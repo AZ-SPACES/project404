@@ -1,0 +1,24 @@
+export const Colors = {
+  primary:    '#1A73E8',
+  secondary:  '#34A853',
+  accent:     '#FBBC04',
+  error:      '#EA4335',
+  warning:    '#FF6D00',
+  info:       '#4285F4',
+  textPrimary:   '#202124',
+  textSecondary: '#5F6368',
+  background: '#FFFFFF',
+  surface:    '#F8F9FA',
+  border:     '#DADCE0',
+};
+export const Typography = {
+  h1:      { fontSize: 32, fontWeight: '700' },
+  h2:      { fontSize: 24, fontWeight: '600' },
+  h3:      { fontSize: 18, fontWeight: '600' },
+  bodyLg:  { fontSize: 16, fontWeight: '400' },
+  body:    { fontSize: 14, fontWeight: '400' },
+  caption: { fontSize: 12, fontWeight: '400' },
+  button:  { fontSize: 16, fontWeight: '600' },
+};
+export const Spacing = { xs:4, sm:8, md:16, lg:24, xl:32 };
+export const Radius  = { sm:8, md:12, lg:16, full:999 };
