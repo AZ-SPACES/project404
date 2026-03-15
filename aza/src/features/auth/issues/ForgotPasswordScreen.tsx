@@ -2,11 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/AppNavigator';
+import { Colors, Typography, Spacing, Radius } from '../../../theme';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Button from '../../../components/Button';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
 export default function ForgotPasswordScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -16,7 +21,27 @@ export default function ForgotPasswordScreen() {
         </TouchableOpacity>
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>Forgot Password</Text>
+        <Text style={styles.title}>I've forgotten my password</Text>
+        <Text style={styles.subtitle}>
+          If you're logged out and can't remember your password, <Text style={styles.boldText}>we can send you an email with a link to reset it.</Text>
+        </Text>
+
+        <View style={styles.buttonContainer}>
+           <Button
+              title="Reset password"
+              onPress={() => {navigation.navigate("ResetPassword")}}
+              backgroundColor={Colors.primary}
+              textColor={Colors.secondary}
+              borderRadius={30} // completely rounded
+              paddingVertical={16}
+              fontSize={Number(Typography.button.fontSize)}
+              fontWeight={Typography.button.fontWeight as any}
+            />
+        </View>
+
+        <TouchableOpacity style={styles.helpButton}>
+            <Text style={styles.helpText}>I still need help</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -45,10 +70,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   title: {
-    fontSize: Typography.h1.fontSize,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  buttonContainer: {
+    marginBottom: Spacing.lg,
+  },
+  helpButton: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  helpText: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
