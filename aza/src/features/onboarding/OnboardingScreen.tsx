@@ -13,6 +13,9 @@ import Button from "../../components/Button";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -39,6 +42,7 @@ const slides = [
 ];
 
 export default function OnboardingScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeSlide, setActiveSlide] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -313,7 +317,10 @@ export default function OnboardingScreen() {
           
           <Button
             title="Login"
-            onPress={() => console.log("Login pressed")}
+            onPress={() => {
+              setBottomSheetVisible(false);
+              navigation.navigate('Login');
+            }}
             backgroundColor="#1E5128"
             textColor="#B7ED7E"
             borderRadius={24}

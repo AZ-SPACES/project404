@@ -1,10 +1,13 @@
-import OnboardingScreen from "./src/features/onboarding/OnboardingScreen";
-import AnimatedSplashScreen from "./src/components/AnimatedSplashScreen";
+import { NavigationContainer } from '@react-navigation/native';
+import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
   return (
     <AnimatedSplashScreen>
-      <OnboardingScreen />
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
     </AnimatedSplashScreen>
   );
 }
