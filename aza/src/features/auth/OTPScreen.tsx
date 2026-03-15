@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import Button from '../../components/Button';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OTPScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -91,7 +91,7 @@ const OTPScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-            <MaterialIcons name="chevron-left" size={28} color="black" />
+            <MaterialIcons name="chevron-left" style={styles.backicon} />
           </TouchableOpacity>
         </View>
 
@@ -100,7 +100,7 @@ const OTPScreen: React.FC = () => {
           <Text style={styles.title}>Enter Code</Text>
           
           <View style={styles.iconContainer}>
-            <MaterialIcons name="phone-iphone" size={20} color={Colors.textSecondary} />
+            <MaterialIcons name="smartphone" size={24} color={Colors.textSecondary} />
           </View>
 
           <Text style={styles.subTitle}>
@@ -166,12 +166,18 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0, 0.05)',
+    width: 44,
+    height: 44,
+    borderRadius: 50,
+    backgroundColor: "rgba(22,51,0,0.07)",
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  backicon: {
+    fontSize: 28,
+    color: Colors.textPrimary,
   },
   content: {
     flex: 1,
@@ -184,10 +190,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
