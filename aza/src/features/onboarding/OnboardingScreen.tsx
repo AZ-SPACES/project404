@@ -6,7 +6,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  Modal,
   TouchableOpacity,
 } from "react-native";
 import { AntDesign } from '@expo/vector-icons';
@@ -50,11 +49,16 @@ export default function OnboardingScreen() {
 
   const splashVideo = require("../../assets/videos/splash.mp4");
 
-  const player = useVideoPlayer(splashVideo, (player) => {
-    player.loop = true;
-    player.play();
-    player.allowsExternalPlayback = false;
-  });
+  const player = useVideoPlayer(splashVideo);
+
+
+  useEffect(() => {
+    if (player) {
+      player.loop = true;
+      player.play();
+      player.allowsExternalPlayback = false;
+    }
+  }, [player]);
 
   const startAnimation = () => {
     progressAnim.setValue(0);
@@ -97,6 +101,10 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     startAnimation();
+
+    if (slideChangeTimeout.current) {
+      clearInterval(slideChangeTimeout.current);
+    }
 
     if (activeSlide < slides.length - 1) {
       slideChangeTimeout.current = setInterval(() => {
