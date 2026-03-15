@@ -7,7 +7,7 @@ export const Colors = {
   info:       '#4285F4',
   textPrimary:   '#0E0F0C',
   textSecondary: '#5F6368',
-  background: '#FFFFFF',
+  background: '#E6ECE1',
   surface:    '#F8F9FA',
   border:     '#DADCE0',
 };
