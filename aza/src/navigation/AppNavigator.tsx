@@ -10,6 +10,8 @@ import ChangePhoneNumberScreen from '../features/auth/issues/ChangePhoneNumberSc
 import ChangeEmailScreen from '../features/auth/issues/ChangeEmailScreen';
 import AccountDeactivatedScreen from '../features/auth/issues/AccountDeactivatedScreen';
 import SomethingElseScreen from '../features/auth/issues/SomethingElseScreen';
+import ResetPasswordScreen from '../features/auth/reset/ResetPasswordScreen';
+import ResetOTPScreen from '../features/auth/reset/ResetOTPScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -22,6 +24,8 @@ export type RootStackParamList = {
   ChangeEmail: undefined;
   AccountDeactivated: undefined;
   SomethingElse: undefined;
+  ResetPassword: undefined;
+  ResetOTP: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,6 +46,8 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="AccountDeactivated" component={AccountDeactivatedScreen} />
       <Stack.Screen name="SomethingElse" component={SomethingElseScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Screen name="ResetOTP" component={ResetOTPScreen} />
     </Stack.Navigator>
   );
 }

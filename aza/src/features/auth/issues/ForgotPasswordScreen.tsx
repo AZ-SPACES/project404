@@ -2,12 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/AppNavigator';
 import { Colors, Typography, Spacing, Radius } from '../../../theme';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from '../../../components/Button';
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
+
 export default function ForgotPasswordScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -25,7 +29,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.buttonContainer}>
            <Button
               title="Reset password"
-              onPress={() => {}}
+              onPress={() => {navigation.navigate("ResetPassword")}}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
               borderRadius={30} // completely rounded
