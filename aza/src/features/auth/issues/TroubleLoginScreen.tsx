@@ -18,9 +18,8 @@ const ISSUES: IssueItem[] = [
   { label: "I've forgotten my password", screen: "ForgotPassword" },
   { label: "2-step verification isn't working", screen: "TwoStepVerificationIssue" },
   { label: "I need to change my phone number", screen: "ChangePhoneNumber" },
-  { label: "I need to change my email", screen: "ChangeEmail" },
+  { label: "Logging into a new device", screen: "NewDeviceLogin" },
   { label: "My account was deactivated", screen: "AccountDeactivated" },
-  { label: "Something else", screen: "SomethingElse" },
 ];
 
 export default function TroubleLoginScreen() {
