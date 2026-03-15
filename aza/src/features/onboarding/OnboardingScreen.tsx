@@ -3,11 +3,11 @@ import {
   StyleSheet,
   Text,
   View,
-  Pressable,
   Animated,
   Dimensions,
   Image,
   Modal,
+  TouchableOpacity,
 } from "react-native";
 import { AntDesign } from '@expo/vector-icons';
 import Button from "../../components/Button";
@@ -15,7 +15,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
 
 const slides = [
@@ -45,6 +45,8 @@ export default function OnboardingScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideChangeTimeout = useRef<NodeJS.Timeout | null>(null);
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
+  const bottomSheetAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const splashVideo = require("../../assets/videos/splash.mp4");
 
@@ -62,6 +64,36 @@ export default function OnboardingScreen() {
       useNativeDriver: false,
     }).start();
   };
+
+  useEffect(() => {
+    if (isBottomSheetVisible) {
+      Animated.parallel([
+        Animated.timing(bottomSheetAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(bottomSheetAnim, {
+          toValue: height,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isBottomSheetVisible, bottomSheetAnim, backdropAnim]);
 
   useEffect(() => {
     startAnimation();
@@ -174,7 +206,7 @@ export default function OnboardingScreen() {
           </Animated.View>
         </View>
 
-        <Pressable style={styles.contentContainer} onPress={handlePress}>
+        <TouchableOpacity style={styles.contentContainer} onPress={handlePress} activeOpacity={0.9}>
           <Animated.Text
             style={[
               styles.title,
@@ -227,7 +259,7 @@ export default function OnboardingScreen() {
               />
             </Animated.View>
           )}
-        </Pressable>
+        </TouchableOpacity>
 
         <View style={styles.footer}>
           <Button
@@ -239,51 +271,55 @@ export default function OnboardingScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Bottom Sheet Modal */}
-      <Modal
-        visible={isBottomSheetVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setBottomSheetVisible(false)}
-      >
-        <View style={styles.bottomSheetOverlay}>
-          <Pressable 
+      {/* Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={isBottomSheetVisible ? "auto" : "none"}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <TouchableOpacity 
             style={styles.bottomSheetBackdrop} 
+            activeOpacity={1}
             onPress={() => setBottomSheetVisible(false)} 
           />
-          <View style={styles.bottomSheetContainer}>
-            <View style={styles.bottomSheetHeader}>
-              <Pressable 
-                style={styles.closeButton} 
-                onPress={() => setBottomSheetVisible(false)}
-              >
-                <AntDesign name="close" size={20} color="#0E0F0C" />
-              </Pressable>
-            </View>
-            <Text style={styles.bottomSheetTitle}>Get Started</Text>
-            <Text style={styles.bottomSheetDescription}>
-              By continuing, you agree to our Terms & Privacy Policy.
-            </Text>
-            <View style={styles.bottomSheetDivider} />
-            
-            <Button
-              title="Login"
-              onPress={() => console.log("Login pressed")}
-              backgroundColor="#1E5128"
-              textColor="#B7ED7E"
-              borderRadius={24}
-            />
-            <View style={{ height: 16 }} />
-            <Button
-              title="Create Account"
-              onPress={() => console.log("Create Account pressed")}
-              backgroundColor="#B7ED7E"
-              textColor="#1E5128"
-              borderRadius={24}  
-            />
+        </Animated.View>
+        <Animated.View style={[
+          styles.bottomSheetContainer, 
+          { 
+            position: "absolute", 
+            bottom: 0, 
+            width: "100%",
+            transform: [{ translateY: bottomSheetAnim }] 
+          }
+        ]}>
+          <View style={styles.bottomSheetHeader}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => setBottomSheetVisible(false)}
+            >
+              <AntDesign name="close" size={20} color="#0E0F0C" />
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+          <Text style={styles.bottomSheetTitle}>Get Started</Text>
+          <Text style={styles.bottomSheetDescription}>
+            By continuing, you agree to our Terms & Privacy Policy.
+          </Text>
+          <View style={styles.bottomSheetDivider} />
+          
+          <Button
+            title="Login"
+            onPress={() => console.log("Login pressed")}
+            backgroundColor="#1E5128"
+            textColor="#B7ED7E"
+            borderRadius={24}
+          />
+          <View style={{ height: 16 }} />
+          <Button
+            title="Create Account"
+            onPress={() => console.log("Create Account pressed")}
+            backgroundColor="#B7ED7E"
+            textColor="#1E5128"
+            borderRadius={24}  
+          />
+        </Animated.View>
+      </View>
     </Animated.View>
   );
 }
@@ -385,8 +421,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   bottomSheetOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
+    ...StyleSheet.absoluteFillObject,
   },
   bottomSheetBackdrop: {
     ...StyleSheet.absoluteFill,
