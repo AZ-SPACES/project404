@@ -2,12 +2,26 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OnboardingScreen from '../features/onboarding/OnboardingScreen';
 import LoginScreen from '../features/auth/LoginScreen';
+import TroubleLoginScreen from '../features/auth/issues/TroubleLoginScreen';
 import OTPScreen from '../features/auth/OTPScreen';
+import ForgotPasswordScreen from '../features/auth/issues/ForgotPasswordScreen';
+import TwoStepVerificationIssueScreen from '../features/auth/issues/TwoStepVerificationIssueScreen';
+import ChangePhoneNumberScreen from '../features/auth/issues/ChangePhoneNumberScreen';
+import ChangeEmailScreen from '../features/auth/issues/ChangeEmailScreen';
+import AccountDeactivatedScreen from '../features/auth/issues/AccountDeactivatedScreen';
+import SomethingElseScreen from '../features/auth/issues/SomethingElseScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
+  TroubleLogin: undefined;
   OTP: undefined;
+  ForgotPassword: undefined;
+  TwoStepVerificationIssue: undefined;
+  ChangePhoneNumber: undefined;
+  ChangeEmail: undefined;
+  AccountDeactivated: undefined;
+  SomethingElse: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -20,7 +34,14 @@ export default function AppNavigator() {
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="TroubleLogin" component={TroubleLoginScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="TwoStepVerificationIssue" component={TwoStepVerificationIssueScreen} />
+      <Stack.Screen name="ChangePhoneNumber" component={ChangePhoneNumberScreen} />
+      <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
+      <Stack.Screen name="AccountDeactivated" component={AccountDeactivatedScreen} />
+      <Stack.Screen name="SomethingElse" component={SomethingElseScreen} />
     </Stack.Navigator>
   );
 }
