@@ -37,6 +37,10 @@ const LoginScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  const handleTrouble = () => {
+    navigation.navigate('TroubleLogin');
+  };
+
   const toggleInputMode = () => {
     setUseEmail((prev) => !prev);
   };
@@ -51,7 +55,7 @@ const LoginScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <MaterialIcons style={styles.closeIcon} name="close" size={24} color="black" />
+            <MaterialIcons style={styles.closeIcon} name="close" />
           </TouchableOpacity>
         </View>
 
@@ -65,9 +69,9 @@ const LoginScreen: React.FC = () => {
 
           <View style={styles.inputContainer}>
             {!useEmail ? (
-              <MaterialIcons name="phone" size={24} color="black" style={styles.inputIcon}/>
+              <MaterialIcons name="smartphone" color={Colors.primary} style={styles.inputIcon}/>
             ) : (
-              <MaterialIcons name="mail-outline" size={24} color={Colors.primary} style={styles.inputIcon}/>
+              <MaterialIcons name="mail-outline" color={Colors.primary} style={styles.inputIcon}/>
             )}
             <TextInput
               style={styles.input}
@@ -90,7 +94,7 @@ const LoginScreen: React.FC = () => {
             <View style={styles.passwordSection}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputContainer}>
-                <MaterialIcons name="fingerprint" size={24} color={Colors.primary} style={styles.inputIcon} />
+                <MaterialIcons name="fingerprint" color={Colors.primary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="********"
@@ -125,8 +129,8 @@ const LoginScreen: React.FC = () => {
             fontWeight={Typography.button.fontWeight as any}
           />
 
-          <TouchableOpacity style={styles.troubleButton}>
-            <Text style={styles.troubleText}>Trouble logging?</Text>
+          <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
+            <Text style={styles.troubleText}>Trouble logging in?</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -149,17 +153,17 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   closeButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 50,
-    backgroundColor: "#868685",
+    backgroundColor: "rgba(22,51,0,0.07)",
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeIcon: {
-    fontSize: 14,
+    fontSize: 28,
     color: Colors.textPrimary,
   },
   content: {
@@ -192,7 +196,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   inputIcon: {
-    fontSize: 18,
+    fontSize: 24,
     marginRight: Spacing.sm,
   },
   input: {
@@ -221,6 +225,7 @@ const styles = StyleSheet.create({
   },
   troubleText: {
     fontSize: Typography.body.fontSize,
+    fontWeight: '600',
     color: Colors.textPrimary,
     textDecorationLine: 'underline',
   },
