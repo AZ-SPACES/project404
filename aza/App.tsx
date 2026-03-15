@@ -1,7 +1,10 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
 import OnboardingScreen from "./src/features/onboarding/OnboardingScreen";
+import AnimatedSplashScreen from "./src/components/AnimatedSplashScreen";
 
 export default function App() {
-  return <OnboardingScreen />;
+  return (
+    <AnimatedSplashScreen>
+      <OnboardingScreen />
+    </AnimatedSplashScreen>
+  );
 }
