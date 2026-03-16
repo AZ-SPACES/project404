@@ -2,11 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/AppNavigator';
+import { Colors, Typography, Spacing, Radius } from '../../../theme';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Button from '../../../components/Button';
 
-export default function ChangePhoneNumberScreen() {
-  const navigation = useNavigation();
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPassword'>;
+
+export default function ChangePhoneNumber() {
+  const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -16,7 +21,60 @@ export default function ChangePhoneNumberScreen() {
         </TouchableOpacity>
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>Change Phone Number</Text>
+        <Text style={styles.title}>I need to change my phone number</Text>
+        <Text style={styles.subtitle}>
+          If you've lost access to your old number, don't worry - here's how you can change your number:If you've lost access to your old number, don't worry - here's how you can change your number:
+        </Text>
+
+        <View style={styles.listContainer}>
+                  <View style={styles.listItem}>
+                    <Text style={styles.listNumber}>1.</Text>
+                    <Text style={styles.listItemText}>
+                     <Text style={styles.boldText}>Log-in</Text> with your email and password
+                    </Text>
+                  </View>
+                  <View style={styles.listItem}>
+                    <Text style={styles.listNumber}>2.</Text>
+                    <Text style={styles.listItemText}>
+                      In the 2-step verification page choose <Text style={styles.boldText}>Try another way</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.listItem}>
+                    <Text style={styles.listNumber}>3.</Text>
+                    <Text style={styles.listItemText}>
+                     If you can't use any alternative 2-step verification methods, choose<Text style={styles.boldText}> I don't have any of these</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.listItem}>
+                    <Text style={styles.listNumber}>4.</Text>
+                    <Text style={styles.listItemText}>
+                      Follow the flow to confirm your identity and new phone number
+                    </Text>
+                  </View>
+                  <View style={styles.listItem}>
+                    <Text style={styles.listNumber}>5.</Text>
+                    <Text style={styles.listItemText}>
+                      After confirming that, we'll be able to change your phone number
+                    </Text>
+                  </View>
+                </View>
+
+        <View style={styles.buttonContainer}>
+           <Button
+              title="Login"
+              onPress={() => {navigation.navigate("Login")}}
+              backgroundColor={Colors.primary}
+              textColor={Colors.secondary}
+              borderRadius={30} // completely rounded
+              paddingVertical={16}
+              fontSize={Number(Typography.button.fontSize)}
+              fontWeight={Typography.button.fontWeight as any}
+            />
+        </View>
+
+        <TouchableOpacity style={styles.helpButton}>
+            <Text style={styles.helpText}>I still need help</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -45,10 +103,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   title: {
-    fontSize: Typography.h1.fontSize,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  buttonContainer: {
+    marginBottom: Spacing.lg,
+  },
+  listContainer: {
+    marginBottom: Spacing.xl,
+    paddingLeft: Spacing.xs,
+  },
+  listItem: {
+    flexDirection: 'row',
+    marginBottom: Spacing.md,
+    alignItems: 'flex-start',
+  },
+  listNumber: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    width: 28,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  listItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.textSecondary,
+    lineHeight: 24,
+  },
+  helpButton: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  helpText: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

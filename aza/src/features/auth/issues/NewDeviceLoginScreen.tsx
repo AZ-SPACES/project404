@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Colors, Typography, Spacing } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
-export default function TwoStepVerificationIssueScreen() {
+export default function NewDeviceLogin() {
   const navigation = useNavigation();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -54,7 +54,7 @@ export default function TwoStepVerificationIssueScreen() {
           style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
         >
           <Text style={styles.headerTitle} numberOfLines={1}>
-            2-step verification isn't working
+            Logging in with a new device
           </Text>
         </Animated.View>
       </Animated.View>
@@ -68,75 +68,70 @@ export default function TwoStepVerificationIssueScreen() {
         )}
         scrollEventThrottle={16}
       >
-        <Text style={styles.title}>2-step verification isn't working</Text>
+        <Text style={styles.title}>Logging in with a new device</Text>
 
         <Text style={styles.paragraph}>
-          If you're not getting the Aza app notification or text message for
-          2-step verification, check that:
+          If you have a new device, but still have access to the same number,
+          please follow these steps to change your registered device:
         </Text>
 
         <View style={styles.bulletContainer}>
           <View style={styles.bulletItem}>
-            <Text style={styles.bulletIndicator}>•</Text>
-            <Text style={styles.bulletText}>WiFi/mobile data is turned on</Text>
-          </View>
-          <View style={styles.bulletItem}>
-            <Text style={styles.bulletIndicator}>•</Text>
+            <Text style={styles.bulletIndicator}>1.</Text>
             <Text style={styles.bulletText}>
-              You're checking your registered phone number for the text message,
-              or a trusted device for the Aza app notification
+              When you're logging in and see the message "We've sent an approval
+              request to your registered device", select I'm not receiving the
+              approval request. This will take about 5 seconds to appear
             </Text>
           </View>
           <View style={styles.bulletItem}>
-            <Text style={styles.bulletIndicator}>•</Text>
+            <Text style={styles.bulletIndicator}>2</Text>
             <Text style={styles.bulletText}>
-              You have notifications from Aza enabled
+              Choose SMS or voice call and we'll send you a code to log in with
+            </Text>
+          </View>
+          <View style={styles.bulletItem}>
+            <Text style={styles.bulletIndicator}>3</Text>
+            <Text style={styles.bulletText}>
+              Once you've logged in, you'll be able to change the device your
+              push notifications are sent to
             </Text>
           </View>
         </View>
 
         <Text style={styles.paragraph}>
-          If it's still not working, click{" "}
-          <Text style={styles.bold}>I'm not receiving approval requests</Text>{" "}
-          or <Text style={styles.bold}>Try another way</Text>, and choose one of
-          the other available methods.
-        </Text>
-
-        <Text style={styles.paragraph}>
-          If none of this works, you can recover your account through confirming
-          your identity. To do that, click{" "}
-          <Text style={styles.bold}>I don't have any of these</Text> in the
-          2-step verification page, and:
+          You should then turn 2-step verification off and on again:
         </Text>
 
         <View style={styles.listContainer}>
           <View style={styles.listItem}>
             <Text style={styles.listNumber}>1.</Text>
-            <Text style={styles.listItemText}>
-              Click <Text style={styles.bold}>Continue</Text> to confirm it's
-              you with a selfie
-            </Text>
+            <Text style={styles.listItemText}>Select your name</Text>
           </View>
           <View style={styles.listItem}>
             <Text style={styles.listNumber}>2.</Text>
             <Text style={styles.listItemText}>
-              Select to check automatically, and continue to the selfie step
+              Select <Text style={styles.bold}>Settings</Text>
             </Text>
           </View>
           <View style={styles.listItem}>
             <Text style={styles.listNumber}>3.</Text>
             <Text style={styles.listItemText}>
-              Follow instructions on the screen until the selfie is approved
+              Select <Text style={styles.bold}>2-step verification </Text> and{" "}
+              <Text style={styles.bold}>Select Remove this method</Text>
             </Text>
           </View>
           <View style={styles.listItem}>
             <Text style={styles.listNumber}>4.</Text>
             <Text style={styles.listItemText}>
-              Choose if you want to keep the same number or change
+              On the 2-step verification page,{" "}
+              <Text style={styles.bold}>select Aza app again </Text>
             </Text>
           </View>
         </View>
-
+        <Text style={styles.paragraph}>
+          You will now be able to log in with your new device.
+        </Text>
         <TouchableOpacity style={styles.helpButton}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
