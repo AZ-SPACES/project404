@@ -77,7 +77,7 @@ const ResetOTPScreen: React.FC = () => {
   const handleVerify = () => {
     console.log('Reset OTP entered:', otp.join(''));
     // Navigate to ResetPassword after successful OTP verification
-    navigation.navigate('ResetPassword');
+    // navigation.navigate('ResetPassword');
   };
 
   const handleClose = () => {
