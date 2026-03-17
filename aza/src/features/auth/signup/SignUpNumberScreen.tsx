@@ -27,6 +27,7 @@ export default function SignUpNumberScreen() {
     const handleNext = () => {
         // Navigate to next screen, e.g. OTP verification
         // navigation.navigate('SignUpOTP'); or similar
+        navigation.navigate('SignUpEmail');
     };
 
     return (
@@ -90,7 +91,7 @@ export default function SignUpNumberScreen() {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Colors.background,
     },
     container: {
         flex: 1,

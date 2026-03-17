@@ -25,7 +25,8 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-video"
+      "expo-video",
+      "@react-native-community/datetimepicker"
     ]
   }
 }
