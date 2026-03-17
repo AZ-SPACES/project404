@@ -25,7 +25,7 @@ export default function Statement() {
           If your account has been deactivated and you would like a statement for your account, you can reach out to us. Click the link below to speak with one of our team.
         </Text>
 
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
             <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </View>
@@ -77,9 +77,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   helpText: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });

@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     skipText: {
-        fontSize: Typography.body.fontSize,
+        fontSize: Typography.bodyLg.fontSize,
         color: Colors.textSecondary,
         fontWeight: '500',
     },
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xl,
     },
     title: {
-        fontSize: 27, // Made slightly larger to match mockup 
+        fontSize: 34,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.sm,
@@ -174,14 +174,14 @@ const styles = StyleSheet.create({
         lineHeight: 32,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: Colors.textSecondary,
         lineHeight: 20,
         marginTop: Spacing.xs,
-        paddingRight: Spacing.xl, // keeps text from hitting far right edge
+        paddingRight: Spacing.xl, 
     },
     label: {
-        fontSize: Typography.body.fontSize, // smaller label
+        fontSize: Typography.bodyLg.fontSize,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.sm,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
         marginRight: Spacing.sm,
     },
     radioCircleSelected: {
-        backgroundColor: Colors.primary, // Fill entirely when active mimicking icon
+        backgroundColor: Colors.primary,
     },
     radioLabel: {
         fontSize: Typography.body.fontSize,

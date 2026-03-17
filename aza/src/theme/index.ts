@@ -10,7 +10,8 @@ export const Colors = {
   background: '#E6ECE1',
   surface:    '#F8F9FA',
   border:     '#DADCE0',
-};
+} as const;
+
 export const Typography = {
   h1:      { fontSize: 32, fontWeight: '700' },
   h2:      { fontSize: 24, fontWeight: '600' },
@@ -19,6 +20,7 @@ export const Typography = {
   body:    { fontSize: 14, fontWeight: '400' },
   caption: { fontSize: 12, fontWeight: '400' },
   button:  { fontSize: 16, fontWeight: '600' },
-};
-export const Spacing = { xs:4, sm:8, md:16, lg:24, xl:32 };
-export const Radius  = { sm:8, md:12, lg:16, full:999 };
+} as const;
+
+export const Spacing = { xs:4, sm:8, md:16, lg:24, xl:32 } as const;
+export const Radius  = { sm:8, md:12, lg:16, full:999 } as const;

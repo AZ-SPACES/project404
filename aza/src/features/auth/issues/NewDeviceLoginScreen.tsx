@@ -10,9 +10,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Colors, Typography, Spacing } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../../navigation/AppNavigator";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NewDeviceLogin">
 
 export default function NewDeviceLogin() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -132,7 +136,7 @@ export default function NewDeviceLogin() {
         <Text style={styles.paragraph}>
           You will now be able to log in with your new device.
         </Text>
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>

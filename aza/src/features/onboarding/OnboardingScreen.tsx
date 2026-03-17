@@ -40,9 +40,9 @@ const slides = [
     image: require("../../assets/v-card.png"),
   },
 ];
-
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 export default function OnboardingScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp>();
   const [activeSlide, setActiveSlide] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
