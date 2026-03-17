@@ -1,0 +1,194 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
+    TouchableWithoutFeedback,
+    Keyboard,
+    TouchableOpacity,
+    StyleSheet,
+    ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Colors, Typography, Spacing, Radius } from '../../../theme';
+import Button from '../../../components/Button';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/AppNavigator';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+export default function SignUpNameScreen() {
+    const navigation = useNavigation<NavigationProp>();
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [userName, setUserName] = useState('');
+
+    const handleNext = () => {
+        // Navigate to the next screen in the signup flow
+        navigation.navigate('SignUpAddress');
+    };
+
+    const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0 && userName.trim().length > 0;
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <KeyboardAvoidingView
+                    style={styles.container}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Content */}
+                    <ScrollView 
+                        style={styles.content}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContentContainer}
+                    >
+                        <Text style={styles.title}>What's your name?</Text>
+                        <Text style={styles.subtitle}>
+                            This will be the name we use to refer to you.
+                        </Text>
+                        
+                        <Text style={styles.label}>Firstname</Text>
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Ahliyah"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={firstName}
+                                onChangeText={setFirstName}
+                                autoCapitalize="words"
+                                autoFocus
+                            />
+                        </View>
+
+                        <Text style={styles.label}>Lastname</Text>
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Azeez"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={lastName}
+                                onChangeText={setLastName}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <Text style={styles.label}>User Name</Text>
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Ladybug"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={userName}
+                                onChangeText={setUserName}
+                                autoCapitalize="none"
+                            />
+                        </View>
+                    </ScrollView>
+
+                    {/* Footer */}
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title="Continue"
+                            onPress={handleNext}
+                            backgroundColor={Colors.primary}
+                            textColor={Colors.secondary}
+                            borderRadius={30}
+                            paddingVertical={16}
+                            fontSize={Number(Typography.button.fontSize)}
+                            fontWeight={Typography.button.fontWeight as any}
+                            disabled={!isFormValid}
+                        />
+                    </View>
+                </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    container: {
+        flex: 1,
+    },
+    header: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.md,
+    },
+    backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 50,
+        backgroundColor: 'rgba(22,51,0,0.04)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    content: {
+        flex: 1,
+    },
+    scrollContentContainer: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: Spacing.xl,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: Colors.textPrimary,
+        marginBottom: Spacing.sm,
+        letterSpacing: -0.5,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 20,
+    },
+    label: {
+        fontSize: Typography.body.fontSize,
+        fontWeight: '600',
+        color: Colors.textPrimary,
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.xl,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: Radius.sm,
+        paddingHorizontal: Spacing.md,
+        height: 48,
+        backgroundColor: 'white',
+    },
+    inputIcon: {
+        marginRight: Spacing.sm,
+    },
+    input: {
+        flex: 1,
+        fontSize: Typography.bodyLg.fontSize,
+        color: Colors.textPrimary,
+        height: '100%',
+    },
+    buttonContainer: {
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.lg,
+    },
+});

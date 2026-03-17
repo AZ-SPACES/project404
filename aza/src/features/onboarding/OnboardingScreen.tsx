@@ -328,7 +328,7 @@ export default function OnboardingScreen() {
           <View style={{ height: 16 }} />
           <Button
             title="Create Account"
-            onPress={() => console.log("Create Account pressed")}
+            onPress={() => navigation.navigate('SignUpNumber')}
             backgroundColor="#B7ED7E"
             textColor="#1E5128"
             borderRadius={24}  
