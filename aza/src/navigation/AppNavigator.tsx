@@ -10,7 +10,6 @@ import ChangePhoneNumberScreen from '../features/auth/issues/ChangePhoneNumberSc
 import AccountDeactivatedScreen from '../features/auth/issues/AccountDeactivatedScreen';
 import NewDeviceLoginScreen from '../features/auth/issues/NewDeviceLoginScreen';
 import ResetPasswordScreen from '../features/auth/reset/ResetPasswordScreen';
-import ResetOTPScreen from '../features/auth/reset/ResetOTPScreen';
 import SignUpNumberScreen from '../features/auth/signup/SignUpNumberScreen';
 import SignUpEmailScreen from '../features/auth/signup/SignUpEmailScreen';
 import SignUpPasswordScreen from '../features/auth/signup/SignUpPasswordScreen';
@@ -19,10 +18,13 @@ import SignUpAddressScreen from '../features/auth/signup/SignUpAddressScreen';
 import SignUpPronounsScreen from '../features/auth/signup/SignUpPronounsScreen';
 import SignUpEmploymentScreen from '../features/auth/signup/SignUpEmploymentScreen';
 import SignUpBirthdayScreen from '../features/auth/signup/SignUpBirthdayScreen';
-import RefundScreen from '../features/auth/issues/dactivatedaccount/RefundScreen';
+import ResetOTPScreen from '../features/auth/reset/ResetOTPScreen';
 import ReasonScreen from '../features/auth/issues/dactivatedaccount/ReasonScreen';
+import RefundScreen from '../features/auth/issues/dactivatedaccount/RefundScreen';
 import StatementScreen from '../features/auth/issues/dactivatedaccount/StatementScreen';
-
+import TalkToUsScreen from '../features/customercare/TalkToUsScreen';
+import EmailUsScreen from '../features/customercare/EmailUsScreen';
+import ChatWithUsScreen from '../features/customercare/ChatWithUsScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -47,6 +49,9 @@ export type RootStackParamList = {
   Reason: undefined;
   Refund: undefined;
   Statement: undefined;
+  TalkToUs: undefined;
+  EmailUs: undefined;
+  ChatWithUs: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -78,7 +83,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
-      <Stack.Screen name="Statement" component={StatementScreen} />
+      <Stack.Screen name="Statement" component={StatementScreen}/>
     </Stack.Navigator>
   );
 }

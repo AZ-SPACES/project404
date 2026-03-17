@@ -111,7 +111,7 @@ export default function Refund() {
         <View style={styles.buttonContainer}>
           <Button
           title="Submit an appeal"
-          onPress={console.log("awaitng")}
+          onPress={() => console.log("awaitng")}
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           borderRadius={30}
@@ -121,7 +121,7 @@ export default function Refund() {
           />
         </View>
 
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>

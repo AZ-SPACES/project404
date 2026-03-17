@@ -8,11 +8,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../../navigation/AppNavigator";
 import { Colors, Typography, Spacing } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TwoStepVerificationIssue">;
+
 export default function TwoStepVerificationIssueScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -137,7 +141,7 @@ export default function TwoStepVerificationIssueScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>

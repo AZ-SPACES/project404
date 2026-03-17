@@ -11,11 +11,13 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-community/datetimepicker": "8.6.0",
+    "@react-native-picker/picker": "2.11.4",
     "@react-navigation/core": "^7.5.0",
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/native-stack": "^7.2.0",
     "@types/lodash": "^4.17.24",
     "expo": "~55.0.6",
+    "expo-image-picker": "~55.0.12",
     "expo-splash-screen": "~55.0.10",
     "expo-status-bar": "~55.0.4",
     "expo-video": "55.0.5",

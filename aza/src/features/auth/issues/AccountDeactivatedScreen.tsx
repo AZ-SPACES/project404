@@ -30,7 +30,7 @@ export default function AccountDeactivatedScreen() {
         </TouchableOpacity>
       </View>
       <View style={styles.content}>
-        <Text style={styles.title}>Trouble logging in</Text>
+        <Text style={styles.title}>Deactivated Account</Text>
         <View style={styles.subHeaderContainer}>
           <Text style={styles.subHeader}>Select an issue</Text>
         </View>
