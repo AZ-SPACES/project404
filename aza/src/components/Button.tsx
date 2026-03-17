@@ -38,7 +38,9 @@ const Button: React.FC<ButtonProps> = ({
       style={[
         styles.button,
         {
-          backgroundColor: disabled ? '#9ca3af' : backgroundColor,
+          backgroundColor: disabled ? 'transparent' : backgroundColor,
+          borderColor: backgroundColor,
+          borderWidth: disabled ? 1 : 0,
           borderRadius,
           paddingVertical,
           paddingHorizontal,
@@ -54,7 +56,7 @@ const Button: React.FC<ButtonProps> = ({
         style={[
           styles.buttonText,
           {
-            color: textColor,
+            color: disabled ? backgroundColor : textColor,
             fontSize,
             fontWeight,
           },

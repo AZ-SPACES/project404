@@ -48,8 +48,8 @@ export default function SignUpNumberScreen() {
                     <View style={styles.content}>
                         <Text style={styles.title}>What's your mobile number?</Text>
                         <Text style={styles.subtitle}>
-                           Your number will be used for signing into your account</Text>
-                        <Text style={styles.label}>Phone Number</Text>
+                           Your number will be used for signing into your account.</Text>
+                        <Text style={styles.label}>Your Phone Number</Text>
                         <View style={styles.inputContainer}>
                             <MaterialIcons name="smartphone" size={24} color={Colors.primary} style={styles.inputIcon} />
                             <TextInput
@@ -63,9 +63,6 @@ export default function SignUpNumberScreen() {
                                 autoFocus
                             />
                         </View>
-                        <Text style={styles.subtitle}>
-                            We'll send a code to verify it.
-                        </Text>
                     </View>
 
                     {/* Footer */}
@@ -114,7 +111,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.lg,
     },
     title: {
-        fontSize: 24,
+        fontSize: 34,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.xl,
@@ -126,7 +123,7 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     label: {
-        fontSize: Typography.body.fontSize,
+        fontSize: Typography.bodyLg.fontSize,
         fontWeight: '600',
         color: Colors.textPrimary,
         marginBottom: Spacing.sm,

@@ -21,7 +21,7 @@ export default function SignUpBirthdayScreen() {
     const navigation = useNavigation<NavigationProp>();
 
     const [selectedDate, setSelectedDate] = useState<string>('');
-    const [currentMonth, setCurrentMonth] = useState<string>('2005-01-01');
+    const [currentMonth, setCurrentMonth] = useState<string>('2004-07');
 
     // ── Stable callbacks ───────────────────────────────────────────────────────
 
@@ -37,9 +37,6 @@ export default function SignUpBirthdayScreen() {
         console.log('Birthday complete!');
     }, []);
 
-    const handleSkip = useCallback(() => {
-        console.log('Birthday skipped!');
-    }, []);
 
     const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -54,9 +51,6 @@ export default function SignUpBirthdayScreen() {
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                         <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleSkip}>
-                        <Text style={styles.skipText}>Skip</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -136,14 +130,14 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xl,
     },
     title: {
-        fontSize: 27,
+        fontSize: 34,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.xs,
         letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: Colors.textSecondary,
         lineHeight: 20,
         marginBottom: Spacing.xl,
