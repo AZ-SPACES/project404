@@ -26,6 +26,7 @@ import TalkToUsScreen from '../features/customercare/TalkToUsScreen';
 import EmailUsScreen from '../features/customercare/EmailUsScreen';
 import ChatWithUsScreen from '../features/customercare/ChatWithUsScreen';
 import EnableNotificationsScreen from '../features/onboarding/EnableNotificationsScreen';
+import EnableBiometricsScreen from '../features/auth/EnableBiometricsScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -54,6 +55,7 @@ export type RootStackParamList = {
   EmailUs: undefined;
   ChatWithUs: undefined;
   EnableNotification: undefined;
+  EnableBiometrics: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,7 +63,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Onboarding"
+      initialRouteName="EnableNotification"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -87,6 +89,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
       <Stack.Screen name="EnableNotification" component={EnableNotificationsScreen} />
+      <Stack.Screen name="EnableBiometrics" component={EnableBiometricsScreen} />
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
