@@ -14,7 +14,7 @@ import type { RootStackParamList } from '../../navigation/AppNavigator';
 import Button from '../../components/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
 export default function EnableNotificationsScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -27,7 +27,7 @@ export default function EnableNotificationsScreen() {
     // Logic to enable notifications
     console.log('Enable notifications');
     // For now, let's just go back or to the next screen
-    navigation.goBack();
+    navigation.navigate('EnableBiometrics');
   };
 
   const handleNotNow = () => {
