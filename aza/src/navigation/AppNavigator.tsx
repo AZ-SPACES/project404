@@ -25,6 +25,7 @@ import StatementScreen from '../features/auth/issues/dactivatedaccount/Statement
 import TalkToUsScreen from '../features/customercare/TalkToUsScreen';
 import EmailUsScreen from '../features/customercare/EmailUsScreen';
 import ChatWithUsScreen from '../features/customercare/ChatWithUsScreen';
+import EnableNotificationsScreen from '../features/onboarding/EnableNotificationsScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -52,6 +53,7 @@ export type RootStackParamList = {
   TalkToUs: undefined;
   EmailUs: undefined;
   ChatWithUs: undefined;
+  EnableNotification: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,6 +86,10 @@ export default function AppNavigator() {
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
+      <Stack.Screen name="EnableNotification" component={EnableNotificationsScreen} />
+      <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
+      <Stack.Screen name="EmailUs" component={EmailUsScreen} />
+      <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
     </Stack.Navigator>
   );
 }
