@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen() {
             />
         </View>
 
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
             <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </View>
@@ -94,9 +94,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   helpText: {
-    fontSize: 13,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });

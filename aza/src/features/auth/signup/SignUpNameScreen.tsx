@@ -150,19 +150,19 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xl,
     },
     title: {
-        fontSize: 24,
+        fontSize: 34,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.sm,
         letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: Colors.textSecondary,
         lineHeight: 20,
     },
     label: {
-        fontSize: Typography.body.fontSize,
+        fontSize: Typography.bodyLg.fontSize,
         fontWeight: '600',
         color: Colors.textPrimary,
         marginBottom: Spacing.sm,

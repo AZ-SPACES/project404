@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xl,
     },
     title: {
-        fontSize: 27,
+        fontSize: 34,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.md,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
         lineHeight: 32,
     },
     label: {
-        fontSize: Typography.body.fontSize,
+        fontSize: Typography.bodyLg.fontSize,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: Spacing.md,

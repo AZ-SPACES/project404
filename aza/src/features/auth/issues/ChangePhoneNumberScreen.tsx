@@ -72,7 +72,7 @@ export default function ChangePhoneNumber() {
             />
         </View>
 
-        <TouchableOpacity style={styles.helpButton}>
+        <TouchableOpacity style={styles.helpButton} onPress={() => navigation.navigate('TalkToUs')}>
             <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </View>
