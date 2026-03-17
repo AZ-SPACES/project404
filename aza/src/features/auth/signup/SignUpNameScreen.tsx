@@ -25,14 +25,13 @@ export default function SignUpNameScreen() {
     const navigation = useNavigation<NavigationProp>();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [userName, setUserName] = useState('');
 
     const handleNext = () => {
         // Navigate to the next screen in the signup flow
         navigation.navigate('SignUpAddress');
     };
 
-    const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0 && userName.trim().length > 0;
+    const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0;
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -65,7 +64,7 @@ export default function SignUpNameScreen() {
                             <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g. Ahliyah"
+                                placeholder="e.g. Kwame"
                                 placeholderTextColor={Colors.textSecondary}
                                 value={firstName}
                                 onChangeText={setFirstName}
@@ -79,24 +78,11 @@ export default function SignUpNameScreen() {
                             <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="e.g. Azeez"
+                                placeholder="e.g. Obeng"
                                 placeholderTextColor={Colors.textSecondary}
                                 value={lastName}
                                 onChangeText={setLastName}
                                 autoCapitalize="words"
-                            />
-                        </View>
-
-                        <Text style={styles.label}>User Name</Text>
-                        <View style={styles.inputContainer}>
-                            <MaterialIcons name="person-outline" size={24} color={Colors.primary} style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="e.g. Ladybug"
-                                placeholderTextColor={Colors.textSecondary}
-                                value={userName}
-                                onChangeText={setUserName}
-                                autoCapitalize="none"
                             />
                         </View>
                     </ScrollView>
