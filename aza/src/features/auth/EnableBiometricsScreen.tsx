@@ -37,6 +37,12 @@ export default function EnableBiometricsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <AntDesign name="close" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.content}>
         <Text style={styles.title}>Make logging in faster with biometrics</Text>
         <Text style={styles.description}>
@@ -45,7 +51,7 @@ export default function EnableBiometricsScreen() {
 
         <View style={styles.imageContainer}>
           <Image
-            source={require('../../assets/faceid.png')}
+            source={require('../../assets/biometric.png')}
             style={styles.image}
             resizeMode="contain"
           />
@@ -80,10 +86,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  header: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   title: {
     ...Typography.h1,
@@ -98,7 +116,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     flex: 1,
     alignItems: 'center',
-    paddingBottom: Spacing.xl,
+    justifyContent: 'center',
   },
   image: {
     width: '80%',
