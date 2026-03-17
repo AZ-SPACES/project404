@@ -1,0 +1,158 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
+    TouchableWithoutFeedback,
+    Keyboard,
+    TouchableOpacity,
+    StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Colors, Typography, Spacing, Radius } from '../../../theme';
+import Button from '../../../components/Button';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/AppNavigator';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+export default function SignUpNumberScreen() {
+    const navigation = useNavigation<NavigationProp>();
+    const [phoneNumber, setPhoneNumber] = useState('');
+
+    const handleNext = () => {
+        // Navigate to next screen, e.g. OTP verification
+        // navigation.navigate('SignUpOTP'); or similar
+        navigation.navigate('SignUpEmail');
+    };
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <KeyboardAvoidingView
+                    style={styles.container}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <MaterialIcons name="close" size={28} color={Colors.textPrimary} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Content */}
+                    <View style={styles.content}>
+                        <Text style={styles.title}>What's your mobile number?</Text>
+                        <Text style={styles.subtitle}>
+                           Your number will be used for signing into your account</Text>
+                        <Text style={styles.label}>Phone Number</Text>
+                        <View style={styles.inputContainer}>
+                            <MaterialIcons name="smartphone" size={24} color={Colors.primary} style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="000 000 0000"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
+                                keyboardType="phone-pad"
+                                autoCapitalize="none"
+                                autoFocus
+                            />
+                        </View>
+                        <Text style={styles.subtitle}>
+                            We'll send a code to verify it.
+                        </Text>
+                    </View>
+
+                    {/* Footer */}
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title="Next"
+                            onPress={handleNext}
+                            backgroundColor={Colors.primary}
+                            textColor={Colors.secondary}
+                            borderRadius={30}
+                            paddingVertical={16}
+                            fontSize={Number(Typography.button.fontSize)}
+                            fontWeight={Typography.button.fontWeight as any}
+                            disabled={phoneNumber.trim().length === 0}
+                        />
+                    </View>
+                </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    container: {
+        flex: 1,
+    },
+    header: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.md,
+    },
+    backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 50,
+        backgroundColor: 'rgba(22,51,0,0.04)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: Spacing.lg,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: Colors.textPrimary,
+        marginBottom: Spacing.xl,
+        letterSpacing: -0.5,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 20,
+    },
+    label: {
+        fontSize: Typography.body.fontSize,
+        fontWeight: '600',
+        color: Colors.textPrimary,
+        marginBottom: Spacing.sm,
+        marginTop: Spacing.xl,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: Radius.sm,
+        paddingHorizontal: Spacing.md,
+        height: 48,
+        backgroundColor: 'white',
+    },
+    inputIcon: {
+        marginRight: Spacing.sm,
+    },
+    input: {
+        flex: 1,
+        fontSize: Typography.bodyLg.fontSize,
+        color: Colors.textPrimary,
+        height: '100%',
+    },
+    buttonContainer: {
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.lg,
+    },
+});
