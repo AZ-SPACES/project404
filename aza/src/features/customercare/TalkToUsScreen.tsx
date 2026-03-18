@@ -9,13 +9,13 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { Colors, Spacing, Typography, Radius } from "../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { AntDesign } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Button from "../../components/Button";
+import Button from "../../components/ui/Button";
 
 const { height } = Dimensions.get("window");
 
@@ -80,8 +80,11 @@ export default function TalkToUsScreen() {
       <View style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Conversation Language</Text>
-          <TouchableOpacity 
-            style={[styles.dropdownButton, isDropdownOpen && styles.dropdownButtonActive]}
+          <TouchableOpacity
+            style={[
+              styles.dropdownButton,
+              isDropdownOpen && styles.dropdownButtonActive,
+            ]}
             onPress={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <Text style={styles.dropdownText}>{language}</Text>
@@ -91,26 +94,35 @@ export default function TalkToUsScreen() {
               color={Colors.textSecondary}
             />
           </TouchableOpacity>
-          
+
           {isDropdownOpen && (
             <View style={styles.dropdownList}>
               {languages.map((lang, index) => (
-                <TouchableOpacity 
-                  key={lang} 
+                <TouchableOpacity
+                  key={lang}
                   style={[
                     styles.dropdownItem,
-                    index === languages.length - 1 && { borderBottomWidth: 0 }
+                    index === languages.length - 1 && { borderBottomWidth: 0 },
                   ]}
                   onPress={() => {
                     setLanguage(lang);
                     setIsDropdownOpen(false);
                   }}
                 >
-                  <Text style={[styles.dropdownItemText, language === lang && styles.dropdownItemTextSelected]}>
+                  <Text
+                    style={[
+                      styles.dropdownItemText,
+                      language === lang && styles.dropdownItemTextSelected,
+                    ]}
+                  >
                     {lang}
                   </Text>
                   {language === lang && (
-                    <Feather name="check" size={16} color={Colors.textPrimary} />
+                    <Feather
+                      name="check"
+                      size={16}
+                      color={Colors.textPrimary}
+                    />
                   )}
                 </TouchableOpacity>
               ))}
@@ -122,7 +134,10 @@ export default function TalkToUsScreen() {
           <Text style={styles.sectionTitle}>Select an issue</Text>
           <View style={styles.separator} />
 
-          <TouchableOpacity style={styles.issueItem} onPress={() => navigation.navigate('EmailUs')}>
+          <TouchableOpacity
+            style={styles.issueItem}
+            onPress={() => navigation.navigate("EmailUs")}
+          >
             <View style={styles.iconContainer}>
               <Feather name="mail" size={20} color={Colors.textPrimary} />
             </View>
@@ -140,7 +155,10 @@ export default function TalkToUsScreen() {
           </TouchableOpacity>
           <View style={styles.separator} />
 
-          <TouchableOpacity style={styles.issueItem} onPress={() => navigation.navigate('ChatWithUs')}>
+          <TouchableOpacity
+            style={styles.issueItem}
+            onPress={() => navigation.navigate("ChatWithUs")}
+          >
             <View style={styles.iconContainer}>
               <Feather
                 name="message-circle"
@@ -160,7 +178,10 @@ export default function TalkToUsScreen() {
           </TouchableOpacity>
           <View style={styles.separator} />
 
-          <TouchableOpacity style={styles.issueItem} onPress={() => setBottomSheetVisible(true)}>
+          <TouchableOpacity
+            style={styles.issueItem}
+            onPress={() => setBottomSheetVisible(true)}
+          >
             <View style={styles.iconContainer}>
               <Feather name="smartphone" size={20} color={Colors.textPrimary} />
             </View>
@@ -179,26 +200,33 @@ export default function TalkToUsScreen() {
       </View>
 
       {/* Bottom Sheet */}
-      <View style={StyleSheet.absoluteFill} pointerEvents={isBottomSheetVisible ? "auto" : "none"}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
-          <TouchableOpacity 
-            style={styles.bottomSheetBackdrop} 
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={isBottomSheetVisible ? "auto" : "none"}
+      >
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}
+        >
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
             activeOpacity={1}
-            onPress={() => setBottomSheetVisible(false)} 
+            onPress={() => setBottomSheetVisible(false)}
           />
         </Animated.View>
-        <Animated.View style={[
-          styles.bottomSheetContainer, 
-          { 
-            position: "absolute", 
-            bottom: 0, 
-            width: "100%",
-            transform: [{ translateY: bottomSheetAnim }] 
-          }
-        ]}>
+        <Animated.View
+          style={[
+            styles.bottomSheetContainer,
+            {
+              position: "absolute",
+              bottom: 0,
+              width: "100%",
+              transform: [{ translateY: bottomSheetAnim }],
+            },
+          ]}
+        >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
+            <TouchableOpacity
+              style={styles.closeButton}
               onPress={() => setBottomSheetVisible(false)}
             >
               <AntDesign name="close" size={20} color="#0E0F0C" />
@@ -209,7 +237,7 @@ export default function TalkToUsScreen() {
             Reach us on our mobile or telephone lines.
           </Text>
           <View style={styles.bottomSheetDivider} />
-          
+
           <Button
             title="+233 55 123 4567"
             onPress={() => {
@@ -227,7 +255,7 @@ export default function TalkToUsScreen() {
             }}
             backgroundColor="#B7ED7E"
             textColor="#1E5128"
-            borderRadius={24}  
+            borderRadius={24}
           />
         </Animated.View>
       </View>

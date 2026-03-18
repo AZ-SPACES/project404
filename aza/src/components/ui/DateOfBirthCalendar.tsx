@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Calendar, DateData } from "react-native-calendars";
-import { Colors, Typography, Spacing, Radius } from "../theme";
+import { Colors, Typography, Spacing, Radius } from "../../theme";
 
 const NOOP_HEADER = () => null;
 

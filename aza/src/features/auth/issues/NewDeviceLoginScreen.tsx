@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Colors, Typography, Spacing } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../navigation/AppNavigator";
+import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NewDeviceLogin">
 
