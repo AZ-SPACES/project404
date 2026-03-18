@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
-const splashImage = require('../assets/aza-logo.png');
+const splashImage = require('../../assets/aza-logo.png');
 
 export default function AnimatedSplashScreen({ children }: { children: React.ReactNode }) {
   const [isAppReady, setAppReady] = useState(false);
@@ -69,11 +69,11 @@ export default function AnimatedSplashScreen({ children }: { children: React.Rea
       
       {isSplashVisible && (
         <Animated.View
+          pointerEvents="none"
           style={[
             styles.splashOverlay,
             {
               opacity: overlayOpacity,
-              pointerEvents: 'none', // Allow touches to pass through during animation
             },
           ]}
         >

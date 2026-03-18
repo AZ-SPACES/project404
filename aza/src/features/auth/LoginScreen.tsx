@@ -13,9 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/AppNavigator';
+import { RootStackParamList } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
-import Button from '../../components/Button';
+import Button from '../../components/ui/Button';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -125,8 +125,8 @@ const LoginScreen: React.FC = () => {
             textColor={Colors.secondary}
             borderRadius={Radius.md}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
           />
 
           <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.h1.fontSize,
-    fontWeight: Typography.h1.fontWeight as any,
+    fontWeight: Typography.h1.fontWeight,
     color: Colors.textPrimary,
     marginBottom: Spacing.lg,
   },

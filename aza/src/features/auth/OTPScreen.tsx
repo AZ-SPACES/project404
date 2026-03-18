@@ -9,13 +9,12 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  NativeSyntheticEvent,
-  TextInputKeyPressEventData,
+  TextInputKeyPressEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
-import Button from '../../components/Button';
+import Button from '../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OTPScreen: React.FC = () => {
@@ -30,6 +29,7 @@ const OTPScreen: React.FC = () => {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [timeLeft]);
 
   const handleOtpChange = (text: string, index: number) => {
@@ -62,7 +62,7 @@ const OTPScreen: React.FC = () => {
     }
   };
 
-  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>, index: number) => {
+  const handleKeyPress = (e: TextInputKeyPressEvent, index: number) => {
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
       const newOtp = [...otp];
@@ -117,7 +117,7 @@ const OTPScreen: React.FC = () => {
                   onChangeText={(text) => handleOtpChange(text, index)}
                   onKeyPress={(e) => handleKeyPress(e, index)}
                   keyboardType="number-pad"
-                  maxLength={6}
+                  maxLength={1}
                   autoFocus={index === 0}
                   cursorColor={Colors.primary}
                 />
