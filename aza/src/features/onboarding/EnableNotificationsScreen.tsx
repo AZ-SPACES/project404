@@ -10,8 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/AppNavigator';
-import Button from '../../components/Button';
+import type { RootStackParamList } from '../../navigation/types';
+import Button from '../../components/ui/Button';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;

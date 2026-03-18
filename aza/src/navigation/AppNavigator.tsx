@@ -1,62 +1,41 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import OnboardingScreen from '../features/onboarding/OnboardingScreen';
-import LoginScreen from '../features/auth/LoginScreen';
-import TroubleLoginScreen from '../features/auth/issues/TroubleLoginScreen';
-import OTPScreen from '../features/auth/OTPScreen';
-import ForgotPasswordScreen from '../features/auth/issues/ForgotPasswordScreen';
-import TwoStepVerificationIssueScreen from '../features/auth/issues/TwoStepVerificationIssueScreen';
-import ChangePhoneNumberScreen from '../features/auth/issues/ChangePhoneNumberScreen';
-import AccountDeactivatedScreen from '../features/auth/issues/AccountDeactivatedScreen';
-import NewDeviceLoginScreen from '../features/auth/issues/NewDeviceLoginScreen';
-import ResetPasswordScreen from '../features/auth/reset/ResetPasswordScreen';
-import SignUpNumberScreen from '../features/auth/signup/SignUpNumberScreen';
-import SignUpEmailScreen from '../features/auth/signup/SignUpEmailScreen';
-import SignUpPasswordScreen from '../features/auth/signup/SignUpPasswordScreen';
-import SignUpNameScreen from '../features/auth/signup/SignUpNameScreen';
-import SignUpAddressScreen from '../features/auth/signup/SignUpAddressScreen';
-import SignUpPronounsScreen from '../features/auth/signup/SignUpPronounsScreen';
-import SignUpEmploymentScreen from '../features/auth/signup/SignUpEmploymentScreen';
-import SignUpBirthdayScreen from '../features/auth/signup/SignUpBirthdayScreen';
-import ResetOTPScreen from '../features/auth/reset/ResetOTPScreen';
-import ReasonScreen from '../features/auth/issues/dactivatedaccount/ReasonScreen';
-import RefundScreen from '../features/auth/issues/dactivatedaccount/RefundScreen';
-import StatementScreen from '../features/auth/issues/dactivatedaccount/StatementScreen';
-import TalkToUsScreen from '../features/customercare/TalkToUsScreen';
-import EmailUsScreen from '../features/customercare/EmailUsScreen';
-import ChatWithUsScreen from '../features/customercare/ChatWithUsScreen';
-import EnableNotificationsScreen from '../features/onboarding/EnableNotificationsScreen';
-import EnableBiometricsScreen from '../features/auth/EnableBiometricsScreen';
+import { 
+  OnboardingScreen, 
+  EnableNotificationsScreen 
+} from '../features/onboarding';
+import { 
+  LoginScreen, 
+  OTPScreen, 
+  EnableBiometricsScreen,
+  TroubleLoginScreen,
+  ForgotPasswordScreen,
+  TwoStepVerificationIssueScreen,
+  ChangePhoneNumberScreen,
+  AccountDeactivatedScreen,
+  NewDeviceLoginScreen,
+  ResetPasswordScreen,
+  ResetOTPScreen,
+  SignUpNumberScreen,
+  SignUpEmailScreen,
+  SignUpPasswordScreen,
+  SignUpNameScreen,
+  SignUpAddressScreen,
+  SignUpPronounsScreen,
+  SignUpEmploymentScreen,
+  SignUpBirthdayScreen,
+  ReasonScreen,
+  RefundScreen,
+  StatementScreen
+} from '../features/auth';
+import { 
+  TalkToUsScreen, 
+  EmailUsScreen, 
+  ChatWithUsScreen 
+} from '../features/customercare';
 
-export type RootStackParamList = {
-  Onboarding: undefined;
-  Login: undefined;
-  TroubleLogin: undefined;
-  OTP: undefined;
-  ForgotPassword: undefined;
-  TwoStepVerificationIssue: undefined;
-  ChangePhoneNumber: undefined;
-  AccountDeactivated: undefined;
-  NewDeviceLogin: undefined;
-  ResetPassword: undefined;
-  ResetOTP: undefined;
-  SignUpNumber: undefined;
-  SignUpEmail: undefined;
-  SignUpPassword: undefined;
-  SignUpName: undefined;
-  SignUpAddress: undefined;
-  SignUpPronouns: undefined;
-  SignUpEmployment: undefined;
-  SignUpBirthday: undefined;
-  Reason: undefined;
-  Refund: undefined;
-  Statement: undefined;
-  TalkToUs: undefined;
-  EmailUs: undefined;
-  ChatWithUs: undefined;
-  EnableNotification: undefined;
-  EnableBiometrics: undefined;
-};
+import { RootStackParamList } from './types';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

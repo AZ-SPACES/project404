@@ -9,13 +9,13 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { AntDesign } from '@expo/vector-icons';
-import Button from "../../components/Button";
+import Button from "../../components/ui/Button";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/AppNavigator';
+import type { RootStackParamList } from '../../navigation/types';
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -146,6 +146,7 @@ export default function OnboardingScreen() {
   };
 
   const currentSlide = slides[activeSlide];
+  if (!currentSlide) return null;
 
   return (
     <Animated.View

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../../navigation/AppNavigator';
+import { RootStackParamList } from '../../../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../../../theme';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
