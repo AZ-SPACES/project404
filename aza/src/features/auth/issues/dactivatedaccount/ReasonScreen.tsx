@@ -10,13 +10,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Colors, Typography, Spacing } from "../../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Button from "../../../../components/Button";
+import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../../navigation/AppNavigator";
+import { RootStackParamList } from "../../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Reason'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Reason">;
 export default function Reason() {
- const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -85,49 +85,58 @@ export default function Reason() {
           If we've deactivated your account, you can make an appeal.
         </Text>
 
-        <Text style={[styles.paragraph,styles.bold]}>
+        <Text style={[styles.paragraph, styles.bold]}>
           How to start the appeal process:
         </Text>
 
         <Text style={styles.paragraph}>
-          Even if we deactivated your account, you will still need to use your login details to access the appeals flow.
+          Even if we deactivated your account, you will still need to use your
+          login details to access the appeals flow.
         </Text>
 
         <Text style={styles.paragraph}>
-          You click the button below. When you try to log in, you will see a message stating "Sorry, we deactivated your account."
+          You click the button below. When you try to log in, you will see a
+          message stating "Sorry, we deactivated your account."
         </Text>
 
         <Text style={styles.paragraph}>
-          Click on "Appeal our decision" so this link can guide you through the appeal process.
+          Click on "Appeal our decision" so this link can guide you through the
+          appeal process.
         </Text>
 
         <Text style={styles.paragraph}>
-          After you've appealed, we'll review your appeal thoroughly and contact you about your account.
+          After you've appealed, we'll review your appeal thoroughly and contact
+          you about your account.
         </Text>
 
         <Text style={styles.paragraph}>
-          Once you've submitted your appeal, our team will be in touch. It could take up to 30 days for the team to reevaluate the decision. This is the
-          only way to have your account reevaluated.
+          Once you've submitted your appeal, our team will be in touch. It could
+          take up to 30 days for the team to reevaluate the decision. This is
+          the only way to have your account reevaluated.
         </Text>
 
-        <Text style={[styles.paragraph,styles.bold]}>
-          Bear in mind Customer Support doesn't have the ability to provide updates or speed up this process for you.
+        <Text style={[styles.paragraph, styles.bold]}>
+          Bear in mind Customer Support doesn't have the ability to provide
+          updates or speed up this process for you.
         </Text>
 
         <View style={styles.buttonContainer}>
           <Button
-          title="Submit an appeal"
-          onPress={() => console.log("awaitng")}
-          backgroundColor={Colors.primary}
-          textColor={Colors.secondary}
-          borderRadius={30}
-          paddingVertical={16}
-          fontSize={Number(Typography.button.fontSize)}
-          fontWeight={Typography.button.fontWeight as any} 
+            title="Submit an appeal"
+            onPress={() => console.log("awaitng")}
+            backgroundColor={Colors.primary}
+            textColor={Colors.secondary}
+            borderRadius={30}
+            paddingVertical={16}
+            fontSize={Number(Typography.button.fontSize)}
+            fontWeight={Typography.button.fontWeight as any}
           />
         </View>
 
-        <TouchableOpacity style={styles.helpButton} onPressOut={() => navigation.navigate('TalkToUs')}>
+        <TouchableOpacity
+          style={styles.helpButton}
+          onPressOut={() => navigation.navigate("TalkToUs")}
+        >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
       </Animated.ScrollView>
