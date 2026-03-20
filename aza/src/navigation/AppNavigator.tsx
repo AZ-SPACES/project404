@@ -2,12 +2,12 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { 
   OnboardingScreen, 
-  EnableNotificationsScreen 
+  EnableNotificationsScreen,
+  EnableBiometricsScreen
 } from '../features/onboarding';
 import { 
   LoginScreen, 
   OTPScreen, 
-  EnableBiometricsScreen,
   TroubleLoginScreen,
   ForgotPasswordScreen,
   TwoStepVerificationIssueScreen,
@@ -29,6 +29,13 @@ import {
   StatementScreen
 } from '../features/auth';
 import { 
+  VerifyIdentityScreen,
+  SourceofFundsScreen,
+  IdtypeScreen,
+  VerifyFaceIdScreen,
+  ScanIdScreen,
+ } from '../features/kyc';
+import { 
   TalkToUsScreen, 
   EmailUsScreen, 
   ChatWithUsScreen 
@@ -42,7 +49,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Onboarding"
+      initialRouteName="ScanId"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -64,6 +71,11 @@ export default function AppNavigator() {
       <Stack.Screen name="SignUpPronouns" component={SignUpPronounsScreen} />
       <Stack.Screen name="SignUpEmployment" component={SignUpEmploymentScreen} />
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
+      <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
+      <Stack.Screen name="SourceofFund" component={SourceofFundsScreen} />
+      <Stack.Screen name='Idtype' component={IdtypeScreen} />
+      <Stack.Screen name="VerifyFaceId" component={VerifyFaceIdScreen} />
+      <Stack.Screen name="ScanId" component={ScanIdScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

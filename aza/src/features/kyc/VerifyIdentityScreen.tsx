@@ -1,28 +1,25 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  Image,
   Animated,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Colors, Typography, Spacing } from "../../theme";
+import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing } from "../../../theme";
-import Button from "../../../components/ui/Button";
-import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
+import { RootStackParamList } from "../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function SignUpBirthdayScreen() {
+export default function VerifyIdentityScreen() {
   const navigation = useNavigation<NavigationProp>();
-
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -37,27 +34,10 @@ export default function SignUpBirthdayScreen() {
     extrapolate: "clamp",
   });
 
-  // ── Stable callbacks ───────────────────────────────────────────────────────
+  const handleNext = () => {
+    navigation.navigate('SourceofFund');
+  };
 
-  const handleDateSelect = useCallback((dateString: string) => {
-    setSelectedDate(dateString);
-  }, []);
-
-  const handleMonthChange = useCallback((dateString: string) => {
-    setCurrentMonth(dateString);
-  }, []);
-
-  const handleNext = useCallback(() => {
-    console.log("Birthday complete!");
-    navigation.navigate('EnableNotification')
-  }, []);
-
-  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
-
-  // Derived — avoids inline expression in JSX causing Button re-renders
-  const isDisabled = useMemo(() => !selectedDate, [selectedDate]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -73,7 +53,10 @@ export default function SignUpBirthdayScreen() {
             },
           ]}
         >
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <MaterialIcons
               name="chevron-left"
               size={28}
@@ -84,7 +67,7 @@ export default function SignUpBirthdayScreen() {
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Date of birth
+              Verify your identity
             </Text>
           </Animated.View>
         </Animated.View>
@@ -92,30 +75,42 @@ export default function SignUpBirthdayScreen() {
         {/* Content */}
         <Animated.ScrollView
           style={styles.content}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContentContainer}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: false },
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>When were you born?</Text>
+          <Text style={styles.title}>Verify your identity</Text>
           <Text style={styles.subtitle}>
-            We may surprise you with a birthday gift.
+            As your financial partner, we are required to verify if it's really
+            you.
           </Text>
 
-          {/* Reusable calendar component */}
-          <DateOfBirthCalendar
-            selectedDate={selectedDate}
-            onDateSelect={handleDateSelect}
-            currentMonth={currentMonth}
-            onMonthChange={handleMonthChange}
-          />
+          {/* Centered Image */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={require("../../assets/encryption.png")}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </View>
         </Animated.ScrollView>
 
         {/* Footer */}
-        <View style={styles.buttonContainer}>
+        <View style={styles.footer}>
+          <View style={styles.securityNoteContainer}>
+            <MaterialIcons
+              name="lock-outline"
+              size={20}
+              color={Colors.textPrimary}
+            />
+            <Text style={styles.securityNoteText}>
+              Your identity is safe with us.
+            </Text>
+          </View>
           <Button
             title="Continue"
             onPress={handleNext}
@@ -125,7 +120,6 @@ export default function SignUpBirthdayScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={isDisabled}
           />
         </View>
       </View>
@@ -166,33 +160,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  skipText: {
-    fontSize: Typography.body.fontSize,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
   content: {
     flex: 1,
-  },
-  scrollContentContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
   },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
     lineHeight: 20,
-    marginBottom: Spacing.xl,
   },
-  buttonContainer: {
+  imageContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  image: {
+    width: "80%",
+    height: "80%",
+  },
+  footer: {
     paddingHorizontal: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
+    paddingVertical: Spacing.lg
+  },
+  securityNoteContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.lg,
+  },
+  securityNoteText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: Spacing.sm,
   },
 });

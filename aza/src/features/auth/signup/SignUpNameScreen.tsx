@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -25,6 +26,19 @@ export default function SignUpNameScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const headerBorderOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   const handleNext = () => {
     // Navigate to the next screen in the signup flow
@@ -42,7 +56,17 @@ export default function SignUpNameScreen() {
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: headerBorderOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["transparent", Colors.border],
+                }),
+              },
+            ]}
+          >
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
@@ -53,13 +77,25 @@ export default function SignUpNameScreen() {
                 color={Colors.textPrimary}
               />
             </TouchableOpacity>
-          </View>
+            <Animated.View
+              style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+            >
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                What's your name?
+              </Text>
+            </Animated.View>
+          </Animated.View>
 
           {/* Content */}
-          <ScrollView
+          <Animated.ScrollView
             style={styles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: false },
+            )}
+            scrollEventThrottle={16}
           >
             <Text style={styles.title}>What's your name?</Text>
             <Text style={styles.subtitle}>
@@ -102,7 +138,7 @@ export default function SignUpNameScreen() {
                 autoCapitalize="words"
               />
             </View>
-          </ScrollView>
+          </Animated.ScrollView>
 
           {/* Footer */}
           <View style={styles.buttonContainer}>
@@ -133,9 +169,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: "center",
+    marginRight: 44,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.textPrimary,
   },
   backButton: {
     width: 44,

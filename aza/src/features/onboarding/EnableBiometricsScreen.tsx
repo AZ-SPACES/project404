@@ -28,11 +28,11 @@ export default function EnableBiometricsScreen() {
     console.log('Set up biometrics');
     alert('Set up biometrics');
     // For now, let's just go back or to the next screen
-    navigation.goBack();
+    navigation.navigate('VerifyIdentity');
   };
 
   const handleNotNow = () => {
-    navigation.goBack();
+    navigation.navigate('VerifyIdentity');
   };
 
   return (
