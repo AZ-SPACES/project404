@@ -14,36 +14,16 @@ import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
-type SourceofFundRouteProp = RouteProp<RootStackParamList, "SourceofFund">;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type SourceOptions =
-  | "Salary/Employment Income"
-  | "Business Profits"
-  | "Personal Savings"
-  | "Inheritance or Gifts"
-  | "Sale of Assets"
-  | "Investment Dividends"
-  | "Pension / Retirement Distributions";
+type PEPOptions = "Yes, I am" | "No, I am not";
 
-const SOURCE_OPTIONS: SourceOptions[] = [
-  "Salary/Employment Income",
-  "Business Profits",
-  "Personal Savings",
-  "Inheritance or Gifts",
-  "Sale of Assets",
-  "Investment Dividends",
-  "Pension / Retirement Distributions"
-];
+const PEP_OPTIONS: PEPOptions[] = ["No, I am not", "Yes, I am"];
 
-export default function SourceofFundsScreen() {
+export default function PEPStatusScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<SourceofFundRouteProp>();
-  const { isPEP } = route.params || {};
-  const [selectedEmployment, setSelectedEmployment] =
-    useState<SourceOptions | null>(null);
+  const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -59,23 +39,27 @@ export default function SourceofFundsScreen() {
   });
 
   const handleNext = () => {
-    navigation.navigate('Idtype', { isPEP: isPEP as boolean })
+    if (selectedOption === "Yes, I am") {
+      navigation.navigate("PEPDetails");
+    } else {
+      navigation.navigate("VerifyIdentity", { isPEP: false });
+    }
   };
 
-  const renderOption = (label: SourceOptions) => (
+  const renderOption = (label: PEPOptions) => (
     <TouchableOpacity
       key={label}
       style={[
         styles.optionItem,
-        selectedEmployment === label && styles.optionItemSelected,
+        selectedOption === label && styles.optionItemSelected,
       ]}
-      onPress={() => setSelectedEmployment(label)}
+      onPress={() => setSelectedOption(label)}
       activeOpacity={0.7}
     >
       <Text
         style={[
           styles.optionLabel,
-          selectedEmployment === label && styles.optionLabelSelected,
+          selectedOption === label && styles.optionLabelSelected,
         ]}
       >
         {label}
@@ -112,7 +96,7 @@ export default function SourceofFundsScreen() {
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Source of Funds
+              PEP Status
             </Text>
           </Animated.View>
         </Animated.View>
@@ -128,13 +112,13 @@ export default function SourceofFundsScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>Source of Funds</Text>
-          <Text style={styles.subtitle}>To keep your account secure and comply with Bank of Ghana regulations, please select the primary source of your funds.</Text>
-
-          <Text style={styles.label}>Employment</Text>
+          <Text style={styles.title}>Are you a Politically Exposed Person (PEP)?</Text>
+          <Text style={styles.subtitle}>
+            A Politically Exposed Person (PEP) is an individual who is or has been entrusted with a prominent public function, such as a senior politician, a senior government, judicial or military official, a senior executive of a state-owned corporation, or an important political party official, as well as their family members and close associates.
+          </Text>
 
           <View style={styles.optionsContainer}>
-            {SOURCE_OPTIONS.map(renderOption)}
+            {PEP_OPTIONS.map(renderOption)}
           </View>
         </Animated.ScrollView>
 
@@ -149,7 +133,7 @@ export default function SourceofFundsScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={selectedEmployment === null}
+            disabled={selectedOption === null}
           />
         </View>
       </View>
@@ -203,20 +187,13 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: -0.5,
-    lineHeight: 32,
+    lineHeight: 38,
   },
   subtitle:{
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 24,
     marginBottom: Spacing.xl,
-  },
-  label: {
-    fontSize: Typography.bodyLg.fontSize,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-    marginTop: Spacing.sm,
   },
   optionsContainer: {
     gap: Spacing.sm,

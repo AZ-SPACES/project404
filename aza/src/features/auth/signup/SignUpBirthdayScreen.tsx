@@ -49,7 +49,7 @@ export default function SignUpBirthdayScreen() {
 
   const handleNext = useCallback(() => {
     console.log("Birthday complete!");
-    navigation.navigate('EnableNotification')
+    navigation.navigate('CreatePasscode')
   }, []);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);

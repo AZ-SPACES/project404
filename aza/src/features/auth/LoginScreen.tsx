@@ -84,7 +84,11 @@ const LoginScreen: React.FC = () => {
             />
           </View>
 
-          <TouchableOpacity onPress={toggleInputMode} style={styles.toggleRow}>
+          <TouchableOpacity 
+            onPress={toggleInputMode} 
+            style={styles.toggleRow}
+            activeOpacity={0.7}
+          >
             <Text style={styles.toggleText}>
               {useEmail ? 'Use phone instead' : 'Use email instead'}
             </Text>
@@ -206,8 +210,11 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   toggleRow: {
-    alignItems: 'flex-end',
-    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    alignSelf: 'flex-end',
+    marginTop: Spacing.xs,
+    marginRight: -Spacing.sm,
   },
   toggleText: {
     fontSize: Typography.body.fontSize,

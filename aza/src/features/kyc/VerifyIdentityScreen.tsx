@@ -15,11 +15,15 @@ import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
+import { RouteProp, useRoute } from "@react-navigation/native";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type VerifyIdentityRouteProp = RouteProp<RootStackParamList, "VerifyIdentity">;
 
 export default function VerifyIdentityScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<VerifyIdentityRouteProp>();
+  const { isPEP } = route.params || {};
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -35,7 +39,7 @@ export default function VerifyIdentityScreen() {
   });
 
   const handleNext = () => {
-    navigation.navigate('SourceofFund');
+    navigation.navigate('SourceofFund', { isPEP: !!isPEP });
   };
 
   return (

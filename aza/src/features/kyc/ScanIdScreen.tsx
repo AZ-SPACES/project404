@@ -17,8 +17,10 @@ import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ScanId'>;
+type ScanIdRouteProp = RouteProp<RootStackParamList, "ScanId">;
 
 const { width, height } = Dimensions.get("window");
 const FRAME_WIDTH = width * 0.85;
@@ -26,6 +28,8 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 
 export default function ScanIdScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<ScanIdRouteProp>();
+  const { isPEP } = route.params || {};
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -114,7 +118,7 @@ export default function ScanIdScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
-    navigation.navigate("ScanIdBack");
+    navigation.navigate("ScanIdBack", { isPEP: !!isPEP });
   };
 
   if (!permission) {
