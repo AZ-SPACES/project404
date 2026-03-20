@@ -18,6 +18,11 @@ export type RootStackParamList = {
   SignUpPronouns: undefined;
   SignUpEmployment: undefined;
   SignUpBirthday: undefined;
+  VerifyIdentity: undefined;
+  SourceofFund: undefined;
+  Idtype: undefined;
+  VerifyFaceId: undefined;
+  ScanId: undefined;
   Reason: undefined;
   Refund: undefined;
   Statement: undefined;
