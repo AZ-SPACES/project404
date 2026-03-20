@@ -11,15 +11,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { RootStackParamList } from "../../navigation/types";
+import { RouteProp, useRoute } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VerifyFaceId'>;
+type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
 
 export default function VerifyFaceIdScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<VerifyFaceIdRouteProp>();
+  const { isPEP } = route.params || {};
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -35,7 +39,7 @@ export default function VerifyFaceIdScreen() {
   });
 
   const handleNext = () => {
-    navigation.navigate("ScanId");
+    navigation.navigate("ScanId", { isPEP: !!isPEP });
   };
 
   return (

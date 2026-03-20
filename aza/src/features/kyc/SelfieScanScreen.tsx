@@ -17,8 +17,10 @@ import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelfieScan'>;
+type SelfieScanRouteProp = RouteProp<RootStackParamList, "SelfieScan">;
 
 const { width, height } = Dimensions.get("window");
 // Oval frame: portrait-oriented, roughly face-shaped
@@ -29,6 +31,8 @@ type FeedbackState = "Center your face" | "Move closer" | "Hold still" | "Proces
 
 export default function SelfieScanScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<SelfieScanRouteProp>();
+  const { isPEP } = route.params || {};
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -100,8 +104,11 @@ export default function SelfieScanScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
-    // TODO: navigate to the next step in the KYC flow (e.g. success / review screen)
-    //navigation.navigate("VerifyIdentity");
+    if (isPEP) {
+      navigation.navigate("PEPUnderReview");
+    } else {
+      navigation.navigate("KYCSuccess");
+    }
   };
 
   if (!permission) {

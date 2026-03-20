@@ -21,8 +21,10 @@ import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
+import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Idtype'>;
+type IdtypeRouteProp = RouteProp<RootStackParamList, "Idtype">;
 
 // Defined ID Types
 const ID_OPTIONS = [
@@ -34,6 +36,8 @@ const ID_OPTIONS = [
 
 export default function IdtypeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<IdtypeRouteProp>();
+  const { isPEP } = route.params || {};
   const [documentType, setDocumentType] = useState<{
     label: string;
     value: string;
@@ -58,7 +62,7 @@ export default function IdtypeScreen() {
   });
 
   const handleNext = () => {
-    navigation.navigate("VerifyFaceId");
+    navigation.navigate("VerifyFaceId", { isPEP: isPEP as boolean });
   };
 
   const handleDocumentSelect = (item: typeof ID_OPTIONS[0]) => {

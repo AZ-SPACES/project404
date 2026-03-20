@@ -14,36 +14,39 @@ import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
-type SourceofFundRouteProp = RouteProp<RootStackParamList, "SourceofFund">;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type SourceOptions =
-  | "Salary/Employment Income"
-  | "Business Profits"
-  | "Personal Savings"
-  | "Inheritance or Gifts"
-  | "Sale of Assets"
-  | "Investment Dividends"
-  | "Pension / Retirement Distributions";
+type PurposeOption = 
+  | "Day-to-day spending" 
+  | "Savings & Investments" 
+  | "Business transactions" 
+  | "Salary receiving";
 
-const SOURCE_OPTIONS: SourceOptions[] = [
-  "Salary/Employment Income",
-  "Business Profits",
-  "Personal Savings",
-  "Inheritance or Gifts",
-  "Sale of Assets",
-  "Investment Dividends",
-  "Pension / Retirement Distributions"
+type VolumeOption = 
+  | "Less than GH₵ 10,000" 
+  | "GH₵ 10,000 - 50,000" 
+  | "GH₵ 50,000 - 100,000"
+  | "More than GH₵ 100,000";
+
+const PURPOSE_OPTIONS: PurposeOption[] = [
+  "Day-to-day spending", 
+  "Savings & Investments", 
+  "Business transactions", 
+  "Salary receiving"
 ];
 
-export default function SourceofFundsScreen() {
+const VOLUME_OPTIONS: VolumeOption[] = [
+  "Less than GH₵ 10,000", 
+  "GH₵ 10,000 - 50,000", 
+  "GH₵ 50,000 - 100,000",
+  "More than GH₵ 100,000"
+];
+
+export default function PEPAccountPurposeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<SourceofFundRouteProp>();
-  const { isPEP } = route.params || {};
-  const [selectedEmployment, setSelectedEmployment] =
-    useState<SourceOptions | null>(null);
+  const [purpose, setPurpose] = useState<PurposeOption | null>(null);
+  const [volume, setVolume] = useState<VolumeOption | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -58,24 +61,48 @@ export default function SourceofFundsScreen() {
     extrapolate: "clamp",
   });
 
+  const isFormValid = purpose !== null && volume !== null;
+
   const handleNext = () => {
-    navigation.navigate('Idtype', { isPEP: isPEP as boolean })
+    // Proceed to Document Upload for PEP EDD
+    navigation.navigate("PEPProofOfWealth");
   };
 
-  const renderOption = (label: SourceOptions) => (
+  const renderPurposeOption = (label: PurposeOption) => (
     <TouchableOpacity
       key={label}
       style={[
         styles.optionItem,
-        selectedEmployment === label && styles.optionItemSelected,
+        purpose === label && styles.optionItemSelected,
       ]}
-      onPress={() => setSelectedEmployment(label)}
+      onPress={() => setPurpose(label)}
       activeOpacity={0.7}
     >
       <Text
         style={[
           styles.optionLabel,
-          selectedEmployment === label && styles.optionLabelSelected,
+          purpose === label && styles.optionLabelSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderVolumeOption = (label: VolumeOption) => (
+    <TouchableOpacity
+      key={label}
+      style={[
+        styles.optionItem,
+        volume === label && styles.optionItemSelected,
+      ]}
+      onPress={() => setVolume(label)}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.optionLabel,
+          volume === label && styles.optionLabelSelected,
         ]}
       >
         {label}
@@ -112,7 +139,7 @@ export default function SourceofFundsScreen() {
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Source of Funds
+              Account Purpose
             </Text>
           </Animated.View>
         </Animated.View>
@@ -128,13 +155,23 @@ export default function SourceofFundsScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>Source of Funds</Text>
-          <Text style={styles.subtitle}>To keep your account secure and comply with Bank of Ghana regulations, please select the primary source of your funds.</Text>
+          <Text style={styles.title}>Account Usage</Text>
+          <Text style={styles.subtitle}>
+            Please provide details on how you intend to use this account to help us optimize your limits and secure your profile.
+          </Text>
 
-          <Text style={styles.label}>Employment</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Primary Purpose of Account</Text>
+            <View style={styles.optionsContainer}>
+              {PURPOSE_OPTIONS.map(renderPurposeOption)}
+            </View>
+          </View>
 
-          <View style={styles.optionsContainer}>
-            {SOURCE_OPTIONS.map(renderOption)}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Expected Monthly Volume</Text>
+            <View style={styles.optionsContainer}>
+              {VOLUME_OPTIONS.map(renderVolumeOption)}
+            </View>
           </View>
         </Animated.ScrollView>
 
@@ -149,7 +186,7 @@ export default function SourceofFundsScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={selectedEmployment === null}
+            disabled={!isFormValid}
           />
         </View>
       </View>
@@ -203,20 +240,22 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: -0.5,
-    lineHeight: 32,
+    lineHeight: 38,
   },
-  subtitle:{
+  subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: Spacing.lg,
+  },
+  section: {
     marginBottom: Spacing.xl,
   },
-  label: {
+  sectionTitle: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-    marginTop: Spacing.sm,
   },
   optionsContainer: {
     gap: Spacing.sm,

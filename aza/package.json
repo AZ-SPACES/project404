@@ -29,6 +29,8 @@
     "@yesdevs/react-native-perspective-image-cropper": "^0.6.2",
     "expo": "~55.0.6",
     "expo-camera": "~55.0.10",
+    "expo-document-picker": "~55.0.9",
+    "expo-haptics": "~55.0.9",
     "expo-image-manipulator": "~55.0.11",
     "expo-image-picker": "~55.0.12",
     "expo-splash-screen": "~55.0.10",

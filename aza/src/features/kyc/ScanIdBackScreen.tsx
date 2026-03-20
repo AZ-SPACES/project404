@@ -10,7 +10,7 @@ import {
   Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -18,7 +18,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ScanIdBack'>;
+type ScanIdBackRouteProp = RouteProp<RootStackParamList, "ScanIdBack">;
 
 const { width, height } = Dimensions.get("window");
 const FRAME_WIDTH = width * 0.85;
@@ -26,6 +27,8 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 
 export default function ScanIdBackScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<ScanIdBackRouteProp>();
+  const { isPEP } = route.params || {};
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -114,7 +117,7 @@ export default function ScanIdBackScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
-    navigation.navigate("SelfieScan");
+    navigation.navigate("SelfieScan", { isPEP: !!isPEP });
   };
 
   if (!permission) {

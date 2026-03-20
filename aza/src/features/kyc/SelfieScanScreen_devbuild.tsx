@@ -130,7 +130,7 @@ export default function SelfieScanScreen_devbuild() {
   const handleLooksGood = () => {
     setIsModalVisible(false);
     // TODO: navigate to the next step in the KYC flow
-    navigation.navigate("VerifyIdentity");
+    navigation.navigate("PEPStatus");
   };
 
   if (!hasPermission || device == null) {
