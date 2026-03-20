@@ -26,12 +26,12 @@ export default function EnableBiometricsScreen() {
   const handleSetup = () => {
     // Logic to Set up biometrics
     console.log('Set up biometrics');
-    // Proceed to identity verification check after biometric setup
-    navigation.navigate('VerifyIdentity', { isPEP: false });
+    // Proceed to PEP Status check after biometric setup
+    navigation.navigate('PEPStatus');
   };
 
   const handleNotNow = () => {
-    navigation.navigate('VerifyIdentity', { isPEP: false });
+    navigation.navigate('PEPStatus');
   };
 
   return (
