@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   cornerActive: {
-    borderColor: '#4ade80', // green color when 'Hold Still'
+    borderColor: Colors.secondary,
   },
   topLeft: {
     top: 0,
@@ -365,15 +365,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: 4,
-    backgroundColor: '#3b82f6',
-    shadowColor: '#3b82f6',
+    backgroundColor: Colors.secondary,
+    shadowColor: Colors.secondary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 5,
   },
   feedbackContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
