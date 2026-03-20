@@ -21,7 +21,6 @@ import { RootStackParamList } from "../../navigation/types";
 import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor } from "react-native-vision-camera";
 import { runOnJS } from "react-native-reanimated";
 import { scanOCR } from 'vision-camera-ocr';
-import Cropper from '@yesdevs/react-native-perspective-image-cropper';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,7 +28,7 @@ const { width, height } = Dimensions.get("window");
 const FRAME_WIDTH = width * 0.85;
 const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 
-export default function ScanIdScreen_devbuild() {
+export default function ScanIdBackScreen_devbuild() {
   const navigation = useNavigation<NavigationProp>();
   // react-native-vision-camera hook
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -75,7 +74,6 @@ export default function ScanIdScreen_devbuild() {
   }, [capturedImage, hasPermission, device]);
 
   // Actual Frame Processor (executes on Worklet Thread) 
-  // IMPORTANT: For true native edge detection, replace with the implementation of your chosen module.
   const frameProcessor = useFrameProcessor((frame: any) => {
     'worklet';
     
@@ -112,11 +110,6 @@ export default function ScanIdScreen_devbuild() {
       if (cameraRef.current) {
         setFeedback("Processing...");
         const photo = await cameraRef.current.takePhoto();
-        
-        // Example Unwarp Logic:
-        // const unwarped = await Cropper.crop(photo.path, detectedPoints);
-        // setCapturedImage(`file://${unwarped}`);
-
         setCapturedImage(`file://${photo.path}`);
         setIsModalVisible(true);
       }
@@ -137,7 +130,7 @@ export default function ScanIdScreen_devbuild() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
-    navigation.navigate("ScanIdBack");
+    navigation.navigate("SelfieScan");
   };
 
   if (!hasPermission || device == null) {
@@ -187,9 +180,9 @@ export default function ScanIdScreen_devbuild() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
-              <Text style={styles.headerTitle}>Front of your ID</Text>
+              <Text style={styles.headerTitle}>Back of your ID</Text>
               <Text style={styles.subtitle}>
-                Hold up your ID and take a picture. Your entire ID must be in the
+                Hold up the back of your ID and take a picture. Your entire ID must be in the
                 frame.
               </Text>
             </View>

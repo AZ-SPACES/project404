@@ -34,6 +34,8 @@ import {
   IdtypeScreen,
   VerifyFaceIdScreen,
   ScanIdScreen,
+  ScanIdBackScreen,
+  SelfieScanScreen,
  } from '../features/kyc';
 import { 
   TalkToUsScreen, 
@@ -76,6 +78,8 @@ export default function AppNavigator() {
       <Stack.Screen name='Idtype' component={IdtypeScreen} />
       <Stack.Screen name="VerifyFaceId" component={VerifyFaceIdScreen} />
       <Stack.Screen name="ScanId" component={ScanIdScreen} />
+      <Stack.Screen name="ScanIdBack" component={ScanIdBackScreen} />
+      <Stack.Screen name="SelfieScan" component={SelfieScanScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

@@ -21,72 +21,58 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width, height } = Dimensions.get("window");
-const FRAME_WIDTH = width * 0.85;
-const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
+// Oval frame: portrait-oriented, roughly face-shaped
+const OVAL_WIDTH = width * 0.7;
+const OVAL_HEIGHT = OVAL_WIDTH * 1.3;
 
-export default function ScanIdScreen() {
+type FeedbackState = "Center your face" | "Move closer" | "Hold still" | "Processing...";
+
+export default function SelfieScanScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [permission, requestPermission] = useCameraPermissions();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [feedback, setFeedback] = useState("Move Closer");
-  
+  const [feedback, setFeedback] = useState<FeedbackState>("Center your face");
+
   const cameraRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
-  
-  const scanLineAnim = useRef(new Animated.Value(0)).current;
 
-  // Camera permissions
+  // Pulse animation on the oval border while scanning
+  const pulseAnim = useRef(new Animated.Value(0.85)).current;
+
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
       requestPermission();
     }
   }, [permission]);
 
-  // Scanning Animation
+  // Oval pulse while scanning
   useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.85, duration: 900, useNativeDriver: true }),
+      ])
+    );
     if (!capturedImage && permission?.granted) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scanLineAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scanLineAnim, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else {
-      scanLineAnim.stopAnimation();
+      loop.start();
     }
+    return () => loop.stop();
   }, [capturedImage, permission?.granted]);
 
-  // Simulated Liveness and Edge Detection logic for Expo Go
+  // Simulated liveness progression (Expo Go mock)
   useEffect(() => {
-    let timeout1: NodeJS.Timeout;
-    let timeout2: NodeJS.Timeout;
-    let autoCaptureTimeout: NodeJS.Timeout;
+    if (capturedImage || !permission?.granted) return;
 
-    if (!capturedImage && permission?.granted) {
-      // Mock progression of detecting an ID
-      setFeedback("Move Closer");
-      timeout1 = setTimeout(() => setFeedback("Align ID"), 1500);
-      timeout2 = setTimeout(() => setFeedback("Hold Still"), 3000);
-      
-      // Auto-capture after 1.5s liveness timer (total 4.5s)
-      autoCaptureTimeout = setTimeout(() => {
-        handleCapture();
-      }, 4500);
-    }
+    setFeedback("Center your face");
+    const t1 = setTimeout(() => setFeedback("Move closer"), 1500);
+    const t2 = setTimeout(() => setFeedback("Hold still"), 3000);
+    const tCapture = setTimeout(() => handleCapture(), 4500);
 
     return () => {
-      clearTimeout(timeout1);
-      clearTimeout(timeout2);
-      clearTimeout(autoCaptureTimeout);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(tCapture);
     };
   }, [capturedImage, permission?.granted]);
 
@@ -101,7 +87,7 @@ export default function ScanIdScreen() {
         }
       }
     } catch (e) {
-      console.log("Camera capture failed", e);
+      console.log("Selfie capture failed", e);
       setCapturedImage("placeholder");
       setIsModalVisible(true);
     }
@@ -114,34 +100,75 @@ export default function ScanIdScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
-    navigation.navigate("ScanIdBack");
+    // TODO: navigate to the next step in the KYC flow (e.g. success / review screen)
+    //navigation.navigate("VerifyIdentity");
   };
 
   if (!permission) {
     return <View style={styles.container} />;
   }
 
-  // Interpolate scanning line position
-  const translateY = scanLineAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, FRAME_HEIGHT - 4]
-  });
+  const ovalBorderColor = feedback === "Hold still"
+    ? Colors.secondary   // green-ish when face is locked
+    : "rgba(255,255,255,0.6)";
 
   return (
     <View style={styles.container}>
+      {/* Camera / Captured preview */}
       {capturedImage && capturedImage !== "placeholder" ? (
-        <Image style={styles.fullScreen} source={{ uri: capturedImage }} resizeMode="cover" />
+        <Image
+          style={[styles.fullScreen, { transform: [{ scaleX: -1 }] }]}
+          source={{ uri: capturedImage }}
+          resizeMode="cover"
+        />
       ) : permission.granted ? (
-        <CameraView style={styles.fullScreen} facing="back" ref={cameraRef} />
+        <CameraView
+          style={styles.fullScreen}
+          facing="front"
+          ref={cameraRef}
+        />
       ) : (
         <View style={styles.fullScreenBlack}>
-          <Text style={styles.permissionText}>No camera permission. Please grant access.</Text>
+          <Text style={styles.permissionText}>
+            No camera permission. Please grant access.
+          </Text>
           <Button title="Grant Permission" onPress={requestPermission} />
         </View>
       )}
 
-      {/* Overlay */}
+      {/* Dark vignette overlay — punches out the oval */}
+      {!capturedImage && permission.granted && (
+        <View style={styles.vignetteOverlay} pointerEvents="none">
+          {/* Top block */}
+          <View
+            style={[
+              styles.vignetteBlock,
+              { height: (height - OVAL_HEIGHT) / 2 - 20 },
+            ]}
+          />
+          {/* Middle row: left + oval gap + right */}
+          <View style={styles.vignetteMiddle}>
+            <View style={[styles.vignetteBlock, { width: (width - OVAL_WIDTH)  }]} />
+            {/* Oval border drawn around the transparent gap */}
+            <Animated.View
+              style={[
+                styles.ovalBorder,
+                {
+                  borderColor: ovalBorderColor,
+                  transform: [{ scale: pulseAnim }],
+                },
+              ]}
+            />
+            <View style={[styles.vignetteBlock, { width: (width - OVAL_WIDTH) / 2 }]} />
+          </View>
+          {/* Bottom block */}
+          <View style={styles.vignetteBlock} />
+        </View>
+      )}
+
+      {/* UI overlay */}
       <View style={[styles.overlay, { paddingTop: insets.top }]}>
+        {/* Header — hidden while modal showing */}
         {!isModalVisible && (
           <View style={styles.headerContainer}>
             <TouchableOpacity
@@ -155,39 +182,32 @@ export default function ScanIdScreen() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
-              <Text style={styles.headerTitle}>Front of your ID</Text>
+              <Text style={styles.headerTitle}>A quick selfie</Text>
               <Text style={styles.subtitle}>
-                Hold up your ID and take a picture. Your entire ID must be in the
-                frame.
+                Let's take a quick selfie for verification purposes. Your photo
+                is secure.
               </Text>
             </View>
           </View>
         )}
 
-        {/* Frame Cutout */}
-        <View style={styles.frameContainer}>
+        {/* Feedback pill (centred over the oval) */}
+        <View style={styles.feedbackRow} pointerEvents="none">
           {!capturedImage && (
-            <View style={styles.frame}>
-              {/* Corner Indicators */}
-              <View style={[styles.corner, styles.topLeft, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.topRight, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.bottomLeft, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.bottomRight, feedback === "Hold Still" && styles.cornerActive]} />
-              
-              {/* Live Feedback Overlay */}
-              <View style={styles.feedbackContainer}>
-                <Text style={styles.feedbackText}>{feedback}</Text>
-              </View>
-
-              {/* Scanning Animation Line */}
-              <Animated.View style={[styles.scanLine, { transform: [{ translateY }] }]} />
+            <View style={styles.feedbackPill}>
+              <Text style={styles.feedbackText}>{feedback}</Text>
             </View>
           )}
         </View>
 
-        {/* Manual Capture Fallback */}
+        {/* Capture button */}
         {!isModalVisible && (
-          <View style={[styles.footerContainer, { paddingBottom: insets.bottom || 24 }]}>
+          <View
+            style={[
+              styles.footerContainer,
+              { paddingBottom: insets.bottom || 24 },
+            ]}
+          >
             <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
               <View style={styles.captureInner} />
             </TouchableOpacity>
@@ -195,7 +215,7 @@ export default function ScanIdScreen() {
         )}
       </View>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation modal */}
       <Modal visible={isModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           {/* Preview thumbnail */}
@@ -203,15 +223,21 @@ export default function ScanIdScreen() {
             <View style={styles.previewContainer}>
               <Image
                 source={{ uri: capturedImage }}
-                style={styles.previewImage}
+                style={[styles.previewImage, { transform: [{ scaleX: -1 }] }]}
                 resizeMode="cover"
               />
             </View>
           )}
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom || Spacing.lg }]}>
-            <Text style={styles.modalTitle}>Is your ID easy to read?</Text>
+
+          <View
+            style={[
+              styles.modalContent,
+              { paddingBottom: insets.bottom || Spacing.lg },
+            ]}
+          >
+            <Text style={styles.modalTitle}>Does your selfie look clear?</Text>
             <Text style={styles.modalSubtitle}>
-              Please make sure the text is clear and your entire card is visible.
+              Make sure your face is fully visible, well-lit, and in focus.
             </Text>
 
             <View style={styles.modalActions}>
@@ -220,7 +246,7 @@ export default function ScanIdScreen() {
                 onPress={handleLooksGood}
                 backgroundColor={Colors.primary}
                 textColor={Colors.background}
-                borderRadius={30}
+                borderRadius={10}
                 paddingVertical={16}
                 fontSize={Number(Typography.button.fontSize)}
               />
@@ -230,7 +256,7 @@ export default function ScanIdScreen() {
                 onPress={handleRetake}
                 backgroundColor={Colors.secondary}
                 textColor={Colors.primary}
-                borderRadius={30}
+                borderRadius={10}
                 paddingVertical={16}
                 fontSize={Number(Typography.button.fontSize)}
               />
@@ -243,28 +269,51 @@ export default function ScanIdScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#000',
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
   },
-  fullScreen: { 
-    ...StyleSheet.absoluteFillObject 
+  fullScreen: {
+    ...StyleSheet.absoluteFillObject,
   },
-  fullScreenBlack: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: '#000', 
-    justifyContent: 'center',
-    alignItems: 'center',
+  fullScreenBlack: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
     padding: Spacing.lg,
   },
   permissionText: {
-    color: '#fff',
+    color: "#fff",
     marginBottom: Spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  overlay: { 
-    flex: 1, 
-    justifyContent: 'space-between' 
+
+  // Vignette
+  vignetteOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "transparent",
+  },
+  vignetteBlock: {
+    flex: 1,
+  },
+  vignetteMiddle: {
+    flexDirection: "row",
+    height: OVAL_HEIGHT,
+    alignItems: "center",
+  },
+  ovalBorder: {
+    width: OVAL_WIDTH,
+    height: OVAL_HEIGHT,
+    borderRadius: OVAL_WIDTH / 2,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+
+  // Overlay / layout
+  overlay: {
+    flex: 1,
+    justifyContent: "space-between",
   },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
@@ -278,7 +327,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     marginBottom: Spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     padding: Spacing.md,
     borderRadius: 12,
   },
@@ -293,85 +342,27 @@ const styles = StyleSheet.create({
     color: "#e5e7eb",
     lineHeight: 20,
   },
-  frameContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  frame: {
-    width: FRAME_WIDTH,
-    height: FRAME_HEIGHT,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  corner: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderColor: '#ffffff',
-    borderWidth: 0,
-    opacity: 0.8,
-  },
-  cornerActive: {
-    borderColor: Colors.secondary,
-  },
-  topLeft: {
+  feedbackRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: (height - OVAL_HEIGHT) / 2 + OVAL_HEIGHT - 60,
+    position: "absolute",
+    width: "100%",
     top: 0,
-    left: 0,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderTopLeftRadius: 16,
   },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderTopRightRadius: 16,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderBottomLeftRadius: 16,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderBottomRightRadius: 16,
-  },
-  scanLine: {
-    position: 'absolute',
-    width: '100%',
-    height: 4,
-    backgroundColor: Colors.secondary,
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  feedbackContainer: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+  feedbackPill: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   feedbackText: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    color: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    fontSize: 18,
-    fontWeight: '600',
-    overflow: 'hidden',
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   footerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: Spacing.xl * 1.5,
   },
   captureButton: {
@@ -379,20 +370,22 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 4,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   captureInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
+
+  // Modal
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   previewContainer: {
     alignItems: "center",
@@ -400,22 +393,22 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   previewImage: {
-    width: width * 0.7,
-    height: (width * 0.7) * 0.63, // ID card aspect ratio
-    borderRadius: 12,
+    width: width * 0.55,
+    height: width * 0.55,
+    borderRadius: (width * 0.55) / 2,
     borderWidth: 4,
     borderColor: "#fff",
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl + 40,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
   },

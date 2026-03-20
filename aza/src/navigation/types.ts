@@ -23,6 +23,8 @@ export type RootStackParamList = {
   Idtype: undefined;
   VerifyFaceId: undefined;
   ScanId: undefined;
+  ScanIdBack: undefined;
+  SelfieScan: undefined;
   Reason: undefined;
   Refund: undefined;
   Statement: undefined;
