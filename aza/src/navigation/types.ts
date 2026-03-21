@@ -33,6 +33,8 @@ export type RootStackParamList = {
   PEPProofOfWealth: undefined;
   PEPUnderReview: undefined;
   KYCSuccess: undefined;
+  CreatingAccount: undefined;
+  AccountReady: undefined;
   Reason: undefined;
   Refund: undefined;
   Statement: undefined;

@@ -3,7 +3,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { 
   OnboardingScreen, 
   EnableNotificationsScreen,
-  EnableBiometricsScreen
+  EnableBiometricsScreen,
+  CreatingAccountScreen,
+  AccountReadyScreen
 } from '../features/onboarding';
 import { 
   LoginScreen, 
@@ -96,6 +98,8 @@ export default function AppNavigator() {
       <Stack.Screen name="PEPProofOfWealth" component={PEPProofOfWealthScreen} />
       <Stack.Screen name="PEPUnderReview" component={PEPUnderReviewScreen} />
       <Stack.Screen name="KYCSuccess" component={KYCSuccessScreen} />
+      <Stack.Screen name="CreatingAccount" component={CreatingAccountScreen} />
+      <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
