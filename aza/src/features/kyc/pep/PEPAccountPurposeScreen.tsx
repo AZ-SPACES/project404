@@ -10,10 +10,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
-import Button from "../../components/ui/Button";
+import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/types";
+import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
