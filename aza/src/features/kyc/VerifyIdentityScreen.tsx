@@ -11,8 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing } from "../../theme";
+import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -88,7 +89,8 @@ export default function VerifyIdentityScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>Verify your identity</Text>
+          <KYCProgressBar currentStep={1} totalSteps={6} label="Identity Verification" />
+          <Text style={styles.title}>Let's verify your identity</Text>
           <Text style={styles.subtitle}>
             As your financial partner, we are required to verify if it's really
             you.

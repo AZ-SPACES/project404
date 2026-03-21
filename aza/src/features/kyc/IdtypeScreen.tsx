@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -142,7 +143,8 @@ export default function IdtypeScreen() {
             )}
             scrollEventThrottle={16}
           >
-            <Text style={styles.title}>Verify your Identity</Text>
+            <KYCProgressBar currentStep={3} totalSteps={6} label="Select ID Type" />
+            <Text style={styles.title}>What type of ID do you have?</Text>
             <Text style={styles.subtitle}>Select your document type and enter the ID number</Text>
 
             {/* Document Type Selector */}

@@ -74,6 +74,8 @@ export default function SignUpNumberScreen() {
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoFocus
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
             </View>
           </View>

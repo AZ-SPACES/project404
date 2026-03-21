@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -189,6 +190,7 @@ export default function SelfieScanScreen() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
+              <KYCProgressBar currentStep={6} totalSteps={6} label="Liveness Check" />
               <Text style={styles.headerTitle}>A quick selfie</Text>
               <Text style={styles.subtitle}>
                 Let's take a quick selfie for verification purposes. Your photo

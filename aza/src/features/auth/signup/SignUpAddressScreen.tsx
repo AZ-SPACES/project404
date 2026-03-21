@@ -119,6 +119,8 @@ export default function SignUpAddressScreen() {
                 onChangeText={setHomeAddress}
                 autoCapitalize="words"
                 autoFocus
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
             </View>
 
@@ -137,6 +139,8 @@ export default function SignUpAddressScreen() {
                 value={city}
                 onChangeText={setCity}
                 autoCapitalize="words"
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
             </View>
 

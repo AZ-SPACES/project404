@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Animated,
-  Dimensions,
   TextInput,
   TouchableWithoutFeedback,
   Keyboard,
@@ -14,12 +13,12 @@ import {
   Platform,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { useNavigation,} from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
-import Button from "../../../components/ui/Button";
+import { Colors, Spacing } from "../../theme";
+import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../../navigation/types";
+import { RootStackParamList } from "../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

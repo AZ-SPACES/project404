@@ -118,6 +118,8 @@ export default function SignUpNameScreen() {
                 onChangeText={setFirstName}
                 autoCapitalize="words"
                 autoFocus
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
             </View>
 

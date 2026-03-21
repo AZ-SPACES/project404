@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
 import { Colors } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -2,
     lineHeight: 64,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   footer: {
     paddingHorizontal: 24,
