@@ -26,6 +26,8 @@ const { width, height } = Dimensions.get("window");
 const FRAME_WIDTH = width * 0.85;
 const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 
+const ZOOM_SCALE = 1 / 0.85;
+
 export default function ScanIdBackScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdBackRouteProp>();
@@ -308,6 +310,7 @@ const styles = StyleSheet.create({
     height: FRAME_HEIGHT,
     position: 'relative',
     overflow: 'hidden',
+    marginBottom: 200,
   },
   corner: {
     position: 'absolute',
@@ -400,16 +403,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   previewContainer: {
-    alignItems: "center",
-    marginBottom: -40,
-    zIndex: 10,
-  },
-  previewImage: {
+    alignSelf: "center",
     width: width * 0.7,
-    height: (width * 0.7) * 0.63, // ID card aspect ratio
+    height: (width * 0.7) * 0.63,
     borderRadius: 12,
     borderWidth: 4,
     borderColor: "#fff",
+    overflow: "hidden",
+    marginBottom: -40,
+    zIndex: 10,
+    backgroundColor: '#000',
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+    transform: [{ scale: ZOOM_SCALE }],
   },
   modalContent: {
     backgroundColor: '#fff',
