@@ -8,3 +8,5 @@ export { default as SignUpEmploymentScreen } from './SignUpEmploymentScreen';
 export { default as SignUpBirthdayScreen } from './SignUpBirthdayScreen';
 export { default as CreatePasscodeScreen } from './CreatePasscodeScreen';
 export { default as ConfirmPasscodeScreen } from './ConfirmPasscodeScreen';
+export { default as TaxResidencyScreen } from './TaxResidencyScreen';
+export { default as ConsentScreen } from './ConsentScreen';

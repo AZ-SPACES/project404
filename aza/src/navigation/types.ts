@@ -18,8 +18,11 @@ export type RootStackParamList = {
   SignUpPronouns: undefined;
   SignUpEmployment: undefined;
   SignUpBirthday: undefined;
+  TaxResidency: undefined;
   CreatePasscode: undefined;
   ConfirmPasscode: { firstPasscode: string };
+  Consent: undefined;
+  FeesAndLimits: undefined;
   VerifyIdentity: { isPEP?: boolean };
   SourceofFund: { isPEP?: boolean };
   Idtype: { isPEP?: boolean };

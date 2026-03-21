@@ -42,7 +42,7 @@ export default function SignUpAddressScreen() {
 
   const handleNext = () => {
     // Navigate to the next screen in the signup flow
-    navigation.navigate("SignUpPronouns");
+    navigation.navigate("TaxResidency");
   };
 
   const isFormValid = homeAddress.trim().length > 0 && city.trim().length > 0;

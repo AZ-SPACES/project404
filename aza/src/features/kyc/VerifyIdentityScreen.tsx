@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ export default function VerifyIdentityScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
+  const [biometricConsent, setBiometricConsent] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -105,6 +106,27 @@ export default function VerifyIdentityScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
+          {/* Biometric consent — Data Protection Act 843 */}
+          <TouchableOpacity
+            style={styles.consentRow}
+            onPress={() => setBiometricConsent(!biometricConsent)}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: biometricConsent }}
+          >
+            <View style={[styles.checkbox, biometricConsent && styles.checkboxChecked]}>
+              {biometricConsent && (
+                <MaterialIcons name="check" size={14} color={Colors.secondary} />
+              )}
+            </View>
+            <Text style={styles.consentText}>
+              I consent to aza collecting and processing my ID document images
+              and selfie for identity verification, as required under{" "}
+              <Text style={styles.consentBold}>AML Act 1044</Text>. Data is
+              retained for a minimum of 6 years.
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.securityNoteContainer}>
             <MaterialIcons
               name="lock-outline"
@@ -124,6 +146,7 @@ export default function VerifyIdentityScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
+            disabled={!biometricConsent}
           />
         </View>
       </View>
@@ -200,10 +223,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.lg,
+    marginTop: Spacing.sm,
   },
   securityNoteText: {
     fontSize: 14,
     color: Colors.textSecondary,
     marginLeft: Spacing.sm,
+  },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+    paddingHorizontal: 2,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.white,
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  consentBold: {
+    fontWeight: "600",
+    color: Colors.textPrimary,
   },
 });

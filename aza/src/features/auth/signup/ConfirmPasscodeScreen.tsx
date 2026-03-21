@@ -55,7 +55,7 @@ export default function ConfirmPasscodeScreen() {
     if (passcode.length === 4) {
       if (passcode === firstPasscode) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        navigation.navigate("EnableNotification");
+        navigation.navigate("Consent");
       } else {
         setErrorStatus(true);
         startShake();

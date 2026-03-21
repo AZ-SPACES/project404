@@ -5,7 +5,8 @@ import {
   EnableNotificationsScreen,
   EnableBiometricsScreen,
   CreatingAccountScreen,
-  AccountReadyScreen
+  AccountReadyScreen,
+  FeesAndLimitsScreen
 } from '../features/onboarding';
 import { 
   LoginScreen, 
@@ -28,6 +29,8 @@ import {
   SignUpBirthdayScreen,
   CreatePasscodeScreen,
   ConfirmPasscodeScreen,
+  TaxResidencyScreen,
+  ConsentScreen,
   ReasonScreen,
   RefundScreen,
   StatementScreen
@@ -85,6 +88,9 @@ export default function AppNavigator() {
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
       <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
       <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
+      <Stack.Screen name="TaxResidency" component={TaxResidencyScreen} />
+      <Stack.Screen name="Consent" component={ConsentScreen} />
+      <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
       <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
       <Stack.Screen name="SourceofFund" component={SourceofFundsScreen} />
       <Stack.Screen name='Idtype' component={IdtypeScreen} />

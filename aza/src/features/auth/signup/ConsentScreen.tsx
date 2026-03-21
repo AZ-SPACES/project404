@@ -1,0 +1,345 @@
+import React, { useState, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  Linking,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import Button from "../../../components/ui/Button";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../../navigation/types";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const TERMS_URL = "";
+const PRIVACY_URL = "";
+
+export default function ConsentScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
+
+  const headerBorderOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const isValid = agreedToTerms && agreedToPrivacy;
+
+  const handleOpenTerms = () => {
+    Linking.openURL(TERMS_URL).catch(() => {});
+  };
+
+  const handleOpenPrivacy = () => {
+    Linking.openURL(PRIVACY_URL).catch(() => {});
+  };
+
+  const handleContinue = () => {
+    navigation.navigate("EnableNotification");
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              borderBottomColor: headerBorderOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["transparent", Colors.border],
+              }),
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Content */}
+        <Animated.ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+        >
+          <Text style={styles.title}>Before you continue</Text>
+          <Text style={styles.subtitle}>
+            Please review and accept our Terms of Service and Privacy Policy.
+            These documents explain your rights, our obligations, and how your
+            data is handled.
+          </Text>
+
+          {/* Documents */}
+          <View style={styles.documentList}>
+            <TouchableOpacity
+              style={styles.documentRow}
+              onPress={handleOpenTerms}
+              activeOpacity={0.7}
+            >
+              <View style={styles.documentIcon}>
+                <MaterialIcons name="description" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.documentInfo}>
+                <Text style={styles.documentTitle}>Terms of Service</Text>
+                <Text style={styles.documentMeta}>aza Financial Services Ltd</Text>
+              </View>
+              <MaterialIcons name="open-in-new" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={styles.documentRow}
+              onPress={handleOpenPrivacy}
+              activeOpacity={0.7}
+            >
+              <View style={styles.documentIcon}>
+                <MaterialIcons name="privacy-tip" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.documentInfo}>
+                <Text style={styles.documentTitle}>Privacy Policy</Text>
+                <Text style={styles.documentMeta}>How your data is collected and used</Text>
+              </View>
+              <MaterialIcons name="open-in-new" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Checkboxes */}
+          <View style={styles.checkboxSection}>
+            <CheckboxRow
+              checked={agreedToTerms}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              label="I have read and agree to the "
+              linkLabel="Terms of Service"
+              onLinkPress={handleOpenTerms}
+            />
+            <CheckboxRow
+              checked={agreedToPrivacy}
+              onPress={() => setAgreedToPrivacy(!agreedToPrivacy)}
+              label="I have read and agree to the "
+              linkLabel="Privacy Policy"
+              onLinkPress={handleOpenPrivacy}
+            />
+          </View>
+
+          <View style={styles.legalNote}>
+            <MaterialIcons name="info-outline" size={16} color={Colors.textSecondary} />
+            <Text style={styles.legalNoteText}>
+              Your acceptance is recorded with a timestamp under the Data
+              Protection Act 843 (2012) and BoG Disclosure Guidelines 2022.
+            </Text>
+          </View>
+        </Animated.ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Button
+            title="I agree — Continue"
+            onPress={handleContinue}
+            backgroundColor={Colors.primary}
+            textColor={Colors.secondary}
+            borderRadius={30}
+            paddingVertical={16}
+            fontSize={Number(Typography.button.fontSize)}
+            fontWeight={Typography.button.fontWeight as any}
+            disabled={!isValid}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+
+type CheckboxRowProps = {
+  checked: boolean;
+  onPress: () => void;
+  label: string;
+  linkLabel: string;
+  onLinkPress: () => void;
+};
+
+function CheckboxRow({
+  checked,
+  onPress,
+  label,
+  linkLabel,
+  onLinkPress,
+}: CheckboxRowProps) {
+  return (
+    <TouchableOpacity
+      style={styles.checkboxRow}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+    >
+      <View
+        style={[styles.checkbox, checked && styles.checkboxChecked]}
+        aria-hidden
+      >
+        {checked && (
+          <MaterialIcons name="check" size={14} color={Colors.secondary} />
+        )}
+      </View>
+      <Text style={styles.checkboxLabel}>
+        {label}
+        <Text style={styles.checkboxLink} onPress={onLinkPress}>
+          {linkLabel}
+        </Text>
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  container: { flex: 1 },
+  header: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 50,
+    backgroundColor: "rgba(22,51,0,0.04)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: Spacing.sm,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: Spacing.xl,
+  },
+  documentList: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.white,
+    overflow: "hidden",
+  },
+  documentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    gap: Spacing.md,
+  },
+  documentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  documentInfo: { flex: 1 },
+  documentTitle: {
+    fontSize: Typography.bodyLg.fontSize,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  documentMeta: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.border,
+    marginLeft: Spacing.md + 36 + Spacing.md,
+  },
+  checkboxSection: {
+    marginTop: Spacing.xl,
+    gap: Spacing.md,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.md,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.white,
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: Typography.bodyLg.fontSize,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  },
+  checkboxLink: {
+    color: Colors.primary,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  legalNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+    padding: Spacing.md,
+  },
+  legalNoteText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  footer: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+});
