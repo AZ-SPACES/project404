@@ -29,10 +29,9 @@ const ResetOTPScreen: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(57);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    }
+    if (timeLeft <= 0) return;
+    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+    return () => clearTimeout(timer);
   }, [timeLeft]);
 
   const handleOtpChange = (text: string, index: number) => {

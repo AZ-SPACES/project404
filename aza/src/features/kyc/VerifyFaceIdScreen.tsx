@@ -16,6 +16,7 @@ import { RouteProp, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VerifyFaceId'>;
 type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
@@ -87,6 +88,7 @@ export default function VerifyFaceIdScreen() {
           )}
           scrollEventThrottle={16}
         >
+          <KYCProgressBar currentStep={4} totalSteps={6} label="Prepare ID Scan" />
           <Text style={styles.title}>
             Verify your identity with your face and identity card.
           </Text>

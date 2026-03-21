@@ -14,6 +14,7 @@ import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -158,6 +159,7 @@ export default function ScanIdBackScreen() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
+              <KYCProgressBar currentStep={5} totalSteps={6} label="Back of ID" />
               <Text style={styles.headerTitle}>Back of your ID</Text>
               <Text style={styles.subtitle}>
                 Hold up the back of your ID and take a picture. Your entire ID must be in the

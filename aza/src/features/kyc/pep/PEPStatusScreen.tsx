@@ -17,9 +17,13 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-type PEPOptions = "Yes, I am" | "No, I am not";
+type PEPOptions = "No, I am not" | "Yes, I am a Politically Exposed Person" | "Yes, I am a family member or close associate of a PEP";
 
-const PEP_OPTIONS: PEPOptions[] = ["No, I am not", "Yes, I am"];
+const PEP_OPTIONS: PEPOptions[] = [
+  "No, I am not",
+  "Yes, I am a Politically Exposed Person",
+  "Yes, I am a family member or close associate of a PEP"
+];
 
 export default function PEPStatusScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -39,10 +43,10 @@ export default function PEPStatusScreen() {
   });
 
   const handleNext = () => {
-    if (selectedOption === "Yes, I am") {
-      navigation.navigate("PEPDetails");
-    } else {
+    if (selectedOption === "No, I am not") {
       navigation.navigate("VerifyIdentity", { isPEP: false });
+    } else {
+      navigation.navigate("PEPDetails");
     }
   };
 
@@ -199,9 +203,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   optionItem: {
-    height: 48,
+    minHeight: 48,
     justifyContent: "center",
     paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
     backgroundColor: "white",
     borderWidth: 1,
     borderColor: Colors.border,
@@ -212,7 +217,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFCF8",
   },
   optionLabel: {
-    fontSize: Typography.body.fontSize,
+    fontSize: 14,
     color: Colors.textSecondary,
   },
   optionLabelSelected: {

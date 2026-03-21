@@ -6,12 +6,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
+import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -26,7 +32,8 @@ type SourceOptions =
   | "Inheritance or Gifts"
   | "Sale of Assets"
   | "Investment Dividends"
-  | "Pension / Retirement Distributions";
+  | "Pension / Retirement Distributions"
+  | "Other";
 
 const SOURCE_OPTIONS: SourceOptions[] = [
   "Salary/Employment Income",
@@ -35,15 +42,16 @@ const SOURCE_OPTIONS: SourceOptions[] = [
   "Inheritance or Gifts",
   "Sale of Assets",
   "Investment Dividends",
-  "Pension / Retirement Distributions"
+  "Pension / Retirement Distributions",
+  "Other"
 ];
 
 export default function SourceofFundsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SourceofFundRouteProp>();
   const { isPEP } = route.params || {};
-  const [selectedEmployment, setSelectedEmployment] =
-    useState<SourceOptions | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>([]);
+  const [otherText, setOtherText] = useState("");
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -62,42 +70,74 @@ export default function SourceofFundsScreen() {
     navigation.navigate('Idtype', { isPEP: isPEP as boolean })
   };
 
-  const renderOption = (label: SourceOptions) => (
-    <TouchableOpacity
-      key={label}
-      style={[
-        styles.optionItem,
-        selectedEmployment === label && styles.optionItemSelected,
-      ]}
-      onPress={() => setSelectedEmployment(label)}
-      activeOpacity={0.7}
-    >
-      <Text
-        style={[
-          styles.optionLabel,
-          selectedEmployment === label && styles.optionLabelSelected,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
+  const isFormValid = selectedOptions.length > 0 && (!selectedOptions.includes("Other") || otherText.trim().length > 0);
+
+  const toggleOption = (label: SourceOptions) => {
+    setSelectedOptions((prev) => 
+      prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
+    );
+  };
+
+  const renderOption = (label: SourceOptions) => {
+    const isSelected = selectedOptions.includes(label);
+    return (
+      <View key={label}>
+        <TouchableOpacity
+          style={[
+            styles.optionItem,
+            isSelected && styles.optionItemSelected,
+          ]}
+          onPress={() => toggleOption(label)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.optionLabel,
+              isSelected && styles.optionLabelSelected,
+            ]}
+          >
+            {label}
+          </Text>
+          {isSelected && (
+            <MaterialIcons name="check" size={20} color={Colors.primary} />
+          )}
+        </TouchableOpacity>
+        {label === "Other" && isSelected && (
+          <TextInput
+            style={styles.otherInput}
+            placeholder="Please specify"
+            placeholderTextColor={Colors.textSecondary}
+            value={otherText}
+            onChangeText={setOtherText}
+            autoCapitalize="sentences"
+            cursorColor={Colors.primary}
+            selectionColor={Colors.primary}
+          />
+        )}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              borderBottomColor: headerBorderOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["transparent", Colors.border],
-              }),
-            },
-          ]}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
         >
+          {/* Header */}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: headerBorderOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["transparent", Colors.border],
+                }),
+              },
+            ]}
+          >
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -128,6 +168,7 @@ export default function SourceofFundsScreen() {
           )}
           scrollEventThrottle={16}
         >
+          <KYCProgressBar currentStep={2} totalSteps={6} label="Source of Income" />
           <Text style={styles.title}>Source of Funds</Text>
           <Text style={styles.subtitle}>To keep your account secure and comply with Bank of Ghana regulations, please select the primary source of your funds.</Text>
 
@@ -149,10 +190,11 @@ export default function SourceofFundsScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={selectedEmployment === null}
+            disabled={!isFormValid}
           />
         </View>
-      </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
@@ -223,7 +265,9 @@ const styles = StyleSheet.create({
   },
   optionItem: {
     height: 48,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
     backgroundColor: "white",
     borderWidth: 1,
@@ -245,5 +289,16 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  otherInput: {
+    marginTop: Spacing.xs,
+    height: 48,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.white,
+    fontSize: Typography.bodyLg.fontSize,
+    color: Colors.textPrimary,
   },
 });

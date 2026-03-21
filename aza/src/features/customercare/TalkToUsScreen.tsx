@@ -136,6 +136,25 @@ export default function TalkToUsScreen() {
 
           <TouchableOpacity
             style={styles.issueItem}
+            onPress={() => navigation.navigate("ChatWithUs")}
+          >
+            <View style={[styles.iconContainer, { backgroundColor: "rgba(234, 67, 53, 0.1)" }]}>
+              <Feather name="alert-triangle" size={20} color="#EA4335" />
+            </View>
+            <View style={styles.issueTextContainer}>
+              <Text style={styles.issueTitle}>Report suspicious activity / Fraud</Text>
+              <Text style={styles.issueSubtitle}>Priority immediate response</Text>
+            </View>
+            <Feather
+              name="chevron-right"
+              size={20}
+              color={Colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <View style={styles.separator} />
+
+          <TouchableOpacity
+            style={styles.issueItem}
             onPress={() => navigation.navigate("EmailUs")}
           >
             <View style={styles.iconContainer}>
