@@ -3,3 +3,4 @@ export { default as EnableNotificationsScreen } from './EnableNotificationsScree
 export { default as EnableBiometricsScreen } from './EnableBiometricsScreen';
 export { default as CreatingAccountScreen } from './CreatingAccountScreen';
 export { default as AccountReadyScreen } from './AccountReadyScreen';
+export { default as FeesAndLimitsScreen } from './FeesAndLimitsScreen';

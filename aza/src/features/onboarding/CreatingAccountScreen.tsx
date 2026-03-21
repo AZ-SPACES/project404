@@ -77,7 +77,7 @@ export default function CreatingAccountScreen() {
     }, DURATION - 600);
 
     const navigationTimer = setTimeout(() => {
-      navigation.replace("AccountReady");
+      navigation.replace("FeesAndLimits");
     }, DURATION + 400);
 
     return () => {
