@@ -48,4 +48,6 @@ export type RootStackParamList = {
   EnableNotification: undefined;
   EnableBiometrics: undefined;
   Send: undefined;
+  Profile: undefined;
+  Display: undefined;
 };

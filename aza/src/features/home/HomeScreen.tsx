@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import { useDisplayContext } from '../../providers/DisplayProvider';
 
 const { height } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ const ActionTarget = ({ icon, label, onPress }: ActionTargetProps) => (
 
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { homeBackground } = useDisplayContext();
 
   return (
     <View style={styles.container}>
@@ -34,7 +36,7 @@ export default function HomeScreen() {
       {/* Background Hero Image */}
       <View style={styles.topSection}>
         <Image 
-          source={{ uri: 'https://images.pexels.com/photos/3609832/pexels-photo-3609832.jpeg' }} 
+          source={{ uri: homeBackground }} 
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
@@ -45,7 +47,10 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <Text style={[Typography.h1, { color: Colors.white }]}>Good Morning</Text>
             <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.profilePicContainer}>
+              <TouchableOpacity 
+                style={styles.profilePicContainer}
+                onPress={() => navigation.navigate('Profile')}
+              >
                 <Image 
                   source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10' }} 
                   style={styles.profilePic} 
