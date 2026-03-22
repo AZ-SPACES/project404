@@ -8,7 +8,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPUnderReview">;
 
 export default function PEPUnderReviewScreen() {
   const navigation = useNavigation<NavigationProp>();
