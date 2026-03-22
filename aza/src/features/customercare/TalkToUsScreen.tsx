@@ -138,12 +138,21 @@ export default function TalkToUsScreen() {
             style={styles.issueItem}
             onPress={() => navigation.navigate("ChatWithUs")}
           >
-            <View style={[styles.iconContainer, { backgroundColor: "rgba(234, 67, 53, 0.1)" }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: "rgba(234, 67, 53, 0.1)" },
+              ]}
+            >
               <Feather name="alert-triangle" size={20} color="#EA4335" />
             </View>
             <View style={styles.issueTextContainer}>
-              <Text style={styles.issueTitle}>Report suspicious activity / Fraud</Text>
-              <Text style={styles.issueSubtitle}>Priority immediate response</Text>
+              <Text style={styles.issueTitle}>
+                Report suspicious activity / Fraud
+              </Text>
+              <Text style={styles.issueSubtitle}>
+                Priority immediate response
+              </Text>
             </View>
             <Feather
               name="chevron-right"
@@ -405,7 +414,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   bottomSheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   bottomSheetContainer: {
