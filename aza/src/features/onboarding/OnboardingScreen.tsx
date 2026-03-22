@@ -8,14 +8,14 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign } from "@expo/vector-icons";
 import Button from "../../components/ui/Button";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/types';
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../../navigation/types";
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -40,7 +40,10 @@ const slides = [
     image: require("../../assets/v-card.png"),
   },
 ];
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Onboarding"
+>;
 export default function OnboardingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [activeSlide, setActiveSlide] = useState(0);
@@ -54,7 +57,6 @@ export default function OnboardingScreen() {
   const splashVideo = require("../../assets/videos/splash.mp4");
 
   const player = useVideoPlayer(splashVideo);
-
 
   useEffect(() => {
     if (player) {
@@ -193,7 +195,10 @@ export default function OnboardingScreen() {
               {
                 backgroundColor: fadeAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["rgba(255, 255, 255, 0.3)", "rgba(30, 81, 40, 0.3)"],
+                  outputRange: [
+                    "rgba(255, 255, 255, 0.3)",
+                    "rgba(30, 81, 40, 0.3)",
+                  ],
                 }),
               },
             ]}
@@ -219,7 +224,11 @@ export default function OnboardingScreen() {
           </Animated.View>
         </View>
 
-        <TouchableOpacity style={styles.contentContainer} onPress={handlePress} activeOpacity={0.9}>
+        <TouchableOpacity
+          style={styles.contentContainer}
+          onPress={handlePress}
+          activeOpacity={0.9}
+        >
           <Animated.Text
             style={[
               styles.title,
@@ -285,26 +294,33 @@ export default function OnboardingScreen() {
       </SafeAreaView>
 
       {/* Bottom Sheet */}
-      <View style={StyleSheet.absoluteFill} pointerEvents={isBottomSheetVisible ? "auto" : "none"}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
-          <TouchableOpacity 
-            style={styles.bottomSheetBackdrop} 
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={isBottomSheetVisible ? "auto" : "none"}
+      >
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}
+        >
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
             activeOpacity={1}
-            onPress={() => setBottomSheetVisible(false)} 
+            onPress={() => setBottomSheetVisible(false)}
           />
         </Animated.View>
-        <Animated.View style={[
-          styles.bottomSheetContainer, 
-          { 
-            position: "absolute", 
-            bottom: 0, 
-            width: "100%",
-            transform: [{ translateY: bottomSheetAnim }] 
-          }
-        ]}>
+        <Animated.View
+          style={[
+            styles.bottomSheetContainer,
+            {
+              position: "absolute",
+              bottom: 0,
+              width: "100%",
+              transform: [{ translateY: bottomSheetAnim }],
+            },
+          ]}
+        >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
+            <TouchableOpacity
+              style={styles.closeButton}
               onPress={() => setBottomSheetVisible(false)}
             >
               <AntDesign name="close" size={20} color="#0E0F0C" />
@@ -315,12 +331,12 @@ export default function OnboardingScreen() {
             By continuing, you agree to our Terms & Privacy Policy.
           </Text>
           <View style={styles.bottomSheetDivider} />
-          
+
           <Button
             title="Login"
             onPress={() => {
               setBottomSheetVisible(false);
-              navigation.navigate('Login');
+              navigation.navigate("Login");
             }}
             backgroundColor="#1E5128"
             textColor="#B7ED7E"
@@ -329,10 +345,10 @@ export default function OnboardingScreen() {
           <View style={{ height: 16 }} />
           <Button
             title="Create Account"
-            onPress={() => navigation.navigate('SignUpNumber')}
+            onPress={() => navigation.navigate("SignUpNumber")}
             backgroundColor="#B7ED7E"
             textColor="#1E5128"
-            borderRadius={24}  
+            borderRadius={24}
           />
         </Animated.View>
       </View>
@@ -416,7 +432,7 @@ const styles = StyleSheet.create({
     transform: [
       { translateX: 21 },
       { translateY: -107 },
-      { rotate: "-11.78deg" }
+      { rotate: "-11.78deg" },
     ],
   },
   footer: {
@@ -437,7 +453,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   bottomSheetOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   bottomSheetBackdrop: {
     ...StyleSheet.absoluteFill,

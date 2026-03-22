@@ -20,7 +20,10 @@ import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelfieScan'>;
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "SelfieScan"
+>;
 type SelfieScanRouteProp = RouteProp<RootStackParamList, "SelfieScan">;
 
 const { width, height } = Dimensions.get("window");
@@ -28,7 +31,11 @@ const { width, height } = Dimensions.get("window");
 const OVAL_WIDTH = width * 0.7;
 const OVAL_HEIGHT = OVAL_WIDTH * 1.3;
 
-type FeedbackState = "Center your face" | "Move closer" | "Hold still" | "Processing...";
+type FeedbackState =
+  | "Center your face"
+  | "Move closer"
+  | "Hold still"
+  | "Processing...";
 
 export default function SelfieScanScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -55,9 +62,17 @@ export default function SelfieScanScreen() {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.85, duration: 900, useNativeDriver: true }),
-      ])
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.85,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
     );
     if (!capturedImage && permission?.granted) {
       loop.start();
@@ -116,9 +131,10 @@ export default function SelfieScanScreen() {
     return <View style={styles.container} />;
   }
 
-  const ovalBorderColor = feedback === "Hold still"
-    ? Colors.secondary   // green-ish when face is locked
-    : "rgba(255,255,255,0.6)";
+  const ovalBorderColor =
+    feedback === "Hold still"
+      ? Colors.secondary // green-ish when face is locked
+      : "rgba(255,255,255,0.6)";
 
   return (
     <View style={styles.container}>
@@ -130,11 +146,7 @@ export default function SelfieScanScreen() {
           resizeMode="cover"
         />
       ) : permission.granted ? (
-        <CameraView
-          style={styles.fullScreen}
-          facing="front"
-          ref={cameraRef}
-        />
+        <CameraView style={styles.fullScreen} facing="front" ref={cameraRef} />
       ) : (
         <View style={styles.fullScreenBlack}>
           <Text style={styles.permissionText}>
@@ -156,7 +168,9 @@ export default function SelfieScanScreen() {
           />
           {/* Middle row: left + oval gap + right */}
           <View style={styles.vignetteMiddle}>
-            <View style={[styles.vignetteBlock, { width: (width - OVAL_WIDTH)  }]} />
+            <View
+              style={[styles.vignetteBlock, { width: width - OVAL_WIDTH }]}
+            />
             {/* Oval border drawn around the transparent gap */}
             <Animated.View
               style={[
@@ -167,7 +181,12 @@ export default function SelfieScanScreen() {
                 },
               ]}
             />
-            <View style={[styles.vignetteBlock, { width: (width - OVAL_WIDTH) / 2 }]} />
+            <View
+              style={[
+                styles.vignetteBlock,
+                { width: (width - OVAL_WIDTH) / 2 },
+              ]}
+            />
           </View>
           {/* Bottom block */}
           <View style={styles.vignetteBlock} />
@@ -190,7 +209,11 @@ export default function SelfieScanScreen() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
-              <KYCProgressBar currentStep={6} totalSteps={6} label="Liveness Check" />
+              <KYCProgressBar
+                currentStep={6}
+                totalSteps={6}
+                label="Liveness Check"
+              />
               <Text style={styles.headerTitle}>A quick selfie</Text>
               <Text style={styles.subtitle}>
                 Let's take a quick selfie for verification purposes. Your photo
@@ -217,7 +240,10 @@ export default function SelfieScanScreen() {
               { paddingBottom: insets.bottom || 24 },
             ]}
           >
-            <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={handleCapture}
+            >
               <View style={styles.captureInner} />
             </TouchableOpacity>
           </View>
@@ -283,10 +309,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   fullScreen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   fullScreenBlack: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
