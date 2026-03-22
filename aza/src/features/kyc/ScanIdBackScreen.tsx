@@ -19,7 +19,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ScanIdBack'>;
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ScanIdBack"
+>;
 type ScanIdBackRouteProp = RouteProp<RootStackParamList, "ScanIdBack">;
 
 const { width, height } = Dimensions.get("window");
@@ -36,10 +39,10 @@ export default function ScanIdBackScreen() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [feedback, setFeedback] = useState("Move Closer");
-  
+
   const cameraRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
-  
+
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
   // Camera permissions
@@ -64,7 +67,7 @@ export default function ScanIdBackScreen() {
             duration: 1500,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     } else {
       scanLineAnim.stopAnimation();
@@ -82,7 +85,7 @@ export default function ScanIdBackScreen() {
       setFeedback("Move Closer");
       timeout1 = setTimeout(() => setFeedback("Align ID"), 1500);
       timeout2 = setTimeout(() => setFeedback("Hold Still"), 3000);
-      
+
       // Auto-capture after 1.5s liveness timer (total 4.5s)
       autoCaptureTimeout = setTimeout(() => {
         handleCapture();
@@ -130,18 +133,24 @@ export default function ScanIdBackScreen() {
   // Interpolate scanning line position
   const translateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, FRAME_HEIGHT - 4]
+    outputRange: [0, FRAME_HEIGHT - 4],
   });
 
   return (
     <View style={styles.container}>
       {capturedImage && capturedImage !== "placeholder" ? (
-        <Image style={styles.fullScreen} source={{ uri: capturedImage }} resizeMode="cover" />
+        <Image
+          style={styles.fullScreen}
+          source={{ uri: capturedImage }}
+          resizeMode="cover"
+        />
       ) : permission.granted ? (
         <CameraView style={styles.fullScreen} facing="back" ref={cameraRef} />
       ) : (
         <View style={styles.fullScreenBlack}>
-          <Text style={styles.permissionText}>No camera permission. Please grant access.</Text>
+          <Text style={styles.permissionText}>
+            No camera permission. Please grant access.
+          </Text>
           <Button title="Grant Permission" onPress={requestPermission} />
         </View>
       )}
@@ -161,11 +170,15 @@ export default function ScanIdBackScreen() {
               />
             </TouchableOpacity>
             <View style={styles.textContainer}>
-              <KYCProgressBar currentStep={5} totalSteps={6} label="Back of ID" />
+              <KYCProgressBar
+                currentStep={5}
+                totalSteps={6}
+                label="Back of ID"
+              />
               <Text style={styles.headerTitle}>Back of your ID</Text>
               <Text style={styles.subtitle}>
-                Hold up the back of your ID and take a picture. Your entire ID must be in the
-                frame.
+                Hold up the back of your ID and take a picture. Your entire ID
+                must be in the frame.
               </Text>
             </View>
           </View>
@@ -176,26 +189,60 @@ export default function ScanIdBackScreen() {
           {!capturedImage && (
             <View style={styles.frame}>
               {/* Corner Indicators */}
-              <View style={[styles.corner, styles.topLeft, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.topRight, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.bottomLeft, feedback === "Hold Still" && styles.cornerActive]} />
-              <View style={[styles.corner, styles.bottomRight, feedback === "Hold Still" && styles.cornerActive]} />
-              
+              <View
+                style={[
+                  styles.corner,
+                  styles.topLeft,
+                  feedback === "Hold Still" && styles.cornerActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.corner,
+                  styles.topRight,
+                  feedback === "Hold Still" && styles.cornerActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.corner,
+                  styles.bottomLeft,
+                  feedback === "Hold Still" && styles.cornerActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.corner,
+                  styles.bottomRight,
+                  feedback === "Hold Still" && styles.cornerActive,
+                ]}
+              />
+
               {/* Live Feedback Overlay */}
               <View style={styles.feedbackContainer}>
                 <Text style={styles.feedbackText}>{feedback}</Text>
               </View>
 
               {/* Scanning Animation Line */}
-              <Animated.View style={[styles.scanLine, { transform: [{ translateY }] }]} />
+              <Animated.View
+                style={[styles.scanLine, { transform: [{ translateY }] }]}
+              />
             </View>
           )}
         </View>
 
         {/* Manual Capture Fallback */}
         {!isModalVisible && (
-          <View style={[styles.footerContainer, { paddingBottom: insets.bottom || 24 }]}>
-            <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
+          <View
+            style={[
+              styles.footerContainer,
+              { paddingBottom: insets.bottom || 24 },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={handleCapture}
+            >
               <View style={styles.captureInner} />
             </TouchableOpacity>
           </View>
@@ -215,10 +262,16 @@ export default function ScanIdBackScreen() {
               />
             </View>
           )}
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom || Spacing.lg }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { paddingBottom: insets.bottom || Spacing.lg },
+            ]}
+          >
             <Text style={styles.modalTitle}>Is your ID easy to read?</Text>
             <Text style={styles.modalSubtitle}>
-              Please make sure the text is clear and your entire card is visible.
+              Please make sure the text is clear and your entire card is
+              visible.
             </Text>
 
             <View style={styles.modalActions}>
@@ -250,28 +303,28 @@ export default function ScanIdBackScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#000',
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
   },
-  fullScreen: { 
-    ...StyleSheet.absoluteFillObject 
+  fullScreen: {
+    ...StyleSheet.absoluteFill,
   },
-  fullScreenBlack: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: '#000', 
-    justifyContent: 'center',
-    alignItems: 'center',
+  fullScreenBlack: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
     padding: Spacing.lg,
   },
   permissionText: {
-    color: '#fff',
+    color: "#fff",
     marginBottom: Spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  overlay: { 
-    flex: 1, 
-    justifyContent: 'space-between' 
+  overlay: {
+    flex: 1,
+    justifyContent: "space-between",
   },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
@@ -285,7 +338,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     marginBottom: Spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     padding: Spacing.md,
     borderRadius: 12,
   },
@@ -302,21 +355,21 @@ const styles = StyleSheet.create({
   },
   frameContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   frame: {
     width: FRAME_WIDTH,
     height: FRAME_HEIGHT,
-    position: 'relative',
-    overflow: 'hidden',
+    position: "relative",
+    overflow: "hidden",
     marginBottom: 200,
   },
   corner: {
-    position: 'absolute',
+    position: "absolute",
     width: 40,
     height: 40,
-    borderColor: '#ffffff',
+    borderColor: "#ffffff",
     borderWidth: 0,
     opacity: 0.8,
   },
@@ -352,8 +405,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 16,
   },
   scanLine: {
-    position: 'absolute',
-    width: '100%',
+    position: "absolute",
+    width: "100%",
     height: 4,
     backgroundColor: Colors.secondary,
     shadowColor: Colors.secondary,
@@ -364,22 +417,22 @@ const styles = StyleSheet.create({
   },
   feedbackContainer: {
     ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 10,
   },
   feedbackText: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    color: '#fff',
+    backgroundColor: "rgba(0,0,0,0.7)",
+    color: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
     fontSize: 18,
-    fontWeight: '600',
-    overflow: 'hidden',
+    fontWeight: "600",
+    overflow: "hidden",
   },
   footerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: Spacing.xl * 1.5,
   },
   captureButton: {
@@ -387,32 +440,32 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 38,
     borderWidth: 4,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   captureInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   previewContainer: {
     alignSelf: "center",
     width: width * 0.7,
-    height: (width * 0.7) * 0.63,
+    height: width * 0.7 * 0.63,
     borderRadius: 12,
     borderWidth: 4,
     borderColor: "#fff",
     overflow: "hidden",
     marginBottom: -40,
     zIndex: 10,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   previewImage: {
     width: "100%",
@@ -420,7 +473,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: ZOOM_SCALE }],
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: Spacing.lg,
@@ -428,7 +481,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
   },
