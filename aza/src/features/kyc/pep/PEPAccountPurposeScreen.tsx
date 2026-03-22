@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,19 +10,43 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing } from "../../../theme";
-import Button from "../../../components/ui/Button";
-import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function SignUpBirthdayScreen() {
-  const navigation = useNavigation<NavigationProp>();
+type PurposeOption = 
+  | "Day-to-day spending" 
+  | "Savings & Investments" 
+  | "Business transactions" 
+  | "Salary receiving";
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
+type VolumeOption = 
+  | "Less than GH₵ 10,000" 
+  | "GH₵ 10,000 - 50,000" 
+  | "GH₵ 50,000 - 100,000"
+  | "More than GH₵ 100,000";
+
+const PURPOSE_OPTIONS: PurposeOption[] = [
+  "Day-to-day spending", 
+  "Savings & Investments", 
+  "Business transactions", 
+  "Salary receiving"
+];
+
+const VOLUME_OPTIONS: VolumeOption[] = [
+  "Less than GH₵ 10,000", 
+  "GH₵ 10,000 - 50,000", 
+  "GH₵ 50,000 - 100,000",
+  "More than GH₵ 100,000"
+];
+
+export default function PEPAccountPurposeScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const [purpose, setPurpose] = useState<PurposeOption | null>(null);
+  const [volume, setVolume] = useState<VolumeOption | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -37,27 +61,55 @@ export default function SignUpBirthdayScreen() {
     extrapolate: "clamp",
   });
 
-  // ── Stable callbacks ───────────────────────────────────────────────────────
+  const isFormValid = purpose !== null && volume !== null;
 
-  const handleDateSelect = useCallback((dateString: string) => {
-    setSelectedDate(dateString);
-  }, []);
+  const handleNext = () => {
+    // Proceed to Document Upload for PEP EDD
+    navigation.navigate("PEPProofOfWealth");
+  };
 
-  const handleMonthChange = useCallback((dateString: string) => {
-    setCurrentMonth(dateString);
-  }, []);
+  const renderPurposeOption = (label: PurposeOption) => (
+    <TouchableOpacity
+      key={label}
+      style={[
+        styles.optionItem,
+        purpose === label && styles.optionItemSelected,
+      ]}
+      onPress={() => setPurpose(label)}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.optionLabel,
+          purpose === label && styles.optionLabelSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
-  const handleNext = useCallback(() => {
-    console.log("Birthday complete!");
-    navigation.navigate('CreatePasscode')
-  }, []);
+  const renderVolumeOption = (label: VolumeOption) => (
+    <TouchableOpacity
+      key={label}
+      style={[
+        styles.optionItem,
+        volume === label && styles.optionItemSelected,
+      ]}
+      onPress={() => setVolume(label)}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.optionLabel,
+          volume === label && styles.optionLabelSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
-  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
-
-  // Derived — avoids inline expression in JSX causing Button re-renders
-  const isDisabled = useMemo(() => !selectedDate, [selectedDate]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -73,7 +125,10 @@ export default function SignUpBirthdayScreen() {
             },
           ]}
         >
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <MaterialIcons
               name="chevron-left"
               size={28}
@@ -84,7 +139,7 @@ export default function SignUpBirthdayScreen() {
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Date of birth
+              Account Purpose
             </Text>
           </Animated.View>
         </Animated.View>
@@ -100,18 +155,24 @@ export default function SignUpBirthdayScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>When were you born?</Text>
+          <Text style={styles.title}>Account Usage</Text>
           <Text style={styles.subtitle}>
-            We may surprise you with a birthday gift.
+            Please provide details on how you intend to use this account to help us optimize your limits and secure your profile.
           </Text>
 
-          {/* Reusable calendar component */}
-          <DateOfBirthCalendar
-            selectedDate={selectedDate}
-            onDateSelect={handleDateSelect}
-            currentMonth={currentMonth}
-            onMonthChange={handleMonthChange}
-          />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Primary Purpose of Account</Text>
+            <View style={styles.optionsContainer}>
+              {PURPOSE_OPTIONS.map(renderPurposeOption)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Expected Monthly Volume</Text>
+            <View style={styles.optionsContainer}>
+              {VOLUME_OPTIONS.map(renderVolumeOption)}
+            </View>
+          </View>
         </Animated.ScrollView>
 
         {/* Footer */}
@@ -125,7 +186,7 @@ export default function SignUpBirthdayScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={isDisabled}
+            disabled={!isFormValid}
           />
         </View>
       </View>
@@ -166,11 +227,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  skipText: {
-    fontSize: Typography.body.fontSize,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
   content: {
     flex: 1,
   },
@@ -182,14 +238,48 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+    lineHeight: 38,
   },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: Spacing.lg,
+  },
+  section: {
     marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: Typography.bodyLg.fontSize,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  optionsContainer: {
+    gap: Spacing.sm,
+  },
+  optionItem: {
+    height: 48,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.md,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+  },
+  optionItemSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: "#FAFCF8",
+  },
+  optionLabel: {
+    fontSize: Typography.body.fontSize,
+    color: Colors.textSecondary,
+  },
+  optionLabelSelected: {
+    color: Colors.textPrimary,
+    fontWeight: "500",
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

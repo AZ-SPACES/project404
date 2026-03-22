@@ -1,0 +1,13 @@
+export { default as VerifyIdentityScreen } from './VerifyIdentityScreen';
+export { default as SourceofFundsScreen} from './SourceofFundsScreen';
+export { default as IdtypeScreen } from './IdtypeScreen';
+export { default as VerifyFaceIdScreen } from './VerifyFaceIdScreen';
+export { default as ScanIdScreen } from './ScanIdScreen';
+export { default as ScanIdBackScreen } from './ScanIdBackScreen';
+export { default as SelfieScanScreen } from './SelfieScanScreen';
+export { default as PEPStatusScreen } from './pep/PEPStatusScreen';
+export { default as PEPDetailsScreen } from './pep/PEPDetailsScreen';
+export { default as PEPAccountPurposeScreen } from './pep/PEPAccountPurposeScreen';
+export { default as PEPProofOfWealthScreen } from './pep/PEPProofOfWealthScreen';
+export { default as PEPUnderReviewScreen } from './pep/PEPUnderReviewScreen';
+export { default as KYCSuccessScreen } from './KYCSuccessScreen';
