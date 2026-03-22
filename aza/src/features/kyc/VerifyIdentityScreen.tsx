@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "VerifyIdentity">;
 type VerifyIdentityRouteProp = RouteProp<RootStackParamList, "VerifyIdentity">;
 
 export default function VerifyIdentityScreen() {
