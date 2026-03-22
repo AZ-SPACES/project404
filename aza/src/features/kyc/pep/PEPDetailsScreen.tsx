@@ -3,13 +3,12 @@ import {
   View,
   Text,
   TextInput,
+  StyleSheet,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,10 +21,10 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function SignUpNameScreen() {
+export default function PEPDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState("");
+  const [wealthSource, setWealthSource] = useState("");
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -40,20 +39,19 @@ export default function SignUpNameScreen() {
     extrapolate: "clamp",
   });
 
-  const handleNext = () => {
-    // Navigate to the next screen in the signup flow
-    navigation.navigate("SignUpAddress");
-  };
+  const isFormValid = role.trim().length > 0 && wealthSource.trim().length > 0;
 
-  const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0;
+  const handleNext = () => {
+    // Proceed to next KYC EDD step
+    navigation.navigate("PEPAccountPurpose");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
           <Animated.View
@@ -81,7 +79,7 @@ export default function SignUpNameScreen() {
               style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
             >
               <Text style={styles.headerTitle} numberOfLines={1}>
-                What's your name?
+                Enhanced Due Diligence
               </Text>
             </Animated.View>
           </Animated.View>
@@ -97,55 +95,48 @@ export default function SignUpNameScreen() {
             )}
             scrollEventThrottle={16}
           >
-            <Text style={styles.title}>What's your name?</Text>
+            <Text style={styles.title}>PEP Verification</Text>
             <Text style={styles.subtitle}>
-              This will be the name we use to refer to you.
+              To comply with Bank of Ghana regulations for Politically Exposed Persons, please provide additional details regarding your position and source of wealth.
             </Text>
 
-            <Text style={styles.label}>Firstname</Text>
-            <View style={styles.inputContainer}>
-              <MaterialIcons
-                name="person-outline"
-                size={24}
-                color={Colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Kwame"
-                placeholderTextColor={Colors.textSecondary}
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-                autoFocus
-                cursorColor={Colors.primary}
-                selectionColor={Colors.primary}
-              />
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Political Role / Position</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="work-outline" color={Colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Minister of Finance"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={role}
+                  onChangeText={setRole}
+                  autoCapitalize="words"
+                />
+              </View>
+              <Text style={styles.hint}>Include relationship if you are a close associate.</Text>
             </View>
 
-            <Text style={styles.label}>Lastname</Text>
-            <View style={styles.inputContainer}>
-              <MaterialIcons
-                name="person-outline"
-                size={24}
-                color={Colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Obeng"
-                placeholderTextColor={Colors.textSecondary}
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-              />
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Source of Wealth</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="account-balance-wallet" color={Colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Real Estate, Business Ownership"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={wealthSource}
+                  onChangeText={setWealthSource}
+                  autoCapitalize="sentences"
+                />
+              </View>
+              <Text style={styles.hint}>Briefly declare your primary source(s) of wealth generation.</Text>
             </View>
           </Animated.ScrollView>
 
           {/* Footer */}
           <View style={styles.buttonContainer}>
             <Button
-              title="Continue"
+              title="Submit Details"
               onPress={handleNext}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
@@ -206,20 +197,29 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+    lineHeight: 38,
   },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: Spacing.xl,
+  },
+  inputSection: {
+    marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: Typography.bodyLg.fontSize,
-    fontWeight: "600",
+    fontSize: Typography.body.fontSize,
+    fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-    marginTop: Spacing.xl,
+  },
+  hint: {
+    fontSize: Typography.caption.fontSize,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   inputContainer: {
     flexDirection: "row",
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   inputIcon: {
+    fontSize: 24,
     marginRight: Spacing.sm,
   },
   input: {

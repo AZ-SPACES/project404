@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,19 +10,24 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing } from "../../../theme";
-import Button from "../../../components/ui/Button";
-import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export default function SignUpBirthdayScreen() {
-  const navigation = useNavigation<NavigationProp>();
+type PEPOptions = "No, I am not" | "Yes, I am a Politically Exposed Person" | "Yes, I am a family member or close associate of a PEP";
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
+const PEP_OPTIONS: PEPOptions[] = [
+  "No, I am not",
+  "Yes, I am a Politically Exposed Person",
+  "Yes, I am a family member or close associate of a PEP"
+];
+
+export default function PEPStatusScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -37,27 +42,35 @@ export default function SignUpBirthdayScreen() {
     extrapolate: "clamp",
   });
 
-  // ── Stable callbacks ───────────────────────────────────────────────────────
+  const handleNext = () => {
+    if (selectedOption === "No, I am not") {
+      navigation.navigate("VerifyIdentity", { isPEP: false });
+    } else {
+      navigation.navigate("PEPDetails");
+    }
+  };
 
-  const handleDateSelect = useCallback((dateString: string) => {
-    setSelectedDate(dateString);
-  }, []);
+  const renderOption = (label: PEPOptions) => (
+    <TouchableOpacity
+      key={label}
+      style={[
+        styles.optionItem,
+        selectedOption === label && styles.optionItemSelected,
+      ]}
+      onPress={() => setSelectedOption(label)}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.optionLabel,
+          selectedOption === label && styles.optionLabelSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
-  const handleMonthChange = useCallback((dateString: string) => {
-    setCurrentMonth(dateString);
-  }, []);
-
-  const handleNext = useCallback(() => {
-    console.log("Birthday complete!");
-    navigation.navigate('CreatePasscode')
-  }, []);
-
-  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
-
-  // Derived — avoids inline expression in JSX causing Button re-renders
-  const isDisabled = useMemo(() => !selectedDate, [selectedDate]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -73,7 +86,10 @@ export default function SignUpBirthdayScreen() {
             },
           ]}
         >
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <MaterialIcons
               name="chevron-left"
               size={28}
@@ -84,7 +100,7 @@ export default function SignUpBirthdayScreen() {
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Date of birth
+              PEP Status
             </Text>
           </Animated.View>
         </Animated.View>
@@ -100,18 +116,14 @@ export default function SignUpBirthdayScreen() {
           )}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>When were you born?</Text>
+          <Text style={styles.title}>Are you a Politically Exposed Person (PEP)?</Text>
           <Text style={styles.subtitle}>
-            We may surprise you with a birthday gift.
+            A Politically Exposed Person (PEP) is an individual who is or has been entrusted with a prominent public function, such as a senior politician, a senior government, judicial or military official, a senior executive of a state-owned corporation, or an important political party official, as well as their family members and close associates.
           </Text>
 
-          {/* Reusable calendar component */}
-          <DateOfBirthCalendar
-            selectedDate={selectedDate}
-            onDateSelect={handleDateSelect}
-            currentMonth={currentMonth}
-            onMonthChange={handleMonthChange}
-          />
+          <View style={styles.optionsContainer}>
+            {PEP_OPTIONS.map(renderOption)}
+          </View>
         </Animated.ScrollView>
 
         {/* Footer */}
@@ -125,7 +137,7 @@ export default function SignUpBirthdayScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={isDisabled}
+            disabled={selectedOption === null}
           />
         </View>
       </View>
@@ -166,11 +178,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  skipText: {
-    fontSize: Typography.body.fontSize,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
   content: {
     flex: 1,
   },
@@ -182,14 +189,40 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+    lineHeight: 38,
   },
-  subtitle: {
+  subtitle:{
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 24,
     marginBottom: Spacing.xl,
+  },
+  optionsContainer: {
+    gap: Spacing.sm,
+  },
+  optionItem: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+  },
+  optionItemSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: "#FAFCF8",
+  },
+  optionLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  optionLabelSelected: {
+    color: Colors.textPrimary,
+    fontWeight: "500",
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

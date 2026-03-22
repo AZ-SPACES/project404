@@ -10,6 +10,7 @@ export const Colors = {
   background: '#E6ECE1',
   surface:    '#F8F9FA',
   border:     '#DADCE0',
+  white: '#FFFFFF',
 } as const;
 
 export const Typography = {

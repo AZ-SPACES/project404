@@ -111,6 +111,8 @@ export default function SignUpPasswordScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!isConfirmPasswordVisible}
                 autoCapitalize="none"
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
               <TouchableOpacity
                 onPress={() =>

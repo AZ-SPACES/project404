@@ -2,12 +2,15 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { 
   OnboardingScreen, 
-  EnableNotificationsScreen 
+  EnableNotificationsScreen,
+  EnableBiometricsScreen,
+  CreatingAccountScreen,
+  AccountReadyScreen,
+  FeesAndLimitsScreen
 } from '../features/onboarding';
 import { 
   LoginScreen, 
   OTPScreen, 
-  EnableBiometricsScreen,
   TroubleLoginScreen,
   ForgotPasswordScreen,
   TwoStepVerificationIssueScreen,
@@ -24,10 +27,29 @@ import {
   SignUpPronounsScreen,
   SignUpEmploymentScreen,
   SignUpBirthdayScreen,
+  CreatePasscodeScreen,
+  ConfirmPasscodeScreen,
+  TaxResidencyScreen,
+  ConsentScreen,
   ReasonScreen,
   RefundScreen,
   StatementScreen
 } from '../features/auth';
+import { 
+  VerifyIdentityScreen,
+  SourceofFundsScreen,
+  IdtypeScreen,
+  VerifyFaceIdScreen,
+  ScanIdScreen,
+  ScanIdBackScreen,
+  SelfieScanScreen,
+  PEPStatusScreen,
+  PEPDetailsScreen,
+  PEPAccountPurposeScreen,
+  PEPProofOfWealthScreen,
+  PEPUnderReviewScreen,
+  KYCSuccessScreen,
+ } from '../features/kyc';
 import { 
   TalkToUsScreen, 
   EmailUsScreen, 
@@ -42,7 +64,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Onboarding"
+      initialRouteName="VerifyFaceId"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -64,6 +86,26 @@ export default function AppNavigator() {
       <Stack.Screen name="SignUpPronouns" component={SignUpPronounsScreen} />
       <Stack.Screen name="SignUpEmployment" component={SignUpEmploymentScreen} />
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
+      <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
+      <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
+      <Stack.Screen name="TaxResidency" component={TaxResidencyScreen} />
+      <Stack.Screen name="Consent" component={ConsentScreen} />
+      <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
+      <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
+      <Stack.Screen name="SourceofFund" component={SourceofFundsScreen} />
+      <Stack.Screen name='Idtype' component={IdtypeScreen} />
+      <Stack.Screen name="VerifyFaceId" component={VerifyFaceIdScreen} />
+      <Stack.Screen name="ScanId" component={ScanIdScreen} />
+      <Stack.Screen name="ScanIdBack" component={ScanIdBackScreen} />
+      <Stack.Screen name="SelfieScan" component={SelfieScanScreen} />
+      <Stack.Screen name="PEPStatus" component={PEPStatusScreen} />
+      <Stack.Screen name="PEPDetails" component={PEPDetailsScreen} />
+      <Stack.Screen name="PEPAccountPurpose" component={PEPAccountPurposeScreen} />
+      <Stack.Screen name="PEPProofOfWealth" component={PEPProofOfWealthScreen} />
+      <Stack.Screen name="PEPUnderReview" component={PEPUnderReviewScreen} />
+      <Stack.Screen name="KYCSuccess" component={KYCSuccessScreen} />
+      <Stack.Screen name="CreatingAccount" component={CreatingAccountScreen} />
+      <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

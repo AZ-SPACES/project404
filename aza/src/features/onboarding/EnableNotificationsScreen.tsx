@@ -31,7 +31,8 @@ export default function EnableNotificationsScreen() {
   };
 
   const handleNotNow = () => {
-    navigation.goBack();
+    console.log('Not now')
+    navigation.navigate('EnableBiometrics');
   };
 
   return (

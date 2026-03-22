@@ -73,6 +73,8 @@ export default function SignUpEmailScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus
+                cursorColor={Colors.primary}
+                selectionColor={Colors.primary}
               />
             </View>
           </View>
