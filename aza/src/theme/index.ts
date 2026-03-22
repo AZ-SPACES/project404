@@ -11,6 +11,7 @@ export const Colors = {
   surface:    '#F8F9FA',
   border:     '#DADCE0',
   white: '#FFFFFF',
+  black: '#000000',
   white10: 'rgba(255, 255, 255, 0.1)',
   white20: 'rgba(255, 255, 255, 0.2)',
   white30: 'rgba(255, 255, 255, 0.3)',

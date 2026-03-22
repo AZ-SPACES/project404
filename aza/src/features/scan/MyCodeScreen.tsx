@@ -1,0 +1,277 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share } from 'react-native';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+
+const { width } = Dimensions.get('window');
+
+const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
+  const navigation = useNavigation();
+  const userHandle = "naaddo";
+  const profileLink = `aza.me/${userHandle}`;
+
+  const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: `Pay me on Aza: ${profileLink}`,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Top Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={28} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconCircle}>
+              <Feather name="shield" size={22} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShare} style={styles.iconCircle}>
+              <Feather name="upload" size={22} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* User Profile Section */}
+        <View style={styles.profileSection}>
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>Nana Akufo-Addo</Text>
+            <View style={styles.handleBadge}>
+              <Text style={styles.userHandle}>@{userHandle}</Text>
+            </View>
+          </View>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/3310695/pexels-photo-3310695.jpeg' }} 
+            style={styles.avatar} 
+          />
+        </View>
+
+        {/* Main QR Content */}
+        <View style={styles.mainContent}>
+          <View style={styles.qrCard}>
+            <View style={styles.qrWrapper}>
+              <Image 
+                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${profileLink}` }}
+                style={styles.qrImage}
+              />
+              <View style={styles.qrLogoContainer}>
+                <Image source={require('../../assets/aza-z.png')} style={styles.qrLogo} />
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.copyLinkContainer}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              // Add Clipboard.setString here if needed
+            }}
+          >
+            <Text style={styles.getPaidText}>
+              Get paid at <Text style={styles.linkText}>{profileLink}</Text>
+            </Text>
+            <Feather name="copy" size={14} color={Colors.textSecondary} style={{marginLeft: 6}} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Toggle - Positioned within Safe Area for better padding */}
+        <View style={styles.bottomNav}>
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity 
+              style={styles.toggleButton}
+              onPress={onToggle}
+            >
+              <Text style={styles.toggleTextInactive}>Scan</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.toggleButton, styles.activeToggleButton]}
+              activeOpacity={1}
+            >
+              <Text style={styles.toggleTextActive}>My code</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA', // Slightly off-white for better card contrast
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    height: 60,
+  },
+  backButton: {
+    padding: Spacing.xs,
+    marginLeft: -Spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.sm,
+    // Soft shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  profileSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl * 1.5,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  handleBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  userHandle: {
+    fontSize: 14,
+    color: '#174717', 
+    fontWeight: '700',
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  mainContent: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: Spacing.md,
+  },
+  qrCard: {
+    backgroundColor: Colors.white,
+    padding: 24,
+    borderRadius: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10,
+    marginBottom: Spacing.xl,
+  },
+  qrWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrImage: {
+    width: width * 0.65,
+    height: width * 0.65,
+  },
+  qrLogoContainer: {
+    position: 'absolute',
+    backgroundColor: Colors.white,
+    padding: 8,
+    borderRadius: 12,
+  },
+  qrLogo:{
+    width: 44,
+    height: 52,
+  },
+  copyLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#EAEAEA',
+  },
+  getPaidText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  linkText: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  bottomNav: {
+    paddingBottom: 20, // Extra padding for the bottom
+    alignItems: 'center',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: Radius.full,
+    width: 240,
+    backgroundColor: '#E9E9E9',
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: Radius.full,
+  },
+  activeToggleButton: {
+    backgroundColor: Colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  toggleTextActive: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  toggleTextInactive: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+});
+
+export default MyCodeScreen;

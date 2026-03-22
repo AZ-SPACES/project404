@@ -306,10 +306,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   fullScreen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   fullScreenBlack: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
