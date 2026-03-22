@@ -4,6 +4,7 @@ import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { HomeScreen } from '../features/home';
 import { RecipientsScreen } from '../features/recipients';
+import { ScanScreen } from '../features/scan';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -47,10 +48,10 @@ export default function MainTabsNavigator() {
         }}
       />
       
-      {/* Center Scan/Grid Button */}
+      {/* Center Scan */}
       <Tab.Screen 
         name="ScanTab" 
-        component={DummyScreen} 
+        component={ScanScreen} 
         options={{
           tabBarLabel: '',
           tabBarButton: ({ onPress, accessibilityState, accessibilityLabel }) => (
