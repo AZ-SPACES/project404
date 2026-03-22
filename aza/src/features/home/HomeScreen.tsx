@@ -3,16 +3,20 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, StatusBar 
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 
 const { height } = Dimensions.get('window');
 
 type ActionTargetProps = {
   icon: ComponentProps<typeof Feather>['name'];
   label: string;
+  onPress?: () => void;
 };
 
-const ActionTarget = ({ icon, label }: ActionTargetProps) => (
-  <TouchableOpacity style={styles.actionContainer} activeOpacity={0.7}>
+const ActionTarget = ({ icon, label, onPress }: ActionTargetProps) => (
+  <TouchableOpacity style={styles.actionContainer} activeOpacity={0.7} onPress={onPress}>
     <View style={styles.actionIconCircle}>
       <Feather name={icon} size={24} color={Colors.white} />
     </View>
@@ -21,6 +25,8 @@ const ActionTarget = ({ icon, label }: ActionTargetProps) => (
 );
 
 export default function HomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -65,7 +71,7 @@ export default function HomeScreen() {
           
           {/* Action Buttons */}
           <View style={styles.actionsRow}>
-            <ActionTarget icon="arrow-up" label="Send" />
+            <ActionTarget icon="arrow-up" label="Send" onPress={() => navigation.navigate('Send')} />
             <ActionTarget icon="arrow-down" label="Request" />
             <ActionTarget icon="credit-card" label="Details" />
             <ActionTarget icon="more-horizontal" label="More" />
