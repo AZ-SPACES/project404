@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { HomeScreen } from '../features/home';
+import { RecipientsScreen } from '../features/recipients';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 
 const Tab = createBottomTabNavigator();
@@ -37,7 +38,7 @@ export default function MainTabsNavigator() {
       />
       <Tab.Screen 
         name="Recipients" 
-        component={DummyScreen} 
+        component={RecipientsScreen} 
         options={{
           tabBarLabel: 'Recipients',
           tabBarIcon: ({ color, size }) => (
@@ -53,7 +54,6 @@ export default function MainTabsNavigator() {
         options={{
           tabBarLabel: '',
           tabBarButton: ({ onPress, accessibilityState, accessibilityLabel }) => (
-            // A custom wrapper completely extracting the button from the flex flow
             <View style={styles.centerButtonWrapper} pointerEvents="box-none">
               <TouchableOpacity 
                 onPress={onPress}
@@ -62,7 +62,7 @@ export default function MainTabsNavigator() {
                 style={styles.centerButton} 
                 activeOpacity={0.9}
               >
-                <Ionicons name="grid-outline" size={24} color={Colors.white} />
+                <Ionicons name="qr-code-outline" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
           ),

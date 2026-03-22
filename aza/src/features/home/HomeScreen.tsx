@@ -14,7 +14,7 @@ type ActionTargetProps = {
 const ActionTarget = ({ icon, label }: ActionTargetProps) => (
   <TouchableOpacity style={styles.actionContainer} activeOpacity={0.7}>
     <View style={styles.actionIconCircle}>
-      <Feather name={icon} size={24} color={Colors.primary} />
+      <Feather name={icon} size={24} color={Colors.white} />
     </View>
     <Text style={styles.actionLabel}>{label}</Text>
   </TouchableOpacity>
@@ -37,17 +37,16 @@ export default function HomeScreen() {
         <SafeAreaView>
           {/* Header */}
           <View style={styles.header}>
-            {/* The rule says no <small> as heading, or decorative copy. Just use standardized typography. */}
             <Text style={[Typography.h1, { color: Colors.white }]}>Good Morning</Text>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.profilePicContainer}>
                 <Image 
-                  source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+                  source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10' }} 
                   style={styles.profilePic} 
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.bellButton}>
-                <Feather name="bell" size={20} color={Colors.white} />
+                <Feather name="bell" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -56,7 +55,6 @@ export default function HomeScreen() {
           <View style={styles.balanceSection}>
             <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
             <View style={styles.balanceRow}>
-              {/* Using the standard h1 typography instead of arbitrary 44px text to respect the Rules */}
               <Text style={[Typography.h1, styles.balanceText]}>GH₵ 0.00</Text>
               <TouchableOpacity style={styles.eyeIcon}>
                 <Feather name="eye-off" size={Typography.h1.fontSize} color={Colors.white} />
@@ -75,12 +73,6 @@ export default function HomeScreen() {
         </SafeAreaView>
       </View>
       
-      {/* Bottom Section / Transactions */}
-      {/* 
-        Rule overrides: 
-        Cards: 8–12px max border-radius. 
-        Shadows: max 0 2px 8px rgba(0,0,0,0.1)
-      */}
       <View style={styles.bottomSection}>
         <View style={styles.transactionsHeader}>
           <Text style={[Typography.h3, styles.transactionsTitle]}>Transactions</Text>
@@ -111,8 +103,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, 
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(23, 71, 23, 0.45)', // Using primary green tone for overlay
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(23, 71, 23, 0.45)',
   },
   header: {
     flexDirection: 'row',
@@ -129,17 +121,15 @@ const styles = StyleSheet.create({
     marginRight: Spacing.md,
   },
   profilePic: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   bellButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: Radius.full,
-    backgroundColor: 'rgba(0,0,0,0.2)', // solid fill or subtle transparency. Avoiding glassmorphism (blurry white boxes).
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -177,8 +167,8 @@ const styles = StyleSheet.create({
   actionIconCircle: {
     width: 56,
     height: 56,
-    borderRadius: Radius.full, // Circle for icons
-    backgroundColor: Colors.white, // Solid fill, not glassmorphism
+    borderRadius: Radius.full, 
+    backgroundColor: Colors.black30, 
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -192,8 +182,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
     marginTop: -Spacing.lg, 
-    borderTopLeftRadius: Radius.md, // 12px conforming to user rule max
-    borderTopRightRadius: Radius.md, // 12px conforming to user rule max
+    borderTopLeftRadius: Radius.md,
+    borderTopRightRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
   },
