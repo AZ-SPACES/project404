@@ -55,6 +55,7 @@ import {
   EmailUsScreen, 
   ChatWithUsScreen 
 } from '../features/customercare';
+import { ProfileScreen, DisplayScreen } from '../features/profile';
 
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
@@ -115,6 +116,8 @@ export default function AppNavigator() {
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Display" component={DisplayScreen} />
     </Stack.Navigator>
   );
 }

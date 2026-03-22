@@ -47,4 +47,6 @@ export type RootStackParamList = {
   ChatWithUs: undefined;
   EnableNotification: undefined;
   EnableBiometrics: undefined;
+  Profile: undefined;
+  Display: undefined;
 };
