@@ -19,7 +19,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPDetails">;
 
 export default function PEPDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();

@@ -7,7 +7,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
 import { Colors } from "../../theme";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatingAccount">;
 
 const DURATION = 3200; // slightly longer for premium feel
 

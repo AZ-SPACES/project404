@@ -15,7 +15,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPAccountPurpose">;
 
 type PurposeOption = 
   | "Day-to-day spending" 

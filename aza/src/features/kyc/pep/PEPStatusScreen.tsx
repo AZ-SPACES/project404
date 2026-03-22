@@ -15,7 +15,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPStatus">;
 
 type PEPOptions = "No, I am not" | "Yes, I am a Politically Exposed Person" | "Yes, I am a family member or close associate of a PEP";
 

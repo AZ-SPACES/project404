@@ -14,7 +14,7 @@ import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Reason">;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Refund">;
 export default function Refund() {
   const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;

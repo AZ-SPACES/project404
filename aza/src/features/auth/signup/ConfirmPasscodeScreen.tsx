@@ -20,7 +20,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ConfirmPasscode">;
 type ConfirmPageRouteProp = RouteProp<RootStackParamList, "ConfirmPasscode">;
 
 export default function ConfirmPasscodeScreen() {

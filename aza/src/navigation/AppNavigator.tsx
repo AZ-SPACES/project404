@@ -57,17 +57,18 @@ import {
 } from '../features/customercare';
 
 import { RootStackParamList } from './types';
-
+import MainTabsNavigator from './MainTabsNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="VerifyFaceId"
+      initialRouteName="Onboarding"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="MainTabs" component={MainTabsNavigator} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="TroubleLogin" component={TroubleLoginScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
