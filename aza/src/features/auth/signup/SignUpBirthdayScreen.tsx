@@ -16,7 +16,7 @@ import { Colors, Typography, Spacing } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
 export default function SignUpBirthdayScreen() {
   const navigation = useNavigation<NavigationProp>();

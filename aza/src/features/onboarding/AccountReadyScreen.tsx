@@ -9,7 +9,7 @@ import { RootStackParamList } from "../../navigation/types";
 import { Colors } from "../../theme";
 import Button from "../../components/ui/Button";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "AccountReady">;
 
 export default function AccountReadyScreen() {
   const navigation = useNavigation<NavigationProp>();

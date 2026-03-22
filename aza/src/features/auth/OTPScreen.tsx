@@ -16,9 +16,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import Button from '../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 const OTPScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [timeLeft, setTimeLeft] = useState(57);
@@ -74,6 +77,7 @@ const OTPScreen: React.FC = () => {
   const handleVerify = () => {
     // TODO: Verify OTP
     console.log('OTP entered:', otp.join(''));
+    navigation.navigate('MainTabs');
   };
 
   const handleClose = () => {

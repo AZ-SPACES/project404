@@ -16,7 +16,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 
 type DocumentType = "Bank Statement" | "Asset Declaration Form" | "Recent Payslip" | "Tax Return";
 

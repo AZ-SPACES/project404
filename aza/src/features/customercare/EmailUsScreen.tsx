@@ -18,7 +18,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../components/ui/Button";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "EmailUs">;
 
 export default function EmailUsScreen() {
   const navigation = useNavigation<NavigationProp>();
