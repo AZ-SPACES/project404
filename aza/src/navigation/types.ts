@@ -53,6 +53,8 @@ export type RootStackParamList = {
   Receive: undefined;
   HelpAndSupport: undefined;
   Inbox: undefined;
+  NotificationSettings: undefined;
   SendAmount: { name: string; username: string; avatar: string };
   RequestAmount: { name: string; username: string; avatar: string };
+  SecurityAndPrivacy: undefined;
 };
