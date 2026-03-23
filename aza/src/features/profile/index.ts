@@ -1,2 +1,4 @@
 export * from './ProfileScreen';
-export * from './DisplayScreen';
+export * from './AppearanceScreen';
+export * from './NotificationSettingsScreen';
+export * from './securityandprivacy/SecurityAndPrivacyScreen';
