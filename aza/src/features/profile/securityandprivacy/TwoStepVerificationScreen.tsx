@@ -1,0 +1,218 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { Colors, Typography, Spacing, Radius } from '../../../theme';
+
+interface VerificationMethodProps {
+  iconName: string;
+  iconType: 'Feather' | 'MaterialCommunityIcons' | 'Ionicons';
+  title: string;
+  description: string;
+  securityLevel: string;
+  isVerySecure?: boolean;
+  onPress?: () => void;
+}
+
+const VerificationMethod = ({ 
+  iconName, 
+  iconType, 
+  title, 
+  description, 
+  securityLevel, 
+  isVerySecure,
+  onPress 
+}: VerificationMethodProps) => (
+  <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
+    <View style={styles.iconContainer}>
+      {iconType === 'Feather' && <Feather name={iconName as any} size={24} color={Colors.textPrimary} />}
+      {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={24} color={Colors.textPrimary} />}
+      {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={24} color={Colors.textPrimary} />}
+    </View>
+    <View style={styles.methodInfo}>
+      <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
+      <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
+      <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
+        {securityLevel}
+      </Text>
+    </View>
+    <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+  </TouchableOpacity>
+);
+
+export function TwoStepVerificationScreen() {
+  const navigation = useNavigation();
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.titleSection}>
+          <Text style={[Typography.h1, styles.mainTitle]}>2-step verification</Text>
+          <Text style={[Typography.bodyLg, styles.mainDescription]}>
+            Manage how you complete 2-step verification. It's an extra layer of security on your account, on top of your password.
+          </Text>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={[Typography.body, styles.sectionLabel]}>Your verification methods</Text>
+          <TouchableOpacity>
+            <Text style={[Typography.body, { color: Colors.primary, fontWeight: '600' }]}>Change default</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.divider} />
+
+        <View style={styles.contentSection}>
+          <VerificationMethod 
+            iconType="MaterialCommunityIcons"
+            iconName="account-group-outline"
+            title="Passkeys (default)"
+            description="Log in with the more secure face and fingerprint recognition."
+            securityLevel="Very secure"
+            isVerySecure
+          />
+          
+          <VerificationMethod 
+            iconType="Feather"
+            iconName="smartphone"
+            title="Aza app"
+            description="Verify yourself with this app. No need to wait for a text, and you just need an internet connection."
+            securityLevel="Very secure"
+            isVerySecure
+          />
+
+          <VerificationMethod 
+            iconType="Ionicons"
+            iconName="chatbubble-outline"
+            title="Text message"
+            description="Receive a verification code by text. You'll need phone signal for this."
+            securityLevel="Fairly secure"
+          />
+        </View>
+
+        <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+          <Text style={[Typography.body, styles.sectionLabel]}>Other verification methods</Text>
+        </View>
+        <View style={styles.divider} />
+
+        <View style={styles.contentSection}>
+          <TouchableOpacity style={styles.methodRow} activeOpacity={0.7}>
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name="shield-check-outline" size={24} color={Colors.textPrimary} />
+            </View>
+            <View style={styles.methodInfo}>
+              <Text style={[Typography.bodyLg, styles.methodTitle]}>Authenticator app</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xl,
+  },
+  titleSection: {
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  mainTitle: {
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    fontSize: 32,
+  },
+  mainDescription: {
+    color: Colors.textSecondary,
+    lineHeight: 24,
+  },
+  sectionHeader: {
+    paddingHorizontal: Spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sectionLabel: {
+    color: Colors.textSecondary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginBottom: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+  },
+  contentSection: {
+    paddingHorizontal: Spacing.lg,
+  },
+  methodRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  methodInfo: {
+    flex: 1,
+  },
+  methodTitle: {
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  methodDescription: {
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  securityLevel: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  verySecure: {
+    color: '#1E5128', // Dark green
+  },
+  fairlySecure: {
+    color: Colors.textSecondary,
+  },
+});
