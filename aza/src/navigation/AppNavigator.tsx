@@ -58,6 +58,7 @@ import {
 import SendScreen from '../features/home/quickaccess/SendScreen';
 import ReceiveScreen from '../features/home/quickaccess/ReceiveScreen';
 import SendAmountScreen from '../features/home/quickaccess/SendAmountScreen';
+import RequestAmountScreen from '../features/home/quickaccess/RequestAmountScreen';
 import { ProfileScreen, DisplayScreen } from '../features/profile';
 
 import { RootStackParamList } from './types';
@@ -124,6 +125,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Display" component={DisplayScreen} />
       <Stack.Screen name="Receive" component={ReceiveScreen} />
       <Stack.Screen name="SendAmount" component={SendAmountScreen} />
+      <Stack.Screen name="RequestAmount" component={RequestAmountScreen} />
     </Stack.Navigator>
   );
 }

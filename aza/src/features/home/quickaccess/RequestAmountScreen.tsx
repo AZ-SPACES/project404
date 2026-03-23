@@ -18,9 +18,9 @@ import { Colors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 
-type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
+type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'RequestAmount'>;
 
-export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
+export default function RequestAmountScreen({ navigation, route }: RequestAmountScreenProps) {
     const { name, username, avatar } = route.params;
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
@@ -30,21 +30,13 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const displayAmount = numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
 
     const handleAmountChange = (text: string) => {
-        // Allow only digits and a single decimal point
         const cleaned = text.replace(/[^0-9.]/g, '');
-
-        // Reject multiple decimal points
         const dotCount = (cleaned.match(/\./g) || []).length;
         if (dotCount > 1) return;
-
-        // If there's a decimal, allow at most 2 digits after it
         const dotIndex = cleaned.indexOf('.');
         if (dotIndex !== -1 && cleaned.length - dotIndex - 1 > 2) return;
-
-        // Cap integer part at 8 digits
         const intPart = dotIndex !== -1 ? cleaned.slice(0, dotIndex) : cleaned;
         if (intPart.length > 8) return;
-
         setAmount(cleaned);
     };
 
@@ -67,9 +59,9 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
         setAmount(num.toFixed(2));
     };
 
-    const handleSend = () => {
+    const handleRequest = () => {
         if (numericAmount <= 0) return;
-        // Handle send logic
+        // Handle request logic
     };
 
     return (
@@ -95,7 +87,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             >
                                 <Feather name="chevron-left" size={24} color={Colors.textPrimary} style={styles.backicon} />
                             </TouchableOpacity>
-                            <Text style={styles.headerTitle}>Send Money</Text>
+                            <Text style={styles.headerTitle}>Request Money</Text>
                             <View style={styles.backButtonPlaceholder} />
                         </View>
 
@@ -137,13 +129,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             {/* Fee indicator */}
                             <View style={styles.feeRow}>
                                 <Feather name="info" size={14} color={Colors.primary} />
-                                <Text style={styles.feeText}>No transfer fees</Text>
-                            </View>
-
-                            {/* Balance */}
-                            <View style={styles.balanceRow}>
-                                <Text style={styles.balanceLabel}>Available balance:</Text>
-                                <Text style={styles.balanceAmount}>GH¢ 0.00</Text>
+                                <Text style={styles.feeText}>No fees on requests</Text>
                             </View>
                         </View>
 
@@ -171,29 +157,29 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             </View>
                         </View>
 
-                        {/* Send Button */}
+                        {/* Request Button */}
                         <TouchableOpacity
                             style={[
-                                styles.sendButton,
-                                numericAmount > 0 && styles.sendButtonActive,
+                                styles.requestButton,
+                                numericAmount > 0 && styles.requestButtonActive,
                             ]}
                             activeOpacity={0.7}
-                            onPress={handleSend}
+                            onPress={handleRequest}
                             disabled={numericAmount <= 0}
                         >
                             <Feather
-                                name="arrow-up"
+                                name="arrow-down"
                                 size={18}
                                 color={numericAmount > 0 ? Colors.white : Colors.textSecondary}
-                                style={styles.sendIcon}
+                                style={styles.requestIcon}
                             />
                             <Text
                                 style={[
-                                    styles.sendButtonText,
-                                    numericAmount > 0 && styles.sendButtonTextActive,
+                                    styles.requestButtonText,
+                                    numericAmount > 0 && styles.requestButtonTextActive,
                                 ]}
                             >
-                                Send GH¢ {displayAmount}
+                                Request GH¢ {displayAmount}
                             </Text>
                         </TouchableOpacity>
                   </ScrollView>
@@ -339,21 +325,6 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         fontWeight: '500',
     },
-    balanceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: Spacing.sm,
-    },
-    balanceLabel: {
-        ...Typography.caption,
-        color: Colors.textSecondary,
-    },
-    balanceAmount: {
-        ...Typography.caption,
-        fontWeight: '600',
-        color: Colors.textPrimary,
-    },
 
     // Note
     noteContainer: {
@@ -380,8 +351,8 @@ const styles = StyleSheet.create({
         padding: 0,
     },
 
-    // Send
-    sendButton: {
+    // Request
+    requestButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -391,17 +362,17 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
     },
-    sendButtonActive: {
+    requestButtonActive: {
         backgroundColor: Colors.primary,
     },
-    sendIcon: {
+    requestIcon: {
         marginRight: Spacing.sm,
     },
-    sendButtonText: {
+    requestButtonText: {
         ...Typography.button,
         color: Colors.textSecondary,
     },
-    sendButtonTextActive: {
+    requestButtonTextActive: {
         color: Colors.white,
     },
 });

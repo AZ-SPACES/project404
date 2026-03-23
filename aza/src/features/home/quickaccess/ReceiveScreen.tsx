@@ -93,7 +93,11 @@ export default function ReceiveScreen({ navigation }: ReceiveScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleContactPress = (contact: Contact) => {
-    // Navigate to request amount screen or handle contact selection
+    navigation.navigate('RequestAmount', {
+      name: contact.name,
+      username: contact.username,
+      avatar: contact.avatar,
+    });
   };
 
   const filteredContacts = searchQuery
