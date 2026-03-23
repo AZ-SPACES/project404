@@ -106,8 +106,14 @@ export function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Settings</Text>
-          <SectionItem iconFamily="Feather" iconName="shield" title="Security and Privacy" subtitle="Change your security and privacy settings" />
-          <SectionItem iconFamily="Feather" iconName="bell" title="Notifications" subtitle="Customise how you get updates" />
+          <SectionItem iconFamily="Feather" iconName="shield" title="Security and Privacy" subtitle="Change your security and privacy settings" onPress={() => navigation.navigate("SecurityAndPrivacy")} />
+          <SectionItem 
+            iconFamily="Feather" 
+            iconName="bell" 
+            title="Notifications" 
+            subtitle="Customise how you get updates" 
+            onPress={() => navigation.navigate("NotificationSettings")}
+          />
           <SectionItem 
             iconFamily="Ionicons" 
             iconName="contrast-outline" 

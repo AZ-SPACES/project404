@@ -62,7 +62,7 @@ import {
   RequestContactScreen,
   RequestAmountScreen 
 } from '../features/transfer';
-import { ProfileScreen, AppearanceScreen } from '../features/profile';
+import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen } from '../features/profile';
 
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
@@ -132,6 +132,8 @@ export default function AppNavigator() {
       <Stack.Screen name="RequestAmount" component={RequestAmountScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="SecurityAndPrivacy" component={SecurityAndPrivacyScreen} />
     </Stack.Navigator>
   );
 }
