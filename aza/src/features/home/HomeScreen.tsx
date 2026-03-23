@@ -77,7 +77,7 @@ export default function HomeScreen() {
           {/* Action Buttons */}
           <View style={styles.actionsRow}>
             <ActionTarget icon="arrow-up" label="Send" onPress={() => navigation.navigate('Send')} />
-            <ActionTarget icon="arrow-down" label="Request" />
+            <ActionTarget icon="arrow-down" label="Request" onPress={() => navigation.navigate('Receive')} />
             <ActionTarget icon="credit-card" label="Details" />
             <ActionTarget icon="more-horizontal" label="More" />
           </View>

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  FlatList,
   ScrollView,
   TextInput,
 } from 'react-native';
@@ -15,7 +14,7 @@ import { Colors, Typography, Spacing, Radius } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 
-type SendScreenProps = NativeStackScreenProps<RootStackParamList, 'Send'>;
+type ReceiveScreenProps = NativeStackScreenProps<RootStackParamList, 'Receive'>;
 
 type Contact = {
   id: string;
@@ -24,92 +23,50 @@ type Contact = {
   avatar: string;
 };
 
-const RECENT_CONTACTS: Contact[] = [
-  {
-    id: '1',
-    name: 'Ruth Akosua',
-    username: '@rakosua',
-    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=face',
-  },
-  {
-    id: '2',
-    name: 'Keren Dussey',
-    username: '@kdussey',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
-  },
-  {
-    id: '3',
-    name: 'Reuel Agyapong',
-    username: '@ragyapong',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
-  },
-];
-
 const ALL_CONTACTS: Contact[] = [
   {
-    id: '4',
+    id: '1',
     name: 'Paapa Cobbold',
     username: '@pcobbold',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '5',
+    id: '2',
     name: 'Davies Opoku',
     username: '@dopoku',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '6',
+    id: '3',
     name: 'Ibrahim Mahama',
     username: '@ibmahama',
     avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '7',
+    id: '4',
     name: 'Charlotte Osei',
     username: '@cosei',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '8',
+    id: '5',
     name: 'Kevin Okyere',
     username: '@kokyere',
     avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '9',
+    id: '6',
     name: 'Shirley Ayorkor Botchwey',
     username: '@sabotchwey',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop&crop=face',
   },
   {
-    id: '10',
+    id: '7',
     name: 'Richard Nii Armah Quaye',
     username: '@rnaquaye',
     avatar: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=200&h=200&fit=crop&crop=face',
   },
 ];
-
-type RecentContactItemProps = {
-  contact: Contact;
-  onPress: (contact: Contact) => void;
-};
-
-const RecentContactItem = ({ contact, onPress }: RecentContactItemProps) => (
-  <TouchableOpacity
-    style={styles.recentItem}
-    activeOpacity={0.7}
-    onPress={() => onPress(contact)}
-  >
-    <Image source={{ uri: contact.avatar }} style={styles.recentAvatar} />
-    <Text style={styles.recentName} numberOfLines={1}>
-      {contact.name}
-    </Text>
-    <Text style={styles.recentUsername} numberOfLines={1}>
-      {contact.username}
-    </Text>
-  </TouchableOpacity>
-);
 
 type ContactRowProps = {
   contact: Contact;
@@ -131,16 +88,12 @@ const ContactRow = ({ contact, onPress }: ContactRowProps) => (
   </TouchableOpacity>
 );
 
-export default function SendScreen({ navigation }: SendScreenProps) {
+export default function ReceiveScreen({ navigation }: ReceiveScreenProps) {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleContactPress = (contact: Contact) => {
-    navigation.navigate('SendAmount', {
-      name: contact.name,
-      username: contact.username,
-      avatar: contact.avatar,
-    });
+    // Navigate to request amount screen or handle contact selection
   };
 
   const filteredContacts = searchQuery
@@ -173,20 +126,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         {/* Title */}
-        <Text style={styles.title}>Who are you sending to?</Text>
-
-        {/* Recents Section */}
-        <Text style={styles.sectionLabel}>Recents</Text>
-        <FlatList
-          data={RECENT_CONTACTS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.recentsContainer}
-          renderItem={({ item }) => (
-            <RecentContactItem contact={item} onPress={handleContactPress} />
-          )}
-        />
+        <Text style={styles.title}>Who are you{'\n'}requesting from?</Text>
 
         {/* All Section Header */}
         <View style={styles.allHeader}>
@@ -241,7 +181,6 @@ export default function SendScreen({ navigation }: SendScreenProps) {
   );
 }
 
-const AVATAR_SIZE = 64;
 const CONTACT_ROW_AVATAR = 44;
 
 const styles = StyleSheet.create({
@@ -300,34 +239,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textPrimary,
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  recentsContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  recentItem: {
-    alignItems: 'center',
-    width: 80,
-  },
-  recentAvatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.xs,
-  },
-  recentName: {
-    ...Typography.caption,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  recentUsername: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    textAlign: 'center',
   },
   allHeader: {
     flexDirection: 'row',

@@ -50,4 +50,6 @@ export type RootStackParamList = {
   Send: undefined;
   Profile: undefined;
   Display: undefined;
+  Receive: undefined;
+  SendAmount: { name: string; username: string; avatar: string };
 };
