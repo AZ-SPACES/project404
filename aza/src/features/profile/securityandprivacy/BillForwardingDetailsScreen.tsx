@@ -7,12 +7,11 @@ import {
   ScrollView,
   StatusBar,
   Switch,
-  Clipboard,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, AntDesign } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";

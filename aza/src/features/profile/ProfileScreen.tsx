@@ -1,12 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar, Animated, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  Animated,
+  Dimensions,
+  Platform,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
-import Button from '../../components/ui/Button';
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as ImagePicker from "expo-image-picker";
+import { RootStackParamList } from "../../navigation/types";
+import { Colors, Typography, Spacing, Radius } from "../../theme";
+import Button from "../../components/ui/Button";
 
 const { height } = Dimensions.get('window');
 
@@ -43,9 +56,19 @@ const SectionItem = ({ iconFamily, iconName, title, subtitle, onPress, hideArrow
 
 export function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const [profileImage, setProfileImage] = useState<string | null>(
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10"
+  );
+
+  // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
   const bottomSheetAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  // Profile Photo Bottom Sheet
+  const [isPhotoSheetVisible, setPhotoSheetVisible] = useState(false);
+  const photoSheetAnim = useRef(new Animated.Value(height)).current;
+  const photoBackdropAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isBottomSheetVisible) {
@@ -77,6 +100,91 @@ export function ProfileScreen() {
     }
   }, [isBottomSheetVisible, bottomSheetAnim, backdropAnim]);
 
+  useEffect(() => {
+    if (isPhotoSheetVisible) {
+      Animated.parallel([
+        Animated.timing(photoSheetAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(photoBackdropAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(photoSheetAnim, {
+          toValue: height,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(photoBackdropAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isPhotoSheetVisible, photoSheetAnim, photoBackdropAnim]);
+
+  const handleTakePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Camera permission is required to take a photo."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const selectedImage = result.assets[0].uri;
+      if (selectedImage) {
+        setProfileImage(selectedImage);
+        setPhotoSheetVisible(false);
+      }
+    }
+  };
+
+  const handleChooseFromLibrary = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Media library permission is required to choose a photo."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const selectedImage = result.assets[0].uri;
+      if (selectedImage) {
+        setProfileImage(selectedImage);
+        setPhotoSheetVisible(false);
+      }
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setProfileImage(null);
+    setPhotoSheetVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
@@ -91,12 +199,28 @@ export function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
-          <Image 
-            source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10' }} 
-            style={styles.profileImage}
-          />
-          <Text style={[Typography.h2, styles.profileName]}>NAANA AKUFO-ADDO</Text>
-          <Text style={[Typography.caption, styles.profileType]}>Personal account</Text>
+          <TouchableOpacity
+            onPress={() => setPhotoSheetVisible(true)}
+            activeOpacity={0.8}
+            style={styles.profileImageContainer}
+          >
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            ) : (
+              <View style={[styles.profileImage, styles.placeholderImage]}>
+                <Ionicons name="person" size={50} color={Colors.textSecondary} />
+              </View>
+            )}
+            <View style={styles.editIconContainer}>
+              <Ionicons name="camera" size={16} color={Colors.white} />
+            </View>
+          </TouchableOpacity>
+          <Text style={[Typography.h2, styles.profileName]}>
+            NAANA AKUFO-ADDO
+          </Text>
+          <Text style={[Typography.caption, styles.profileType]}>
+            Personal account
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -121,7 +245,13 @@ export function ProfileScreen() {
             subtitle="Customise language and theme settings" 
             onPress={() => navigation.navigate("Appearance")}
           />
-          <SectionItem iconFamily="Feather" iconName="user" title="Personal details" subtitle="Update your profile information" />
+          <SectionItem 
+            iconFamily="Feather" 
+            iconName="user" 
+            title="Personal details" 
+            subtitle="Update your profile information" 
+            onPress={() => navigation.navigate("PersonalDetails")}
+          />
         </View>
 
         <View style={styles.section}>
@@ -201,6 +331,95 @@ export function ProfileScreen() {
           />
         </Animated.View>
       </View>
+
+      {/* Profile Photo Bottom Sheet Overlay */}
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={isPhotoSheetVisible ? "auto" : "none"}
+      >
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: photoBackdropAnim, zIndex: 1000 },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setPhotoSheetVisible(false)}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.bottomSheetContainer,
+            {
+              zIndex: 1001,
+              transform: [{ translateY: photoSheetAnim }],
+            },
+          ]}
+        >
+          <View style={styles.bottomSheetHeader}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setPhotoSheetVisible(false)}
+            >
+              <AntDesign name="close" size={20} color="#0E0F0C" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.bottomSheetTitle}>Edit profile photo</Text>
+          <View style={styles.bottomSheetDivider} />
+
+          <TouchableOpacity
+            style={styles.photoOption}
+            onPress={handleTakePhoto}
+          >
+            <View
+              style={[
+                styles.photoIconContainer,
+                { backgroundColor: Colors.surface },
+              ]}
+            >
+              <Feather name="camera" size={20} color={Colors.textPrimary} />
+            </View>
+            <Text style={styles.photoOptionText}>Take a photo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.photoOption}
+            onPress={handleChooseFromLibrary}
+          >
+            <View
+              style={[
+                styles.photoIconContainer,
+                { backgroundColor: Colors.surface },
+              ]}
+            >
+              <Feather name="image" size={20} color={Colors.textPrimary} />
+            </View>
+            <Text style={styles.photoOptionText}>Choose from library</Text>
+          </TouchableOpacity>
+
+          {profileImage && (
+            <TouchableOpacity
+              style={styles.photoOption}
+              onPress={handleRemovePhoto}
+            >
+              <View
+                style={[
+                  styles.photoIconContainer,
+                  { backgroundColor: "#FEE2E2" },
+                ]}
+              >
+                <Feather name="trash-2" size={20} color="#DC2626" />
+              </View>
+              <Text style={[styles.photoOptionText, { color: "#DC2626" }]}>
+                Remove photo
+              </Text>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -247,16 +466,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: Spacing.md,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   profileName: {
-    textAlign: 'center',
+    textAlign: "center",
     color: Colors.textPrimary,
     marginBottom: 4,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   profileType: {
     color: Colors.textSecondary,
@@ -270,8 +488,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   sectionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: Spacing.sm,
     marginBottom: Spacing.sm,
   },
@@ -281,18 +499,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: Spacing.md,
     backgroundColor: Colors.white,
   },
   itemTextContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   itemTitle: {
     color: Colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   itemSubtitle: {
     color: Colors.textSecondary,
@@ -352,7 +570,48 @@ const styles = StyleSheet.create({
   activeAccountMessage: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
+  },
+  profileImageContainer: {
+    position: "relative",
+    marginBottom: Spacing.md,
+  },
+  placeholderImage: {
+    backgroundColor: Colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editIconContainer: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: Colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  photoOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  photoIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  photoOptionText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: Colors.textPrimary,
   },
 });
