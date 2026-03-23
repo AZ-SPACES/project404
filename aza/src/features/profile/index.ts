@@ -10,4 +10,8 @@ export * from './securityandprivacy/ChangePasswordScreen';
 export * from './securityandprivacy/FindMeByScreen';
 export * from './securityandprivacy/BillForwardingIntroScreen';
 export * from './securityandprivacy/BillForwardingDetailsScreen';
+export * from './personaldetails/PersonalDetailsScreen';
+export * from './personaldetails/PersonalInformationScreen';
+export * from './personaldetails/ChangeEmailScreen';
+export * from './personaldetails/ChangePhoneScreen';
 

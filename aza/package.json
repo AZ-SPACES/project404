@@ -29,6 +29,7 @@
     "@types/lodash": "^4.17.24",
     "expo": "~55.0.6",
     "expo-camera": "~55.0.10",
+    "expo-clipboard": "~55.0.9",
     "expo-document-picker": "~55.0.9",
     "expo-haptics": "~55.0.9",
     "expo-image-manipulator": "~55.0.11",

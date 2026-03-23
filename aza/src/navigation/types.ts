@@ -65,4 +65,8 @@ export type RootStackParamList = {
   FindMeBy: undefined;
   BillForwardingIntro: undefined;
   BillForwardingDetails: undefined;
+  PersonalDetails: undefined;
+  PersonalInformation: undefined;
+  ChangeEmail: undefined;
+  ChangePhone: undefined;
 };

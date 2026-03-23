@@ -74,7 +74,11 @@ import {
   ChangePasswordScreen,
   FindMeByScreen,
   BillForwardingIntroScreen,
-  BillForwardingDetailsScreen
+  BillForwardingDetailsScreen,
+  PersonalDetailsScreen,
+  PersonalInformationScreen,
+  ChangeEmailScreen,
+  ChangePhoneScreen
 } from '../features/profile';
 
 
@@ -156,6 +160,10 @@ export default function AppNavigator() {
       <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
       <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
+      <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
+      <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
+      <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
     </Stack.Navigator>
 
   );
