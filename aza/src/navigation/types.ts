@@ -52,4 +52,5 @@ export type RootStackParamList = {
   Display: undefined;
   Receive: undefined;
   SendAmount: { name: string; username: string; avatar: string };
+  RequestAmount: { name: string; username: string; avatar: string };
 };
