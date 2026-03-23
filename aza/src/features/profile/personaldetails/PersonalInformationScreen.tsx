@@ -9,14 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  ScrollView,
-} from "react-native";
+  ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 
 type NavigationProp = NativeStackNavigationProp<
@@ -31,29 +30,34 @@ interface ReadOnlyInputProps {
   isDate?: boolean;
 }
 
-const ReadOnlyInput = ({
-  label,
-  value,
-  placeholder,
-  isDate,
-}: ReadOnlyInputProps) => (
-  <View style={styles.inputSection}>
-    <Text style={styles.label}>{label}</Text>
-    <View style={[styles.inputContainer, styles.readOnlyContainer]}>
-      <TextInput
-        style={[styles.input, { color: Colors.textSecondary }]}
-        value={value}
-        placeholder={placeholder}
-        editable={false}
-      />
-      {isDate && (
-        <Feather name="chevron-down" size={20} color={Colors.textSecondary} />
-      )}
-    </View>
-  </View>
-);
+
 
 export function PersonalInformationScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
+  const ReadOnlyInput = ({
+    label,
+    value,
+    placeholder,
+    isDate }: ReadOnlyInputProps) => (
+    <View style={styles.inputSection}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputContainer, styles.readOnlyContainer]}>
+        <TextInput
+          style={[styles.input, { color: Colors.textSecondary }]}
+          value={value}
+          placeholder={placeholder}
+          editable={false}
+        />
+        {isDate && (
+          <Feather name="chevron-down" size={20} color={Colors.textSecondary} />
+        )}
+      </View>
+    </View>
+  );
+
   const navigation = useNavigation<NavigationProp>();
   const [preferredName, setPreferredName] = useState("");
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -61,14 +65,12 @@ export function PersonalInformationScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleSave = () => {
     // Save logic
@@ -77,7 +79,7 @@ export function PersonalInformationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
 
       <Animated.View
         style={[
@@ -85,9 +87,7 @@ export function PersonalInformationScreen() {
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          },
+              outputRange: ["transparent", Colors.border] }) },
         ]}
       >
         <TouchableOpacity
@@ -217,11 +217,12 @@ export function PersonalInformationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
@@ -229,8 +230,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    height: 60,
-  },
+    height: 60 },
   closeButton: {
     width: 44,
     height: 44,
@@ -238,52 +238,42 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: "center",
-  },
+    alignItems: "center" },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     fontSize: 32,
-    fontWeight: "700",
-  },
+    fontWeight: "700" },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   sectionHeading: {
     ...Typography.body,
     fontWeight: "600",
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   inputSection: {
     marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   label: {
     ...Typography.caption,
     fontWeight: "600",
     color: Colors.textSecondary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   labelWithIcon: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   inputContainer: {
     height: 52,
     borderWidth: 1,
@@ -292,26 +282,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   readOnlyContainer: {
-    backgroundColor: Colors.surface + "50",
-  },
+    backgroundColor: Colors.surface + "50" },
   input: {
     flex: 1,
     ...Typography.bodyLg,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
     marginVertical: Spacing.lg,
-    opacity: 0.5,
-  },
+    opacity: 0.5 },
   row: {
     flexDirection: "row",
-    gap: Spacing.sm,
-  },
+    gap: Spacing.sm },
   dateInput: {
     flex: 1,
     height: 52,
@@ -319,8 +304,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.sm,
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   dateInputLarge: {
     flex: 2,
     height: 52,
@@ -328,45 +312,40 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.sm,
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   dateLabel: {
     ...Typography.caption,
     color: Colors.textSecondary,
     fontSize: 10,
     position: "absolute",
     top: 4,
-    left: 8,
-  },
+    left: 8 },
   dateValue: {
     ...Typography.bodyLg,
     color: Colors.textSecondary,
-    marginTop: 8,
-  },
+    marginTop: 8 },
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   linkText: {
     ...Typography.body,
     fontWeight: "700",
     color: Colors.primary,
     textAlign: "center",
     textDecorationLine: "underline",
-    marginVertical: Spacing.md,
-  },
+    marginVertical: Spacing.md },
   confirmationText: {
     ...Typography.body,
     color: Colors.textSecondary,
     textAlign: "center",
     marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.border + "20",
-    backgroundColor: Colors.white,
-  },
-});
+    backgroundColor: Colors.background } });
+}
+
+

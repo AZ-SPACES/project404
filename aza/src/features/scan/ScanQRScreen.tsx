@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius } from '../../theme';
+import { useAppTheme, ThemeColors, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +11,8 @@ const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
 
 const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -30,14 +32,12 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             toValue: FRAME_SIZE - 2,
             duration: 2000,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
           Animated.timing(scanAnim, {
             toValue: 0,
             duration: 2000,
             easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
         ])
       ).start();
     };
@@ -157,7 +157,9 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: Colors.black, 
@@ -189,8 +191,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.white30,
     borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   scanLine: {
     width: '100%',
     height: 2,
@@ -198,8 +199,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOpacity: 0.8,
     shadowRadius: 10,
-    elevation: 5,
-  },
+    elevation: 5 },
   corner: { 
     position: 'absolute', 
     width: 24, 
@@ -236,11 +236,10 @@ const styles = StyleSheet.create({
   },
   scanLabelContainer: {
     marginTop: 40,
-    backgroundColor: 'white',
+    backgroundColor: Colors.white,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 20,
-  },
+    borderRadius: 20 },
   scanLabel: { 
     fontSize: 14, 
     fontWeight: '700', 
@@ -291,7 +290,7 @@ const styles = StyleSheet.create({
   toggleTextInactive: { 
     color: Colors.white60, 
     fontWeight: 'bold' 
-  },
-});
+  } });
+}
 
 export default ScanQRScreen;

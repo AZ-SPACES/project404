@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   StatusBar,
   Animated,
-  ScrollView,
-} from "react-native";
+  ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,56 +26,57 @@ interface DetailItemProps {
   onPress: () => void;
 }
 
-const DetailItem = ({
-  iconName,
-  title,
-  subtitle,
-  onPress,
-}: DetailItemProps) => (
-  <TouchableOpacity
-    style={styles.detailItem}
-    onPress={onPress}
-    activeOpacity={0.7}
-  >
-    <View style={styles.iconContainer}>
-      <Feather name={iconName as any} size={22} color={Colors.textPrimary} />
-    </View>
-    <View style={styles.textContainer}>
-      <Text style={[Typography.body, styles.itemTitle]}>{title}</Text>
-      <Text style={[Typography.caption, styles.itemSubtitle]}>{subtitle}</Text>
-    </View>
-    <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-  </TouchableOpacity>
-);
+
 
 export function PersonalDetailsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+
+  const DetailItem = ({
+    iconName,
+    title,
+    subtitle,
+    onPress }: DetailItemProps) => (
+    <TouchableOpacity
+      style={styles.detailItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.iconContainer}>
+        <Feather name={iconName as any} size={22} color={Colors.textPrimary} />
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={[Typography.body, styles.itemTitle]}>{title}</Text>
+        <Text style={[Typography.caption, styles.itemSubtitle]}>{subtitle}</Text>
+      </View>
+      <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+    </TouchableOpacity>
+  );
+
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <Animated.View
         style={[
           styles.header,
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          },
+              outputRange: ["transparent", Colors.border] }) },
         ]}
       >
         <TouchableOpacity
@@ -133,11 +133,12 @@ export function PersonalDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
@@ -145,8 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    height: 60,
-  },
+    height: 60 },
   backButton: {
     width: 44,
     height: 44,
@@ -154,36 +154,29 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: "center",
-  },
+    alignItems: "center" },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     fontSize: 32,
-    fontWeight: "700",
-  },
+    fontWeight: "700" },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   detailItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   iconContainer: {
     width: 44,
     height: 44,
@@ -192,20 +185,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   textContainer: {
     flex: 1,
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   itemTitle: {
     fontWeight: "600",
     color: Colors.textPrimary,
     fontSize: 18,
-    marginBottom: 2,
-  },
+    marginBottom: 2 },
   itemSubtitle: {
     color: Colors.textSecondary,
-    fontSize: 14,
-  },
-});
+    fontSize: 14 } });
+}
+
+

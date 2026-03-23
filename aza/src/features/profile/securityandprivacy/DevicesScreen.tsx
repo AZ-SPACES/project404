@@ -3,20 +3,25 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Animat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 
 const { height } = Dimensions.get('window');
 
-const DeviceDetailRow = ({ label, value }: { label: string; value: string }) => (
-  <View style={styles.detailRow}>
-    <Text style={[Typography.body, styles.detailLabel]}>{label}</Text>
-    <Text style={[Typography.body, styles.detailValue]}>{value}</Text>
-  </View>
-);
+
 
 export function DevicesScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation();
+  
+  const DeviceDetailRow = ({ label, value }: { label: string; value: string }) => (
+    <View style={styles.detailRow}>
+      <Text style={[Typography.body, styles.detailLabel]}>{label}</Text>
+      <Text style={[Typography.body, styles.detailValue]}>{value}</Text>
+    </View>
+  );
   
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -29,33 +34,29 @@ export function DevicesScreen() {
         Animated.timing(bottomSheetAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(bottomSheetAnim, {
           toValue: height,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     }
   }, [isBottomSheetVisible]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       
       <View style={styles.header}>
         <TouchableOpacity 
@@ -111,8 +112,7 @@ export function DevicesScreen() {
             styles.bottomSheetContainer,
             {
               zIndex: 1001,
-              transform: [{ translateY: bottomSheetAnim }],
-            },
+              transform: [{ translateY: bottomSheetAnim }] },
           ]}
         >
           <View style={styles.bottomSheetHeader}>
@@ -149,75 +149,65 @@ export function DevicesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
+    paddingBottom: Spacing.sm },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     fontSize: 32,
-    fontWeight: '700',
-  },
+    fontWeight: '700' },
   mainDescription: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   contentSection: {
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-  },
+    paddingVertical: Spacing.md },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   deviceInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   deviceTitle: {
     fontWeight: '600',
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   deviceSubtitle: {
     color: Colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   bottomSheetContainer: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: 24,
@@ -226,50 +216,41 @@ const styles = StyleSheet.create({
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: -4,
-    },
+      height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 10,
-  },
+    elevation: 10 },
   bottomSheetHeader: {
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
-    marginBottom: 16,
-  },
+    marginBottom: 16 },
   bottomSheetTitle: {
     color: Colors.textPrimary,
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   bottomSheetSubtitle: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   closeButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   detailsContainer: {
-    marginBottom: 32,
-  },
+    marginBottom: 32 },
   detailRow: {
-    marginBottom: 24,
-  },
+    marginBottom: 24 },
   detailLabel: {
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   detailValue: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   bottomSheetFooter: {
-    marginTop: 8,
-  },
-});
+    marginTop: 8 } });
+}
+
+

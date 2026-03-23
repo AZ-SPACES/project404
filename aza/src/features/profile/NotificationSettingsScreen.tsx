@@ -5,7 +5,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, } from '../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -15,14 +15,6 @@ interface NotificationSectionProps {
   children: React.ReactNode;
 }
 
-const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
-  <View style={styles.section}>
-    <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
-    <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
-    {children}
-  </View>
-);
-
 interface NotificationToggleProps {
   iconName: string;
   iconType?: 'Feather' | 'Ionicons' | 'MaterialCommunityIcons';
@@ -31,41 +23,53 @@ interface NotificationToggleProps {
   onValueChange: (value: boolean) => void;
 }
 
-const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
-  <View style={styles.toggleRow}>
-    <View style={styles.iconContainer}>
-      {iconType === 'Feather' ? (
-        <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
-      ) : (
-        <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
-      )}
-    </View>
-    <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
-    <Switch
-      value={value}
-      onValueChange={onValueChange}
-      trackColor={{ false: '#E5E7EB', true: Colors.primary }}
-      thumbColor={Colors.white}
-      ios_backgroundColor="#E5E7EB"
-    />
-  </View>
-);
+
 
 export function NotificationSettingsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+
+  const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
+    <View style={styles.section}>
+      <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
+      <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
+      {children}
+    </View>
+  );
+
+  const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
+    <View style={styles.toggleRow}>
+      <View style={styles.iconContainer}>
+        {iconType === 'Feather' ? (
+          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        ) : (
+          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+        )}
+      </View>
+      <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+      />
+    </View>
+  );
+
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const [allowNotifications, setAllowNotifications] = useState(true);
   const [transfersEmail, setTransfersEmail] = useState(true);
@@ -77,7 +81,7 @@ export function NotificationSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       
       <Animated.View 
         style={[
@@ -85,9 +89,7 @@ export function NotificationSettingsScreen() {
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          }
+              outputRange: ["transparent", Colors.border] }) }
         ]}
       >
         <TouchableOpacity 
@@ -199,19 +201,19 @@ export function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-  },
+    borderBottomWidth: 1 },
   backButton: {
     width: 40,
     height: 40,
@@ -219,55 +221,43 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   mainDescription: {
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   allowSection: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionTitle: {
     color: Colors.textPrimary,
     fontSize: 18,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   sectionDescription: {
     color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   iconContainer: {
     width: 44,
     height: 44,
@@ -276,21 +266,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   toggleTitle: {
     flex: 1,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   footerInfo: {
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-  },
+    marginTop: Spacing.md },
   footerText: {
     color: Colors.textSecondary,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   spacer: {
-    height: Spacing.xl,
-  },
-});
+    height: Spacing.xl } });
+}
+
+

@@ -5,18 +5,25 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { HomeScreen } from '../features/home';
 import { RecipientsScreen } from '../features/recipients';
 import { ScanScreen } from '../features/scan';
-import { Colors, Typography, Spacing, Radius } from '../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
 // Dummy screen for inactive tabs
-const DummyScreen = () => (
-  <View style={styles.dummyContainer}>
-    <Text style={[Typography.h3, styles.dummyText]}>Coming Soon</Text>
-  </View>
-);
+const DummyScreen = () => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  return (
+    <View style={styles.dummyContainer}>
+      <Text style={[Typography.h3, styles.dummyText]}>Coming Soon</Text>
+    </View>
+  );
+};
 
 export default function MainTabsNavigator() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -24,8 +31,7 @@ export default function MainTabsNavigator() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}
+        tabBarLabelStyle: styles.tabBarLabel }}
     >
       <Tab.Screen 
         name="HomeTab" 
@@ -34,8 +40,7 @@ export default function MainTabsNavigator() {
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size || 24} color={color} />
-          ),
-        }}
+          ) }}
       />
       <Tab.Screen 
         name="Recipients" 
@@ -44,8 +49,7 @@ export default function MainTabsNavigator() {
           tabBarLabel: 'Recipients',
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size || 24} color={color} />
-          ),
-        }}
+          ) }}
       />
       
       {/* Center Scan */}
@@ -66,8 +70,7 @@ export default function MainTabsNavigator() {
                 <Ionicons name="qr-code-outline" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
-          ),
-        }}
+          ) }}
       />
       
       <Tab.Screen 
@@ -77,8 +80,7 @@ export default function MainTabsNavigator() {
           tabBarLabel: 'Chat',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size || 24} color={color} />
-          ),
-        }}
+          ) }}
       />
       <Tab.Screen 
         name="Manage" 
@@ -87,41 +89,37 @@ export default function MainTabsNavigator() {
           tabBarLabel: 'Manage',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="apps-outline" size={size || 24} color={color} />
-          ),
-        }}
+          ) }}
       />
     </Tab.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   dummyContainer: {
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   dummyText: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   tabBar: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     paddingTop: Spacing.sm,
     elevation: 0,
-    shadowOpacity: 0,
-  },
+    shadowOpacity: 0 },
   tabBarLabel: {
     ...Typography.caption,
     fontWeight: '500',
-    paddingBottom: Platform.OS === 'android' ? Spacing.sm : 0,
-  },
+    paddingBottom: Platform.OS === 'android' ? Spacing.sm : 0 },
   centerButtonWrapper: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   centerButton: {
     position: 'absolute',
     top: -24, 
@@ -132,11 +130,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: Colors.white,
+    borderColor: Colors.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 2,
-  },
-});
+    elevation: 2 } });
+}

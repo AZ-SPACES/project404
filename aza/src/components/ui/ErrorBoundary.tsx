@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors as AppColors, Typography, Spacing, Radius } from '../../theme';
+import { LightColors as AppColors, Typography, Spacing, Radius } from '../../theme';
 
 interface Props {
   children: ReactNode;
@@ -64,8 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.lg,
-  },
+    padding: Spacing.lg },
   content: {
     backgroundColor: AppColors.surface,
     padding: Spacing.xl,
@@ -79,31 +78,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 2,
-  },
+    elevation: 2 },
   title: {
     fontSize: Typography.h2.fontSize,
     fontWeight: Typography.h2.fontWeight as any,
     color: AppColors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   message: {
     fontSize: Typography.body.fontSize,
     color: AppColors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   button: {
     backgroundColor: AppColors.primary,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderRadius: Radius.sm,
-  },
+    borderRadius: Radius.sm },
   buttonText: {
     color: AppColors.secondary,
     fontSize: Typography.button.fontSize,
-    fontWeight: Typography.button.fontWeight as any,
-  },
-});
+    fontWeight: Typography.button.fontWeight as any } });
 
 export default ErrorBoundary;

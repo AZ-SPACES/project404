@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 
 interface VerificationMethodProps {
   iconName: string;
@@ -15,38 +15,43 @@ interface VerificationMethodProps {
   onPress?: () => void;
 }
 
-const VerificationMethod = ({ 
-  iconName, 
-  iconType, 
-  title, 
-  description, 
-  securityLevel, 
-  isVerySecure,
-  onPress 
-}: VerificationMethodProps) => (
-  <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
-    <View style={styles.iconContainer}>
-      {iconType === 'Feather' && <Feather name={iconName as any} size={24} color={Colors.textPrimary} />}
-      {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={24} color={Colors.textPrimary} />}
-      {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={24} color={Colors.textPrimary} />}
-    </View>
-    <View style={styles.methodInfo}>
-      <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
-      <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
-      <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
-        {securityLevel}
-      </Text>
-    </View>
-    <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-  </TouchableOpacity>
-);
+
 
 export function TwoStepVerificationScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation();
+  
+  const VerificationMethod = ({ 
+    iconName, 
+    iconType, 
+    title, 
+    description, 
+    securityLevel, 
+    isVerySecure,
+    onPress 
+  }: VerificationMethodProps) => (
+    <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.iconContainer}>
+        {iconType === 'Feather' && <Feather name={iconName as any} size={24} color={Colors.textPrimary} />}
+        {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={24} color={Colors.textPrimary} />}
+        {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={24} color={Colors.textPrimary} />}
+      </View>
+      <View style={styles.methodInfo}>
+        <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
+        <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
+        <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
+          {securityLevel}
+        </Text>
+      </View>
+      <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       
       <View style={styles.header}>
         <TouchableOpacity 
@@ -122,66 +127,56 @@ export function TwoStepVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
+    paddingBottom: Spacing.sm },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-    fontSize: 32,
-  },
+    fontSize: 32 },
   mainDescription: {
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   sectionHeader: {
     paddingHorizontal: Spacing.lg,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   sectionLabel: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
     marginBottom: Spacing.lg,
-    marginHorizontal: Spacing.lg,
-  },
+    marginHorizontal: Spacing.lg },
   contentSection: {
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   methodRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   iconContainer: {
     width: 48,
     height: 48,
@@ -190,29 +185,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   methodInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   methodTitle: {
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   methodDescription: {
     color: Colors.textSecondary,
     lineHeight: 20,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   securityLevel: {
     fontWeight: '600',
-    fontSize: 14,
-  },
+    fontSize: 14 },
   verySecure: {
-    color: '#1E5128', // Dark green
+    color: isDark ? Colors.primary : '#1E5128', // Dark green
   },
   fairlySecure: {
-    color: Colors.textSecondary,
-  },
-});
+    color: Colors.textSecondary } });
+}
+
+

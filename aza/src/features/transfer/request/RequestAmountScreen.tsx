@@ -11,10 +11,10 @@ import {
     Keyboard,
     Pressable,
     ScrollView,
-} from 'react-native';
+    StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 
@@ -22,6 +22,9 @@ type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'Requ
 
 export default function RequestAmountScreen({ navigation, route }: RequestAmountScreenProps) {
     const { name, username, avatar } = route.params;
+    const { colors: Colors } = useAppTheme();
+    const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+    const isDark = Colors.background === '#121212';
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const amountInputRef = useRef<TextInput>(null);
@@ -66,6 +69,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
 
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
             <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -191,21 +195,19 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
 
 const AVATAR_SIZE = 48;
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+    const isDark = Colors.background === '#121212';
+    return StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.surface,
-    },
+        backgroundColor: Colors.background },
     flex: {
-        flex: 1,
-    },
+        flex: 1 },
     scrollContent: {
-        flexGrow: 1,
-    },
+        flexGrow: 1 },
     spacer: {
         flex: 1,
-        minHeight: Spacing.lg,
-    },
+        minHeight: Spacing.lg },
 
     // Header
     header: {
@@ -213,30 +215,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.sm,
-    },
+        paddingVertical: Spacing.sm },
     backButton: {
         width: 44,
         height: 44,
         borderRadius: 50,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.surface : Colors.white,
         borderWidth: 1,
         borderColor: Colors.border,
         alignItems: 'center',
-        justifyContent: 'center',
-    },
+        justifyContent: 'center' },
     backicon: {
         fontSize: 28,
-        color: Colors.textPrimary,
-    },
+        color: Colors.textPrimary },
     headerTitle: {
         ...Typography.body,
         fontWeight: '600',
-        color: Colors.textPrimary,
-    },
+        color: Colors.textPrimary },
     backButtonPlaceholder: {
-        width: 44,
-    },
+        width: 44 },
 
     // Recipient
     recipientCard: {
@@ -244,112 +241,95 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: Spacing.lg,
         marginTop: Spacing.md,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.surface : Colors.white,
         borderRadius: 12,
         padding: Spacing.md,
         borderWidth: 1,
-        borderColor: Colors.border,
-    },
+        borderColor: Colors.border },
     recipientAvatar: {
         width: AVATAR_SIZE,
         height: AVATAR_SIZE,
         borderRadius: AVATAR_SIZE / 2,
-        backgroundColor: Colors.border,
-    },
+        backgroundColor: Colors.border },
     recipientInfo: {
         flex: 1,
-        marginLeft: Spacing.md,
-    },
+        marginLeft: Spacing.md },
     recipientName: {
         ...Typography.body,
         fontWeight: '600',
-        color: Colors.textPrimary,
-    },
+        color: Colors.textPrimary },
     recipientUsername: {
         ...Typography.caption,
         color: Colors.textSecondary,
-        marginTop: 2,
-    },
+        marginTop: 2 },
     recipientBadge: {
         width: 28,
         height: 28,
         borderRadius: 14,
         backgroundColor: Colors.secondary,
         alignItems: 'center',
-        justifyContent: 'center',
-    },
+        justifyContent: 'center' },
 
     // Amount
     amountCard: {
         marginHorizontal: Spacing.lg,
         marginTop: Spacing.md,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.surface : Colors.white,
         borderRadius: 12,
         padding: Spacing.lg,
         borderWidth: 1,
-        borderColor: Colors.border,
-    },
+        borderColor: Colors.border },
     amountLabel: {
         ...Typography.caption,
         color: Colors.textSecondary,
-        marginBottom: Spacing.sm,
-    },
+        marginBottom: Spacing.sm },
     amountRow: {
         flexDirection: 'row',
         alignItems: 'baseline',
         paddingBottom: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
-    },
+        borderBottomColor: Colors.border },
     currencySymbol: {
         fontSize: 36,
         fontWeight: '700',
         color: Colors.textPrimary,
-        marginRight: Spacing.xs,
-    },
+        marginRight: Spacing.xs },
     amountInput: {
         flex: 1,
         fontSize: 36,
         fontWeight: '700',
         color: Colors.textPrimary,
-        padding: 0,
-    },
+        padding: 0 },
     feeRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: Spacing.md,
-        gap: 6,
-    },
+        gap: 6 },
     feeText: {
         ...Typography.caption,
         color: Colors.primary,
-        fontWeight: '500',
-    },
+        fontWeight: '500' },
 
     // Note
     noteContainer: {
         paddingHorizontal: Spacing.lg,
-        marginBottom: Spacing.md,
-    },
+        marginBottom: Spacing.md },
     noteInputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.surface : Colors.white,
         borderWidth: 1,
         borderColor: Colors.border,
         borderRadius: 12,
         paddingHorizontal: Spacing.md,
-        paddingVertical: 14,
-    },
+        paddingVertical: 14 },
     noteIcon: {
-        marginRight: Spacing.sm,
-    },
+        marginRight: Spacing.sm },
     noteInput: {
         flex: 1,
         ...Typography.body,
         color: Colors.textPrimary,
-        padding: 0,
-    },
+        padding: 0 },
 
     // Request
     requestButton: {
@@ -358,21 +338,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginHorizontal: Spacing.lg,
         marginBottom: Spacing.md,
-        backgroundColor: Colors.border,
+        backgroundColor: isDark ? Colors.surface : Colors.border,
         borderRadius: 12,
-        paddingVertical: 16,
-    },
+        paddingVertical: 16 },
     requestButtonActive: {
-        backgroundColor: Colors.primary,
-    },
+        backgroundColor: Colors.primary },
     requestIcon: {
-        marginRight: Spacing.sm,
-    },
+        marginRight: Spacing.sm },
     requestButtonText: {
         ...Typography.button,
-        color: Colors.textSecondary,
-    },
+        color: Colors.textSecondary },
     requestButtonTextActive: {
-        color: Colors.white,
-    },
-});
+        color: Colors.white } });
+}

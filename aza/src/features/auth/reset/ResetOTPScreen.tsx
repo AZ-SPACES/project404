@@ -11,11 +11,12 @@ import {
   StyleSheet,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
+  StatusBar,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
@@ -23,6 +24,9 @@ import { RootStackParamList } from "../../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
 const ResetOTPScreen: React.FC = () => {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const inputRefs = useRef<Array<TextInput | null>>([]);
@@ -88,6 +92,7 @@ const ResetOTPScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -156,10 +161,12 @@ const ResetOTPScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
   },
   container: {
     flex: 1,
@@ -172,8 +179,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -206,7 +212,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-evenly",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
     borderWidth: 1,
     borderColor: "#D1D5DB", // A visible border color from screenshot
     borderRadius: 8,
@@ -250,5 +256,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
   },
 });
+}
 
 export default ResetOTPScreen;
