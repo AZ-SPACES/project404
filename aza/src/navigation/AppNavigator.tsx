@@ -53,13 +53,15 @@ import {
 import { 
   TalkToUsScreen, 
   EmailUsScreen, 
-  ChatWithUsScreen 
+  ChatWithUsScreen,
+  HelpAndSupportScreen
 } from '../features/customercare';
 import SendScreen from '../features/home/quickaccess/SendScreen';
 import ReceiveScreen from '../features/home/quickaccess/ReceiveScreen';
 import SendAmountScreen from '../features/home/quickaccess/SendAmountScreen';
 import RequestAmountScreen from '../features/home/quickaccess/RequestAmountScreen';
 import { ProfileScreen, AppearanceScreen } from '../features/profile';
+import InboxScreen from '../features/notifications/InboxScreen';
 
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
@@ -120,12 +122,14 @@ export default function AppNavigator() {
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
+      <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
       <Stack.Screen name="Send" component={SendScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Receive" component={ReceiveScreen} />
       <Stack.Screen name="SendAmount" component={SendAmountScreen} />
       <Stack.Screen name="RequestAmount" component={RequestAmountScreen} />
       <Stack.Screen name="Appearance" component={AppearanceScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
     </Stack.Navigator>
   );
 }

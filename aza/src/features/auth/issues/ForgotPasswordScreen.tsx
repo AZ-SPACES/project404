@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -15,10 +15,33 @@ type NavigationProp = NativeStackNavigationProp<
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const headerBorderOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            borderBottomColor: headerBorderOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["transparent", Colors.border],
+            }),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -29,9 +52,26 @@ export default function ForgotPasswordScreen() {
             color={Colors.textPrimary}
           />
         </TouchableOpacity>
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>I've forgotten my password</Text>
+        <Animated.View
+          style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+        >
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            I've forgotten my password
+          </Text>
+        </Animated.View>
+        <View style={{ width: 44 }} />
+      </Animated.View>
+
+      <Animated.ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false },
+        )}
+        scrollEventThrottle={16}
+      >
+        <Text style={styles.largeTitle}>I've forgotten my password</Text>
         <Text style={styles.subtitle}>
           If you're logged out and can't remember your password,{" "}
           <Text style={styles.boldText}>
@@ -60,7 +100,7 @@ export default function ForgotPasswordScreen() {
         >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -71,9 +111,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   header: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
     width: 44,
@@ -82,13 +124,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1,
   },
-  content: {
+  headerTitleContainer: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  largeTitle: {
+    fontSize: Typography.h1.fontSize,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,

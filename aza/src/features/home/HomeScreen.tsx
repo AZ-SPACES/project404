@@ -77,7 +77,10 @@ export default function HomeScreen() {
                   style={styles.profilePic}
                 />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.bellButton}>
+              <TouchableOpacity 
+                style={styles.bellButton}
+                onPress={() => navigation.navigate("Inbox")}
+              >
                 <Feather name="bell" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
