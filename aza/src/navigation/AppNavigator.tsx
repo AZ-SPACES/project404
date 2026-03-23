@@ -56,6 +56,8 @@ import {
   ChatWithUsScreen 
 } from '../features/customercare';
 import SendScreen from '../features/home/quickaccess/SendScreen';
+import ReceiveScreen from '../features/home/quickaccess/ReceiveScreen';
+import SendAmountScreen from '../features/home/quickaccess/SendAmountScreen';
 import { ProfileScreen, DisplayScreen } from '../features/profile';
 
 import { RootStackParamList } from './types';
@@ -120,6 +122,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Send" component={SendScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Display" component={DisplayScreen} />
+      <Stack.Screen name="Receive" component={ReceiveScreen} />
+      <Stack.Screen name="SendAmount" component={SendAmountScreen} />
     </Stack.Navigator>
   );
 }
