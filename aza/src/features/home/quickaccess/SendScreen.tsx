@@ -8,6 +8,7 @@ import {
   FlatList,
   ScrollView,
   TextInput,
+  StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -153,6 +154,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

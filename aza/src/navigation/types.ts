@@ -49,7 +49,7 @@ export type RootStackParamList = {
   EnableBiometrics: undefined;
   Send: undefined;
   Profile: undefined;
-  Display: undefined;
+  Appearance: undefined;
   Receive: undefined;
   SendAmount: { name: string; username: string; avatar: string };
   RequestAmount: { name: string; username: string; avatar: string };

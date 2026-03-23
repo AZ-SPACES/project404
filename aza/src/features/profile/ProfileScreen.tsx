@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -43,6 +43,7 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
@@ -65,41 +66,26 @@ export function ProfileScreen() {
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>My Account</Text>
           <SectionItem iconFamily="Feather" iconName="help-circle" title="Help & Support" />
-          <SectionItem iconFamily="Ionicons" iconName="sync-outline" title="Transaction History" />
         </View>
 
         <View style={styles.section}>
-          <Text style={[Typography.h3, styles.sectionTitle]}>General</Text>
-          <SectionItem iconFamily="Feather" iconName="shield" title="Privacy" subtitle="Control your data and privacy" />
-          <SectionItem iconFamily="Feather" iconName="bell" title="Notifications" subtitle="Manage your alerts" />
+          <Text style={[Typography.h3, styles.sectionTitle]}>Settings</Text>
+          <SectionItem iconFamily="Feather" iconName="shield" title="Security and Privacy" subtitle="Change your security and privacy settings" />
+          <SectionItem iconFamily="Feather" iconName="bell" title="Notifications" subtitle="Customise how you get updates" />
           <SectionItem 
             iconFamily="Ionicons" 
             iconName="contrast-outline" 
-            title="Display" 
-            subtitle="Customize theme and language" 
-            onPress={() => navigation.navigate("Display")}
+            title="Language and Appearance" 
+            subtitle="Customise language and theme settings" 
+            onPress={() => navigation.navigate("Appearance")}
           />
-          <SectionItem iconFamily="Feather" iconName="user" title="Profile" subtitle="Update your profile information" />
+          <SectionItem iconFamily="Feather" iconName="user" title="Personal details" subtitle="Update your profile information" />
         </View>
 
         <View style={styles.section}>
-          <Text style={[Typography.h3, styles.sectionTitle]}>Preferences</Text>
-          <SectionItem iconFamily="Feather" iconName="shield" title="Privacy" subtitle="Control your data and privacy" />
-          <SectionItem iconFamily="Feather" iconName="bell" title="Notifications" subtitle="Manage your alerts" />
-          <SectionItem 
-            iconFamily="Ionicons" 
-            iconName="contrast-outline" 
-            title="Display" 
-            subtitle="Customize theme and language" 
-            onPress={() => navigation.navigate("Display")}
-          />
-          <SectionItem iconFamily="Feather" iconName="user" title="Profile" subtitle="Update your profile information" />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[Typography.h3, styles.sectionTitle]}>Legal</Text>
+          <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
           <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" />
-          <SectionItem iconFamily="Feather" iconName="star" title="Feedback" subtitle="Tell us what you think" />
+          <SectionItem iconFamily="Feather" iconName="star" title="Rate us" subtitle="Tell us what you think" />
           <SectionItem 
             iconFamily="Feather" 
             iconName="log-out" 
@@ -139,8 +125,8 @@ const styles = StyleSheet.create({
   addAccountButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.lg,
   },
   addAccountText: {
     ...Typography.body,
