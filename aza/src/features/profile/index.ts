@@ -1,2 +1,2 @@
 export * from './ProfileScreen';
-export * from './DisplayScreen';
+export * from './AppearanceScreen';
