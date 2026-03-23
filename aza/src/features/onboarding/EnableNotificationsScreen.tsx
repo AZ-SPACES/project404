@@ -11,6 +11,7 @@ import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import * as Notifications from 'expo-notifications';
 import Button from '../../components/ui/Button';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
@@ -26,11 +27,26 @@ export default function EnableNotificationsScreen() {
     navigation.goBack();
   };
 
-  const handleEnable = () => {
-    // Logic to enable notifications
-    console.log('Enable notifications');
-    // For now, let's just go back or to the next screen
-    navigation.navigate('EnableBiometrics');
+  const handleEnable = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus === 'granted') {
+        console.log('Push notifications enabled!');
+      } else {
+        console.log('Failed to enable push notifications.');
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+    } finally {
+      navigation.navigate('EnableBiometrics');
+    }
   };
 
   const handleNotNow = () => {
