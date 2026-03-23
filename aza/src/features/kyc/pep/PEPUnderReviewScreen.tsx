@@ -1,9 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -11,6 +11,9 @@ import { RootStackParamList } from "../../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPUnderReview">;
 
 export default function PEPUnderReviewScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
 
   const handleFinish = () => {
@@ -20,6 +23,7 @@ export default function PEPUnderReviewScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.container}>
         <View style={styles.iconContainer}>
           <MaterialIcons name="pending-actions" size={64} color={Colors.primary} />
@@ -57,56 +61,51 @@ export default function PEPUnderReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl * 2,
-  },
+    paddingTop: Spacing.xl * 2 },
   iconContainer: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "rgba(22, 51, 0, 0.05)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.05)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     letterSpacing: -0.5,
-    lineHeight: 38,
-  },
+    lineHeight: 38 },
   subtitle: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "600",
     color: Colors.textSecondary,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   infoCard: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: isDark ? Colors.surface : "#F9FAFB",
     padding: Spacing.lg,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
+    borderColor: Colors.border },
   bodyText: {
     fontSize: Typography.body.fontSize,
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   spacer: {
-    height: Spacing.md,
-  },
+    height: Spacing.md },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-});
+    marginBottom: Spacing.lg } });
+}
+
+

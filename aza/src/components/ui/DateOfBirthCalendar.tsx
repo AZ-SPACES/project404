@@ -3,11 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-} from "react-native";
+  TouchableOpacity } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Calendar, DateData } from "react-native-calendars";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from "../../theme";
 
 const NOOP_HEADER = () => null;
 
@@ -29,8 +28,9 @@ export default function DateOfBirthCalendar({
   onDateSelect,
   currentMonth,
   onMonthChange,
-  maxDate,
-}: DateOfBirthCalendarProps) {
+  maxDate }: DateOfBirthCalendarProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const [viewMode, setViewMode] = useState<"calendar" | "month" | "year">("calendar");
   const [pickerYear, setPickerYear] = useState(() => new Date(currentMonth).getFullYear());
   const [yearPageStart, setYearPageStart] = useState(() => {
@@ -99,8 +99,7 @@ export default function DateOfBirthCalendar({
   // ── Memoised configurations ─────────────────────────────────────────────────
 
   const markedDates = useMemo(() => selectedDate ? {
-    [selectedDate]: { selected: true, selectedColor: Colors.primary, selectedTextColor: Colors.surface },
-  } : {}, [selectedDate, Colors.primary, Colors.surface]);
+    [selectedDate]: { selected: true, selectedColor: Colors.primary, selectedTextColor: Colors.surface } } : {}, [selectedDate, Colors.primary, Colors.surface]);
 
   const calendarTheme = useMemo(() => ({
     backgroundColor: "transparent",
@@ -120,8 +119,7 @@ export default function DateOfBirthCalendar({
     textMonthFontSize: Typography.h3.fontSize,
     textDayHeaderFontSize: Typography.caption.fontSize,
     // @ts-ignore
-    "stylesheet.calendar.header": { week: { marginTop: Spacing.xs, flexDirection: "row", justifyContent: "space-around" } },
-  }), []);
+    "stylesheet.calendar.header": { week: { marginTop: Spacing.xs, flexDirection: "row", justifyContent: "space-around" } } }), [Colors, Spacing, Typography]);
 
   const headerText = useMemo(() => {
     const d = new Date(currentMonth);
@@ -255,7 +253,8 @@ export default function DateOfBirthCalendar({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
   calendarContainer: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
@@ -264,40 +263,33 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm, // 8
     borderWidth: 1,
     borderColor: Colors.border,
-    minHeight: 350, 
-  },
+    minHeight: 350 },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   monthSelector: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    paddingVertical: 4,
-  },
+    paddingVertical: 4 },
   monthText: {
     ...Typography.h3,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   arrowGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
-  },
+    gap: Spacing.sm },
   arrowButton: {
     width: 32,
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
-  },
+    borderRadius: 6 },
   pickerContainer: {
     flex: 1,
-    paddingTop: 8,
-  },
+    paddingTop: 8 },
   yearSelectorRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -307,23 +299,19 @@ const styles = StyleSheet.create({
   },
   yearTextButton: {
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   pickerYearText: {
     fontSize: Typography.h3.fontSize + 2,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   yearArrow: {
-    padding: Spacing.xs,
-  },
+    padding: Spacing.xs },
   monthGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     rowGap: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-  },
+    paddingHorizontal: Spacing.sm },
   
   // Shared Grid Item Styles (Used by both Month and Year)
   gridItem: {
@@ -331,13 +319,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: Radius.md,
-  },
+    borderRadius: Radius.md },
   gridItemSelected: { backgroundColor: Colors.primary },
   gridItemText: { 
     ...Typography.bodyLg,
-    color: Colors.textPrimary, 
-  },
+    color: Colors.textPrimary },
   gridItemTextSelected: { color: Colors.surface, fontWeight: "600" },
-  gridItemTextDisabled: { color: Colors.border },
-});
+  gridItemTextDisabled: { color: Colors.border } });
+}

@@ -2,21 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { useDisplayContext } from '../../providers/DisplayProvider';
+
 const splashImage = require('../../assets/aza-logo.png');
 
 export default function AnimatedSplashScreen({ children }: { children: React.ReactNode }) {
   const [isAppReady, setAppReady] = useState(false);
   const [isSplashVisible, setSplashVisible] = useState(true);
+  const { activeColorScheme } = useDisplayContext();
   
   const logoScale = useRef(new Animated.Value(1)).current;
   const overlayOpacity = useRef(new Animated.Value(1)).current;
+
+  const isDarkMode = activeColorScheme === 'dark';
+  const backgroundColor = isDarkMode ? '#121212' : '#ffffff';
 
   useEffect(() => {
     async function prepare() {
       try {
         await SplashScreen.preventAutoHideAsync();
         
-        // Wait 1s and simulate app loading to hold the logo
         await new Promise(resolve => setTimeout(resolve, 800));
       } catch (e) {
         console.warn(e);
@@ -31,34 +36,33 @@ export default function AnimatedSplashScreen({ children }: { children: React.Rea
   useEffect(() => {
     if (isAppReady) {
       SplashScreen.hideAsync().then(() => {
-        // Fintech animations: Subtle initial bounce then exponential zoom + fade out
-        Animated.sequence([
-          // A subtle pulse down
-          Animated.timing(logoScale, {
-            toValue: 0.9,
-            duration: 200,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          // Huge scale up acting as a reveal
-          Animated.timing(logoScale, {
-            toValue: 2.5, 
-            duration: 400,
-            easing: Easing.in(Easing.exp),
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // Fade out overlay simultaneously after the initial bounce
-        setTimeout(() => {
-          Animated.timing(overlayOpacity, {
-            toValue: 0,
-            duration: 350,
-            useNativeDriver: true,
-          }).start(() => {
-            setSplashVisible(false);
-          });
-        }, 150);
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(logoScale, {
+              toValue: 0.8,
+              duration: 150,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.timing(logoScale, {
+              toValue: 80, 
+              duration: 250,
+              easing: Easing.in(Easing.exp),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.sequence([
+            Animated.delay(150),
+            Animated.timing(overlayOpacity, {
+              toValue: 0,
+              duration: 250,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start(() => {
+          setSplashVisible(false);
+        });
       });
     }
   }, [isAppReady, logoScale, overlayOpacity]);
@@ -74,6 +78,7 @@ export default function AnimatedSplashScreen({ children }: { children: React.Rea
             styles.splashOverlay,
             {
               opacity: overlayOpacity,
+              backgroundColor,
             },
           ]}
         >
@@ -84,6 +89,7 @@ export default function AnimatedSplashScreen({ children }: { children: React.Rea
               {
                 transform: [{ scale: logoScale }],
               },
+              isDarkMode && { tintColor: '#ffffff' } // Tinting logo to white for dark mode if it's a dark logo
             ]}
             resizeMode="contain"
           />
@@ -99,10 +105,9 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#ffffff', // Ensures perfectly smooth handoff from the native splash screen
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 9999, // ensures it sits above the whole app
+    zIndex: 9999,
   },
   logo: {
     width: '60%', 

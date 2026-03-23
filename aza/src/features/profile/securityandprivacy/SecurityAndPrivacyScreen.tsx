@@ -5,11 +5,13 @@ import { Feather, Ionicons, MaterialCommunityIcons, AntDesign } from '@expo/vect
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 
 const { height } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SecurityAndPrivacy">;
+
+
 
 interface SettingRowProps {
   iconName: string;
@@ -22,46 +24,50 @@ interface SettingRowProps {
   onSwitchChange?: (value: boolean) => void;
 }
 
-const SettingRow = ({ 
-  iconName, 
-  iconType, 
-  title, 
-  subtitle, 
-  onPress, 
-  showSwitch, 
-  switchValue, 
-  onSwitchChange 
-}: SettingRowProps) => (
-  <TouchableOpacity 
-    style={styles.row} 
-    onPress={onPress} 
-    disabled={showSwitch}
-    activeOpacity={0.7}
-  >
-    <View style={styles.iconContainer}>
-      {iconType === 'Feather' && <Feather name={iconName as any} size={20} color={Colors.textPrimary} />}
-      {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />}
-      {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={20} color={Colors.textPrimary} />}
-    </View>
-    <View style={styles.textContainer}>
-      <Text style={[Typography.body, styles.rowTitle]}>{title}</Text>
-      {subtitle && <Text style={[Typography.caption, styles.rowSubtitle]}>{subtitle}</Text>}
-    </View>
-    {showSwitch ? (
-      <Switch
-        value={switchValue}
-        onValueChange={onSwitchChange}
-        trackColor={{ false: '#E5E7EB', true: Colors.primary }}
-        thumbColor={Colors.white}
-        ios_backgroundColor="#E5E7EB"
-      />
-    ) : (
-      <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-    )}
-  </TouchableOpacity>
-);
-
 export function SecurityAndPrivacyScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
+  const SettingRow = ({ 
+    iconName, 
+    iconType, 
+    title, 
+    subtitle, 
+    onPress, 
+    showSwitch, 
+    switchValue, 
+    onSwitchChange 
+  }: SettingRowProps) => (
+    <TouchableOpacity 
+      style={styles.row} 
+      onPress={onPress} 
+      disabled={showSwitch}
+      activeOpacity={0.7}
+    >
+      <View style={styles.iconContainer}>
+        {iconType === 'Feather' && <Feather name={iconName as any} size={20} color={Colors.textPrimary} />}
+        {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />}
+        {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={20} color={Colors.textPrimary} />}
+      </View>
+      <View style={styles.textContainer}>
+        <Text style={[Typography.body, styles.rowTitle]}>{title}</Text>
+        {subtitle && <Text style={[Typography.caption, styles.rowSubtitle]}>{subtitle}</Text>}
+      </View>
+      {showSwitch ? (
+        <Switch
+          value={switchValue}
+          onValueChange={onSwitchChange}
+          trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
+          thumbColor={Colors.white}
+          ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+        />
+      ) : (
+        <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+      )}
+    </TouchableOpacity>
+  );
+
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -80,26 +86,22 @@ export function SecurityAndPrivacyScreen() {
         Animated.timing(bottomSheetAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(bottomSheetAnim, {
           toValue: height,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     }
   }, [isBottomSheetVisible]);
@@ -107,18 +109,16 @@ export function SecurityAndPrivacyScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       
       <Animated.View 
         style={[
@@ -126,9 +126,7 @@ export function SecurityAndPrivacyScreen() {
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          }
+              outputRange: ["transparent", Colors.border] }) }
         ]}
       >
         <TouchableOpacity 
@@ -279,8 +277,7 @@ export function SecurityAndPrivacyScreen() {
             styles.bottomSheetContainer,
             {
               zIndex: 1001,
-              transform: [{ translateY: bottomSheetAnim }],
-            },
+              transform: [{ translateY: bottomSheetAnim }] },
           ]}
         >
           <View style={styles.bottomSheetHeader}>
@@ -309,11 +306,12 @@ export function SecurityAndPrivacyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
@@ -321,86 +319,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    height: 60,
-  },
+    height: 60 },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionTitle: {
     color: Colors.textPrimary,
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   iconContainer: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   textContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingRight: Spacing.sm,
-  },
+    paddingRight: Spacing.sm },
   rowTitle: {
     color: Colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   rowSubtitle: {
     color: Colors.textSecondary,
     fontSize: 14,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   spacer: {
-    height: Spacing.xl,
-  },
+    height: Spacing.xl },
   bottomSheetContainer: {
     position: "absolute",
     bottom: 0,
     width: "100%",
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
@@ -409,55 +393,48 @@ const styles = StyleSheet.create({
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: -2,
-    },
+      height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    elevation: 5,
-  },
+    elevation: 5 },
   bottomSheetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
-  },
+    marginBottom: 24 },
   bottomSheetTitle: {
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   closeButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   bottomSheetItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-  },
+    paddingVertical: Spacing.md },
   bottomSheetIconContainer: {
     width: 48,
     height: 48,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   bottomSheetTextContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   bottomSheetItemTitle: {
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   bottomSheetItemSubtitle: {
     color: Colors.textSecondary,
     fontSize: 14,
-    lineHeight: 20,
-  },
-});
+    lineHeight: 20 } });
+}
+
+

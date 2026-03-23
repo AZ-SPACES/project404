@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
@@ -36,14 +36,16 @@ const FEE_ROWS: LimitRow[] = [
 ];
 
 export default function FeesAndLimitsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleContinue = () => {
     navigation.navigate("AccountReady");
@@ -51,6 +53,7 @@ export default function FeesAndLimitsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.container}>
         {/* Header */}
         <Animated.View
@@ -59,9 +62,7 @@ export default function FeesAndLimitsScreen() {
             {
               borderBottomColor: headerBorderOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: ["transparent", Colors.border],
-              }),
-            },
+                outputRange: ["transparent", Colors.border] }) },
           ]}
         />
 
@@ -169,122 +170,106 @@ export default function FeesAndLimitsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: { flex: 1 },
   header: {
     height: 56,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+    borderBottomWidth: StyleSheet.hairlineWidth },
   content: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   heroRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   heroIcon: {
     width: 40,
     height: 40,
     borderRadius: Radius.sm,
-    backgroundColor: "#EAF5E9",
+    backgroundColor: isDark ? "rgba(22, 163, 74, 0.15)" : "#EAF5E9",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   heroLabel: {
     fontSize: 15,
     fontWeight: "700",
     color: Colors.primary,
-    letterSpacing: 0.1,
-  },
+    letterSpacing: 0.1 },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   subtitle: {
     fontSize: 15,
     color: Colors.textSecondary,
     lineHeight: 22,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionLabel: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "600",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-    marginTop: Spacing.md,
-  },
+    marginTop: Spacing.md },
   table: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     overflow: "hidden",
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
+    borderBottomColor: Colors.border },
   tableHeaderCell: {
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
     color: Colors.textSecondary,
     textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
+    letterSpacing: 0.3 },
   tableRow: {
     flexDirection: "row",
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-  },
+    borderBottomColor: Colors.border },
   tableRowAlt: {
-    backgroundColor: "#FAFCF8",
-  },
+    backgroundColor: isDark ? "rgba(255, 255, 255, 0.03)" : "#FAFCF8" },
   tableCell: {
     flex: 1,
     fontSize: Typography.body.fontSize,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   tableCellFree: {
     color: "#16a34a",
-    fontWeight: "600",
-  },
+    fontWeight: "600" },
   tierNote: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.sm,
     padding: Spacing.md,
-    backgroundColor: "#EAF5E9",
+    backgroundColor: isDark ? "rgba(22, 163, 74, 0.15)" : "#EAF5E9",
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: "#bbddbb",
-    marginBottom: Spacing.md,
-  },
+    borderColor: isDark ? "rgba(22, 163, 74, 0.3)" : "#bbddbb",
+    marginBottom: Spacing.md },
   tierNoteText: {
     flex: 1,
     fontSize: 14,
     color: Colors.textPrimary,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   bold: { 
     fontWeight: "700"
   },
@@ -292,16 +277,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.sm,
-    padding: Spacing.md,
-  },
+    padding: Spacing.md },
   legalNoteText: {
     flex: 1,
     fontSize: 13,
     color: Colors.textSecondary,
-    lineHeight: 18,
-  },
+    lineHeight: 18 },
   footer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-});
+    marginBottom: Spacing.lg } });
+}

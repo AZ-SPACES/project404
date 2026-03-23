@@ -6,8 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Switch,
-} from "react-native";
+  Switch } from "react-native";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,7 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -23,6 +22,8 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 export function BillForwardingDetailsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [enabled, setEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -122,11 +123,12 @@ export function BillForwardingDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
@@ -134,16 +136,14 @@ const styles = StyleSheet.create({
     height: 60,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
+    justifyContent: "space-between" },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.surface,
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   faqButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -151,35 +151,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    gap: 8,
-  },
+    gap: 8 },
   faqButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     fontSize: 32,
-    fontWeight: "700",
-  },
+    fontWeight: "700" },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Spacing.lg,
-  },
+    paddingVertical: Spacing.lg },
   iconContainer: {
     width: 48,
     height: 48,
@@ -188,76 +181,63 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   textContainer: {
     flex: 1,
     justifyContent: "center",
-    paddingRight: Spacing.md,
-  },
+    paddingRight: Spacing.md },
   rowTitle: {
     color: Colors.textPrimary,
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   rowSubtitle: {
     color: Colors.textSecondary,
     fontSize: 15,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   detailsContainer: {
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-  },
+    marginTop: Spacing.md },
   emailRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   emailContainer: {
     flex: 1,
-    paddingRight: Spacing.md,
-  },
+    paddingRight: Spacing.md },
   label: {
     fontSize: 16,
     color: Colors.textSecondary,
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   emailText: {
     fontSize: 18,
     fontWeight: "700",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   copyButton: {
     backgroundColor: "#F3F4F6",
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   copyButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginTop: Spacing.lg,
-  },
+    marginTop: Spacing.lg },
   footerSection: {
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.xl,
-  },
+    marginTop: Spacing.xl },
   footerText: {
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   learnMore: {
     color: "#004D00",
     fontWeight: "700",
-    textDecorationLine: "underline",
-  },
-});
+    textDecorationLine: "underline" } });
+}
+
+

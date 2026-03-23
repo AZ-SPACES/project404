@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
-import { Colors, Spacing, Radius } from '../../../theme';
+import { useAppTheme, ThemeColors, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 
 const { width } = Dimensions.get('window');
@@ -13,6 +13,8 @@ const { width } = Dimensions.get('window');
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "BillForwardingIntro">;
 
 export function BillForwardingIntroScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
 
   return (
@@ -60,48 +62,43 @@ export function BillForwardingIntroScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
     height: 60,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   content: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   illustrationContainer: {
     height: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.xl,
-  },
+    marginTop: Spacing.xl },
   illustration: {
     width: width * 0.8,
-    height: 300,
-  },
+    height: 300 },
   textContainer: {
     alignItems: 'center',
     flex: 1,
-    marginTop: 40,
-  },
+    marginTop: 40 },
   title: {
     fontSize: 34,
     fontWeight: '900',
@@ -109,29 +106,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 38,
     marginBottom: Spacing.lg,
-    letterSpacing: -0.5,
-  },
+    letterSpacing: -0.5 },
   description: {
     fontSize: 18,
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 26,
-    paddingHorizontal: Spacing.sm,
-  },
+    paddingHorizontal: Spacing.sm },
   footer: {
     width: '100%',
-    paddingBottom: Spacing.md,
-  },
+    paddingBottom: Spacing.md },
   primaryButton: {
     backgroundColor: '#9AF064',
     paddingVertical: 18,
     borderRadius: Radius.full,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   primaryButtonText: {
     color: '#004D00',
     fontSize: 18,
-    fontWeight: '700',
-  },
-});
+    fontWeight: '700' } });
+}
+
+

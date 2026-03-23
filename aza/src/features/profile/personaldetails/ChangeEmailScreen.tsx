@@ -9,14 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  ScrollView,
-} from "react-native";
+  ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 
 type NavigationProp = NativeStackNavigationProp<
@@ -25,6 +24,8 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 export function ChangeEmailScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [newEmail, setNewEmail] = useState("");
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -32,14 +33,12 @@ export function ChangeEmailScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -51,9 +50,7 @@ export function ChangeEmailScreen() {
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          },
+              outputRange: ["transparent", Colors.border] }) },
         ]}
       >
         <TouchableOpacity
@@ -144,11 +141,12 @@ export function ChangeEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
@@ -156,8 +154,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    height: 60,
-  },
+    height: 60 },
   backButton: {
     width: 44,
     height: 44,
@@ -165,54 +162,44 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: "center",
-  },
+    alignItems: "center" },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     fontSize: 32,
-    fontWeight: "700",
-  },
+    fontWeight: "700" },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   subtitle: {
     ...Typography.bodyLg,
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
     lineHeight: 22,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   noticeText: {
     ...Typography.body,
     color: Colors.textSecondary,
     marginBottom: Spacing.lg,
     lineHeight: 20,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   inputSection: {
     marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   label: {
     ...Typography.caption,
     fontWeight: "600",
     color: Colors.textSecondary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   inputContainer: {
     height: 52,
     borderWidth: 1,
@@ -220,25 +207,22 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   readOnlyContainer: {
     backgroundColor: Colors.surface + "30",
-    borderColor: Colors.border + "50",
-  },
+    borderColor: Colors.border + "50" },
   input: {
     flex: 1,
     ...Typography.bodyLg,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   readOnlyText: {
     ...Typography.body,
-    color: Colors.border,
-  },
+    color: Colors.border },
   footer: {
     padding: Spacing.lg,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderTopWidth: 1,
-    borderTopColor: Colors.border + "20",
-  },
-});
+    borderTopColor: Colors.border + "20" } });
+}
+
+

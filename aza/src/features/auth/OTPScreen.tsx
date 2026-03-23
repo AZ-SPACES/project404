@@ -10,10 +10,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInputKeyPressEvent,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../theme';
 import Button from '../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +22,9 @@ import { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 const OTPScreen: React.FC = () => {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
@@ -86,6 +90,7 @@ const OTPScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView 
           style={styles.container}
@@ -156,7 +161,9 @@ const OTPScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -173,7 +180,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.07)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
@@ -197,7 +204,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 18,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
@@ -216,7 +223,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-evenly',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
@@ -260,5 +267,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
   },
 });
+}
 
 export default OTPScreen;

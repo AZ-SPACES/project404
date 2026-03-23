@@ -6,10 +6,9 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
-  StatusBar,
-} from "react-native";
+  StatusBar } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,29 +17,31 @@ import { useDisplayContext } from "../../providers/DisplayProvider";
 
 const { height } = Dimensions.get("window");
 
-type ActionTargetProps = {
-  icon: ComponentProps<typeof Feather>["name"];
-  label: string;
-  onPress?: () => void;
-};
 
-const ActionTarget = ({ icon, label, onPress }: ActionTargetProps) => (
-  <TouchableOpacity
-    style={styles.actionContainer}
-    activeOpacity={0.7}
-    onPress={onPress}
-  >
-    <View style={styles.actionIconCircle}>
-      <Feather name={icon} size={24} color={Colors.white} />
-    </View>
-    <Text style={styles.actionLabel}>{label}</Text>
-  </TouchableOpacity>
-);
 
 export default function HomeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { homeBackground } = useDisplayContext();
+
+  const ActionTarget = ({ icon, label, onPress }: {
+    icon: ComponentProps<typeof Feather>["name"];
+    label: string;
+    onPress?: () => void;
+  }) => (
+    <TouchableOpacity
+      style={styles.actionContainer}
+      activeOpacity={0.7}
+      onPress={onPress}
+    >
+      <View style={styles.actionIconCircle}>
+        <Feather name={icon} size={24} color={Colors.white} />
+      </View>
+      <Text style={styles.actionLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -72,8 +73,7 @@ export default function HomeScreen() {
               >
                 <Image
                   source={{
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10",
-                  }}
+                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10" }}
                   style={styles.profilePic}
                 />
               </TouchableOpacity>
@@ -143,77 +143,63 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   topSection: {
     height: height * 0.55,
-    backgroundColor: Colors.primary,
-  },
+    backgroundColor: Colors.primary },
   overlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(23, 71, 23, 0.45)",
-  },
+    backgroundColor: "rgba(23, 71, 23, 0.45)" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
+    paddingTop: Spacing.md },
   headerRight: {
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   profilePicContainer: {
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   profilePic: {
     width: 44,
     height: 44,
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   bellButton: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
     backgroundColor: "rgba(0, 0, 0, 0.28)",
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   balanceSection: {
     alignItems: "center",
-    marginTop: Spacing.xl * 2,
-  },
+    marginTop: Spacing.xl * 2 },
   accountType: {
     color: Colors.white,
-    marginBottom: Spacing.xs,
-  },
+    marginBottom: Spacing.xs },
   balanceRow: {
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   balanceText: {
-    color: Colors.white,
-  },
+    color: Colors.white },
   eyeIcon: {
-    marginLeft: Spacing.md,
-  },
+    marginLeft: Spacing.md },
   updateTime: {
     color: "rgba(255,255,255,0.8)",
-    marginTop: Spacing.sm,
-  },
+    marginTop: Spacing.sm },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.xl,
-    marginTop: Spacing.xl * 2,
-  },
+    marginTop: Spacing.xl * 2 },
   actionContainer: {
-    alignItems: "center",
-  },
+    alignItems: "center" },
   actionIconCircle: {
     width: 56,
     height: 56,
@@ -221,43 +207,36 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.black30,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   actionLabel: {
     ...Typography.body,
     fontWeight: "600",
-    color: Colors.white,
-  },
+    color: Colors.white },
   bottomSection: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     marginTop: -Spacing.lg,
     borderTopLeftRadius: Radius.md,
     borderTopRightRadius: Radius.md,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-  },
+    paddingTop: Spacing.lg },
   transactionsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   transactionsTitle: {
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   seeAllText: {
-    color: Colors.primary,
-  },
+    color: Colors.primary },
   emptyStateCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderRadius: Radius.md, // 12px max
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
+    borderColor: Colors.border },
   clockIconContainer: {
     width: 36,
     height: 36,
@@ -267,9 +246,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   emptyStateText: {
-    color: Colors.textSecondary,
-  },
-});
+    color: Colors.textSecondary } });
+}

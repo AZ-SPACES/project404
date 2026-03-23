@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -9,6 +9,8 @@ import * as Haptics from 'expo-haptics';
 const { width } = Dimensions.get('window');
 
 const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation();
   const userHandle = "naaddo";
   const profileLink = `aza.me/${userHandle}`;
@@ -17,8 +19,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await Share.share({
-        message: `Pay me on Aza: ${profileLink}`,
-      });
+        message: `Pay me on Aza: ${profileLink}` });
     } catch (error) {
       console.log(error);
     }
@@ -111,34 +112,32 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA', // Slightly off-white for better card contrast
+    backgroundColor: Colors.background,
   },
   safeArea: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    height: 60,
-  },
+    height: 60 },
   backButton: {
     padding: Spacing.xs,
-    marginLeft: -Spacing.sm,
-  },
+    marginLeft: -Spacing.sm },
   headerActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.sm,
@@ -147,51 +146,43 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
-    elevation: 2,
-  },
+    elevation: 2 },
   profileSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.xl * 1.5,
-  },
+    marginBottom: Spacing.xl * 1.5 },
   profileInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   userName: {
     fontSize: 26,
     fontWeight: '800',
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
+    letterSpacing: -0.5 },
   handleBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
-    marginTop: 4,
-  },
+    marginTop: 4 },
   userHandle: {
     fontSize: 14,
-    color: '#174717', 
-    fontWeight: '700',
-  },
+    color: isDark ? Colors.primary : '#174717', 
+    fontWeight: '700' },
   avatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
     borderWidth: 2,
-    borderColor: Colors.white,
-  },
+    borderColor: Colors.white },
   mainContent: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: Spacing.md,
-  },
+    paddingTop: Spacing.md },
   qrCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.white, // QR cards usually stay white for scannability, but let's see if surface works better
     padding: 24,
     borderRadius: 32,
     shadowColor: '#000',
@@ -199,79 +190,65 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 10,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   qrWrapper: {
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   qrImage: {
     width: width * 0.65,
-    height: width * 0.65,
-  },
+    height: width * 0.65 },
   qrLogoContainer: {
     position: 'absolute',
     backgroundColor: Colors.white,
     padding: 8,
-    borderRadius: 12,
-  },
+    borderRadius: 12 },
   qrLogo:{
     width: 44,
-    height: 52,
-  },
+    height: 52 },
   copyLinkContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: '#EAEAEA',
-  },
+    borderColor: Colors.border },
   getPaidText: {
     fontSize: 14,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   linkText: {
     color: Colors.textPrimary,
-    fontWeight: '700',
-  },
+    fontWeight: '700' },
   bottomNav: {
     paddingBottom: 20, // Extra padding for the bottom
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   toggleContainer: {
     flexDirection: 'row',
     padding: 4,
     borderRadius: Radius.full,
     width: 240,
-    backgroundColor: '#E9E9E9',
-  },
+    backgroundColor: isDark ? Colors.surface : '#E9E9E9' },
   toggleButton: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   activeToggleButton: {
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
-  },
+    elevation: 3 },
   toggleTextActive: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   toggleTextInactive: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#8E8E93',
-  },
-});
+    color: isDark ? Colors.textSecondary : '#8E8E93' } });
+}
 
 export default MyCodeScreen;

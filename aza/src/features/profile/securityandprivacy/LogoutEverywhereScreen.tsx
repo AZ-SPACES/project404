@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import Button from '../../../components/ui/Button';
 
 export function LogoutEverywhereScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation();
 
   const handleLogout = () => {
@@ -74,77 +76,65 @@ export function LogoutEverywhereScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
+    paddingBottom: Spacing.sm },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.surface,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   scrollContent: {
-    paddingBottom: 100,
-  },
+    paddingBottom: 100 },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-    fontSize: 32,
-  },
+    fontSize: 32 },
   mainDescription: {
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   contentSection: {
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   sectionLabel: {
     color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   infoRow: {
     flexDirection: 'row',
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   icon: {
     marginRight: Spacing.md,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   infoTextContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   infoTitle: {
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   infoSubtitle: {
     color: Colors.textSecondary,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   footer: {
     padding: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-});
+    backgroundColor: Colors.background } });
+}
+
+

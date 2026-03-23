@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   FlatList,
   StatusBar,
-  Image,
-} from "react-native";
+  Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, Typography, Spacing, Radius } from "../../theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
@@ -32,34 +31,38 @@ const mockNotifications: NotificationItem[] = [
     date: "23 Jan",
     content:
       "We regularly review our Privacy Notice to make sure it’s clear, easy to navigate and up to date on how Wise handles your data. Changes will come into effect on 18 February 2026. Tap to read it now.",
-    isUnread: true,
-  },
+    isUnread: true },
   {
     id: "2",
     title: "We’ve hidden some cancelled transfers",
     date: "7 Sep 2025",
     content:
       "To make your Activity list easier to read, we’ve started hiding cancelled transfers that weren’t paid for. You can still find them by searching.",
-    isUnread: true,
-  },
+    isUnread: true },
   {
     id: "3",
     title: "How did we do?",
     date: "5 Sep 2025",
     content:
       "You can let us know by taking a quick survey. Your feedback helps us understand what we’re doing well, and what we need to improve. Tap to get started.",
-    isUnread: true,
-  },
+    isUnread: true },
   {
     id: "4",
     title: "Got a sec?",
     date: "3 Sep 2025",
     content: "We’d love to know how you heard about us.",
-    isUnread: true,
-  },
+    isUnread: true },
 ];
 
-const NotificationCard = ({ item }: { item: NotificationItem }) => (
+const NotificationCard = ({ 
+  item, 
+  styles, 
+  Colors 
+}: { 
+  item: NotificationItem, 
+  styles: any, 
+  Colors: any 
+}) => (
   <View style={styles.notificationItem}>
     <View style={styles.notificationHeader}>
       <View style={styles.titleContainer}>
@@ -79,6 +82,9 @@ const NotificationCard = ({ item }: { item: NotificationItem }) => (
 );
 
 export default function InboxScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation<NavigationProp>();
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(mockNotifications);
@@ -89,7 +95,7 @@ export default function InboxScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
 
       <View style={styles.header}>
         <TouchableOpacity
@@ -122,7 +128,7 @@ export default function InboxScreen() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NotificationCard item={item} />}
+        renderItem={({ item }) => <NotificationCard item={item} styles={styles} Colors={Colors} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -147,120 +153,100 @@ export default function InboxScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: any) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
+    paddingBottom: Spacing.sm },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.surface,
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   clearButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    borderRadius: Radius.lg,
-  },
+    borderRadius: Radius.lg },
   clearButtonText: {
     ...Typography.body,
     fontWeight: "500",
-    color: Colors.white,
-  },
+    color: Colors.white },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   sectionHeader: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   sectionTitle: {
     color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
+    marginBottom: Spacing.xs },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    opacity: 0.5,
-  },
+    opacity: 0.5 },
   listContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   notificationItem: {
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   notificationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: Spacing.xs,
-  },
+    marginBottom: Spacing.xs },
   titleContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: Spacing.md,
-  },
+    paddingRight: Spacing.md },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "#374151",
     marginRight: Spacing.sm,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   notificationTitle: {
     color: Colors.textPrimary,
-    flexShrink: 1,
-  },
+    flexShrink: 1 },
   notificationDate: {
     color: Colors.textSecondary,
     textAlign: "right",
-    minWidth: 80,
-  },
+    minWidth: 80 },
   notificationContent: {
     color: Colors.textSecondary,
     lineHeight: 20,
-    paddingLeft: 16,
-  },
+    paddingLeft: 16 },
   emptyContainer: {
     paddingTop: 80,
     alignItems: "center",
-    paddingHorizontal: Spacing.xl,
-  },
+    paddingHorizontal: Spacing.xl },
   iconCircle: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   icon: {
     width: 160,
-    height: 160,
-  },
+    height: 160 },
   emptyTitle: {
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
+    textAlign: "center" },
   emptyText: {
     color: Colors.textSecondary,
     textAlign: "center",
-    lineHeight: 20,
-  },
-});
+    lineHeight: 20 } });
+}
