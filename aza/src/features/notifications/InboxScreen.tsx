@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar,Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  StatusBar,
+  Image,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/types";
+import { Colors, Typography, Spacing, Radius } from "../../theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
@@ -19,31 +27,34 @@ interface NotificationItem {
 
 const mockNotifications: NotificationItem[] = [
   {
-    id: '1',
-    title: 'Updates to our Privacy Notices',
-    date: '23 Jan',
-    content: 'We regularly review our Privacy Notice to make sure it’s clear, easy to navigate and up to date on how Wise handles your data. Changes will come into effect on 18 February 2026. Tap to read it now.',
+    id: "1",
+    title: "Updates to our Privacy Notices",
+    date: "23 Jan",
+    content:
+      "We regularly review our Privacy Notice to make sure it’s clear, easy to navigate and up to date on how Wise handles your data. Changes will come into effect on 18 February 2026. Tap to read it now.",
     isUnread: true,
   },
   {
-    id: '2',
-    title: 'We’ve hidden some cancelled transfers',
-    date: '7 Sep 2025',
-    content: 'To make your Activity list easier to read, we’ve started hiding cancelled transfers that weren’t paid for. You can still find them by searching.',
+    id: "2",
+    title: "We’ve hidden some cancelled transfers",
+    date: "7 Sep 2025",
+    content:
+      "To make your Activity list easier to read, we’ve started hiding cancelled transfers that weren’t paid for. You can still find them by searching.",
     isUnread: true,
   },
   {
-    id: '3',
-    title: 'How did we do?',
-    date: '5 Sep 2025',
-    content: 'You can let us know by taking a quick survey. Your feedback helps us understand what we’re doing well, and what we need to improve. Tap to get started.',
+    id: "3",
+    title: "How did we do?",
+    date: "5 Sep 2025",
+    content:
+      "You can let us know by taking a quick survey. Your feedback helps us understand what we’re doing well, and what we need to improve. Tap to get started.",
     isUnread: true,
   },
   {
-    id: '4',
-    title: 'Got a sec?',
-    date: '3 Sep 2025',
-    content: 'We’d love to know how you heard about us.',
+    id: "4",
+    title: "Got a sec?",
+    date: "3 Sep 2025",
+    content: "We’d love to know how you heard about us.",
     isUnread: true,
   },
 ];
@@ -53,35 +64,42 @@ const NotificationCard = ({ item }: { item: NotificationItem }) => (
     <View style={styles.notificationHeader}>
       <View style={styles.titleContainer}>
         {item.isUnread && <View style={styles.unreadDot} />}
-        <Text style={[Typography.h3, styles.notificationTitle]}>{item.title}</Text>
+        <Text style={[Typography.h3, styles.notificationTitle]}>
+          {item.title}
+        </Text>
       </View>
-      <Text style={[Typography.caption, styles.notificationDate]}>{item.date}</Text>
+      <Text style={[Typography.caption, styles.notificationDate]}>
+        {item.date}
+      </Text>
     </View>
-    <Text style={[Typography.body, styles.notificationContent]}>{item.content}</Text>
+    <Text style={[Typography.body, styles.notificationContent]}>
+      {item.content}
+    </Text>
   </View>
 );
 
 export default function InboxScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  const [notifications, setNotifications] =
+    useState<NotificationItem[]>(mockNotifications);
 
   const handleClearNotifications = () => {
     setNotifications([]);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
+          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         {notifications.length > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.clearButton}
             onPress={handleClearNotifications}
           >
@@ -95,7 +113,9 @@ export default function InboxScreen() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={[Typography.body, styles.sectionTitle]}>Notifications</Text>
+        <Text style={[Typography.body, styles.sectionTitle]}>
+          Notifications
+        </Text>
         <View style={styles.divider} />
       </View>
 
@@ -108,13 +128,15 @@ export default function InboxScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <View style={styles.iconCircle}>
-              <Image 
-                source={require('../../assets/bell.png')} 
+              <Image
+                source={require("../../assets/bell.png")}
                 style={styles.icon}
                 resizeMode="contain"
               />
             </View>
-            <Text style={[Typography.h3, styles.emptyTitle]}>You're all caught up</Text>
+            <Text style={[Typography.h3, styles.emptyTitle]}>
+              You're all caught up
+            </Text>
             <Text style={[Typography.body, styles.emptyText]}>
               When you get notifications, they'll show up here.
             </Text>
@@ -131,9 +153,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
@@ -143,8 +165,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   clearButton: {
     backgroundColor: Colors.primary,
@@ -154,7 +176,7 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     ...Typography.body,
-    fontWeight: '500',
+    fontWeight: "500",
     color: Colors.white,
   },
   titleSection: {
@@ -184,22 +206,22 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   notificationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: Spacing.xs,
   },
   titleContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingRight: Spacing.md,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#374151', 
+    backgroundColor: "#374151",
     marginRight: Spacing.sm,
     marginTop: 2,
   },
@@ -209,7 +231,7 @@ const styles = StyleSheet.create({
   },
   notificationDate: {
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: "right",
     minWidth: 80,
   },
   notificationContent: {
@@ -219,12 +241,12 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     paddingTop: 80,
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: Spacing.xl,
   },
   iconCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.lg,
   },
   icon: {
@@ -234,11 +256,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptyText: {
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
 });

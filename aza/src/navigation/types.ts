@@ -57,4 +57,12 @@ export type RootStackParamList = {
   SendAmount: { name: string; username: string; avatar: string };
   RequestAmount: { name: string; username: string; avatar: string };
   SecurityAndPrivacy: undefined;
+  ChangePassword: undefined;
+  SecureAccount: undefined;
+  LogoutEverywhere: undefined;
+  Devices: undefined;
+  TwoStepVerification: undefined;
+  FindMeBy: undefined;
+  BillForwardingIntro: undefined;
+  BillForwardingDetails: undefined;
 };
