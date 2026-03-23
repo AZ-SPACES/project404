@@ -49,10 +49,14 @@ export type RootStackParamList = {
   EnableBiometrics: undefined;
   Send: undefined;
   Profile: undefined;
-  Display: undefined;
+  Appearance: undefined;
   Receive: undefined;
+  HelpAndSupport: undefined;
+  Inbox: undefined;
+  NotificationSettings: undefined;
   SendAmount: { name: string; username: string; avatar: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string };
   SendPin: { name: string; username: string; avatar: string; amount: number; note: string };
   RequestAmount: { name: string; username: string; avatar: string };
+  SecurityAndPrivacy: undefined;
 };

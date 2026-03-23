@@ -9,6 +9,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -47,6 +48,7 @@ const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
