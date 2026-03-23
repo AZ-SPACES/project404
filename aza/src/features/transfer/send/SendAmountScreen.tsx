@@ -69,7 +69,13 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
 
     const handleSend = () => {
         if (numericAmount <= 0) return;
-        // Handle send logic
+        navigation.navigate('SendConfirm', {
+            name,
+            username,
+            avatar,
+            amount: numericAmount,
+            note,
+        });
     };
 
     return (
