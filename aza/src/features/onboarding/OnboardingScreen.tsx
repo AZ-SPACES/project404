@@ -35,6 +35,11 @@ const slides = [
     isLight: false,
   },
   {
+    title: "ALL IN ONE PLATFORM",
+    description: "Manage your money, chat with friends, make calls and use other apps all in one place.",
+    isLight: true,
+  },
+  {
     title: "PAY, CHAT & CALL IN\nONE APP",
     description: "",
     isLight: true,
