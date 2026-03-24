@@ -1,11 +1,24 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
-import { Ionicons, Feather } from '@expo/vector-icons';
-import { HomeScreen } from '../features/home';
-import { RecipientsScreen } from '../features/recipients';
-import { ScanScreen } from '../features/scan';
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../theme';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Platform,
+} from "react-native";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { HomeScreen } from "../features/home";
+import { HubScreen } from "../features/hub";
+import { RecipientsScreen } from "../features/recipients";
+import { ScanScreen } from "../features/scan";
+import {
+  useAppTheme,
+  ThemeColors,
+  Typography,
+  Spacing,
+  Radius,
+} from "../theme";
 
 const Tab = createBottomTabNavigator();
 
@@ -31,109 +44,134 @@ export default function MainTabsNavigator() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabel }}
+        tabBarLabelStyle: styles.tabBarLabel,
+      }}
     >
-      <Tab.Screen 
-        name="HomeTab" 
-        component={HomeScreen} 
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: "Home",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size || 24} color={color} />
-          ) }}
+          ),
+        }}
       />
-      <Tab.Screen 
-        name="Recipients" 
-        component={RecipientsScreen} 
+      <Tab.Screen
+        name="Recipients"
+        component={RecipientsScreen}
         options={{
-          tabBarLabel: 'Recipients',
+          tabBarLabel: "Recipients",
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size || 24} color={color} />
-          ) }}
+          ),
+        }}
       />
-      
+
       {/* Center Scan */}
-      <Tab.Screen 
-        name="ScanTab" 
-        component={ScanScreen} 
+      <Tab.Screen
+        name="ScanTab"
+        component={ScanScreen}
         options={{
-          tabBarLabel: '',
-          tabBarButton: ({ onPress, accessibilityState, accessibilityLabel }) => (
+          tabBarLabel: "",
+          tabBarButton: ({
+            onPress,
+            accessibilityState,
+            accessibilityLabel,
+          }) => (
             <View style={styles.centerButtonWrapper} pointerEvents="box-none">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={onPress}
                 accessibilityState={accessibilityState}
                 accessibilityLabel={accessibilityLabel}
-                style={styles.centerButton} 
+                style={styles.centerButton}
                 activeOpacity={0.9}
               >
-                <Ionicons name="qr-code-outline" size={24} color={Colors.white} />
+                <Ionicons
+                  name="qr-code-outline"
+                  size={24}
+                  color={Colors.white}
+                />
               </TouchableOpacity>
             </View>
-          ) }}
+          ),
+        }}
       />
-      
-      <Tab.Screen 
-        name="Chat" 
-        component={DummyScreen} 
+
+      <Tab.Screen
+        name="Chat"
+        component={DummyScreen}
         options={{
-          tabBarLabel: 'Chat',
+          tabBarLabel: "Chat",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size || 24} color={color} />
-          ) }}
+            <Ionicons
+              name="chatbubble-outline"
+              size={size || 24}
+              color={color}
+            />
+          ),
+        }}
       />
-      <Tab.Screen 
-        name="Hub" 
-        component={DummyScreen} 
+      <Tab.Screen
+        name="Hub"
+        component={HubScreen}
         options={{
-          tabBarLabel: 'Hub',
+          tabBarLabel: "Hub",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="apps-outline" size={size || 24} color={color} />
-          ) }}
+          ),
+        }}
       />
     </Tab.Navigator>
   );
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
-  return StyleSheet.create({  
-  dummyContainer: {
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: Colors.background },
-  dummyText: {
-    color: Colors.textSecondary },
-  tabBar: {
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: Spacing.sm,
-    elevation: 0,
-    shadowOpacity: 0 },
-  tabBarLabel: {
-    ...Typography.caption,
-    fontWeight: '500',
-    paddingBottom: Platform.OS === 'android' ? Spacing.sm : 0 },
-  centerButtonWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center' },
-  centerButton: {
-    position: 'absolute',
-    top: -24, 
-    width: 64,
-    height: 64,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary, 
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: Colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2 } });
+  const isDark = Colors.background === "#121212";
+  return StyleSheet.create({
+    dummyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: Colors.background,
+    },
+    dummyText: {
+      color: Colors.textSecondary,
+    },
+    tabBar: {
+      backgroundColor: Colors.background,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+      paddingTop: Spacing.sm,
+      elevation: 0,
+      shadowOpacity: 0,
+    },
+    tabBarLabel: {
+      ...Typography.caption,
+      fontWeight: "500",
+      paddingBottom: Platform.OS === "android" ? Spacing.sm : 0,
+    },
+    centerButtonWrapper: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    centerButton: {
+      position: "absolute",
+      top: -24,
+      width: 64,
+      height: 64,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 4,
+      borderColor: Colors.background,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+  });
 }
