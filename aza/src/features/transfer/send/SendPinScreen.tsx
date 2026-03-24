@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 
@@ -27,6 +27,8 @@ const PIN_ARRAY = Array.from({ length: PIN_LENGTH });
 
 export default function SendPinScreen({ navigation, route }: SendPinScreenProps) {
   const { name, amount } = route.params;
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const [pin, setPin] = useState<string>('');
   const inputRef = useRef<TextInput>(null);
   const scaleAnims = useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
@@ -174,7 +176,8 @@ export default function SendPinScreen({ navigation, route }: SendPinScreenProps)
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
@@ -270,4 +273,5 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: Colors.textPrimary,
   },
-});
+  });
+}
