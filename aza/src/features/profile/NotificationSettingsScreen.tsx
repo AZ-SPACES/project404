@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, } from '../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -15,14 +17,6 @@ interface NotificationSectionProps {
   children: React.ReactNode;
 }
 
-const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
-  <View style={styles.section}>
-    <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
-    <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
-    {children}
-  </View>
-);
-
 interface NotificationToggleProps {
   iconName: string;
   iconType?: 'Feather' | 'Ionicons' | 'MaterialCommunityIcons';
@@ -31,53 +25,186 @@ interface NotificationToggleProps {
   onValueChange: (value: boolean) => void;
 }
 
-const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
-  <View style={styles.toggleRow}>
-    <View style={styles.iconContainer}>
-      {iconType === 'Feather' ? (
-        <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
-      ) : (
-        <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
-      )}
-    </View>
-    <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
-    <Switch
-      value={value}
-      onValueChange={onValueChange}
-      trackColor={{ false: '#E5E7EB', true: Colors.primary }}
-      thumbColor={Colors.white}
-      ios_backgroundColor="#E5E7EB"
-    />
-  </View>
-);
+
 
 export function NotificationSettingsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+
+  const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
+    <View style={styles.section}>
+      <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
+      <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
+      {children}
+    </View>
+  );
+
+  const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
+    <View style={styles.toggleRow}>
+      <View style={styles.iconContainer}>
+        {iconType === 'Feather' ? (
+          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        ) : iconType === 'Ionicons' ? (
+          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+        ) : (
+          <MaterialCommunityIcons name={iconName as any} size={20} color={Colors.textPrimary} />
+        )}
+      </View>
+      <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+      />
+    </View>
+  );
+
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
-  const [allowNotifications, setAllowNotifications] = useState(true);
+  const [allowNotifications, setAllowNotifications] = useState(false);
   const [transfersEmail, setTransfersEmail] = useState(true);
   const [transfersPush, setTransfersPush] = useState(true);
+  const [securityEmail, setSecurityEmail] = useState(true);
+  const [securityPush, setSecurityPush] = useState(true);
   const [personalisedEmail, setPersonalisedEmail] = useState(false);
   const [personalisedPush, setPersonalisedPush] = useState(false);
   const [feedbackEmail, setFeedbackEmail] = useState(true); 
+  const [feedbackPush, setFeedbackPush] = useState(false);
   const [causesEmail, setCausesEmail] = useState(false);
+  const [causesPush, setCausesPush] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      setAllowNotifications(status === 'granted');
+    };
+    checkStatus();
+    
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        checkStatus();
+      }
+    });
+    
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@notification_prefs');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setTransfersEmail(parsed.transfersEmail ?? true);
+          setTransfersPush(parsed.transfersPush ?? true);
+          setSecurityEmail(parsed.securityEmail ?? true);
+          setSecurityPush(parsed.securityPush ?? true);
+          setPersonalisedEmail(parsed.personalisedEmail ?? false);
+          setPersonalisedPush(parsed.personalisedPush ?? false);
+          setFeedbackEmail(parsed.feedbackEmail ?? true);
+          setFeedbackPush(parsed.feedbackPush ?? false);
+          setCausesEmail(parsed.causesEmail ?? false);
+          setCausesPush(parsed.causesPush ?? false);
+        }
+      } catch (e) {
+        console.error('Failed to load notification preferences');
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const savePreferences = async () => {
+      try {
+        const prefs = { 
+          transfersEmail, transfersPush, 
+          securityEmail, securityPush,
+          personalisedEmail, personalisedPush, 
+          feedbackEmail, feedbackPush, 
+          causesEmail, causesPush 
+        };
+        await AsyncStorage.setItem('@notification_prefs', JSON.stringify(prefs));
+      } catch (e) {
+        console.error('Failed to save notification preferences');
+      }
+    };
+    savePreferences();
+  }, [
+    transfersEmail, transfersPush, 
+    securityEmail, securityPush,
+    personalisedEmail, personalisedPush, 
+    feedbackEmail, feedbackPush, 
+    causesEmail, causesPush, 
+    isLoaded
+  ]);
+
+  const togglePushPreference = async (setter: (val: boolean) => void, currentVal: boolean) => {
+    if (!currentVal) {
+      
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        if (reqStatus === 'granted') {
+          setter(true);
+        } else if (!canAskAgain) {
+          Alert.alert('Enable Notifications', 'To receive push notifications, please enable them in your device settings.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]);
+        }
+      } else {
+        setter(true);
+      }
+    } else {
+      setter(false);
+    }
+  };
+
+  const handleAllowNotificationsToggle = async (value: boolean) => {
+    if (value) {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        if (reqStatus === 'granted') {
+          setAllowNotifications(true);
+        } else if (!canAskAgain) {
+          Alert.alert('Enable Notifications', 'Please enable notifications in your device settings.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]);
+        }
+      } else {
+        setAllowNotifications(true);
+      }
+    } else {
+      Alert.alert('Disable Notifications', 'To disable notifications, please switch them off in your device settings.', [
+         { text: 'Cancel', style: 'cancel' },
+         { text: 'Open Settings', onPress: () => Linking.openSettings() }
+      ]);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       
       <Animated.View 
         style={[
@@ -85,9 +212,7 @@ export function NotificationSettingsScreen() {
           {
             borderBottomColor: headerBorderOpacity.interpolate({
               inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border],
-            }),
-          }
+              outputRange: ["transparent", Colors.border] }) }
         ]}
       >
         <TouchableOpacity 
@@ -123,9 +248,27 @@ export function NotificationSettingsScreen() {
             iconName="bell"
             title="Allow notifications"
             value={allowNotifications}
-            onValueChange={setAllowNotifications}
+            onValueChange={handleAllowNotificationsToggle}
           />
         </View>
+
+        <NotificationSection 
+          title="Account security" 
+          description="Alerts for login, password resets, and changes to your two-step verification."
+        >
+          <NotificationToggle
+            iconName="mail"
+            title="Email"
+            value={securityEmail}
+            onValueChange={setSecurityEmail}
+          />
+          <NotificationToggle
+            iconName="smartphone"
+            title="Push"
+            value={securityPush}
+            onValueChange={(val) => togglePushPreference(setSecurityPush, securityPush)}
+          />
+        </NotificationSection>
 
         <NotificationSection 
           title="Your transfers and balances" 
@@ -141,13 +284,13 @@ export function NotificationSettingsScreen() {
             iconName="smartphone"
             title="Push"
             value={transfersPush}
-            onValueChange={setTransfersPush}
+            onValueChange={(val) => togglePushPreference(setTransfersPush, transfersPush)}
           />
         </NotificationSection>
 
         <NotificationSection 
           title="Personalised updates" 
-          description="Receive updates about the latest Wise products and features."
+          description="Receive updates about the latest features and products."
         >
           <NotificationToggle
             iconName="mail"
@@ -159,7 +302,7 @@ export function NotificationSettingsScreen() {
             iconName="smartphone"
             title="Push"
             value={personalisedPush}
-            onValueChange={setPersonalisedPush}
+            onValueChange={(val) => togglePushPreference(setPersonalisedPush, personalisedPush)}
           />
         </NotificationSection>
 
@@ -173,6 +316,12 @@ export function NotificationSettingsScreen() {
             value={feedbackEmail}
             onValueChange={setFeedbackEmail}
           />
+          <NotificationToggle
+            iconName="smartphone"
+            title="Push"
+            value={feedbackPush}
+            onValueChange={(val) => togglePushPreference(setFeedbackPush, feedbackPush)}
+          />
         </NotificationSection>
 
         <NotificationSection 
@@ -184,6 +333,12 @@ export function NotificationSettingsScreen() {
             title="Email"
             value={causesEmail}
             onValueChange={setCausesEmail}
+          />
+          <NotificationToggle
+            iconName="smartphone"
+            title="Push"
+            value={causesPush}
+            onValueChange={(val) => togglePushPreference(setCausesPush, causesPush)}
           />
         </NotificationSection>
 
@@ -199,19 +354,19 @@ export function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-  },
+    borderBottomWidth: 1 },
   backButton: {
     width: 40,
     height: 40,
@@ -219,55 +374,43 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   titleSection: {
     paddingHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   mainTitle: {
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   mainDescription: {
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   allowSection: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionTitle: {
     color: Colors.textPrimary,
     fontSize: 18,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   sectionDescription: {
     color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   iconContainer: {
     width: 44,
     height: 44,
@@ -276,21 +419,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   toggleTitle: {
     flex: 1,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   footerInfo: {
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-  },
+    marginTop: Spacing.md },
   footerText: {
     color: Colors.textSecondary,
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   spacer: {
-    height: Spacing.xl,
-  },
-});
+    height: Spacing.xl } });
+}
+
+

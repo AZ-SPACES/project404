@@ -15,13 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../theme';
 import Button from '../../components/ui/Button';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC = () => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [useEmail, setUseEmail] = useState(false);
@@ -145,7 +147,9 @@ const LoginScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -162,7 +166,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.07)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     height: 48,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
   },
   inputIcon: {
     fontSize: 24,
@@ -239,5 +243,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+}
 
 export default LoginScreen;

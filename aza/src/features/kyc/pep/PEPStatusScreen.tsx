@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -26,6 +26,9 @@ const PEP_OPTIONS: PEPOptions[] = [
 ];
 
 export default function PEPStatusScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -33,14 +36,12 @@ export default function PEPStatusScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleNext = () => {
     if (selectedOption === "No, I am not") {
@@ -73,6 +74,7 @@ export default function PEPStatusScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.container}>
         {/* Header */}
         <Animated.View
@@ -81,9 +83,7 @@ export default function PEPStatusScreen() {
             {
               borderBottomColor: headerBorderOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: ["transparent", Colors.border],
-              }),
-            },
+                outputRange: ["transparent", Colors.border] }) },
           ]}
         >
           <TouchableOpacity
@@ -145,87 +145,75 @@ export default function PEPStatusScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     height: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+    borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleContainer: {
     flex: 1,
     alignItems: "center",
-    marginRight: 44,
-  },
+    marginRight: 44 },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContentContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: -0.5,
-    lineHeight: 38,
-  },
+    lineHeight: 38 },
   subtitle:{
     fontSize: 16,
     color: Colors.textSecondary,
     lineHeight: 24,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   optionsContainer: {
-    gap: Spacing.sm,
-  },
+    gap: Spacing.sm },
   optionItem: {
     minHeight: 48,
     justifyContent: "center",
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.sm,
-  },
+    borderRadius: Radius.sm },
   optionItemSelected: {
     borderColor: Colors.primary,
-    backgroundColor: "#FAFCF8",
-  },
+    backgroundColor: isDark ? Colors.white10 : '#FAFCF8' },
   optionLabel: {
     fontSize: 14,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   optionLabelSelected: {
     color: Colors.textPrimary,
-    fontWeight: "500",
-  },
+    fontWeight: "500" },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-});
+    marginBottom: Spacing.lg } });
+}
+
+

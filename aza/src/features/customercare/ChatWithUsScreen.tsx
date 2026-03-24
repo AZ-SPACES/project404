@@ -8,13 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image,
-} from "react-native";
+  Image } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors, Spacing, Radius } from "../../theme";
+import { useAppTheme, Spacing, Radius } from "../../theme";
+import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,6 +29,9 @@ interface Message {
 }
 
 export default function ChatWithUsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation<NavigationProp>();
   const [inputText, setInputText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -49,10 +52,9 @@ export default function ChatWithUsScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       allowsEditing: true,
-      quality: 1,
-    });
+      quality: 1 });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
+    if (!result.canceled && result.assets?.[0]?.uri) {
       setSelectedImage(result.assets[0].uri);
     }
   };
@@ -63,9 +65,8 @@ export default function ChatWithUsScreen() {
     const newMessage: Message = {
       id: Date.now().toString(),
       text: inputText.trim(),
-      imageUri: selectedImage || undefined,
-      isSender: true,
-    };
+      ...(selectedImage ? { imageUri: selectedImage } : {}),
+      isSender: true };
 
     setMessages((prev) => [...prev, newMessage]);
     setInputText("");
@@ -80,14 +81,14 @@ export default function ChatWithUsScreen() {
           text: selectedImage 
             ? "We've received your attachment. Let us review it." 
             : "Thank you for reaching out. One of our agents will be with you shortly.",
-          isSender: false,
-        },
+          isSender: false },
       ]);
     }, 1500);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <KeyboardAvoidingView 
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -175,103 +176,87 @@ export default function ChatWithUsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: any) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+    backgroundColor: Colors.background },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-  },
+    paddingBottom: Spacing.md },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   title: {
     fontSize: 32,
     fontWeight: "700",
     color: Colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   chatContainer: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    gap: 12,
-  },
+    gap: 12 },
   messageBubble: {
     maxWidth: '85%',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
-  },
+    borderRadius: 12 },
   imageBubble: {
     paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
+    paddingVertical: 8 },
   messageImage: {
     width: 200,
     height: 200,
-    borderRadius: 8,
-  },
+    borderRadius: 8 },
   textWithImage: {
     marginTop: 8,
-    paddingHorizontal: 8,
-  },
+    paddingHorizontal: 8 },
   senderBubble: {
     backgroundColor: Colors.primary, 
     alignSelf: 'flex-end',
-    borderTopRightRadius: 4, 
-  },
+    borderTopRightRadius: 4 },
   receiverBubble: {
-    backgroundColor: Colors.secondary, 
+    backgroundColor: isDark ? Colors.surface : Colors.secondary, 
     alignSelf: 'flex-start',
-    borderTopLeftRadius: 4, 
-  },
+    borderTopLeftRadius: 4 },
   messageText: {
     fontSize: 16,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   senderText: {
-    color: "#FFFFFF",
-  },
+    color: "#FFFFFF" },
   receiverText: {
-    color: "#0E0F0C",
-  },
+    color: Colors.textPrimary },
   inputContainer: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
     alignItems: 'flex-end',
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.05)",
-  },
+    borderTopColor: isDark ? Colors.border : "rgba(0,0,0,0.05)" },
   attachButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
-  },
+    marginRight: 8 },
   inputWrapper: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.md,
@@ -279,19 +264,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   previewContainer: {
     marginBottom: Spacing.sm,
     position: 'relative',
     width: 60,
-    height: 60,
-  },
+    height: 60 },
   previewImage: {
     width: 60,
     height: 60,
-    borderRadius: Radius.sm,
-  },
+    borderRadius: Radius.sm },
   removeImageButton: {
     position: 'absolute',
     top: -4,
@@ -301,23 +283,19 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   textInput: {
     fontSize: 16,
     color: Colors.textPrimary,
-    maxHeight: 100,
-  },
+    maxHeight: 100 },
   sendButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: Colors.secondary,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   sendButtonDisabled: {
     backgroundColor: Colors.border,
-    opacity: 0.5,
-  },
-});
+    opacity: 0.5 } });
+}

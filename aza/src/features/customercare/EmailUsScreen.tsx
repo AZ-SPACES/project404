@@ -8,12 +8,12 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  TextInput,
-} from "react-native";
+  TextInput } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors, Spacing, Radius } from "../../theme";
+import { useAppTheme, Spacing, Radius } from "../../theme";
+import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../components/ui/Button";
@@ -21,11 +21,15 @@ import Button from "../../components/ui/Button";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "EmailUs">;
 
 export default function EmailUsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation<NavigationProp>();
   const [details, setDetails] = useState("");
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -82,54 +86,47 @@ export default function EmailUsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: any) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+    backgroundColor: Colors.background },
   keyboardAvoidingView: {
-    flex: 1,
-  },
+    flex: 1 },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-  },
+    paddingBottom: Spacing.md },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.surface : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   title: {
     fontSize: 32,
     fontWeight: "700",
     color: Colors.textPrimary,
     letterSpacing: -0.5,
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   subtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   content: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
+    paddingTop: Spacing.md },
   inputLabel: {
     fontSize: 14,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -138,13 +135,12 @@ const styles = StyleSheet.create({
     minHeight: 140,
     fontSize: 16,
     color: Colors.textPrimary,
-    backgroundColor: "#FFFFFF",
-    paddingTop: Spacing.md, // needed for top alignment on iOS when multiline
+    backgroundColor: isDark ? Colors.surface : Colors.white,
+    paddingTop: Spacing.md,
   },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: "rgba(22,51,0,0.08)",
-  },
-});
+    borderTopColor: isDark ? Colors.border : "rgba(22,51,0,0.08)" } });
+}

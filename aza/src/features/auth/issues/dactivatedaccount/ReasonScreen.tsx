@@ -5,10 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { Colors, Typography, Spacing } from "../../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +17,9 @@ import { RootStackParamList } from "../../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Reason">;
 export default function Reason() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -33,6 +37,7 @@ export default function Reason() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <Animated.View
         style={[
           styles.header,
@@ -144,10 +149,12 @@ export default function Reason() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.background,
   },
   header: {
     height: 56,
@@ -159,8 +166,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1,
@@ -211,3 +217,6 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+}
+
+
