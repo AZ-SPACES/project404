@@ -83,10 +83,10 @@ export default function MainTabsNavigator() {
           ) }}
       />
       <Tab.Screen 
-        name="Manage" 
+        name="Hub" 
         component={DummyScreen} 
         options={{
-          tabBarLabel: 'Manage',
+          tabBarLabel: 'Hub',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="apps-outline" size={size || 24} color={color} />
           ) }}
@@ -97,7 +97,7 @@ export default function MainTabsNavigator() {
 
 function createStyles(Colors: ThemeColors) {
   const isDark = Colors.background === '#121212';
-  return StyleSheet.create({
+  return StyleSheet.create({  
   dummyContainer: {
     flex: 1, 
     justifyContent: 'center', 
