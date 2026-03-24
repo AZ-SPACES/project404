@@ -6,23 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  StatusBar,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
-import {
-  useDisplayContext,
-  BACKGROUND_IMAGES,
-  ThemeOption,
-  LanguageOption,
-  THEMES,
-  LANGUAGES,
-} from "../../providers/DisplayProvider";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
+import { useDisplayContext,BACKGROUND_IMAGES,ThemeOption,THEMES,LANGUAGES } from "../../providers/DisplayProvider";
 
 type ThemeCardProps = {
   theme: ThemeOption;
@@ -31,6 +23,9 @@ type ThemeCardProps = {
 };
 
 const ThemeThumbnail = ({ theme }: { theme: ThemeOption }) => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
   if (theme === "Light") {
     return (
       <View style={[styles.thumbnailBase, { backgroundColor: "#F3F4F6" }]}>
@@ -68,8 +63,7 @@ const ThemeThumbnail = ({ theme }: { theme: ThemeOption }) => {
             fontWeight: "bold",
             color: "#111827",
             marginLeft: 4,
-            marginTop: 4,
-          }}
+            marginTop: 4 }}
         >
           Aa
         </Text>
@@ -81,8 +75,7 @@ const ThemeThumbnail = ({ theme }: { theme: ThemeOption }) => {
             fontWeight: "bold",
             color: "#FFFFFF",
             marginLeft: 4,
-            marginTop: 4,
-          }}
+            marginTop: 4 }}
         >
           Aa
         </Text>
@@ -92,11 +85,13 @@ const ThemeThumbnail = ({ theme }: { theme: ThemeOption }) => {
 };
 
 const ThemeCard = ({ theme, isSelected, onSelect }: ThemeCardProps) => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
   const subtitles: Record<ThemeOption, string> = {
     Light: "Theme will always be in light mode",
     Dark: "Theme will always be in dark mode",
-    "System Default": "Theme will follow the operating system theme",
-  };
+    "System Default": "Theme will follow the operating system theme" };
 
   const displayLabel = theme === "System Default" ? "Automatic" : theme;
 
@@ -127,6 +122,8 @@ const ThemeCard = ({ theme, isSelected, onSelect }: ThemeCardProps) => {
 };
 
 export function AppearanceScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
@@ -135,15 +132,13 @@ export function AppearanceScreen() {
     language: selectedLanguage,
     setLanguage,
     homeBackground,
-    setHomeBackground,
-  } = useDisplayContext();
+    setHomeBackground } = useDisplayContext();
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 1,
-    });
+      quality: 1 });
 
     if (!result.canceled && result.assets && result.assets[0]) {
       setHomeBackground(result.assets[0].uri);
@@ -167,7 +162,7 @@ export function AppearanceScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={Colors.background === '#121212' ? 'light-content' : 'dark-content'} backgroundColor={Colors.white} />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -265,11 +260,15 @@ export function AppearanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  const mainBg = isDark ? Colors.background : Colors.white;
+  const contentBg = isDark ? Colors.surface : Colors.white;
+
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: mainBg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -277,44 +276,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: mainBg },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.border : Colors.surface,
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   headerTitle: {
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   headerRightPlaceholder: {
-    width: 40,
-  },
+    width: 40 },
   scrollContent: {
-    paddingVertical: Spacing.lg,
-  },
+    paddingVertical: Spacing.lg },
   section: {
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionTitle: {
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
     fontSize: 14,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   appearanceContainer: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: isDark ? Colors.surface : "#F9FAFB",
     marginHorizontal: Spacing.lg,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
+    borderColor: Colors.border },
   themeCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -323,56 +314,47 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: "transparent",
-  },
+    borderColor: "transparent" },
   themeCardSelected: {
-    backgroundColor: Colors.white,
+    backgroundColor: contentBg,
     borderColor: Colors.primary,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 1,
-  },
+    elevation: 1 },
   thumbnailBase: {
     width: 60,
     height: 50,
     borderRadius: Radius.sm,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
+    borderColor: Colors.border },
   thumbnailLightContent: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 4,
     marginTop: 8,
     marginLeft: 8,
-    padding: 4,
-  },
+    padding: 4 },
   thumbnailDarkContent: {
     flex: 1,
     backgroundColor: "#111827",
     borderTopLeftRadius: 4,
     marginTop: 8,
     marginLeft: 8,
-    padding: 4,
-  },
+    padding: 4 },
   thumbnailSplitSide: {
-    flex: 1,
-  },
+    flex: 1 },
   themeCardTextContainer: {
     flex: 1,
-    marginLeft: Spacing.md,
-  },
+    marginLeft: Spacing.md },
   themeCardTitle: {
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   themeCardSubtitle: {
     color: Colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   checkCircle: {
     width: 20,
     height: 20,
@@ -381,38 +363,31 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "transparent",
-  },
+    backgroundColor: "transparent" },
   checkCircleSelected: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
+    borderColor: Colors.primary },
   sectionCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: contentBg,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.border,
-  },
+    borderColor: Colors.border },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: contentBg },
   optionText: {
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginLeft: Spacing.lg,
-  },
+    marginLeft: Spacing.lg },
   backgroundsScrollContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
-  },
+    paddingVertical: Spacing.xs },
   bgThumbnailContainer: {
     width: 100,
     height: 160,
@@ -421,14 +396,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "transparent",
-    position: "relative",
-  },
+    position: "relative" },
   bgThumbnailSelected: {
-    borderColor: Colors.primary,
-  },
+    borderColor: Colors.primary },
   bgThumbnailImage: {
-    flex: 1,
-  },
+    flex: 1 },
   bgCheckCircle: {
     position: "absolute",
     bottom: 8,
@@ -438,8 +410,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.primary,
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   bgUploadButton: {
     width: 100,
     height: 160,
@@ -450,10 +421,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderStyle: "dashed",
     justifyContent: "center",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   uploadText: {
     color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-});
+    marginTop: Spacing.xs } });
+}

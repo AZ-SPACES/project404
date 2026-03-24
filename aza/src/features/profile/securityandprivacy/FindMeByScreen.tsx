@@ -1,0 +1,382 @@
+import React, { useState, useRef, useEffect } from "react";
+import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather,Ionicons,MaterialCommunityIcons,AntDesign } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../../navigation/types";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+
+const { height } = Dimensions.get("window");
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "FindMeBy">;
+
+
+
+interface SettingRowProps {
+  iconName?: string;
+  iconType?: "Feather" | "Ionicons" | "MaterialCommunityIcons" | "Custom";
+  title: string;
+  subtitle: string;
+  switchValue: boolean;
+  onSwitchChange: (value: boolean) => void;
+}
+
+export function FindMeByScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
+  const SettingRow = ({ iconName,iconType,title,subtitle,switchValue,onSwitchChange }: SettingRowProps) => (
+    <View style={styles.row}>
+      <View style={styles.iconContainer}>
+        {iconType === "Feather" && (
+          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        )}
+        {iconType === "Ionicons" && (
+          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+        )}
+        {iconType === "MaterialCommunityIcons" && (
+          <MaterialCommunityIcons
+            name={iconName as any}
+            size={22}
+            color={Colors.textPrimary}
+          />
+        )}
+        {iconType === "Custom" && (
+          <Image
+            source={require("../../../assets/aza-z.png")}
+            style={{ width: 24, height: 24 }}
+            resizeMode="contain"
+          />
+        )}
+      </View>
+  
+      <View style={styles.textContainer}>
+        <Text style={[Typography.body, styles.rowTitle]}>{title}</Text>
+        <Text style={[Typography.caption, styles.rowSubtitle]}>{subtitle}</Text>
+      </View>
+      <Switch
+        value={switchValue}
+        onValueChange={onSwitchChange}
+        trackColor={{ false: isDark ? Colors.surface : "#E5E7EB", true: Colors.primary }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+      />
+    </View>
+  );
+
+  const navigation = useNavigation<NavigationProp>();
+
+  const [wiseTagEnabled, setWiseTagEnabled] = useState(true);
+  const [emailEnabled, setEmailEnabled] = useState(true);
+  const [phoneEnabled, setPhoneEnabled] = useState(true);
+
+  const [isModalVisible, setModalVisible] = useState(false);
+  const modalAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isModalVisible) {
+      Animated.parallel([
+        Animated.timing(modalAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true }),
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(modalAnim, {
+          toValue: height,
+          duration: 300,
+          useNativeDriver: true }),
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isModalVisible]);
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
+
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.titleSection}>
+          <Text style={[Typography.h1, styles.mainTitle]}>Find me by</Text>
+          <Text style={[Typography.body, styles.description]}>
+            Set how people on Wise can find you to send and request money.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <SettingRow
+            iconType="Custom"
+            title="Wisetag"
+            subtitle="@paapacobbold"
+            switchValue={wiseTagEnabled}
+            onSwitchChange={setWiseTagEnabled}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="mail"
+            title="Email address"
+            subtitle="paapacobbold@icloud.com"
+            switchValue={emailEnabled}
+            onSwitchChange={setEmailEnabled}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="phone"
+            title="Phone number"
+            subtitle="+233249054893"
+            switchValue={phoneEnabled}
+            onSwitchChange={setPhoneEnabled}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.deleteSection}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.deleteTextContainer}>
+            <Text style={[Typography.bodyLg, styles.deleteTitle]}>
+              Delete my details everywhere
+            </Text>
+            <Text style={[Typography.body, styles.deleteSubtitle]}>
+              Remove yourself from all existing recipient lists and become
+              hidden in the future
+            </Text>
+          </View>
+          <Feather
+            name="chevron-right"
+            size={20}
+            color={Colors.textSecondary}
+          />
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Deletion Modal */}
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={isModalVisible ? "auto" : "none"}
+      >
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              opacity: backdropAnim,
+              zIndex: 1000,
+              backgroundColor: "rgba(0,0,0,0.5)" },
+          ]}
+        >
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              zIndex: 1001,
+              transform: [{ translateY: modalAnim }] },
+          ]}
+        >
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={[Typography.h2, styles.modalTitle]}>
+              Remove yourself as a recipient
+            </Text>
+          </View>
+
+          <Text style={[Typography.bodyLg, styles.modalDescription]}>
+            If you have already been found by people on Wise, you can remove
+            yourself - and become hidden in the future.
+          </Text>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={styles.destructiveButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.destructiveButtonText}>Remove yourself</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    height: 60,
+    justifyContent: "center" },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.surface,
+    justifyContent: "center",
+    alignItems: "center" },
+  scrollContent: {
+    paddingBottom: Spacing.xl },
+  titleSection: {
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xl },
+  mainTitle: {
+    color: Colors.textPrimary,
+    fontSize: 32,
+    fontWeight: "700",
+    marginBottom: Spacing.sm },
+  description: {
+    color: Colors.textSecondary,
+    fontSize: 18,
+    lineHeight: 24 },
+  section: {
+    paddingHorizontal: Spacing.lg },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md },
+  textContainer: {
+    flex: 1,
+    justifyContent: "center" },
+  rowTitle: {
+    color: Colors.textPrimary,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 2 },
+  rowSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 15 },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.lg,
+    marginHorizontal: Spacing.lg },
+  deleteSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md },
+  deleteTextContainer: {
+    flex: 1,
+    paddingRight: Spacing.md },
+  deleteTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 4 },
+  deleteSubtitle: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    lineHeight: 22 },
+  modalContainer: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    backgroundColor: isDark ? Colors.surface : Colors.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 40,
+    shadowColor: Colors.black,
+    shadowOffset: {
+      width: 0,
+      height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10 },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginBottom: 16 },
+  modalTitle: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 24,
+    fontWeight: "700" },
+
+  closeButton: {
+    backgroundColor: Colors.surface,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16 },
+
+  modalDescription: {
+    color: Colors.textSecondary,
+    fontSize: 17,
+    lineHeight: 24,
+    marginBottom: 32 },
+  modalFooter: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 20,
+    marginTop: 12 },
+  destructiveButton: {
+    backgroundColor: "#FEE2E2",
+    paddingVertical: 16,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center" },
+  destructiveButtonText: {
+    color: "#DC2626",
+    fontSize: 16,
+    fontWeight: "600" } });
+}
+
+

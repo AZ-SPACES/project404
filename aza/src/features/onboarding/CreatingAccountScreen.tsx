@@ -1,17 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, ImageBackground, Animated, Easing } from "react-native";
+import { View, Text, StyleSheet, ImageBackground, Animated, Easing, StatusBar } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors } from "../../theme";
+import { useAppTheme, ThemeColors } from "../../theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatingAccount">;
 
 const DURATION = 3200; // slightly longer for premium feel
 
 export default function CreatingAccountScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   
   const [status, setStatus] = useState("Securing your profile");
@@ -28,16 +30,14 @@ export default function CreatingAccountScreen() {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
-      easing: Easing.out(Easing.quad),
-    }).start();
+      easing: Easing.out(Easing.quad) }).start();
 
     // 2. Progress Bar Animation
     Animated.timing(progressAnim, {
       toValue: 1,
       duration: DURATION - 400, // leave some time for the 'Success' state
       useNativeDriver: false,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-    }).start();
+      easing: Easing.bezier(0.4, 0, 0.2, 1) }).start();
 
     // 3. Footer Pulse Animation
     Animated.loop(
@@ -46,14 +46,12 @@ export default function CreatingAccountScreen() {
           toValue: 0.6,
           duration: 1000,
           useNativeDriver: true,
-          easing: Easing.inOut(Easing.quad),
-        }),
+          easing: Easing.inOut(Easing.quad) }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1000,
           useNativeDriver: true,
-          easing: Easing.inOut(Easing.quad),
-        }),
+          easing: Easing.inOut(Easing.quad) }),
       ])
     ).start();
 
@@ -72,8 +70,7 @@ export default function CreatingAccountScreen() {
         toValue: 1,
         tension: 50,
         friction: 7,
-        useNativeDriver: true,
-      }).start();
+        useNativeDriver: true }).start();
     }, DURATION - 600);
 
     const navigationTimer = setTimeout(() => {
@@ -89,8 +86,7 @@ export default function CreatingAccountScreen() {
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0%", "100%"],
-  });
+    outputRange: ["0%", "100%"] });
 
   return (
     <ImageBackground
@@ -99,6 +95,7 @@ export default function CreatingAccountScreen() {
       resizeMode="cover"
     >
       <View style={styles.overlay}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" />
         <Animated.View style={[styles.centerContent, { opacity: fadeAnim }]}>
           <Text style={styles.title}>Creating your{"\n"}account</Text>
           
@@ -129,24 +126,22 @@ export default function CreatingAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
   background: {
     flex: 1,
-    width: "100%",
-  },
+    width: "100%" },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.52)",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingBottom: 40,
-  },
+    paddingBottom: 40 },
   centerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-  },
+    width: "100%" },
   title: {
     color: Colors.white,
     fontSize: 40,
@@ -154,39 +149,33 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: -1,
     lineHeight: 46,
-    marginBottom: 40,
-  },
+    marginBottom: 40 },
   progressContainer: {
     width: "70%",
     height: 80,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   progressBarWrapper: {
     height: 4,
     width: "100%",
     backgroundColor: "rgba(255,255,255,0.25)",
     borderRadius: 2,
     overflow: "hidden",
-    marginBottom: 16,
-  },
+    marginBottom: 16 },
   progressBarFill: {
     height: "100%",
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.white },
   statusText: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 16,
     fontWeight: "500",
-    textAlign: "center",
-  },
+    textAlign: "center" },
   statusTextReady: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 12,
-  },
+    marginTop: 12 },
   successCircle: {
     width: 48,
     height: 48,
@@ -195,11 +184,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
+    borderColor: "rgba(255,255,255,0.2)" },
   footerText: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 14,
-    fontWeight: "500",
-  },
-});
+    fontWeight: "500" } });
+}

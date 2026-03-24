@@ -11,11 +11,12 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  StatusBar
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -44,6 +45,9 @@ const NATIONALITIES = [
 type YesNo = "Yes" | "No" | null;
 
 export default function TaxResidencyScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -77,6 +81,7 @@ export default function TaxResidencyScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -292,7 +297,9 @@ export default function TaxResidencyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -319,7 +326,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -363,7 +370,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
   selectorText: {
     fontSize: Typography.bodyLg.fontSize,
@@ -376,7 +383,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     marginTop: Spacing.xs,
     overflow: "hidden",
   },
@@ -390,7 +397,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   pickerItemSelected: {
-    backgroundColor: "#FAFCF8",
+    backgroundColor: isDark ? Colors.white10 : "#FAFCF8",
   },
   pickerItemText: {
     fontSize: Typography.bodyLg.fontSize,
@@ -412,11 +419,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
   yesNoOptionSelected: {
     borderColor: Colors.primary,
-    backgroundColor: "#FAFCF8",
+    backgroundColor: isDark ? Colors.white10 : "#FAFCF8",
   },
   yesNoText: {
     fontSize: Typography.bodyLg.fontSize,
@@ -434,7 +441,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     height: 48,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     marginTop: Spacing.sm,
   },
   inputIcon: { marginRight: Spacing.sm },
@@ -462,3 +469,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
 });
+}
+
+

@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
-} from "react-native";
+  Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors, Spacing, Typography, Radius } from "../../theme";
+import { useAppTheme, Spacing, Typography, Radius, ThemeColors } from "../../theme";
+import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { AntDesign } from "@expo/vector-icons";
@@ -22,6 +22,9 @@ const { height } = Dimensions.get("window");
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TalkToUs">;
 
 export default function TalkToUsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
   const navigation = useNavigation<NavigationProp>();
   const [language, setLanguage] = useState("English");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -37,32 +40,29 @@ export default function TalkToUsScreen() {
         Animated.timing(bottomSheetAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(bottomSheetAnim, {
           toValue: height,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(backdropAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     }
   }, [isBottomSheetVisible, bottomSheetAnim, backdropAnim]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -248,8 +248,7 @@ export default function TalkToUsScreen() {
               position: "absolute",
               bottom: 0,
               width: "100%",
-              transform: [{ translateY: bottomSheetAnim }],
-            },
+              transform: [{ translateY: bottomSheetAnim }] },
           ]}
         >
           <View style={styles.bottomSheetHeader}>
@@ -257,7 +256,7 @@ export default function TalkToUsScreen() {
               style={styles.closeButton}
               onPress={() => setBottomSheetVisible(false)}
             >
-              <AntDesign name="close" size={20} color="#0E0F0C" />
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
           <Text style={styles.bottomSheetTitle}>Call us</Text>
@@ -291,44 +290,39 @@ export default function TalkToUsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-  },
+    paddingBottom: Spacing.md },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   title: {
     fontSize: 32,
     fontWeight: "700",
     color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
+    letterSpacing: -0.5 },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
-  },
+    paddingHorizontal: Spacing.lg },
   section: {
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   sectionLabel: {
     fontSize: 14,
     fontWeight: "400",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   dropdownButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,27 +331,23 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-  },
+    paddingVertical: 12 },
   dropdownButtonActive: {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    borderBottomColor: "transparent",
-  },
+    borderBottomColor: "transparent" },
   dropdownText: {
     fontSize: 16,
     fontWeight: "400",
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   dropdownList: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderTopWidth: 0,
     borderBottomLeftRadius: Radius.md,
     borderBottomRightRadius: Radius.md,
-    backgroundColor: "#FFFFFF",
-    overflow: "hidden",
-  },
+    backgroundColor: isDark ? Colors.surface : "#FFFFFF",
+    overflow: "hidden" },
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -365,95 +355,78 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(22,51,0,0.04)",
-  },
+    borderBottomColor: isDark ? Colors.border : "rgba(22,51,0,0.04)" },
   dropdownItemText: {
     fontSize: 16,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   dropdownItemTextSelected: {
     color: Colors.textPrimary,
-    fontWeight: "500",
-  },
+    fontWeight: "500" },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   separator: {
     height: 1,
-    backgroundColor: "rgba(22,51,0,0.08)",
-  },
+    backgroundColor: isDark ? Colors.border : "rgba(22,51,0,0.08)" },
   issueItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: Spacing.lg,
-  },
+    paddingVertical: Spacing.lg },
   iconContainer: {
     width: 44,
     height: 44,
     borderRadius: Radius.full,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   issueTextContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   issueTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: Colors.textPrimary,
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   issueSubtitle: {
     fontSize: 14,
     fontWeight: "400",
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   bottomSheetBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
+    backgroundColor: "rgba(0, 0, 0, 0.5)" },
   bottomSheetContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: isDark ? Colors.surface : "#ffffff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 48,
-  },
+    paddingBottom: 48 },
   bottomSheetHeader: {
     flexDirection: "row",
     justifyContent: "flex-start",
-    marginBottom: 16,
-  },
+    marginBottom: 16 },
   closeButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: isDark ? Colors.white10 : "#F3F4F6",
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   bottomSheetTitle: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#0E0F0C",
+    color: Colors.textPrimary,
     marginBottom: 8,
-    letterSpacing: -0.5,
-  },
+    letterSpacing: -0.5 },
   bottomSheetDescription: {
     fontSize: 16,
-    color: "#0E0F0C",
+    color: Colors.textPrimary,
     lineHeight: 22,
-    marginBottom: 20,
-  },
+    marginBottom: 20 },
   bottomSheetDivider: {
     height: 1,
-    backgroundColor: "#E5E7EB",
-    marginBottom: 24,
-  },
-});
+    backgroundColor: Colors.border,
+    marginBottom: 24 } });
+}

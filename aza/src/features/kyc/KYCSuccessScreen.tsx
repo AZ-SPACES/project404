@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated, Easing, StatusBar } from "react-nativ
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
@@ -27,8 +27,7 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
       duration: 400,
       delay,
       useNativeDriver: true,
-      easing: Easing.out(Easing.quad),
-    }).start();
+      easing: Easing.out(Easing.quad) }).start();
 
     if (status === 'reviewing') {
       // Pulsing for active/reviewing state
@@ -38,14 +37,12 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
             toValue: 1.1,
             duration: 1000,
             useNativeDriver: true,
-            easing: Easing.inOut(Easing.quad),
-          }),
+            easing: Easing.inOut(Easing.quad) }),
           Animated.timing(pulseValue, {
             toValue: 1,
             duration: 1000,
             useNativeDriver: true,
-            easing: Easing.inOut(Easing.quad),
-          }),
+            easing: Easing.inOut(Easing.quad) }),
         ])
       ).start();
     }
@@ -53,13 +50,14 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
 
   const scaleValue = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.8, 1],
-  });
+    outputRange: [0.8, 1] });
 
   const finalScale = status === 'reviewing' 
     ? Animated.multiply(scaleValue, pulseValue)
     : scaleValue;
 
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
     <View style={styles.checkItem}>
       <View style={styles.checkIconTextRow}>
@@ -67,8 +65,7 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
           styles.iconBox,
           {
             opacity: animatedValue,
-            transform: [{ scale: finalScale }],
-          }
+            transform: [{ scale: finalScale }] }
         ]}>
           <MaterialIcons 
             name={status === 'completed' ? "check" : "remove"} 
@@ -86,6 +83,8 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
 }
 
 export default function KYCSuccessScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -94,8 +93,7 @@ export default function KYCSuccessScreen() {
       toValue: 1,
       duration: 500,
       delay: 200,
-      useNativeDriver: true,
-    }).start();
+      useNativeDriver: true }).start();
   }, []);
 
   const handleFinish = () => {
@@ -156,57 +154,50 @@ export default function KYCSuccessScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl * 2,
-  },
+    paddingTop: Spacing.xl * 2 },
   iconContainer: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "rgba(22, 51, 0, 0.05)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.05)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     letterSpacing: -0.5,
-    lineHeight: 38,
-  },
+    lineHeight: 38 },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   checksContainer: {
-    marginTop: Spacing.xl * 1.5,
-  },
+    marginTop: Spacing.xl * 1.5 },
   checksTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.lg + Spacing.sm,
-  },
+    marginBottom: Spacing.lg + Spacing.sm },
   checkItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.lg + 4,
-  },
+    marginBottom: Spacing.lg + 4 },
   checkIconTextRow: {
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   iconBox: {
     width: 22,
     height: 22,
@@ -216,29 +207,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: Spacing.md,
-  },
+    marginRight: Spacing.md },
   checkText: {
     fontSize: 16,
-    color: "#6B7280",
-  },
+    color: Colors.textSecondary },
   statusCompleted: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   statusReviewing: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   footerLine: {
     height: 1,
     backgroundColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-});
+    paddingBottom: Spacing.lg } });
+}
+
+

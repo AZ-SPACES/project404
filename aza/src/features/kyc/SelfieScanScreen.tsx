@@ -8,11 +8,11 @@ import {
   Dimensions,
   Modal,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
 import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -38,6 +38,8 @@ type FeedbackState =
   | "Processing...";
 
 export default function SelfieScanScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SelfieScanRouteProp>();
   const { isPEP } = route.params || {};
@@ -65,13 +67,11 @@ export default function SelfieScanScreen() {
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 900,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(pulseAnim, {
           toValue: 0.85,
           duration: 900,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]),
     );
     if (!capturedImage && permission?.granted) {
@@ -138,6 +138,7 @@ export default function SelfieScanScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" />
       {/* Camera / Captured preview */}
       {capturedImage && capturedImage !== "placeholder" ? (
         <Image
@@ -177,8 +178,7 @@ export default function SelfieScanScreen() {
                 styles.ovalBorder,
                 {
                   borderColor: ovalBorderColor,
-                  transform: [{ scale: pulseAnim }],
-                },
+                  transform: [{ scale: pulseAnim }] },
               ]}
             />
             <View
@@ -280,7 +280,7 @@ export default function SelfieScanScreen() {
                 title="Yes, looks good"
                 onPress={handleLooksGood}
                 backgroundColor={Colors.primary}
-                textColor={Colors.background}
+                textColor={Colors.secondary}
                 borderRadius={10}
                 paddingVertical={16}
                 fontSize={Number(Typography.button.fontSize)}
@@ -289,7 +289,7 @@ export default function SelfieScanScreen() {
               <Button
                 title="Retake"
                 onPress={handleRetake}
-                backgroundColor={Colors.secondary}
+                backgroundColor={Colors.secondary} 
                 textColor={Colors.primary}
                 borderRadius={10}
                 paddingVertical={16}
@@ -303,103 +303,87 @@ export default function SelfieScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-  },
+    backgroundColor: "#000" },
   fullScreen: {
-    ...StyleSheet.absoluteFill,
-  },
+    ...StyleSheet.absoluteFill },
   fullScreenBlack: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
-    padding: Spacing.lg,
-  },
+    padding: Spacing.lg },
   permissionText: {
     color: "#fff",
     marginBottom: Spacing.md,
-    textAlign: "center",
-  },
+    textAlign: "center" },
 
   // Vignette
   vignetteOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "transparent",
-  },
+    backgroundColor: "transparent" },
   vignetteBlock: {
-    flex: 1,
-  },
+    flex: 1 },
   vignetteMiddle: {
     flexDirection: "row",
     height: OVAL_HEIGHT,
-    alignItems: "center",
-  },
+    alignItems: "center" },
   ovalBorder: {
     width: OVAL_WIDTH,
     height: OVAL_HEIGHT,
     borderRadius: OVAL_WIDTH / 2,
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.6)",
-  },
+    borderColor: "rgba(255,255,255,0.6)" },
 
   // Overlay / layout
   overlay: {
     flex: 1,
-    justifyContent: "space-between",
-  },
+    justifyContent: "space-between" },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-  },
+    paddingTop: Spacing.sm },
   backButton: {
     width: 44,
     height: 44,
     justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   textContainer: {
     marginBottom: Spacing.md,
     backgroundColor: "rgba(0,0,0,0.6)",
     padding: Spacing.md,
-    borderRadius: 12,
-  },
+    borderRadius: 12 },
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   subtitle: {
     fontSize: 14,
     color: "#e5e7eb",
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   feedbackRow: {
     alignItems: "center",
     justifyContent: "center",
     marginTop: (height - OVAL_HEIGHT) / 2 + OVAL_HEIGHT - 60,
     position: "absolute",
     width: "100%",
-    top: 0,
-  },
+    top: 0 },
   feedbackPill: {
     backgroundColor: "rgba(0,0,0,0.7)",
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 20,
-  },
+    borderRadius: 20 },
   feedbackText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
-  },
+    fontWeight: "600" },
   footerContainer: {
     alignItems: "center",
-    paddingBottom: Spacing.xl * 1.5,
-  },
+    paddingBottom: Spacing.xl * 1.5 },
   captureButton: {
     width: 76,
     height: 76,
@@ -407,53 +391,46 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   captureInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#fff",
-  },
+    backgroundColor: "#fff" },
 
   // Modal
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
+    backgroundColor: "rgba(0,0,0,0.6)" },
   previewContainer: {
     alignItems: "center",
     marginBottom: -40,
-    zIndex: 10,
-  },
+    zIndex: 10 },
   previewImage: {
     width: width * 0.55,
     height: width * 0.55,
     borderRadius: (width * 0.55) / 2,
     borderWidth: 4,
-    borderColor: "#fff",
-  },
+    borderColor: "#fff" },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: isDark ? Colors.surface : "#fff",
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl + 40,
-  },
+    paddingTop: Spacing.xl + 40 },
   modalTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   modalSubtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
     marginBottom: Spacing.xl,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   modalActions: {
-    marginBottom: Spacing.md,
-  },
-});
+    marginBottom: Spacing.md } });
+}
+
+

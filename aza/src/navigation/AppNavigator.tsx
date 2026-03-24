@@ -64,7 +64,25 @@ import {
   RequestContactScreen,
   RequestAmountScreen 
 } from '../features/transfer';
-import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen } from '../features/profile';
+import { 
+  ProfileScreen, 
+  AppearanceScreen, 
+  NotificationSettingsScreen, 
+  SecurityAndPrivacyScreen,
+  SecureAccountScreen,
+  LogoutEverywhereScreen,
+  DevicesScreen,
+  TwoStepVerificationScreen,
+  ChangePasswordScreen,
+  FindMeByScreen,
+  BillForwardingIntroScreen,
+  BillForwardingDetailsScreen,
+  PersonalDetailsScreen,
+  PersonalInformationScreen,
+  ChangeEmailScreen,
+  ChangePhoneScreen
+} from '../features/profile';
+
 
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
@@ -138,6 +156,19 @@ export default function AppNavigator() {
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="SecurityAndPrivacy" component={SecurityAndPrivacyScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="SecureAccount" component={SecureAccountScreen} />
+      <Stack.Screen name="LogoutEverywhere" component={LogoutEverywhereScreen} />
+      <Stack.Screen name="Devices" component={DevicesScreen} />
+      <Stack.Screen name="TwoStepVerification" component={TwoStepVerificationScreen} />
+      <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
+      <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
+      <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
+      <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
+      <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
+      <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
     </Stack.Navigator>
+
   );
 }

@@ -10,11 +10,12 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useNavigation, } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing,  } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -23,6 +24,9 @@ import { RootStackParamList } from "../../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePasscode">;
 
 export default function CreatePasscodeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [passcode, setPasscode] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -91,6 +95,7 @@ export default function CreatePasscodeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -145,8 +150,8 @@ export default function CreatePasscodeScreen() {
               <Button
                 title="Continue"
                 onPress={handleContinue}
-                backgroundColor={passcode.length === 4 ? Colors.primary : "#E5E7EB"}
-                textColor={passcode.length === 4 ? Colors.secondary : "#9CA3AF"}
+                backgroundColor={passcode.length === 4 ? Colors.primary : isDark ? Colors.white10 : "#E5E7EB"}
+                textColor={passcode.length === 4 ? Colors.secondary : isDark ? Colors.textSecondary : "#9CA3AF"}
                 disabled={passcode.length !== 4}
                 borderRadius={30}
                 paddingVertical={16}
@@ -159,7 +164,9 @@ export default function CreatePasscodeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -175,7 +182,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -213,7 +220,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: Colors.surface,
   },
   passcodeBoxActive: {
     borderColor: Colors.primary,
@@ -229,3 +236,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xl,
   },
 });
+}
+
+

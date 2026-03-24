@@ -9,22 +9,27 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  StatusBar
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../components/ui/Button";
 
 export default function ResetPasswordScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState("");
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -91,10 +96,12 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
   },
   container: {
     flex: 1,
@@ -107,8 +114,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -143,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     height: 48,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
     marginBottom: Spacing.xl,
   },
   inputIcon: {
@@ -159,3 +165,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
 });
+}
+
+

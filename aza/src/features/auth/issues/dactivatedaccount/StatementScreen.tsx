@@ -1,19 +1,23 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../../../theme';
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../../theme';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Statement'>;
 export default function Statement() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
@@ -33,10 +37,12 @@ export default function Statement() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -46,8 +52,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -83,3 +88,6 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+}
+
+
