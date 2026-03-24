@@ -71,4 +71,5 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   ChangeEmail: undefined;
   ChangePhone: undefined;
+  Hub: undefined;
 };
