@@ -11,6 +11,9 @@ import {
     Keyboard,
     Pressable,
     ScrollView,
+    Animated,
+    Modal,
+    Dimensions,
     StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +31,45 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const amountInputRef = useRef<TextInput>(null);
+
+    const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);
+    const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    const showSuccessModal = () => {
+        setSuccessModalVisible(true);
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.spring(slideAnim, {
+                toValue: 0,
+                bounciness: 0,
+                speed: 12,
+                useNativeDriver: true,
+            })
+        ]).start();
+    };
+
+    const hideSuccessModal = () => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: Dimensions.get('window').height,
+                duration: 250,
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setSuccessModalVisible(false);
+            navigation.goBack();
+        });
+    };
 
     const numericAmount = amount === '' || amount === '.' ? 0 : (parseFloat(amount) || 0);
     const displayAmount = numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
@@ -65,6 +107,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
     const handleRequest = () => {
         if (numericAmount <= 0) return;
         // Handle request logic
+        showSuccessModal();
     };
 
     return (
@@ -189,6 +232,30 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                   </ScrollView>
                 </Pressable>
             </KeyboardAvoidingView>
+
+            {/* Success Modal */}
+            <Modal
+                visible={isSuccessModalVisible}
+                transparent
+                animationType="none"
+                onRequestClose={hideSuccessModal}
+            >
+                <View style={styles.modalOverlayContainer}>
+                    <Animated.View style={[styles.modalBackdrop, { opacity: fadeAnim }]}>
+                        <Pressable style={styles.flex} onPress={hideSuccessModal} />
+                    </Animated.View>
+                    <Animated.View style={[styles.modalSheet, { transform: [{ translateY: slideAnim }] }]}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.successIconContainer}>
+                                <Feather name="check" size={20} color={Colors.textPrimary} />
+                            </View>
+                            <Text style={styles.successMessage}>
+                                You've requested GH¢ {displayAmount}{'\n'}from {name}
+                            </Text>
+                        </View>
+                    </Animated.View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -349,5 +416,42 @@ function createStyles(Colors: ThemeColors) {
         ...Typography.button,
         color: Colors.textSecondary },
     requestButtonTextActive: {
-        color: Colors.white } });
+        color: Colors.white },
+        
+    // Success Modal
+    modalOverlayContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    modalBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    modalSheet: {
+        backgroundColor: isDark ? Colors.background : Colors.white,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingTop: Spacing.xl,
+        paddingHorizontal: Spacing.xl,
+        paddingBottom: Platform.OS === 'ios' ? 48 : Spacing.xl * 2,
+    },
+    modalContent: {
+        alignItems: 'center',
+    },
+    successIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: isDark ? Colors.surface : '#f3f4f6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: Spacing.lg,
+    },
+    successMessage: {
+        ...Typography.body,
+        fontWeight: '600',
+        color: Colors.textPrimary,
+        textAlign: 'center',
+        marginBottom: Spacing.xl * 2,
+    } });
 }

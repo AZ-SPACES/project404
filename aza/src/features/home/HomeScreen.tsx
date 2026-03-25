@@ -113,7 +113,7 @@ export default function HomeScreen() {
               label="Send"
               onPress={() => navigation.navigate("Send")}
             />
-            <ActionTarget icon="arrow-down" label="Request" />
+            <ActionTarget icon="arrow-down" label="Request" onPress={() => navigation.navigate("Receive")}/>
             <ActionTarget icon="credit-card" label="Details" />
             <ActionTarget icon="more-horizontal" label="More" />
           </View>

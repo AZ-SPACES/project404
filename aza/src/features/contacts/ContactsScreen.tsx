@@ -13,6 +13,9 @@ import {
 import { Feather, MaterialCommunityIcons, AntDesign } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/types";
 
 // Type definitions
 type Recipient = {
@@ -68,11 +71,12 @@ const INITIAL_RECIPIENTS: Recipient[] = [
       "https://focusfmknust.com/wp-content/uploads/2024/07/GDbhQpdXAAA7sUf-1600x1066.jpg" },
 ];
 
-export default function RecipientsScreen() {
+export default function ContactsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // Simple filter logic
   const filteredRecipients = INITIAL_RECIPIENTS.filter(
@@ -87,6 +91,28 @@ export default function RecipientsScreen() {
 
   const closeSheet = () => {
     setSelectedRecipient(null);
+  };
+
+  const handleSend = () => {
+    if (selectedRecipient) {
+      closeSheet();
+      navigation.navigate("SendAmount", {
+        name: selectedRecipient.name,
+        username: selectedRecipient.username,
+        avatar: selectedRecipient.avatar,
+      });
+    }
+  };
+
+  const handleRequest = () => {
+    if (selectedRecipient) {
+      closeSheet();
+      navigation.navigate("RequestAmount", {
+        name: selectedRecipient.name,
+        username: selectedRecipient.username,
+        avatar: selectedRecipient.avatar,
+      });
+    }
   };
 
   const renderItem = ({ item }: { item: Recipient }) => (
@@ -113,7 +139,7 @@ export default function RecipientsScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[Typography.h1, styles.title]}>Recipients</Text>
+          <Text style={[Typography.h1, styles.title]}>Contacts</Text>
           <TouchableOpacity style={styles.inviteButton} activeOpacity={0.8}>
             <MaterialCommunityIcons name="party-popper" size={20} color={Colors.secondary} />
             <Text style={styles.inviteButtonText}>Invite</Text>
@@ -186,17 +212,25 @@ export default function RecipientsScreen() {
 
                 <View style={styles.sheetActions}>
                   <View style={styles.actionItem}>
-                    <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.actionCircleButton} 
+                      activeOpacity={0.8}
+                      onPress={handleSend}
+                    >
                       <Feather name="arrow-up" size={24} color={Colors.secondary} />
                     </TouchableOpacity>
                     <Text style={styles.actionLabel}>Send</Text>
                   </View>
 
                   <View style={styles.actionItem}>
-                    <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.actionCircleButton} 
+                      activeOpacity={0.8}
+                      onPress={handleRequest}
+                    >
                       <Feather name="arrow-down" size={24} color={Colors.secondary} />
                     </TouchableOpacity>
-                    <Text style={styles.actionLabel}>Receive</Text>
+                    <Text style={styles.actionLabel}>Request</Text>
                   </View>
 
                   <View style={styles.actionItem}>

@@ -13,6 +13,7 @@ import {
   SendAmountScreen,
   SendConfirmScreen,
   SendPinScreen,
+  SendSuccessScreen,
   RequestContactScreen,
   RequestAmountScreen 
 } from '../features/transfer';
@@ -58,6 +59,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SendAmount" component={SendAmountScreen} />
       <Stack.Screen name="SendConfirm" component={SendConfirmScreen} />
       <Stack.Screen name="SendPin" component={SendPinScreen} />
+      <Stack.Screen name="SendSuccess" component={SendSuccessScreen} />
       <Stack.Screen name="RequestAmount" component={RequestAmountScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
