@@ -10,7 +10,7 @@ import {
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
-import { RecipientsScreen } from "../features/recipients";
+import { ContactsScreen } from "../features/contacts";
 import { ScanScreen } from "../features/scan";
 import {
   useAppTheme,
@@ -58,10 +58,10 @@ export default function MainTabsNavigator() {
         }}
       />
       <Tab.Screen
-        name="Recipients"
-        component={RecipientsScreen}
+        name="Contacts"
+        component={ContactsScreen}
         options={{
-          tabBarLabel: "Recipients",
+          tabBarLabel: "Contacts",
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size || 24} color={color} />
           ),

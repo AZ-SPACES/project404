@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing } from '../../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 
@@ -16,6 +16,8 @@ type SendConfirmScreenProps = NativeStackScreenProps<RootStackParamList, 'SendCo
 
 export default function SendConfirmScreen({ navigation, route }: SendConfirmScreenProps) {
   const { name, username, avatar, amount, note } = route.params;
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const displayAmount = amount.toFixed(2);
 
@@ -120,10 +122,12 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface, // Matches the grey background from other screens
+    backgroundColor: isDark ? Colors.background : Colors.surface, // Adapts to theme
   },
   flex: {
     flex: 1,
@@ -149,7 +153,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
@@ -166,7 +170,7 @@ const styles = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     borderRadius: 12, // Matches typical border radius used so far
     padding: Spacing.lg,
     marginBottom: Spacing.md,
@@ -260,4 +264,5 @@ const styles = StyleSheet.create({
     ...Typography.button,
     color: Colors.white,
   },
-});
+  });
+}

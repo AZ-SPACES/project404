@@ -44,8 +44,8 @@ export default function SendPinScreen({ navigation, route }: SendPinScreenProps)
   const handleCompletePin = useCallback((enteredPin: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     console.log('Completing transaction with PIN:', enteredPin);
-    navigation.popToTop();
-  }, [navigation]);
+    navigation.replace('SendSuccess', route.params);
+  }, [navigation, route.params]);
 
   // Auto-submit when PIN is fully entered
   useEffect(() => {
@@ -177,10 +177,11 @@ export default function SendPinScreen({ navigation, route }: SendPinScreenProps)
 }
 
 function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.background : Colors.surface, // Adapts to theme
   },
   flex: {
     flex: 1,

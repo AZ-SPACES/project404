@@ -57,6 +57,7 @@ export type RootStackParamList = {
   SendAmount: { name: string; username: string; avatar: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string };
   SendPin: { name: string; username: string; avatar: string; amount: number; note: string };
+  SendSuccess: { name: string; username: string; avatar: string; amount: number; note: string };
   RequestAmount: { name: string; username: string; avatar: string };
   SecurityAndPrivacy: undefined;
   ChangePassword: undefined;
