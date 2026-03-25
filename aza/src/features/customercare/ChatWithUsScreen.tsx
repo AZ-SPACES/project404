@@ -51,7 +51,7 @@ export default function ChatWithUsScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality: 1 });
 
     if (!result.canceled && result.assets?.[0]?.uri) {

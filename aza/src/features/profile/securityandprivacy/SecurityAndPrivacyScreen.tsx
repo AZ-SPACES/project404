@@ -5,6 +5,7 @@ import { Feather, Ionicons, MaterialCommunityIcons, AntDesign } from '@expo/vect
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
+import { useAuth } from '../../../providers/AuthProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 
 const { height } = Dimensions.get('window');
@@ -28,6 +29,7 @@ export function SecurityAndPrivacyScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { isBiometricsEnabled, toggleBiometrics } = useAuth();
 
   const SettingRow = ({ 
     iconName, 
@@ -184,7 +186,7 @@ export function SecurityAndPrivacyScreen() {
             iconType="MaterialCommunityIcons" 
             iconName="face-recognition" 
             title="App security" 
-            subtitle="Require Face ID for login, transactions and after 5 minutes of inactivity"
+            subtitle={isBiometricsEnabled ? "Require Face ID for login, transactions and after 5 minutes of inactivity" : "Require Passcode for login, transactions and after 5 minutes of inactivity"}
             onPress={() => setBottomSheetVisible(true)}
           />
           
@@ -290,12 +292,12 @@ export function SecurityAndPrivacyScreen() {
             </TouchableOpacity>
           </View>
           
-          <TouchableOpacity style={styles.bottomSheetItem} activeOpacity={0.7} onPress={() => setBottomSheetVisible(false)}>
+          <TouchableOpacity style={styles.bottomSheetItem} activeOpacity={0.7} onPress={() => { toggleBiometrics(!isBiometricsEnabled); setBottomSheetVisible(false); }}>
             <View style={styles.bottomSheetIconContainer}>
               <Ionicons name="grid-outline" size={24} color={Colors.textPrimary} />
             </View>
             <View style={styles.bottomSheetTextContainer}>
-              <Text style={[Typography.bodyLg, styles.bottomSheetItemTitle]}>Switch to passcode</Text>
+              <Text style={[Typography.bodyLg, styles.bottomSheetItemTitle]}>{isBiometricsEnabled ? "Switch to passcode" : "Switch to biometrics"}</Text>
               <Text style={[Typography.body, styles.bottomSheetItemSubtitle]}>For unlocking this app when you haven't used it for 5 minutes</Text>
             </View>
             <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
