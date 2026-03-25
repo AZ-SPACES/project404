@@ -16,6 +16,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
+import { useAuth } from "../../../providers/AuthProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -24,6 +25,7 @@ export default function SignUpBirthdayScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { login } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
@@ -53,8 +55,9 @@ export default function SignUpBirthdayScreen() {
 
   const handleNext = useCallback(() => {
     console.log("Birthday complete!");
-    navigation.navigate('CreatePasscode')
-  }, []);
+    // Log in the user to trigger the root navigator state change into SetupNavigator
+    login("signup-token-placeholder", false, false);
+  }, [login]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
