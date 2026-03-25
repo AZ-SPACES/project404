@@ -1,10 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Animated, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../components/ui/Button";
 
@@ -14,11 +14,38 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 export default function ChangePhoneNumber() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const headerBorderOpacity = scrollY.interpolate({
+    inputRange: [40, 70],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            borderBottomColor: headerBorderOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["transparent", Colors.border],
+            }),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -29,13 +56,29 @@ export default function ChangePhoneNumber() {
             color={Colors.textPrimary}
           />
         </TouchableOpacity>
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>I need to change my phone number</Text>
+        <Animated.View
+          style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+        >
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            I need to change my phone number
+          </Text>
+        </Animated.View>
+        <View style={{ width: 44 }} />
+      </Animated.View>
+
+      <Animated.ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false },
+        )}
+        scrollEventThrottle={16}
+      >
+        <Text style={styles.largeTitle}>I need to change my phone number</Text>
         <Text style={styles.subtitle}>
           If you've lost access to your old number, don't worry - here's how you
-          can change your number:If you've lost access to your old number, don't
-          worry - here's how you can change your number:
+          can change your number:
         </Text>
 
         <View style={styles.listContainer}>
@@ -96,35 +139,49 @@ export default function ChangePhoneNumber() {
         >
           <Text style={styles.helpText}>I still need help</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
   },
   header: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1,
   },
-  content: {
+  headerTitleContainer: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
+    alignItems: "center",
   },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.textPrimary,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  largeTitle: {
+    fontSize: Typography.h1.fontSize,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
@@ -176,3 +233,6 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+}
+
+

@@ -11,11 +11,11 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -47,6 +47,9 @@ const SOURCE_OPTIONS: SourceOptions[] = [
 ];
 
 export default function SourceofFundsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SourceofFundRouteProp>();
   const { isPEP } = route.params || {};
@@ -57,14 +60,12 @@ export default function SourceofFundsScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleNext = () => {
     navigation.navigate('Idtype', { isPEP: isPEP as boolean })
@@ -120,6 +121,7 @@ export default function SourceofFundsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -133,9 +135,7 @@ export default function SourceofFundsScreen() {
               {
                 borderBottomColor: headerBorderOpacity.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["transparent", Colors.border],
-                }),
-              },
+                  outputRange: ["transparent", Colors.border] }) },
             ]}
           >
           <TouchableOpacity
@@ -199,97 +199,82 @@ export default function SourceofFundsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     height: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+    borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleContainer: {
     flex: 1,
     alignItems: "center",
-    marginRight: 44,
-  },
+    marginRight: 44 },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContentContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: -0.5,
-    lineHeight: 32,
-  },
+    lineHeight: 32 },
   subtitle:{
     fontSize: 16,
     color: Colors.textSecondary,
     lineHeight: 20,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   label: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-    marginTop: Spacing.sm,
-  },
+    marginTop: Spacing.sm },
   optionsContainer: {
-    gap: Spacing.sm,
-  },
+    gap: Spacing.sm },
   optionItem: {
     height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.sm,
-  },
+    borderRadius: Radius.sm },
   optionItemSelected: {
     borderColor: Colors.primary,
-    backgroundColor: "#FAFCF8",
-  },
+    backgroundColor: isDark ? Colors.white10 : '#FAFCF8' },
   optionLabel: {
     fontSize: Typography.body.fontSize,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   optionLabelSelected: {
     color: Colors.textPrimary,
-    fontWeight: "500",
-  },
+    fontWeight: "500" },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   otherInput: {
     marginTop: Spacing.xs,
     height: 48,
@@ -297,8 +282,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.white,
+    backgroundColor: isDark ? Colors.surface : Colors.white,
     fontSize: Typography.bodyLg.fontSize,
-    color: Colors.textPrimary,
-  },
-});
+    color: Colors.textPrimary } });
+}
+
+

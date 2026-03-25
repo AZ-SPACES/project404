@@ -9,11 +9,13 @@ import {
   TouchableOpacity,
   StatusBar,
   Modal,
-  TouchableWithoutFeedback,
-} from "react-native";
+  TouchableWithoutFeedback } from "react-native";
 import { Feather, MaterialCommunityIcons, AntDesign } from "@expo/vector-icons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/types";
 
 // Type definitions
 type Recipient = {
@@ -30,55 +32,51 @@ const INITIAL_RECIPIENTS: Recipient[] = [
     name: "Paapa Cobbold",
     username: "@pcobbold",
     avatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&fit=crop",
-  },
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&fit=crop" },
   {
     id: "2",
     name: "Davies Opoku",
     username: "@dopoku",
     avatar:
-      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&fit=crop",
-  },
+      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&fit=crop" },
   {
     id: "3",
     name: "Ibrahim Mahama",
     username: "@ibmahama",
     avatar:
-      "https://i0.wp.com/ghanamedia.net/wp-content/uploads/2026/03/img_9680.jpg?fit=1200%2C812&ssl=1",
-  },
+      "https://i0.wp.com/ghanamedia.net/wp-content/uploads/2026/03/img_9680.jpg?fit=1200%2C812&ssl=1" },
   {
     id: "4",
     name: "Charlotte osei",
     username: "@cosei",
     avatar:
-      "https://i0.wp.com/www.gbcghanaonline.com/wp-content/uploads/2024/08/FB_IMG_1723196462221-e1723205205559.jpg",
-  },
+      "https://i0.wp.com/www.gbcghanaonline.com/wp-content/uploads/2024/08/FB_IMG_1723196462221-e1723205205559.jpg" },
   {
     id: "5",
     name: "Kevin Okyere",
     username: "@kokyere",
     avatar:
-      "https://prod.cdn-medias.theafricareport.com/medias/2025/11/28/gvaffltwmaecdxx.jpg",
-  },
+      "https://prod.cdn-medias.theafricareport.com/medias/2025/11/28/gvaffltwmaecdxx.jpg" },
   {
     id: "6",
     name: "Shirley Ayorkor Botchwey",
     username: "@sabotchwey",
     avatar:
-      "https://www.happyghana.com/wp-content/uploads/2024/10/Ayorko-Botchwey-2048x1365.jpg",
-  },
+      "https://www.happyghana.com/wp-content/uploads/2024/10/Ayorko-Botchwey-2048x1365.jpg" },
   {
     id: "7",
     name: "Rita Akosua Dickson",
     username: "@radickson",
     avatar:
-      "https://focusfmknust.com/wp-content/uploads/2024/07/GDbhQpdXAAA7sUf-1600x1066.jpg",
-  },
+      "https://focusfmknust.com/wp-content/uploads/2024/07/GDbhQpdXAAA7sUf-1600x1066.jpg" },
 ];
 
-export default function RecipientsScreen() {
+export default function ContactsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // Simple filter logic
   const filteredRecipients = INITIAL_RECIPIENTS.filter(
@@ -93,6 +91,28 @@ export default function RecipientsScreen() {
 
   const closeSheet = () => {
     setSelectedRecipient(null);
+  };
+
+  const handleSend = () => {
+    if (selectedRecipient) {
+      closeSheet();
+      navigation.navigate("SendAmount", {
+        name: selectedRecipient.name,
+        username: selectedRecipient.username,
+        avatar: selectedRecipient.avatar,
+      });
+    }
+  };
+
+  const handleRequest = () => {
+    if (selectedRecipient) {
+      closeSheet();
+      navigation.navigate("RequestAmount", {
+        name: selectedRecipient.name,
+        username: selectedRecipient.username,
+        avatar: selectedRecipient.avatar,
+      });
+    }
   };
 
   const renderItem = ({ item }: { item: Recipient }) => (
@@ -115,11 +135,11 @@ export default function RecipientsScreen() {
   return (
     <>
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+        <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[Typography.h1, styles.title]}>Recipients</Text>
+          <Text style={[Typography.h1, styles.title]}>Contacts</Text>
           <TouchableOpacity style={styles.inviteButton} activeOpacity={0.8}>
             <MaterialCommunityIcons name="party-popper" size={20} color={Colors.secondary} />
             <Text style={styles.inviteButtonText}>Invite</Text>
@@ -178,7 +198,7 @@ export default function RecipientsScreen() {
                 style={styles.closeButton} 
                 onPress={closeSheet}
               >
-                <AntDesign name="close" size={20} color="#0E0F0C" />
+                <AntDesign name="close" size={20} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -192,17 +212,25 @@ export default function RecipientsScreen() {
 
                 <View style={styles.sheetActions}>
                   <View style={styles.actionItem}>
-                    <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.actionCircleButton} 
+                      activeOpacity={0.8}
+                      onPress={handleSend}
+                    >
                       <Feather name="arrow-up" size={24} color={Colors.secondary} />
                     </TouchableOpacity>
                     <Text style={styles.actionLabel}>Send</Text>
                   </View>
 
                   <View style={styles.actionItem}>
-                    <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.actionCircleButton} 
+                      activeOpacity={0.8}
+                      onPress={handleRequest}
+                    >
                       <Feather name="arrow-down" size={24} color={Colors.secondary} />
                     </TouchableOpacity>
-                    <Text style={styles.actionLabel}>Receive</Text>
+                    <Text style={styles.actionLabel}>Request</Text>
                   </View>
 
                   <View style={styles.actionItem}>
@@ -221,63 +249,56 @@ export default function RecipientsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
-  },
+    backgroundColor: Colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   title: {
     color: Colors.textPrimary,
     fontWeight: "700",
-    fontSize: 28,
-  },
+    fontSize: 28 },
   inviteButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.primary, 
     height: 44,
     paddingHorizontal: Spacing.md,
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   inviteButtonText: {
     ...Typography.button,
     color: Colors.secondary,
     marginLeft: 6,
-    fontSize: 15,
-  },
+    fontSize: 15 },
   searchRow: {
     flexDirection: "row",
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
-    alignItems: "center",
-  },
+    alignItems: "center" },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EBEBEB",
+    backgroundColor: isDark ? Colors.surface : "#EBEBEB",
     borderRadius: Radius.full, // Precise pill shape matching design
     paddingHorizontal: Spacing.md,
-    height: 48,
-  },
+    height: 48 },
   searchIcon: {
-    marginRight: Spacing.xs,
-  },
+    marginRight: Spacing.xs },
   searchInput: {
     flex: 1,
     ...Typography.body,
     fontSize: 15,
     color: Colors.textPrimary,
-    height: "100%",
-  },
+    height: "100%" },
   addButton: {
     width: 44,
     height: 44,
@@ -285,103 +306,84 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: Spacing.sm,
-  },
+    marginLeft: Spacing.sm },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl * 2,
-  },
+    paddingBottom: Spacing.xl * 2 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
+    marginBottom: Spacing.xs },
   avatar: {
     width: 50,
     height: 50,
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   rowInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
-  },
+    marginLeft: Spacing.md },
   rowName: {
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: 2,
-    fontSize: 16,
-  },
+    fontSize: 16 },
   rowUsername: {
     color: Colors.primary,
-    fontWeight: "500",
-  },
+    fontWeight: "500" },
   modalOverlay: {
     flex: 1,
-    justifyContent: "flex-end",
-  },
+    justifyContent: "flex-end" },
   bottomSheetBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: Colors.black70,
-  },
+    backgroundColor: Colors.black70 },
   bottomSheetContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl * 2,
-  },
+    paddingBottom: Spacing.xl * 2 },
   bottomSheetHeader: {
     flexDirection: "row",
     justifyContent: "flex-start",
-    marginBottom: 10,
-  },
+    marginBottom: 10 },
   closeButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: isDark ? Colors.surface : "#F3F4F6",
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   sheetContent: {
     alignItems: "center",
-    marginTop: 0, 
-  },
+    marginTop: 0 },
   sheetAvatar: {
     width: 90,
     height: 90,
     borderRadius: Radius.full,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   sheetName: {
     color: Colors.textPrimary,
     fontWeight: "700",
     marginBottom: 2,
-    fontSize: 18,
-  },
+    fontSize: 18 },
   sheetUsername: {
     color: Colors.primary,
-    fontWeight: "600",
-  },
+    fontWeight: "600" },
   bottomSheetDivider: {
     height: 1,
     width: "100%",
-    backgroundColor: "#E5E7EB",
+    backgroundColor: Colors.border,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   sheetActions: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 40,
-    width: "100%",
-  },
+    width: "100%" },
   actionItem: {
     alignItems: "center",
-    width: 80,
-  },
+    width: 80 },
   actionCircleButton: {
     width: 60,
     height: 60,
@@ -389,11 +391,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   actionLabel: {
     ...Typography.body,
     fontWeight: "700",
-    color: Colors.primary,
-  },
-});
+    color: Colors.primary } });
+}

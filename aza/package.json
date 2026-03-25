@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.6.0",
     "@react-native-picker/picker": "2.11.4",
     "@react-navigation/bottom-tabs": "^7.15.6",
@@ -27,13 +28,15 @@
     "@react-navigation/native": "^7.0.14",
     "@react-navigation/native-stack": "^7.2.0",
     "@types/lodash": "^4.17.24",
-    "@yesdevs/react-native-perspective-image-cropper": "^0.6.2",
     "expo": "~55.0.6",
     "expo-camera": "~55.0.10",
+    "expo-clipboard": "~55.0.9",
     "expo-document-picker": "~55.0.9",
     "expo-haptics": "~55.0.9",
     "expo-image-manipulator": "~55.0.11",
     "expo-image-picker": "~55.0.12",
+    "expo-local-authentication": "~55.0.9",
+    "expo-notifications": "~55.0.13",
     "expo-splash-screen": "~55.0.10",
     "expo-status-bar": "~55.0.4",
     "expo-video": "55.0.5",
@@ -44,10 +47,7 @@
     "react-native-calendars": "^1.1314.0",
     "react-native-reanimated": "^3.19.5",
     "react-native-safe-area-context": "~5.6.2",
-    "react-native-screens": "~4.23.0",
-    "react-native-vision-camera": "^4.7.3",
-    "react-native-worklets-core": "^1.6.3",
-    "vision-camera-ocr": "^1.0.0"
+    "react-native-screens": "~4.23.0"
   },
   "devDependencies": {
     "@testing-library/jest-native": "^5.4.3",

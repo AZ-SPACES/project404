@@ -5,29 +5,48 @@ import {
   View,
   Image,
   TouchableOpacity,
-} from 'react-native';
+  StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import * as Notifications from 'expo-notifications';
 import Button from '../../components/ui/Button';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
 export default function EnableNotificationsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
 
   const handleClose = () => {
     navigation.goBack();
   };
 
-  const handleEnable = () => {
-    // Logic to enable notifications
-    console.log('Enable notifications');
-    // For now, let's just go back or to the next screen
-    navigation.navigate('EnableBiometrics');
+  const handleEnable = async () => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus === 'granted') {
+        console.log('Push notifications enabled!');
+      } else {
+        console.log('Failed to enable push notifications.');
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+    } finally {
+      navigation.navigate('EnableBiometrics');
+    }
   };
 
   const handleNotNow = () => {
@@ -37,6 +56,7 @@ export default function EnableNotificationsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
           <AntDesign name="close" size={24} color={Colors.textPrimary} />
@@ -85,61 +105,51 @@ export default function EnableNotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
+    paddingTop: Spacing.sm },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: isDark ? Colors.white10 : 'rgba(22, 51, 0, 0.04)',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   content: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
+    paddingTop: Spacing.md },
   title: {
     ...Typography.h1,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   description: {
     ...Typography.bodyLg,
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   imageContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   image: {
     width: '80%',
-    height: '60%',
-  },
+    height: '60%' },
   footer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
+    paddingBottom: Spacing.lg },
   footerInfo: {
     ...Typography.body,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
+    marginBottom: Spacing.lg },
   button: {
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   spacer: {
-    height: Spacing.md,
-  },
-});
+    height: Spacing.md } });
+}

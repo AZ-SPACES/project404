@@ -8,11 +8,11 @@ import {
   Dimensions,
   Modal,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
 import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -32,6 +32,8 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 const ZOOM_SCALE = 1 / 0.85;
 
 export default function ScanIdBackScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdBackRouteProp>();
   const { isPEP } = route.params || {};
@@ -60,13 +62,11 @@ export default function ScanIdBackScreen() {
           Animated.timing(scanLineAnim, {
             toValue: 1,
             duration: 1500,
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
           Animated.timing(scanLineAnim, {
             toValue: 0,
             duration: 1500,
-            useNativeDriver: true,
-          }),
+            useNativeDriver: true }),
         ]),
       ).start();
     } else {
@@ -133,11 +133,11 @@ export default function ScanIdBackScreen() {
   // Interpolate scanning line position
   const translateY = scanLineAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, FRAME_HEIGHT - 4],
-  });
+    outputRange: [0, FRAME_HEIGHT - 4] });
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" />
       {capturedImage && capturedImage !== "placeholder" ? (
         <Image
           style={styles.fullScreen}
@@ -279,7 +279,7 @@ export default function ScanIdBackScreen() {
                 title="Yes, looks good"
                 onPress={handleLooksGood}
                 backgroundColor={Colors.primary}
-                textColor={Colors.background}
+                textColor={Colors.secondary}
                 borderRadius={30}
                 paddingVertical={16}
                 fontSize={Number(Typography.button.fontSize)}
@@ -302,108 +302,92 @@ export default function ScanIdBackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-  },
+    backgroundColor: "#000" },
   fullScreen: {
-    ...StyleSheet.absoluteFill,
-  },
+    ...StyleSheet.absoluteFill },
   fullScreenBlack: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "#000",
     justifyContent: "center",
     alignItems: "center",
-    padding: Spacing.lg,
-  },
+    padding: Spacing.lg },
   permissionText: {
     color: "#fff",
     marginBottom: Spacing.md,
-    textAlign: "center",
-  },
+    textAlign: "center" },
   overlay: {
     flex: 1,
-    justifyContent: "space-between",
-  },
+    justifyContent: "space-between" },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-  },
+    paddingTop: Spacing.sm },
   backButton: {
     width: 44,
     height: 44,
     justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   textContainer: {
     marginBottom: Spacing.md,
     backgroundColor: "rgba(0,0,0,0.6)",
     padding: Spacing.md,
-    borderRadius: 12,
-  },
+    borderRadius: 12 },
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
     color: "#fff",
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   subtitle: {
     fontSize: 14,
     color: "#e5e7eb",
-    lineHeight: 20,
-  },
+    lineHeight: 20 },
   frameContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   frame: {
     width: FRAME_WIDTH,
     height: FRAME_HEIGHT,
     position: "relative",
     overflow: "hidden",
-    marginBottom: 200,
-  },
+    marginBottom: 200 },
   corner: {
     position: "absolute",
     width: 40,
     height: 40,
     borderColor: "#ffffff",
     borderWidth: 0,
-    opacity: 0.8,
-  },
+    opacity: 0.8 },
   cornerActive: {
-    borderColor: Colors.secondary,
-  },
+    borderColor: Colors.secondary },
   topLeft: {
     top: 0,
     left: 0,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderTopLeftRadius: 16,
-  },
+    borderTopLeftRadius: 16 },
   topRight: {
     top: 0,
     right: 0,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderTopRightRadius: 16,
-  },
+    borderTopRightRadius: 16 },
   bottomLeft: {
     bottom: 0,
     left: 0,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderBottomLeftRadius: 16,
-  },
+    borderBottomLeftRadius: 16 },
   bottomRight: {
     bottom: 0,
     right: 0,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderBottomRightRadius: 16,
-  },
+    borderBottomRightRadius: 16 },
   scanLine: {
     position: "absolute",
     width: "100%",
@@ -413,14 +397,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,
-    elevation: 5,
-  },
+    elevation: 5 },
   feedbackContainer: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 10,
-  },
+    zIndex: 10 },
   feedbackText: {
     backgroundColor: "rgba(0,0,0,0.7)",
     color: "#fff",
@@ -429,12 +411,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     fontSize: 18,
     fontWeight: "600",
-    overflow: "hidden",
-  },
+    overflow: "hidden" },
   footerContainer: {
     alignItems: "center",
-    paddingBottom: Spacing.xl * 1.5,
-  },
+    paddingBottom: Spacing.xl * 1.5 },
   captureButton: {
     width: 76,
     height: 76,
@@ -442,19 +422,16 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   captureInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#fff",
-  },
+    backgroundColor: "#fff" },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
+    backgroundColor: "rgba(0,0,0,0.5)" },
   previewContainer: {
     alignSelf: "center",
     width: width * 0.7,
@@ -465,33 +442,29 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: -40,
     zIndex: 10,
-    backgroundColor: "#000",
-  },
+    backgroundColor: "#000" },
   previewImage: {
     width: "100%",
     height: "100%",
-    transform: [{ scale: ZOOM_SCALE }],
-  },
+    transform: [{ scale: ZOOM_SCALE }] },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: isDark ? Colors.surface : "#fff",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl + 40,
-  },
+    paddingTop: Spacing.xl + 40 },
   modalTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+    marginBottom: Spacing.sm },
   modalSubtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
     marginBottom: Spacing.xl,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   modalActions: {
-    marginBottom: Spacing.md,
-  },
-});
+    marginBottom: Spacing.md } });
+}
+
+

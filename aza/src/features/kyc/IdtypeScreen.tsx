@@ -9,15 +9,14 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Modal,
   FlatList,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -36,6 +35,9 @@ const ID_OPTIONS = [
 ];
 
 export default function IdtypeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<IdtypeRouteProp>();
   const { isPEP } = route.params || {};
@@ -53,14 +55,12 @@ export default function IdtypeScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleNext = () => {
     navigation.navigate("VerifyFaceId", { isPEP: isPEP as boolean });
@@ -107,6 +107,7 @@ export default function IdtypeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -119,9 +120,7 @@ export default function IdtypeScreen() {
               {
                 borderBottomColor: headerBorderOpacity.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ["transparent", Colors.border],
-                }),
-              },
+                  outputRange: ["transparent", Colors.border] }) },
             ]}
           >
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -215,7 +214,9 @@ export default function IdtypeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: { 
     flex: 1, 
     backgroundColor: Colors.background 
@@ -228,23 +229,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+    borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleContainer: {
     flex: 1,
     alignItems: "center",
-    marginRight: 44,
-  },
+    marginRight: 44 },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   backButton: { 
     width: 44, 
     height: 44, 
     borderRadius: 22, 
-    backgroundColor: "rgba(0,0,0,0.05)", 
+    backgroundColor: isDark ? Colors.white10 : 'rgba(0, 0, 0, 0.05)', 
     alignItems: "center", 
     justifyContent: "center" 
   },
@@ -264,6 +262,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl 
   },
   label: { 
+    color: Colors.textPrimary, 
     fontSize: 16, 
     fontWeight: "600", 
     marginBottom: Spacing.xs, 
@@ -277,8 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     height: 52,
-    backgroundColor: "white",
-  },
+    backgroundColor: isDark ? Colors.surface : 'white' },
   inputIcon: { 
     marginRight: Spacing.sm 
   },
@@ -296,8 +294,7 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     marginTop: Spacing.xs,
-    gap: Spacing.sm,
-  },
+    gap: Spacing.sm },
   optionCard: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -307,17 +304,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
-    backgroundColor: "white",
-  },
+    backgroundColor: isDark ? Colors.surface : 'white' },
   optionCardSelected: {
     borderColor: Colors.primary,
-  },
+    backgroundColor: isDark ? Colors.white10 : '#FAFCF8' },
   optionCardText: {
     fontSize: 16,
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   optionCardTextSelected: {
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
-});
+    color: Colors.textPrimary } });
+}
+
+

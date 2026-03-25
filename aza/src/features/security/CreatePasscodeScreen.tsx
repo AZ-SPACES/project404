@@ -10,12 +10,11 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+  Platform } from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation,} from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Spacing } from "../../theme";
+import { LightColors as Colors, useAppTheme, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
@@ -76,13 +75,11 @@ export default function CreatePasscodeScreen() {
         Animated.timing(scaleAnims[index]!, {
           toValue: 1.15,
           duration: 100,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
         Animated.timing(scaleAnims[index]!, {
           toValue: 1,
           duration: 100,
-          useNativeDriver: true,
-        }),
+          useNativeDriver: true }),
       ]).start();
     }
     
@@ -162,49 +159,40 @@ export default function CreatePasscodeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
+    paddingVertical: Spacing.sm },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.05)",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   content: {
     flex: 1,
     alignItems: "center",
-    paddingTop: Spacing.xl,
-  },
+    paddingTop: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
+    marginBottom: Spacing.xs },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    marginBottom: Spacing.xl * 2,
-  },
+    marginBottom: Spacing.xl * 2 },
   hiddenInput: {
     position: 'absolute',
     width: 0,
     height: 0,
-    opacity: 0,
-  },
+    opacity: 0 },
   passcodeContainer: {
     flexDirection: "row",
-    gap: 12,
-  },
+    gap: 12 },
   passcodeBox: {
     width: 60,
     height: 60,
@@ -213,19 +201,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
-  },
+    backgroundColor: "#fff" },
   passcodeBoxActive: {
-    borderColor: Colors.primary,
-  },
+    borderColor: Colors.primary },
   dot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: Colors.textPrimary,
-  },
+    backgroundColor: Colors.textPrimary },
   footer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-});
+    paddingBottom: Spacing.xl } });

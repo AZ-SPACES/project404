@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-} from "react-native";
+  StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as DocumentPicker from "expo-document-picker";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -28,6 +28,9 @@ const DOC_TYPES: DocumentType[] = [
 ];
 
 export default function PEPProofOfWealthScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [docType, setDocType] = useState<DocumentType | null>(null);
   const [fileUploaded, setFileUploaded] = useState<boolean>(false);
@@ -37,14 +40,12 @@ export default function PEPProofOfWealthScreen() {
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
     outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+    extrapolate: "clamp" });
 
   const handleNext = () => {
     // Proceed to standard KYC part of the EDD flow
@@ -62,8 +63,7 @@ export default function PEPProofOfWealthScreen() {
       console.log("Launching document picker...");
       const result = await DocumentPicker.getDocumentAsync({
         type: "*/*", // Using wildcard for maximum compatibility during debugging
-        copyToCacheDirectory: true,
-      });
+        copyToCacheDirectory: true });
 
       console.log("Picker result:", result);
 
@@ -106,6 +106,7 @@ export default function PEPProofOfWealthScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.container}>
         {/* Header */}
         <Animated.View
@@ -114,9 +115,7 @@ export default function PEPProofOfWealthScreen() {
             {
               borderBottomColor: headerBorderOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: ["transparent", Colors.border],
-              }),
-            },
+                outputRange: ["transparent", Colors.border] }) },
           ]}
         >
           <TouchableOpacity
@@ -215,94 +214,79 @@ export default function PEPProofOfWealthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     height: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+    borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitleContainer: {
     flex: 1,
     alignItems: "center",
-    marginRight: 44,
-  },
+    marginRight: 44 },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    justifyContent: "center",
-  },
+    justifyContent: "center" },
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContentContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+    paddingBottom: Spacing.xl },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: -0.5,
-    lineHeight: 38,
-  },
+    lineHeight: 38 },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
     lineHeight: 24,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   label: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   optionsContainer: {
     gap: Spacing.sm,
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   optionItem: {
     height: 48,
     justifyContent: "center",
     paddingHorizontal: Spacing.md,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.sm,
-  },
+    borderRadius: Radius.sm },
   optionItemSelected: {
     borderColor: Colors.primary,
-    backgroundColor: "#FAFCF8",
-  },
+    backgroundColor: isDark ? Colors.white10 : '#FAFCF8' },
   optionLabel: {
     fontSize: Typography.body.fontSize,
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   optionLabelSelected: {
     color: Colors.textPrimary,
-    fontWeight: "500",
-  },
+    fontWeight: "500" },
   uploadSection: {
-    marginBottom: Spacing.xl,
-  },
+    marginBottom: Spacing.xl },
   uploadBox: {
     borderWidth: 1,
     borderStyle: "dashed",
@@ -311,54 +295,45 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FAFAFA",
-  },
+    backgroundColor: isDark ? Colors.surface : "#FAFAFA" },
   uploadBoxText: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "600",
     color: Colors.textPrimary,
-    marginTop: Spacing.sm,
-  },
+    marginTop: Spacing.sm },
   uploadBoxDisabled: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#D1D5DB",
-    borderStyle: "solid",
-  },
+    backgroundColor: isDark ? Colors.background : "#F3F4F6",
+    borderColor: isDark ? Colors.border : "#D1D5DB",
+    borderStyle: "solid" },
   uploadBoxTextDisabled: {
-    color: Colors.textSecondary,
-  },
+    color: Colors.textSecondary },
   uploadHint: {
     fontSize: Typography.caption.fontSize,
     color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
+    marginTop: Spacing.xs },
   fileCard: {
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
     padding: Spacing.md,
-    backgroundColor: "white",
-  },
+    backgroundColor: isDark ? Colors.surface : 'white' },
   fileDetailsRow: {
     flexDirection: "row",
-    alignItems: "center",
-  },
+    alignItems: "center" },
   fileTextContainer: {
     flex: 1,
-    marginLeft: Spacing.md,
-  },
+    marginLeft: Spacing.md },
   fileName: {
     fontSize: Typography.bodyLg.fontSize,
     fontWeight: "500",
-    color: Colors.textPrimary,
-  },
+    color: Colors.textPrimary },
   fileSize: {
     fontSize: Typography.caption.fontSize,
     color: Colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-});
+    marginBottom: Spacing.lg } });
+}
+
+
