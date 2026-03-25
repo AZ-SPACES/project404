@@ -1,4 +1,6 @@
-export const Colors = {
+import { useDisplayContext } from '../providers/DisplayProvider';
+
+export const LightColors = {
   primary:    '#174717',
   secondary:  '#B7EE7A',
   accent:     '#E6ECE1',
@@ -31,6 +33,31 @@ export const Colors = {
   black80: 'rgba(0, 0, 0, 0.8)',
   black90: 'rgba(0, 0, 0, 0.9)',
 } as const;
+
+export const DarkColors = {
+  ...LightColors,
+  primary:    '#174717',
+  secondary:  '#B7EE7A',
+  accent:     '#2D3748', 
+  error:      '#F28B82', 
+  warning:    '#FFB74D',
+  info:       '#8AB4F8',
+  textPrimary:   '#F8F9FA',
+  textSecondary: '#9AA0A6',
+  background: '#121212',
+  surface:    '#1E1E1E',
+  border:     '#3C4043',
+} as const;
+
+export type ThemeColors = {
+  [K in keyof typeof LightColors]: string;
+};
+
+export function useAppTheme() {
+  const { activeColorScheme } = useDisplayContext();
+  const colors = activeColorScheme === 'dark' ? DarkColors : LightColors;
+  return { colors };
+}
 
 export const Typography = {
   h1:      { fontSize: 32, fontWeight: '700' },

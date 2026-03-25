@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
+import { useAppTheme, ThemeColors } from "../../theme";
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -34,6 +35,11 @@ const slides = [
     isLight: false,
   },
   {
+    title: "ALL IN ONE PLATFORM",
+    description: "Manage your money, chat with friends, make calls and use other apps all in one place.",
+    isLight: true,
+  },
+  {
     title: "PAY, CHAT & CALL IN\nONE APP",
     description: "",
     isLight: true,
@@ -45,6 +51,8 @@ type NavigationProp = NativeStackNavigationProp<
   "Onboarding"
 >;
 export default function OnboardingScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [activeSlide, setActiveSlide] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -323,7 +331,7 @@ export default function OnboardingScreen() {
               style={styles.closeButton}
               onPress={() => setBottomSheetVisible(false)}
             >
-              <AntDesign name="close" size={20} color="#0E0F0C" />
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
           <Text style={styles.bottomSheetTitle}>Get Started</Text>
@@ -356,146 +364,149 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
-  lightContainer: {
-    backgroundColor: "#E8EDE1",
-  },
-  videoContainer: {
-    ...StyleSheet.absoluteFill,
-  },
-  video: {
-    flex: 1,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  safeArea: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  progressContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    zIndex: 10,
-  },
-  progressBarBackground: {
-    width: "100%",
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#ffffff",
-    lineHeight: 40,
-    marginBottom: 16,
-    letterSpacing: -0.5,
-  },
-  titleLight: {
-    color: "#1E5128",
-  },
-  description: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#e5e7eb",
-    lineHeight: 22,
-    paddingRight: 24,
-  },
-  descriptionLight: {
-    color: "#3A5C45",
-  },
-  imageContainer: {
-    flex: 1,
-    marginTop: 20,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  image: {
-    width: 400,
-    height: 400,
-    paddingBottom: 20,
-    transform: [
-      { translateX: 21 },
-      { translateY: -107 },
-      { rotate: "-11.78deg" },
-    ],
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    paddingTop: 16,
-  },
-  button: {
-    backgroundColor: "#1E5128",
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    color: "#B7ED7E",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  bottomSheetOverlay: {
-    ...StyleSheet.absoluteFill,
-  },
-  bottomSheetBackdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  bottomSheetContainer: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 48,
-  },
-  bottomSheetHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    marginBottom: 16,
-  },
-  closeButton: {
-    backgroundColor: "#F3F4F6",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bottomSheetTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#0E0F0C",
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  bottomSheetDescription: {
-    fontSize: 16,
-    color: "#0E0F0C",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  bottomSheetDivider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginBottom: 24,
-  },
-});
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === "#121212";
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#000",
+    },
+    lightContainer: {
+      backgroundColor: "#E8EDE1",
+    },
+    videoContainer: {
+      ...StyleSheet.absoluteFill,
+    },
+    video: {
+      flex: 1,
+    },
+    overlay: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: "rgba(0,0,0,0.35)",
+    },
+    safeArea: {
+      flex: 1,
+      justifyContent: "space-between",
+    },
+    progressContainer: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      zIndex: 10,
+    },
+    progressBarBackground: {
+      width: "100%",
+      height: 4,
+      borderRadius: 2,
+      overflow: "hidden",
+    },
+    progressBarFill: {
+      height: "100%",
+      borderRadius: 2,
+    },
+    contentContainer: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 40,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "800",
+      color: "#ffffff",
+      lineHeight: 40,
+      marginBottom: 16,
+      letterSpacing: -0.5,
+    },
+    titleLight: {
+      color: "#1E5128",
+    },
+    description: {
+      fontSize: 15,
+      fontWeight: "500",
+      color: "#e5e7eb",
+      lineHeight: 22,
+      paddingRight: 24,
+    },
+    descriptionLight: {
+      color: "#3A5C45",
+    },
+    imageContainer: {
+      flex: 1,
+      marginTop: 20,
+      alignItems: "center",
+      justifyContent: "flex-start",
+    },
+    image: {
+      width: 400,
+      height: 400,
+      paddingBottom: 20,
+      transform: [
+        { translateX: 21 },
+        { translateY: -107 },
+        { rotate: "-11.78deg" },
+      ],
+    },
+    footer: {
+      paddingHorizontal: 24,
+      paddingBottom: 32,
+      paddingTop: 16,
+    },
+    button: {
+      backgroundColor: "#1E5128",
+      paddingVertical: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    buttonText: {
+      color: "#B7ED7E",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    bottomSheetOverlay: {
+      ...StyleSheet.absoluteFill,
+    },
+    bottomSheetBackdrop: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    bottomSheetContainer: {
+      backgroundColor: isDark ? Colors.surface : "#ffffff",
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 48,
+    },
+    bottomSheetHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-start",
+      marginBottom: 16,
+    },
+    closeButton: {
+      backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "#F3F4F6",
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bottomSheetTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      marginBottom: 8,
+      letterSpacing: -0.5,
+    },
+    bottomSheetDescription: {
+      fontSize: 16,
+      color: Colors.textPrimary,
+      lineHeight: 22,
+      marginBottom: 20,
+    },
+    bottomSheetDivider: {
+      height: 1,
+      backgroundColor: Colors.border,
+      marginBottom: 24,
+    },
+  });
+}

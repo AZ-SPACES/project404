@@ -9,28 +9,59 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../theme';
 import Button from '../../components/ui/Button';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuth } from '../../providers/AuthProvider';
+import { Alert } from 'react-native';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC = () => {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [useEmail, setUseEmail] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const { login, isBiometricsEnabled } = useAuth();
 
   const handleLogin = () => {
-    navigation.navigate('OTP');
+    navigation.navigate('OTP', { isLogin: true });
     // TODO: implement login logic
+  };
+
+  const handleBiometricAuth = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
+        return;
+      }
+      
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Login to aza',
+        fallbackLabel: 'Use Passcode',
+      });
+      
+      if (result.success) {
+        // Biometric successful, bypass OTP and setup/KYC flows directly
+        login('biometric-token', true, true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleClose = () => {
@@ -47,6 +78,7 @@ const LoginScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -133,6 +165,13 @@ const LoginScreen: React.FC = () => {
             fontWeight={Typography.button.fontWeight}
           />
 
+          {isBiometricsEnabled && (
+            <TouchableOpacity style={styles.biometricButton} onPress={handleBiometricAuth}>
+              <MaterialIcons name="fingerprint" size={40} color={Colors.primary} />
+              <Text style={styles.biometricText}>Login with Biometrics</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
             <Text style={styles.troubleText}>Trouble logging in?</Text>
           </TouchableOpacity>
@@ -143,7 +182,9 @@ const LoginScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -160,7 +201,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.07)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
@@ -197,7 +238,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     height: 48,
-    backgroundColor: "white",
+    backgroundColor: isDark ? Colors.surface : 'white',
   },
   inputIcon: {
     fontSize: 24,
@@ -224,8 +265,21 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingBottom: Spacing.lg,
-    gap: Spacing.md,
+    gap: Spacing.sm,
     alignItems: 'center',
+  },
+  biometricButton: {
+    flexDirection: "row",
+    gap: 10,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  biometricText: {
+    fontSize: Typography.body.fontSize,
+    fontWeight: '600',
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
   troubleButton: {
     paddingVertical: Spacing.sm,
@@ -237,5 +291,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+}
 
 export default LoginScreen;

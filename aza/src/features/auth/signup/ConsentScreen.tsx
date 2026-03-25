@@ -7,11 +7,12 @@ import {
   ScrollView,
   Animated,
   Linking,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing, Radius } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -22,7 +23,10 @@ const TERMS_URL = "";
 const PRIVACY_URL = "";
 
 export default function ConsentScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const isDark = Colors.background === '#121212';
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -50,6 +54,7 @@ export default function ConsentScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.container}>
         {/* Header */}
         <Animated.View
@@ -186,6 +191,8 @@ function CheckboxRow({
   linkLabel,
   onLinkPress,
 }: CheckboxRowProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
     <TouchableOpacity
       style={styles.checkboxRow}
@@ -213,7 +220,9 @@ function CheckboxRow({
 }
 
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -230,7 +239,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 50,
-    backgroundColor: "rgba(22,51,0,0.04)",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -256,7 +265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.sm,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     overflow: "hidden",
   },
   documentRow: {
@@ -307,7 +316,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     marginTop: 1,
   },
   checkboxChecked: {
@@ -343,3 +352,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
 });
+}
+
+

@@ -5,37 +5,63 @@ import {
   View,
   Image,
   TouchableOpacity,
-} from 'react-native';
+  StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Button from '../../components/ui/Button';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { useAuth } from '../../providers/AuthProvider';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Alert } from 'react-native';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiometrics'>;
 
 export default function EnableBiometricsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { setPasscode, toggleBiometrics } = useAuth();
 
   const handleClose = () => {
     navigation.goBack();
   };
 
-  const handleSetup = () => {
-    // Logic to Set up biometrics
-    console.log('Set up biometrics');
-    // Proceed to PEP Status check after biometric setup
-    navigation.navigate('PEPStatus');
+  const handleSetup = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
+        return;
+      }
+      
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Enable biometric login for aza',
+      });
+      
+      if (result.success) {
+        console.log('Biometrics enabled for user.');
+        toggleBiometrics(true);
+        setPasscode();
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'An error occurred while setting up biometrics.');
+    }
   };
 
   const handleNotNow = () => {
-    navigation.navigate('PEPStatus');
+    setPasscode();
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
           <AntDesign name="close" size={24} color={Colors.textPrimary} />
@@ -80,55 +106,46 @@ export default function EnableBiometricsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  const isDark = Colors.background === '#121212';
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
+    backgroundColor: Colors.background },
   header: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-  },
+    paddingTop: Spacing.sm },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: isDark ? Colors.white10 : 'rgba(22, 51, 0, 0.04)',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   content: {
     flex: 1,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
+    paddingTop: Spacing.md },
   title: {
     ...Typography.h1,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
+    marginBottom: Spacing.md },
   description: {
     ...Typography.bodyLg,
     color: Colors.textSecondary,
-    lineHeight: 24,
-  },
+    lineHeight: 24 },
   imageContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   image: {
     width: '80%',
-    height: '60%',
-  },
+    height: '60%' },
   footer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
+    paddingBottom: Spacing.lg },
   button: {
-    borderRadius: Radius.full,
-  },
+    borderRadius: Radius.full },
   spacer: {
-    height: Spacing.md,
-  },
-});
+    height: Spacing.md } });
+}

@@ -1,18 +1,22 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, ImageBackground, Animated } from "react-native";
+import { View, Text, StyleSheet, ImageBackground, Animated, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
-import { Colors } from "../../theme";
+import { useAppTheme, ThemeColors } from "../../theme";
 import Button from "../../components/ui/Button";
+import { useAuth } from "../../providers/AuthProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "AccountReady">;
 
 export default function AccountReadyScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { completeKYC } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -23,12 +27,11 @@ export default function AccountReadyScreen() {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
-      useNativeDriver: true,
-    }).start();
+      useNativeDriver: true }).start();
   }, [fadeAnim]);
 
   const handleFinish = () => {
-    navigation.navigate("Onboarding");
+    completeKYC();
   };
 
   return (
@@ -39,6 +42,7 @@ export default function AccountReadyScreen() {
     >
       <View style={styles.overlay}>
         <SafeAreaView style={styles.safeArea}>
+          <StatusBar barStyle="light-content" backgroundColor="transparent" />
           <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
             <Text style={styles.title}>You’re{"\n"}all set to{"\n"}use aza</Text>
           </Animated.View>
@@ -63,36 +67,30 @@ export default function AccountReadyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
   background: {
     flex: 1,
-    width: "100%",
-  },
+    width: "100%" },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.52)",
-  },
+    backgroundColor: "rgba(0,0,0,0.52)" },
   safeArea: {
-    flex: 1,
-  },
+    flex: 1 },
   content: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
-  },
+    paddingHorizontal: 24 },
   title: {
     color: Colors.white,
     fontSize: 60,
     fontWeight: "800",
     letterSpacing: -2,
     lineHeight: 64,
-    marginBottom: 24,
-  },
+    marginBottom: 24 },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
+    paddingBottom: 24 },
   buttonWrapper: {
-    width: '100%',
-  },
-});
+    width: '100%' } });
+}
