@@ -7,6 +7,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useAuth } from "../../../providers/AuthProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPUnderReview">;
 
@@ -15,10 +16,11 @@ export default function PEPUnderReviewScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { logout } = useAuth();
 
   const handleFinish = () => {
     // Navigate back to home/dashboard or onboarding since the account is locked in review state
-    navigation.navigate("Onboarding");
+    logout();
   };
 
   return (

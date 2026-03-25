@@ -19,13 +19,19 @@ import Button from '../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import { useAuth } from '../../providers/AuthProvider';
+import { RouteProp, useRoute } from '@react-navigation/native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
+type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
+
 const OTPScreen: React.FC = () => {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<OTPRouteProp>();
+  const { login } = useAuth();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [timeLeft, setTimeLeft] = useState(57);
@@ -81,7 +87,8 @@ const OTPScreen: React.FC = () => {
   const handleVerify = () => {
     // TODO: Verify OTP
     console.log('OTP entered:', otp.join(''));
-    navigation.navigate('MainTabs');
+    const isLogin = route.params?.isLogin;
+    login('dummy-token-from-otp', isLogin, isLogin);
   };
 
   const handleClose = () => {

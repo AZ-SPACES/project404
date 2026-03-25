@@ -2,8 +2,9 @@ import { StatusBar } from "react-native";
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import AnimatedSplashScreen from "./src/components/ui/AnimatedSplashScreen";
 import ErrorBoundary from "./src/components/ui/ErrorBoundary";
-import AppNavigator from "./src/navigation/AppNavigator";
+import RootNavigator from "./src/navigation/RootNavigator";
 import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
+import { AuthProvider } from "./src/providers/AuthProvider";
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
@@ -11,7 +12,7 @@ function AppContent() {
     <>
       <StatusBar barStyle={activeColorScheme === "dark" ? "light-content" : "dark-content"} />
       <NavigationContainer theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <AppNavigator />
+        <RootNavigator />
       </NavigationContainer>
     </>
   );
@@ -20,11 +21,13 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <DisplayProvider>
-        <AnimatedSplashScreen>
-          <AppContent />
-        </AnimatedSplashScreen>
-      </DisplayProvider>
+      <AuthProvider>
+        <DisplayProvider>
+          <AnimatedSplashScreen>
+            <AppContent />
+          </AnimatedSplashScreen>
+        </DisplayProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
