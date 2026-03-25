@@ -12,6 +12,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import Button from '../../components/ui/Button';
+import { useAuth } from '../../providers/AuthProvider';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Alert } from 'react-native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiometrics'>;
@@ -21,20 +24,39 @@ export default function EnableBiometricsScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { setPasscode, toggleBiometrics } = useAuth();
 
   const handleClose = () => {
     navigation.goBack();
   };
 
-  const handleSetup = () => {
-    // Logic to Set up biometrics
-    console.log('Set up biometrics');
-    // Proceed to PEP Status check after biometric setup
-    navigation.navigate('PEPStatus');
+  const handleSetup = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
+        return;
+      }
+      
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Enable biometric login for aza',
+      });
+      
+      if (result.success) {
+        console.log('Biometrics enabled for user.');
+        toggleBiometrics(true);
+        setPasscode();
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'An error occurred while setting up biometrics.');
+    }
   };
 
   const handleNotNow = () => {
-    navigation.navigate('PEPStatus');
+    setPasscode();
   };
 
   return (

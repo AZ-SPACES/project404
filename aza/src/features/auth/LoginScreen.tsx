@@ -18,6 +18,9 @@ import { RootStackParamList } from '../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../theme';
 import Button from '../../components/ui/Button';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuth } from '../../providers/AuthProvider';
+import { Alert } from 'react-native';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -30,10 +33,35 @@ const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const { login, isBiometricsEnabled } = useAuth();
 
   const handleLogin = () => {
-    navigation.navigate('OTP');
+    navigation.navigate('OTP', { isLogin: true });
     // TODO: implement login logic
+  };
+
+  const handleBiometricAuth = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
+        return;
+      }
+      
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Login to aza',
+        fallbackLabel: 'Use Passcode',
+      });
+      
+      if (result.success) {
+        // Biometric successful, bypass OTP and setup/KYC flows directly
+        login('biometric-token', true, true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleClose = () => {
@@ -137,6 +165,13 @@ const LoginScreen: React.FC = () => {
             fontWeight={Typography.button.fontWeight}
           />
 
+          {isBiometricsEnabled && (
+            <TouchableOpacity style={styles.biometricButton} onPress={handleBiometricAuth}>
+              <MaterialIcons name="fingerprint" size={40} color={Colors.primary} />
+              <Text style={styles.biometricText}>Login with Biometrics</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.troubleButton} onPress={handleTrouble}>
             <Text style={styles.troubleText}>Trouble logging in?</Text>
           </TouchableOpacity>
@@ -230,8 +265,21 @@ function createStyles(Colors: ThemeColors) {
   },
   footer: {
     paddingBottom: Spacing.lg,
-    gap: Spacing.md,
+    gap: Spacing.sm,
     alignItems: 'center',
+  },
+  biometricButton: {
+    flexDirection: "row",
+    gap: 10,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  biometricText: {
+    fontSize: Typography.body.fontSize,
+    fontWeight: '600',
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
   troubleButton: {
     paddingVertical: Spacing.sm,
