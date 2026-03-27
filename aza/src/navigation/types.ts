@@ -72,5 +72,6 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   ChangeEmail: undefined;
   ChangePhone: undefined;
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean };
   Hub: undefined;
 };

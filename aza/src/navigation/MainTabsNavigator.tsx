@@ -12,6 +12,7 @@ import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
 import { ContactsScreen } from "../features/contacts";
 import { ScanScreen } from "../features/scan";
+import { ChatContactsScreen } from "../features/chat";
 import {
   useAppTheme,
   ThemeColors,
@@ -100,7 +101,7 @@ export default function MainTabsNavigator() {
 
       <Tab.Screen
         name="Chat"
-        component={DummyScreen}
+        component={ChatContactsScreen}
         options={{
           tabBarLabel: "Chat",
           tabBarIcon: ({ color, size }) => (
