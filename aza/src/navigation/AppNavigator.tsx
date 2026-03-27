@@ -8,6 +8,7 @@ import {
   ChatWithUsScreen,
   HelpAndSupportScreen
 } from '../features/customercare';
+import { ChatScreen } from '../features/chat';
 import { 
   SendContactScreen,
   SendAmountScreen,
@@ -80,6 +81,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
     </Stack.Navigator>
   );
 }
