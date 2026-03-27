@@ -126,30 +126,28 @@ const LoginScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {useEmail && (
-            <View style={styles.passwordSection}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputContainer}>
-                <MaterialIcons name="fingerprint" color={Colors.primary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="********"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!isPasswordVisible}
-                  autoCapitalize="none"
+          <View style={styles.passwordSection}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputContainer}>
+              <MaterialIcons name="lock-outline" color={Colors.primary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="********"
+                placeholderTextColor={Colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!isPasswordVisible}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                <MaterialIcons
+                  name={isPasswordVisible ? "visibility" : "visibility-off"}
+                  size={20}
+                  color={Colors.primary}
                 />
-                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                  <MaterialIcons
-                    name={isPasswordVisible ? "visibility" : "visibility-off"}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
         </View>
 
         {/* Footer */}

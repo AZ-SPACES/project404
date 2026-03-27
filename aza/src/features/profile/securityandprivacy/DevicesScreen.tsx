@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Device from 'expo-device';
+import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 import { Feather, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
@@ -15,6 +18,58 @@ export function DevicesScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.background === '#121212';
   const navigation = useNavigation();
+  
+  const [deviceInfo, setDeviceInfo] = useState({
+    model: Device.modelName || 'Unknown Device',
+    os: Platform.OS === 'ios' ? 'iOS' : 'Android',
+    osVersion: Device.osVersion || '',
+    brand: Device.brand || '',
+    location: 'Detecting location...',
+    ipAddress: 'Detecting...',
+    status: 'Active now',
+    lastSeen: 'Just now'
+  });
+
+  useEffect(() => {
+    async function getIP() {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        setDeviceInfo(prev => ({ ...prev, ipAddress: data.ip }));
+      } catch (e) {
+        setDeviceInfo(prev => ({ ...prev, ipAddress: 'Unavailable' }));
+      }
+    }
+    getIP();
+  }, []);
+
+  useEffect(() => {
+    async function getLocation() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setDeviceInfo(prev => ({ ...prev, location: 'Location restricted' }));
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        });
+
+        if (reverseGeocode.length > 0) {
+          const item = reverseGeocode[0];
+          const city = item?.city || item?.subregion || 'Unknown City';
+          const country = item?.country || 'Unknown Country';
+          setDeviceInfo(prev => ({ ...prev, location: `${city}, ${country}` }));
+        }
+      } catch (e) {
+        setDeviceInfo(prev => ({ ...prev, location: 'Location unavailable' }));
+      }
+    }
+    getLocation();
+  }, []);
   
   const DeviceDetailRow = ({ label, value }: { label: string; value: string }) => (
     <View style={styles.detailRow}>
@@ -61,7 +116,7 @@ export function DevicesScreen() {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs' as never)}
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
@@ -85,8 +140,14 @@ export function DevicesScreen() {
               <Feather name="smartphone" size={24} color={Colors.textPrimary} />
             </View>
             <View style={styles.deviceInfo}>
-              <Text style={[Typography.bodyLg, styles.deviceTitle]}>iOS, iPhone 13</Text>
-              <Text style={[Typography.body, styles.deviceSubtitle]}>This device - Kumasi, Ghana</Text>
+              <View style={styles.deviceHeaderRow}>
+                <Text style={[Typography.bodyLg, styles.deviceTitle]}>{deviceInfo.os}, {deviceInfo.model}</Text>
+                <View style={styles.statusBadge}>
+                   <View style={styles.statusDot} />
+                   <Text style={styles.statusText}>{deviceInfo.status}</Text>
+                </View>
+              </View>
+              <Text style={[Typography.body, styles.deviceSubtitle]}>This device — {deviceInfo.location}</Text>
             </View>
             <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -123,15 +184,17 @@ export function DevicesScreen() {
               <AntDesign name="close" size={20} color={Colors.textPrimary} />
             </TouchableOpacity>
             <View>
-              <Text style={[Typography.h2, styles.bottomSheetTitle]}>iOS, iPhone 13</Text>
+              <Text style={[Typography.h2, styles.bottomSheetTitle]}>{deviceInfo.os}, {deviceInfo.model}</Text>
               <Text style={[Typography.body, styles.bottomSheetSubtitle]}>This device</Text>
             </View>
           </View>
           
           <View style={styles.detailsContainer}>
-            <DeviceDetailRow label="First logged in" value="29 January 2026 at 08:48" />
-            <DeviceDetailRow label="Last logged in" value="22 March 2026 at 21:21" />
-            <DeviceDetailRow label="Last logged in from" value="Kumasi, Ghana" />
+            <DeviceDetailRow label="Device model" value={deviceInfo.model} />
+            <DeviceDetailRow label="Operating system" value={`${deviceInfo.os} ${deviceInfo.osVersion}`} />
+            <DeviceDetailRow label="Public IP address" value={deviceInfo.ipAddress} />
+            <DeviceDetailRow label="Current location" value={deviceInfo.location} />
+            <DeviceDetailRow label="Status" value={deviceInfo.status} />
           </View>
 
           <View style={styles.bottomSheetFooter}>
@@ -197,9 +260,30 @@ function createStyles(Colors: ThemeColors) {
     marginRight: Spacing.md },
   deviceInfo: {
     flex: 1 },
+  deviceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm },
   deviceTitle: {
     fontWeight: '600',
     color: Colors.textPrimary },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12 },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22C55E',
+    marginRight: 4 },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#22C55E' },
   deviceSubtitle: {
     color: Colors.textSecondary,
     marginTop: 2 },

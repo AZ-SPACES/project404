@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
+import { useNotifications } from '../../providers/NotificationProvider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,23 +25,23 @@ interface NotificationToggleProps {
   onValueChange: (value: boolean) => void;
 }
 
-
-
-export function NotificationSettingsScreen() {
+const NotificationSection = ({ title, description, children }: NotificationSectionProps) => {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-
-  const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
+  return (
     <View style={styles.section}>
       <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
       <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
       {children}
     </View>
   );
+};
 
-  const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
+const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  return (
     <View style={styles.toggleRow}>
       <View style={styles.iconContainer}>
         {iconType === 'Feather' ? (
@@ -62,6 +62,14 @@ export function NotificationSettingsScreen() {
       />
     </View>
   );
+};
+
+export function NotificationSettingsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { checkPermissions, requestPermissions } = useNotifications();
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -90,7 +98,7 @@ export function NotificationSettingsScreen() {
 
   useEffect(() => {
     const checkStatus = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       setAllowNotifications(status === 'granted');
     };
     checkStatus();
@@ -159,9 +167,9 @@ export function NotificationSettingsScreen() {
   const togglePushPreference = async (setter: (val: boolean) => void, currentVal: boolean) => {
     if (!currentVal) {
       
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       if (status !== 'granted') {
-        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        const { status: reqStatus, canAskAgain } = await requestPermissions();
         if (reqStatus === 'granted') {
           setter(true);
         } else if (!canAskAgain) {
@@ -180,9 +188,9 @@ export function NotificationSettingsScreen() {
 
   const handleAllowNotificationsToggle = async (value: boolean) => {
     if (value) {
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       if (status !== 'granted') {
-        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        const { status: reqStatus, canAskAgain } = await requestPermissions();
         if (reqStatus === 'granted') {
           setAllowNotifications(true);
         } else if (!canAskAgain) {
@@ -217,7 +225,7 @@ export function NotificationSettingsScreen() {
       >
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')}
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>

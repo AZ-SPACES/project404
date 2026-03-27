@@ -70,16 +70,6 @@ export function SecureAccountScreen() {
               </Text>
             </View>
           </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="credit-card-off-outline" size={28} color={Colors.textPrimary} style={styles.icon} />
-            <View style={styles.infoTextContainer}>
-              <Text style={[Typography.bodyLg, styles.infoTitle]}>Your Wise card(s) will be suspended</Text>
-              <Text style={[Typography.body, styles.infoSubtitle]}>
-                Payments with your Wise card(s) will fail until you log in again.
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
 
