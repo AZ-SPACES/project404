@@ -11,9 +11,12 @@ import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
-import * as Notifications from 'expo-notifications';
 import Button from '../../components/ui/Button';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
+
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuth } from '../../providers/AuthProvider';
+import { useNotifications } from '../../providers/NotificationProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
@@ -22,36 +25,52 @@ export default function EnableNotificationsScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { registerForNotifications, sendLocalNotification } = useNotifications();
+  const { setPasscode } = useAuth();
 
   const handleClose = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      setPasscode();
+    }
+  };
+
+  const navigateNext = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (hasHardware && isEnrolled) {
+        navigation.navigate('EnableBiometrics');
+      } else {
+        setPasscode();
+      }
+    } catch (e) {
+      setPasscode();
+    }
   };
 
   const handleEnable = async () => {
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+      const granted = await registerForNotifications();
       
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus === 'granted') {
-        console.log('Push notifications enabled!');
-      } else {
-        console.log('Failed to enable push notifications.');
+      if (granted) {
+        console.log('Notifications enabled!');
+        await sendLocalNotification(
+          "Welcome to Aza!",
+          "You'll now receive updates about your spending and security.",
+        );
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
     } finally {
-      navigation.navigate('EnableBiometrics');
+      await navigateNext();
     }
   };
 
-  const handleNotNow = () => {
-    console.log('Not now')
-    navigation.navigate('EnableBiometrics');
+  const handleNotNow = async () => {
+    await navigateNext();
   };
 
   return (

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthState = {
   userToken: string | null;
@@ -10,18 +10,27 @@ type AuthState = {
 };
 
 type AuthContextType = AuthState & {
-  login: (token: string, hasPasscodeArg?: boolean, isKYCVerifiedArg?: boolean) => void;
+  login: (
+    token: string,
+    hasPasscodeArg?: boolean,
+    isKYCVerifiedArg?: boolean,
+  ) => void;
   logout: () => void;
   completeKYC: () => void;
   setPasscode: () => void;
   toggleBiometrics: (enabled: boolean) => void;
+  savePasscodeValue: (code: string) => Promise<void>;
+  verifyPasscode: (code: string) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_STATE_KEY = '@aza_auth_state';
+const AUTH_STATE_KEY = "@aza_auth_state";
+const PASSCODE_VALUE_KEY = "@aza_passcode";
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [authState, setAuthState] = useState<AuthState>({
     userToken: null,
     isKYCVerified: false,
@@ -40,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (e) {
         // Restoring state failed
-        console.error('Failed to load auth state', e);
+        console.error("Failed to load auth state", e);
       }
 
       setAuthState({
@@ -61,15 +70,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(updatedState));
     } catch (e) {
-      console.error('Failed to save auth state', e);
+      console.error("Failed to save auth state", e);
     }
   };
 
-  const login = (token: string, hasPasscodeArg: boolean = false, isKYCVerifiedArg: boolean = false) => {
-    saveState({ 
-      userToken: token, 
-      hasPasscode: hasPasscodeArg, 
-      isKYCVerified: isKYCVerifiedArg 
+  const login = (
+    token: string,
+    hasPasscodeArg: boolean = false,
+    isKYCVerifiedArg: boolean = false,
+  ) => {
+    saveState({
+      userToken: token,
+      hasPasscode: hasPasscodeArg,
+      isKYCVerified: isKYCVerifiedArg,
     });
   };
 
@@ -85,6 +98,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveState({ hasPasscode: true });
   };
 
+  const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(PASSCODE_VALUE_KEY, code);
+    } catch (e) {
+      console.error("Failed to save passcode value", e);
+    }
+    saveState({ hasPasscode: true });
+  }, []);
+
+  const verifyPasscode = useCallback(async (code: string): Promise<boolean> => {
+    try {
+      const stored = await AsyncStorage.getItem(PASSCODE_VALUE_KEY);
+      return stored !== null && stored === code;
+    } catch (e) {
+      console.error("Failed to verify passcode", e);
+      return false;
+    }
+  }, []);
+
   const toggleBiometrics = (enabled: boolean) => {
     saveState({ isBiometricsEnabled: enabled });
   };
@@ -98,6 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         completeKYC,
         setPasscode,
         toggleBiometrics,
+        savePasscodeValue,
+        verifyPasscode,
       }}
     >
       {children}
@@ -108,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

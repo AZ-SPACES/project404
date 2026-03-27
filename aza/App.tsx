@@ -5,6 +5,7 @@ import ErrorBoundary from "./src/components/ui/ErrorBoundary";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
 import { AuthProvider } from "./src/providers/AuthProvider";
+import { NotificationProvider } from "./src/providers/NotificationProvider";
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
@@ -22,11 +23,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <DisplayProvider>
-          <AnimatedSplashScreen>
-            <AppContent />
-          </AnimatedSplashScreen>
-        </DisplayProvider>
+        <NotificationProvider>
+          <DisplayProvider>
+            <AnimatedSplashScreen>
+              <AppContent />
+            </AnimatedSplashScreen>
+          </DisplayProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

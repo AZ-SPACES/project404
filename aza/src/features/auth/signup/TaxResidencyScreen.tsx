@@ -23,24 +23,15 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TaxResidency">;
 
-const NATIONALITIES = [
-  "Ghanaian",
-  "Nigerian",
-  "Kenyan",
-  "South African",
-  "Ivorian",
-  "Senegalese",
-  "Ethiopian",
-  "Tanzanian",
-  "Rwandan",
-  "Ugandan",
-  "British",
-  "American",
-  "Canadian",
-  "French",
-  "German",
-  "Other",
-];
+import nationalities from "i18n-nationality";
+import englishNationalities from "i18n-nationality/langs/en.json";
+
+nationalities.registerLocale(englishNationalities);
+
+const allNames = Object.values(nationalities.getNames("en"));
+const uniqueNames = Array.from(new Set(allNames));
+uniqueNames.sort((a, b) => a.localeCompare(b));
+const NATIONALITIES = [...uniqueNames, "Other"];
 
 type YesNo = "Yes" | "No" | null;
 
@@ -52,10 +43,21 @@ export default function TaxResidencyScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [nationality, setNationality] = useState<string | null>(null);
+  const [otherNationality, setOtherNationality] = useState("");
   const [showNationalityPicker, setShowNationalityPicker] = useState(false);
+  const [nationalitySearch, setNationalitySearch] = useState("");
   const [isTaxResidentAbroad, setIsTaxResidentAbroad] = useState<YesNo>(null);
   const [taxCountry, setTaxCountry] = useState("");
   const [isUSPerson, setIsUSPerson] = useState<YesNo>(null);
+  const searchInputRef = useRef<TextInput>(null);
+
+  React.useEffect(() => {
+    if (showNationalityPicker) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showNationalityPicker]);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -71,6 +73,7 @@ export default function TaxResidencyScreen() {
 
   const isFormValid =
     nationality !== null &&
+    (nationality !== "Other" || otherNationality.trim().length > 0) &&
     isTaxResidentAbroad !== null &&
     isUSPerson !== null &&
     (isTaxResidentAbroad === "No" || taxCountry.trim().length > 0);
@@ -153,34 +156,90 @@ export default function TaxResidencyScreen() {
               />
             </TouchableOpacity>
 
+            {nationality === "Other" && (
+              <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your nationality"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={otherNationality}
+                  onChangeText={setOtherNationality}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
             {showNationalityPicker && (
               <View style={styles.pickerList}>
-                {NATIONALITIES.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[
-                      styles.pickerItem,
-                      nationality === item && styles.pickerItemSelected,
-                    ]}
-                    onPress={() => {
-                      setNationality(item);
-                      setShowNationalityPicker(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerItemText,
-                        nationality === item && styles.pickerItemTextSelected,
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                    {nationality === item && (
-                      <MaterialIcons name="check" size={18} color={Colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.pickerSearchContainer}>
+                  <MaterialIcons name="search" size={20} color={Colors.textSecondary} />
+                  <TextInput
+                    ref={searchInputRef}
+                    style={styles.pickerSearchInput}
+                    placeholder="Search nationality"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={nationalitySearch}
+                    onChangeText={setNationalitySearch}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                  {nationalitySearch.length > 0 && (
+                    <TouchableOpacity onPress={() => setNationalitySearch("")}>
+                      <MaterialIcons name="close" size={20} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <ScrollView 
+                  nestedScrollEnabled={true} 
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.pickerScrollContent}
+                >
+                  {(() => {
+                    const filtered = NATIONALITIES.filter(item => 
+                      item.toLowerCase().includes(nationalitySearch.toLowerCase())
+                    );
+                    
+                    if (filtered.length === 0) {
+                      return (
+                        <View style={styles.noResults}>
+                          <Text style={styles.noResultsText}>No results found</Text>
+                        </View>
+                      );
+                    }
+
+                    return filtered.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[
+                          styles.pickerItem,
+                          nationality === item && styles.pickerItemSelected,
+                        ]}
+                        onPress={() => {
+                          setNationality(item);
+                          setShowNationalityPicker(false);
+                          setNationalitySearch("");
+                          // UX logic: Auto-select 'Yes' for US person if they are American
+                          if (item === "American") {
+                            setIsUSPerson("Yes");
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.pickerItemText,
+                            nationality === item && styles.pickerItemTextSelected,
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                        {nationality === item && (
+                          <MaterialIcons name="check" size={18} color={Colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ));
+                  })()}
+                </ScrollView>
               </View>
             )}
 
@@ -284,7 +343,7 @@ export default function TaxResidencyScreen() {
               onPress={handleNext}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
-              borderRadius={30}
+              borderRadius={Radius.sm}
               paddingVertical={16}
               fontSize={Number(Typography.button.fontSize)}
               fontWeight={Typography.button.fontWeight as any}
@@ -386,6 +445,21 @@ function createStyles(Colors: ThemeColors) {
     backgroundColor: Colors.surface,
     marginTop: Spacing.xs,
     overflow: "hidden",
+    maxHeight: 250,
+  },
+  pickerSearchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+    height: 48,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    marginLeft: Spacing.sm,
+    fontSize: Typography.bodyLg.fontSize,
+    color: Colors.textPrimary,
   },
   pickerItem: {
     flexDirection: "row",
@@ -396,8 +470,11 @@ function createStyles(Colors: ThemeColors) {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
   },
+  pickerScrollContent: {
+    paddingBottom: Spacing.sm,
+  },
   pickerItemSelected: {
-    backgroundColor: isDark ? Colors.white10 : "#FAFCF8",
+    backgroundColor: isDark ? Colors.white10 : Colors.accent,
   },
   pickerItemText: {
     fontSize: Typography.bodyLg.fontSize,
@@ -405,7 +482,15 @@ function createStyles(Colors: ThemeColors) {
   },
   pickerItemTextSelected: {
     color: Colors.textPrimary,
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  noResults: {
+    padding: Spacing.md,
+    alignItems: "center",
+  },
+  noResultsText: {
+    fontSize: Typography.body.fontSize,
+    color: Colors.textSecondary,
   },
   yesNoRow: {
     flexDirection: "row",
@@ -423,7 +508,7 @@ function createStyles(Colors: ThemeColors) {
   },
   yesNoOptionSelected: {
     borderColor: Colors.primary,
-    backgroundColor: isDark ? Colors.white10 : "#FAFCF8",
+    backgroundColor: isDark ? Colors.white10 : Colors.accent,
   },
   yesNoText: {
     fontSize: Typography.bodyLg.fontSize,

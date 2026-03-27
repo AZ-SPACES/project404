@@ -25,21 +25,36 @@ export default function EnableBiometricsScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { setPasscode, toggleBiometrics } = useAuth();
+  const [isBiometricAvailable, setIsBiometricAvailable] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    async function checkAvailability() {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        setIsBiometricAvailable(hasHardware && isEnrolled);
+      } catch (e) {
+        setIsBiometricAvailable(false);
+      }
+    }
+    checkAvailability();
+  }, []);
 
   const handleClose = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      setPasscode();
+    }
   };
 
   const handleSetup = async () => {
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
-      if (!hasHardware || !isEnrolled) {
-        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
+      if (isBiometricAvailable === false) {
+        setPasscode();
         return;
       }
-      
+
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Enable biometric login for aza',
       });
@@ -85,22 +100,25 @@ export default function EnableBiometricsScreen() {
 
       <View style={styles.footer}>
         <Button
-          title="Set up biometrics"
+          title={isBiometricAvailable === false ? "Continue" : "Set up biometrics"}
           onPress={handleSetup}
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
         />
         
-        <View style={styles.spacer} />
-        
-        <Button
-          title="Not now"
-          onPress={handleNotNow}
-          backgroundColor={Colors.secondary}
-          textColor={Colors.primary}
-          style={styles.button}
-        />
+        {isBiometricAvailable !== false && (
+          <>
+            <View style={styles.spacer} />
+            <Button
+              title="Not now"
+              onPress={handleNotNow}
+              backgroundColor={Colors.secondary}
+              textColor={Colors.primary}
+              style={styles.button}
+            />
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
