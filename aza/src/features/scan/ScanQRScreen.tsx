@@ -263,7 +263,7 @@ function createStyles(Colors: ThemeColors) {
   },
   bottomNav: { 
     position: 'absolute', 
-    bottom: 60, 
+    bottom: 100,
     width: '100%', 
     alignItems: 'center' 
   },

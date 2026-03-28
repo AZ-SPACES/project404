@@ -221,8 +221,9 @@ function createStyles(Colors: ThemeColors) {
     color: Colors.textPrimary,
     fontWeight: '700' },
   bottomNav: {
-    paddingBottom: 20, // Extra padding for the bottom
-    alignItems: 'center' },
+    paddingBottom: 60,
+    alignItems: 'center' 
+  },
   toggleContainer: {
     flexDirection: 'row',
     padding: 4,
