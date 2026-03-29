@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,12 +20,15 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const displayAmount = amount.toFixed(2);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleEditNote = () => {
     navigation.goBack(); // Going back lets them edit the note on the previous screen
   };
 
   const handleConfirmSend = () => {
+    if (isLoading) return;
+    setIsLoading(true);
     navigation.navigate('SendPin', {
       name,
       username,
@@ -33,6 +36,7 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
       amount,
       note,
     });
+    setTimeout(() => setIsLoading(false), 500);
   };
 
   return (
@@ -111,11 +115,15 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
 
         {/* Send Button */}
         <TouchableOpacity
-          style={styles.sendButton}
+          style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
           activeOpacity={0.7}
           onPress={handleConfirmSend}
+          disabled={isLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Confirm and send"
+          accessibilityState={{ disabled: isLoading }}
         >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Text style={styles.sendButtonText}>{isLoading ? 'Confirming…' : 'Send'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -259,6 +267,9 @@ function createStyles(Colors: ThemeColors) {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.md,
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
   },
   sendButtonText: {
     ...Typography.button,

@@ -5,14 +5,19 @@ import AuthNavigator from './AuthNavigator';
 import KYCNavigator from './KYCNavigator';
 import SetupNavigator from './SetupNavigator';
 import AppNavigator from './AppNavigator';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 const Stack = createNativeStackNavigator();
+
+function KYCWithBoundary() {
+  return <ErrorBoundary><KYCNavigator /></ErrorBoundary>;
+}
 
 export default function RootNavigator() {
   const { userToken, isKYCVerified, hasPasscode, isLoading } = useAuth();
 
   if (isLoading) {
-    // We can return a loading splash screen here if desired, 
+    // We can return a loading splash screen here if desired,
     // but the app already uses AnimatedSplashScreen in App.tsx.
     return null;
   }
@@ -27,7 +32,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Setup" component={SetupNavigator} />
       ) : !isKYCVerified ? (
         // User has set up passcode but hasn't completed KYC
-        <Stack.Screen name="KYC" component={KYCNavigator} />
+        <Stack.Screen name="KYC" component={KYCWithBoundary} />
       ) : (
         // User is fully authenticated and set up
         <Stack.Screen name="App" component={AppNavigator} />

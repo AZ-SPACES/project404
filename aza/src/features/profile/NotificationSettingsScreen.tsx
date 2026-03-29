@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../providers/NotificationProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -58,6 +59,8 @@ const NotificationToggle = (props: NotificationToggleProps) => {
         trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
         thumbColor={Colors.white}
         ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+        accessibilityRole="switch"
+        accessibilityLabel={title}
       />
     </View>
   );
@@ -69,6 +72,8 @@ export function NotificationSettingsScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { checkPermissions, requestPermissions } = useNotifications();
+  const { userToken } = useAuth();
+  const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -114,7 +119,7 @@ export function NotificationSettingsScreen() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@notification_prefs');
+        const stored = await AsyncStorage.getItem(prefsKey);
         if (stored) {
           const parsed = JSON.parse(stored);
           setTransfersEmail(parsed.transfersEmail ?? true);
@@ -148,7 +153,7 @@ export function NotificationSettingsScreen() {
           feedbackEmail, feedbackPush, 
           causesEmail, causesPush 
         };
-        await AsyncStorage.setItem('@notification_prefs', JSON.stringify(prefs));
+        await AsyncStorage.setItem(prefsKey, JSON.stringify(prefs));
       } catch (e) {
         console.error('Failed to save notification preferences');
       }

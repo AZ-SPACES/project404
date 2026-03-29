@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -28,17 +29,10 @@ interface DetailItemProps {
 
 
 
-export function PersonalDetailsScreen() {
+function DetailItem({ iconName, title, subtitle, onPress }: DetailItemProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-
-  const DetailItem = ({
-    iconName,
-    title,
-    subtitle,
-    onPress }: DetailItemProps) => (
+  return (
     <TouchableOpacity
       style={styles.detailItem}
       onPress={onPress}
@@ -54,6 +48,14 @@ export function PersonalDetailsScreen() {
       <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
     </TouchableOpacity>
   );
+}
+
+export function PersonalDetailsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { email, phone } = useProfile();
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -120,13 +122,13 @@ export function PersonalDetailsScreen() {
         <DetailItem
           iconName="mail"
           title="Email address"
-          subtitle="user@email.com (Verified)" // TODO: load from user profile
+          subtitle={email ?? 'Not set'}
           onPress={() => navigation.navigate("ChangeEmail")}
         />
         <DetailItem
           iconName="smartphone"
           title="Mobile number"
-          subtitle="+000000000000" // TODO: load from user profile
+          subtitle={phone ?? 'Not set'}
           onPress={() => navigation.navigate("ChangePhone")}
         />
       </Animated.ScrollView>

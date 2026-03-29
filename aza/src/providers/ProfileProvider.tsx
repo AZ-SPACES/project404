@@ -7,16 +7,22 @@ const PROFILE_STORAGE_KEY = 'aza_profile';
 type ProfileData = {
   displayName: string;
   profileImageUri: string | null;
+  email: string | null;
+  phone: string | null;
 };
 
 const INITIAL_PROFILE: ProfileData = {
   displayName: '',
   profileImageUri: null,
+  email: null,
+  phone: null,
 };
 
 type ProfileContextType = ProfileData & {
   setDisplayName: (name: string) => Promise<void>;
   setProfileImage: (uri: string | null) => Promise<void>;
+  setEmail: (email: string | null) => Promise<void>;
+  setPhone: (phone: string | null) => Promise<void>;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -62,8 +68,28 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [profile]);
 
+  const setEmail = useCallback(async (email: string | null) => {
+    const updated = { ...profile, email };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save email', e);
+    }
+  }, [profile]);
+
+  const setPhone = useCallback(async (phone: string | null) => {
+    const updated = { ...profile, phone };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save phone', e);
+    }
+  }, [profile]);
+
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage }}>
+    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone }}>
       {children}
     </ProfileContext.Provider>
   );

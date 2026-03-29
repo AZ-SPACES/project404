@@ -38,17 +38,11 @@ type SectionItemProps = (
 
 
 
-export function ProfileScreen() {
+function SectionItem(props: SectionItemProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-  const { logout } = useAuth();
-  const { displayName, profileImageUri, setProfileImage } = useProfile();
-
-  const SectionItem = (props: SectionItemProps) => {
-    const { title, subtitle, onPress, hideArrow } = props;
-    return (
+  const { title, subtitle, onPress, hideArrow } = props;
+  return (
     <TouchableOpacity style={styles.sectionItem} onPress={onPress} activeOpacity={0.7} accessibilityLabel={title}>
       <View style={styles.iconContainer}>
         {props.iconFamily === 'Feather' ? (
@@ -65,8 +59,16 @@ export function ProfileScreen() {
         <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
       )}
     </TouchableOpacity>
-    );
-  };
+  );
+}
+
+export function ProfileScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { logout } = useAuth();
+  const { displayName, profileImageUri, setProfileImage } = useProfile();
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);

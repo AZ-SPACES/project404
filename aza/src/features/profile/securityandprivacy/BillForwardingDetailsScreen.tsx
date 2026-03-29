@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,7 +28,9 @@ export function BillForwardingDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [enabled, setEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
-  const emailAddress = "billing@aza.app"; // TODO: load from user profile
+  const { email } = useProfile();
+  // TODO: replace with user-specific billing address from backend (e.g. bills+{handle}@aza.app)
+  const emailAddress = email ? `bills+${email.split('@')[0]}@aza.app` : 'Pending account setup';
 
   const handleCopy = () => {
     Clipboard.setString(emailAddress);
@@ -83,6 +86,8 @@ export function BillForwardingDetailsScreen() {
               trackColor={{ false: "#E5E7EB", true: "#243b14" }}
               thumbColor={Colors.white}
               ios_backgroundColor="#E5E7EB"
+              accessibilityRole="switch"
+              accessibilityLabel="Enable bill forwarding"
             />
           </View>
         </View>

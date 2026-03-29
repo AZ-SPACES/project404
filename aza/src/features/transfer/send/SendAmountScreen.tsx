@@ -27,6 +27,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const isDark = Colors.background === '#121212';
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const amountInputRef = useRef<TextInput>(null);
 
     const numericAmount = amount === '' || amount === '.' ? 0 : (parseFloat(amount) || 0);
@@ -71,7 +72,8 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     };
 
     const handleSend = () => {
-        if (numericAmount <= 0) return;
+        if (numericAmount <= 0 || isLoading) return;
+        setIsLoading(true);
         navigation.navigate('SendConfirm', {
             name,
             username,
@@ -79,6 +81,8 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             amount: numericAmount,
             note,
         });
+        // Reset after navigation so button is re-enabled if user goes back
+        setTimeout(() => setIsLoading(false), 500);
     };
 
     return (
@@ -187,25 +191,28 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                         <TouchableOpacity
                             style={[
                                 styles.sendButton,
-                                numericAmount > 0 && styles.sendButtonActive,
+                                numericAmount > 0 && !isLoading && styles.sendButtonActive,
                             ]}
                             activeOpacity={0.7}
                             onPress={handleSend}
-                            disabled={numericAmount <= 0}
+                            disabled={numericAmount <= 0 || isLoading}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Send GH¢ ${displayAmount}`}
+                            accessibilityState={{ disabled: numericAmount <= 0 || isLoading }}
                         >
                             <Feather
                                 name="arrow-up"
                                 size={18}
-                                color={numericAmount > 0 ? Colors.white : Colors.textSecondary}
+                                color={numericAmount > 0 && !isLoading ? Colors.white : Colors.textSecondary}
                                 style={styles.sendIcon}
                             />
                             <Text
                                 style={[
                                     styles.sendButtonText,
-                                    numericAmount > 0 && styles.sendButtonTextActive,
+                                    numericAmount > 0 && !isLoading && styles.sendButtonTextActive,
                                 ]}
                             >
-                                Send GH¢ {displayAmount}
+                                {isLoading ? 'Preparing…' : `Send GH¢ ${displayAmount}`}
                             </Text>
                         </TouchableOpacity>
                   </ScrollView>
