@@ -23,7 +23,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
       await Share.share({
         message: `Pay me on Aza: ${profileLink}` });
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 

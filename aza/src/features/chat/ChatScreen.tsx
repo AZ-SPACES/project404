@@ -29,7 +29,7 @@ function ChatHeader({ name, avatar, online, onBack }: { name: string; avatar: st
       </TouchableOpacity>
       
       <View style={styles.profileInfo}>
-        <Image source={{ uri: avatar }} style={styles.avatar} />
+        <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
         <View style={styles.nameContainer}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {online && <Text style={styles.onlineText}>online</Text>}
@@ -90,6 +90,7 @@ function ChatInputArea({ message, setMessage, onSend }: { message: string, setMe
           value={message}
           onChangeText={setMessage}
           multiline
+          accessibilityLabel="Message input"
         />
       </View>
 

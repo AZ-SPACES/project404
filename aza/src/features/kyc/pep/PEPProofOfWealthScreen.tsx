@@ -53,19 +53,12 @@ export default function PEPProofOfWealthScreen() {
   };
 
   const handleSelectDocument = async () => {
-    if (!docType) {
-      // Unlikely to hit if button is managed correctly, but safety check
-      console.log("No document type selected");
-      return;
-    }
+    if (!docType) return;
 
     try {
-      console.log("Launching document picker...");
       const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*", // Using wildcard for maximum compatibility during debugging
+        type: ["application/pdf", "image/jpeg", "image/png"],
         copyToCacheDirectory: true });
-
-      console.log("Picker result:", result);
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const file = result.assets[0];
@@ -74,7 +67,7 @@ export default function PEPProofOfWealthScreen() {
         setFileUploaded(true);
       }
     } catch (err) {
-      console.log("DocumentPicker Error: ", err);
+      console.error("DocumentPicker Error: ", err);
     }
   };
 
@@ -204,7 +197,7 @@ export default function PEPProofOfWealthScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
+            fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
             disabled={!docType || !fileUploaded}
           />

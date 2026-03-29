@@ -36,6 +36,7 @@ const LoginScreen: React.FC = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
@@ -58,26 +59,28 @@ const LoginScreen: React.FC = () => {
   };
 
   const handleBiometricAuth = async () => {
+    setIsBiometricLoading(true);
     try {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
+
       if (!hasHardware || !isEnrolled) {
         Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
         return;
       }
-      
+
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to aza',
         disableDeviceFallback: true,
       });
-      
+
       if (result.success) {
-        // Biometric successful, bypass OTP and setup/KYC flows directly
         login('biometric-token', true, true);
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -191,8 +194,13 @@ const LoginScreen: React.FC = () => {
           />
 
           {isBiometricsEnabled && (
-            <TouchableOpacity style={styles.biometricButton} onPress={handleBiometricAuth}>
-              <MaterialIcons name="fingerprint" size={40} color={Colors.primary} />
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricAuth}
+              disabled={isBiometricLoading}
+              accessibilityLabel="Login with biometrics"
+            >
+              <MaterialIcons name="fingerprint" size={40} color={isBiometricLoading ? Colors.textSecondary : Colors.primary} />
               <Text style={styles.biometricText}>Login with Biometrics</Text>
             </TouchableOpacity>
           )}

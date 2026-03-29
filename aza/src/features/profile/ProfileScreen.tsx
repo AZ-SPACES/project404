@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { ComponentProps, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,16 +25,16 @@ import { useProfile } from "../../providers/ProfileProvider";
 const { height } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Profile">;
-type IconFamily = 'Feather' | 'Ionicons';
 
-interface SectionItemProps {
-  iconFamily: IconFamily;
-  iconName: string;
+type SectionItemProps = (
+  | { iconFamily: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconFamily: 'Ionicons'; iconName: ComponentProps<typeof Ionicons>['name'] }
+) & {
   title: string;
   subtitle?: string;
   onPress?: () => void;
   hideArrow?: boolean;
-}
+};
 
 
 
@@ -46,13 +46,15 @@ export function ProfileScreen() {
   const { logout } = useAuth();
   const { displayName, profileImageUri, setProfileImage } = useProfile();
 
-  const SectionItem = ({ iconFamily, iconName, title, subtitle, onPress, hideArrow }: SectionItemProps) => (
-    <TouchableOpacity style={styles.sectionItem} onPress={onPress} activeOpacity={0.7}>
+  const SectionItem = (props: SectionItemProps) => {
+    const { title, subtitle, onPress, hideArrow } = props;
+    return (
+    <TouchableOpacity style={styles.sectionItem} onPress={onPress} activeOpacity={0.7} accessibilityLabel={title}>
       <View style={styles.iconContainer}>
-        {iconFamily === 'Feather' ? (
-          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        {props.iconFamily === 'Feather' ? (
+          <Feather name={props.iconName} size={20} color={Colors.textPrimary} />
         ) : (
-          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+          <Ionicons name={props.iconName} size={20} color={Colors.textPrimary} />
         )}
       </View>
       <View style={styles.itemTextContainer}>
@@ -63,7 +65,8 @@ export function ProfileScreen() {
         <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
       )}
     </TouchableOpacity>
-  );
+    );
+  };
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);

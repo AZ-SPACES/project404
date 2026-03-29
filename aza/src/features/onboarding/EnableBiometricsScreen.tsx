@@ -26,6 +26,7 @@ export default function EnableBiometricsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { setPasscode, toggleBiometrics } = useAuth();
   const [isBiometricAvailable, setIsBiometricAvailable] = React.useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
     async function checkAvailability() {
@@ -49,25 +50,26 @@ export default function EnableBiometricsScreen() {
   };
 
   const handleSetup = async () => {
+    if (isBiometricAvailable === false) {
+      setPasscode();
+      return;
+    }
+    setIsLoading(true);
     try {
-      if (isBiometricAvailable === false) {
-        setPasscode();
-        return;
-      }
-
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Enable biometric login for aza',
         disableDeviceFallback: true,
       });
-      
+
       if (result.success) {
-        console.log('Biometrics enabled for user.');
         toggleBiometrics(true);
         setPasscode();
       }
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'An error occurred while setting up biometrics.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -106,6 +108,8 @@ export default function EnableBiometricsScreen() {
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
+          loading={isLoading}
+          disabled={isLoading}
         />
         
         {isBiometricAvailable !== false && (

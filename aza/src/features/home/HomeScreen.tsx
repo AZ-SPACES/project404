@@ -78,7 +78,7 @@ export default function HomeScreen() {
                 accessibilityLabel="Open profile"
               >
                 {profileImageUri ? (
-                  <Image source={{ uri: profileImageUri }} style={styles.profilePic} />
+                  <Image source={{ uri: profileImageUri }} style={styles.profilePic} accessibilityLabel="Profile photo" />
                 ) : (
                   <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
                     <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />

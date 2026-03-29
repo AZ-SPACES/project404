@@ -27,6 +27,7 @@ export default function EnableNotificationsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { registerForNotifications, sendLocalNotification } = useNotifications();
   const { setPasscode } = useAuth();
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const handleClose = () => {
     if (navigation.canGoBack()) {
@@ -52,11 +53,11 @@ export default function EnableNotificationsScreen() {
   };
 
   const handleEnable = async () => {
+    setIsLoading(true);
     try {
       const granted = await registerForNotifications();
-      
+
       if (granted) {
-        console.log('Notifications enabled!');
         await sendLocalNotification(
           "Welcome to Aza!",
           "You'll now receive updates about your spending and security.",
@@ -65,6 +66,7 @@ export default function EnableNotificationsScreen() {
     } catch (error) {
       console.error('Error enabling notifications:', error);
     } finally {
+      setIsLoading(false);
       await navigateNext();
     }
   };
@@ -108,6 +110,8 @@ export default function EnableNotificationsScreen() {
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
+          loading={isLoading}
+          disabled={isLoading}
         />
         
         <View style={styles.spacer} />
