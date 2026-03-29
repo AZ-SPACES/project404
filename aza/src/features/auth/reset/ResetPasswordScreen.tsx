@@ -28,6 +28,7 @@ export default function ResetPasswordScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const emailError = touched && email.length > 0 && !isValidEmail(email)
     ? "Enter a valid email address"
@@ -86,16 +87,24 @@ export default function ResetPasswordScreen() {
             <View style={styles.buttonContainer}>
               <Button
                 title="Reset password"
-                onPress={() => {
+                onPress={async () => {
                   if (!isValidEmail(email)) { setTouched(true); return; }
-                  navigation.navigate("ResetOTP");
+                  setIsLoading(true);
+                  try {
+                    // TODO: call send-reset-email API, then navigate on success
+                    navigation.navigate("ResetOTP");
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
                 backgroundColor={Colors.primary}
                 textColor={Colors.secondary}
-                borderRadius={30} // completely rounded
+                borderRadius={30}
                 paddingVertical={16}
                 fontSize={Number(Typography.button.fontSize)}
                 fontWeight={Typography.button.fontWeight as any}
+                loading={isLoading}
+                disabled={isLoading}
               />
             </View>
           </View>
