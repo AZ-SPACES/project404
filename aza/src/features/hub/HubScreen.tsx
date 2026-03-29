@@ -5,7 +5,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../the
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDisplayContext } from '../../providers/DisplayProvider';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - Spacing.lg * 2 - Spacing.md) / 2;
 
 type MiniApp = {
@@ -50,7 +50,7 @@ const MINI_APPS: MiniApp[] = [
 export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { homeBackground } = useDisplayContext();
+  const { hubBackground } = useDisplayContext();
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredApps = React.useMemo(() => {
@@ -63,12 +63,13 @@ export default function HubScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
       
-      <Image
-        source={{ uri: homeBackground }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      <View style={styles.overlay} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.55 }}>
+        <Image
+          source={{ uri: hubBackground }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.headerSpacer} />
@@ -126,10 +127,6 @@ function createStyles(Colors: ThemeColors) {
     container: {
       flex: 1,
       backgroundColor: '#174717',
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(23, 71, 23, 0.45)",
     },
     safeArea: {
       flex: 1,
