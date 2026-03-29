@@ -16,14 +16,20 @@ export function ChangePasswordScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const rules = getPasswordRules(newPassword);
   const isFormValid = currentPassword.trim().length > 0 && isValidPassword(newPassword);
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     if (!isFormValid) return;
-    // TODO: send to backend
-    navigation.goBack();
+    setIsLoading(true);
+    try {
+      // TODO: call change-password API, then navigate on success
+      navigation.goBack();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -114,7 +120,8 @@ export function ChangePasswordScreen() {
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             borderRadius={Radius.full}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isLoading}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

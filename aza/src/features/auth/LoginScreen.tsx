@@ -35,6 +35,7 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
@@ -44,11 +45,16 @@ const LoginScreen: React.FC = () => {
   const passwordError = touched && password.trim().length === 0 ? 'Password is required' : null;
   const isFormValid = credentialValid && password.trim().length > 0;
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setTouched(true);
     if (!isFormValid) return;
-    navigation.navigate('OTP', { isLogin: true });
-    // TODO: implement login logic
+    setIsLoading(true);
+    try {
+      // TODO: call login API, then navigate on success
+      navigation.navigate('OTP', { isLogin: true });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBiometricAuth = async () => {
@@ -178,6 +184,8 @@ const LoginScreen: React.FC = () => {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
+            loading={isLoading}
+            disabled={isLoading}
           />
 
           {isBiometricsEnabled && (
