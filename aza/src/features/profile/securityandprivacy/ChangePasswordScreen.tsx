@@ -8,6 +8,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 import { isValidPassword, getPasswordRules } from '../../../utils/validation';
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -20,6 +21,7 @@ export function ChangePasswordScreen() {
   const [newPasswordTouched, setNewPasswordTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  usePreventScreenCapture();
   const rules = getPasswordRules(newPassword);
   const isFormValid = currentPassword.trim().length > 0 && isValidPassword(newPassword);
 

@@ -185,9 +185,26 @@ export function ProfileScreen() {
     }
   };
 
-  const handleRemovePhoto = async () => {
-    await setProfileImage(null);
-    setPhotoSheetVisible(false);
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      "Remove Photo",
+      "Are you sure you want to remove your profile photo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await setProfileImage(null);
+              setPhotoSheetVisible(false);
+            } catch {
+              Alert.alert("Error", "Could not remove photo. Please try again.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -263,11 +280,30 @@ export function ProfileScreen() {
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
           <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" />
           <SectionItem iconFamily="Feather" iconName="star" title="Rate us" subtitle="Tell us what you think" />
-          <SectionItem 
-            iconFamily="Feather" 
-            iconName="log-out" 
-            title="Sign Out"  
-            onPress={() => logout()}
+          <SectionItem
+            iconFamily="Feather"
+            iconName="log-out"
+            title="Sign Out"
+            onPress={() => {
+              Alert.alert(
+                "Sign Out",
+                "Are you sure you want to sign out?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await logout();
+                      } catch {
+                        Alert.alert("Error", "Something went wrong. Please try again.");
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
           />
         </View>
 

@@ -64,63 +64,55 @@ export default function MainTabsNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: "Home",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "house" } as any)
+          tabBarIcon: (isIOS
+            ? { type: "sfSymbol", name: "house" }
             : ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="home-outline" size={size || 24} color={color} />
-              ),
-        } as any}
+              )) as any,
+        }}
       />
       <Tab.Screen
         name="Contacts"
         component={ContactsScreen}
         options={{
           tabBarLabel: "Contacts",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "person" } as any)
+          tabBarIcon: (isIOS
+            ? { type: "sfSymbol", name: "person" }
             : ({ color, size }: { color: string; size: number }) => (
                 <Feather name="user" size={size || 24} color={color} />
-              ),
-        } as any}
+              )) as any,
+        }}
       />
 
       <Tab.Screen
         name="ScanTab"
         component={ScanScreen}
-        options={
-          (isIOS
-            ? {
-                tabBarLabel: "Scan",
-                tabBarIcon: { type: "sfSymbol", name: "qrcode.viewfinder" },
-              }
-            : {
-                tabBarLabel: "",
-                tabBarButton: ({
-                  onPress,
-                  accessibilityState,
-                  accessibilityLabel,
-                }: any) => (
-                  <View
-                    style={styles.centerButtonWrapper}
-                    pointerEvents="box-none"
-                  >
-                    <TouchableOpacity
-                      onPress={onPress}
-                      accessibilityState={accessibilityState}
-                      accessibilityLabel={accessibilityLabel}
-                      style={styles.centerButton}
-                      activeOpacity={0.9}
-                    >
-                      <Ionicons
-                        name="qr-code-outline"
-                        size={24}
-                        color={Colors.white}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ),
-              }) as any
-        }
+        options={isIOS ? {
+          tabBarLabel: "Scan",
+          tabBarIcon: { type: "sfSymbol", name: "qrcode.viewfinder" },
+        } : {
+          tabBarLabel: "",
+          tabBarButton: (props: any) => (
+            <View
+              style={styles.centerButtonWrapper}
+              pointerEvents="box-none"
+            >
+              <TouchableOpacity
+                onPress={props.onPress ?? undefined}
+                accessibilityState={props.accessibilityState}
+                accessibilityLabel={props.accessibilityLabel}
+                style={styles.centerButton}
+                activeOpacity={0.9}
+              >
+                <Ionicons
+                  name="qr-code-outline"
+                  size={24}
+                  color={Colors.white}
+                />
+              </TouchableOpacity>
+            </View>
+          ),
+        } as any}
       />
 
       <Tab.Screen
@@ -128,28 +120,28 @@ export default function MainTabsNavigator() {
         component={ChatContactsScreen}
         options={{
           tabBarLabel: "Chat",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "bubble.left" } as any)
+          tabBarIcon: (isIOS
+            ? { type: "sfSymbol", name: "bubble.left" }
             : ({ color, size }: { color: string; size: number }) => (
                 <Ionicons
                   name="chatbubble-outline"
                   size={size || 24}
                   color={color}
                 />
-              ),
-        } as any}
+              )) as any,
+        }}
       />
       <Tab.Screen
         name="Hub"
         component={HubScreen}
         options={{
           tabBarLabel: "Hub",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "square.grid.2x2" } as any)
+          tabBarIcon: (isIOS
+            ? { type: "sfSymbol", name: "square.grid.2x2" }
             : ({ color, size }: { color: string; size: number }) => (
                 <Ionicons name="apps-outline" size={size || 24} color={color} />
-              ),
-        } as any}
+              )) as any,
+        }}
       />
     </Tab.Navigator>
   );
