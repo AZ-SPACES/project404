@@ -84,7 +84,7 @@ const NotificationCard = ({
 export default function InboxScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(mockNotifications);
@@ -154,7 +154,7 @@ export default function InboxScreen() {
 }
 
 function createStyles(Colors: any) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

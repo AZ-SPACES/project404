@@ -48,7 +48,7 @@ const HelpTopic = ({ icon, title, description, onPress, colors, styles }: HelpTo
 export default function HelpAndSupportScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -186,7 +186,7 @@ export default function HelpAndSupportScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

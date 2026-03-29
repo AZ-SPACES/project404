@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../theme';
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -43,7 +44,7 @@ const NotificationSection = ({ title, description, children }: NotificationSecti
 const NotificationToggle = (props: NotificationToggleProps) => {
   const { title, value, onValueChange } = props;
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
     <View style={styles.toggleRow}>
@@ -68,11 +69,12 @@ const NotificationToggle = (props: NotificationToggleProps) => {
 
 export function NotificationSettingsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { checkPermissions, requestPermissions } = useNotifications();
   const { userToken } = useAuth();
+  const { showToast } = useToast();
   const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -134,7 +136,7 @@ export function NotificationSettingsScreen() {
           setCausesPush(parsed.causesPush ?? false);
         }
       } catch (e) {
-        console.error('Failed to load notification preferences');
+        showToast('Could not load your notification preferences', 'error');
       } finally {
         setIsLoaded(true);
       }
@@ -155,7 +157,7 @@ export function NotificationSettingsScreen() {
         };
         await AsyncStorage.setItem(prefsKey, JSON.stringify(prefs));
       } catch (e) {
-        console.error('Failed to save notification preferences');
+        showToast('Failed to save preferences. Please try again.', 'error');
       }
     };
     savePreferences();
@@ -378,7 +380,7 @@ export function NotificationSettingsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

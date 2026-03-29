@@ -19,7 +19,7 @@ interface Message {
 // ----------------------------------------------------------------------------
 function ChatHeader({ name, avatar, online, onBack }: { name: string; avatar: string; online: boolean; onBack: () => void }) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = useMemo(() => createHeaderStyles(Colors, isDark), [Colors, isDark]);
 
   return (
@@ -72,7 +72,7 @@ function ChatMessageBubble({ message }: { message: Message }) {
 // ----------------------------------------------------------------------------
 function ChatInputArea({ message, setMessage, onSend }: { message: string, setMessage: (val: string) => void, onSend: () => void }) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = useMemo(() => createInputStyles(Colors, isDark), [Colors, isDark]);
 
   return (
@@ -106,7 +106,7 @@ function ChatInputArea({ message, setMessage, onSend }: { message: string, setMe
 // ----------------------------------------------------------------------------
 export function ChatScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
   const { name, avatar, online } = route.params;

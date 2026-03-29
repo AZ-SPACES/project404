@@ -29,7 +29,7 @@ type SettingRowProps = (
 
 function SettingRow(props: SettingRowProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { title, subtitle, onPress, showSwitch, switchValue, onSwitchChange } = props;
   return (
@@ -68,7 +68,7 @@ function SettingRow(props: SettingRowProps) {
 
 export function SecurityAndPrivacyScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
 
@@ -311,7 +311,7 @@ export function SecurityAndPrivacyScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

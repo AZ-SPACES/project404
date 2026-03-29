@@ -27,7 +27,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePassc
 export default function CreatePasscodeScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [passcode, setPasscode] = useState("");
@@ -167,7 +167,7 @@ export default function CreatePasscodeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

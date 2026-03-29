@@ -24,7 +24,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const { name, username, avatar } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-    const isDark = Colors.background === '#121212';
+    const isDark = Colors.isDark;
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -225,7 +225,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
 const AVATAR_SIZE = 48;
 
 function createStyles(Colors: ThemeColors) {
-    const isDark = Colors.background === '#121212';
+    const isDark = Colors.isDark;
     return StyleSheet.create({
     container: {
         flex: 1,

@@ -25,17 +25,6 @@ import {
 const isIOS = Platform.OS === "ios";
 const Tab = isIOS ? createNativeBottomTabNavigator() : createBottomTabNavigator();
 
-// Dummy screen for inactive tabs
-const DummyScreen = () => {
-  const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  return (
-    <View style={styles.dummyContainer}>
-      <Text style={[Typography.h3, styles.dummyText]}>Coming Soon</Text>
-    </View>
-  );
-};
-
 export default function MainTabsNavigator() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);

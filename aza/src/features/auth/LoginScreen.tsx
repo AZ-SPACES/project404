@@ -22,6 +22,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../providers/AuthProvider';
 import { Alert } from 'react-native';
 import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useToast } from '../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../utils/validation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -39,6 +40,7 @@ const LoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
+  const { showToast } = useToast();
   usePreventScreenCapture();
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
@@ -80,7 +82,7 @@ const LoginScreen: React.FC = () => {
         login('biometric-token', true, true);
       }
     } catch (e) {
-      console.error(e);
+      showToast('Biometric authentication failed. Please try again.', 'error');
     } finally {
       setIsBiometricLoading(false);
     }
@@ -218,7 +220,7 @@ const LoginScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

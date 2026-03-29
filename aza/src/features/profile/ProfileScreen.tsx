@@ -21,6 +21,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../the
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../providers/AuthProvider";
 import { useProfile } from "../../providers/ProfileProvider";
+import { useToast } from "../../providers/ToastProvider";
 
 const { height } = Dimensions.get('window');
 
@@ -64,11 +65,12 @@ function SectionItem(props: SectionItemProps) {
 
 export function ProfileScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
   const { displayName, profileImageUri, setProfileImage } = useProfile();
+  const { showToast } = useToast();
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -155,7 +157,7 @@ export function ProfileScreen() {
         setPhotoSheetVisible(false);
       }
     } catch {
-      Alert.alert("Error", "Something went wrong while taking the photo. Please try again.");
+      showToast('Something went wrong while taking the photo.', 'error');
     }
   };
 
@@ -181,7 +183,7 @@ export function ProfileScreen() {
         setPhotoSheetVisible(false);
       }
     } catch {
-      Alert.alert("Error", "Something went wrong while selecting the photo. Please try again.");
+      showToast('Something went wrong while selecting the photo.', 'error');
     }
   };
 
@@ -199,7 +201,7 @@ export function ProfileScreen() {
               await setProfileImage(null);
               setPhotoSheetVisible(false);
             } catch {
-              Alert.alert("Error", "Could not remove photo. Please try again.");
+              showToast('Could not remove photo. Please try again.', 'error');
             }
           },
         },
@@ -297,7 +299,7 @@ export function ProfileScreen() {
                       try {
                         await logout();
                       } catch {
-                        Alert.alert("Error", "Something went wrong. Please try again.");
+                        showToast('Sign out failed. Please try again.', 'error');
                       }
                     },
                   },
@@ -464,7 +466,7 @@ export function ProfileScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
