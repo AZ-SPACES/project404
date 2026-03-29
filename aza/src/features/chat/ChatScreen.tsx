@@ -90,6 +90,14 @@ export function ChatScreen() {
   // --------------------------------------------------------------------------
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
+  const handleProfilePress = useCallback(() => {
+    navigation.navigate('ContactsProfile', {
+      name,
+      username: name.toLowerCase().replace(/\s+/g, '_'),
+      avatar,
+    });
+  }, [navigation, name, avatar]);
+
   const handleMorePress = useCallback((anchor: MenuAnchor) => {
     setMenuAnchor(anchor);
     setShowMoreMenu(true);
@@ -312,6 +320,7 @@ export function ChatScreen() {
         avatar={avatar}
         online={online}
         onBack={handleBack}
+        onProfilePress={handleProfilePress}
         isMenuOpen={showMoreMenu}
         onMorePress={handleMorePress}
       />
