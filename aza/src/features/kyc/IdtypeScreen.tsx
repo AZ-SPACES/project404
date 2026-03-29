@@ -36,7 +36,7 @@ const ID_OPTIONS = [
 
 export default function IdtypeScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<IdtypeRouteProp>();
@@ -218,7 +218,7 @@ export default function IdtypeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: { 
     flex: 1, 

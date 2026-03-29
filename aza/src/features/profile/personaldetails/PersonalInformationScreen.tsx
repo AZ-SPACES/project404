@@ -18,6 +18,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -35,7 +36,7 @@ interface ReadOnlyInputProps {
 
 export function PersonalInformationScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const ReadOnlyInput = ({
@@ -61,6 +62,7 @@ export function PersonalInformationScreen() {
 
   const navigation = useNavigation<NavigationProp>();
   const { displayName, phone, setDisplayName } = useProfile();
+  const { showToast } = useToast();
   const [preferredName, setPreferredName] = useState(displayName ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -84,7 +86,10 @@ export function PersonalInformationScreen() {
     setIsSaving(true);
     try {
       await setDisplayName(preferredName.trim());
+      showToast('Changes saved', 'success');
       navigation.goBack();
+    } catch {
+      showToast('Failed to save changes. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -232,7 +237,7 @@ export function PersonalInformationScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

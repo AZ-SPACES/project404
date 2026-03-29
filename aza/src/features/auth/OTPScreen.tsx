@@ -29,7 +29,7 @@ type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
 const OTPScreen: React.FC = () => {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<OTPRouteProp>();
@@ -170,7 +170,7 @@ const OTPScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

@@ -23,7 +23,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "EmailUs">;
 export default function EmailUsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const [details, setDetails] = useState("");
 
@@ -87,7 +87,7 @@ export default function EmailUsScreen() {
 }
 
 function createStyles(Colors: any) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

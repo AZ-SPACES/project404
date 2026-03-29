@@ -19,6 +19,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { isValidPhone } from "../../../utils/validation";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -30,6 +31,7 @@ export function ChangePhoneScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { phone } = useProfile();
+  const { showToast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState(phone ?? "");
   const [countryCode, setCountryCode] = useState("+233");
   const [touched, setTouched] = useState(false);
@@ -140,6 +142,8 @@ export function ChangePhoneScreen() {
                 // TODO: call change-phone API, verify with OTP, then persist
                 // await setPhone(`${countryCode}${phoneNumber}`);
                 navigation.goBack();
+              } catch {
+                showToast('Failed to update phone number. Please try again.', 'error');
               } finally {
                 setIsLoading(false);
               }
@@ -157,7 +161,7 @@ export function ChangePhoneScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

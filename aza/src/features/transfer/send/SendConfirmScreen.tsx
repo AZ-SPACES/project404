@@ -131,7 +131,7 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

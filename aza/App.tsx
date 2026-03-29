@@ -9,6 +9,7 @@ import { AuthProvider } from "./src/providers/AuthProvider";
 import { ProfileProvider } from "./src/providers/ProfileProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
 import { NetworkProvider } from "./src/providers/NetworkProvider";
+import { ToastProvider } from "./src/providers/ToastProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 
@@ -58,9 +59,11 @@ export default function App() {
             <ProfileProvider>
               <NotificationProvider>
                 <DisplayProvider>
-                  <AnimatedSplashScreen>
-                    <AppContent />
-                  </AnimatedSplashScreen>
+                  <ToastProvider>
+                    <AnimatedSplashScreen>
+                      <AppContent />
+                    </AnimatedSplashScreen>
+                  </ToastProvider>
                 </DisplayProvider>
               </NotificationProvider>
             </ProfileProvider>
