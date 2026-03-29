@@ -3,7 +3,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   TroubleLogin: undefined;
-  OTP: { isLogin?: boolean } | undefined;
+  OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
   ChangePhoneNumber: undefined;

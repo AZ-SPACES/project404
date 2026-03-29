@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
+import { isValidPhone } from "../../../utils/validation";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,12 +28,15 @@ export function ChangePhoneScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const initialPhoneNumber = "245903854";
-  const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber);
+  const [phoneNumber, setPhoneNumber] = useState(""); // TODO: pre-fill from user profile
   const [countryCode, setCountryCode] = useState("+233");
+  const [touched, setTouched] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const isChanged = phoneNumber !== initialPhoneNumber && phoneNumber.length > 0;
+  const phoneError = touched && phoneNumber.length > 0 && !isValidPhone(phoneNumber)
+    ? "Enter a valid phone number"
+    : null;
+  const isChanged = isValidPhone(phoneNumber);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -113,6 +117,7 @@ export function ChangePhoneScreen() {
                   style={styles.input}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
+                  onBlur={() => setTouched(true)}
                   keyboardType="phone-pad"
                   placeholder="XXXXXXXXX"
                   placeholderTextColor={Colors.textSecondary + "80"}
@@ -120,6 +125,7 @@ export function ChangePhoneScreen() {
               </View>
             </View>
           </View>
+          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
         </Animated.ScrollView>
 
         <View style={styles.footer}>
@@ -217,6 +223,12 @@ function createStyles(Colors: ThemeColors) {
   input: {
     ...Typography.bodyLg,
     color: Colors.textPrimary },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
+    paddingHorizontal: Spacing.lg,
+  },
   footer: {
     padding: Spacing.lg,
     backgroundColor: Colors.background,

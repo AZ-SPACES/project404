@@ -11,6 +11,7 @@ import {
   StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -32,6 +33,7 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 const ZOOM_SCALE = 1 / 0.85;
 
 export default function ScanIdBackScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();

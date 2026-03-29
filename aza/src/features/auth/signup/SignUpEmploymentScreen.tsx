@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -15,16 +15,9 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useSignUp, EmploymentOption } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmployment">;
-
-type EmploymentOption =
-  | "Student"
-  | "Part-Time"
-  | "Full-Time"
-  | "Self-employed"
-  | "Retired"
-  | "Unemployed";
 
 const EMPLOYMENT_OPTIONS: EmploymentOption[] = [
   "Student",
@@ -40,8 +33,7 @@ export default function SignUpEmploymentScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [selectedEmployment, setSelectedEmployment] =
-    useState<EmploymentOption | null>(null);
+  const { data, update } = useSignUp();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -66,15 +58,15 @@ export default function SignUpEmploymentScreen() {
       key={label}
       style={[
         styles.optionItem,
-        selectedEmployment === label && styles.optionItemSelected,
+        data.employmentStatus === label && styles.optionItemSelected,
       ]}
-      onPress={() => setSelectedEmployment(label)}
+      onPress={() => update({ employmentStatus: label })}
       activeOpacity={0.7}
     >
       <Text
         style={[
           styles.optionLabel,
-          selectedEmployment === label && styles.optionLabelSelected,
+          data.employmentStatus === label && styles.optionLabelSelected,
         ]}
       >
         {label}
@@ -148,7 +140,7 @@ export default function SignUpEmploymentScreen() {
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
             fontWeight={Typography.button.fontWeight as any}
-            disabled={selectedEmployment === null}
+            disabled={data.employmentStatus === null}
           />
         </View>
       </View>

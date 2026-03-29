@@ -18,6 +18,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../components/ui/Button";
+import { isValidEmail, sanitizeText } from "../../../utils/validation";
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -26,6 +27,11 @@ export default function ResetPasswordScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const emailError = touched && email.length > 0 && !isValidEmail(email)
+    ? "Enter a valid email address"
+    : null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -69,16 +75,19 @@ export default function ResetPasswordScreen() {
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => setEmail(sanitizeText(t))}
+                onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
             <View style={styles.buttonContainer}>
               <Button
                 title="Reset password"
                 onPress={() => {
+                  if (!isValidEmail(email)) { setTouched(true); return; }
                   navigation.navigate("ResetOTP");
                 }}
                 backgroundColor={Colors.primary}
@@ -160,6 +169,12 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
+    marginBottom: 8,
   },
   buttonContainer: {
     marginBottom: Spacing.lg,

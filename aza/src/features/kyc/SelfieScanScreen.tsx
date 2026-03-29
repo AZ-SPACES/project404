@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -38,6 +39,7 @@ type FeedbackState =
   | "Processing...";
 
 export default function SelfieScanScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();

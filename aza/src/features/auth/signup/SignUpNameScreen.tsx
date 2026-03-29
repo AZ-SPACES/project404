@@ -20,6 +20,8 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { isValidName, sanitizeText } from "../../../utils/validation";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpName">;
 
@@ -28,9 +30,17 @@ export default function SignUpNameScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const { data, update } = useSignUp();
+  const [firstTouched, setFirstTouched] = useState(false);
+  const [lastTouched, setLastTouched] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const firstNameError = firstTouched && data.firstName.length > 0 && !isValidName(data.firstName)
+    ? "Only letters, spaces, hyphens and apostrophes allowed"
+    : null;
+  const lastNameError = lastTouched && data.lastName.length > 0 && !isValidName(data.lastName)
+    ? "Only letters, spaces, hyphens and apostrophes allowed"
+    : null;
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -49,7 +59,7 @@ export default function SignUpNameScreen() {
     navigation.navigate("SignUpAddress");
   };
 
-  const isFormValid = firstName.trim().length > 0 && lastName.trim().length > 0;
+  const isFormValid = isValidName(data.firstName) && isValidName(data.lastName);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -119,14 +129,16 @@ export default function SignUpNameScreen() {
                 style={styles.input}
                 placeholder="e.g. Kwame"
                 placeholderTextColor={Colors.textSecondary}
-                value={firstName}
-                onChangeText={setFirstName}
+                value={data.firstName}
+                onChangeText={(t) => update({ firstName: sanitizeText(t) })}
+                onBlur={() => setFirstTouched(true)}
                 autoCapitalize="words"
                 autoFocus
                 cursorColor={Colors.primary}
                 selectionColor={Colors.primary}
               />
             </View>
+            {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
 
             <Text style={styles.label}>Lastname</Text>
             <View style={styles.inputContainer}>
@@ -140,11 +152,13 @@ export default function SignUpNameScreen() {
                 style={styles.input}
                 placeholder="e.g. Obeng"
                 placeholderTextColor={Colors.textSecondary}
-                value={lastName}
-                onChangeText={setLastName}
+                value={data.lastName}
+                onChangeText={(t) => update({ lastName: sanitizeText(t) })}
+                onBlur={() => setLastTouched(true)}
                 autoCapitalize="words"
               />
             </View>
+            {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
           </Animated.ScrollView>
 
           {/* Footer */}
@@ -246,6 +260,11 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

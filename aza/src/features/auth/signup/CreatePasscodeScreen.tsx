@@ -13,7 +13,8 @@ import {
   StatusBar,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation, } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {  useAppTheme, ThemeColors, Typography, Spacing,  } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,6 +25,7 @@ import { RootStackParamList } from "../../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePasscode">;
 
 export default function CreatePasscodeScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);

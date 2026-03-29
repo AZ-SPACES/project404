@@ -131,7 +131,7 @@ export function FindMeByScreen() {
           <SettingRow
             iconType="Custom"
             title="Wisetag"
-            subtitle="@paapacobbold"
+            subtitle="@username" // TODO: load from user profile
             switchValue={wiseTagEnabled}
             onSwitchChange={setWiseTagEnabled}
           />
@@ -140,7 +140,7 @@ export function FindMeByScreen() {
             iconType="Feather"
             iconName="mail"
             title="Email address"
-            subtitle="paapacobbold@icloud.com"
+            subtitle="user@email.com" // TODO: load from user profile
             switchValue={emailEnabled}
             onSwitchChange={setEmailEnabled}
           />
@@ -149,7 +149,7 @@ export function FindMeByScreen() {
             iconType="Feather"
             iconName="phone"
             title="Phone number"
-            subtitle="+233249054893"
+            subtitle="+000000000000" // TODO: load from user profile
             switchValue={phoneEnabled}
             onSwitchChange={setPhoneEnabled}
           />

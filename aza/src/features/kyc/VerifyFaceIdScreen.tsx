@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -22,6 +23,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VerifyFaceI
 type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
 
 export default function VerifyFaceIdScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);

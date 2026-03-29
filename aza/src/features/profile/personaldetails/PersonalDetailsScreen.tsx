@@ -119,13 +119,13 @@ export function PersonalDetailsScreen() {
         <DetailItem
           iconName="mail"
           title="Email address"
-          subtitle="paapacobbold@icloud.com (Verified)"
+          subtitle="user@email.com (Verified)" // TODO: load from user profile
           onPress={() => navigation.navigate("ChangeEmail")}
         />
         <DetailItem
           iconName="smartphone"
           title="Mobile number"
-          subtitle="+2332458932"
+          subtitle="+000000000000" // TODO: load from user profile
           onPress={() => navigation.navigate("ChangePhone")}
         />
       </Animated.ScrollView>

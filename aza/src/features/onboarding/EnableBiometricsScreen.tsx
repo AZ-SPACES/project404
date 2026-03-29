@@ -57,6 +57,7 @@ export default function EnableBiometricsScreen() {
 
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Enable biometric login for aza',
+        disableDeviceFallback: true,
       });
       
       if (result.success) {

@@ -101,7 +101,7 @@ export function ChangeEmailScreen() {
                 style={styles.input}
                 value={newEmail}
                 onChangeText={setNewEmail}
-                placeholder="caleb.dussey04@icloud.com"
+                placeholder="user@aza.com"
                 placeholderTextColor={Colors.textSecondary + "80"}
                 keyboardType="email-address"
                 autoCapitalize="none"
