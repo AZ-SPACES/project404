@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 type AuthState = {
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await SecureStore.setItemAsync(AUTH_STATE_KEY, JSON.stringify(updatedState));
     } catch (e) {
       console.error("Failed to save auth state", e);
+      Alert.alert("Session Error", "We couldn't save your session. Please restart the app if issues persist.");
     }
   };
 
@@ -124,10 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
+      saveState({ hasPasscode: true });
     } catch (e) {
       console.error("Failed to save passcode value", e);
+      Alert.alert("Passcode Error", "We couldn't save your passcode. Please try again.");
     }
-    saveState({ hasPasscode: true });
   }, []);
 
   const verifyPasscode = useCallback(async (code: string): Promise<boolean> => {

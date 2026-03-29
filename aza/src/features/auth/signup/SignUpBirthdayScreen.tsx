@@ -18,6 +18,7 @@ import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -28,6 +29,7 @@ export default function SignUpBirthdayScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { login } = useAuth();
   const { data, update, reset } = useSignUp();
+  const { setDisplayName } = useProfile();
 
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -54,10 +56,12 @@ export default function SignUpBirthdayScreen() {
     setCurrentMonth(dateString);
   }, []);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
+    const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+    if (fullName) await setDisplayName(fullName);
     login("signup-token-placeholder", false, false);
     reset();
-  }, [login, reset]);
+  }, [login, reset, data.firstName, data.lastName, setDisplayName]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 

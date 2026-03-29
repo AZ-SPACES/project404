@@ -5,6 +5,7 @@ import ErrorBoundary from "./src/components/ui/ErrorBoundary";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
 import { AuthProvider } from "./src/providers/AuthProvider";
+import { ProfileProvider } from "./src/providers/ProfileProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 
@@ -25,6 +26,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <ProfileProvider>
         <NotificationProvider>
           <DisplayProvider>
             <AnimatedSplashScreen>
@@ -32,6 +34,7 @@ export default function App() {
             </AnimatedSplashScreen>
           </DisplayProvider>
         </NotificationProvider>
+        </ProfileProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
