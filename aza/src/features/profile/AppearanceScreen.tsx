@@ -136,7 +136,7 @@ export function AppearanceScreen() {
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'] as ImagePicker.MediaType[],
       allowsEditing: false,
       quality: 1 });
 
