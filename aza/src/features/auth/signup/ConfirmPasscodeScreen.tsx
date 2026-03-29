@@ -41,7 +41,11 @@ export default function ConfirmPasscodeScreen() {
 
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  const MAX_ATTEMPTS = 5;
 
   const scaleAnims = useRef([
     new Animated.Value(1),
@@ -79,24 +83,29 @@ export default function ConfirmPasscodeScreen() {
   }, [shakeAnim]);
 
   const handleContinue = useCallback(async () => {
-    if (passcode.length === 4) {
+    if (passcode.length === 4 && !isLocked) {
       if (passcode === firstPasscode) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await savePasscodeValue(passcode);
         navigation.navigate("Consent");
       } else {
+        const newCount = attemptCount + 1;
+        setAttemptCount(newCount);
+        if (newCount >= MAX_ATTEMPTS) {
+          setIsLocked(true);
+        }
         setErrorStatus(true);
         startShake();
         setPasscode("");
       }
     }
-  }, [passcode, firstPasscode, navigation, startShake, savePasscodeValue]);
+  }, [passcode, firstPasscode, navigation, startShake, savePasscodeValue, attemptCount, isLocked]);
 
   useEffect(() => {
-    // Focus keyboard on mount
+    if (isLocked) return;
     const timer = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isLocked]);
 
   // Automatic verification when 4 digits are entered
   useEffect(() => {
@@ -113,6 +122,7 @@ export default function ConfirmPasscodeScreen() {
   }, [passcode, handleContinue]);
 
   const handleTextChange = (text: string) => {
+    if (isLocked) return;
     if (errorStatus) {
       setErrorStatus(false);
     }
@@ -214,11 +224,15 @@ export default function ConfirmPasscodeScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
-              {errorStatus && (
+              {isLocked ? (
                 <Text style={styles.errorText}>
-                  Passcodes do not match. Try again.
+                  Too many failed attempts. Please go back and start over.
                 </Text>
-              )}
+              ) : errorStatus ? (
+                <Text style={styles.errorText}>
+                  Passcodes do not match. {MAX_ATTEMPTS - attemptCount} attempt{MAX_ATTEMPTS - attemptCount === 1 ? "" : "s"} remaining.
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.footer}>
@@ -226,20 +240,20 @@ export default function ConfirmPasscodeScreen() {
                 title="Continue"
                 onPress={handleContinue}
                 backgroundColor={
-                  passcode.length === 4
+                  passcode.length === 4 && !isLocked
                     ? Colors.primary
                     : isDark
                       ? Colors.white10
                       : "#E5E7EB"
                 }
                 textColor={
-                  passcode.length === 4
+                  passcode.length === 4 && !isLocked
                     ? Colors.secondary
                     : isDark
                       ? Colors.textSecondary
                       : "#9CA3AF"
                 }
-                disabled={passcode.length !== 4}
+                disabled={passcode.length !== 4 || isLocked}
                 borderRadius={30}
                 paddingVertical={16}
               />
