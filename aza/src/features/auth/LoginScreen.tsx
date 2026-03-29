@@ -21,6 +21,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../providers/AuthProvider';
 import { Alert } from 'react-native';
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../utils/validation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -38,6 +39,7 @@ const LoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
+  usePreventScreenCapture();
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
   const credentialError = touched && !credentialValid

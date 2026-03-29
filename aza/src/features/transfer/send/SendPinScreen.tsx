@@ -26,6 +26,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
+import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -40,6 +41,7 @@ export default function SendPinScreen({
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { verifyPasscode, checkPinLockout, recordPinFailure, resetPinAttempts } = useAuth();
+  usePreventScreenCapture();
   const [pin, setPin] = useState<string>("");
   const [errorStatus, setErrorStatus] = useState(false);
   const [lockedSeconds, setLockedSeconds] = useState(0);

@@ -189,7 +189,7 @@ function createStyles(Colors: ThemeColors) {
     alignItems: 'center',
     paddingTop: Spacing.md },
   qrCard: {
-    backgroundColor: Colors.white, // QR cards usually stay white for scannability, but let's see if surface works better
+    backgroundColor: Colors.white,
     padding: 24,
     borderRadius: 32,
     shadowColor: '#000',

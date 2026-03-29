@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -59,8 +60,15 @@ export function PersonalInformationScreen() {
   );
 
   const navigation = useNavigation<NavigationProp>();
-  const [preferredName, setPreferredName] = useState("");
+  const { displayName, phone, setDisplayName } = useProfile();
+  const [preferredName, setPreferredName] = useState(displayName ?? "");
+  const [isSaving, setIsSaving] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  // Sync if displayName loads after mount
+  useEffect(() => {
+    if (displayName) setPreferredName(displayName);
+  }, [displayName]);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -72,9 +80,14 @@ export function PersonalInformationScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleSave = () => {
-    // Save logic
-    navigation.goBack();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await setDisplayName(preferredName.trim());
+      navigation.goBack();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -142,8 +155,8 @@ export function PersonalInformationScreen() {
           </View>
           <Text style={styles.sectionHeading}>Personal details</Text>
 
-          <ReadOnlyInput label="Full legal first and middle name(s)" value="Paapa" />
-          <ReadOnlyInput label="Full legal last name(s)" value="Cobbold" />
+          <ReadOnlyInput label="Full legal first and middle name(s)" value="—" placeholder="Provided after verification" />
+          <ReadOnlyInput label="Full legal last name(s)" value="—" placeholder="Provided after verification" />
 
           <View style={styles.inputSection}>
             <View style={styles.labelWithIcon}>
@@ -166,23 +179,22 @@ export function PersonalInformationScreen() {
             <View style={styles.row}>
               <View style={[styles.dateInput, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Day</Text>
-                <Text style={styles.dateValue}>16</Text>
+                <Text style={styles.dateValue}>—</Text>
               </View>
               <View style={[styles.dateInputLarge, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Month</Text>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.dateValue}>November</Text>
-                  <Feather name="chevron-down" size={16} color={Colors.textSecondary} />
+                  <Text style={styles.dateValue}>—</Text>
                 </View>
               </View>
               <View style={[styles.dateInput, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Year</Text>
-                <Text style={styles.dateValue}>2004</Text>
+                <Text style={styles.dateValue}>—</Text>
               </View>
             </View>
           </View>
 
-          <ReadOnlyInput label="Phone number" value="+2332458932" />
+          <ReadOnlyInput label="Phone number" value={phone ?? 'Not set'} />
 
           <TouchableOpacity onPress={() => navigation.navigate("ChangePhone")}>
             <Text style={styles.linkText}>Change phone number</Text>
@@ -193,8 +205,8 @@ export function PersonalInformationScreen() {
           </View>
           <Text style={styles.sectionHeading}>Address</Text>
 
-          <ReadOnlyInput label="Home address" value="Aunty B, Ableks" />
-          <ReadOnlyInput label="City" value="Accea" />
+          <ReadOnlyInput label="Home address" value="—" placeholder="Provided after verification" />
+          <ReadOnlyInput label="City" value="—" placeholder="Provided after verification" />
 
           <Text style={styles.confirmationText}>
             By continuing, you confirm this address is correct.
@@ -210,6 +222,8 @@ export function PersonalInformationScreen() {
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             borderRadius={Radius.full}
+            loading={isSaving}
+            disabled={isSaving}
           />
         </View>
       </KeyboardAvoidingView>

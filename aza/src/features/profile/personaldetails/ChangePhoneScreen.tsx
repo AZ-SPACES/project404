@@ -18,6 +18,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { isValidPhone } from "../../../utils/validation";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -28,9 +29,11 @@ export function ChangePhoneScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [phoneNumber, setPhoneNumber] = useState(""); // TODO: pre-fill from user profile
+  const { phone } = useProfile();
+  const [phoneNumber, setPhoneNumber] = useState(phone ?? "");
   const [countryCode, setCountryCode] = useState("+233");
   const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const phoneError = touched && phoneNumber.length > 0 && !isValidPhone(phoneNumber)
@@ -131,11 +134,21 @@ export function ChangePhoneScreen() {
         <View style={styles.footer}>
           <Button
             title="Continue"
-            onPress={() => {}}
+            onPress={async () => {
+              setIsLoading(true);
+              try {
+                // TODO: call change-phone API, verify with OTP, then persist
+                // await setPhone(`${countryCode}${phoneNumber}`);
+                navigation.goBack();
+              } finally {
+                setIsLoading(false);
+              }
+            }}
             backgroundColor={isChanged ? Colors.primary : Colors.surface}
             textColor={isChanged ? Colors.secondary : Colors.textSecondary}
             borderRadius={Radius.full}
-            disabled={!isChanged}
+            disabled={!isChanged || isLoading}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

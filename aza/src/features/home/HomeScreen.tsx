@@ -46,6 +46,13 @@ function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
   );
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
 export default function HomeScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
@@ -53,6 +60,9 @@ export default function HomeScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { homeBackground } = useDisplayContext();
   const { displayName, profileImageUri } = useProfile();
+
+  const firstName = displayName?.trim().split(" ")[0];
+  const greeting = getGreeting();
 
   return (
     <View style={styles.container}>
@@ -75,7 +85,7 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Typography.h1, { color: Colors.white }]}>
-              {displayName ? `Hi, ${displayName.split(' ')[0]}` : 'Good Morning'}
+              {`${greeting}${firstName ? `, ${firstName}` : ""}`}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity
