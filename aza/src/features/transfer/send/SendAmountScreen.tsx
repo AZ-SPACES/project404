@@ -141,6 +141,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                     selectionColor={Colors.primary}
                                     returnKeyType="done"
                                     maxLength={12}
+                                    accessibilityLabel="Enter amount in cedis"
                                 />
                             </TouchableOpacity>
 
@@ -177,6 +178,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                     onChangeText={setNote}
                                     returnKeyType="done"
                                     maxLength={100}
+                                    accessibilityLabel="Add a note"
                                 />
                             </View>
                         </View>

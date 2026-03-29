@@ -110,7 +110,7 @@ export default function ScanIdScreen() {
         }
       }
     } catch (e) {
-      console.log("Camera capture failed", e);
+      console.error("Camera capture failed", e);
       setCapturedImage("placeholder");
       setIsModalVisible(true);
     }

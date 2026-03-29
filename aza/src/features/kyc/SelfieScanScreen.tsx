@@ -109,7 +109,7 @@ export default function SelfieScanScreen() {
         }
       }
     } catch (e) {
-      console.log("Selfie capture failed", e);
+      console.error("Selfie capture failed", e);
       setCapturedImage("placeholder");
       setIsModalVisible(true);
     }

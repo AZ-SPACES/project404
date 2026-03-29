@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { ComponentProps, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,13 +17,15 @@ interface NotificationSectionProps {
   children: React.ReactNode;
 }
 
-interface NotificationToggleProps {
-  iconName: string;
-  iconType?: 'Feather' | 'Ionicons' | 'MaterialCommunityIcons';
+type NotificationToggleProps = (
+  | { iconType: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconType: 'Ionicons'; iconName: ComponentProps<typeof Ionicons>['name'] }
+  | { iconType: 'MaterialCommunityIcons'; iconName: ComponentProps<typeof MaterialCommunityIcons>['name'] }
+) & {
   title: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
-}
+};
 
 const NotificationSection = ({ title, description, children }: NotificationSectionProps) => {
   const { colors: Colors } = useAppTheme();
@@ -37,20 +39,17 @@ const NotificationSection = ({ title, description, children }: NotificationSecti
   );
 };
 
-const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => {
+const NotificationToggle = (props: NotificationToggleProps) => {
+  const { title, value, onValueChange } = props;
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
     <View style={styles.toggleRow}>
       <View style={styles.iconContainer}>
-        {iconType === 'Feather' ? (
-          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
-        ) : iconType === 'Ionicons' ? (
-          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
-        ) : (
-          <MaterialCommunityIcons name={iconName as any} size={20} color={Colors.textPrimary} />
-        )}
+        {props.iconType === 'Feather' && <Feather name={props.iconName} size={20} color={Colors.textPrimary} />}
+        {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={20} color={Colors.textPrimary} />}
+        {props.iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={props.iconName} size={20} color={Colors.textPrimary} />}
       </View>
       <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
       <Switch
@@ -253,6 +252,7 @@ export function NotificationSettingsScreen() {
 
         <View style={styles.allowSection}>
           <NotificationToggle
+            iconType="Feather"
             iconName="bell"
             title="Allow notifications"
             value={allowNotifications}
@@ -265,12 +265,14 @@ export function NotificationSettingsScreen() {
           description="Alerts for login, password resets, and changes to your two-step verification."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={securityEmail}
             onValueChange={setSecurityEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={securityPush}
@@ -283,12 +285,14 @@ export function NotificationSettingsScreen() {
           description="Notifications about where your money is."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={transfersEmail}
             onValueChange={setTransfersEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={transfersPush}
@@ -301,12 +305,14 @@ export function NotificationSettingsScreen() {
           description="Receive updates about the latest features and products."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={personalisedEmail}
             onValueChange={setPersonalisedEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={personalisedPush}
@@ -319,12 +325,14 @@ export function NotificationSettingsScreen() {
           description="A chance to share your thoughts, test new products, and earn rewards."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={feedbackEmail}
             onValueChange={setFeedbackEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={feedbackPush}
@@ -337,12 +345,14 @@ export function NotificationSettingsScreen() {
           description="Chances to get involved with our charity and fundraising projects."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={causesEmail}
             onValueChange={setCausesEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={causesPush}

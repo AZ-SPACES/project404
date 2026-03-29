@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ComponentProps } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 interface DetailItemProps {
-  iconName: string;
+  iconName: ComponentProps<typeof Feather>['name'];
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -45,7 +45,7 @@ export function PersonalDetailsScreen() {
       activeOpacity={0.7}
     >
       <View style={styles.iconContainer}>
-        <Feather name={iconName as any} size={22} color={Colors.textPrimary} />
+        <Feather name={iconName} size={22} color={Colors.textPrimary} />
       </View>
       <View style={styles.textContainer}>
         <Text style={[Typography.body, styles.itemTitle]}>{title}</Text>
@@ -82,6 +82,7 @@ export function PersonalDetailsScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>

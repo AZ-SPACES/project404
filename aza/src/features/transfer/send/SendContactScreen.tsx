@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -81,14 +81,12 @@ const ALL_CONTACTS: Contact[] = [
 
 
 
-export default function SendScreen({ navigation }: SendScreenProps) {
+type ContactItemProps = { contact: Contact; onPress: (contact: Contact) => void };
+
+function RecentContactItem({ contact, onPress }: ContactItemProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const RecentContactItem = ({ contact, onPress }: { contact: Contact; onPress: (contact: Contact) => void }) => (
+  return (
     <TouchableOpacity
       style={styles.recentItem}
       activeOpacity={0.7}
@@ -103,16 +101,16 @@ export default function SendScreen({ navigation }: SendScreenProps) {
           onError={() => {}}
         />
       </View>
-      <Text style={styles.recentName} numberOfLines={1}>
-        {contact.name}
-      </Text>
-      <Text style={styles.recentUsername} numberOfLines={1}>
-        {contact.username}
-      </Text>
+      <Text style={styles.recentName} numberOfLines={1}>{contact.name}</Text>
+      <Text style={styles.recentUsername} numberOfLines={1}>{contact.username}</Text>
     </TouchableOpacity>
   );
+}
 
-  const ContactRow = ({ contact, onPress }: { contact: Contact; onPress: (contact: Contact) => void }) => (
+function ContactRow({ contact, onPress }: ContactItemProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  return (
     <TouchableOpacity
       style={styles.contactRow}
       activeOpacity={0.7}
@@ -132,13 +130,21 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
     </TouchableOpacity>
   );
+}
 
-  const handleContactPress = (contact: Contact) => {
+export default function SendScreen({ navigation }: SendScreenProps) {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const isDark = Colors.background === '#121212';
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleContactPress = useCallback((contact: Contact) => {
     navigation.navigate('SendAmount', {
       name: contact.name,
       username: contact.username,
       avatar: contact.avatar });
-  };
+  }, [navigation]);
 
   const filteredContacts = searchQuery
     ? ALL_CONTACTS.filter(

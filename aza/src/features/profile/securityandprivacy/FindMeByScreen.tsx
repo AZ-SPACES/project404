@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { ComponentProps, useState, useRef, useEffect } from "react";
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,37 +14,42 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "FindMeBy">;
 
 
 
-interface SettingRowProps {
-  iconName?: string;
-  iconType?: "Feather" | "Ionicons" | "MaterialCommunityIcons" | "Custom";
+type SettingRowProps = (
+  | { iconType: "Feather"; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconType: "Ionicons"; iconName: ComponentProps<typeof Ionicons>['name'] }
+  | { iconType: "MaterialCommunityIcons"; iconName: ComponentProps<typeof MaterialCommunityIcons>['name'] }
+  | { iconType: "Custom"; iconName?: never }
+) & {
   title: string;
   subtitle: string;
   switchValue: boolean;
   onSwitchChange: (value: boolean) => void;
-}
+};
 
 export function FindMeByScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
-  const SettingRow = ({ iconName,iconType,title,subtitle,switchValue,onSwitchChange }: SettingRowProps) => (
+  const SettingRow = (props: SettingRowProps) => {
+    const { title, subtitle, switchValue, onSwitchChange } = props;
+    return (
     <View style={styles.row}>
       <View style={styles.iconContainer}>
-        {iconType === "Feather" && (
-          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        {props.iconType === "Feather" && (
+          <Feather name={props.iconName} size={20} color={Colors.textPrimary} />
         )}
-        {iconType === "Ionicons" && (
-          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+        {props.iconType === "Ionicons" && (
+          <Ionicons name={props.iconName} size={20} color={Colors.textPrimary} />
         )}
-        {iconType === "MaterialCommunityIcons" && (
+        {props.iconType === "MaterialCommunityIcons" && (
           <MaterialCommunityIcons
-            name={iconName as any}
+            name={props.iconName}
             size={22}
             color={Colors.textPrimary}
           />
         )}
-        {iconType === "Custom" && (
+        {props.iconType === "Custom" && (
           <Image
             source={require("../../../assets/aza-z.png")}
             style={{ width: 24, height: 24 }}
@@ -65,7 +70,8 @@ export function FindMeByScreen() {
         ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
       />
     </View>
-  );
+    );
+  };
 
   const navigation = useNavigation<NavigationProp>();
 
