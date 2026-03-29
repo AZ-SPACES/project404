@@ -39,12 +39,14 @@ export default function SendPinScreen({
   const { name, amount } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { verifyPasscode } = useAuth();
+  const { verifyPasscode, checkPinLockout, recordPinFailure, resetPinAttempts } = useAuth();
   const [pin, setPin] = useState<string>("");
   const [errorStatus, setErrorStatus] = useState(false);
+  const [lockedSeconds, setLockedSeconds] = useState(0);
   const inputRef = useRef<TextInput>(null);
   const scaleAnims = useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   const displayAmount = useMemo(() => amount.toFixed(2), [amount]);
 
@@ -58,32 +60,60 @@ export default function SendPinScreen({
     ]).start();
   }, [shakeAnim]);
 
-  // Focus keyboard on mount
+  const startCountdown = useCallback((seconds: number) => {
+    setLockedSeconds(seconds);
+    countdownRef.current = setInterval(() => {
+      setLockedSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  // Check for existing lockout on mount
   useEffect(() => {
+    checkPinLockout().then(({ isLocked, secondsRemaining }) => {
+      if (isLocked) {
+        startCountdown(secondsRemaining);
+      }
+    });
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [checkPinLockout, startCountdown]);
+
+  // Focus keyboard on mount (only when not locked)
+  useEffect(() => {
+    if (lockedSeconds > 0) return;
     const timer = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [lockedSeconds]);
 
   const handleCompletePin = useCallback(
     async (enteredPin: string) => {
       const isValid = await verifyPasscode(enteredPin);
       if (isValid) {
+        await resetPinAttempts();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         navigation.replace("SendSuccess", route.params);
       } else {
+        const { isLocked, secondsRemaining } = await recordPinFailure();
         setErrorStatus(true);
         startShake();
         setPin("");
+        if (isLocked) {
+          startCountdown(secondsRemaining);
+        }
       }
     },
-    [navigation, route.params, verifyPasscode, startShake],
+    [navigation, route.params, verifyPasscode, startShake, recordPinFailure, resetPinAttempts, startCountdown],
   );
 
   // Auto-submit when PIN is fully entered
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (pin.length === PIN_LENGTH) {
-      // Small delay for visual confirmation of the last digit
+    if (pin.length === PIN_LENGTH && lockedSeconds === 0) {
       timer = setTimeout(() => {
         handleCompletePin(pin);
       }, 300);
@@ -91,10 +121,11 @@ export default function SendPinScreen({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [pin, handleCompletePin]);
+  }, [pin, handleCompletePin, lockedSeconds]);
 
   const handleTextChange = useCallback(
     (text: string) => {
+      if (lockedSeconds > 0) return;
       if (errorStatus) setErrorStatus(false);
       // Only allow numbers and max length of 4
       const cleaned = text.replace(/[^0-9]/g, "").slice(0, PIN_LENGTH);
@@ -122,7 +153,7 @@ export default function SendPinScreen({
 
       setPin(cleaned);
     },
-    [pin.length, scaleAnims],
+    [pin.length, scaleAnims, errorStatus, lockedSeconds],
   );
 
   const renderSquares = () => {
@@ -210,6 +241,14 @@ export default function SendPinScreen({
             </Text>
 
             {renderSquares()}
+
+            {lockedSeconds > 0 ? (
+              <Text style={styles.lockoutText}>
+                Too many failed attempts.{"\n"}Try again in {Math.floor(lockedSeconds / 60)}:{String(lockedSeconds % 60).padStart(2, "0")}
+              </Text>
+            ) : errorStatus ? (
+              <Text style={styles.errorText}>Incorrect PIN. Try again.</Text>
+            ) : null}
           </View>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
@@ -314,6 +353,19 @@ function createStyles(Colors: ThemeColors) {
       height: 12,
       borderRadius: 6,
       backgroundColor: Colors.textPrimary,
+    },
+    errorText: {
+      marginTop: 20,
+      fontSize: 14,
+      color: Colors.error,
+      textAlign: "center",
+    },
+    lockoutText: {
+      marginTop: 20,
+      fontSize: 14,
+      color: Colors.error,
+      textAlign: "center",
+      lineHeight: 22,
     },
   });
 }

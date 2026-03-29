@@ -6,6 +6,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
 import { AuthProvider } from "./src/providers/AuthProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
+import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
@@ -15,6 +16,7 @@ function AppContent() {
       <NavigationContainer theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <RootNavigator />
       </NavigationContainer>
+      <PrivacyOverlay />
     </>
   );
 }
