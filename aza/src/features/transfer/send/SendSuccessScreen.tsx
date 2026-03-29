@@ -13,7 +13,7 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const { colors: Colors } = useAppTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const backgroundColor = isDark ? Colors.background : Colors.accent;
 
   const handleDone = () => {

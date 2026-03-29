@@ -32,14 +32,15 @@ export const LightColors = {
   black70: 'rgba(0, 0, 0, 0.7)',
   black80: 'rgba(0, 0, 0, 0.8)',
   black90: 'rgba(0, 0, 0, 0.9)',
+  isDark: false,
 } as const;
 
 export const DarkColors = {
   ...LightColors,
   primary:    '#174717',
   secondary:  '#B7EE7A',
-  accent:     '#2D3748', 
-  error:      '#F28B82', 
+  accent:     '#2D3748',
+  error:      '#F28B82',
   warning:    '#FFB74D',
   info:       '#8AB4F8',
   textPrimary:   '#F8F9FA',
@@ -47,16 +48,18 @@ export const DarkColors = {
   background: '#121212',
   surface:    '#1E1E1E',
   border:     '#3C4043',
+  isDark: true,
 } as const;
 
 export type ThemeColors = {
-  [K in keyof typeof LightColors]: string;
+  [K in keyof typeof LightColors]: K extends 'isDark' ? boolean : string;
 };
 
 export function useAppTheme() {
   const { activeColorScheme } = useDisplayContext();
-  const colors = activeColorScheme === 'dark' ? DarkColors : LightColors;
-  return { colors };
+  const isDark = activeColorScheme === 'dark';
+  const colors = isDark ? DarkColors : LightColors;
+  return { colors, isDark };
 }
 
 export const Typography = {

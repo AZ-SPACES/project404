@@ -15,6 +15,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useToast } from '../../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 
@@ -29,7 +31,7 @@ const DOC_TYPES: DocumentType[] = [
 
 export default function PEPProofOfWealthScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [docType, setDocType] = useState<DocumentType | null>(null);
@@ -208,7 +210,7 @@ export default function PEPProofOfWealthScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

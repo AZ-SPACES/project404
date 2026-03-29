@@ -31,7 +31,7 @@ interface Message {
 export default function ChatWithUsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const [inputText, setInputText] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -177,7 +177,7 @@ export default function ChatWithUsScreen() {
 }
 
 function createStyles(Colors: any) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

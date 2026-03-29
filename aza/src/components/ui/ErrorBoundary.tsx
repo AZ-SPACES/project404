@@ -1,10 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Dimensions, Platform } from 'react-native';
+import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LightColors as AppColors, Typography, Spacing, Radius } from '../../theme';
-
-const { height } = Dimensions.get('window');
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeColors, Typography, Spacing, Radius, LightColors, DarkColors } from '../../theme';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -27,6 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // In a production app, report to Sentry, Bugsnag, etc.
     console.error('Uncaught error:', error, errorInfo);
   }
 
@@ -42,51 +41,10 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <View style={styles.overlay}>
-          <StatusBar barStyle="light-content" />
-          <View style={styles.modal}>
-            <View style={styles.grabber} />
-            
-            <View style={styles.illustrationContainer}>
-              <View style={styles.tvFrame}>
-                <Ionicons name="tv-outline" size={80} color="#3C4043" />
-                <View style={styles.errorDot} />
-              </View>
-              <View style={styles.sparkContainer}>
-                <Ionicons name="flash" size={20} color={AppColors.error} />
-              </View>
-            </View>
-
-            <View style={styles.content}>
-              <Text style={styles.title}>Something went wrong</Text>
-              <Text style={styles.message}>
-                Don't worry, our best minds are on it. You may retry or check back soon!
-              </Text>
-
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={this.handleReset}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.buttonText}>Try again</Text>
-              </TouchableOpacity>
-              
-              {__DEV__ && (
-                <View style={styles.debugContainer}>
-                  <ScrollView 
-                    style={styles.errorScroll}
-                    horizontal={true}
-                    showsHorizontalScrollIndicator={false}
-                  >
-                    <Text style={styles.stackTrace}>
-                      {this.state.error?.name}: {this.state.error?.message}
-                    </Text>
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
+        <ErrorScreen 
+          error={this.state.error} 
+          onReset={this.handleReset} 
+        />
       );
     }
 
@@ -94,113 +52,168 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0E0F0C', // Match reference image background
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  modal: {
-    backgroundColor: '#1E1E1E', // Match dark modal color
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 24, // Consistent with reference image
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3C4043',
-  },
-  grabber: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#3C4043',
-    borderRadius: 2,
-    marginBottom: Spacing.xl,
-  },
-  illustrationContainer: {
-    width: 140,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  tvFrame: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorDot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: AppColors.error,
-    top: '40%',
-    left: '40%',
-    shadowColor: AppColors.error,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  sparkContainer: {
-    position: 'absolute',
-    right: 0,
-    bottom: 10,
-  },
-  content: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  message: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#9AA0A6',
-    textAlign: 'center',
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.sm,
-  },
-  button: {
-    backgroundColor: '#DFE1E5', // Accurate light gray button from image
-    width: '100%',
-    height: 56,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#121212',
-  },
-  debugContainer: {
-    width: '100%',
-    marginTop: Spacing.lg,
-    padding: Spacing.sm,
-    backgroundColor: '#121212',
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: '#3C4043',
-  },
-  errorScroll: {
-    width: '100%',
-  },
-  stackTrace: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 11,
-    color: '#F2F2F2',
-  },
-});
+function ErrorScreen({ error, onReset }: { error: Error | null; onReset: () => void }) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const Colors = isDark ? DarkColors : LightColors;
+  const [showDetails, setShowDetails] = useState(false);
+  const styles = React.useMemo(() => createStyles(Colors as any), [Colors]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      
+      <View style={styles.content}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+        </View>
+
+        <Text style={styles.title}>Application Error</Text>
+        <Text style={styles.message}>
+          A problem occurred that prevented the application from continuing. You can try to reload the app or contact support if the issue persists.
+        </Text>
+
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={onReset}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.primaryButtonText}>Reload Application</Text>
+          </TouchableOpacity>
+
+          {__DEV__ && (
+            <TouchableOpacity 
+              style={styles.secondaryButton} 
+              onPress={() => setShowDetails(!showDetails)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {showDetails ? 'Hide details' : 'Show technical details'}
+              </Text>
+              <Ionicons 
+                name={showDetails ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={Colors.textSecondary} 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {showDetails && __DEV__ && (
+          <View style={styles.debugContainer}>
+            <ScrollView style={styles.errorScroll} showsVerticalScrollIndicator={true}>
+              <Text style={styles.errorName}>{error?.name || 'Error'}</Text>
+              <Text style={styles.errorMessage}>{error?.message || 'No message available'}</Text>
+              {error?.stack && (
+                <Text style={styles.stackTrace}>{error.stack}</Text>
+              )}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Aza v1.0.0 • Session Error
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.xl,
+      maxWidth: 500,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    iconContainer: {
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      ...Typography.h2,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.sm,
+    },
+    message: {
+      ...Typography.bodyLg,
+      color: Colors.textSecondary,
+      lineHeight: 24,
+      marginBottom: Spacing.xl,
+    },
+    actions: {
+      gap: Spacing.md,
+    },
+    primaryButton: {
+      backgroundColor: Colors.textPrimary,
+      height: 52,
+      borderRadius: Radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    primaryButtonText: {
+      ...Typography.button,
+      color: Colors.white,
+    },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      height: 44,
+    },
+    secondaryButtonText: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      fontWeight: '500',
+    },
+    debugContainer: {
+      marginTop: Spacing.xl,
+      backgroundColor: Colors.surface,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      maxHeight: 300,
+    },
+    errorScroll: {
+      padding: Spacing.md,
+    },
+    errorName: {
+      ...Typography.body,
+      fontWeight: '700',
+      color: Colors.error,
+      marginBottom: 4,
+    },
+    errorMessage: {
+      ...Typography.body,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.md,
+    },
+    stackTrace: {
+      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+      fontSize: 12,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
+    footer: {
+      padding: Spacing.lg,
+      alignItems: 'center',
+    },
+    footerText: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      opacity: 0.7,
+    },
+  });
+}
 
 export default ErrorBoundary;

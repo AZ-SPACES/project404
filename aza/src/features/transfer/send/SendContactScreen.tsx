@@ -135,7 +135,7 @@ function ContactRow({ contact, onPress }: ContactItemProps) {
 export default function SendScreen({ navigation }: SendScreenProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -248,7 +248,7 @@ const AVATAR_SIZE = 64;
 const CONTACT_ROW_AVATAR = 44;
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

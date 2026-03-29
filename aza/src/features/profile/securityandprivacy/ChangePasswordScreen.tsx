@@ -8,6 +8,8 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 import { isValidPassword, getPasswordRules } from '../../../utils/validation';
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useToast } from '../../../providers/ToastProvider';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -19,7 +21,9 @@ export function ChangePasswordScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [newPasswordTouched, setNewPasswordTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
+  usePreventScreenCapture();
   const rules = getPasswordRules(newPassword);
   const isFormValid = currentPassword.trim().length > 0 && isValidPassword(newPassword);
 
@@ -28,7 +32,10 @@ export function ChangePasswordScreen() {
     setIsLoading(true);
     try {
       // TODO: call change-password API, then navigate on success
+      showToast('Password updated successfully', 'success');
       navigation.goBack();
+    } catch {
+      showToast('Failed to update password. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +44,7 @@ export function ChangePasswordScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar 
-        barStyle={Colors.background === '#121212' ? 'light-content' : 'dark-content'} 
+        barStyle={Colors.isDark ? 'light-content' : 'dark-content'} 
         backgroundColor={Colors.background} 
       />
       
@@ -132,7 +139,7 @@ export function ChangePasswordScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
     safeArea: {
       flex: 1,

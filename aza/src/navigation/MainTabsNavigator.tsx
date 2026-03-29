@@ -7,7 +7,6 @@ import {
   Platform,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createNativeBottomTabNavigator } from "@react-navigation/bottom-tabs/unstable";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
@@ -22,8 +21,7 @@ import {
   Radius,
 } from "../theme";
 
-const isIOS = Platform.OS === "ios";
-const Tab = isIOS ? createNativeBottomTabNavigator() : createBottomTabNavigator();
+const Tab = createBottomTabNavigator();
 
 export default function MainTabsNavigator() {
   const { colors: Colors } = useAppTheme();
@@ -35,17 +33,8 @@ export default function MainTabsNavigator() {
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
-        ...(isIOS
-          ? {
-              tabBarControllerMode: "tabBar",
-              tabBarStyle: {
-                backgroundColor: Colors.background,
-              },
-            }
-          : {
-              tabBarStyle: styles.tabBar,
-              tabBarLabelStyle: styles.tabBarLabel,
-            }),
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
       }}
     >
       <Tab.Screen
@@ -53,63 +42,48 @@ export default function MainTabsNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: "Home",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "house" } as any)
-            : ({ color, size }: { color: string; size: number }) => (
-                <Ionicons name="home-outline" size={size || 24} color={color} />
-              ),
-        } as any}
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="home-outline" size={size || 24} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Contacts"
         component={ContactsScreen}
         options={{
           tabBarLabel: "Contacts",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "person" } as any)
-            : ({ color, size }: { color: string; size: number }) => (
-                <Feather name="user" size={size || 24} color={color} />
-              ),
-        } as any}
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Feather name="user" size={size || 24} color={color} />
+          ),
+        }}
       />
 
       <Tab.Screen
         name="ScanTab"
         component={ScanScreen}
-        options={
-          (isIOS
-            ? {
-                tabBarLabel: "Scan",
-                tabBarIcon: { type: "sfSymbol", name: "qrcode.viewfinder" },
-              }
-            : {
-                tabBarLabel: "",
-                tabBarButton: ({
-                  onPress,
-                  accessibilityState,
-                  accessibilityLabel,
-                }: any) => (
-                  <View
-                    style={styles.centerButtonWrapper}
-                    pointerEvents="box-none"
-                  >
-                    <TouchableOpacity
-                      onPress={onPress}
-                      accessibilityState={accessibilityState}
-                      accessibilityLabel={accessibilityLabel}
-                      style={styles.centerButton}
-                      activeOpacity={0.9}
-                    >
-                      <Ionicons
-                        name="qr-code-outline"
-                        size={24}
-                        color={Colors.white}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ),
-              }) as any
-        }
+        options={{
+          tabBarLabel: "",
+          tabBarButton: (props: any) => (
+            <View
+              style={styles.centerButtonWrapper}
+              pointerEvents="box-none"
+            >
+              <TouchableOpacity
+                onPress={props.onPress ?? undefined}
+                accessibilityState={props.accessibilityState}
+                accessibilityLabel={props.accessibilityLabel}
+                style={styles.centerButton}
+                activeOpacity={0.9}
+              >
+                <Ionicons
+                  name="qr-code-outline"
+                  size={24}
+                  color={Colors.white}
+                />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
       />
 
       <Tab.Screen
@@ -117,28 +91,24 @@ export default function MainTabsNavigator() {
         component={ChatContactsScreen}
         options={{
           tabBarLabel: "Chat",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "bubble.left" } as any)
-            : ({ color, size }: { color: string; size: number }) => (
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={size || 24}
-                  color={color}
-                />
-              ),
-        } as any}
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons
+              name="chatbubble-outline"
+              size={size || 24}
+              color={color}
+            />
+          ),
+        }}
       />
       <Tab.Screen
         name="Hub"
         component={HubScreen}
         options={{
           tabBarLabel: "Hub",
-          tabBarIcon: isIOS
-            ? ({ type: "sfSymbol", name: "square.grid.2x2" } as any)
-            : ({ color, size }: { color: string; size: number }) => (
-                <Ionicons name="apps-outline" size={size || 24} color={color} />
-              ),
-        } as any}
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <Ionicons name="apps-outline" size={size || 24} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

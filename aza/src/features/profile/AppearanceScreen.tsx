@@ -162,7 +162,7 @@ export function AppearanceScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle={Colors.background === '#121212' ? 'light-content' : 'dark-content'} backgroundColor={Colors.white} />
+      <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.white} />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -261,7 +261,7 @@ export function AppearanceScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const mainBg = isDark ? Colors.background : Colors.white;
   const contentBg = isDark ? Colors.surface : Colors.white;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, TextInput, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, TextInput, Image, Dimensions, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ type MiniApp = {
   name: string;
   logo: string;
   backgroundColor?: string;
+  url: string;
 }
 
 const MINI_APPS: MiniApp[] = [
@@ -20,25 +21,29 @@ const MINI_APPS: MiniApp[] = [
     id: 'bolt', 
     name: 'Bolt', 
     logo: 'https://1000logos.net/wp-content/uploads/2021/06/Bolt-Logo-1536x966.png',
-    backgroundColor: '#ffffffff'
+    backgroundColor: '#ffffffff',
+    url: 'https://bolt.eu'
   },
   { 
     id: 'jumia', 
     name: 'Jumia', 
     logo: 'https://1000logos.net/wp-content/uploads/2021/02/Jumia-Logo.png',
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#FFFFFF',
+    url: 'https://www.jumia.com.gh'
   },
   { 
     id: 'aliexpress', 
     name: 'AliExpress', 
     logo: 'https://1000logos.net/wp-content/uploads/2020/04/AliExpress-Logo.png',
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#FFFFFF',
+    url: 'https://aliexpress.com'
   },
   { 
     id: 'kfc', 
     name: 'KFC', 
     logo: 'https://1000logos.net/wp-content/uploads/2017/03/KFC-Logo.png',
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#FFFFFF',
+    url: 'https://www.kfc.com.gh'
   },
 ];
 
@@ -46,6 +51,13 @@ export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { homeBackground } = useDisplayContext();
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const filteredApps = React.useMemo(() => {
+    return MINI_APPS.filter(app => 
+      app.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   return (
     <View style={styles.container}>
@@ -74,13 +86,22 @@ export default function HubScreen() {
                   placeholder="Search mini apps..."
                   placeholderTextColor={Colors.textSecondary}
                   style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
             </View>
 
             <View style={styles.grid}>
-              {MINI_APPS.map((app) => (
-                <TouchableOpacity key={app.id} style={styles.appItem} activeOpacity={0.8}>
+              {filteredApps.map((app) => (
+                <TouchableOpacity 
+                  key={app.id} 
+                  style={styles.appItem} 
+                  activeOpacity={0.8}
+                  onPress={() => Linking.openURL(app.url)}
+                >
                   <View style={[styles.logoCard, { backgroundColor: app.backgroundColor || Colors.white }]}>
                     <Image 
                       source={{ uri: app.logo }} 
@@ -100,7 +121,7 @@ export default function HubScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -118,7 +139,7 @@ function createStyles(Colors: ThemeColors) {
     },
     contentContainer: {
       flex: 1,
-      backgroundColor: isDark ? Colors.background : '#F0F4EF',
+      backgroundColor: isDark ? Colors.background : Colors.surface,
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
       overflow: 'hidden',
@@ -133,7 +154,7 @@ function createStyles(Colors: ThemeColors) {
     searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? Colors.surface : Colors.white,
       borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: Colors.border,

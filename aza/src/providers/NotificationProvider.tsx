@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
+import { useAuth } from './AuthProvider';
 
 import type { Notification, NotificationPermissionsStatus } from 'expo-notifications';
 
@@ -13,7 +14,8 @@ type NotificationContextType = {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  
+  const { userToken } = useAuth();
+
   useEffect(() => {
     // Dynamically require to avoid boot-time side-effects in Expo Go Android
     try {
@@ -30,6 +32,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.warn('NotificationProvider: Could not initialize notifications', e);
     }
   }, []);
+
+  // Cancel all pending local notifications on logout
+  useEffect(() => {
+    if (userToken === null) {
+      try {
+        const Notifications = require('expo-notifications');
+        Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+        Notifications.dismissAllNotificationsAsync().catch(() => {});
+      } catch (e) {
+        // Notifications not available on this platform
+      }
+    }
+  }, [userToken]);
 
   const checkPermissions = async () => {
     const Notifications = require('expo-notifications');

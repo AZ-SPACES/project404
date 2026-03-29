@@ -160,7 +160,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: { 
     flex: 1, 

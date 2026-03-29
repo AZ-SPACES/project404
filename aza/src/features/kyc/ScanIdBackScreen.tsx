@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
+import { useToast } from '../../providers/ToastProvider';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -35,6 +36,7 @@ const ZOOM_SCALE = 1 / 0.85;
 export default function ScanIdBackScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdBackRouteProp>();
@@ -112,9 +114,7 @@ export default function ScanIdBackScreen() {
         }
       }
     } catch (e) {
-      console.error("Camera capture failed", e);
-      setCapturedImage("placeholder");
-      setIsModalVisible(true);
+      showToast('Camera capture failed. Please try again.', 'error');
     }
   };
 
@@ -164,6 +164,8 @@ export default function ScanIdBackScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <MaterialIcons
                 name="chevron-left"
@@ -305,7 +307,7 @@ export default function ScanIdBackScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

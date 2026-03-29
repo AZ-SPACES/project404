@@ -27,7 +27,7 @@ export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -230,7 +230,7 @@ function CheckboxRow({
 
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

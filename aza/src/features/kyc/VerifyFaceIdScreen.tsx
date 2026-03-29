@@ -25,7 +25,7 @@ type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
 export default function VerifyFaceIdScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyFaceIdRouteProp>();
@@ -127,7 +127,7 @@ export default function VerifyFaceIdScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

@@ -20,19 +20,16 @@ const { height } = Dimensions.get("window");
 
 
 
-export default function HomeScreen() {
+type ActionTargetProps = {
+  icon: ComponentProps<typeof Feather>["name"];
+  label: string;
+  onPress?: () => void;
+};
+
+function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { homeBackground } = useDisplayContext();
-  const { displayName, profileImageUri } = useProfile();
-
-  const ActionTarget = ({ icon, label, onPress }: {
-    icon: ComponentProps<typeof Feather>["name"];
-    label: string;
-    onPress?: () => void;
-  }) => (
+  return (
     <TouchableOpacity
       style={styles.actionContainer}
       activeOpacity={0.7}
@@ -47,6 +44,25 @@ export default function HomeScreen() {
       <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
+export default function HomeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { homeBackground } = useDisplayContext();
+  const { displayName, profileImageUri } = useProfile();
+
+  const firstName = displayName?.trim().split(" ")[0];
+  const greeting = getGreeting();
 
   return (
     <View style={styles.container}>
@@ -69,7 +85,7 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Typography.h1, { color: Colors.white }]}>
-              {displayName ? `Hi, ${displayName.split(' ')[0]}` : 'Good Morning'}
+              {`${greeting}${firstName ? `, ${firstName}` : ""}`}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity
@@ -153,7 +169,7 @@ export default function HomeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

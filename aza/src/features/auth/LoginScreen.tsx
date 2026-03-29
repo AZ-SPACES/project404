@@ -21,6 +21,8 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../providers/AuthProvider';
 import { Alert } from 'react-native';
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useToast } from '../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../utils/validation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -38,6 +40,8 @@ const LoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
+  const { showToast } = useToast();
+  usePreventScreenCapture();
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
   const credentialError = touched && !credentialValid
@@ -78,7 +82,7 @@ const LoginScreen: React.FC = () => {
         login('biometric-token', true, true);
       }
     } catch (e) {
-      console.error(e);
+      showToast('Biometric authentication failed. Please try again.', 'error');
     } finally {
       setIsBiometricLoading(false);
     }
@@ -132,11 +136,12 @@ const LoginScreen: React.FC = () => {
               value={useEmail ? email : phoneNumber}
               onChangeText={useEmail
                 ? (t) => setEmail(sanitizeText(t))
-                : setPhoneNumber}
+                : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
               onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
               accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
+              maxLength={useEmail ? undefined : 10}
             />
           </View>
           {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
@@ -216,7 +221,7 @@ const LoginScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

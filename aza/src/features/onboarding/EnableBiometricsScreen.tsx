@@ -21,7 +21,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiome
 
 export default function EnableBiometricsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { setPasscode, toggleBiometrics } = useAuth();
@@ -130,7 +130,7 @@ export default function EnableBiometricsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

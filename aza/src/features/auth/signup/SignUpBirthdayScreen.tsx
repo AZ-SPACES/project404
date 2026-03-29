@@ -24,12 +24,12 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirth
 
 export default function SignUpBirthdayScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { login } = useAuth();
   const { data, update, reset } = useSignUp();
-  const { setDisplayName } = useProfile();
+  const { setDisplayName, setEmail, setPhone } = useProfile();
 
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -59,9 +59,11 @@ export default function SignUpBirthdayScreen() {
   const handleNext = useCallback(async () => {
     const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
     if (fullName) await setDisplayName(fullName);
+    if (data.email) await setEmail(data.email);
+    if (data.phoneNumber) await setPhone(data.phoneNumber);
     login("signup-token-placeholder", false, false);
     reset();
-  }, [login, reset, data.firstName, data.lastName, setDisplayName]);
+  }, [login, reset, data.firstName, data.lastName, data.email, data.phoneNumber, setDisplayName, setEmail, setPhone]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -146,7 +148,7 @@ export default function SignUpBirthdayScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
