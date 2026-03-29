@@ -15,99 +15,22 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'me' | 'other';
-  time: string;
-}
-
-// ----------------------------------------------------------------------------
-// Chat Header Component
-// ----------------------------------------------------------------------------
-function ChatHeader({ name, avatar, online, onBack }: { name: string; avatar: string; online: boolean; onBack: () => void }) {
-  const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
-  const styles = useMemo(() => createHeaderStyles(Colors, isDark), [Colors, isDark]);
-
-  return (
-    <View style={styles.header}>
-      <TouchableOpacity style={styles.iconButton} onPress={onBack} activeOpacity={0.8}>
-        <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-      </TouchableOpacity>
-      
-      <View style={styles.profileInfo}>
-        <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
-        <View style={styles.nameContainer}>
-          <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          {online && <Text style={styles.onlineText}>online</Text>}
-        </View>
-      </View>
-
-      <View style={styles.rightActions}>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-          <Feather name="video" size={20} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-          <Feather name="more-horizontal" size={20} color={Colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-// ----------------------------------------------------------------------------
-// Chat Message Component
-// ----------------------------------------------------------------------------
-function ChatMessageBubble({ message }: { message: Message }) {
-  const { colors: Colors } = useAppTheme();
-  const styles = useMemo(() => createMessageStyles(Colors), [Colors]);
-  const isMe = message.sender === 'me';
-
-  return (
-    <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}>
-      <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-        <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>
-          {message.text}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-// ----------------------------------------------------------------------------
-// Chat Input Component
-// ----------------------------------------------------------------------------
-function ChatInputArea({ message, setMessage, onSend }: { message: string, setMessage: (val: string) => void, onSend: () => void }) {
-  const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
-  const styles = useMemo(() => createInputStyles(Colors, isDark), [Colors, isDark]);
-
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-        <Feather name="plus" size={24} color={Colors.white} />
-      </TouchableOpacity>
-
-      <View style={styles.inputWrapper}>
-        <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
-        <TextInput
-          style={styles.textInput}
-          placeholder="Type here"
-          placeholderTextColor={Colors.textSecondary}
-          value={message}
-          onChangeText={setMessage}
-          multiline
-          accessibilityLabel="Message input"
-        />
-      </View>
-
-      <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>
-        <Feather name="send" size={20} color={Colors.white} style={styles.sendIcon} />
-      </TouchableOpacity>
-    </View>
-  );
-}
+import { ChatHeader } from '../../components/chat/ChatHeader';
+import { ChatMessageBubble, ChatTypingIndicator } from '../../components/chat/ChatMessageBubble';
+import { ChatInputArea } from '../../components/chat/ChatInputArea';
+import { ChatAttachmentModal } from '../../components/chat/ChatAttachmentModal';
+import { ChatMoreModal } from '../../components/chat/ChatMoreModal';
+import {
+  Message,
+  MoreAction,
+  MenuAnchor,
+  AttachmentAnchor,
+  INITIAL_MESSAGES,
+  AUTO_REPLIES,
+  isSameDay,
+  formatDateHeader,
+  formatTime,
+} from '../../components/chat/chatTypes';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -115,6 +38,7 @@ function ChatInputArea({ message, setMessage, onSend }: { message: string, setMe
 export function ChatScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
+  const styles = useMemo(() => createScreenStyles(Colors, isDark), [Colors, isDark]);
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
   const { name, avatar, online } = route.params;

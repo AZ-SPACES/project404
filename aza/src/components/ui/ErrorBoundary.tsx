@@ -1,8 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeColors, Typography, Spacing, Radius, LightColors, DarkColors } from '../../theme';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -53,9 +53,11 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 function ErrorScreen({ error, onReset }: { error: Error | null; onReset: () => void }) {
-  const { colors: Colors, isDark } = useAppTheme();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const Colors = isDark ? DarkColors : LightColors;
   const [showDetails, setShowDetails] = useState(false);
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const styles = React.useMemo(() => createStyles(Colors as any), [Colors]);
 
   return (
     <SafeAreaView style={styles.container}>
