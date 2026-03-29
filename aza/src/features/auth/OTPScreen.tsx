@@ -160,7 +160,7 @@ const OTPScreen: React.FC = () => {
               borderRadius={30} // completely rounded
               paddingVertical={16}
               fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontWeight={Typography.button.fontWeight}
             />
         </View>
       </KeyboardAvoidingView>
@@ -204,7 +204,7 @@ function createStyles(Colors: ThemeColors) {
   },
   title: {
     fontSize: Typography.h1.fontSize,
-    fontWeight: Typography.h1.fontWeight as any,
+    fontWeight: Typography.h1.fontWeight,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },

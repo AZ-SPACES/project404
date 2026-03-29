@@ -133,6 +133,7 @@ const LoginScreen: React.FC = () => {
               onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
+              accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
             />
           </View>
           {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
@@ -160,6 +161,7 @@ const LoginScreen: React.FC = () => {
                 onBlur={() => setTouched(true)}
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
+                accessibilityLabel="Password"
               />
               <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                 <MaterialIcons

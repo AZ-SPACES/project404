@@ -118,7 +118,7 @@ export default function VerifyFaceIdScreen() {
             borderRadius={30}
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontWeight={Typography.button.fontWeight}
           />
         </View>
       </View>

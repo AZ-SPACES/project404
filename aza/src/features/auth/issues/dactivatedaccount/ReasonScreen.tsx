@@ -134,7 +134,7 @@ export default function Reason() {
             borderRadius={30}
             paddingVertical={16}
             fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontWeight={Typography.button.fontWeight}
           />
         </View>
 
