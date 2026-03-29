@@ -234,7 +234,20 @@ export default function ContactsScreen() {
                   </View>
 
                   <View style={styles.actionItem}>
-                    <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8}>
+                    <TouchableOpacity
+                      style={styles.actionCircleButton}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        if (selectedRecipient) {
+                          closeSheet();
+                          navigation.navigate("ContactsProfile", {
+                            name: selectedRecipient.name,
+                            username: selectedRecipient.username,
+                            avatar: selectedRecipient.avatar,
+                          });
+                        }
+                      }}
+                    >
                       <Feather name="user" size={24} color={Colors.secondary} />
                     </TouchableOpacity>
                     <Text style={styles.actionLabel}>View</Text>
