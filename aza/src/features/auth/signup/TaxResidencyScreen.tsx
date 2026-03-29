@@ -335,7 +335,7 @@ export default function TaxResidencyScreen() {
               textColor={Colors.secondary}
               borderRadius={Radius.sm}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
+              fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />

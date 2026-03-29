@@ -285,7 +285,7 @@ export default function SelfieScanScreen() {
                 textColor={Colors.secondary}
                 borderRadius={10}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
               <View style={{ height: Spacing.md }} />
               <Button
@@ -295,7 +295,7 @@ export default function SelfieScanScreen() {
                 textColor={Colors.primary}
                 borderRadius={10}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
             </View>
           </View>

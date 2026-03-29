@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useProfile } from '../../providers/ProfileProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -14,7 +15,8 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const userHandle = "naaddo";
+  const { displayName, profileImageUri } = useProfile();
+  const userHandle = "naaddo"; // TODO: replace with user handle from backend
   const profileLink = `aza.me/${userHandle}`;
 
   const handleShare = async () => {
@@ -52,15 +54,16 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
         {/* User Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>Nana Akufo-Addo</Text>
+            <Text style={styles.userName}>{displayName || 'Your Name'}</Text>
             <View style={styles.handleBadge}>
               <Text style={styles.userHandle}>@{userHandle}</Text>
             </View>
           </View>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/3310695/pexels-photo-3310695.jpeg' }} 
-            style={styles.avatar} 
-          />
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.avatar} accessibilityLabel="Profile photo" />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          )}
         </View>
 
         {/* Main QR Content */}
