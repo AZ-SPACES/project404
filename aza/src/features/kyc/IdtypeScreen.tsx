@@ -160,6 +160,9 @@ export default function IdtypeScreen() {
                     ]}
                     onPress={() => handleDocumentSelect(item)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[
                       styles.optionCardText,

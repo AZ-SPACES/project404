@@ -182,6 +182,8 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 30,
     borderWidth: 2,
     borderColor: Colors.white },
+  avatarPlaceholder: {
+    backgroundColor: Colors.surface },
   mainContent: {
     flex: 1,
     alignItems: 'center',

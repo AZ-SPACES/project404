@@ -27,15 +27,12 @@ type SettingRowProps = (
   onSwitchChange?: (value: boolean) => void;
 };
 
-export function SecurityAndPrivacyScreen() {
+function SettingRow(props: SettingRowProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { isBiometricsEnabled, toggleBiometrics } = useAuth();
-
-  const SettingRow = (props: SettingRowProps) => {
-    const { title, subtitle, onPress, showSwitch, switchValue, onSwitchChange } = props;
-    return (
+  const { title, subtitle, onPress, showSwitch, switchValue, onSwitchChange } = props;
+  return (
     <TouchableOpacity
       style={styles.row}
       onPress={onPress}
@@ -59,13 +56,21 @@ export function SecurityAndPrivacyScreen() {
           trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
           thumbColor={Colors.white}
           ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+          accessibilityRole="switch"
+          accessibilityLabel={title}
         />
       ) : (
         <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
       )}
     </TouchableOpacity>
-    );
-  };
+  );
+}
+
+export function SecurityAndPrivacyScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.background === '#121212';
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { isBiometricsEnabled, toggleBiometrics } = useAuth();
 
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;

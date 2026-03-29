@@ -20,19 +20,16 @@ const { height } = Dimensions.get("window");
 
 
 
-export default function HomeScreen() {
+type ActionTargetProps = {
+  icon: ComponentProps<typeof Feather>["name"];
+  label: string;
+  onPress?: () => void;
+};
+
+function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { homeBackground } = useDisplayContext();
-  const { displayName, profileImageUri } = useProfile();
-
-  const ActionTarget = ({ icon, label, onPress }: {
-    icon: ComponentProps<typeof Feather>["name"];
-    label: string;
-    onPress?: () => void;
-  }) => (
+  return (
     <TouchableOpacity
       style={styles.actionContainer}
       activeOpacity={0.7}
@@ -47,6 +44,15 @@ export default function HomeScreen() {
       <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );
+}
+
+export default function HomeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { homeBackground } = useDisplayContext();
+  const { displayName, profileImageUri } = useProfile();
 
   return (
     <View style={styles.container}>
