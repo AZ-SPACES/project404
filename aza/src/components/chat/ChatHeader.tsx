@@ -12,6 +12,7 @@ type ChatHeaderProps = {
   avatar: string;
   online: boolean;
   onBack: () => void;
+  onProfilePress?: () => void;
   isMenuOpen: boolean;
   onMorePress: (anchor: MenuAnchor) => void;
 };
@@ -24,6 +25,7 @@ export const ChatHeader = memo(function ChatHeader({
   avatar,
   online,
   onBack,
+  onProfilePress,
   isMenuOpen,
   onMorePress,
 }: ChatHeaderProps) {
@@ -47,13 +49,18 @@ export const ChatHeader = memo(function ChatHeader({
         <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
       </TouchableOpacity>
 
-      <View style={styles.profileInfo}>
+      <TouchableOpacity
+        style={styles.profileInfo}
+        activeOpacity={0.7}
+        onPress={onProfilePress}
+        disabled={!onProfilePress}
+      >
         <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
         <View style={styles.nameContainer}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {online && <Text style={styles.onlineText}>online</Text>}
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.rightActions}>
         <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
