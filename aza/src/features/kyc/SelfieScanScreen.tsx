@@ -20,6 +20,7 @@ import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -41,6 +42,7 @@ type FeedbackState =
 export default function SelfieScanScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SelfieScanRouteProp>();
@@ -109,9 +111,7 @@ export default function SelfieScanScreen() {
         }
       }
     } catch (e) {
-      console.error("Selfie capture failed", e);
-      setCapturedImage("placeholder");
-      setIsModalVisible(true);
+      showToast('Selfie capture failed. Please try again.', 'error');
     }
   };
 
@@ -203,6 +203,8 @@ export default function SelfieScanScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <MaterialIcons
                 name="chevron-left"

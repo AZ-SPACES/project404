@@ -136,11 +136,12 @@ const LoginScreen: React.FC = () => {
               value={useEmail ? email : phoneNumber}
               onChangeText={useEmail
                 ? (t) => setEmail(sanitizeText(t))
-                : setPhoneNumber}
+                : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
               onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
               accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
+              maxLength={useEmail ? undefined : 10}
             />
           </View>
           {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
