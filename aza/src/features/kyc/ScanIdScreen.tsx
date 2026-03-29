@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ScanId">;
 type ScanIdRouteProp = RouteProp<RootStackParamList, "ScanId">;
@@ -30,6 +31,7 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 const ZOOM_SCALE = 1 / 0.85;
 
 export default function ScanIdScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();

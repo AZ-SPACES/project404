@@ -21,6 +21,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../providers/AuthProvider';
 import { Alert } from 'react-native';
+import { isValidEmail, isValidPhone, sanitizeText } from '../../utils/validation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -33,9 +34,19 @@ const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [touched, setTouched] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
 
+  const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
+  const credentialError = touched && !credentialValid
+    ? useEmail ? 'Enter a valid email address' : 'Enter a valid phone number'
+    : null;
+  const passwordError = touched && password.trim().length === 0 ? 'Password is required' : null;
+  const isFormValid = credentialValid && password.trim().length > 0;
+
   const handleLogin = () => {
+    setTouched(true);
+    if (!isFormValid) return;
     navigation.navigate('OTP', { isLogin: true });
     // TODO: implement login logic
   };
@@ -52,7 +63,7 @@ const LoginScreen: React.FC = () => {
       
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to aza',
-        fallbackLabel: 'Use Passcode',
+        disableDeviceFallback: true,
       });
       
       if (result.success) {
@@ -110,11 +121,15 @@ const LoginScreen: React.FC = () => {
               placeholder={useEmail ? 'Email Address' : 'Phone Number'}
               placeholderTextColor={Colors.textSecondary}
               value={useEmail ? email : phoneNumber}
-              onChangeText={useEmail ? setEmail : setPhoneNumber}
+              onChangeText={useEmail
+                ? (t) => setEmail(sanitizeText(t))
+                : setPhoneNumber}
+              onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
             />
           </View>
+          {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
 
           <TouchableOpacity 
             onPress={toggleInputMode} 
@@ -136,6 +151,7 @@ const LoginScreen: React.FC = () => {
                 placeholderTextColor={Colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}
+                onBlur={() => setTouched(true)}
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
               />
@@ -147,6 +163,7 @@ const LoginScreen: React.FC = () => {
                 />
               </TouchableOpacity>
             </View>
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           </View>
         </View>
 
@@ -260,6 +277,11 @@ function createStyles(Colors: ThemeColors) {
     fontWeight: '600',
     color: Colors.primary,
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   footer: {
     paddingBottom: Spacing.lg,

@@ -18,6 +18,8 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { isValidPhone } from "../../../utils/validation";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpNumber">;
 
@@ -26,11 +28,14 @@ export default function SignUpNumberScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const { data, update } = useSignUp();
+  const [touched, setTouched] = useState(false);
+
+  const phoneError = touched && data.phoneNumber.length > 0 && !isValidPhone(data.phoneNumber)
+    ? "Enter a valid phone number"
+    : null;
 
   const handleNext = () => {
-    // Navigate to next screen, e.g. OTP verification
-    // navigation.navigate('SignUpOTP'); or similar
     navigation.navigate("SignUpEmail");
   };
 
@@ -74,8 +79,9 @@ export default function SignUpNumberScreen() {
                 style={styles.input}
                 placeholder="000 000 0000"
                 placeholderTextColor={Colors.textSecondary}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
+                value={data.phoneNumber}
+                onChangeText={(t) => update({ phoneNumber: t })}
+                onBlur={() => setTouched(true)}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoFocus
@@ -83,6 +89,7 @@ export default function SignUpNumberScreen() {
                 selectionColor={Colors.primary}
               />
             </View>
+            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
           </View>
 
           {/* Footer */}
@@ -96,7 +103,7 @@ export default function SignUpNumberScreen() {
               paddingVertical={16}
               fontSize={Number(Typography.button.fontSize)}
               fontWeight={Typography.button.fontWeight as any}
-              disabled={phoneNumber.trim().length === 0}
+              disabled={!isValidPhone(data.phoneNumber)}
             />
           </View>
         </KeyboardAvoidingView>
@@ -169,6 +176,11 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

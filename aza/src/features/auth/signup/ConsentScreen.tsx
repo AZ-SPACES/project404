@@ -19,8 +19,8 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
-const TERMS_URL = "";
-const PRIVACY_URL = "";
+const TERMS_URL = ""; // TODO: add production URL
+const PRIVACY_URL = ""; // TODO: add production URL
 
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
@@ -41,11 +41,11 @@ export default function ConsentScreen() {
   const isValid = agreedToTerms && agreedToPrivacy;
 
   const handleOpenTerms = () => {
-    Linking.openURL(TERMS_URL).catch(() => {});
+    if (TERMS_URL) Linking.openURL(TERMS_URL).catch(() => {});
   };
 
   const handleOpenPrivacy = () => {
-    Linking.openURL(PRIVACY_URL).catch(() => {});
+    if (PRIVACY_URL) Linking.openURL(PRIVACY_URL).catch(() => {});
   };
 
   const handleContinue = () => {

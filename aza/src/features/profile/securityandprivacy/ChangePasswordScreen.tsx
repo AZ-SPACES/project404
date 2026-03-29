@@ -5,6 +5,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
+import { isValidPassword, getPasswordRules } from '../../../utils/validation';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -14,9 +15,14 @@ export function ChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+
+  const rules = getPasswordRules(newPassword);
+  const isFormValid = currentPassword.trim().length > 0 && isValidPassword(newPassword);
 
   const handleUpdatePassword = () => {
-    // Logic to update password
+    if (!isFormValid) return;
+    // TODO: send to backend
     navigation.goBack();
   };
 
@@ -80,6 +86,7 @@ export function ChangePasswordScreen() {
                   style={styles.input}
                   value={newPassword}
                   onChangeText={setNewPassword}
+                  onBlur={() => setNewPasswordTouched(true)}
                   secureTextEntry={!showNewPassword}
                   placeholder=""
                 />
@@ -87,17 +94,27 @@ export function ChangePasswordScreen() {
                   <Feather name={showNewPassword ? "eye-off" : "eye"} size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
+              {newPasswordTouched && newPassword.length > 0 && (
+                <View style={styles.rulesContainer}>
+                  {rules.map((r) => (
+                    <Text key={r.label} style={[styles.ruleText, r.met ? styles.ruleMet : styles.ruleUnmet]}>
+                      {r.met ? '✓' : '✗'} {r.label}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button 
-            title="Change password" 
+          <Button
+            title="Change password"
             onPress={handleUpdatePassword}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             borderRadius={Radius.full}
+            disabled={!isFormValid}
           />
         </View>
       </KeyboardAvoidingView>
@@ -190,6 +207,19 @@ function createStyles(Colors: ThemeColors) {
       flex: 1,
       ...Typography.bodyLg,
       color: Colors.textPrimary
+    },
+    rulesContainer: {
+      marginTop: 8,
+      gap: 2,
+    },
+    ruleText: {
+      fontSize: 12,
+    },
+    ruleMet: {
+      color: '#22C55E',
+    },
+    ruleUnmet: {
+      color: '#D1222E',
     },
     footer: {
       padding: Spacing.lg,

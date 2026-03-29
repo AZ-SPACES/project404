@@ -81,9 +81,7 @@ const ResetOTPScreen: React.FC = () => {
   };
 
   const handleVerify = () => {
-    console.log("Reset OTP entered:", otp.join(""));
-    // Navigate to ResetPassword after successful OTP verification
-    //navigation.navigate('');
+    // TODO: send otp.join('') to backend for verification, then navigate to ResetPassword
   };
 
   const handleClose = () => {
@@ -126,7 +124,7 @@ const ResetOTPScreen: React.FC = () => {
                     onChangeText={(text) => handleOtpChange(text, index)}
                     onKeyPress={(e) => handleKeyPress(e, index)}
                     keyboardType="number-pad"
-                    maxLength={6}
+                    maxLength={1}
                     autoFocus={index === 0}
                     cursorColor={Colors.primary}
                   />

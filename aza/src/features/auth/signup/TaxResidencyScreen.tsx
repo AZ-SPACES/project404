@@ -20,6 +20,7 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TaxResidency">;
 
@@ -33,22 +34,16 @@ const uniqueNames = Array.from(new Set(allNames));
 uniqueNames.sort((a, b) => a.localeCompare(b));
 const NATIONALITIES = [...uniqueNames, "Other"];
 
-type YesNo = "Yes" | "No" | null;
-
 export default function TaxResidencyScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { data, update } = useSignUp();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const [nationality, setNationality] = useState<string | null>(null);
-  const [otherNationality, setOtherNationality] = useState("");
   const [showNationalityPicker, setShowNationalityPicker] = useState(false);
   const [nationalitySearch, setNationalitySearch] = useState("");
-  const [isTaxResidentAbroad, setIsTaxResidentAbroad] = useState<YesNo>(null);
-  const [taxCountry, setTaxCountry] = useState("");
-  const [isUSPerson, setIsUSPerson] = useState<YesNo>(null);
   const searchInputRef = useRef<TextInput>(null);
 
   React.useEffect(() => {
@@ -72,11 +67,11 @@ export default function TaxResidencyScreen() {
   });
 
   const isFormValid =
-    nationality !== null &&
-    (nationality !== "Other" || otherNationality.trim().length > 0) &&
-    isTaxResidentAbroad !== null &&
-    isUSPerson !== null &&
-    (isTaxResidentAbroad === "No" || taxCountry.trim().length > 0);
+    data.nationality !== null &&
+    (data.nationality !== "Other" || data.otherNationality.trim().length > 0) &&
+    data.isTaxResidentAbroad !== null &&
+    data.isUSPerson !== null &&
+    (data.isTaxResidentAbroad === "No" || data.taxCountry.trim().length > 0);
 
   const handleNext = () => {
     navigation.navigate("SignUpPronouns");
@@ -144,10 +139,10 @@ export default function TaxResidencyScreen() {
               <Text
                 style={[
                   styles.selectorText,
-                  !nationality && styles.selectorPlaceholder,
+                  !data.nationality && styles.selectorPlaceholder,
                 ]}
               >
-                {nationality ?? "Select nationality"}
+                {data.nationality ?? "Select nationality"}
               </Text>
               <MaterialIcons
                 name={showNationalityPicker ? "expand-less" : "expand-more"}
@@ -156,14 +151,14 @@ export default function TaxResidencyScreen() {
               />
             </TouchableOpacity>
 
-            {nationality === "Other" && (
+            {data.nationality === "Other" && (
               <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your nationality"
                   placeholderTextColor={Colors.textSecondary}
-                  value={otherNationality}
-                  onChangeText={setOtherNationality}
+                  value={data.otherNationality}
+                  onChangeText={(t) => update({ otherNationality: t })}
                   autoCapitalize="words"
                 />
               </View>
@@ -212,28 +207,24 @@ export default function TaxResidencyScreen() {
                         key={item}
                         style={[
                           styles.pickerItem,
-                          nationality === item && styles.pickerItemSelected,
+                          data.nationality === item && styles.pickerItemSelected,
                         ]}
                         onPress={() => {
-                          setNationality(item);
+                          update({ nationality: item, ...(item === "American" ? { isUSPerson: "Yes" } : {}) });
                           setShowNationalityPicker(false);
                           setNationalitySearch("");
-                          // UX logic: Auto-select 'Yes' for US person if they are American
-                          if (item === "American") {
-                            setIsUSPerson("Yes");
-                          }
                         }}
                         activeOpacity={0.7}
                       >
                         <Text
                           style={[
                             styles.pickerItemText,
-                            nationality === item && styles.pickerItemTextSelected,
+                            data.nationality === item && styles.pickerItemTextSelected,
                           ]}
                         >
                           {item}
                         </Text>
-                        {nationality === item && (
+                        {data.nationality === item && (
                           <MaterialIcons name="check" size={18} color={Colors.primary} />
                         )}
                       </TouchableOpacity>
@@ -257,18 +248,17 @@ export default function TaxResidencyScreen() {
                   key={opt}
                   style={[
                     styles.yesNoOption,
-                    isTaxResidentAbroad === opt && styles.yesNoOptionSelected,
+                    data.isTaxResidentAbroad === opt && styles.yesNoOptionSelected,
                   ]}
                   onPress={() => {
-                    setIsTaxResidentAbroad(opt);
-                    if (opt === "No") setTaxCountry("");
+                    update({ isTaxResidentAbroad: opt, ...(opt === "No" ? { taxCountry: "" } : {}) });
                   }}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.yesNoText,
-                      isTaxResidentAbroad === opt && styles.yesNoTextSelected,
+                      data.isTaxResidentAbroad === opt && styles.yesNoTextSelected,
                     ]}
                   >
                     {opt}
@@ -277,7 +267,7 @@ export default function TaxResidencyScreen() {
               ))}
             </View>
 
-            {isTaxResidentAbroad === "Yes" && (
+            {data.isTaxResidentAbroad === "Yes" && (
               <View style={styles.inputContainer}>
                 <MaterialIcons
                   name="public"
@@ -289,8 +279,8 @@ export default function TaxResidencyScreen() {
                   style={styles.input}
                   placeholder="Country of tax residence"
                   placeholderTextColor={Colors.textSecondary}
-                  value={taxCountry}
-                  onChangeText={setTaxCountry}
+                  value={data.taxCountry}
+                  onChangeText={(t) => update({ taxCountry: t })}
                   autoCapitalize="words"
                 />
               </View>
@@ -310,15 +300,15 @@ export default function TaxResidencyScreen() {
                   key={opt}
                   style={[
                     styles.yesNoOption,
-                    isUSPerson === opt && styles.yesNoOptionSelected,
+                    data.isUSPerson === opt && styles.yesNoOptionSelected,
                   ]}
-                  onPress={() => setIsUSPerson(opt)}
+                  onPress={() => update({ isUSPerson: opt })}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.yesNoText,
-                      isUSPerson === opt && styles.yesNoTextSelected,
+                      data.isUSPerson === opt && styles.yesNoTextSelected,
                     ]}
                   >
                     {opt}

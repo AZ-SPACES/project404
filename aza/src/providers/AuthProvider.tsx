@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 type AuthState = {
   userToken: string | null;
@@ -25,8 +25,8 @@ type AuthContextType = AuthState & {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_STATE_KEY = "@aza_auth_state";
-const PASSCODE_VALUE_KEY = "@aza_passcode";
+const AUTH_STATE_KEY = "aza_auth_state";
+const PASSCODE_VALUE_KEY = "aza_passcode";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const bootstrapAsync = async () => {
       let stateFromStorage: AuthState | null = null;
       try {
-        const storedState = await AsyncStorage.getItem(AUTH_STATE_KEY);
+        const storedState = await SecureStore.getItemAsync(AUTH_STATE_KEY);
         if (storedState) {
           stateFromStorage = JSON.parse(storedState);
         }
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const updatedState = { ...authState, ...newState };
     setAuthState(updatedState);
     try {
-      await AsyncStorage.setItem(AUTH_STATE_KEY, JSON.stringify(updatedState));
+      await SecureStore.setItemAsync(AUTH_STATE_KEY, JSON.stringify(updatedState));
     } catch (e) {
       console.error("Failed to save auth state", e);
     }
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
-      await AsyncStorage.setItem(PASSCODE_VALUE_KEY, code);
+      await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
     } catch (e) {
       console.error("Failed to save passcode value", e);
     }
@@ -109,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const verifyPasscode = useCallback(async (code: string): Promise<boolean> => {
     try {
-      const stored = await AsyncStorage.getItem(PASSCODE_VALUE_KEY);
+      const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
       return stored !== null && stored === code;
     } catch (e) {
       console.error("Failed to verify passcode", e);

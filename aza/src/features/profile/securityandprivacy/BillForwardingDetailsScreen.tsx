@@ -27,15 +27,16 @@ export function BillForwardingDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [enabled, setEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
-  const emailAddress = "paapacobbold@icloud.com";
+  const emailAddress = "billing@aza.app"; // TODO: load from user profile
 
   const handleCopy = () => {
     Clipboard.setString(emailAddress);
     setCopied(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
+      Clipboard.setStringAsync('');
       setCopied(false);
-    }, 2000);
+    }, 30000); // clear clipboard after 30s
   };
 
 

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAppTheme, ThemeColors, Spacing } from "../../../theme";
@@ -29,6 +30,7 @@ type NavigationProp = NativeStackNavigationProp<
 type ConfirmPageRouteProp = RouteProp<RootStackParamList, "ConfirmPasscode">;
 
 export default function ConfirmPasscodeScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === "#121212";
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
