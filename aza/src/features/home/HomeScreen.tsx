@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { useDisplayContext } from "../../providers/DisplayProvider";
+import { useProfile } from "../../providers/ProfileProvider";
 
 const { height } = Dimensions.get("window");
 
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { homeBackground } = useDisplayContext();
+  const { displayName, profileImageUri } = useProfile();
 
   const ActionTarget = ({ icon, label, onPress }: {
     icon: ComponentProps<typeof Feather>["name"];
@@ -64,18 +66,21 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Typography.h1, { color: Colors.white }]}>
-              Good Morning
+              {displayName ? `Hi, ${displayName.split(' ')[0]}` : 'Good Morning'}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={styles.profilePicContainer}
                 onPress={() => navigation.navigate("Profile")}
+                accessibilityLabel="Open profile"
               >
-                <Image
-                  source={{
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10" }}
-                  style={styles.profilePic}
-                />
+                {profileImageUri ? (
+                  <Image source={{ uri: profileImageUri }} style={styles.profilePic} />
+                ) : (
+                  <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
+                    <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />
+                  </View>
+                )}
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.bellButton}
@@ -170,6 +175,10 @@ function createStyles(Colors: ThemeColors) {
     width: 44,
     height: 44,
     borderRadius: Radius.full },
+  profilePicPlaceholder: {
+    backgroundColor: "rgba(0,0,0,0.28)",
+    justifyContent: "center",
+    alignItems: "center" },
   bellButton: {
     width: 44,
     height: 44,

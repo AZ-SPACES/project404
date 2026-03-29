@@ -10,7 +10,6 @@ import {
   Animated,
   Dimensions,
   Alert } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
@@ -21,6 +20,7 @@ import { RootStackParamList } from "../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../providers/AuthProvider";
+import { useProfile } from "../../providers/ProfileProvider";
 
 const { height } = Dimensions.get('window');
 
@@ -43,10 +43,8 @@ export function ProfileScreen() {
   const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [profileImage, setProfileImage] = useState<string | null>(
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10"
-  );
   const { logout } = useAuth();
+  const { displayName, profileImageUri, setProfileImage } = useProfile();
 
   const SectionItem = ({ iconFamily, iconName, title, subtitle, onPress, hideArrow }: SectionItemProps) => (
     <TouchableOpacity style={styles.sectionItem} onPress={onPress} activeOpacity={0.7}>
@@ -129,100 +127,61 @@ export function ProfileScreen() {
     }
   }, [isPhotoSheetVisible, photoSheetAnim, photoBackdropAnim]);
   
-  // Persistence logic
-  useEffect(() => {
-    const loadProfileImage = async () => {
-      try {
-        const savedImage = await AsyncStorage.getItem('AppProfileImage');
-        if (savedImage) setProfileImage(savedImage);
-      } catch (error) {
-        console.error("Error loading profile image:", error);
-      }
-    };
-    loadProfileImage();
-  }, []);
-
-  const updateProfileImage = async (uri: string | null) => {
-    setProfileImage(uri);
-    try {
-      if (uri) {
-        await AsyncStorage.setItem('AppProfileImage', uri);
-      } else {
-        await AsyncStorage.removeItem('AppProfileImage');
-      }
-    } catch (error) {
-      console.error("Error saving profile image:", error);
-    }
-  };
 
   const handleTakePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Camera permission is required to take a photo."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 0.8 });
-
-    if (!result.canceled && result.assets && result.assets[0]) {
-      const { uri, width, height } = result.assets[0];
-      
-      // Programmatically square the image for a premium, unified experience
-      const side = Math.min(width, height);
-      const originX = (width - side) / 2;
-      const originY = (height - side) / 2;
-      
-      const manipulated = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ crop: { originX, originY, width: side, height: side } }, { resize: { width: 400, height: 400 } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-      updateProfileImage(manipulated.uri);
-      setPhotoSheetVisible(false);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Camera permission is required to take a photo.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.8 });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const { uri, width, height } = result.assets[0];
+        const side = Math.min(width, height);
+        const originX = (width - side) / 2;
+        const originY = (height - side) / 2;
+        const manipulated = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ crop: { originX, originY, width: side, height: side } }, { resize: { width: 400, height: 400 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        await setProfileImage(manipulated.uri);
+        setPhotoSheetVisible(false);
+      }
+    } catch {
+      Alert.alert("Error", "Something went wrong while taking the photo. Please try again.");
     }
   };
 
   const handleChooseFromLibrary = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Media library permission is required to choose a photo."
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: false,
-      quality: 0.8 });
-
-    if (!result.canceled && result.assets && result.assets[0]) {
-      const { uri, width, height } = result.assets[0];
-      
-      // Programmatically square the image
-      const side = Math.min(width, height);
-      const originX = (width - side) / 2;
-      const originY = (height - side) / 2;
-      
-      const manipulated = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ crop: { originX, originY, width: side, height: side } }, { resize: { width: 400, height: 400 } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-      updateProfileImage(manipulated.uri);
-      setPhotoSheetVisible(false);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Media library permission is required to choose a photo.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.8 });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const { uri, width, height } = result.assets[0];
+        const side = Math.min(width, height);
+        const originX = (width - side) / 2;
+        const originY = (height - side) / 2;
+        const manipulated = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ crop: { originX, originY, width: side, height: side } }, { resize: { width: 400, height: 400 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        await setProfileImage(manipulated.uri);
+        setPhotoSheetVisible(false);
+      }
+    } catch {
+      Alert.alert("Error", "Something went wrong while selecting the photo. Please try again.");
     }
   };
 
-  const handleRemovePhoto = () => {
-    updateProfileImage(null);
+  const handleRemovePhoto = async () => {
+    await setProfileImage(null);
     setPhotoSheetVisible(false);
   };
 
@@ -245,8 +204,8 @@ export function ProfileScreen() {
             activeOpacity={0.8}
             style={styles.profileImageContainer}
           >
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
             ) : (
               <View style={[styles.profileImage, styles.placeholderImage]}>
                 <Ionicons name="person" size={50} color={Colors.textSecondary} />
@@ -257,7 +216,7 @@ export function ProfileScreen() {
             </View>
           </TouchableOpacity>
           <Text style={[Typography.h2, styles.profileName]}>
-            NAANA AKUFO-ADDO
+            {displayName || "Your Name"}
           </Text>
           <Text style={[Typography.caption, styles.profileType]}>
             Personal account
@@ -439,7 +398,7 @@ export function ProfileScreen() {
             <Text style={styles.photoOptionText}>Choose from library</Text>
           </TouchableOpacity>
 
-          {profileImage && (
+          {profileImageUri && (
             <TouchableOpacity
               style={styles.photoOption}
               onPress={handleRemovePhoto}
