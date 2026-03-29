@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -20,16 +20,17 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { sanitizeText } from "../../../utils/validation";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpAddress">;
 
 export default function SignUpAddressScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [homeAddress, setHomeAddress] = useState("");
-  const [city, setCity] = useState("");
+  const { data, update } = useSignUp();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -49,7 +50,7 @@ export default function SignUpAddressScreen() {
     navigation.navigate("TaxResidency");
   };
 
-  const isFormValid = homeAddress.trim().length > 0 && city.trim().length > 0;
+  const isFormValid = data.homeAddress.trim().length > 0 && data.city.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -120,8 +121,8 @@ export default function SignUpAddressScreen() {
                 style={styles.input}
                 placeholder="603 Newtown Rd,Accra,Ghana"
                 placeholderTextColor={Colors.textSecondary}
-                value={homeAddress}
-                onChangeText={setHomeAddress}
+                value={data.homeAddress}
+                onChangeText={(t) => update({ homeAddress: sanitizeText(t) })}
                 autoCapitalize="words"
                 autoFocus
                 cursorColor={Colors.primary}
@@ -141,8 +142,8 @@ export default function SignUpAddressScreen() {
                 style={styles.input}
                 placeholder="Accra"
                 placeholderTextColor={Colors.textSecondary}
-                value={city}
-                onChangeText={setCity}
+                value={data.city}
+                onChangeText={(t) => update({ city: sanitizeText(t) })}
                 autoCapitalize="words"
                 cursorColor={Colors.primary}
                 selectionColor={Colors.primary}
@@ -163,8 +164,8 @@ export default function SignUpAddressScreen() {
               textColor={Colors.secondary}
               borderRadius={30}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />
           </View>
@@ -175,7 +176,7 @@ export default function SignUpAddressScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

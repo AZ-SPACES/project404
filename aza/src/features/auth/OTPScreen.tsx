@@ -21,13 +21,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
 
 const OTPScreen: React.FC = () => {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<OTPRouteProp>();
@@ -35,7 +37,7 @@ const OTPScreen: React.FC = () => {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [timeLeft, setTimeLeft] = useState(57);
-  const phoneNumber = '+233 53 027 9917';
+  const phoneNumber = route.params?.phoneNumber ?? '';
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -85,8 +87,7 @@ const OTPScreen: React.FC = () => {
   };
 
   const handleVerify = () => {
-    // TODO: Verify OTP
-    console.log('OTP entered:', otp.join(''));
+    // TODO: send otp.join('') to backend for verification
     const isLogin = route.params?.isLogin;
     login('dummy-token-from-otp', isLogin, isLogin);
   };
@@ -158,8 +159,8 @@ const OTPScreen: React.FC = () => {
               textColor={Colors.secondary}
               borderRadius={30} // completely rounded
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
             />
         </View>
       </KeyboardAvoidingView>
@@ -169,7 +170,7 @@ const OTPScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -203,7 +204,7 @@ function createStyles(Colors: ThemeColors) {
   },
   title: {
     fontSize: Typography.h1.fontSize,
-    fontWeight: Typography.h1.fontWeight as any,
+    fontWeight: Typography.h1.fontWeight,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },

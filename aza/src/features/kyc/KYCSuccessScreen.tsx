@@ -146,8 +146,8 @@ export default function KYCSuccessScreen() {
           textColor={Colors.secondary}
           borderRadius={30}
           paddingVertical={16}
-          fontSize={Number(Typography.button.fontSize)}
-          fontWeight={Typography.button.fontWeight as any}
+          fontSize={Typography.button.fontSize}
+          fontWeight={Typography.button.fontWeight}
         />
       </View>
     </SafeAreaView>
@@ -155,7 +155,7 @@ export default function KYCSuccessScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

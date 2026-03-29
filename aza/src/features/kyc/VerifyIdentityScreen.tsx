@@ -17,17 +17,19 @@ import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "VerifyIdentity">;
 type VerifyIdentityRouteProp = RouteProp<RootStackParamList, "VerifyIdentity">;
 
 export default function VerifyIdentityScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
+  usePreventScreenCapture();
   const [biometricConsent, setBiometricConsent] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -62,6 +64,8 @@ export default function VerifyIdentityScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"
@@ -146,8 +150,8 @@ export default function VerifyIdentityScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
             disabled={!biometricConsent}
           />
         </View>
@@ -157,7 +161,7 @@ export default function VerifyIdentityScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

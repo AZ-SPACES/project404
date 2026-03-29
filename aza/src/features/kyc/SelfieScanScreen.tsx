@@ -19,6 +19,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -38,7 +40,9 @@ type FeedbackState =
   | "Processing...";
 
 export default function SelfieScanScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SelfieScanRouteProp>();
@@ -107,9 +111,7 @@ export default function SelfieScanScreen() {
         }
       }
     } catch (e) {
-      console.log("Selfie capture failed", e);
-      setCapturedImage("placeholder");
-      setIsModalVisible(true);
+      showToast('Selfie capture failed. Please try again.', 'error');
     }
   };
 
@@ -201,6 +203,8 @@ export default function SelfieScanScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <MaterialIcons
                 name="chevron-left"
@@ -283,7 +287,7 @@ export default function SelfieScanScreen() {
                 textColor={Colors.secondary}
                 borderRadius={10}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
               <View style={{ height: Spacing.md }} />
               <Button
@@ -293,7 +297,7 @@ export default function SelfieScanScreen() {
                 textColor={Colors.primary}
                 borderRadius={10}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
             </View>
           </View>
@@ -304,7 +308,7 @@ export default function SelfieScanScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

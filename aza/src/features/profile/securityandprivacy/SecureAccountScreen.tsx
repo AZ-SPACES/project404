@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import Button from '../../../components/ui/Button';
 
 export function SecureAccountScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'SecureAccount'>>();
 
   const handleSecureAccount = () => {
     // Logic to secure account
@@ -70,16 +72,6 @@ export function SecureAccountScreen() {
               </Text>
             </View>
           </View>
-
-          <View style={styles.infoRow}>
-            <MaterialCommunityIcons name="credit-card-off-outline" size={28} color={Colors.textPrimary} style={styles.icon} />
-            <View style={styles.infoTextContainer}>
-              <Text style={[Typography.bodyLg, styles.infoTitle]}>Your Wise card(s) will be suspended</Text>
-              <Text style={[Typography.body, styles.infoSubtitle]}>
-                Payments with your Wise card(s) will fail until you log in again.
-              </Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
 
@@ -97,7 +89,7 @@ export function SecureAccountScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

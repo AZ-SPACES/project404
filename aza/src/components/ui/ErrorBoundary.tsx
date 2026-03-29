@@ -1,7 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { LightColors as AppColors, Typography, Spacing, Radius } from '../../theme';
-
+import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, useColorScheme } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeColors, Typography, Spacing, Radius, LightColors, DarkColors } from '../../theme';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -24,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log you error to an external service like Sentry or Datadog
+    // In a production app, report to Sentry, Bugsnag, etc.
     console.error('Uncaught error:', error, errorInfo);
   }
 
@@ -40,17 +41,10 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <Text style={styles.title}>Something went wrong</Text>
-            <Text style={styles.message}>
-              {this.state.error?.message || 'An unexpected error occurred.'}
-            </Text>
-            <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-              <Text style={styles.buttonText}>Try again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <ErrorScreen 
+          error={this.state.error} 
+          onReset={this.handleReset} 
+        />
       );
     }
 
@@ -58,45 +52,168 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.lg },
-  content: {
-    backgroundColor: AppColors.surface,
-    padding: Spacing.xl,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2 },
-  title: {
-    fontSize: Typography.h2.fontSize,
-    fontWeight: Typography.h2.fontWeight as any,
-    color: AppColors.textPrimary,
-    marginBottom: Spacing.sm },
-  message: {
-    fontSize: Typography.body.fontSize,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.lg },
-  button: {
-    backgroundColor: AppColors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.sm },
-  buttonText: {
-    color: AppColors.secondary,
-    fontSize: Typography.button.fontSize,
-    fontWeight: Typography.button.fontWeight as any } });
+function ErrorScreen({ error, onReset }: { error: Error | null; onReset: () => void }) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const Colors = isDark ? DarkColors : LightColors;
+  const [showDetails, setShowDetails] = useState(false);
+  const styles = React.useMemo(() => createStyles(Colors as any), [Colors]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      
+      <View style={styles.content}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+        </View>
+
+        <Text style={styles.title}>Application Error</Text>
+        <Text style={styles.message}>
+          A problem occurred that prevented the application from continuing. You can try to reload the app or contact support if the issue persists.
+        </Text>
+
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={styles.primaryButton} 
+            onPress={onReset}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.primaryButtonText}>Reload Application</Text>
+          </TouchableOpacity>
+
+          {__DEV__ && (
+            <TouchableOpacity 
+              style={styles.secondaryButton} 
+              onPress={() => setShowDetails(!showDetails)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {showDetails ? 'Hide details' : 'Show technical details'}
+              </Text>
+              <Ionicons 
+                name={showDetails ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={Colors.textSecondary} 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {showDetails && __DEV__ && (
+          <View style={styles.debugContainer}>
+            <ScrollView style={styles.errorScroll} showsVerticalScrollIndicator={true}>
+              <Text style={styles.errorName}>{error?.name || 'Error'}</Text>
+              <Text style={styles.errorMessage}>{error?.message || 'No message available'}</Text>
+              {error?.stack && (
+                <Text style={styles.stackTrace}>{error.stack}</Text>
+              )}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Aza v1.0.0 • Session Error
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function createStyles(Colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.xl,
+      maxWidth: 500,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    iconContainer: {
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      ...Typography.h2,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.sm,
+    },
+    message: {
+      ...Typography.bodyLg,
+      color: Colors.textSecondary,
+      lineHeight: 24,
+      marginBottom: Spacing.xl,
+    },
+    actions: {
+      gap: Spacing.md,
+    },
+    primaryButton: {
+      backgroundColor: Colors.textPrimary,
+      height: 52,
+      borderRadius: Radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    primaryButtonText: {
+      ...Typography.button,
+      color: Colors.white,
+    },
+    secondaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      height: 44,
+    },
+    secondaryButtonText: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      fontWeight: '500',
+    },
+    debugContainer: {
+      marginTop: Spacing.xl,
+      backgroundColor: Colors.surface,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      maxHeight: 300,
+    },
+    errorScroll: {
+      padding: Spacing.md,
+    },
+    errorName: {
+      ...Typography.body,
+      fontWeight: '700',
+      color: Colors.error,
+      marginBottom: 4,
+    },
+    errorMessage: {
+      ...Typography.body,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.md,
+    },
+    stackTrace: {
+      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+      fontSize: 12,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
+    footer: {
+      padding: Spacing.lg,
+      alignItems: 'center',
+    },
+    footerText: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      opacity: 0.7,
+    },
+  });
+}
 
 export default ErrorBoundary;

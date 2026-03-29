@@ -18,29 +18,33 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { isValidPassword, getPasswordRules } from "../../../utils/validation";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpPassword">;
 
 export default function SignUpPasswordScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [password, setPassword] = useState("");
+  const { data, update } = useSignUp();
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
-    useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
+
+  const rules = getPasswordRules(data.password);
+  const mismatchError = confirmTouched && confirmPassword.length > 0 && data.password !== confirmPassword
+    ? "Passwords don't match"
+    : null;
 
   const handleNext = () => {
-    // Navigate to the next screen in the signup flow
     navigation.navigate("SignUpName");
   };
 
-  const isFormValid =
-    password.length > 0 &&
-    confirmPassword.length > 0 &&
-    password === confirmPassword;
+  const isFormValid = isValidPassword(data.password) && data.password === confirmPassword;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -83,8 +87,9 @@ export default function SignUpPasswordScreen() {
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
+                value={data.password}
+                onChangeText={(t) => update({ password: t })}
+                onBlur={() => setPasswordTouched(true)}
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
                 autoFocus
@@ -99,6 +104,18 @@ export default function SignUpPasswordScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {passwordTouched && data.password.length > 0 && (
+              <View style={styles.rulesContainer}>
+                {rules.map((r) => (
+                  <Text
+                    key={r.label}
+                    style={[styles.ruleText, r.met ? styles.ruleMet : styles.ruleUnmet]}
+                  >
+                    {r.met ? '✓' : '✗'} {r.label}
+                  </Text>
+                ))}
+              </View>
+            )}
 
             <Text style={styles.label}>Confirm Password</Text>
             <View style={styles.inputContainer}>
@@ -114,6 +131,7 @@ export default function SignUpPasswordScreen() {
                 placeholderTextColor={Colors.textSecondary}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                onBlur={() => setConfirmTouched(true)}
                 secureTextEntry={!isConfirmPasswordVisible}
                 autoCapitalize="none"
                 cursorColor={Colors.primary}
@@ -133,6 +151,7 @@ export default function SignUpPasswordScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {mismatchError ? <Text style={styles.errorText}>{mismatchError}</Text> : null}
           </View>
 
           {/* Footer */}
@@ -144,8 +163,8 @@ export default function SignUpPasswordScreen() {
               textColor={Colors.secondary}
               borderRadius={30}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />
           </View>
@@ -156,7 +175,7 @@ export default function SignUpPasswordScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -219,6 +238,24 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  rulesContainer: {
+    marginTop: 8,
+    gap: 2,
+  },
+  ruleText: {
+    fontSize: 12,
+  },
+  ruleMet: {
+    color: '#22C55E',
+  },
+  ruleUnmet: {
+    color: '#D1222E',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

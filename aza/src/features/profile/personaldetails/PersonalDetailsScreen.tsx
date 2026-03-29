@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ComponentProps } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -20,7 +21,7 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 interface DetailItemProps {
-  iconName: string;
+  iconName: ComponentProps<typeof Feather>['name'];
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -28,24 +29,17 @@ interface DetailItemProps {
 
 
 
-export function PersonalDetailsScreen() {
+function DetailItem({ iconName, title, subtitle, onPress }: DetailItemProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-
-  const DetailItem = ({
-    iconName,
-    title,
-    subtitle,
-    onPress }: DetailItemProps) => (
+  return (
     <TouchableOpacity
       style={styles.detailItem}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={styles.iconContainer}>
-        <Feather name={iconName as any} size={22} color={Colors.textPrimary} />
+        <Feather name={iconName} size={22} color={Colors.textPrimary} />
       </View>
       <View style={styles.textContainer}>
         <Text style={[Typography.body, styles.itemTitle]}>{title}</Text>
@@ -54,6 +48,14 @@ export function PersonalDetailsScreen() {
       <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
     </TouchableOpacity>
   );
+}
+
+export function PersonalDetailsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { email, phone } = useProfile();
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -82,6 +84,7 @@ export function PersonalDetailsScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          accessibilityLabel="Go back"
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
@@ -119,13 +122,13 @@ export function PersonalDetailsScreen() {
         <DetailItem
           iconName="mail"
           title="Email address"
-          subtitle="paapacobbold@icloud.com (Verified)"
+          subtitle={email ?? 'Not set'}
           onPress={() => navigation.navigate("ChangeEmail")}
         />
         <DetailItem
           iconName="smartphone"
           title="Mobile number"
-          subtitle="+2332458932"
+          subtitle={phone ?? 'Not set'}
           onPress={() => navigation.navigate("ChangePhone")}
         />
       </Animated.ScrollView>
@@ -134,7 +137,7 @@ export function PersonalDetailsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

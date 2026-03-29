@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,15 +28,18 @@ export function BillForwardingDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [enabled, setEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
-  const emailAddress = "paapacobbold@icloud.com";
+  const { email } = useProfile();
+  // TODO: replace with user-specific billing address from backend (e.g. bills+{handle}@aza.app)
+  const emailAddress = email ? `bills+${email.split('@')[0]}@aza.app` : 'Pending account setup';
 
   const handleCopy = () => {
     Clipboard.setString(emailAddress);
     setCopied(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {
+      Clipboard.setStringAsync('');
       setCopied(false);
-    }, 2000);
+    }, 30000); // clear clipboard after 30s
   };
 
 
@@ -82,6 +86,8 @@ export function BillForwardingDetailsScreen() {
               trackColor={{ false: "#E5E7EB", true: "#243b14" }}
               thumbColor={Colors.white}
               ios_backgroundColor="#E5E7EB"
+              accessibilityRole="switch"
+              accessibilityLabel="Enable bill forwarding"
             />
           </View>
         </View>
@@ -124,7 +130,7 @@ export function BillForwardingDetailsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

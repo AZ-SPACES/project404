@@ -2,21 +2,33 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
-import { 
-  TalkToUsScreen, 
-  EmailUsScreen, 
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import {
+  TalkToUsScreen,
+  EmailUsScreen,
   ChatWithUsScreen,
   HelpAndSupportScreen
 } from '../features/customercare';
-import { 
+import { ChatScreen } from '../features/chat';
+import {
   SendContactScreen,
   SendAmountScreen,
   SendConfirmScreen,
   SendPinScreen,
   SendSuccessScreen,
   RequestContactScreen,
-  RequestAmountScreen 
+  RequestAmountScreen
 } from '../features/transfer';
+
+// Wrap the entire transfer flow so a crash in any send/receive screen
+// shows the error boundary instead of taking down the whole app.
+function SendContactWithBoundary(props: React.ComponentProps<typeof SendContactScreen>) { return <ErrorBoundary><SendContactScreen {...props} /></ErrorBoundary>; }
+function SendAmountWithBoundary(props: React.ComponentProps<typeof SendAmountScreen>) { return <ErrorBoundary><SendAmountScreen {...props} /></ErrorBoundary>; }
+function SendConfirmWithBoundary(props: React.ComponentProps<typeof SendConfirmScreen>) { return <ErrorBoundary><SendConfirmScreen {...props} /></ErrorBoundary>; }
+function SendPinWithBoundary(props: React.ComponentProps<typeof SendPinScreen>) { return <ErrorBoundary><SendPinScreen {...props} /></ErrorBoundary>; }
+function SendSuccessWithBoundary(props: React.ComponentProps<typeof SendSuccessScreen>) { return <ErrorBoundary><SendSuccessScreen {...props} /></ErrorBoundary>; }
+function RequestContactWithBoundary(props: React.ComponentProps<typeof RequestContactScreen>) { return <ErrorBoundary><RequestContactScreen {...props} /></ErrorBoundary>; }
+function RequestAmountWithBoundary(props: React.ComponentProps<typeof RequestAmountScreen>) { return <ErrorBoundary><RequestAmountScreen {...props} /></ErrorBoundary>; }
 import { 
   ProfileScreen, 
   AppearanceScreen, 
@@ -52,15 +64,15 @@ export default function AppNavigator() {
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
-      <Stack.Screen name="Send" component={SendContactScreen} />
+      <Stack.Screen name="Send" component={SendContactWithBoundary} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Appearance" component={AppearanceScreen} />
-      <Stack.Screen name="Receive" component={RequestContactScreen} />
-      <Stack.Screen name="SendAmount" component={SendAmountScreen} />
-      <Stack.Screen name="SendConfirm" component={SendConfirmScreen} />
-      <Stack.Screen name="SendPin" component={SendPinScreen} />
-      <Stack.Screen name="SendSuccess" component={SendSuccessScreen} />
-      <Stack.Screen name="RequestAmount" component={RequestAmountScreen} />
+      <Stack.Screen name="Receive" component={RequestContactWithBoundary} />
+      <Stack.Screen name="SendAmount" component={SendAmountWithBoundary} />
+      <Stack.Screen name="SendConfirm" component={SendConfirmWithBoundary} />
+      <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
+      <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
+      <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
@@ -80,6 +92,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
     </Stack.Navigator>
   );
 }

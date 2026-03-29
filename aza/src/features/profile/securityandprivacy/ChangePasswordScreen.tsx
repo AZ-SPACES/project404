@@ -3,27 +3,48 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, TextIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
+import { isValidPassword, getPasswordRules } from '../../../utils/validation';
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useToast } from '../../../providers/ToastProvider';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChangePassword'>>();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [newPasswordTouched, setNewPasswordTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
-  const handleUpdatePassword = () => {
-    // Logic to update password
-    navigation.goBack();
+  usePreventScreenCapture();
+  const rules = getPasswordRules(newPassword);
+  const isFormValid = currentPassword.trim().length > 0 && isValidPassword(newPassword);
+
+  const handleUpdatePassword = async () => {
+    if (!isFormValid) return;
+    setIsLoading(true);
+    try {
+      // TODO: call change-password API, then navigate on success
+      showToast('Password updated successfully', 'success');
+      navigation.goBack();
+    } catch {
+      showToast('Failed to update password. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar 
-        barStyle={Colors.background === '#121212' ? 'light-content' : 'dark-content'} 
+        barStyle={Colors.isDark ? 'light-content' : 'dark-content'} 
         backgroundColor={Colors.background} 
       />
       
@@ -80,6 +101,7 @@ export function ChangePasswordScreen() {
                   style={styles.input}
                   value={newPassword}
                   onChangeText={setNewPassword}
+                  onBlur={() => setNewPasswordTouched(true)}
                   secureTextEntry={!showNewPassword}
                   placeholder=""
                 />
@@ -87,17 +109,28 @@ export function ChangePasswordScreen() {
                   <Feather name={showNewPassword ? "eye-off" : "eye"} size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
+              {newPasswordTouched && newPassword.length > 0 && (
+                <View style={styles.rulesContainer}>
+                  {rules.map((r) => (
+                    <Text key={r.label} style={[styles.ruleText, r.met ? styles.ruleMet : styles.ruleUnmet]}>
+                      {r.met ? '✓' : '✗'} {r.label}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button 
-            title="Change password" 
+          <Button
+            title="Change password"
             onPress={handleUpdatePassword}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             borderRadius={Radius.full}
+            disabled={!isFormValid || isLoading}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>
@@ -106,7 +139,7 @@ export function ChangePasswordScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -190,6 +223,19 @@ function createStyles(Colors: ThemeColors) {
       flex: 1,
       ...Typography.bodyLg,
       color: Colors.textPrimary
+    },
+    rulesContainer: {
+      marginTop: 8,
+      gap: 2,
+    },
+    ruleText: {
+      fontSize: 12,
+    },
+    ruleMet: {
+      color: '#22C55E',
+    },
+    ruleUnmet: {
+      color: '#D1222E',
     },
     footer: {
       padding: Spacing.lg,

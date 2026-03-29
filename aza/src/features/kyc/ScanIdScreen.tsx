@@ -19,6 +19,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ScanId">;
 type ScanIdRouteProp = RouteProp<RootStackParamList, "ScanId">;
@@ -30,7 +32,9 @@ const FRAME_HEIGHT = FRAME_WIDTH * 0.63;
 const ZOOM_SCALE = 1 / 0.85;
 
 export default function ScanIdScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdRouteProp>();
@@ -108,9 +112,7 @@ export default function ScanIdScreen() {
         }
       }
     } catch (e) {
-      console.log("Camera capture failed", e);
-      setCapturedImage("placeholder");
-      setIsModalVisible(true);
+      showToast('Camera capture failed. Please try again.', 'error');
     }
   };
 
@@ -160,6 +162,8 @@ export default function ScanIdScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <MaterialIcons
                 name="chevron-left"
@@ -280,7 +284,7 @@ export default function ScanIdScreen() {
                 textColor={Colors.secondary}
                 borderRadius={30}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
               <View style={{ height: Spacing.md }} />
               <Button
@@ -290,7 +294,7 @@ export default function ScanIdScreen() {
                 textColor={Colors.primary}
                 borderRadius={30}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
             </View>
           </View>
@@ -301,7 +305,7 @@ export default function ScanIdScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

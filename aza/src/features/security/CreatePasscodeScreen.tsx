@@ -13,6 +13,7 @@ import {
   Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LightColors as Colors, useAppTheme, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -22,6 +23,7 @@ import { RootStackParamList } from "../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePasscode">;
 
 export default function CreatePasscodeScreen() {
+  usePreventScreenCapture();
   const navigation = useNavigation<NavigationProp>();
   const [passcode, setPasscode] = useState("");
   const inputRef = useRef<TextInput>(null);

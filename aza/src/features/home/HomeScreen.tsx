@@ -14,27 +14,29 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { useDisplayContext } from "../../providers/DisplayProvider";
+import { useProfile } from "../../providers/ProfileProvider";
 
 const { height } = Dimensions.get("window");
 
 
 
-export default function HomeScreen() {
+type ActionTargetProps = {
+  icon: ComponentProps<typeof Feather>["name"];
+  label: string;
+  onPress?: () => void;
+};
+
+function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { homeBackground } = useDisplayContext();
-
-  const ActionTarget = ({ icon, label, onPress }: {
-    icon: ComponentProps<typeof Feather>["name"];
-    label: string;
-    onPress?: () => void;
-  }) => (
+  return (
     <TouchableOpacity
       style={styles.actionContainer}
       activeOpacity={0.7}
       onPress={onPress}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <View style={styles.actionIconCircle}>
         <Feather name={icon} size={24} color={Colors.white} />
@@ -42,6 +44,25 @@ export default function HomeScreen() {
       <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
+export default function HomeScreen() {
+  const { colors: Colors } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { homeBackground } = useDisplayContext();
+  const { displayName, profileImageUri } = useProfile();
+
+  const firstName = displayName?.trim().split(" ")[0];
+  const greeting = getGreeting();
 
   return (
     <View style={styles.container}>
@@ -64,22 +85,26 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Typography.h1, { color: Colors.white }]}>
-              Good Morning
+              {`${greeting}${firstName ? `, ${firstName}` : ""}`}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={styles.profilePicContainer}
                 onPress={() => navigation.navigate("Profile")}
+                accessibilityLabel="Open profile"
               >
-                <Image
-                  source={{
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSFfKhLo-lRTneqdi08aiU4__DwJKMiL272plVlzySUyn2bhPMYBf49JekzTzcSW3OfCKINbPogZksLGjvSVaPq57Toy6_QunNUSF8jQ&s=10" }}
-                  style={styles.profilePic}
-                />
+                {profileImageUri ? (
+                  <Image source={{ uri: profileImageUri }} style={styles.profilePic} accessibilityLabel="Profile photo" />
+                ) : (
+                  <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
+                    <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />
+                  </View>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.bellButton}
                 onPress={() => navigation.navigate("Inbox")}
+                accessibilityLabel="Open notifications"
               >
                 <Feather name="bell" size={24} color={Colors.white} />
               </TouchableOpacity>
@@ -93,7 +118,7 @@ export default function HomeScreen() {
             </Text>
             <View style={styles.balanceRow}>
               <Text style={[Typography.h1, styles.balanceText]}>GH₵ 0.00</Text>
-              <TouchableOpacity style={styles.eyeIcon}>
+              <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility">
                 <Feather
                   name="eye-off"
                   size={Typography.h1.fontSize}
@@ -144,7 +169,7 @@ export default function HomeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,
@@ -170,6 +195,10 @@ function createStyles(Colors: ThemeColors) {
     width: 44,
     height: 44,
     borderRadius: Radius.full },
+  profilePicPlaceholder: {
+    backgroundColor: "rgba(0,0,0,0.28)",
+    justifyContent: "center",
+    alignItems: "center" },
   bellButton: {
     width: 44,
     height: 44,

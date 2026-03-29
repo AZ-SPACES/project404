@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -20,18 +20,16 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpPronouns">;
 
-type PronounOption = "he/his" | "she/her" | "they/them" | "custom" | null;
-
 export default function SignUpPronounsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [selectedPronoun, setSelectedPronoun] = useState<PronounOption>(null);
-  const [customPronoun, setCustomPronoun] = useState("");
+  const { data, update } = useSignUp();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -57,28 +55,28 @@ export default function SignUpPronounsScreen() {
   };
 
   const isFormValid =
-    (selectedPronoun !== null && selectedPronoun !== "custom") ||
-    (selectedPronoun === "custom" && customPronoun.trim().length > 0);
+    (data.pronoun !== null && data.pronoun !== "custom") ||
+    (data.pronoun === "custom" && data.customPronoun.trim().length > 0);
 
-  const renderOption = (label: string, id: PronounOption) => (
+  const renderOption = (label: string, id: "he/his" | "she/her" | "they/them") => (
     <TouchableOpacity
       style={[
         styles.radioItem,
-        selectedPronoun === id && styles.radioItemSelected,
+        data.pronoun === id && styles.radioItemSelected,
       ]}
-      onPress={() => setSelectedPronoun(id)}
+      onPress={() => update({ pronoun: id })}
       activeOpacity={0.7}
     >
       <View
         style={[
           styles.radioCircle,
-          selectedPronoun === id && styles.radioCircleSelected,
+          data.pronoun === id && styles.radioCircleSelected,
         ]}
       />
       <Text
         style={[
           styles.radioLabel,
-          selectedPronoun === id && styles.radioLabelSelected,
+          data.pronoun === id && styles.radioLabelSelected,
         ]}
       >
         {label}
@@ -155,21 +153,18 @@ export default function SignUpPronounsScreen() {
             <View
               style={[
                 styles.inputContainer,
-                selectedPronoun === "custom" && styles.inputContainerActive,
+                data.pronoun === "custom" && styles.inputContainerActive,
               ]}
             >
               <TextInput
                 style={styles.input}
                 placeholder="Add yours"
                 placeholderTextColor={Colors.textSecondary}
-                value={customPronoun}
+                value={data.customPronoun}
                 onChangeText={(text) => {
-                  setCustomPronoun(text);
-                  if (text.length > 0) {
-                    setSelectedPronoun("custom");
-                  }
+                  update({ customPronoun: text, ...(text.length > 0 ? { pronoun: "custom" } : {}) });
                 }}
-                onFocus={() => setSelectedPronoun("custom")}
+                onFocus={() => update({ pronoun: "custom" })}
                 autoCapitalize="none"
               />
             </View>
@@ -184,8 +179,8 @@ export default function SignUpPronounsScreen() {
               textColor={Colors.secondary}
               borderRadius={30}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />
           </View>
@@ -196,7 +191,7 @@ export default function SignUpPronounsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

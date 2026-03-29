@@ -11,47 +11,68 @@ import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
-import * as Notifications from 'expo-notifications';
 import Button from '../../components/ui/Button';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
+
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuth } from '../../providers/AuthProvider';
+import { useNotifications } from '../../providers/NotificationProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
 export default function EnableNotificationsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { registerForNotifications, sendLocalNotification } = useNotifications();
+  const { setPasscode } = useAuth();
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const handleClose = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      setPasscode();
+    }
+  };
+
+  const navigateNext = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (hasHardware && isEnrolled) {
+        navigation.navigate('EnableBiometrics');
+      } else {
+        setPasscode();
+      }
+    } catch (e) {
+      setPasscode();
+    }
   };
 
   const handleEnable = async () => {
+    setIsLoading(true);
     try {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus === 'granted') {
-        console.log('Push notifications enabled!');
-      } else {
-        console.log('Failed to enable push notifications.');
+      const granted = await registerForNotifications();
+
+      if (granted) {
+        await sendLocalNotification(
+          "Welcome to Aza!",
+          "You'll now receive updates about your spending and security.",
+        );
       }
     } catch (error) {
       console.error('Error enabling notifications:', error);
     } finally {
-      navigation.navigate('EnableBiometrics');
+      setIsLoading(false);
+      await navigateNext();
     }
   };
 
-  const handleNotNow = () => {
-    console.log('Not now')
-    navigation.navigate('EnableBiometrics');
+  const handleNotNow = async () => {
+    await navigateNext();
   };
 
   return (
@@ -89,6 +110,8 @@ export default function EnableNotificationsScreen() {
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
+          loading={isLoading}
+          disabled={isLoading}
         />
         
         <View style={styles.spacer} />
@@ -106,7 +129,7 @@ export default function EnableNotificationsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

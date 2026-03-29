@@ -26,11 +26,13 @@ import {
 } from '../features/auth';
 
 import { createNativeStackNavigator as createStack } from '@react-navigation/native-stack';
+import { SignUpProvider } from '../providers/SignUpProvider';
 
 const Stack = createStack<RootStackParamList>();
 
 export default function AuthNavigator() {
   return (
+    <SignUpProvider>
     <Stack.Navigator
       initialRouteName="Onboarding"
       screenOptions={{ headerShown: false }}
@@ -56,5 +58,6 @@ export default function AuthNavigator() {
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
       <Stack.Screen name="TaxResidency" component={TaxResidencyScreen} />
     </Stack.Navigator>
+    </SignUpProvider>
   );
 }

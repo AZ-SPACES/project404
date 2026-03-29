@@ -17,6 +17,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
+import { isValidPhone } from "../../../utils/validation";
+import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,12 +30,18 @@ export function ChangePhoneScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const initialPhoneNumber = "245903854";
-  const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber);
+  const { phone } = useProfile();
+  const { showToast } = useToast();
+  const [phoneNumber, setPhoneNumber] = useState(phone ?? "");
   const [countryCode, setCountryCode] = useState("+233");
+  const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const isChanged = phoneNumber !== initialPhoneNumber && phoneNumber.length > 0;
+  const phoneError = touched && phoneNumber.length > 0 && !isValidPhone(phoneNumber)
+    ? "Enter a valid phone number"
+    : null;
+  const isChanged = isValidPhone(phoneNumber);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -113,6 +122,7 @@ export function ChangePhoneScreen() {
                   style={styles.input}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
+                  onBlur={() => setTouched(true)}
                   keyboardType="phone-pad"
                   placeholder="XXXXXXXXX"
                   placeholderTextColor={Colors.textSecondary + "80"}
@@ -120,16 +130,29 @@ export function ChangePhoneScreen() {
               </View>
             </View>
           </View>
+          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
         </Animated.ScrollView>
 
         <View style={styles.footer}>
           <Button
             title="Continue"
-            onPress={() => {}}
+            onPress={async () => {
+              setIsLoading(true);
+              try {
+                // TODO: call change-phone API, verify with OTP, then persist
+                // await setPhone(`${countryCode}${phoneNumber}`);
+                navigation.goBack();
+              } catch {
+                showToast('Failed to update phone number. Please try again.', 'error');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
             backgroundColor={isChanged ? Colors.primary : Colors.surface}
             textColor={isChanged ? Colors.secondary : Colors.textSecondary}
             borderRadius={Radius.full}
-            disabled={!isChanged}
+            disabled={!isChanged || isLoading}
+            loading={isLoading}
           />
         </View>
       </KeyboardAvoidingView>
@@ -138,7 +161,7 @@ export function ChangePhoneScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -217,6 +240,12 @@ function createStyles(Colors: ThemeColors) {
   input: {
     ...Typography.bodyLg,
     color: Colors.textPrimary },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
+    paddingHorizontal: Spacing.lg,
+  },
   footer: {
     padding: Spacing.lg,
     backgroundColor: Colors.background,

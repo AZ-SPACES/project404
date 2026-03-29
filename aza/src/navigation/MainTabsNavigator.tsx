@@ -1,5 +1,4 @@
 import React from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   View,
   StyleSheet,
@@ -7,11 +6,13 @@ import {
   Text,
   Platform,
 } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
 import { ContactsScreen } from "../features/contacts";
 import { ScanScreen } from "../features/scan";
+import { ChatContactsScreen } from "../features/chat";
 import {
   useAppTheme,
   ThemeColors,
@@ -21,17 +22,6 @@ import {
 } from "../theme";
 
 const Tab = createBottomTabNavigator();
-
-// Dummy screen for inactive tabs
-const DummyScreen = () => {
-  const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  return (
-    <View style={styles.dummyContainer}>
-      <Text style={[Typography.h3, styles.dummyText]}>Coming Soon</Text>
-    </View>
-  );
-};
 
 export default function MainTabsNavigator() {
   const { colors: Colors } = useAppTheme();
@@ -52,7 +42,7 @@ export default function MainTabsNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: "Home",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="home-outline" size={size || 24} color={color} />
           ),
         }}
@@ -62,28 +52,26 @@ export default function MainTabsNavigator() {
         component={ContactsScreen}
         options={{
           tabBarLabel: "Contacts",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Feather name="user" size={size || 24} color={color} />
           ),
         }}
       />
 
-      {/* Center Scan */}
       <Tab.Screen
         name="ScanTab"
         component={ScanScreen}
         options={{
           tabBarLabel: "",
-          tabBarButton: ({
-            onPress,
-            accessibilityState,
-            accessibilityLabel,
-          }) => (
-            <View style={styles.centerButtonWrapper} pointerEvents="box-none">
+          tabBarButton: (props: any) => (
+            <View
+              style={styles.centerButtonWrapper}
+              pointerEvents="box-none"
+            >
               <TouchableOpacity
-                onPress={onPress}
-                accessibilityState={accessibilityState}
-                accessibilityLabel={accessibilityLabel}
+                onPress={props.onPress ?? undefined}
+                accessibilityState={props.accessibilityState}
+                accessibilityLabel={props.accessibilityLabel}
                 style={styles.centerButton}
                 activeOpacity={0.9}
               >
@@ -100,10 +88,10 @@ export default function MainTabsNavigator() {
 
       <Tab.Screen
         name="Chat"
-        component={DummyScreen}
+        component={ChatContactsScreen}
         options={{
           tabBarLabel: "Chat",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons
               name="chatbubble-outline"
               size={size || 24}
@@ -117,7 +105,7 @@ export default function MainTabsNavigator() {
         component={HubScreen}
         options={{
           tabBarLabel: "Hub",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name="apps-outline" size={size || 24} color={color} />
           ),
         }}
