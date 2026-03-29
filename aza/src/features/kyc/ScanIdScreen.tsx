@@ -282,7 +282,7 @@ export default function ScanIdScreen() {
                 textColor={Colors.secondary}
                 borderRadius={30}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
               <View style={{ height: Spacing.md }} />
               <Button
@@ -292,7 +292,7 @@ export default function ScanIdScreen() {
                 textColor={Colors.primary}
                 borderRadius={30}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
+                fontSize={Typography.button.fontSize}
               />
             </View>
           </View>

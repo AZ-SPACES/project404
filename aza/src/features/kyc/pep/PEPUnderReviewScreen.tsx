@@ -55,7 +55,7 @@ export default function PEPUnderReviewScreen() {
           textColor={Colors.secondary}
           borderRadius={30}
           paddingVertical={16}
-          fontSize={Number(Typography.button.fontSize)}
+          fontSize={Typography.button.fontSize}
           fontWeight={Typography.button.fontWeight}
         />
       </View>
