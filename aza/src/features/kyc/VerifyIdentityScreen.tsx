@@ -17,6 +17,7 @@ import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "VerifyIdentity">;
 type VerifyIdentityRouteProp = RouteProp<RootStackParamList, "VerifyIdentity">;
@@ -28,6 +29,7 @@ export default function VerifyIdentityScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
+  usePreventScreenCapture();
   const [biometricConsent, setBiometricConsent] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -62,6 +64,8 @@ export default function VerifyIdentityScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"

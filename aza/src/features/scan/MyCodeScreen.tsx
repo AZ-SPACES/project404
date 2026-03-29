@@ -238,7 +238,8 @@ function createStyles(Colors: ThemeColors) {
     padding: 4,
     borderRadius: Radius.full,
     width: 240,
-    backgroundColor: isDark ? Colors.surface : '#E9E9E9' },
+    backgroundColor: isDark ? Colors.surface : '#E9E9E9',
+   },
   toggleButton: {
     flex: 1,
     paddingVertical: 12,

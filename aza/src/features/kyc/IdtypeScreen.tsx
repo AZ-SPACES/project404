@@ -22,6 +22,7 @@ import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Idtype'>;
 type IdtypeRouteProp = RouteProp<RootStackParamList, "Idtype">;
@@ -41,6 +42,7 @@ export default function IdtypeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<IdtypeRouteProp>();
   const { isPEP } = route.params || {};
+  usePreventScreenCapture();
   const [documentType, setDocumentType] = useState<{
     label: string;
     value: string;
@@ -123,7 +125,7 @@ export default function IdtypeScreen() {
                   outputRange: ["transparent", Colors.border] }) },
             ]}
           >
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityLabel="Go back" accessibilityRole="button">
               <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
             </TouchableOpacity>
             <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>

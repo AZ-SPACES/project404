@@ -15,6 +15,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useToast } from '../../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 

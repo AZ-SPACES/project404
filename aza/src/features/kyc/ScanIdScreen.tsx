@@ -20,6 +20,7 @@ import { RootStackParamList } from "../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ScanId">;
 type ScanIdRouteProp = RouteProp<RootStackParamList, "ScanId">;
@@ -33,6 +34,7 @@ const ZOOM_SCALE = 1 / 0.85;
 export default function ScanIdScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdRouteProp>();
@@ -110,9 +112,7 @@ export default function ScanIdScreen() {
         }
       }
     } catch (e) {
-      console.error("Camera capture failed", e);
-      setCapturedImage("placeholder");
-      setIsModalVisible(true);
+      showToast('Camera capture failed. Please try again.', 'error');
     }
   };
 
@@ -162,6 +162,8 @@ export default function ScanIdScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
             >
               <MaterialIcons
                 name="chevron-left"

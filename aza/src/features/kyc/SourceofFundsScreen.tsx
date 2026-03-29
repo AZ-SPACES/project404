@@ -21,6 +21,7 @@ import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
 type SourceofFundRouteProp = RouteProp<RootStackParamList, "SourceofFund">;
@@ -53,6 +54,7 @@ export default function SourceofFundsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SourceofFundRouteProp>();
   const { isPEP } = route.params || {};
+  usePreventScreenCapture();
   const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>([]);
   const [otherText, setOtherText] = useState("");
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -141,6 +143,8 @@ export default function SourceofFundsScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"
