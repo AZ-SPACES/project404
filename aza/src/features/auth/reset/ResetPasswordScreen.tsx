@@ -18,14 +18,21 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../components/ui/Button";
+import { isValidEmail, sanitizeText } from "../../../utils/validation";
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const emailError = touched && email.length > 0 && !isValidEmail(email)
+    ? "Enter a valid email address"
+    : null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -69,24 +76,35 @@ export default function ResetPasswordScreen() {
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => setEmail(sanitizeText(t))}
+                onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
             </View>
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
             <View style={styles.buttonContainer}>
               <Button
                 title="Reset password"
-                onPress={() => {
-                  navigation.navigate("ResetOTP");
+                onPress={async () => {
+                  if (!isValidEmail(email)) { setTouched(true); return; }
+                  setIsLoading(true);
+                  try {
+                    // TODO: call send-reset-email API, then navigate on success
+                    navigation.navigate("ResetOTP");
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
                 backgroundColor={Colors.primary}
                 textColor={Colors.secondary}
-                borderRadius={30} // completely rounded
+                borderRadius={30}
                 paddingVertical={16}
-                fontSize={Number(Typography.button.fontSize)}
-                fontWeight={Typography.button.fontWeight as any}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                loading={isLoading}
+                disabled={isLoading}
               />
             </View>
           </View>
@@ -97,7 +115,7 @@ export default function ResetPasswordScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -160,6 +178,12 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
+    marginBottom: 8,
   },
   buttonContainer: {
     marginBottom: Spacing.lg,

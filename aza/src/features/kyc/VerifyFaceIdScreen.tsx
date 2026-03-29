@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -22,8 +23,9 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VerifyFaceI
 type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
 
 export default function VerifyFaceIdScreen() {
+  usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyFaceIdRouteProp>();
@@ -115,8 +117,8 @@ export default function VerifyFaceIdScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
           />
         </View>
       </View>
@@ -125,7 +127,7 @@ export default function VerifyFaceIdScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

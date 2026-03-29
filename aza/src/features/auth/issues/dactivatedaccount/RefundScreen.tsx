@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -18,7 +19,7 @@ import { RootStackParamList } from "../../../../navigation/types";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Refund">;
 export default function Refund() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -121,13 +122,13 @@ export default function Refund() {
         <View style={styles.buttonContainer}>
           <Button
             title="Submit an appeal"
-            onPress={() => console.log("awaitng")}
+            onPress={() => Alert.alert("Coming Soon", "Appeal submission will be available soon.")}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
           />
         </View>
 
@@ -143,7 +144,7 @@ export default function Refund() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

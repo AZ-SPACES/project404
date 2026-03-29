@@ -27,7 +27,7 @@ const PEP_OPTIONS: PEPOptions[] = [
 
 export default function PEPStatusScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
@@ -135,8 +135,8 @@ export default function PEPStatusScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
             disabled={selectedOption === null}
           />
         </View>
@@ -146,7 +146,7 @@ export default function PEPStatusScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

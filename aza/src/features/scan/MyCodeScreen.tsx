@@ -3,16 +3,22 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share } fr
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useProfile } from '../../providers/ProfileProvider';
+import { useToast } from '../../providers/ToastProvider';
 
 const { width } = Dimensions.get('window');
 
 const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
-  const userHandle = "naaddo";
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { displayName, profileImageUri } = useProfile();
+  const { showToast } = useToast();
+  const userHandle = "naaddo"; // TODO: replace with user handle from backend
   const profileLink = `aza.me/${userHandle}`;
 
   const handleShare = async () => {
@@ -20,8 +26,8 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
     try {
       await Share.share({
         message: `Pay me on Aza: ${profileLink}` });
-    } catch (error) {
-      console.log(error);
+    } catch {
+      showToast('Could not open share sheet. Please try again.', 'error');
     }
   };
 
@@ -50,15 +56,16 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
         {/* User Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>Nana Akufo-Addo</Text>
+            <Text style={styles.userName}>{displayName || 'Your Name'}</Text>
             <View style={styles.handleBadge}>
               <Text style={styles.userHandle}>@{userHandle}</Text>
             </View>
           </View>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/3310695/pexels-photo-3310695.jpeg' }} 
-            style={styles.avatar} 
-          />
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.avatar} accessibilityLabel="Profile photo" />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          )}
         </View>
 
         {/* Main QR Content */}
@@ -113,7 +120,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,
@@ -177,12 +184,14 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 30,
     borderWidth: 2,
     borderColor: Colors.white },
+  avatarPlaceholder: {
+    backgroundColor: Colors.surface },
   mainContent: {
     flex: 1,
     alignItems: 'center',
     paddingTop: Spacing.md },
   qrCard: {
-    backgroundColor: Colors.white, // QR cards usually stay white for scannability, but let's see if surface works better
+    backgroundColor: Colors.white,
     padding: 24,
     borderRadius: 32,
     shadowColor: '#000',
@@ -221,14 +230,16 @@ function createStyles(Colors: ThemeColors) {
     color: Colors.textPrimary,
     fontWeight: '700' },
   bottomNav: {
-    paddingBottom: 20, // Extra padding for the bottom
-    alignItems: 'center' },
+    paddingBottom: 60,
+    alignItems: 'center' 
+  },
   toggleContainer: {
     flexDirection: 'row',
     padding: 4,
     borderRadius: Radius.full,
     width: 240,
-    backgroundColor: isDark ? Colors.surface : '#E9E9E9' },
+    backgroundColor: isDark ? Colors.surface : '#E9E9E9',
+   },
   toggleButton: {
     flex: 1,
     paddingVertical: 12,

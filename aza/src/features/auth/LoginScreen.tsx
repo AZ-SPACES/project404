@@ -21,6 +21,9 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../providers/AuthProvider';
 import { Alert } from 'react-native';
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useToast } from '../../providers/ToastProvider';
+import { isValidEmail, isValidPhone, sanitizeText } from '../../utils/validation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -33,34 +36,55 @@ const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const { login, isBiometricsEnabled } = useAuth();
+  const { showToast } = useToast();
+  usePreventScreenCapture();
 
-  const handleLogin = () => {
-    navigation.navigate('OTP', { isLogin: true });
-    // TODO: implement login logic
+  const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
+  const credentialError = touched && !credentialValid
+    ? useEmail ? 'Enter a valid email address' : 'Enter a valid phone number'
+    : null;
+  const passwordError = touched && password.trim().length === 0 ? 'Password is required' : null;
+  const isFormValid = credentialValid && password.trim().length > 0;
+
+  const handleLogin = async () => {
+    setTouched(true);
+    if (!isFormValid) return;
+    setIsLoading(true);
+    try {
+      // TODO: call login API, then navigate on success
+      navigation.navigate('OTP', { isLogin: true });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBiometricAuth = async () => {
+    setIsBiometricLoading(true);
     try {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
+
       if (!hasHardware || !isEnrolled) {
         Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
         return;
       }
-      
+
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to aza',
-        fallbackLabel: 'Use Passcode',
+        disableDeviceFallback: true,
       });
-      
+
       if (result.success) {
-        // Biometric successful, bypass OTP and setup/KYC flows directly
         login('biometric-token', true, true);
       }
     } catch (e) {
-      console.error(e);
+      showToast('Biometric authentication failed. Please try again.', 'error');
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -110,11 +134,17 @@ const LoginScreen: React.FC = () => {
               placeholder={useEmail ? 'Email Address' : 'Phone Number'}
               placeholderTextColor={Colors.textSecondary}
               value={useEmail ? email : phoneNumber}
-              onChangeText={useEmail ? setEmail : setPhoneNumber}
+              onChangeText={useEmail
+                ? (t) => setEmail(sanitizeText(t))
+                : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
+              onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
+              accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
+              maxLength={useEmail ? undefined : 10}
             />
           </View>
+          {credentialError ? <Text style={styles.errorText}>{credentialError}</Text> : null}
 
           <TouchableOpacity 
             onPress={toggleInputMode} 
@@ -126,30 +156,31 @@ const LoginScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {useEmail && (
-            <View style={styles.passwordSection}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputContainer}>
-                <MaterialIcons name="fingerprint" color={Colors.primary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="********"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!isPasswordVisible}
-                  autoCapitalize="none"
+          <View style={styles.passwordSection}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.inputContainer}>
+              <MaterialIcons name="lock-outline" color={Colors.primary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="********"
+                placeholderTextColor={Colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                onBlur={() => setTouched(true)}
+                secureTextEntry={!isPasswordVisible}
+                autoCapitalize="none"
+                accessibilityLabel="Password"
+              />
+              <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                <MaterialIcons
+                  name={isPasswordVisible ? "visibility" : "visibility-off"}
+                  size={20}
+                  color={Colors.primary}
                 />
-                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                  <MaterialIcons
-                    name={isPasswordVisible ? "visibility" : "visibility-off"}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
+            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          </View>
         </View>
 
         {/* Footer */}
@@ -163,11 +194,18 @@ const LoginScreen: React.FC = () => {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
+            loading={isLoading}
+            disabled={isLoading}
           />
 
           {isBiometricsEnabled && (
-            <TouchableOpacity style={styles.biometricButton} onPress={handleBiometricAuth}>
-              <MaterialIcons name="fingerprint" size={40} color={Colors.primary} />
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricAuth}
+              disabled={isBiometricLoading}
+              accessibilityLabel="Login with biometrics"
+            >
+              <MaterialIcons name="fingerprint" size={40} color={isBiometricLoading ? Colors.textSecondary : Colors.primary} />
               <Text style={styles.biometricText}>Login with Biometrics</Text>
             </TouchableOpacity>
           )}
@@ -183,7 +221,7 @@ const LoginScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -262,6 +300,11 @@ function createStyles(Colors: ThemeColors) {
     fontWeight: '600',
     color: Colors.primary,
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   footer: {
     paddingBottom: Spacing.lg,

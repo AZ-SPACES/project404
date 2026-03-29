@@ -21,37 +21,55 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiome
 
 export default function EnableBiometricsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { setPasscode, toggleBiometrics } = useAuth();
+  const [isBiometricAvailable, setIsBiometricAvailable] = React.useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    async function checkAvailability() {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        setIsBiometricAvailable(hasHardware && isEnrolled);
+      } catch (e) {
+        setIsBiometricAvailable(false);
+      }
+    }
+    checkAvailability();
+  }, []);
 
   const handleClose = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      setPasscode();
+    }
   };
 
   const handleSetup = async () => {
+    if (isBiometricAvailable === false) {
+      setPasscode();
+      return;
+    }
+    setIsLoading(true);
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
-      if (!hasHardware || !isEnrolled) {
-        Alert.alert('Not Available', 'Biometric authentication is not set up on this device');
-        return;
-      }
-      
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Enable biometric login for aza',
+        disableDeviceFallback: true,
       });
-      
+
       if (result.success) {
-        console.log('Biometrics enabled for user.');
         toggleBiometrics(true);
         setPasscode();
       }
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'An error occurred while setting up biometrics.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,29 +103,34 @@ export default function EnableBiometricsScreen() {
 
       <View style={styles.footer}>
         <Button
-          title="Set up biometrics"
+          title={isBiometricAvailable === false ? "Continue" : "Set up biometrics"}
           onPress={handleSetup}
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
+          loading={isLoading}
+          disabled={isLoading}
         />
         
-        <View style={styles.spacer} />
-        
-        <Button
-          title="Not now"
-          onPress={handleNotNow}
-          backgroundColor={Colors.secondary}
-          textColor={Colors.primary}
-          style={styles.button}
-        />
+        {isBiometricAvailable !== false && (
+          <>
+            <View style={styles.spacer} />
+            <Button
+              title="Not now"
+              onPress={handleNotNow}
+              backgroundColor={Colors.secondary}
+              textColor={Colors.primary}
+              style={styles.button}
+            />
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

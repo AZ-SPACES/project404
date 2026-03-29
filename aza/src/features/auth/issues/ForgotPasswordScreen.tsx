@@ -15,7 +15,7 @@ type NavigationProp = NativeStackNavigationProp<
 
 export default function ForgotPasswordScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -93,8 +93,8 @@ export default function ForgotPasswordScreen() {
             textColor={Colors.secondary}
             borderRadius={30} // completely rounded
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
           />
         </View>
 
@@ -110,7 +110,7 @@ export default function ForgotPasswordScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

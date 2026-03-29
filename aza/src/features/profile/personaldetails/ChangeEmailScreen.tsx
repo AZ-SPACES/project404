@@ -1,17 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   Animated,
   ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -27,7 +26,6 @@ export function ChangeEmailScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [newEmail, setNewEmail] = useState("");
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -94,20 +92,11 @@ export function ChangeEmailScreen() {
             secure.
           </Text>
 
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Enter new email</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={newEmail}
-                onChangeText={setNewEmail}
-                placeholder="caleb.dussey04@icloud.com"
-                placeholderTextColor={Colors.textSecondary + "80"}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={false}
-              />
-            </View>
+          <View style={styles.noticeBox}>
+            <MaterialIcons name="info-outline" size={20} color={Colors.textSecondary} style={{ marginTop: 2 }} />
+            <Text style={styles.noticeText}>
+              For your security, email address changes require identity verification and must be processed by our support team.
+            </Text>
           </View>
 
           <View
@@ -142,7 +131,7 @@ export function ChangeEmailScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -188,18 +177,21 @@ function createStyles(Colors: ThemeColors) {
     paddingHorizontal: Spacing.lg },
   noticeText: {
     ...Typography.body,
+    flex: 1,
     color: Colors.textSecondary,
+    lineHeight: 20 },
+  noticeBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
-    lineHeight: 20,
-    paddingHorizontal: Spacing.lg },
-  inputSection: {
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.lg },
-  label: {
-    ...Typography.caption,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 4 },
+    padding: Spacing.md,
+    backgroundColor: isDark ? Colors.surface : Colors.accent,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   inputContainer: {
     height: 52,
     borderWidth: 1,
@@ -211,10 +203,6 @@ function createStyles(Colors: ThemeColors) {
   readOnlyContainer: {
     backgroundColor: Colors.surface + "30",
     borderColor: Colors.border + "50" },
-  input: {
-    flex: 1,
-    ...Typography.bodyLg,
-    color: Colors.textPrimary },
   readOnlyText: {
     ...Typography.body,
     color: Colors.border },

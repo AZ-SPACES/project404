@@ -22,6 +22,7 @@ import KYCProgressBar from "../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Idtype'>;
 type IdtypeRouteProp = RouteProp<RootStackParamList, "Idtype">;
@@ -36,11 +37,12 @@ const ID_OPTIONS = [
 
 export default function IdtypeScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<IdtypeRouteProp>();
   const { isPEP } = route.params || {};
+  usePreventScreenCapture();
   const [documentType, setDocumentType] = useState<{
     label: string;
     value: string;
@@ -123,7 +125,7 @@ export default function IdtypeScreen() {
                   outputRange: ["transparent", Colors.border] }) },
             ]}
           >
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityLabel="Go back" accessibilityRole="button">
               <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
             </TouchableOpacity>
             <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
@@ -160,6 +162,9 @@ export default function IdtypeScreen() {
                     ]}
                     onPress={() => handleDocumentSelect(item)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[
                       styles.optionCardText,
@@ -203,8 +208,8 @@ export default function IdtypeScreen() {
               textColor={Colors.secondary}
               borderRadius={30}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />
           </View>
@@ -215,7 +220,7 @@ export default function IdtypeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: { 
     flex: 1, 

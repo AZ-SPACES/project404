@@ -18,18 +18,24 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { useSignUp } from "../../../providers/SignUpProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmail">;
 
 export default function SignUpEmailScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [email, setEmail] = useState("");
+  const { data, update } = useSignUp();
+  const [touched, setTouched] = useState(false);
+
+  const emailError = touched && data.email.trim().length > 0 && !isValidEmail(data.email)
+    ? "Enter a valid email address"
+    : null;
 
   const handleNext = () => {
-    // Navigate to the next screen in the signup flow
     navigation.navigate("SignUpPassword");
   };
 
@@ -73,8 +79,9 @@ export default function SignUpEmailScreen() {
                 style={styles.input}
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
+                value={data.email}
+                onChangeText={(t) => update({ email: sanitizeText(t) })}
+                onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoFocus
@@ -82,6 +89,7 @@ export default function SignUpEmailScreen() {
                 selectionColor={Colors.primary}
               />
             </View>
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
           </View>
 
           {/* Footer */}
@@ -93,9 +101,9 @@ export default function SignUpEmailScreen() {
               textColor={Colors.secondary}
               borderRadius={30}
               paddingVertical={16}
-              fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
-              disabled={email.trim().length === 0}
+              fontSize={Typography.button.fontSize}
+              fontWeight={Typography.button.fontWeight}
+              disabled={!isValidEmail(data.email)}
             />
           </View>
         </KeyboardAvoidingView>
@@ -105,7 +113,7 @@ export default function SignUpEmailScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -168,6 +176,11 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4,
   },
   buttonContainer: {
     paddingHorizontal: Spacing.lg,

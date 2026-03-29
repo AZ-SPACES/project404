@@ -3,7 +3,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   TroubleLogin: undefined;
-  OTP: { isLogin?: boolean } | undefined;
+  OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
   ChangePhoneNumber: undefined;
@@ -72,5 +72,6 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   ChangeEmail: undefined;
   ChangePhone: undefined;
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean };
   Hub: undefined;
 };

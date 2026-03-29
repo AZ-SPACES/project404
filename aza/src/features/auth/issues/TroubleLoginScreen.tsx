@@ -11,7 +11,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TroubleLogi
 
 type IssueItem = {
   label: string;
-  screen: keyof RootStackParamList;
+  screen: 'ForgotPassword' | 'TwoStepVerificationIssue' | 'ChangePhoneNumber' | 'NewDeviceLogin' | 'AccountDeactivated';
 };
 
 const ISSUES: IssueItem[] = [
@@ -24,7 +24,7 @@ const ISSUES: IssueItem[] = [
 
 export default function TroubleLoginScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -89,7 +89,7 @@ export default function TroubleLoginScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={styles.issueItem}
-            onPress={() => navigation.navigate(item.screen as any)}
+            onPress={() => navigation.navigate(item.screen)}
           >
             <Text style={styles.issueText}>{item.label}</Text>
             <MaterialIcons name="chevron-right" size={24} color={Colors.textPrimary} />
@@ -101,7 +101,7 @@ export default function TroubleLoginScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

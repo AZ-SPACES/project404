@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { ComponentProps, useState, useRef, useEffect } from "react";
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 const { height } = Dimensions.get("window");
 
@@ -14,37 +15,40 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "FindMeBy">;
 
 
 
-interface SettingRowProps {
-  iconName?: string;
-  iconType?: "Feather" | "Ionicons" | "MaterialCommunityIcons" | "Custom";
+type SettingRowProps = (
+  | { iconType: "Feather"; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconType: "Ionicons"; iconName: ComponentProps<typeof Ionicons>['name'] }
+  | { iconType: "MaterialCommunityIcons"; iconName: ComponentProps<typeof MaterialCommunityIcons>['name'] }
+  | { iconType: "Custom"; iconName?: never }
+) & {
   title: string;
   subtitle: string;
   switchValue: boolean;
   onSwitchChange: (value: boolean) => void;
-}
+};
 
-export function FindMeByScreen() {
+function SettingRow(props: SettingRowProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-
-  const SettingRow = ({ iconName,iconType,title,subtitle,switchValue,onSwitchChange }: SettingRowProps) => (
+  const { title, subtitle, switchValue, onSwitchChange } = props;
+  return (
     <View style={styles.row}>
       <View style={styles.iconContainer}>
-        {iconType === "Feather" && (
-          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
+        {props.iconType === "Feather" && (
+          <Feather name={props.iconName} size={20} color={Colors.textPrimary} />
         )}
-        {iconType === "Ionicons" && (
-          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
+        {props.iconType === "Ionicons" && (
+          <Ionicons name={props.iconName} size={20} color={Colors.textPrimary} />
         )}
-        {iconType === "MaterialCommunityIcons" && (
+        {props.iconType === "MaterialCommunityIcons" && (
           <MaterialCommunityIcons
-            name={iconName as any}
+            name={props.iconName}
             size={22}
             color={Colors.textPrimary}
           />
         )}
-        {iconType === "Custom" && (
+        {props.iconType === "Custom" && (
           <Image
             source={require("../../../assets/aza-z.png")}
             style={{ width: 24, height: 24 }}
@@ -52,7 +56,7 @@ export function FindMeByScreen() {
           />
         )}
       </View>
-  
+
       <View style={styles.textContainer}>
         <Text style={[Typography.body, styles.rowTitle]}>{title}</Text>
         <Text style={[Typography.caption, styles.rowSubtitle]}>{subtitle}</Text>
@@ -63,11 +67,20 @@ export function FindMeByScreen() {
         trackColor={{ false: isDark ? Colors.surface : "#E5E7EB", true: Colors.primary }}
         thumbColor={Colors.white}
         ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+        accessibilityRole="switch"
+        accessibilityLabel={title}
       />
     </View>
   );
+}
+
+export function FindMeByScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const navigation = useNavigation<NavigationProp>();
+  const { displayName, email, phone } = useProfile();
 
   const [wiseTagEnabled, setWiseTagEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(true);
@@ -131,7 +144,7 @@ export function FindMeByScreen() {
           <SettingRow
             iconType="Custom"
             title="Wisetag"
-            subtitle="@paapacobbold"
+            subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'} // handle from backend
             switchValue={wiseTagEnabled}
             onSwitchChange={setWiseTagEnabled}
           />
@@ -140,7 +153,7 @@ export function FindMeByScreen() {
             iconType="Feather"
             iconName="mail"
             title="Email address"
-            subtitle="paapacobbold@icloud.com"
+            subtitle={email ?? 'Not set'}
             switchValue={emailEnabled}
             onSwitchChange={setEmailEnabled}
           />
@@ -149,7 +162,7 @@ export function FindMeByScreen() {
             iconType="Feather"
             iconName="phone"
             title="Phone number"
-            subtitle="+233249054893"
+            subtitle={phone ?? 'Not set'}
             switchValue={phoneEnabled}
             onSwitchChange={setPhoneEnabled}
           />
@@ -237,7 +250,7 @@ export function FindMeByScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

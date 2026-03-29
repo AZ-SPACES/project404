@@ -5,6 +5,8 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-ca
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -13,7 +15,7 @@ const FRAME_SIZE = width * 0.7;
 const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -158,7 +160,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: { 
     flex: 1, 
@@ -263,7 +265,7 @@ function createStyles(Colors: ThemeColors) {
   },
   bottomNav: { 
     position: 'absolute', 
-    bottom: 60, 
+    bottom: 100,
     width: '100%', 
     alignItems: 'center' 
   },

@@ -8,6 +8,7 @@ import {
   Animated,
   Linking,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -19,14 +20,14 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
-const TERMS_URL = "";
-const PRIVACY_URL = "";
+const TERMS_URL = ""; // TODO: add production URL
+const PRIVACY_URL = ""; // TODO: add production URL
 
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -41,11 +42,19 @@ export default function ConsentScreen() {
   const isValid = agreedToTerms && agreedToPrivacy;
 
   const handleOpenTerms = () => {
-    Linking.openURL(TERMS_URL).catch(() => {});
+    if (TERMS_URL) {
+      Linking.openURL(TERMS_URL).catch(() => {});
+    } else {
+      Alert.alert("Coming Soon", "Our Terms of Service will be available shortly.");
+    }
   };
 
   const handleOpenPrivacy = () => {
-    Linking.openURL(PRIVACY_URL).catch(() => {});
+    if (PRIVACY_URL) {
+      Linking.openURL(PRIVACY_URL).catch(() => {});
+    } else {
+      Alert.alert("Coming Soon", "Our Privacy Policy will be available shortly.");
+    }
   };
 
   const handleContinue = () => {
@@ -165,8 +174,8 @@ export default function ConsentScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
             disabled={!isValid}
           />
         </View>
@@ -221,7 +230,7 @@ function CheckboxRow({
 
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

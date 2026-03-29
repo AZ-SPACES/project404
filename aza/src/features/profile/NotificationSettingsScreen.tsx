@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { ComponentProps, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
+import { useNotifications } from '../../providers/NotificationProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../theme';
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -17,40 +19,39 @@ interface NotificationSectionProps {
   children: React.ReactNode;
 }
 
-interface NotificationToggleProps {
-  iconName: string;
-  iconType?: 'Feather' | 'Ionicons' | 'MaterialCommunityIcons';
+type NotificationToggleProps = (
+  | { iconType: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconType: 'Ionicons'; iconName: ComponentProps<typeof Ionicons>['name'] }
+  | { iconType: 'MaterialCommunityIcons'; iconName: ComponentProps<typeof MaterialCommunityIcons>['name'] }
+) & {
   title: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
-}
+};
 
-
-
-export function NotificationSettingsScreen() {
+const NotificationSection = ({ title, description, children }: NotificationSectionProps) => {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-
-  const NotificationSection = ({ title, description, children }: NotificationSectionProps) => (
+  return (
     <View style={styles.section}>
       <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
       <Text style={[Typography.body, styles.sectionDescription]}>{description}</Text>
       {children}
     </View>
   );
+};
 
-  const NotificationToggle = ({ iconName, iconType = 'Feather', title, value, onValueChange }: NotificationToggleProps) => (
+const NotificationToggle = (props: NotificationToggleProps) => {
+  const { title, value, onValueChange } = props;
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  return (
     <View style={styles.toggleRow}>
       <View style={styles.iconContainer}>
-        {iconType === 'Feather' ? (
-          <Feather name={iconName as any} size={20} color={Colors.textPrimary} />
-        ) : iconType === 'Ionicons' ? (
-          <Ionicons name={iconName as any} size={20} color={Colors.textPrimary} />
-        ) : (
-          <MaterialCommunityIcons name={iconName as any} size={20} color={Colors.textPrimary} />
-        )}
+        {props.iconType === 'Feather' && <Feather name={props.iconName} size={20} color={Colors.textPrimary} />}
+        {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={20} color={Colors.textPrimary} />}
+        {props.iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={props.iconName} size={20} color={Colors.textPrimary} />}
       </View>
       <Text style={[Typography.bodyLg, styles.toggleTitle]}>{title}</Text>
       <Switch
@@ -59,9 +60,22 @@ export function NotificationSettingsScreen() {
         trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
         thumbColor={Colors.white}
         ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+        accessibilityRole="switch"
+        accessibilityLabel={title}
       />
     </View>
   );
+};
+
+export function NotificationSettingsScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { checkPermissions, requestPermissions } = useNotifications();
+  const { userToken } = useAuth();
+  const { showToast } = useToast();
+  const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -90,7 +104,7 @@ export function NotificationSettingsScreen() {
 
   useEffect(() => {
     const checkStatus = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       setAllowNotifications(status === 'granted');
     };
     checkStatus();
@@ -107,7 +121,7 @@ export function NotificationSettingsScreen() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@notification_prefs');
+        const stored = await AsyncStorage.getItem(prefsKey);
         if (stored) {
           const parsed = JSON.parse(stored);
           setTransfersEmail(parsed.transfersEmail ?? true);
@@ -122,7 +136,7 @@ export function NotificationSettingsScreen() {
           setCausesPush(parsed.causesPush ?? false);
         }
       } catch (e) {
-        console.error('Failed to load notification preferences');
+        showToast('Could not load your notification preferences', 'error');
       } finally {
         setIsLoaded(true);
       }
@@ -141,9 +155,9 @@ export function NotificationSettingsScreen() {
           feedbackEmail, feedbackPush, 
           causesEmail, causesPush 
         };
-        await AsyncStorage.setItem('@notification_prefs', JSON.stringify(prefs));
+        await AsyncStorage.setItem(prefsKey, JSON.stringify(prefs));
       } catch (e) {
-        console.error('Failed to save notification preferences');
+        showToast('Failed to save preferences. Please try again.', 'error');
       }
     };
     savePreferences();
@@ -159,9 +173,9 @@ export function NotificationSettingsScreen() {
   const togglePushPreference = async (setter: (val: boolean) => void, currentVal: boolean) => {
     if (!currentVal) {
       
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       if (status !== 'granted') {
-        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        const { status: reqStatus, canAskAgain } = await requestPermissions();
         if (reqStatus === 'granted') {
           setter(true);
         } else if (!canAskAgain) {
@@ -180,9 +194,9 @@ export function NotificationSettingsScreen() {
 
   const handleAllowNotificationsToggle = async (value: boolean) => {
     if (value) {
-      const { status } = await Notifications.getPermissionsAsync();
+      const { status } = await checkPermissions();
       if (status !== 'granted') {
-        const { status: reqStatus, canAskAgain } = await Notifications.requestPermissionsAsync();
+        const { status: reqStatus, canAskAgain } = await requestPermissions();
         if (reqStatus === 'granted') {
           setAllowNotifications(true);
         } else if (!canAskAgain) {
@@ -217,7 +231,7 @@ export function NotificationSettingsScreen() {
       >
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')}
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
@@ -245,6 +259,7 @@ export function NotificationSettingsScreen() {
 
         <View style={styles.allowSection}>
           <NotificationToggle
+            iconType="Feather"
             iconName="bell"
             title="Allow notifications"
             value={allowNotifications}
@@ -257,12 +272,14 @@ export function NotificationSettingsScreen() {
           description="Alerts for login, password resets, and changes to your two-step verification."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={securityEmail}
             onValueChange={setSecurityEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={securityPush}
@@ -275,12 +292,14 @@ export function NotificationSettingsScreen() {
           description="Notifications about where your money is."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={transfersEmail}
             onValueChange={setTransfersEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={transfersPush}
@@ -293,12 +312,14 @@ export function NotificationSettingsScreen() {
           description="Receive updates about the latest features and products."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={personalisedEmail}
             onValueChange={setPersonalisedEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={personalisedPush}
@@ -311,12 +332,14 @@ export function NotificationSettingsScreen() {
           description="A chance to share your thoughts, test new products, and earn rewards."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={feedbackEmail}
             onValueChange={setFeedbackEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={feedbackPush}
@@ -329,12 +352,14 @@ export function NotificationSettingsScreen() {
           description="Chances to get involved with our charity and fundraising projects."
         >
           <NotificationToggle
+            iconType="Feather"
             iconName="mail"
             title="Email"
             value={causesEmail}
             onValueChange={setCausesEmail}
           />
           <NotificationToggle
+            iconType="Feather"
             iconName="smartphone"
             title="Push"
             value={causesPush}
@@ -355,7 +380,7 @@ export function NotificationSettingsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

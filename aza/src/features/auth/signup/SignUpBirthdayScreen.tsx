@@ -17,17 +17,20 @@ import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme"
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 import { useAuth } from "../../../providers/AuthProvider";
+import { useSignUp } from "../../../providers/SignUpProvider";
+import { useProfile } from "../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
 export default function SignUpBirthdayScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { login } = useAuth();
+  const { data, update, reset } = useSignUp();
+  const { setDisplayName, setEmail, setPhone } = useProfile();
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -46,23 +49,26 @@ export default function SignUpBirthdayScreen() {
   // ── Stable callbacks ───────────────────────────────────────────────────────
 
   const handleDateSelect = useCallback((dateString: string) => {
-    setSelectedDate(dateString);
-  }, []);
+    update({ dateOfBirth: dateString });
+  }, [update]);
 
   const handleMonthChange = useCallback((dateString: string) => {
     setCurrentMonth(dateString);
   }, []);
 
-  const handleNext = useCallback(() => {
-    console.log("Birthday complete!");
-    // Log in the user to trigger the root navigator state change into SetupNavigator
+  const handleNext = useCallback(async () => {
+    const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+    if (fullName) await setDisplayName(fullName);
+    if (data.email) await setEmail(data.email);
+    if (data.phoneNumber) await setPhone(data.phoneNumber);
     login("signup-token-placeholder", false, false);
-  }, [login]);
+    reset();
+  }, [login, reset, data.firstName, data.lastName, data.email, data.phoneNumber, setDisplayName, setEmail, setPhone]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
   // Derived — avoids inline expression in JSX causing Button re-renders
-  const isDisabled = useMemo(() => !selectedDate, [selectedDate]);
+  const isDisabled = useMemo(() => !data.dateOfBirth, [data.dateOfBirth]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -115,7 +121,7 @@ export default function SignUpBirthdayScreen() {
 
           {/* Reusable calendar component */}
           <DateOfBirthCalendar
-            selectedDate={selectedDate}
+            selectedDate={data.dateOfBirth}
             onDateSelect={handleDateSelect}
             currentMonth={currentMonth}
             onMonthChange={handleMonthChange}
@@ -131,8 +137,8 @@ export default function SignUpBirthdayScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
             disabled={isDisabled}
           />
         </View>
@@ -142,7 +148,7 @@ export default function SignUpBirthdayScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

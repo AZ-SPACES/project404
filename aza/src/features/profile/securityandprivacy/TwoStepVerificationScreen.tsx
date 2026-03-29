@@ -1,53 +1,52 @@
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 
-interface VerificationMethodProps {
-  iconName: string;
-  iconType: 'Feather' | 'MaterialCommunityIcons' | 'Ionicons';
+type VerificationMethodProps = (
+  | { iconType: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
+  | { iconType: 'MaterialCommunityIcons'; iconName: ComponentProps<typeof MaterialCommunityIcons>['name'] }
+  | { iconType: 'Ionicons'; iconName: ComponentProps<typeof Ionicons>['name'] }
+) & {
   title: string;
   description: string;
   securityLevel: string;
   isVerySecure?: boolean;
   onPress?: () => void;
-}
+};
 
 
 
 export function TwoStepVerificationScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
-  const navigation = useNavigation();
-  
-  const VerificationMethod = ({ 
-    iconName, 
-    iconType, 
-    title, 
-    description, 
-    securityLevel, 
-    isVerySecure,
-    onPress 
-  }: VerificationMethodProps) => (
-    <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.iconContainer}>
-        {iconType === 'Feather' && <Feather name={iconName as any} size={24} color={Colors.textPrimary} />}
-        {iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={iconName as any} size={24} color={Colors.textPrimary} />}
-        {iconType === 'Ionicons' && <Ionicons name={iconName as any} size={24} color={Colors.textPrimary} />}
-      </View>
-      <View style={styles.methodInfo}>
-        <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
-        <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
-        <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
-          {securityLevel}
-        </Text>
-      </View>
-      <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-    </TouchableOpacity>
-  );
+  const isDark = Colors.isDark;
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'TwoStepVerification'>>();
+
+  const VerificationMethod = (props: VerificationMethodProps) => {
+    const { title, description, securityLevel, isVerySecure, onPress } = props;
+    return (
+      <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
+        <View style={styles.iconContainer}>
+          {props.iconType === 'Feather' && <Feather name={props.iconName} size={24} color={Colors.textPrimary} />}
+          {props.iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={props.iconName} size={24} color={Colors.textPrimary} />}
+          {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={24} color={Colors.textPrimary} />}
+        </View>
+        <View style={styles.methodInfo}>
+          <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
+          <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
+          <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
+            {securityLevel}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -128,7 +127,7 @@ export function TwoStepVerificationScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

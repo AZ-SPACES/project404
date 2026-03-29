@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import * as Font from 'expo-font';
+import { Ionicons, Feather } from '@expo/vector-icons';
+
 import { useDisplayContext } from '../../providers/DisplayProvider';
 
 const splashImage = require('../../assets/aza-logo.png');
@@ -21,6 +24,12 @@ export default function AnimatedSplashScreen({ children }: { children: React.Rea
     async function prepare() {
       try {
         await SplashScreen.preventAutoHideAsync();
+        
+        // Pre-load fonts
+        await Font.loadAsync({
+          ...Ionicons.font,
+          ...Feather.font,
+        });
         
         await new Promise(resolve => setTimeout(resolve, 800));
       } catch (e) {

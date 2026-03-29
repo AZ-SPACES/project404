@@ -15,6 +15,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useToast } from '../../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 
@@ -29,7 +31,7 @@ const DOC_TYPES: DocumentType[] = [
 
 export default function PEPProofOfWealthScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [docType, setDocType] = useState<DocumentType | null>(null);
@@ -53,19 +55,12 @@ export default function PEPProofOfWealthScreen() {
   };
 
   const handleSelectDocument = async () => {
-    if (!docType) {
-      // Unlikely to hit if button is managed correctly, but safety check
-      console.log("No document type selected");
-      return;
-    }
+    if (!docType) return;
 
     try {
-      console.log("Launching document picker...");
       const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*", // Using wildcard for maximum compatibility during debugging
+        type: ["application/pdf", "image/jpeg", "image/png"],
         copyToCacheDirectory: true });
-
-      console.log("Picker result:", result);
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const file = result.assets[0];
@@ -74,7 +69,7 @@ export default function PEPProofOfWealthScreen() {
         setFileUploaded(true);
       }
     } catch (err) {
-      console.log("DocumentPicker Error: ", err);
+      console.error("DocumentPicker Error: ", err);
     }
   };
 
@@ -204,8 +199,8 @@ export default function PEPProofOfWealthScreen() {
             textColor={Colors.secondary}
             borderRadius={30}
             paddingVertical={16}
-            fontSize={Number(Typography.button.fontSize)}
-            fontWeight={Typography.button.fontWeight as any}
+            fontSize={Typography.button.fontSize}
+            fontWeight={Typography.button.fontWeight}
             disabled={!docType || !fileUploaded}
           />
         </View>
@@ -215,7 +210,7 @@ export default function PEPProofOfWealthScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
