@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
@@ -106,7 +107,7 @@ export function ChatScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
   const { name, avatar, online } = route.params;
 
   const [message, setMessage] = useState('');

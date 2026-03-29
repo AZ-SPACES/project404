@@ -11,7 +11,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TroubleLogi
 
 type IssueItem = {
   label: string;
-  screen: keyof RootStackParamList;
+  screen: 'ForgotPassword' | 'TwoStepVerificationIssue' | 'ChangePhoneNumber' | 'NewDeviceLogin' | 'AccountDeactivated';
 };
 
 const ISSUES: IssueItem[] = [
@@ -89,7 +89,7 @@ export default function TroubleLoginScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={styles.issueItem}
-            onPress={() => navigation.navigate(item.screen as any)}
+            onPress={() => navigation.navigate(item.screen)}
           >
             <Text style={styles.issueText}>{item.label}</Text>
             <MaterialIcons name="chevron-right" size={24} color={Colors.textPrimary} />

@@ -37,6 +37,9 @@ export default function HomeScreen() {
       style={styles.actionContainer}
       activeOpacity={0.7}
       onPress={onPress}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <View style={styles.actionIconCircle}>
         <Feather name={icon} size={24} color={Colors.white} />
@@ -82,9 +85,10 @@ export default function HomeScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.bellButton}
                 onPress={() => navigation.navigate("Inbox")}
+                accessibilityLabel="Open notifications"
               >
                 <Feather name="bell" size={24} color={Colors.white} />
               </TouchableOpacity>
@@ -98,7 +102,7 @@ export default function HomeScreen() {
             </Text>
             <View style={styles.balanceRow}>
               <Text style={[Typography.h1, styles.balanceText]}>GH₵ 0.00</Text>
-              <TouchableOpacity style={styles.eyeIcon}>
+              <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility">
                 <Feather
                   name="eye-off"
                   size={Typography.h1.fontSize}

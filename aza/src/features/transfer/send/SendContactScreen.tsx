@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
-  ScrollView,
   TextInput,
   StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -94,9 +93,15 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       style={styles.recentItem}
       activeOpacity={0.7}
       onPress={() => onPress(contact)}
+      accessibilityLabel={contact.name}
     >
       <View style={styles.recentAvatarWrapper}>
-         <Image source={{ uri: contact.avatar }} style={styles.recentAvatar} />
+        <Image
+          source={{ uri: contact.avatar }}
+          style={styles.recentAvatar}
+          accessibilityLabel={contact.name}
+          onError={() => {}}
+        />
       </View>
       <Text style={styles.recentName} numberOfLines={1}>
         {contact.name}
@@ -112,8 +117,14 @@ export default function SendScreen({ navigation }: SendScreenProps) {
       style={styles.contactRow}
       activeOpacity={0.7}
       onPress={() => onPress(contact)}
+      accessibilityLabel={contact.name}
     >
-      <Image source={{ uri: contact.avatar }} style={styles.contactAvatar} />
+      <Image
+        source={{ uri: contact.avatar }}
+        style={styles.contactAvatar}
+        accessibilityLabel={contact.name}
+        onError={() => {}}
+      />
       <View style={styles.contactInfo}>
         <Text style={styles.contactName}>{contact.name}</Text>
         <Text style={styles.contactUsername}>{contact.username}</Text>
@@ -146,84 +157,83 @@ export default function SendScreen({ navigation }: SendScreenProps) {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Go back"
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} style={styles.backicon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.addButton} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.addButton} activeOpacity={0.7} accessibilityLabel="Add contact">
           <Feather name="plus" size={16} color={Colors.white} />
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
+      <FlatList
+        data={filteredContacts}
+        keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Title */}
-        <Text style={styles.title}>Who are you sending to?</Text>
-
-        {/* Recents Section */}
-        <Text style={styles.sectionLabel}>Recents</Text>
-        <FlatList
-          data={RECENT_CONTACTS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.recentsContainer}
-          renderItem={({ item }) => (
-            <RecentContactItem contact={item} onPress={handleContactPress} />
-          )}
-        />
-
-        {/* All Section Header */}
-        <View style={styles.allHeader}>
-          <Text style={styles.sectionLabel}>All</Text>
-          <TouchableOpacity
-            style={styles.searchButton}
-            activeOpacity={0.7}
-            onPress={() => setSearchVisible(!searchVisible)}
-          >
-            <Feather name="search" size={16} color={Colors.textPrimary} />
-            <Text style={styles.searchButtonText}>Search</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Input */}
-        {searchVisible && (
-          <View style={styles.searchInputContainer}>
-            <Feather
-              name="search"
-              size={16}
-              color={Colors.textSecondary}
-              style={styles.searchInputIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search contacts..."
-              placeholderTextColor={Colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Feather name="x" size={16} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
+        renderItem={({ item }) => (
+          <ContactRow contact={item} onPress={handleContactPress} />
         )}
+        ListHeaderComponent={
+          <>
+            {/* Title */}
+            <Text style={styles.title}>Who are you sending to?</Text>
 
-        {/* Contact List */}
-        <View style={styles.contactList}>
-          {filteredContacts.map((contact) => (
-            <ContactRow
-              key={contact.id}
-              contact={contact}
-              onPress={handleContactPress}
+            {/* Recents Section */}
+            <Text style={styles.sectionLabel}>Recents</Text>
+            <FlatList
+              data={RECENT_CONTACTS}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.recentsContainer}
+              renderItem={({ item }) => (
+                <RecentContactItem contact={item} onPress={handleContactPress} />
+              )}
             />
-          ))}
-        </View>
-      </ScrollView>
+
+            {/* All Section Header */}
+            <View style={styles.allHeader}>
+              <Text style={styles.sectionLabel}>All</Text>
+              <TouchableOpacity
+                style={styles.searchButton}
+                activeOpacity={0.7}
+                onPress={() => setSearchVisible(!searchVisible)}
+                accessibilityLabel="Search contacts"
+              >
+                <Feather name="search" size={16} color={Colors.textPrimary} />
+                <Text style={styles.searchButtonText}>Search</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            {searchVisible && (
+              <View style={styles.searchInputContainer}>
+                <Feather
+                  name="search"
+                  size={16}
+                  color={Colors.textSecondary}
+                  style={styles.searchInputIcon}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search contacts..."
+                  placeholderTextColor={Colors.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                  accessibilityLabel="Search contacts"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
+                    <Feather name="x" size={16} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -267,8 +277,6 @@ function createStyles(Colors: ThemeColors) {
     ...Typography.body,
     fontWeight: '600',
     color: Colors.white },
-  scrollView: {
-    flex: 1 },
   title: {
     ...Typography.h2,
     color: Colors.textPrimary,
@@ -345,9 +353,8 @@ function createStyles(Colors: ThemeColors) {
     ...Typography.body,
     color: Colors.textPrimary,
     padding: 0 },
-  contactList: {
-    paddingHorizontal: Spacing.lg },
   contactRow: {
+    paddingHorizontal: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.sm + 2,

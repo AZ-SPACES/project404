@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import Button from '../../../components/ui/Button';
 
 export function SecureAccountScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'SecureAccount'>>();
 
   const handleSecureAccount = () => {
     // Logic to secure account

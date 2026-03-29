@@ -143,7 +143,7 @@ export default function PEPDetailsScreen() {
               borderRadius={30}
               paddingVertical={16}
               fontSize={Number(Typography.button.fontSize)}
-              fontWeight={Typography.button.fontWeight as any}
+              fontWeight={Typography.button.fontWeight}
               disabled={!isFormValid}
             />
           </View>

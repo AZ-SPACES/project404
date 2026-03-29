@@ -86,7 +86,7 @@ export default function AccountDeactivatedScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={styles.issueItem}
-            onPress={() => navigation.navigate(item.screen as any)}
+            onPress={() => navigation.navigate(item.screen)}
           >
             <Text style={styles.issueText}>{item.label}</Text>
             <MaterialIcons name="chevron-right" size={24} color={Colors.textPrimary} />

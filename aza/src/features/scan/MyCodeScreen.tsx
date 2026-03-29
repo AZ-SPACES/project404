@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share } fr
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
@@ -11,7 +13,7 @@ const { width } = Dimensions.get('window');
 const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const userHandle = "naaddo";
   const profileLink = `aza.me/${userHandle}`;
 
