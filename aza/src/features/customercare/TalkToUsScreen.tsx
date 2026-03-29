@@ -24,7 +24,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TalkToUs">;
 export default function TalkToUsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const [language, setLanguage] = useState("English");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -291,7 +291,7 @@ export default function TalkToUsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

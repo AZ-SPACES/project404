@@ -15,26 +15,26 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
-// Chat components
 import { ChatHeader } from '../../components/chat/ChatHeader';
-import { ChatMoreModal } from '../../components/chat/ChatMoreModal';
-import { ChatAttachmentModal } from '../../components/chat/ChatAttachmentModal';
 import { ChatMessageBubble, ChatTypingIndicator } from '../../components/chat/ChatMessageBubble';
 import { ChatInputArea } from '../../components/chat/ChatInputArea';
-
-// Shared types / helpers / constants
+import { ChatAttachmentModal } from '../../components/chat/ChatAttachmentModal';
+import { ChatMoreModal } from '../../components/chat/ChatMoreModal';
 import {
-  Message, MoreAction, MenuAnchor, AttachmentAnchor,
-  AUTO_REPLIES, INITIAL_MESSAGES,
-  isSameDay, formatDateHeader, formatTime,
+  Message,
+  MoreAction,
+  MenuAnchor,
+  AttachmentAnchor,
+  INITIAL_MESSAGES,
+  AUTO_REPLIES,
+  isSameDay,
+  formatDateHeader,
+  formatTime,
 } from '../../components/chat/chatTypes';
 
-// Re-export types so other modules can still import from ChatScreen if needed
-export type { Message, MessageStatus } from '../../components/chat/chatTypes';
-
-// ============================================================================
-// Main Screen
-// ============================================================================
+// ----------------------------------------------------------------------------
+// Main Screen Component
+// ----------------------------------------------------------------------------
 export function ChatScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';

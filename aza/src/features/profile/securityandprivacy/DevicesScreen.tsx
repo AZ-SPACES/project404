@@ -18,7 +18,7 @@ const { height } = Dimensions.get('window');
 export function DevicesScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const [deviceInfo, setDeviceInfo] = useState({
@@ -215,7 +215,7 @@ export function DevicesScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

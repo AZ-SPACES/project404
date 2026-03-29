@@ -25,7 +25,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
 const ResetOTPScreen: React.FC = () => {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
@@ -160,7 +160,7 @@ const ResetOTPScreen: React.FC = () => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

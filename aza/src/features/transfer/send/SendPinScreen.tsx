@@ -26,6 +26,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
+import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -40,9 +41,11 @@ export default function SendPinScreen({
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { verifyPasscode, checkPinLockout, recordPinFailure, resetPinAttempts } = useAuth();
+  usePreventScreenCapture();
   const [pin, setPin] = useState<string>("");
   const [errorStatus, setErrorStatus] = useState(false);
   const [lockedSeconds, setLockedSeconds] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const scaleAnims = useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -92,19 +95,24 @@ export default function SendPinScreen({
 
   const handleCompletePin = useCallback(
     async (enteredPin: string) => {
-      const isValid = await verifyPasscode(enteredPin);
-      if (isValid) {
-        await resetPinAttempts();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        navigation.replace("SendSuccess", route.params);
-      } else {
-        const { isLocked, secondsRemaining } = await recordPinFailure();
-        setErrorStatus(true);
-        startShake();
-        setPin("");
-        if (isLocked) {
-          startCountdown(secondsRemaining);
+      setIsVerifying(true);
+      try {
+        const isValid = await verifyPasscode(enteredPin);
+        if (isValid) {
+          await resetPinAttempts();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          navigation.replace("SendSuccess", route.params);
+        } else {
+          const { isLocked, secondsRemaining } = await recordPinFailure();
+          setErrorStatus(true);
+          startShake();
+          setPin("");
+          if (isLocked) {
+            startCountdown(secondsRemaining);
+          }
         }
+      } finally {
+        setIsVerifying(false);
       }
     },
     [navigation, route.params, verifyPasscode, startShake, recordPinFailure, resetPinAttempts, startCountdown],
@@ -125,7 +133,7 @@ export default function SendPinScreen({
 
   const handleTextChange = useCallback(
     (text: string) => {
-      if (lockedSeconds > 0) return;
+      if (lockedSeconds > 0 || isVerifying) return;
       if (errorStatus) setErrorStatus(false);
       // Only allow numbers and max length of 4
       const cleaned = text.replace(/[^0-9]/g, "").slice(0, PIN_LENGTH);
@@ -153,7 +161,7 @@ export default function SendPinScreen({
 
       setPin(cleaned);
     },
-    [pin.length, scaleAnims, errorStatus, lockedSeconds],
+    [pin.length, scaleAnims, errorStatus, lockedSeconds, isVerifying],
   );
 
   const renderSquares = () => {
@@ -242,7 +250,9 @@ export default function SendPinScreen({
 
             {renderSquares()}
 
-            {lockedSeconds > 0 ? (
+            {isVerifying ? (
+              <Text style={styles.verifyingText}>Verifying…</Text>
+            ) : lockedSeconds > 0 ? (
               <Text style={styles.lockoutText}>
                 Too many failed attempts.{"\n"}Try again in {Math.floor(lockedSeconds / 60)}:{String(lockedSeconds % 60).padStart(2, "0")}
               </Text>
@@ -353,6 +363,12 @@ function createStyles(Colors: ThemeColors) {
       height: 12,
       borderRadius: 6,
       backgroundColor: Colors.textPrimary,
+    },
+    verifyingText: {
+      marginTop: 20,
+      fontSize: 14,
+      color: Colors.textSecondary,
+      textAlign: "center",
     },
     errorText: {
       marginTop: 20,

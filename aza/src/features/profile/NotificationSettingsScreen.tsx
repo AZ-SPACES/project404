@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../providers/NotificationProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../theme';
+import { useToast } from '../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -42,7 +44,7 @@ const NotificationSection = ({ title, description, children }: NotificationSecti
 const NotificationToggle = (props: NotificationToggleProps) => {
   const { title, value, onValueChange } = props;
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
     <View style={styles.toggleRow}>
@@ -58,6 +60,8 @@ const NotificationToggle = (props: NotificationToggleProps) => {
         trackColor={{ false: isDark ? Colors.surface : '#E5E7EB', true: Colors.primary }}
         thumbColor={Colors.white}
         ios_backgroundColor={isDark ? Colors.surface : "#E5E7EB"}
+        accessibilityRole="switch"
+        accessibilityLabel={title}
       />
     </View>
   );
@@ -65,10 +69,13 @@ const NotificationToggle = (props: NotificationToggleProps) => {
 
 export function NotificationSettingsScreen() {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { checkPermissions, requestPermissions } = useNotifications();
+  const { userToken } = useAuth();
+  const { showToast } = useToast();
+  const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -114,7 +121,7 @@ export function NotificationSettingsScreen() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@notification_prefs');
+        const stored = await AsyncStorage.getItem(prefsKey);
         if (stored) {
           const parsed = JSON.parse(stored);
           setTransfersEmail(parsed.transfersEmail ?? true);
@@ -129,7 +136,7 @@ export function NotificationSettingsScreen() {
           setCausesPush(parsed.causesPush ?? false);
         }
       } catch (e) {
-        console.error('Failed to load notification preferences');
+        showToast('Could not load your notification preferences', 'error');
       } finally {
         setIsLoaded(true);
       }
@@ -148,9 +155,9 @@ export function NotificationSettingsScreen() {
           feedbackEmail, feedbackPush, 
           causesEmail, causesPush 
         };
-        await AsyncStorage.setItem('@notification_prefs', JSON.stringify(prefs));
+        await AsyncStorage.setItem(prefsKey, JSON.stringify(prefs));
       } catch (e) {
-        console.error('Failed to save notification preferences');
+        showToast('Failed to save preferences. Please try again.', 'error');
       }
     };
     savePreferences();
@@ -373,7 +380,7 @@ export function NotificationSettingsScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,

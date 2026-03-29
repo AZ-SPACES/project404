@@ -8,6 +8,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../../providers/ProfileProvider';
+import { useToast } from '../../providers/ToastProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { displayName, profileImageUri } = useProfile();
+  const { showToast } = useToast();
   const userHandle = "naaddo"; // TODO: replace with user handle from backend
   const profileLink = `aza.me/${userHandle}`;
 
@@ -24,8 +26,8 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
     try {
       await Share.share({
         message: `Pay me on Aza: ${profileLink}` });
-    } catch (error) {
-      console.error(error);
+    } catch {
+      showToast('Could not open share sheet. Please try again.', 'error');
     }
   };
 
@@ -118,7 +120,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
 };
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,
@@ -182,12 +184,14 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 30,
     borderWidth: 2,
     borderColor: Colors.white },
+  avatarPlaceholder: {
+    backgroundColor: Colors.surface },
   mainContent: {
     flex: 1,
     alignItems: 'center',
     paddingTop: Spacing.md },
   qrCard: {
-    backgroundColor: Colors.white, // QR cards usually stay white for scannability, but let's see if surface works better
+    backgroundColor: Colors.white,
     padding: 24,
     borderRadius: 32,
     shadowColor: '#000',
@@ -234,7 +238,8 @@ function createStyles(Colors: ThemeColors) {
     padding: 4,
     borderRadius: Radius.full,
     width: 240,
-    backgroundColor: isDark ? Colors.surface : '#E9E9E9' },
+    backgroundColor: isDark ? Colors.surface : '#E9E9E9',
+   },
   toggleButton: {
     flex: 1,
     paddingVertical: 12,

@@ -66,7 +66,7 @@ const ALL_CONTACTS: Contact[] = [
 export default function ReceiveScreen({ navigation }: ReceiveScreenProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -181,7 +181,7 @@ export default function ReceiveScreen({ navigation }: ReceiveScreenProps) {
 const CONTACT_ROW_AVATAR = 44;
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
     flex: 1,

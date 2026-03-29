@@ -21,6 +21,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../the
 import Button from "../../components/ui/Button";
 import { useAuth } from "../../providers/AuthProvider";
 import { useProfile } from "../../providers/ProfileProvider";
+import { useToast } from "../../providers/ToastProvider";
 
 const { height } = Dimensions.get('window');
 
@@ -38,17 +39,11 @@ type SectionItemProps = (
 
 
 
-export function ProfileScreen() {
+function SectionItem(props: SectionItemProps) {
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
-  const { logout } = useAuth();
-  const { displayName, profileImageUri, setProfileImage } = useProfile();
-
-  const SectionItem = (props: SectionItemProps) => {
-    const { title, subtitle, onPress, hideArrow } = props;
-    return (
+  const { title, subtitle, onPress, hideArrow } = props;
+  return (
     <TouchableOpacity style={styles.sectionItem} onPress={onPress} activeOpacity={0.7} accessibilityLabel={title}>
       <View style={styles.iconContainer}>
         {props.iconFamily === 'Feather' ? (
@@ -65,8 +60,17 @@ export function ProfileScreen() {
         <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
       )}
     </TouchableOpacity>
-    );
-  };
+  );
+}
+
+export function ProfileScreen() {
+  const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const navigation = useNavigation<NavigationProp>();
+  const { logout } = useAuth();
+  const { displayName, profileImageUri, setProfileImage } = useProfile();
+  const { showToast } = useToast();
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -153,7 +157,7 @@ export function ProfileScreen() {
         setPhotoSheetVisible(false);
       }
     } catch {
-      Alert.alert("Error", "Something went wrong while taking the photo. Please try again.");
+      showToast('Something went wrong while taking the photo.', 'error');
     }
   };
 
@@ -179,13 +183,30 @@ export function ProfileScreen() {
         setPhotoSheetVisible(false);
       }
     } catch {
-      Alert.alert("Error", "Something went wrong while selecting the photo. Please try again.");
+      showToast('Something went wrong while selecting the photo.', 'error');
     }
   };
 
-  const handleRemovePhoto = async () => {
-    await setProfileImage(null);
-    setPhotoSheetVisible(false);
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      "Remove Photo",
+      "Are you sure you want to remove your profile photo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await setProfileImage(null);
+              setPhotoSheetVisible(false);
+            } catch {
+              showToast('Could not remove photo. Please try again.', 'error');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -261,11 +282,30 @@ export function ProfileScreen() {
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
           <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" />
           <SectionItem iconFamily="Feather" iconName="star" title="Rate us" subtitle="Tell us what you think" />
-          <SectionItem 
-            iconFamily="Feather" 
-            iconName="log-out" 
-            title="Sign Out"  
-            onPress={() => logout()}
+          <SectionItem
+            iconFamily="Feather"
+            iconName="log-out"
+            title="Sign Out"
+            onPress={() => {
+              Alert.alert(
+                "Sign Out",
+                "Are you sure you want to sign out?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await logout();
+                      } catch {
+                        showToast('Sign out failed. Please try again.', 'error');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
           />
         </View>
 
@@ -426,7 +466,7 @@ export function ProfileScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === '#121212';
+  const isDark = Colors.isDark;
   return StyleSheet.create({
   safeArea: {
     flex: 1,
