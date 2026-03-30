@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  TextInput,
-  TouchableWithoutFeedback,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-} from "react-native";
+import { View,Text,StyleSheet,TouchableOpacity,Animated,TextInput,TouchableWithoutFeedback,Keyboard,KeyboardAvoidingView,Platform,StatusBar, } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
