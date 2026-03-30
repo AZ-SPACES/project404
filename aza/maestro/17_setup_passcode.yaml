@@ -1,0 +1,41 @@
+appId: com.semekor.k.aza
+name: Setup - Passcode Creation and Onboarding Completion
+---
+# Assumes user just logged in for the first time (no passcode set)
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd
+
+# --- CreatePasscodeScreen ---
+- assertVisible: "Create a passcode"
+
+# Enter 6-digit passcode
+- inputText: ${TEST_PIN}
+- waitForAnimationToEnd
+
+# --- ConfirmPasscodeScreen ---
+- assertVisible: "Confirm your passcode"
+
+# Re-enter same passcode
+- inputText: ${TEST_PIN}
+- waitForAnimationToEnd
+
+# --- ConsentScreen ---
+- assertVisible: "Terms"
+- tapOn: "I agree"
+- waitForAnimationToEnd
+
+# --- EnableBiometricsScreen ---
+- assertVisible: "Biometrics"
+# Tap enable or skip
+- tapOn: "Skip"
+- waitForAnimationToEnd
+
+# --- EnableNotificationsScreen ---
+- assertVisible: "Notifications"
+# Enable notifications
+- tapOn: "Enable notifications"
+- waitForAnimationToEnd
+# Handle system permission dialog if it appears
+- tapOn: "Allow"
+- waitForAnimationToEnd

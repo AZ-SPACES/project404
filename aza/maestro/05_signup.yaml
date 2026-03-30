@@ -1,0 +1,113 @@
+appId: com.semekor.k.aza
+name: Signup - Complete Multi-Step Registration Flow
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Start from onboarding
+- tapOn: "Create Account"
+- waitForAnimationToEnd
+
+# --- Step 1: Phone Number ---
+- assertVisible: "000 000 0000"
+
+# Next button disabled with no input
+- assertNotVisible:
+    text: "Next"
+    enabled: true
+
+# Enter invalid phone (too short)
+- tapOn: "000 000 0000"
+- inputText: "0201"
+- assertNotVisible:
+    text: "Next"
+    enabled: true
+
+# Enter valid 10-digit phone
+- clearText
+- inputText: ${TEST_PHONE}
+- tapOn: "Next"
+- waitForAnimationToEnd
+
+# --- Step 2: Email ---
+- assertVisible: "Email"
+
+# Continue disabled with no input
+- assertNotVisible:
+    text: "Continue"
+    enabled: true
+
+# Enter invalid email
+- tapOn:
+    text: "Email"
+- inputText: "invalid-email"
+- assertNotVisible:
+    text: "Continue"
+    enabled: true
+
+# Clear and enter valid email
+- clearText
+- inputText: ${TEST_EMAIL}
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 3: Password ---
+- assertVisible: "Password"
+
+# Enter weak/short password
+- tapOn:
+    text: "Password"
+- inputText: "weak"
+- assertNotVisible:
+    text: "Continue"
+    enabled: true
+
+# Enter strong password
+- clearText
+- inputText: ${TEST_PASSWORD}
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 4: Full Name ---
+- assertVisible: "Full name"
+- tapOn:
+    text: "Full name"
+- inputText: ${TEST_NAME}
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 5: Address ---
+- assertVisible: "Address"
+- tapOn:
+    text: "Address"
+- inputText: "123 Test Street, Accra"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 6: Pronouns ---
+# Select a pronoun option
+- scrollUntilVisible:
+    text: "He/Him"
+- tapOn: "He/Him"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 7: Employment ---
+- assertVisible: "Employment"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 8: Birthday ---
+# Date of birth picker
+- assertVisible: "Date of birth"
+- waitForAnimationToEnd
+# Select a date (tap on a day)
+- tapOn: "15"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- Step 9: Tax Residency ---
+- assertVisible: "Tax"
+- tapOn: "Continue"
+- waitForAnimationToEnd

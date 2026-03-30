@@ -1,0 +1,44 @@
+appId: com.semekor.k.aza
+name: Login - Email Flow and Validation
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+- tapOn: "Login"
+- waitForAnimationToEnd
+- assertVisible: "Welcome back"
+
+# Switch to email input mode
+- tapOn: "Use email instead"
+- waitForAnimationToEnd
+- assertVisible: "Email address"
+
+# Enter invalid email - button stays disabled
+- tapOn: "Email address"
+- inputText: "notanemail"
+- assertNotVisible:
+    text: "Continue"
+    enabled: true
+
+# Clear and enter valid email
+- clearText
+- inputText: ${TEST_EMAIL}
+
+# Enter password
+- tapOn:
+    text: "Password"
+- inputText: ${TEST_PASSWORD}
+
+# Continue button should now be enabled
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# OTP / verification screen
+- assertVisible: ${TEST_EMAIL}
+
+# Switch back to phone mode
+- back
+- assertVisible: "Welcome back"
+- tapOn: "Use phone instead"
+- assertVisible: "000 000 0000"

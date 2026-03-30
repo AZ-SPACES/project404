@@ -1,0 +1,59 @@
+appId: com.semekor.k.aza
+name: Chat Contacts - List, Filters, and Navigation
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Chat tab
+- tapOn: "Chat"
+- waitForAnimationToEnd
+
+# --- ChatContactsScreen ---
+- assertVisible: "Chats"
+
+# Header buttons
+- assertVisible:
+    id: "chat-search-button"
+- assertVisible:
+    id: "chat-more-button"
+
+# Filter pills
+- assertVisible: "All"
+- assertVisible: "Favorites"
+- assertVisible: "Recent"
+- assertVisible: "Archived"
+
+# Default: "All" pill is active
+- tapOn: "Favorites"
+- waitForAnimationToEnd
+- tapOn: "Recent"
+- waitForAnimationToEnd
+- tapOn: "Archived"
+- waitForAnimationToEnd
+- tapOn: "All"
+- waitForAnimationToEnd
+
+# Contact rows with avatars, name, last message, badge/timestamp
+- assertVisible:
+    index: 0
+    type: "chat-contact-row"
+
+# Tap search
+- tapOn:
+    id: "chat-search-button"
+- waitForAnimationToEnd
+- inputText: "Alice"
+- waitForAnimationToEnd
+- clearText
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# Tap a chat contact - opens ChatScreen
+- tapOn:
+    index: 0
+    type: "chat-contact-row"
+- waitForAnimationToEnd
+- assertVisible: "Online"
+- back
+- waitForAnimationToEnd

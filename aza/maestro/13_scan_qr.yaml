@@ -1,0 +1,45 @@
+appId: com.semekor.k.aza
+name: Scan QR - My Code and Scan Tabs
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Tap the center Scan tab button
+- tapOn:
+    id: "scan-tab"
+- waitForAnimationToEnd
+
+# Should land on ScanQRScreen by default
+- assertVisible:
+    id: "qr-scanner-view"
+
+# Toggle button to switch to My Code
+- tapOn:
+    id: "toggle-scan-mode"
+- waitForAnimationToEnd
+
+# --- MyCodeScreen ---
+- assertVisible:
+    id: "my-qr-code"
+- assertVisible: "Share"
+
+# Tap Share button
+- tapOn: "Share"
+- waitForAnimationToEnd
+# Dismiss share sheet
+- back
+- waitForAnimationToEnd
+
+# Toggle back to Scan mode
+- tapOn:
+    id: "toggle-scan-mode"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "qr-scanner-view"
+
+# Torch button (if available on device)
+# - tapOn:
+#     id: "torch-button"
+# - waitForAnimationToEnd
+# - tapOn:
+#     id: "torch-button"

@@ -1,0 +1,90 @@
+appId: com.semekor.k.aza
+name: Contacts Screen - List, Search, and Actions
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Contacts tab
+- tapOn: "Contacts"
+- waitForAnimationToEnd
+
+# --- ContactsScreen ---
+- assertVisible: "Contacts"
+- assertVisible: "Name, tag, email, phone number"
+
+# Invite button visible
+- assertVisible:
+    id: "invite-button"
+
+# Add contact button
+- assertVisible:
+    id: "add-contact-button"
+
+# Contacts list is populated
+- assertVisible:
+    index: 0
+    type: "contact-row"
+
+# Search functionality
+- tapOn: "Name, tag, email, phone number"
+- inputText: "Alice"
+- waitForAnimationToEnd
+# Filtered results should show
+- assertVisible: "Alice"
+
+# Clear search
+- clearText
+- waitForAnimationToEnd
+
+# Tap a contact - should open bottom sheet
+- tapOn:
+    index: 0
+    type: "contact-row"
+- waitForAnimationToEnd
+
+# Bottom sheet with 3 action circles
+- assertVisible: "Send"
+- assertVisible: "Request"
+- assertVisible: "View"
+
+# --- Test Send from Contact Bottom Sheet ---
+- tapOn: "Send"
+- waitForAnimationToEnd
+- assertVisible: "Send Money"
+- back
+- waitForAnimationToEnd
+
+# Reopen contact bottom sheet
+- tapOn:
+    index: 0
+    type: "contact-row"
+- waitForAnimationToEnd
+
+# --- Test Request from Contact Bottom Sheet ---
+- tapOn: "Request"
+- waitForAnimationToEnd
+- assertVisible: "Request Money"
+- back
+- waitForAnimationToEnd
+
+# Reopen contact bottom sheet
+- tapOn:
+    index: 0
+    type: "contact-row"
+- waitForAnimationToEnd
+
+# --- Test View Profile from Contact Bottom Sheet ---
+- tapOn: "View"
+- waitForAnimationToEnd
+# ContactsProfileScreen
+- back
+- waitForAnimationToEnd
+
+# Dismiss bottom sheet by tapping backdrop
+- tapOn:
+    index: 0
+    type: "contact-row"
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
