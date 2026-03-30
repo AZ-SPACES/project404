@@ -5,20 +5,24 @@ name: Login - Email Flow and Validation
     clearState: true
 - waitForAnimationToEnd
 
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Login"
 - waitForAnimationToEnd
-- assertVisible: "Welcome back"
+- assertVisible: "Login"
 
 # Switch to email input mode
 - tapOn: "Use email instead"
 - waitForAnimationToEnd
-- assertVisible: "Email address"
+- assertVisible: "Your Email"
 
-# Enter invalid email - button stays disabled
-- tapOn: "Email address"
+# Enter invalid email - Login button stays disabled
+- tapOn:
+    label: "Email address"
 - inputText: "notanemail"
 - assertNotVisible:
-    text: "Continue"
+    text: "Login"
     enabled: true
 
 # Clear and enter valid email
@@ -27,18 +31,22 @@ name: Login - Email Flow and Validation
 
 # Enter password
 - tapOn:
-    text: "Password"
+    label: "Password"
 - inputText: ${TEST_PASSWORD}
 
-# Continue button should now be enabled
-- tapOn: "Continue"
+# Login button should now be enabled - tap it
+- tapOn: "Login"
 - waitForAnimationToEnd
 
-# OTP / verification screen
-- assertVisible: ${TEST_EMAIL}
+# OTP screen (Enter Code)
+- assertVisible: "Enter Code"
+
+# Go back to login
+- back
+- waitForAnimationToEnd
+- assertVisible: "Login"
 
 # Switch back to phone mode
-- back
-- assertVisible: "Welcome back"
 - tapOn: "Use phone instead"
-- assertVisible: "000 000 0000"
+- waitForAnimationToEnd
+- assertVisible: "Your Phone Number"

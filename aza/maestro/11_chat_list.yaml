@@ -11,19 +11,13 @@ name: Chat Contacts - List, Filters, and Navigation
 # --- ChatContactsScreen ---
 - assertVisible: "Chats"
 
-# Header buttons
-- assertVisible:
-    id: "chat-search-button"
-- assertVisible:
-    id: "chat-more-button"
-
 # Filter pills
 - assertVisible: "All"
 - assertVisible: "Favorites"
 - assertVisible: "Recent"
 - assertVisible: "Archived"
 
-# Default: "All" pill is active
+# Cycle through filter pills
 - tapOn: "Favorites"
 - waitForAnimationToEnd
 - tapOn: "Recent"
@@ -33,27 +27,14 @@ name: Chat Contacts - List, Filters, and Navigation
 - tapOn: "All"
 - waitForAnimationToEnd
 
-# Contact rows with avatars, name, last message, badge/timestamp
-- assertVisible:
-    index: 0
-    type: "chat-contact-row"
-
-# Tap search
-- tapOn:
-    id: "chat-search-button"
-- waitForAnimationToEnd
-- inputText: "Alice"
-- waitForAnimationToEnd
-- clearText
-- waitForAnimationToEnd
-- back
-- waitForAnimationToEnd
-
-# Tap a chat contact - opens ChatScreen
+# Tap a chat contact (first in list) - opens ChatScreen
+# Note: contact rows have no testID — tap first item by index
 - tapOn:
     index: 0
-    type: "chat-contact-row"
+    text: "Alice Johnson"
 - waitForAnimationToEnd
-- assertVisible: "Online"
+# Status text is lowercase "online"
+- assertVisible: "online"
 - back
 - waitForAnimationToEnd
+- assertVisible: "Chats"

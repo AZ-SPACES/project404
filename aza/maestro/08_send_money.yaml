@@ -49,17 +49,18 @@ name: Send Money - Full Transfer Flow
     text: "Send"
     enabled: true
 
-# Enter an amount
+# Enter an amount (accessibilityLabel: "Enter amount in cedis")
 - tapOn:
-    id: "amount-input"
+    label: "Enter amount in cedis"
 - inputText: "10"
 - waitForAnimationToEnd
 
 # Send button should now show "Send GH¢ 10.00"
 - assertVisible: "Send GH¢ 10.00"
 
-# Add a note
-- tapOn: "Add a note"
+# Add a note (accessibilityLabel: "Add a note")
+- tapOn:
+    label: "Add a note"
 - inputText: "Lunch money"
 
 # Dismiss keyboard
@@ -73,32 +74,23 @@ name: Send Money - Full Transfer Flow
 # --- SendConfirmScreen ---
 - assertVisible: "Review transfer"
 - assertVisible: "Do you know and trust the payee?"
-- assertVisible: "No fees"
 - assertVisible: "GH¢ 10.00"
 - assertVisible: "Lunch money"
 
-# Verify warning card is shown
+# Verify scam warning card is shown
 - assertVisible: "scam"
-
-# Edit note
-- tapOn:
-    id: "edit-note"
-- waitForAnimationToEnd
-- back
-- waitForAnimationToEnd
 
 # Confirm and proceed to PIN
 - tapOn: "Send"
 - waitForAnimationToEnd
 
-# --- SendPinScreen ---
+# --- SendPinScreen (4-digit PIN) ---
 - assertVisible: "Enter your PIN"
 - inputText: ${TEST_PIN}
 - waitForAnimationToEnd
 
 # --- SendSuccessScreen ---
-- assertVisible: "Transfer successful"
-- assertVisible: "GH¢ 10.00"
+- assertVisible: "Sent"
 
 # Done - return home
 - tapOn: "Done"

@@ -52,10 +52,22 @@ name: Onboarding - Carousel and Entry Buttons
     point: "75%,50%"
 - assertVisible: "PAY, CHAT & CALL IN ONE APP"
 
+# "Get Started" opens bottom sheet with Login / Create Account
+- tapOn: "Get Started"
+- waitForAnimationToEnd
+
 # Verify bottom sheet entry buttons are present
 - assertVisible: "Login"
 - assertVisible: "Create Account"
 
-# Tap Login - should navigate to LoginScreen
+# Dismiss bottom sheet
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# Tap Get Started again and navigate to Login
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Login"
-- assertVisible: "Welcome back"
+- waitForAnimationToEnd
+- assertVisible: "Login"

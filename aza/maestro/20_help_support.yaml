@@ -6,7 +6,7 @@ name: Help and Support - Customer Care Screens
 
 # Navigate: Home → Profile → Help & Support
 - tapOn:
-    id: "profile-avatar"
+    label: "Open profile"
 - waitForAnimationToEnd
 - tapOn: "Help & Support"
 - waitForAnimationToEnd

@@ -7,16 +7,16 @@ name: Setup - Passcode Creation and Onboarding Completion
 - waitForAnimationToEnd
 
 # --- CreatePasscodeScreen ---
-- assertVisible: "Create a passcode"
+- assertVisible: "Create passcode"
 
-# Enter 6-digit passcode
+# Enter 4-digit passcode
 - inputText: ${TEST_PIN}
 - waitForAnimationToEnd
 
 # --- ConfirmPasscodeScreen ---
-- assertVisible: "Confirm your passcode"
+- assertVisible: "Confirm passcode"
 
-# Re-enter same passcode
+# Re-enter same 4-digit passcode
 - inputText: ${TEST_PIN}
 - waitForAnimationToEnd
 

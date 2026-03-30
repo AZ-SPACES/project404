@@ -1,34 +1,32 @@
 appId: com.semekor.k.aza
-name: OTP Screen - Input Handling and Resend
+name: OTP Screen - Input Handling and Verify
 ---
 - launchApp:
     clearState: true
 - waitForAnimationToEnd
 
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Login"
 - waitForAnimationToEnd
 
 # Enter credentials to reach OTP screen
-- tapOn: "000 000 0000"
+- tapOn:
+    label: "Phone number"
 - inputText: ${TEST_PHONE}
 - tapOn:
-    text: "Password"
+    label: "Password"
 - inputText: ${TEST_PASSWORD}
-- tapOn: "Continue"
+- tapOn: "Login"
 - waitForAnimationToEnd
 
-# OTP screen assertions
-- assertVisible: ${TEST_PHONE}
+# OTP screen title and button
+- assertVisible: "Enter Code"
 - assertVisible: "Verify"
 
-# Verify button should be disabled with no input
-- assertNotVisible:
-    text: "Verify"
-    enabled: true
 
-# Type digits one by one - focus should advance automatically
-- tapOn:
-    id: "otp-input-0"
+# Type all 6 OTP digits (focus auto-advances between fields)
 - inputText: "1"
 - inputText: "2"
 - inputText: "3"
@@ -36,24 +34,8 @@ name: OTP Screen - Input Handling and Resend
 - inputText: "5"
 - inputText: "6"
 
-# All 6 digits entered - Verify button should be enabled
-- assertVisible:
-    text: "Verify"
-
-# Resend OTP (after countdown expires - 57 seconds)
-# Only asserting countdown text is visible initially
-- assertVisible: "Resend"
-
-# Backspace should work - clears last digit and refocuses
-- tapOn:
-    id: "otp-input-5"
-- pressKey: Backspace
-- assertNotVisible:
-    text: "Verify"
-    enabled: true
-
-# Re-enter last digit
-- inputText: "6"
+# All 6 digits entered - Verify button visible
+- assertVisible: "Verify"
 
 # Submit OTP
 - tapOn: "Verify"

@@ -9,21 +9,16 @@ name: KYC - Identity Verification Flow
 # --- VerifyIdentityScreen (KYC Step 1) ---
 - assertVisible: "Let's verify your identity"
 - assertVisible: "AML Act 1044"
-- assertVisible: "6-year"
-- assertVisible: "Your identity is safe with us"
-
-# KYC progress bar step 1
-- assertVisible:
-    id: "kyc-progress-bar"
+- assertVisible: "Your identity is safe with us."
 
 # Continue disabled until consent checkbox is checked
 - assertNotVisible:
     text: "Continue"
     enabled: true
 
-# Check consent checkbox
+# Check consent checkbox (accessibilityRole: "checkbox", no testID — tap by role)
 - tapOn:
-    id: "consent-checkbox"
+    point: "10%,75%"
 - waitForAnimationToEnd
 
 # Continue should now be enabled

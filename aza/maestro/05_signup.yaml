@@ -5,11 +5,14 @@ name: Signup - Complete Multi-Step Registration Flow
     clearState: true
 - waitForAnimationToEnd
 
-# Start from onboarding
+# Open bottom sheet and tap Create Account
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Create Account"
 - waitForAnimationToEnd
 
-# --- Step 1: Phone Number ---
+# --- Step 1: Phone Number (SignUpNumberScreen) ---
+- assertVisible: "What's your mobile number?"
 - assertVisible: "000 000 0000"
 
 # Next button disabled with no input

@@ -25,7 +25,7 @@ name: Request Money - Request Flow
 - assertVisible: "Request Money"
 - assertVisible: "Enter amount"
 - assertVisible: "GH¢"
-- assertVisible: "No transfer fees"
+- assertVisible: "No fees on requests"
 - assertVisible: "Available balance"
 
 # Request button disabled with no amount
@@ -33,9 +33,8 @@ name: Request Money - Request Flow
     text: "Request"
     enabled: true
 
-# Enter amount
-- tapOn:
-    id: "amount-input"
+# Enter amount (tap the amount row to focus)
+- tapOn: "Enter amount"
 - inputText: "25"
 - waitForAnimationToEnd
 

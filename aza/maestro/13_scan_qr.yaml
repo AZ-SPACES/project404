@@ -4,42 +4,38 @@ name: Scan QR - My Code and Scan Tabs
 - launchApp
 - waitForAnimationToEnd
 
-# Tap the center Scan tab button
+# Tap the center QR tab button (floating circle, center of bottom nav)
 - tapOn:
-    id: "scan-tab"
+    point: "50%,95%"
 - waitForAnimationToEnd
 
-# Should land on ScanQRScreen by default
-- assertVisible:
-    id: "qr-scanner-view"
+# Should land on ScanQRScreen by default ("Scan" active, "My code" inactive)
+- assertVisible: "Scan code to pay"
+- assertVisible: "Scan"
+- assertVisible: "My code"
 
-# Toggle button to switch to My Code
-- tapOn:
-    id: "toggle-scan-mode"
+# Toggle to My Code
+- tapOn: "My code"
 - waitForAnimationToEnd
 
 # --- MyCodeScreen ---
-- assertVisible:
-    id: "my-qr-code"
-- assertVisible: "Share"
+- assertVisible: "Scan"
+- assertVisible: "My code"
 
-# Tap Share button
-- tapOn: "Share"
+# Tap Share button (share icon in MyCodeScreen)
+- tapOn:
+    point: "90%,25%"
 - waitForAnimationToEnd
 # Dismiss share sheet
 - back
 - waitForAnimationToEnd
 
 # Toggle back to Scan mode
-- tapOn:
-    id: "toggle-scan-mode"
+- tapOn: "Scan"
 - waitForAnimationToEnd
-- assertVisible:
-    id: "qr-scanner-view"
+- assertVisible: "Scan code to pay"
 
-# Torch button (if available on device)
+# Torch/flash toggle button
 # - tapOn:
-#     id: "torch-button"
+#     point: "10%,85%"
 # - waitForAnimationToEnd
-# - tapOn:
-#     id: "torch-button"

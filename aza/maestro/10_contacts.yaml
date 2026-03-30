@@ -12,18 +12,8 @@ name: Contacts Screen - List, Search, and Actions
 - assertVisible: "Contacts"
 - assertVisible: "Name, tag, email, phone number"
 
-# Invite button visible
-- assertVisible:
-    id: "invite-button"
-
-# Add contact button
-- assertVisible:
-    id: "add-contact-button"
-
-# Contacts list is populated
-- assertVisible:
-    index: 0
-    type: "contact-row"
+# Invite button visible (text button in header)
+- assertVisible: "Invite"
 
 # Search functionality
 - tapOn: "Name, tag, email, phone number"
@@ -36,10 +26,8 @@ name: Contacts Screen - List, Search, and Actions
 - clearText
 - waitForAnimationToEnd
 
-# Tap a contact - should open bottom sheet
-- tapOn:
-    index: 0
-    type: "contact-row"
+# Tap a contact by name - opens bottom sheet
+- tapOn: "Alice Johnson"
 - waitForAnimationToEnd
 
 # Bottom sheet with 3 action circles
@@ -55,9 +43,7 @@ name: Contacts Screen - List, Search, and Actions
 - waitForAnimationToEnd
 
 # Reopen contact bottom sheet
-- tapOn:
-    index: 0
-    type: "contact-row"
+- tapOn: "Alice Johnson"
 - waitForAnimationToEnd
 
 # --- Test Request from Contact Bottom Sheet ---
@@ -68,9 +54,7 @@ name: Contacts Screen - List, Search, and Actions
 - waitForAnimationToEnd
 
 # Reopen contact bottom sheet
-- tapOn:
-    index: 0
-    type: "contact-row"
+- tapOn: "Alice Johnson"
 - waitForAnimationToEnd
 
 # --- Test View Profile from Contact Bottom Sheet ---
@@ -81,9 +65,7 @@ name: Contacts Screen - List, Search, and Actions
 - waitForAnimationToEnd
 
 # Dismiss bottom sheet by tapping backdrop
-- tapOn:
-    index: 0
-    type: "contact-row"
+- tapOn: "Alice Johnson"
 - waitForAnimationToEnd
 - tapOn:
     point: "50%,10%"

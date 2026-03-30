@@ -6,7 +6,7 @@ name: Security and Privacy - Full Settings Flow
 
 # Navigate to Security settings
 - tapOn:
-    id: "profile-avatar"
+    label: "Open profile"
 - waitForAnimationToEnd
 - tapOn: "Security and Privacy"
 - waitForAnimationToEnd
