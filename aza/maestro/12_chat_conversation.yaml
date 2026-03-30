@@ -1,0 +1,125 @@
+appId: com.semekor.k.aza
+name: Chat Conversation - Messaging, Search, and More Menu
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Chat tab and open first conversation
+- tapOn: "Chat"
+- waitForAnimationToEnd
+- tapOn:
+    index: 0
+    type: "chat-contact-row"
+- waitForAnimationToEnd
+
+# --- ChatScreen ---
+# Header elements
+- assertVisible:
+    id: "chat-back-button"
+- assertVisible:
+    id: "chat-contact-name"
+- assertVisible: "Online"
+- assertVisible:
+    id: "chat-more-menu-button"
+
+# Message input area
+- assertVisible:
+    id: "message-input"
+- assertVisible:
+    id: "attachment-button"
+- assertVisible:
+    id: "send-button"
+
+# --- Type and send a message ---
+- tapOn:
+    id: "message-input"
+- inputText: "Hello! How are you?"
+- tapOn:
+    id: "send-button"
+- waitForAnimationToEnd
+
+# Message should appear in chat
+- assertVisible: "Hello! How are you?"
+
+# Wait for auto-reply
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# --- Attachment Modal ---
+- tapOn:
+    id: "attachment-button"
+- waitForAnimationToEnd
+- assertVisible: "Photos"
+- assertVisible: "Camera"
+- assertVisible: "Document"
+
+# Dismiss attachment modal
+- tapOn:
+    point: "50%,20%"
+- waitForAnimationToEnd
+
+# --- More Menu ---
+- tapOn:
+    id: "chat-more-menu-button"
+- waitForAnimationToEnd
+- assertVisible: "View Profile"
+- assertVisible: "Send Money"
+- assertVisible: "Request Money"
+- assertVisible: "Search in Conversation"
+- assertVisible: "Mute"
+- assertVisible: "Shared Media"
+- assertVisible: "Clear Chat"
+- assertVisible: "Block Contact"
+- assertVisible: "Report"
+
+# Tap Search in Conversation
+- tapOn: "Search in Conversation"
+- waitForAnimationToEnd
+- assertVisible:
+    id: "chat-search-input"
+- inputText: "Hello"
+- waitForAnimationToEnd
+- assertVisible: "Hello! How are you?"
+- clearText
+- tapOn:
+    id: "chat-search-clear"
+- waitForAnimationToEnd
+
+# Open more menu again and close it
+- tapOn:
+    id: "chat-more-menu-button"
+- waitForAnimationToEnd
+# Dismiss by tapping backdrop
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# --- Long Press Message ---
+- longPressOn: "Hello! How are you?"
+- waitForAnimationToEnd
+- assertVisible: "Reply"
+- assertVisible: "Forward"
+- assertVisible: "Copy"
+- assertVisible: "Info"
+- assertVisible: "Star"
+- assertVisible: "Delete"
+
+# Dismiss message action menu
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# --- Send multiple messages ---
+- tapOn:
+    id: "message-input"
+- inputText: "Testing message 2"
+- tapOn:
+    id: "send-button"
+- waitForAnimationToEnd
+- assertVisible: "Testing message 2"
+
+# Back to chat list
+- tapOn:
+    id: "chat-back-button"
+- waitForAnimationToEnd
+- assertVisible: "Chats"

@@ -1,0 +1,64 @@
+appId: com.semekor.k.aza
+name: Trouble Login - All Issue Paths
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+- tapOn: "Login"
+- waitForAnimationToEnd
+- assertVisible: "Welcome back"
+
+# Navigate to trouble login
+- tapOn: "Trouble logging in?"
+- waitForAnimationToEnd
+
+# All 5 options should be visible
+- assertVisible: "I've forgotten my password"
+- assertVisible: "2-step verification isn't working"
+- assertVisible: "I need to change my phone number"
+- assertVisible: "Logging into a new device"
+- assertVisible: "My account was deactivated"
+
+# --- Forgotten Password Flow ---
+- tapOn: "I've forgotten my password"
+- waitForAnimationToEnd
+- assertVisible: "I've forgotten my password"
+- assertVisible: "Reset password"
+- assertVisible: "I still need help"
+
+# Tap "Reset password"
+- tapOn: "Reset password"
+- waitForAnimationToEnd
+# Should land on reset password / OTP screen
+- back
+- waitForAnimationToEnd
+
+# Back to trouble login
+- back
+- assertVisible: "I've forgotten my password"
+
+# --- 2-Step Verification Issue ---
+- tapOn: "2-step verification isn't working"
+- waitForAnimationToEnd
+- back
+
+# --- Change Phone Number ---
+- tapOn: "I need to change my phone number"
+- waitForAnimationToEnd
+- back
+
+# --- New Device Login ---
+- tapOn: "Logging into a new device"
+- waitForAnimationToEnd
+- back
+
+# --- Account Deactivated ---
+- tapOn: "My account was deactivated"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# Close button on trouble login
+- back
+- assertVisible: "Welcome back"

@@ -1,0 +1,51 @@
+appId: com.semekor.k.aza
+name: Personal Details - Edit Information
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate: Home → Profile → Personal Details
+- tapOn:
+    id: "profile-avatar"
+- waitForAnimationToEnd
+- tapOn: "Personal details"
+- waitForAnimationToEnd
+
+# --- PersonalDetailsScreen ---
+- assertVisible: "Personal information"
+- assertVisible: "Change email"
+- assertVisible: "Change phone"
+
+# --- Personal Information ---
+- tapOn: "Personal information"
+- waitForAnimationToEnd
+# Edit fields
+- assertVisible: "Full name"
+- assertVisible: "Date of birth"
+- assertVisible: "Address"
+- assertVisible: "Occupation"
+- back
+- waitForAnimationToEnd
+
+# --- Change Email ---
+- tapOn: "Change email"
+- waitForAnimationToEnd
+- assertVisible: "Email"
+- tapOn:
+    text: "Email"
+- clearText
+- inputText: "newemail@aza.me"
+- back
+- waitForAnimationToEnd
+
+# --- Change Phone ---
+- tapOn: "Change phone"
+- waitForAnimationToEnd
+- assertVisible: "Phone"
+- back
+- waitForAnimationToEnd
+
+# Back to Profile
+- back
+- waitForAnimationToEnd
+- assertVisible: "Personal account"
