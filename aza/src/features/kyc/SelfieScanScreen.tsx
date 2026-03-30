@@ -124,11 +124,15 @@ export default function SelfieScanScreen() {
 
   const handleLooksGood = async () => {
     setIsModalVisible(false);
-    if (capturedImage && capturedImage !== 'placeholder') {
-      update({ selfieImageUri: capturedImage });
+    // Pass selfieImageUri directly to submit() so it doesn't rely on React
+    // state having flushed — update() is async and the KYC closure would
+    // otherwise still see selfieImageUri: null, triggering a false error.
+    const selfieUri = capturedImage && capturedImage !== 'placeholder' ? capturedImage : undefined;
+    if (selfieUri) {
+      update({ selfieImageUri: selfieUri });
     }
     try {
-      await submit();
+      await submit(selfieUri ? { selfieImageUri: selfieUri } : undefined);
       if (isPEP) {
         navigation.navigate('PEPUnderReview');
       } else {

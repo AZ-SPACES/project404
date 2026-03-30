@@ -31,7 +31,10 @@ export default function CreatePasscodeScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const [passcode, setPasscode] = useState("");
+  const [errorStatus, setErrorStatus] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const inputRef = useRef<TextInput>(null);
+  
   const scaleAnims = useRef([
     new Animated.Value(1),
     new Animated.Value(1),
@@ -39,13 +42,59 @@ export default function CreatePasscodeScreen() {
     new Animated.Value(1),
   ]).current;
 
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const startShake = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  }, [shakeAnim]);
+
+  const validatePasscode = (code: string) => {
+    // 1. All same (1111, 2222, etc.)
+    const allSame = code[0] === code[1] && code[1] === code[2] && code[2] === code[3];
+    if (allSame) return "Please choose a more complex passcode.";
+
+    // 2. Sequential (1234, 4321, 0123, 6789, etc.)
+    const isSequentialForward = "0123456789".includes(code);
+    const isSequentialBackward = "9876543210".includes(code);
+    if (isSequentialForward || isSequentialBackward) return "Passcodes cannot be common sequences.";
+    
+    // 3. Three or more of the same digit (e.g. 1112, 1211, 2111)
+    const counts: Record<string, number> = {};
+    for (const char of code) {
+      counts[char] = (counts[char] || 0) + 1;
+      if (counts[char]! >= 3) return "Please choose a more complex passcode.";
+    }
+
+    // 4. Simple patterns (1212, 1122, 2211)
+    const isAlternating = code[0] === code[2] && code[1] === code[3];
+    const isTwoPairs = code[0] === code[1] && code[2] === code[3];
+    if (isAlternating || isTwoPairs) return "Please choose a more complex passcode.";
+
+    return null;
+  };
+
   // Stable navigation callback
   const handleContinue = useCallback(() => {
     if (passcode.length === 4) {
+      const error = validatePasscode(passcode);
+      if (error) {
+        setErrorMessage(error);
+        setErrorStatus(true);
+        startShake();
+        setPasscode("");
+        return;
+      }
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate("ConfirmPasscode", { firstPasscode: passcode });
     }
-  }, [passcode, navigation]);
+  }, [passcode, navigation, startShake]);
 
   useEffect(() => {
     // Focus keyboard on mount
@@ -68,6 +117,11 @@ export default function CreatePasscodeScreen() {
   }, [passcode, handleContinue]);
 
   const handleTextChange = (text: string) => {
+    if (errorStatus) {
+      setErrorStatus(false);
+      setErrorMessage("");
+    }
+    
     // Only allow numbers and max length of 4
     const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
     
@@ -126,26 +180,35 @@ export default function CreatePasscodeScreen() {
               />
 
               {/* Passcode Visualizer (Tappable to focus keyboard) */}
-              <TouchableOpacity 
-                activeOpacity={1} 
-                style={styles.passcodeContainer}
-                onPress={() => inputRef.current?.focus()}
-              >
-                {[0, 1, 2, 3].map((i) => (
-                  <Animated.View
-                    key={i}
-                    style={[
-                      styles.passcodeBox,
-                      passcode.length > i && styles.passcodeBoxActive,
-                      { transform: [{ scale: scaleAnims[i]! }] }
-                    ]}
-                  >
-                    {passcode.length > i && (
-                      <View style={styles.dot} />
-                    )}
-                  </Animated.View>
-                ))}
-              </TouchableOpacity>
+              <Animated.View style={[{ transform: [{ translateX: shakeAnim }] }]}>
+                <TouchableOpacity 
+                  activeOpacity={1} 
+                  style={styles.passcodeContainer}
+                  onPress={() => inputRef.current?.focus()}
+                >
+                  {[0, 1, 2, 3].map((i) => (
+                    <Animated.View
+                      key={i}
+                      style={[
+                        styles.passcodeBox,
+                        passcode.length > i && styles.passcodeBoxActive,
+                        errorStatus && styles.passcodeBoxError,
+                        { transform: [{ scale: scaleAnims[i]! }] }
+                      ]}
+                    >
+                      {passcode.length > i && (
+                        <View style={[styles.dot, errorStatus && styles.dotError]} />
+                      )}
+                    </Animated.View>
+                  ))}
+                </TouchableOpacity>
+              </Animated.View>
+
+              {errorStatus && (
+                <Text style={styles.errorText}>
+                  {errorMessage}
+                </Text>
+              )}
             </View>
 
             <View style={styles.footer}>
@@ -227,11 +290,25 @@ function createStyles(Colors: ThemeColors) {
   passcodeBoxActive: {
     borderColor: Colors.primary,
   },
+  passcodeBoxError: {
+    borderColor: Colors.error,
+  },
   dot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: Colors.textPrimary,
+  },
+  dotError: {
+    backgroundColor: Colors.error,
+  },
+  errorText: {
+    color: Colors.error,
+    marginTop: Spacing.md,
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: 'center',
+    paddingHorizontal: Spacing.lg,
   },
   footer: {
     paddingHorizontal: Spacing.lg,
