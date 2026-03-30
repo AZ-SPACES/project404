@@ -59,7 +59,11 @@ function ReviewCheckItem({ label, status, delay = 0 }: ReviewCheckItemProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   return (
-    <View style={styles.checkItem}>
+    <View
+      style={styles.checkItem}
+      accessible={true}
+      accessibilityLabel={`${label}: ${status === 'completed' ? 'Completed' : 'In review'}`}
+    >
       <View style={styles.checkIconTextRow}>
         <Animated.View style={[
           styles.iconBox,

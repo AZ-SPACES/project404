@@ -19,6 +19,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useKYC } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPDetails">;
 
@@ -27,8 +28,9 @@ export default function PEPDetailsScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [role, setRole] = useState("");
-  const [wealthSource, setWealthSource] = useState("");
+  const { data, update } = useKYC();
+  const [role, setRole] = useState(data.pepRole);
+  const [wealthSource, setWealthSource] = useState(data.pepWealthSource);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -45,6 +47,7 @@ export default function PEPDetailsScreen() {
 
   const handleNext = () => {
     // Proceed to next KYC EDD step
+    update({ pepRole: role.trim(), pepWealthSource: wealthSource.trim() });
     navigation.navigate("PEPAccountPurpose");
   };
 
