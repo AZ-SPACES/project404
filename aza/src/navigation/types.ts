@@ -74,5 +74,6 @@ export type RootStackParamList = {
   ChangePhone: undefined;
   ChatScreen: { id: string; name: string; avatar: string; online: boolean };
   Hub: undefined;
+  MiniApp: { appId: string };
   ContactsProfile: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
 };

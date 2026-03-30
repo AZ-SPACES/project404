@@ -1,123 +1,213 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, TextInput, Image, Dimensions, Linking } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  TextInput,
+  Image,
+  Dimensions,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { useDisplayContext } from '../../providers/DisplayProvider';
+import { RootStackParamList } from '../../navigation/types';
+import { MINI_APP_REGISTRY, getMiniApp } from './miniapps/registry';
+import { MiniAppCategory, MiniAppEntry } from './miniapps/types';
 
-const { width, height } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - Spacing.lg * 2 - Spacing.md) / 2;
+type HubNavProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
-type MiniApp = {
-  id: string;
-  name: string;
-  logo: string;
-  backgroundColor?: string;
-  url: string;
-}
+const { width } = Dimensions.get('window');
+const GRID_PADDING = Spacing.lg;
+const GRID_GAP = Spacing.sm;
+const TILE_SIZE = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 
-const MINI_APPS: MiniApp[] = [
-  { 
-    id: 'bolt', 
-    name: 'Bolt', 
-    logo: 'https://1000logos.net/wp-content/uploads/2021/06/Bolt-Logo-1536x966.png',
-    backgroundColor: '#ffffffff',
-    url: 'https://bolt.eu'
-  },
-  { 
-    id: 'jumia', 
-    name: 'Jumia', 
-    logo: 'https://1000logos.net/wp-content/uploads/2021/02/Jumia-Logo.png',
-    backgroundColor: '#FFFFFF',
-    url: 'https://www.jumia.com.gh'
-  },
-  { 
-    id: 'aliexpress', 
-    name: 'AliExpress', 
-    logo: 'https://1000logos.net/wp-content/uploads/2020/04/AliExpress-Logo.png',
-    backgroundColor: '#FFFFFF',
-    url: 'https://aliexpress.com'
-  },
-  { 
-    id: 'kfc', 
-    name: 'KFC', 
-    logo: 'https://1000logos.net/wp-content/uploads/2017/03/KFC-Logo.png',
-    backgroundColor: '#FFFFFF',
-    url: 'https://www.kfc.com.gh'
-  },
+const ALL_CATEGORIES: ('All' | MiniAppCategory)[] = [
+  'All',
+  'Finance',
+  'Bills & Utilities',
+  'Entertainment',
 ];
+
+// Simulated recently used — first two apps in registry
+const RECENTLY_USED_IDS = ['airtime_data', 'exchange_rates'];
 
 export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { hubBackground } = useDisplayContext();
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const navigation = useNavigation<HubNavProp>();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<'All' | MiniAppCategory>('All');
+
+  const openApp = useCallback((appId: string) => {
+    navigation.navigate('MiniApp', { appId });
+  }, [navigation]);
 
   const filteredApps = React.useMemo(() => {
-    return MINI_APPS.filter(app => 
-      app.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
+    return MINI_APP_REGISTRY.filter((app) => {
+      const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'All' || app.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, activeCategory]);
+
+  const recentlyUsed = React.useMemo(
+    () => RECENTLY_USED_IDS.map((id) => getMiniApp(id)).filter(Boolean) as MiniAppEntry[],
+    [],
+  );
+
+  const showRecently = searchQuery.length === 0 && activeCategory === 'All';
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
-      
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.55 }}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Hero background */}
+      <View style={StyleSheet.absoluteFill}>
         <Image
           source={{ uri: hubBackground }}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, { height: '55%' }]}
           resizeMode="cover"
         />
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.headerSpacer} />
-        
-        <View style={styles.contentContainer}>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent} 
-            bounces={true}
+        {/* Header title over the image */}
+        <View style={styles.heroHeader}>
+          <Text style={styles.heroTitle}>Mini Apps</Text>
+          <Text style={styles.heroSubtitle}>Services built into Aza</Text>
+        </View>
+
+        {/* Card sheet */}
+        <View style={styles.sheet}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.searchWrapper}>
-              <View style={styles.searchContainer}>
-                <Feather name="search" size={20} color={Colors.textSecondary} style={styles.searchIcon} />
-                <TextInput 
-                  placeholder="Search mini apps..."
-                  placeholderTextColor={Colors.textSecondary}
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
+            {/* Search */}
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                placeholder="Search mini apps..."
+                placeholderTextColor={Colors.textSecondary}
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel="Search mini apps"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
+                  <Feather name="x-circle" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <View style={styles.grid}>
-              {filteredApps.map((app) => (
-                <TouchableOpacity 
-                  key={app.id} 
-                  style={styles.appItem} 
-                  activeOpacity={0.8}
-                  onPress={() => Linking.openURL(app.url)}
+            {/* Category chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+            >
+              {ALL_CATEGORIES.map((cat) => {
+                const active = activeCategory === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setActiveCategory(cat)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={cat}
+                    accessibilityState={{ checked: active }}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Recently used */}
+            {showRecently && recentlyUsed.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Recently Used</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.recentRow}
                 >
-                  <View style={[styles.logoCard, { backgroundColor: app.backgroundColor || Colors.white }]}>
-                    <Image 
-                      source={{ uri: app.logo }} 
-                      style={styles.logoImage} 
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <Text style={styles.appName}>{app.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {recentlyUsed.map((app) => (
+                    <TouchableOpacity
+                      key={app.id}
+                      style={styles.recentItem}
+                      onPress={() => openApp(app.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={app.name}
+                    >
+                      <View style={[styles.recentIcon, { backgroundColor: app.color }]}>
+                        <Text style={styles.recentEmoji}>{app.icon}</Text>
+                      </View>
+                      <Text style={styles.recentName} numberOfLines={1}>{app.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {/* All apps grid */}
+            <Text style={styles.sectionLabel}>
+              {activeCategory === 'All' ? 'All Apps' : activeCategory}
+            </Text>
+
+            {filteredApps.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Feather name="search" size={32} color={Colors.textSecondary} />
+                <Text style={styles.emptyText}>No apps found</Text>
+              </View>
+            ) : (
+              <View style={styles.grid}>
+                {filteredApps.map((app) => (
+                  <AppTile key={app.id} app={app} onPress={openApp} styles={styles} Colors={Colors} />
+                ))}
+              </View>
+            )}
           </ScrollView>
         </View>
       </SafeAreaView>
     </View>
+  );
+}
+
+/* ── Tile component ── */
+interface TileProps {
+  app: MiniAppEntry;
+  onPress: (id: string) => void;
+  styles: ReturnType<typeof createStyles>;
+  Colors: ThemeColors;
+}
+
+function AppTile({ app, onPress, styles, Colors }: TileProps) {
+  return (
+    <TouchableOpacity
+      style={styles.tile}
+      activeOpacity={0.75}
+      onPress={() => onPress(app.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${app.name}`}
+    >
+      <View style={[styles.tileIcon, { backgroundColor: app.color }]}>
+        <Text style={styles.tileEmoji}>{app.icon}</Text>
+      </View>
+      <Text style={styles.tileName} numberOfLines={2}>{app.name}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -131,22 +221,31 @@ function createStyles(Colors: ThemeColors) {
     safeArea: {
       flex: 1,
     },
-    headerSpacer: {
-      height: 100,
+    heroHeader: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.xl,
     },
-    contentContainer: {
+    heroTitle: {
+      fontSize: 26,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      marginBottom: 4,
+    },
+    heroSubtitle: {
+      ...Typography.body,
+      color: 'rgba(255,255,255,0.75)',
+    },
+    sheet: {
       flex: 1,
       backgroundColor: isDark ? Colors.background : Colors.surface,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
       overflow: 'hidden',
     },
     scrollContent: {
       padding: Spacing.lg,
-      paddingTop: Spacing.xl,
-    },
-    searchWrapper: {
-      marginBottom: Spacing.xl,
+      paddingBottom: Spacing.xl * 3,
     },
     searchContainer: {
       flexDirection: 'row',
@@ -156,54 +255,103 @@ function createStyles(Colors: ThemeColors) {
       borderWidth: 1,
       borderColor: Colors.border,
       paddingHorizontal: Spacing.md,
-      height: 56,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+      height: 48,
+      marginBottom: Spacing.md,
     },
-    searchIcon: {
-      marginRight: Spacing.sm,
-    },
+    searchIcon: { marginRight: Spacing.sm },
     searchInput: {
       flex: 1,
-      ...Typography.bodyLg,
+      ...Typography.body,
       color: Colors.textPrimary,
+    },
+    chipRow: {
+      gap: Spacing.sm,
+      paddingBottom: Spacing.sm,
+    },
+    chip: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 7,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      backgroundColor: Colors.surface,
+    },
+    chipActive: {
+      backgroundColor: Colors.primary,
+      borderColor: Colors.primary,
+    },
+    chipText: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      fontWeight: '600',
+    },
+    chipTextActive: {
+      color: Colors.secondary,
+    },
+    sectionLabel: {
+      ...Typography.body,
+      fontWeight: '700',
+      color: Colors.textPrimary,
+      marginTop: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    recentRow: {
+      gap: Spacing.md,
+      paddingBottom: Spacing.sm,
+    },
+    recentItem: {
+      alignItems: 'center',
+      width: 68,
+    },
+    recentIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 6,
+    },
+    recentEmoji: { fontSize: 26 },
+    recentName: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      fontWeight: '600',
     },
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      gap: GRID_GAP,
     },
-    appItem: {
-      width: COLUMN_WIDTH,
-      marginBottom: Spacing.xl,
-    },
-    logoCard: {
-      width: COLUMN_WIDTH,
-      height: COLUMN_WIDTH,
-      borderRadius: Radius.md,
-      justifyContent: 'center',
+    tile: {
+      width: TILE_SIZE,
       alignItems: 'center',
-      padding: Spacing.md,
-      marginBottom: Spacing.sm,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      paddingVertical: Spacing.sm,
     },
-    logoImage: {
-      width: '80%',
-      height: '80%',
+    tileIcon: {
+      width: TILE_SIZE - Spacing.lg,
+      height: TILE_SIZE - Spacing.lg,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: Spacing.xs,
     },
-    appName: {
-      ...Typography.body,
+    tileEmoji: { fontSize: 32 },
+    tileName: {
+      ...Typography.caption,
       color: Colors.textPrimary,
-      fontWeight: '500',
+      textAlign: 'center',
+      fontWeight: '600',
+      lineHeight: 16,
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: Spacing.xl * 2,
+      gap: Spacing.md,
+    },
+    emptyText: {
+      ...Typography.body,
+      color: Colors.textSecondary,
     },
   });
 }
-
-
