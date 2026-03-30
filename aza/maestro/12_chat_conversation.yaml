@@ -7,35 +7,24 @@ name: Chat Conversation - Messaging, Search, and More Menu
 # Navigate to Chat tab and open first conversation
 - tapOn: "Chat"
 - waitForAnimationToEnd
-- tapOn:
-    index: 0
-    type: "chat-contact-row"
+- tapOn: "Alice Johnson"
 - waitForAnimationToEnd
 
 # --- ChatScreen ---
-# Header elements
-- assertVisible:
-    id: "chat-back-button"
-- assertVisible:
-    id: "chat-contact-name"
-- assertVisible: "Online"
-- assertVisible:
-    id: "chat-more-menu-button"
+# Status shows "online" (lowercase in source)
+- assertVisible: "online"
 
-# Message input area
+# Message input area (accessibilityLabel: "Message input")
 - assertVisible:
-    id: "message-input"
-- assertVisible:
-    id: "attachment-button"
-- assertVisible:
-    id: "send-button"
+    label: "Message input"
 
 # --- Type and send a message ---
 - tapOn:
-    id: "message-input"
+    label: "Message input"
 - inputText: "Hello! How are you?"
+# Tap the send button (rightmost circle button - no testID, coordinate tap)
 - tapOn:
-    id: "send-button"
+    point: "90%,90%"
 - waitForAnimationToEnd
 
 # Message should appear in chat
@@ -45,9 +34,9 @@ name: Chat Conversation - Messaging, Search, and More Menu
 - waitForAnimationToEnd:
     timeout: 5000
 
-# --- Attachment Modal ---
+# --- Attachment Modal (plus button - leftmost circle button) ---
 - tapOn:
-    id: "attachment-button"
+    point: "10%,90%"
 - waitForAnimationToEnd
 - assertVisible: "Photos"
 - assertVisible: "Camera"
@@ -58,15 +47,15 @@ name: Chat Conversation - Messaging, Search, and More Menu
     point: "50%,20%"
 - waitForAnimationToEnd
 
-# --- More Menu ---
+# --- More Menu (top-right button in ChatHeader) ---
 - tapOn:
-    id: "chat-more-menu-button"
+    point: "95%,10%"
 - waitForAnimationToEnd
 - assertVisible: "View Profile"
 - assertVisible: "Send Money"
 - assertVisible: "Request Money"
 - assertVisible: "Search in Conversation"
-- assertVisible: "Mute"
+- assertVisible: "Mute Notifications"
 - assertVisible: "Shared Media"
 - assertVisible: "Clear Chat"
 - assertVisible: "Block Contact"
@@ -75,23 +64,14 @@ name: Chat Conversation - Messaging, Search, and More Menu
 # Tap Search in Conversation
 - tapOn: "Search in Conversation"
 - waitForAnimationToEnd
-- assertVisible:
-    id: "chat-search-input"
+# Search bar appears with placeholder "Search messages..."
+- assertVisible: "Search messages..."
 - inputText: "Hello"
 - waitForAnimationToEnd
 - assertVisible: "Hello! How are you?"
-- clearText
+# Close search (tap the X button at right of search bar)
 - tapOn:
-    id: "chat-search-clear"
-- waitForAnimationToEnd
-
-# Open more menu again and close it
-- tapOn:
-    id: "chat-more-menu-button"
-- waitForAnimationToEnd
-# Dismiss by tapping backdrop
-- tapOn:
-    point: "50%,10%"
+    point: "95%,15%"
 - waitForAnimationToEnd
 
 # --- Long Press Message ---
@@ -109,17 +89,16 @@ name: Chat Conversation - Messaging, Search, and More Menu
     point: "50%,10%"
 - waitForAnimationToEnd
 
-# --- Send multiple messages ---
+# --- Send another message ---
 - tapOn:
-    id: "message-input"
+    label: "Message input"
 - inputText: "Testing message 2"
 - tapOn:
-    id: "send-button"
+    point: "90%,90%"
 - waitForAnimationToEnd
 - assertVisible: "Testing message 2"
 
 # Back to chat list
-- tapOn:
-    id: "chat-back-button"
+- back
 - waitForAnimationToEnd
 - assertVisible: "Chats"

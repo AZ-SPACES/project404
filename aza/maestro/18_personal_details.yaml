@@ -6,7 +6,7 @@ name: Personal Details - Edit Information
 
 # Navigate: Home → Profile → Personal Details
 - tapOn:
-    id: "profile-avatar"
+    label: "Open profile"
 - waitForAnimationToEnd
 - tapOn: "Personal details"
 - waitForAnimationToEnd

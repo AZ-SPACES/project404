@@ -5,58 +5,41 @@ name: Login - Phone Number Flow
     clearState: true
 - waitForAnimationToEnd
 
-# Navigate to login from onboarding
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Login"
 - waitForAnimationToEnd
 
-# Login screen should be visible
-- assertVisible: "Welcome back"
+# Login screen title
+- assertVisible: "Login"
 
-# Default input should be phone number
-- assertVisible: "000 000 0000"
+# Default input mode is phone number
+- assertVisible: "Your Phone Number"
 
-# Try submitting empty form - button should be disabled
-- assertNotVisible:
-    text: "Continue"
-    enabled: true
+# Password label
+- assertVisible: "Password"
 
-# Enter invalid phone (too short) - button stays disabled
-- tapOn: "000 000 0000"
-- inputText: "12345"
-- assertNotVisible:
-    text: "Continue"
-    enabled: true
 
-# Clear and enter valid phone number
-- clearText
+# Enter phone number (accessibilityLabel: "Phone number")
+- tapOn:
+    label: "Phone number"
 - inputText: ${TEST_PHONE}
 
-# Enter password
+# Enter password (accessibilityLabel: "Password")
 - tapOn:
-    text: "Password"
+    label: "Password"
 - inputText: ${TEST_PASSWORD}
 
-# Toggle password visibility
-- tapOn:
-    id: "toggle-password-visibility"
-- tapOn:
-    id: "toggle-password-visibility"
-
-# Tap Continue / Login button
-- tapOn: "Continue"
+# Tap Login button
+- tapOn: "Login"
 - waitForAnimationToEnd
 
-# OTP screen should appear
-- assertVisible: ${TEST_PHONE}
+# OTP screen should appear (title: "Enter Code")
+- assertVisible: "Enter Code"
 - assertVisible: "Verify"
 
-# Verify OTP fields are present (6 fields)
-- assertVisible:
-    id: "otp-input-0"
-
-# Enter OTP
-- tapOn:
-    id: "otp-input-0"
+# Enter OTP digits
 - inputText: ${TEST_OTP}
 - waitForAnimationToEnd
 

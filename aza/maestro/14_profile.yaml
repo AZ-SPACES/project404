@@ -6,17 +6,19 @@ name: Profile Screen - Settings and Navigation
 
 # Navigate to Profile from Home header
 - tapOn:
-    id: "profile-avatar"
+    label: "Open profile"
 - waitForAnimationToEnd
 
 # --- ProfileScreen ---
 - assertVisible: "Personal account"
 - assertVisible: "Open an Account"
 
-# Profile photo edit
+# Profile photo edit (tap the profile image area near top-center of scroll)
+# Note: no testID/label on this TouchableOpacity — coordinate tap targets the avatar
 - tapOn:
-    id: "profile-photo-edit"
+    point: "50%,25%"
 - waitForAnimationToEnd
+- assertVisible: "Edit profile photo"
 - assertVisible: "Take a photo"
 - assertVisible: "Choose from library"
 # Dismiss bottom sheet
@@ -24,9 +26,8 @@ name: Profile Screen - Settings and Navigation
     point: "50%,10%"
 - waitForAnimationToEnd
 
-# Open account type bottom sheet
-- tapOn:
-    id: "account-type-badge"
+# Open account type bottom sheet via "Open an Account" header button
+- tapOn: "Open an Account"
 - waitForAnimationToEnd
 - assertVisible: "Which account type would you like?"
 - assertVisible: "Personal account"

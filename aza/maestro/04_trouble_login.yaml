@@ -5,9 +5,12 @@ name: Trouble Login - All Issue Paths
     clearState: true
 - waitForAnimationToEnd
 
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
 - tapOn: "Login"
 - waitForAnimationToEnd
-- assertVisible: "Welcome back"
+- assertVisible: "Login"
 
 # Navigate to trouble login
 - tapOn: "Trouble logging in?"
@@ -61,4 +64,5 @@ name: Trouble Login - All Issue Paths
 
 # Close button on trouble login
 - back
-- assertVisible: "Welcome back"
+- waitForAnimationToEnd
+- assertVisible: "Login"

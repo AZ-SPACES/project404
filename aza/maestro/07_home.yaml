@@ -25,14 +25,14 @@ name: Home Screen - Balance, Actions, and Navigation
 
 # Toggle balance visibility (eye icon)
 - tapOn:
-    id: "toggle-balance-visibility"
+    label: "Toggle balance visibility"
 - waitForAnimationToEnd
 # Balance should be hidden now
 - assertNotVisible: "0.00"
 
 # Toggle back to show balance
 - tapOn:
-    id: "toggle-balance-visibility"
+    label: "Toggle balance visibility"
 - waitForAnimationToEnd
 - assertVisible: "0.00"
 
@@ -50,14 +50,14 @@ name: Home Screen - Balance, Actions, and Navigation
 
 # Tap profile picture - should navigate to Profile
 - tapOn:
-    id: "profile-avatar"
+    label: "Open profile"
 - waitForAnimationToEnd
 - assertVisible: "Personal account"
 - back
 
 # Tap notification bell - should navigate to Inbox
 - tapOn:
-    id: "notification-bell"
+    label: "Open notifications"
 - waitForAnimationToEnd
 - assertVisible: "Inbox"
 - back

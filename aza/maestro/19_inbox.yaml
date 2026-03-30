@@ -6,7 +6,7 @@ name: Inbox - Notifications Screen
 
 # Navigate to Inbox via notification bell on Home
 - tapOn:
-    id: "notification-bell"
+    label: "Open notifications"
 - waitForAnimationToEnd
 
 # --- InboxScreen ---
