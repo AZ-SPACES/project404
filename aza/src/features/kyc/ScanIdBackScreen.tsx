@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import { useToast } from '../../providers/ToastProvider';
+import { useKYC } from '../../providers/KYCProvider';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../theme";
 import Button from "../../components/ui/Button";
@@ -37,6 +38,7 @@ export default function ScanIdBackScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const { showToast } = useToast();
+  const { update } = useKYC();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdBackRouteProp>();
@@ -125,6 +127,9 @@ export default function ScanIdBackScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
+    if (capturedImage && capturedImage !== 'placeholder') {
+      update({ idBackImageUri: capturedImage });
+    }
     navigation.navigate("SelfieScan", { isPEP: !!isPEP });
   };
 

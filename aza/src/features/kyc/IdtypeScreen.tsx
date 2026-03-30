@@ -9,8 +9,6 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  Modal,
-  FlatList,
   Animated,
   StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +21,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useKYC, IdType } from '../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Idtype'>;
 type IdtypeRouteProp = RouteProp<RootStackParamList, "Idtype">;
@@ -43,15 +42,11 @@ export default function IdtypeScreen() {
   const route = useRoute<IdtypeRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
-  const [documentType, setDocumentType] = useState<{
-    label: string;
-    value: string;
-    placeholder: string;
-    prefix?: string;
-    maxLength?: number;
-    keyboardType?: "numeric" | "default";
-  } | null>(null);
-  const [idNumber, setIdNumber] = useState("");
+  const { data, update } = useKYC();
+  const [documentType, setDocumentType] = useState(
+    data.idType ? (ID_OPTIONS.find(o => o.value === data.idType) ?? null) : null
+  );
+  const [idNumber, setIdNumber] = useState(data.idNumber);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -65,6 +60,9 @@ export default function IdtypeScreen() {
     extrapolate: "clamp" });
 
   const handleNext = () => {
+    if (documentType) {
+      update({ idType: documentType.value as IdType, idLabel: documentType.label, idNumber });
+    }
     navigation.navigate("VerifyFaceId", { isPEP: isPEP as boolean });
   };
 
