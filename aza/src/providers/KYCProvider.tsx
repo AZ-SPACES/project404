@@ -4,7 +4,6 @@ import React, {
   useContext,
   useState,
 } from 'react';
-import { useAuth } from './AuthProvider';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,7 +130,9 @@ const INITIAL_DATA: KYCData = {
 type KYCContextType = {
   data: KYCData;
   update: (fields: Partial<KYCData>) => void;
-  submit: () => Promise<void>;
+  /** Pass `latestFields` for any fields you just called `update()` on —
+   *  this avoids the stale-closure problem where React state hasn't flushed yet. */
+  submit: (latestFields?: Partial<KYCData>) => Promise<void>;
   reset: () => void;
   isSubmitting: boolean;
 };
@@ -143,7 +144,6 @@ const KYCContext = createContext<KYCContextType | undefined>(undefined);
 export function KYCProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<KYCData>(INITIAL_DATA);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { completeKYC } = useAuth();
 
   const update = useCallback((fields: Partial<KYCData>) => {
     setData((prev) => ({ ...prev, ...fields }));
@@ -153,38 +153,42 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     setData(INITIAL_DATA);
   }, []);
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (latestFields?: Partial<KYCData>) => {
     setIsSubmitting(true);
+    // Merge any just-set fields so we don't hit a stale-closure on fields
+    // that were updated via `update()` immediately before calling `submit()`.
+    // React state (data) may not have flushed yet at the time submit() runs.
+    const merged: KYCData = latestFields ? { ...data, ...latestFields } : data;
     try {
       // Validate that required fields are present before submitting
       if (
-        !data.idType ||
-        !data.idFrontImageUri ||
-        !data.idBackImageUri ||
-        !data.selfieImageUri
+        !merged.idType ||
+        !merged.idFrontImageUri ||
+        !merged.idBackImageUri ||
+        !merged.selfieImageUri
       ) {
         throw new Error('Incomplete KYC data');
       }
 
       const payload: KYCPayload = {
-        biometricConsent: data.biometricConsent,
-        fundsSource: data.fundsSource,
-        ...(data.otherFundsText ? { otherFundsText: data.otherFundsText } : {}),
-        idType: data.idType,
-        idNumber: data.idNumber,
-        idFrontImageUri: data.idFrontImageUri,
-        idBackImageUri: data.idBackImageUri,
-        selfieImageUri: data.selfieImageUri,
-        isPEP: data.isPEP,
-        ...(data.isPEP && {
-          ...(data.pepStatus != null && { pepStatus: data.pepStatus }),
-          ...(data.pepRole && { pepRole: data.pepRole }),
-          ...(data.pepWealthSource && { pepWealthSource: data.pepWealthSource }),
-          ...(data.pepAccountPurpose != null && { pepAccountPurpose: data.pepAccountPurpose }),
-          ...(data.pepMonthlyVolume != null && { pepMonthlyVolume: data.pepMonthlyVolume }),
-          ...(data.pepProofDocType != null && { pepProofDocType: data.pepProofDocType }),
-          ...(data.pepProofDocumentUri != null && { pepProofDocumentUri: data.pepProofDocumentUri }),
-          ...(data.pepProofDocumentName != null && { pepProofDocumentName: data.pepProofDocumentName }),
+        biometricConsent: merged.biometricConsent,
+        fundsSource: merged.fundsSource,
+        ...(merged.otherFundsText ? { otherFundsText: merged.otherFundsText } : {}),
+        idType: merged.idType,
+        idNumber: merged.idNumber,
+        idFrontImageUri: merged.idFrontImageUri,
+        idBackImageUri: merged.idBackImageUri,
+        selfieImageUri: merged.selfieImageUri,
+        isPEP: merged.isPEP,
+        ...(merged.isPEP && {
+          ...(merged.pepStatus != null && { pepStatus: merged.pepStatus }),
+          ...(merged.pepRole && { pepRole: merged.pepRole }),
+          ...(merged.pepWealthSource && { pepWealthSource: merged.pepWealthSource }),
+          ...(merged.pepAccountPurpose != null && { pepAccountPurpose: merged.pepAccountPurpose }),
+          ...(merged.pepMonthlyVolume != null && { pepMonthlyVolume: merged.pepMonthlyVolume }),
+          ...(merged.pepProofDocType != null && { pepProofDocType: merged.pepProofDocType }),
+          ...(merged.pepProofDocumentUri != null && { pepProofDocumentUri: merged.pepProofDocumentUri }),
+          ...(merged.pepProofDocumentName != null && { pepProofDocumentName: merged.pepProofDocumentName }),
         }),
       };
 
@@ -201,13 +205,15 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
       //
       // Step 2 – submit full KYC payload:
       //   await api.post('/kyc/submit', payload);
-      //
-      // Step 3 – mark KYC complete in AuthProvider:
-      completeKYC();
+
+      // NOTE: Do NOT call completeKYC() here. Doing so sets isKYCVerified: true
+      // immediately, which causes RootNavigator to swap KYCNavigator → AppNavigator
+      // before KYCSuccess / CreatingAccount / AccountReady screens can render.
+      // AccountReadyScreen already calls completeKYC() on the final "Go to Home" tap.
     } finally {
       setIsSubmitting(false);
     }
-  }, [data, completeKYC]);
+  }, [data]);
 
   return (
     <KYCContext.Provider value={{ data, update, submit, reset, isSubmitting }}>

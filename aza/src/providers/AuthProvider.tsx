@@ -138,7 +138,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-      saveState({ hasPasscode: true });
+      // Do NOT set hasPasscode: true here. Setting it triggers RootNavigator to
+      // swap SetupNavigator → KYCNavigator immediately, before the navigator
+      // can proceed to the Consent screen (blank screen bug). The setPasscode()
+      // call at the end of the onboarding flow (EnableNotificationsScreen /
+      // EnableBiometricsScreen) is responsible for that state transition.
     } catch (e) {
       console.error("Failed to save passcode value", e);
       Alert.alert(
