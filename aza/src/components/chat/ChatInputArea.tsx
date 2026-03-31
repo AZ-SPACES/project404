@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useRef, useCallback } from 'react';
+import React, { memo, useMemo, useRef, useCallback, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -29,6 +29,9 @@ export const ChatInputArea = memo(function ChatInputArea({
   const isDark = Colors.background === '#121212';
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
   const addButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const showIcon = !isFocused && !message;
 
   const handleAddPress = useCallback(() => {
     addButtonRef.current?.measure(
@@ -38,6 +41,9 @@ export const ChatInputArea = memo(function ChatInputArea({
       },
     );
   }, [onAddPress]);
+
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+  const handleBlur = useCallback(() => setIsFocused(false), []);
 
   return (
     <View style={styles.container}>
@@ -51,13 +57,17 @@ export const ChatInputArea = memo(function ChatInputArea({
       </TouchableOpacity>
 
       <View style={styles.inputWrapper}>
-        <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
+        {showIcon && (
+          <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
+        )}
         <TextInput
           style={styles.textInput}
           placeholder="Type here"
           placeholderTextColor={Colors.textSecondary}
           value={message}
           onChangeText={setMessage}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           multiline
           accessibilityLabel="Message input"
         />
@@ -113,3 +123,4 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     },
     sendIcon: { marginRight: 2, marginTop: 2 },
   });
+

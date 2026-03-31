@@ -260,7 +260,7 @@ export function ChatScreen() {
   // More menu actions
   // --------------------------------------------------------------------------
   const moreMenuActions = useMemo<MoreAction[]>(() => [
-    { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('Profile'); } },
+    { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('ContactsProfile', { name, username: name.toLowerCase().replace(/\s+/g, '_'), avatar }); } },
     { icon: 'send', label: 'Send Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SendAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar }); } },
     { icon: 'download', label: 'Request Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('RequestAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
@@ -342,26 +342,47 @@ export function ChatScreen() {
         </View>
       )}
 
-      <KeyboardAvoidingView style={styles.keyboardAvoidingView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <FlatList
-          ref={flatListRef}
-          data={filteredMessages}
-          keyExtractor={keyExtractor}
-          renderItem={renderItem}
-          contentContainerStyle={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-          ListFooterComponent={listFooter}
-          removeClippedSubviews
-        />
-
-        <ChatInputArea
-          message={message}
-          setMessage={setMessage}
-          onSend={handleSend}
-          isAddOpen={showAttachment}
-          onAddPress={handleAddPress}
-        />
-      </KeyboardAvoidingView>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView style={styles.keyboardAvoidingView} behavior="padding">
+          <FlatList
+            ref={flatListRef}
+            data={filteredMessages}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={listFooter}
+            removeClippedSubviews
+          />
+          <ChatInputArea
+            message={message}
+            setMessage={setMessage}
+            onSend={handleSend}
+            isAddOpen={showAttachment}
+            onAddPress={handleAddPress}
+          />
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.keyboardAvoidingView}>
+          <FlatList
+            ref={flatListRef}
+            data={filteredMessages}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            ListFooterComponent={listFooter}
+            removeClippedSubviews
+          />
+          <ChatInputArea
+            message={message}
+            setMessage={setMessage}
+            onSend={handleSend}
+            isAddOpen={showAttachment}
+            onAddPress={handleAddPress}
+          />
+        </View>
+      )}
 
       <ChatAttachmentModal
         visible={showAttachment}
