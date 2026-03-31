@@ -32,6 +32,10 @@ export type DisplayContextType = {
   setLanguage: (lang: LanguageOption) => void;
   homeBackground: string;
   setHomeBackground: (uri: string) => void;
+  hubBackground: string;
+  setHubBackground: (uri: string) => void;
+  customBackgrounds: string[];
+  addCustomBackground: (uri: string) => void;
   activeColorScheme: "light" | "dark";
 };
 
@@ -42,6 +46,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeOption>("System Default");
   const [language, setLanguageState] = useState<LanguageOption>("English (US)");
   const [homeBackground, setHomeBackgroundState] = useState<string>(defaultBg);
+  const [hubBackground, setHubBackgroundState] = useState<string>(defaultBg);
+  const [customBackgrounds, setCustomBackgroundsState] = useState<string[]>([]);
   
   const colorScheme = useColorScheme();
   const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme());
@@ -62,10 +68,12 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     // Load all settings on mount
     const loadSettings = async () => {
       try {
-        const [savedTheme, savedLang, savedBg] = await Promise.all([
+        const [savedTheme, savedLang, savedBg, savedHubBg, savedCustomBgs] = await Promise.all([
           AsyncStorage.getItem('AppTheme'),
           AsyncStorage.getItem('AppLanguage'),
-          AsyncStorage.getItem('AppHomeBackground')
+          AsyncStorage.getItem('AppHomeBackground'),
+          AsyncStorage.getItem('AppHubBackground'),
+          AsyncStorage.getItem('AppCustomBackgrounds')
         ]);
 
         if (savedTheme && THEMES.includes(savedTheme as ThemeOption)) {
@@ -76,6 +84,14 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         }
         if (savedBg) {
           setHomeBackgroundState(savedBg);
+        }
+        if (savedHubBg) {
+          setHubBackgroundState(savedHubBg);
+        }
+        if (savedCustomBgs) {
+          try {
+            setCustomBackgroundsState(JSON.parse(savedCustomBgs));
+          } catch (e) {}
         }
       } catch (error) {
         console.error("Error loading settings:", error);
@@ -100,6 +116,19 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem('AppHomeBackground', uri).catch(() => {});
   };
 
+  const setHubBackground = (uri: string) => {
+    setHubBackgroundState(uri);
+    AsyncStorage.setItem('AppHubBackground', uri).catch(() => {});
+  };
+
+  const addCustomBackground = (uri: string) => {
+    setCustomBackgroundsState((prev) => {
+      const updated = [uri, ...prev.filter(bg => bg !== uri)].slice(0, 3);
+      AsyncStorage.setItem('AppCustomBackgrounds', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
+  };
+
   return (
     <DisplayContext.Provider
       value={{
@@ -109,6 +138,10 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         setLanguage,
         homeBackground,
         setHomeBackground,
+        hubBackground,
+        setHubBackground,
+        customBackgrounds,
+        addCustomBackground,
         activeColorScheme,
       }}
     >

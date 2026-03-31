@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useKYC } from '../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "VerifyIdentity">;
 type VerifyIdentityRouteProp = RouteProp<RootStackParamList, "VerifyIdentity">;
@@ -27,6 +28,7 @@ export default function VerifyIdentityScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { update } = useKYC();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
@@ -44,6 +46,7 @@ export default function VerifyIdentityScreen() {
     extrapolate: "clamp" });
 
   const handleNext = () => {
+    update({ biometricConsent: true });
     navigation.navigate('SourceofFund', { isPEP: !!isPEP });
   };
 

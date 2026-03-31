@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
@@ -79,10 +85,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const updatedState = { ...authState, ...newState };
     setAuthState(updatedState);
     try {
-      await SecureStore.setItemAsync(AUTH_STATE_KEY, JSON.stringify(updatedState));
+      await SecureStore.setItemAsync(
+        AUTH_STATE_KEY,
+        JSON.stringify(updatedState),
+      );
     } catch (e) {
       console.error("Failed to save auth state", e);
-      Alert.alert("Session Error", "We couldn't save your session. Please restart the app if issues persist.");
+      Alert.alert(
+        "Session Error",
+        "We couldn't save your session. Please restart the app if issues persist.",
+      );
     }
   };
 
@@ -126,10 +138,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-      saveState({ hasPasscode: true });
+      // Do NOT set hasPasscode: true here. Setting it triggers RootNavigator to
+      // swap SetupNavigator → KYCNavigator immediately, before the navigator
+      // can proceed to the Consent screen (blank screen bug). The setPasscode()
+      // call at the end of the onboarding flow (EnableNotificationsScreen /
+      // EnableBiometricsScreen) is responsible for that state transition.
     } catch (e) {
       console.error("Failed to save passcode value", e);
-      Alert.alert("Passcode Error", "We couldn't save your passcode. Please try again.");
+      Alert.alert(
+        "Passcode Error",
+        "We couldn't save your passcode. Please try again.",
+      );
     }
   }, []);
 
@@ -163,12 +182,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const recordPinFailure = useCallback(async (): Promise<PinLockoutResult> => {
     try {
       const raw = await SecureStore.getItemAsync(PIN_ATTEMPTS_KEY);
-      const current: PinAttemptState = raw ? JSON.parse(raw) : { count: 0, lockedUntil: null };
+      const current: PinAttemptState = raw
+        ? JSON.parse(raw)
+        : { count: 0, lockedUntil: null };
       const newCount = current.count + 1;
-      const lockedUntil = newCount >= MAX_PIN_ATTEMPTS ? Date.now() + LOCKOUT_DURATION_MS : null;
-      await SecureStore.setItemAsync(PIN_ATTEMPTS_KEY, JSON.stringify({ count: newCount, lockedUntil }));
+      const lockedUntil =
+        newCount >= MAX_PIN_ATTEMPTS ? Date.now() + LOCKOUT_DURATION_MS : null;
+      await SecureStore.setItemAsync(
+        PIN_ATTEMPTS_KEY,
+        JSON.stringify({ count: newCount, lockedUntil }),
+      );
       if (lockedUntil) {
-        return { isLocked: true, secondsRemaining: Math.ceil(LOCKOUT_DURATION_MS / 1000) };
+        return {
+          isLocked: true,
+          secondsRemaining: Math.ceil(LOCKOUT_DURATION_MS / 1000),
+        };
       }
       return { isLocked: false, secondsRemaining: 0 };
     } catch {

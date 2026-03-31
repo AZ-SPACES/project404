@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
+import { useKYC, PEPProofDocType } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 
@@ -34,9 +35,11 @@ export default function PEPProofOfWealthScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { update } = useKYC();
   const [docType, setDocType] = useState<DocumentType | null>(null);
   const [fileUploaded, setFileUploaded] = useState<boolean>(false);
   const [fileDetails, setFileDetails] = useState<{ name: string; size: string } | null>(null);
+  const [fileUri, setFileUri] = useState<string | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -51,6 +54,11 @@ export default function PEPProofOfWealthScreen() {
 
   const handleNext = () => {
     // Proceed to standard KYC part of the EDD flow
+    update({
+      pepProofDocType: docType as PEPProofDocType ?? null,
+      pepProofDocumentUri: fileUri,
+      pepProofDocumentName: fileDetails?.name ?? null,
+    });
     navigation.navigate("VerifyIdentity", { isPEP: true });
   };
 
@@ -67,6 +75,7 @@ export default function PEPProofOfWealthScreen() {
         const sizeInMb = file.size ? (file.size / (1024 * 1024)).toFixed(2) + " MB" : "Size unknown";
         setFileDetails({ name: file.name, size: sizeInMb });
         setFileUploaded(true);
+        setFileUri(file.uri);
       }
     } catch (err) {
       console.error("DocumentPicker Error: ", err);
@@ -87,6 +96,9 @@ export default function PEPProofOfWealthScreen() {
       ]}
       onPress={() => setDocType(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: docType === label }}
     >
       <Text
         style={[
@@ -116,6 +128,8 @@ export default function PEPProofOfWealthScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"

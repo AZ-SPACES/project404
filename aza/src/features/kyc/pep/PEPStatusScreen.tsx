@@ -14,6 +14,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC, PEPStatus } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPStatus">;
 
@@ -30,6 +31,7 @@ export default function PEPStatusScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { update } = useKYC();
   const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -45,8 +47,13 @@ export default function PEPStatusScreen() {
 
   const handleNext = () => {
     if (selectedOption === "No, I am not") {
+      update({ isPEP: false, pepStatus: null });
       navigation.navigate("VerifyIdentity", { isPEP: false });
     } else {
+      const pepStatus: PEPStatus = selectedOption === 'Yes, I am a Politically Exposed Person'
+        ? 'self'
+        : 'family_associate';
+      update({ isPEP: true, pepStatus });
       navigation.navigate("PEPDetails");
     }
   };
@@ -60,6 +67,9 @@ export default function PEPStatusScreen() {
       ]}
       onPress={() => setSelectedOption(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: selectedOption === label }}
     >
       <Text
         style={[
@@ -89,6 +99,8 @@ export default function PEPStatusScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"

@@ -1,0 +1,74 @@
+appId: com.semekor.k.aza
+name: Security and Privacy - Full Settings Flow
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Security settings
+- tapOn:
+    label: "Open profile"
+- waitForAnimationToEnd
+- tapOn: "Security and Privacy"
+- waitForAnimationToEnd
+
+# --- SecurityAndPrivacyScreen ---
+- assertVisible: "Change Password"
+- assertVisible: "Secure Account"
+- assertVisible: "Two-step verification"
+- assertVisible: "Find me by"
+- assertVisible: "Bill forwarding"
+- assertVisible: "Devices"
+- assertVisible: "Log out everywhere"
+
+# --- Change Password ---
+- tapOn: "Change Password"
+- waitForAnimationToEnd
+- assertVisible: "Current password"
+- assertVisible: "New password"
+- assertVisible: "Confirm new password"
+
+# Test password inputs
+- tapOn: "Current password"
+- inputText: ${TEST_PASSWORD}
+- tapOn: "New password"
+- inputText: "NewTest@5678"
+- tapOn: "Confirm new password"
+- inputText: "NewTest@5678"
+- back
+- waitForAnimationToEnd
+
+# --- Two-Step Verification ---
+- tapOn: "Two-step verification"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Find Me By ---
+- tapOn: "Find me by"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Devices ---
+- tapOn: "Devices"
+- waitForAnimationToEnd
+# Should list active sessions
+- back
+- waitForAnimationToEnd
+
+# --- Log Out Everywhere ---
+- tapOn: "Log out everywhere"
+- waitForAnimationToEnd
+# Confirm dialog
+- assertVisible: "Log out"
+# Cancel
+- tapOn: "Cancel"
+- waitForAnimationToEnd
+
+# --- Bill Forwarding ---
+- tapOn: "Bill forwarding"
+- waitForAnimationToEnd
+# Intro screen
+- assertVisible: "Bill Forwarding"
+- back
+- waitForAnimationToEnd

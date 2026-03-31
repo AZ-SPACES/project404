@@ -1,0 +1,28 @@
+appId: com.semekor.k.aza
+name: Inbox - Notifications Screen
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Inbox via notification bell on Home
+- tapOn:
+    label: "Open notifications"
+- waitForAnimationToEnd
+
+# --- InboxScreen ---
+- assertVisible: "Inbox"
+
+# Empty state or notification list
+- waitForAnimationToEnd
+
+# If notifications exist, interact with them
+# - tapOn:
+#     index: 0
+#     type: "notification-row"
+# - waitForAnimationToEnd
+# - back
+
+# Back to Home
+- back
+- waitForAnimationToEnd
+- assertVisible: "GH₵"
