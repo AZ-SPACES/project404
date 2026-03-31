@@ -79,7 +79,6 @@ export default function HomeScreen() {
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
         />
-        <View style={styles.overlay} />
 
         <SafeAreaView>
           {/* Header */}
@@ -177,9 +176,6 @@ function createStyles(Colors: ThemeColors) {
   topSection: {
     height: height * 0.55,
     backgroundColor: Colors.primary },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(23, 71, 23, 0.45)" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -262,7 +258,7 @@ function createStyles(Colors: ThemeColors) {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: isDark ? Colors.surface : Colors.white,
-    borderRadius: Radius.md, // 12px max
+    borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border },

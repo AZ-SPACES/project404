@@ -1,0 +1,104 @@
+appId: com.semekor.k.aza
+name: Profile Screen - Settings and Navigation
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Profile from Home header
+- tapOn:
+    label: "Open profile"
+- waitForAnimationToEnd
+
+# --- ProfileScreen ---
+- assertVisible: "Personal account"
+- assertVisible: "Open an Account"
+
+# Profile photo edit (tap the profile image area near top-center of scroll)
+# Note: no testID/label on this TouchableOpacity — coordinate tap targets the avatar
+- tapOn:
+    point: "50%,25%"
+- waitForAnimationToEnd
+- assertVisible: "Edit profile photo"
+- assertVisible: "Take a photo"
+- assertVisible: "Choose from library"
+# Dismiss bottom sheet
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# Open account type bottom sheet via "Open an Account" header button
+- tapOn: "Open an Account"
+- waitForAnimationToEnd
+- assertVisible: "Which account type would you like?"
+- assertVisible: "Personal account"
+- assertVisible: "Business account"
+# Dismiss
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# My Account section
+- assertVisible: "Help & Support"
+- tapOn: "Help & Support"
+- waitForAnimationToEnd
+- assertVisible: "Help"
+- back
+- waitForAnimationToEnd
+
+# Settings section
+- assertVisible: "Security and Privacy"
+- assertVisible: "Notifications"
+- assertVisible: "Language and Appearance"
+- assertVisible: "Personal details"
+
+# --- Security and Privacy ---
+- tapOn: "Security and Privacy"
+- waitForAnimationToEnd
+- assertVisible: "Change Password"
+- assertVisible: "Two-step verification"
+- assertVisible: "Find me by"
+- assertVisible: "Devices"
+- assertVisible: "Log out everywhere"
+- back
+- waitForAnimationToEnd
+
+# --- Notifications ---
+- tapOn: "Notifications"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Appearance ---
+- tapOn: "Language and Appearance"
+- waitForAnimationToEnd
+- assertVisible: "Dark"
+- assertVisible: "Light"
+# Toggle theme
+- tapOn: "Dark"
+- waitForAnimationToEnd
+- tapOn: "Light"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Personal Details ---
+- tapOn: "Personal details"
+- waitForAnimationToEnd
+- assertVisible: "Personal information"
+- assertVisible: "Change email"
+- assertVisible: "Change phone"
+- back
+- waitForAnimationToEnd
+
+# Actions section
+- assertVisible: "Terms of Service"
+- assertVisible: "Rate us"
+- assertVisible: "Sign Out"
+
+# Sign Out - verify confirmation alert appears
+- tapOn: "Sign Out"
+- waitForAnimationToEnd
+- assertVisible: "Sign out"
+# Cancel sign out
+- tapOn: "Cancel"
+- waitForAnimationToEnd

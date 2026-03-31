@@ -1,0 +1,80 @@
+appId: com.semekor.k.aza
+name: Home Screen - Balance, Actions, and Navigation
+---
+# Assumes user is already logged in (use clearState: false)
+- launchApp
+
+- waitForAnimationToEnd
+
+# Home screen core elements
+- assertVisible: "Good"
+# Balance display
+- assertVisible: "GH₵"
+- assertVisible: "0.00"
+
+# Action buttons
+- assertVisible: "Send"
+- assertVisible: "Request"
+- assertVisible: "Details"
+- assertVisible: "More"
+
+# Transactions section
+- assertVisible: "Transactions"
+- assertVisible: "See all"
+- assertVisible: "No transactions"
+
+# Toggle balance visibility (eye icon)
+- tapOn:
+    label: "Toggle balance visibility"
+- waitForAnimationToEnd
+# Balance should be hidden now
+- assertNotVisible: "0.00"
+
+# Toggle back to show balance
+- tapOn:
+    label: "Toggle balance visibility"
+- waitForAnimationToEnd
+- assertVisible: "0.00"
+
+# Tap Send button - should navigate to SendContactScreen
+- tapOn: "Send"
+- waitForAnimationToEnd
+- assertVisible: "Who are you sending to?"
+- back
+
+# Tap Request button - should navigate to RequestContactScreen
+- tapOn: "Request"
+- waitForAnimationToEnd
+- assertVisible: "Who are you requesting from?"
+- back
+
+# Tap profile picture - should navigate to Profile
+- tapOn:
+    label: "Open profile"
+- waitForAnimationToEnd
+- assertVisible: "Personal account"
+- back
+
+# Tap notification bell - should navigate to Inbox
+- tapOn:
+    label: "Open notifications"
+- waitForAnimationToEnd
+- assertVisible: "Inbox"
+- back
+
+# Bottom tab navigation
+- tapOn: "Contacts"
+- waitForAnimationToEnd
+- assertVisible: "Contacts"
+
+- tapOn: "Chat"
+- waitForAnimationToEnd
+- assertVisible: "Chats"
+
+- tapOn: "Hub"
+- waitForAnimationToEnd
+
+# Return home
+- tapOn: "Home"
+- waitForAnimationToEnd
+- assertVisible: "GH₵"

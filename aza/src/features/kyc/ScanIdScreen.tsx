@@ -21,6 +21,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import { useToast } from '../../providers/ToastProvider';
+import { useKYC } from '../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ScanId">;
 type ScanIdRouteProp = RouteProp<RootStackParamList, "ScanId">;
@@ -35,6 +36,7 @@ export default function ScanIdScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const { showToast } = useToast();
+  const { update } = useKYC();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdRouteProp>();
@@ -123,6 +125,9 @@ export default function ScanIdScreen() {
 
   const handleLooksGood = () => {
     setIsModalVisible(false);
+    if (capturedImage && capturedImage !== 'placeholder') {
+      update({ idFrontImageUri: capturedImage });
+    }
     navigation.navigate("ScanIdBack", { isPEP: !!isPEP });
   };
 

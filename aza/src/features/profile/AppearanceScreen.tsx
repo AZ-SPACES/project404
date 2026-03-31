@@ -15,6 +15,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import { useDisplayContext,BACKGROUND_IMAGES,ThemeOption,THEMES,LANGUAGES } from "../../providers/DisplayProvider";
+import { Dimensions } from "react-native";
+
+const { width, height } = Dimensions.get('window');
 
 type ThemeCardProps = {
   theme: ThemeOption;
@@ -132,16 +135,36 @@ export function AppearanceScreen() {
     language: selectedLanguage,
     setLanguage,
     homeBackground,
-    setHomeBackground } = useDisplayContext();
+    setHomeBackground,
+    hubBackground,
+    setHubBackground,
+    customBackgrounds,
+    addCustomBackground } = useDisplayContext();
 
-  const handlePickImage = async () => {
+  const handlePickHomeImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'] as ImagePicker.MediaType[],
       allowsEditing: false,
       quality: 1 });
 
     if (!result.canceled && result.assets && result.assets[0]) {
-      setHomeBackground(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setHomeBackground(uri);
+      addCustomBackground(uri);
+    }
+  };
+
+  const handlePickHubImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'] as ImagePicker.MediaType[],
+      allowsEditing: true, // This enables the manipulator!
+      aspect: [Math.round(width), Math.round(height * 0.55)],
+      quality: 1 });
+
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setHubBackground(uri);
+      addCustomBackground(uri);
     }
   };
 
@@ -220,7 +243,7 @@ export function AppearanceScreen() {
             {/* Custom Image Picker Button */}
             <TouchableOpacity
               style={styles.bgUploadButton}
-              onPress={handlePickImage}
+              onPress={handlePickHomeImage}
               activeOpacity={0.7}
             >
               <Feather name="plus" size={24} color={Colors.textSecondary} />
@@ -228,6 +251,32 @@ export function AppearanceScreen() {
                 Upload
               </Text>
             </TouchableOpacity>
+
+            {/* History of custom backgrounds */}
+            {customBackgrounds.map((bgUri) => {
+              const isSelected = homeBackground === bgUri;
+              return (
+                <TouchableOpacity
+                  key={`home-custom-${bgUri}`}
+                  style={[
+                    styles.bgThumbnailContainer,
+                    isSelected && styles.bgThumbnailSelected,
+                  ]}
+                  onPress={() => setHomeBackground(bgUri)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: bgUri }}
+                    style={styles.bgThumbnailImage}
+                  />
+                  {isSelected && (
+                    <View style={styles.bgCheckCircle}>
+                      <Feather name="check" size={12} color={Colors.white} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
 
             {BACKGROUND_IMAGES.map((bg) => {
               const isSelected = homeBackground === bg.uri;
@@ -239,6 +288,80 @@ export function AppearanceScreen() {
                     isSelected && styles.bgThumbnailSelected,
                   ]}
                   onPress={() => setHomeBackground(bg.uri)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: bg.uri }}
+                    style={styles.bgThumbnailImage}
+                  />
+                  {isSelected && (
+                    <View style={styles.bgCheckCircle}>
+                      <Feather name="check" size={12} color={Colors.white} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[Typography.h3, styles.sectionTitle]}>
+            Hub Screen Background
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.backgroundsScrollContainer}
+          >
+            {/* Custom Image Picker Button with Manipulator */}
+            <TouchableOpacity
+              style={styles.bgUploadButton}
+              onPress={handlePickHubImage}
+              activeOpacity={0.7}
+            >
+              <Feather name="crop" size={24} color={Colors.textSecondary} />
+              <Text style={[Typography.caption, styles.uploadText]}>
+                Crop New
+              </Text>
+            </TouchableOpacity>
+
+            {/* History of custom backgrounds */}
+            {customBackgrounds.map((bgUri) => {
+              const isSelected = hubBackground === bgUri;
+              return (
+                <TouchableOpacity
+                  key={`hub-custom-${bgUri}`}
+                  style={[
+                    styles.bgThumbnailContainer,
+                    isSelected && styles.bgThumbnailSelected,
+                  ]}
+                  onPress={() => setHubBackground(bgUri)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: bgUri }}
+                    style={styles.bgThumbnailImage}
+                  />
+                  {isSelected && (
+                    <View style={styles.bgCheckCircle}>
+                      <Feather name="check" size={12} color={Colors.white} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+
+            {BACKGROUND_IMAGES.map((bg) => {
+              const isSelected = hubBackground === bg.uri;
+              return (
+                <TouchableOpacity
+                  key={bg.id}
+                  style={[
+                    styles.bgThumbnailContainer,
+                    isSelected && styles.bgThumbnailSelected,
+                  ]}
+                  onPress={() => setHubBackground(bg.uri)}
                   activeOpacity={0.8}
                 >
                   <Image

@@ -14,6 +14,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC, PEPAccountPurpose, PEPMonthlyVolume } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPAccountPurpose">;
 
@@ -48,8 +49,9 @@ export default function PEPAccountPurposeScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [purpose, setPurpose] = useState<PurposeOption | null>(null);
-  const [volume, setVolume] = useState<VolumeOption | null>(null);
+  const { data, update } = useKYC();
+  const [purpose, setPurpose] = useState<PurposeOption | null>(data.pepAccountPurpose as PurposeOption ?? null);
+  const [volume, setVolume] = useState<VolumeOption | null>(data.pepMonthlyVolume as VolumeOption ?? null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -66,6 +68,10 @@ export default function PEPAccountPurposeScreen() {
 
   const handleNext = () => {
     // Proceed to Document Upload for PEP EDD
+    update({
+      pepAccountPurpose: purpose as PEPAccountPurpose ?? null,
+      pepMonthlyVolume: volume as PEPMonthlyVolume ?? null,
+    });
     navigation.navigate("PEPProofOfWealth");
   };
 
@@ -78,6 +84,9 @@ export default function PEPAccountPurposeScreen() {
       ]}
       onPress={() => setPurpose(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: purpose === label }}
     >
       <Text
         style={[
@@ -99,6 +108,9 @@ export default function PEPAccountPurposeScreen() {
       ]}
       onPress={() => setVolume(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: volume === label }}
     >
       <Text
         style={[
@@ -128,6 +140,8 @@ export default function PEPAccountPurposeScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"

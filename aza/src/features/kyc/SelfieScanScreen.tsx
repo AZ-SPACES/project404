@@ -21,6 +21,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../hooks/usePreventScreenCapture";
 import { useToast } from '../../providers/ToastProvider';
+import { useKYC } from '../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -43,6 +44,7 @@ export default function SelfieScanScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const { showToast } = useToast();
+  const { update, submit, isSubmitting } = useKYC();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SelfieScanRouteProp>();
@@ -120,12 +122,24 @@ export default function SelfieScanScreen() {
     setIsModalVisible(false);
   };
 
-  const handleLooksGood = () => {
+  const handleLooksGood = async () => {
     setIsModalVisible(false);
-    if (isPEP) {
-      navigation.navigate("PEPUnderReview");
-    } else {
-      navigation.navigate("KYCSuccess");
+    // Pass selfieImageUri directly to submit() so it doesn't rely on React
+    // state having flushed — update() is async and the KYC closure would
+    // otherwise still see selfieImageUri: null, triggering a false error.
+    const selfieUri = capturedImage && capturedImage !== 'placeholder' ? capturedImage : undefined;
+    if (selfieUri) {
+      update({ selfieImageUri: selfieUri });
+    }
+    try {
+      await submit(selfieUri ? { selfieImageUri: selfieUri } : undefined);
+      if (isPEP) {
+        navigation.navigate('PEPUnderReview');
+      } else {
+        navigation.navigate('KYCSuccess');
+      }
+    } catch {
+      showToast('Submission failed. Please try again.', 'error');
     }
   };
 

@@ -22,6 +22,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../hooks/usePreventScreenCapture';
+import { useKYC, FundsSource } from '../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
 type SourceofFundRouteProp = RouteProp<RootStackParamList, "SourceofFund">;
@@ -55,8 +56,9 @@ export default function SourceofFundsScreen() {
   const route = useRoute<SourceofFundRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
-  const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>([]);
-  const [otherText, setOtherText] = useState("");
+  const { data, update } = useKYC();
+  const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>(data.fundsSource as SourceOptions[]);
+  const [otherText, setOtherText] = useState(data.otherFundsText);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -70,6 +72,7 @@ export default function SourceofFundsScreen() {
     extrapolate: "clamp" });
 
   const handleNext = () => {
+    update({ fundsSource: selectedOptions as FundsSource[], otherFundsText: otherText });
     navigation.navigate('Idtype', { isPEP: isPEP as boolean })
   };
 

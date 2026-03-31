@@ -1,0 +1,72 @@
+appId: com.semekor.k.aza
+name: Contacts Screen - List, Search, and Actions
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Contacts tab
+- tapOn: "Contacts"
+- waitForAnimationToEnd
+
+# --- ContactsScreen ---
+- assertVisible: "Contacts"
+- assertVisible: "Name, tag, email, phone number"
+
+# Invite button visible (text button in header)
+- assertVisible: "Invite"
+
+# Search functionality
+- tapOn: "Name, tag, email, phone number"
+- inputText: "Alice"
+- waitForAnimationToEnd
+# Filtered results should show
+- assertVisible: "Alice"
+
+# Clear search
+- clearText
+- waitForAnimationToEnd
+
+# Tap a contact by name - opens bottom sheet
+- tapOn: "Alice Johnson"
+- waitForAnimationToEnd
+
+# Bottom sheet with 3 action circles
+- assertVisible: "Send"
+- assertVisible: "Request"
+- assertVisible: "View"
+
+# --- Test Send from Contact Bottom Sheet ---
+- tapOn: "Send"
+- waitForAnimationToEnd
+- assertVisible: "Send Money"
+- back
+- waitForAnimationToEnd
+
+# Reopen contact bottom sheet
+- tapOn: "Alice Johnson"
+- waitForAnimationToEnd
+
+# --- Test Request from Contact Bottom Sheet ---
+- tapOn: "Request"
+- waitForAnimationToEnd
+- assertVisible: "Request Money"
+- back
+- waitForAnimationToEnd
+
+# Reopen contact bottom sheet
+- tapOn: "Alice Johnson"
+- waitForAnimationToEnd
+
+# --- Test View Profile from Contact Bottom Sheet ---
+- tapOn: "View"
+- waitForAnimationToEnd
+# ContactsProfileScreen
+- back
+- waitForAnimationToEnd
+
+# Dismiss bottom sheet by tapping backdrop
+- tapOn: "Alice Johnson"
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd

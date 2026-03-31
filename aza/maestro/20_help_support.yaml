@@ -1,0 +1,42 @@
+appId: com.semekor.k.aza
+name: Help and Support - Customer Care Screens
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate: Home → Profile → Help & Support
+- tapOn:
+    label: "Open profile"
+- waitForAnimationToEnd
+- tapOn: "Help & Support"
+- waitForAnimationToEnd
+
+# --- HelpAndSupportScreen ---
+- assertVisible: "Help"
+
+# Support contact options
+- assertVisible: "Talk to us"
+- assertVisible: "Email us"
+- assertVisible: "Chat with us"
+
+# --- Talk To Us ---
+- tapOn: "Talk to us"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Email Us ---
+- tapOn: "Email us"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# --- Chat With Us ---
+- tapOn: "Chat with us"
+- waitForAnimationToEnd
+- back
+- waitForAnimationToEnd
+
+# Back to Profile
+- back
+- waitForAnimationToEnd

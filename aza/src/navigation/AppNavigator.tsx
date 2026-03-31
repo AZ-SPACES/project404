@@ -11,6 +11,7 @@ import {
 } from '../features/customercare';
 import { ChatScreen } from '../features/chat';
 import { ContactsProfileScreen } from '../features/contacts';
+import { MiniAppPlayerScreen } from '../features/hub';
 import {
   SendContactScreen,
   SendAmountScreen,
@@ -95,6 +96,11 @@ export default function AppNavigator() {
       <Stack.Screen name="Statement" component={StatementScreen}/>
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="ContactsProfile" component={ContactsProfileScreen} />
+      <Stack.Screen
+        name="MiniApp"
+        component={MiniAppPlayerScreen}
+        options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
+      />
     </Stack.Navigator>
   );
 }

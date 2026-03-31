@@ -1,0 +1,104 @@
+appId: com.semekor.k.aza
+name: Chat Conversation - Messaging, Search, and More Menu
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Chat tab and open first conversation
+- tapOn: "Chat"
+- waitForAnimationToEnd
+- tapOn: "Alice Johnson"
+- waitForAnimationToEnd
+
+# --- ChatScreen ---
+# Status shows "online" (lowercase in source)
+- assertVisible: "online"
+
+# Message input area (accessibilityLabel: "Message input")
+- assertVisible:
+    label: "Message input"
+
+# --- Type and send a message ---
+- tapOn:
+    label: "Message input"
+- inputText: "Hello! How are you?"
+# Tap the send button (rightmost circle button - no testID, coordinate tap)
+- tapOn:
+    point: "90%,90%"
+- waitForAnimationToEnd
+
+# Message should appear in chat
+- assertVisible: "Hello! How are you?"
+
+# Wait for auto-reply
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# --- Attachment Modal (plus button - leftmost circle button) ---
+- tapOn:
+    point: "10%,90%"
+- waitForAnimationToEnd
+- assertVisible: "Photos"
+- assertVisible: "Camera"
+- assertVisible: "Document"
+
+# Dismiss attachment modal
+- tapOn:
+    point: "50%,20%"
+- waitForAnimationToEnd
+
+# --- More Menu (top-right button in ChatHeader) ---
+- tapOn:
+    point: "95%,10%"
+- waitForAnimationToEnd
+- assertVisible: "View Profile"
+- assertVisible: "Send Money"
+- assertVisible: "Request Money"
+- assertVisible: "Search in Conversation"
+- assertVisible: "Mute Notifications"
+- assertVisible: "Shared Media"
+- assertVisible: "Clear Chat"
+- assertVisible: "Block Contact"
+- assertVisible: "Report"
+
+# Tap Search in Conversation
+- tapOn: "Search in Conversation"
+- waitForAnimationToEnd
+# Search bar appears with placeholder "Search messages..."
+- assertVisible: "Search messages..."
+- inputText: "Hello"
+- waitForAnimationToEnd
+- assertVisible: "Hello! How are you?"
+# Close search (tap the X button at right of search bar)
+- tapOn:
+    point: "95%,15%"
+- waitForAnimationToEnd
+
+# --- Long Press Message ---
+- longPressOn: "Hello! How are you?"
+- waitForAnimationToEnd
+- assertVisible: "Reply"
+- assertVisible: "Forward"
+- assertVisible: "Copy"
+- assertVisible: "Info"
+- assertVisible: "Star"
+- assertVisible: "Delete"
+
+# Dismiss message action menu
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# --- Send another message ---
+- tapOn:
+    label: "Message input"
+- inputText: "Testing message 2"
+- tapOn:
+    point: "90%,90%"
+- waitForAnimationToEnd
+- assertVisible: "Testing message 2"
+
+# Back to chat list
+- back
+- waitForAnimationToEnd
+- assertVisible: "Chats"
