@@ -18,7 +18,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { displayName, profileImageUri } = useProfile();
   const { showToast } = useToast();
-  const userHandle = "naaddo"; // TODO: replace with user handle from backend
+  const userHandle = "naaddo";
   const profileLink = `aza.me/${userHandle}`;
 
   const handleShare = async () => {
@@ -122,14 +122,16 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
             {/* Wallet Integration Section */}
             <View style={styles.walletContainer}>
               {Platform.OS === 'ios' ? (
-                <TouchableOpacity style={styles.walletButton} onPress={handleAddToAppleWallet}>
-                  <Ionicons name="logo-apple" size={18} color={Colors.background} />
-                  <Text style={styles.walletButtonText}>Add to Apple Wallet</Text>
+                <TouchableOpacity onPress={handleAddToAppleWallet}>
+                  <Image source={require('../../assets/wallet/applewallet.png')} style={styles.wallet} />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={styles.walletButton} onPress={handleAddToGoogleWallet}>
-                  <MaterialCommunityIcons name="google" size={18} color={Colors.background} />
+                  <Image source={require('../../assets/wallet/google_wallet.png')} style={styles.walletIcon} />
                   <Text style={styles.walletButtonText}>Add to Google Wallet</Text>
+                  <View style={styles.betaBadge}>
+                    <Text style={styles.betaText}>BETA</Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
@@ -284,11 +286,31 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 8,
     width: width * 0.65, // Match QR card aesthetic 
   },
+  wallet: {
+    width: 180,
+    height: 50,
+  },
+  walletIcon: {
+    width: 32,
+    height: 32,
+  },
   walletButtonText: {
     color: Colors.background,
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  betaBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: Colors.background,
+  },
+  betaText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textPrimary,
   },
   bottomNav: {
     position: 'absolute',
