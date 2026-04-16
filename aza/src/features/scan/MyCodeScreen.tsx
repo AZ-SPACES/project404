@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share, Linking, Platform, ScrollView } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { useNavigation } from '@react-navigation/native';
@@ -31,6 +31,24 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
     }
   };
 
+  const handleAddToAppleWallet = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // TODO: Replace with endpoint returning a .pkpass file
+    // const passUrl = `https://api.aza.me/wallet/apple/${userHandle}`;
+    // await Linking.openURL(passUrl).catch(() => {
+    //   showToast('Unable to open Apple Wallet.', 'error');
+    // });
+  };
+
+  const handleAddToGoogleWallet = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // TODO: Replace with endpoint containing the JWT link for Google Wallet
+    // const googlePassUrl = `https://api.aza.me/wallet/google/${userHandle}`;
+    // await Linking.openURL(googlePassUrl).catch(() => {
+    //   showToast('Unable to open Google Wallet.', 'error');
+    // });
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -53,48 +71,70 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
           </View>
         </View>
 
-        {/* User Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{displayName || 'Your Name'}</Text>
-            <View style={styles.handleBadge}>
-              <Text style={styles.userHandle}>@{userHandle}</Text>
-            </View>
-          </View>
-          {profileImageUri ? (
-            <Image source={{ uri: profileImageUri }} style={styles.avatar} accessibilityLabel="Profile photo" />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
-          )}
-        </View>
-
-        {/* Main QR Content */}
-        <View style={styles.mainContent}>
-          <View style={styles.qrCard}>
-            <View style={styles.qrWrapper}>
-              <Image 
-                source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${profileLink}` }}
-                style={styles.qrImage}
-              />
-              <View style={styles.qrLogoContainer}>
-                <Image source={require('../../assets/aza-z.png')} style={styles.qrLogo} />
+        <ScrollView 
+          style={{ flex: 1 }} 
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
+          {/* User Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.profileInfo}>
+              <Text style={styles.userName}>{displayName || 'Your Name'}</Text>
+              <View style={styles.handleBadge}>
+                <Text style={styles.userHandle}>@{userHandle}</Text>
               </View>
             </View>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatar} accessibilityLabel="Profile photo" />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]} />
+            )}
           </View>
 
-          <TouchableOpacity 
-            style={styles.copyLinkContainer}
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              // Add Clipboard.setString here if needed
-            }}
-          >
-            <Text style={styles.getPaidText}>
-              Get paid at <Text style={styles.linkText}>{profileLink}</Text>
-            </Text>
-            <Feather name="copy" size={14} color={Colors.textSecondary} style={{marginLeft: 6}} />
-          </TouchableOpacity>
-        </View>
+          {/* Main QR Content */}
+          <View style={styles.mainContent}>
+            <View style={styles.qrCard}>
+              <View style={styles.qrWrapper}>
+                <Image 
+                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${profileLink}` }}
+                  style={styles.qrImage}
+                />
+                <View style={styles.qrLogoContainer}>
+                  <Image source={require('../../assets/aza-z.png')} style={styles.qrLogo} />
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.copyLinkContainer}
+              onPress={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                // Add Clipboard.setString here if needed
+              }}
+            >
+              <Text style={styles.getPaidText}>
+                Get paid at <Text style={styles.linkText}>{profileLink}</Text>
+              </Text>
+              <Feather name="copy" size={14} color={Colors.textSecondary} style={{marginLeft: 6}} />
+            </TouchableOpacity>
+
+            {/* Wallet Integration Section */}
+            <View style={styles.walletContainer}>
+              {Platform.OS === 'ios' ? (
+                <TouchableOpacity style={styles.walletButton} onPress={handleAddToAppleWallet}>
+                  <Ionicons name="logo-apple" size={18} color={Colors.background} />
+                  <Text style={styles.walletButtonText}>Add to Apple Wallet</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.walletButton} onPress={handleAddToGoogleWallet}>
+                  <MaterialCommunityIcons name="google" size={18} color={Colors.background} />
+                  <Text style={styles.walletButtonText}>Add to Google Wallet</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </ScrollView>
 
         {/* Bottom Toggle - Positioned within Safe Area for better padding */}
         <View style={styles.bottomNav}>
@@ -159,8 +199,8 @@ function createStyles(Colors: ThemeColors) {
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl * 1.5 },
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md },
   profileInfo: {
     flex: 1 },
   userName: {
@@ -187,19 +227,18 @@ function createStyles(Colors: ThemeColors) {
   avatarPlaceholder: {
     backgroundColor: Colors.surface },
   mainContent: {
-    flex: 1,
     alignItems: 'center',
-    paddingTop: Spacing.md },
+    paddingTop: Spacing.xs },
   qrCard: {
     backgroundColor: Colors.white,
-    padding: 24,
+    padding: 20,
     borderRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 15 },
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 10,
-    marginBottom: Spacing.xl },
+    marginBottom: Spacing.lg },
   qrWrapper: {
     justifyContent: 'center',
     alignItems: 'center' },
@@ -229,8 +268,33 @@ function createStyles(Colors: ThemeColors) {
   linkText: {
     color: Colors.textPrimary,
     fontWeight: '700' },
+  walletContainer: {
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+  },
+  walletButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.textPrimary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    width: width * 0.65, // Match QR card aesthetic 
+  },
+  walletButtonText: {
+    color: Colors.background,
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   bottomNav: {
-    paddingBottom: 60,
+    position: 'absolute',
+    bottom: Spacing.xl,
+    left: 0,
+    right: 0,
     alignItems: 'center' 
   },
   toggleContainer: {

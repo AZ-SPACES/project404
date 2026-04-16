@@ -1,67 +1,92 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Text, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNetwork } from '../../providers/NetworkProvider';
-import { useAppTheme, Typography, Spacing } from '../../theme';
+import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
+import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export function OfflineBanner() {
   const { isConnected, isInternetReachable } = useNetwork();
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   
+  // Consider offline if explicitly disconnected or internet is unreachable
   const isOffline = isConnected === false || isInternetReachable === false;
   
-  const opacity = useRef(new Animated.Value(0)).current;
+  const visible = useSharedValue(0);
 
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: isOffline ? 1 : 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start();
-  }, [isOffline, opacity]);
+    visible.value = withTiming(isOffline ? 1 : 0, { duration: 300 });
+  }, [isOffline, visible]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: visible.value,
+      transform: [
+        {
+          translateY: (1 - visible.value) * -8,
+        }
+      ]
+    };
+  });
+
+  // Use high-contrast background for better visibility
+  const bannerBg = isDark ? colors.surface : colors.textPrimary;
+  const textColor = isDark ? colors.textPrimary : colors.white;
+  const iconColor = colors.error;
 
   return (
-    <Animated.View
-      style={[
-        styles.banner, 
-        { 
-          opacity,
-          backgroundColor: colors.error,
-          paddingTop: Math.max(insets.top, Spacing.sm),
-        }
-      ]}
-      accessibilityLiveRegion="assertive"
-      accessibilityLabel="No internet connection"
-      pointerEvents={isOffline ? 'auto' : 'none'}
-    >
-      <View style={styles.container}>
-        <Text style={[styles.text, { color: colors.white }]}>
-          No internet connection
+    <View style={[styles.container, { top: insets.top + Spacing.xs }]} pointerEvents="box-none">
+      <Animated.View
+        style={[
+          styles.banner,
+          animatedStyle,
+          { 
+            backgroundColor: bannerBg,
+            borderColor: isDark ? colors.border : colors.textPrimary,
+          }
+        ]}
+        accessibilityLiveRegion="assertive"
+        accessibilityLabel="Offline"
+        pointerEvents={isOffline ? 'auto' : 'none'}
+      >
+        <MaterialIcons name="cloud-off" size={14} color={iconColor} />
+        <Text style={[styles.text, { color: textColor }]}>
+          Offline
         </Text>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
+  container: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     zIndex: 9999,
-  },
-  container: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   text: {
     ...Typography.caption,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
 });
-
 

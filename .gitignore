@@ -1,2 +1,3 @@
-.agents/rules/agent.md
-.superset/config.json
+.agents
+.superset
+.idea
