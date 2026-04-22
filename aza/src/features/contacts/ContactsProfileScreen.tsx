@@ -187,14 +187,6 @@ export default function ContactsProfileScreen() {
     );
   };
 
-  const handleAddNickname = () => {
-    Alert.prompt
-      ? Alert.prompt("Nickname", `Set a nickname for ${name}`, (text: string) => {
-          if (text.trim()) setNickname(text.trim());
-        })
-      : Alert.alert("Nickname", "Nickname editing is available on iOS");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -284,53 +276,6 @@ export default function ContactsProfileScreen() {
           <DetailRow
             label="Username"
             value={username}
-            copyable
-            Colors={Colors}
-          />
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingVertical: 14,
-              paddingHorizontal: Spacing.lg,
-              borderBottomWidth: 1,
-              borderBottomColor: Colors.border,
-            }}
-          >
-            <View>
-              <Text
-                style={{
-                  ...Typography.caption,
-                  color: Colors.textSecondary,
-                  marginBottom: 4,
-                }}
-              >
-                Nickname
-              </Text>
-              <Text
-                style={{
-                  ...Typography.bodyLg,
-                  color: Colors.textPrimary,
-                  fontWeight: "500",
-                }}
-              >
-                {nickname ?? "—"}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.nicknameButton}
-              onPress={handleAddNickname}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.nicknameButtonText}>
-                {nickname ? "Edit" : "Add a nickname"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <DetailRow
-            label="Account provider"
-            value={accountProvider}
             copyable
             Colors={Colors}
           />
