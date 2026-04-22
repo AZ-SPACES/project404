@@ -35,9 +35,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     return null;
   }, [isMe, message.status, styles.statusIcon]);
 
+  const hasCaption = !!message.caption;
+  const overlayMeta = isImageType && !hasCaption;
+
   const metaRow = (
-    <View style={[styles.metaContainer, isImageType && styles.metaContainerOverlay]}>
-      <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, isImageType && styles.timeTextOverlay]}>
+    <View style={[styles.metaContainer, overlayMeta && styles.metaContainerOverlay]}>
+      <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
         {message.time}
       </Text>
       {statusIcon}
@@ -52,9 +55,21 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
     >
       {isImageType && message.uri ? (
-        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-          <Image source={{ uri: message.uri }} style={styles.imageContent} resizeMode="cover" accessibilityLabel="Sent image" />
-          <View style={styles.imageOverlay}>{metaRow}</View>
+        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther, hasCaption && { padding: 4 }]}>
+          <Image 
+            source={{ uri: message.uri }} 
+            style={[styles.imageContent, hasCaption && { borderRadius: 12 }]} 
+            resizeMode="cover" 
+            accessibilityLabel="Sent image" 
+          />
+          {hasCaption ? (
+            <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingBottom: 6 }}>
+              <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.caption}</Text>
+              {metaRow}
+            </View>
+          ) : (
+            <View style={styles.imageOverlay}>{metaRow}</View>
+          )}
         </View>
       ) : message.type === 'document' ? (
         <View style={[styles.bubble, styles.docBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>

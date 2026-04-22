@@ -16,6 +16,7 @@ export interface Message {
   mimeType?: string;
   fileSize?: number;
   fileName?: string;
+  caption?: string;
 }
 
 export type MoreAction = { icon: string; label: string; color?: string; onPress: () => void };
@@ -43,11 +44,7 @@ export const ATTACHMENT_TILES = [
 
 export const MENU_WIDTH = 260;
 
-export const INITIAL_MESSAGES: Message[] = [
-  { id: '1', text: "I'm supposed to send your money. I will send it tomorrow, 7pm.", sender: 'other', time: '9:30 AM', timestamp: Date.now() - 3600000, type: 'text' },
-  { id: '2', text: 'Will be waiting.', sender: 'me', time: '9:35 AM', timestamp: Date.now() - 3000000, status: 'read', type: 'text' },
-  { id: '3', text: 'Thanks.', sender: 'other', time: '9:40 AM', timestamp: Date.now() - 2400000, type: 'text' },
-];
+export const INITIAL_MESSAGES: Message[] = [];
 
 // ----------------------------------------------------------------------------
 // Date helpers

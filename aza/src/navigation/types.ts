@@ -76,4 +76,11 @@ export type RootStackParamList = {
   Hub: undefined;
   MiniApp: { appId: string };
   ContactsProfile: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
+  ChatCamera: { recipientName: string; chatId: string };
+  MediaPreview: {
+    media: Array<{ uri: string; type: 'image' | 'video' }>;
+    recipientName: string;
+    chatId: string;
+    source: 'gallery' | 'camera';
+  };
 };

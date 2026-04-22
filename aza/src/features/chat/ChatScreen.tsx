@@ -25,7 +25,6 @@ import {
   MoreAction,
   MenuAnchor,
   AttachmentAnchor,
-  INITIAL_MESSAGES,
   AUTO_REPLIES,
   isSameDay,
   formatDateHeader,
@@ -41,14 +40,14 @@ export function ChatScreen() {
   const styles = useMemo(() => createScreenStyles(Colors, isDark), [Colors, isDark]);
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
-  const { name, avatar, online } = route.params;
+  const { id, name, avatar, online } = route.params;
 
   const flatListRef = useRef<FlatList>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isPickingRef = useRef(false);
 
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -76,6 +75,30 @@ export function ChatScreen() {
       flatListRef.current?.scrollToEnd({ animated: true });
     }
   }, [messages.length]);
+
+  // Listen for media returned from MediaPreviewScreen
+  useEffect(() => {
+    // @ts-expect-error - Sent media returns from MediaPreview
+    const sentMedia: Message[] | undefined = route.params?.sentMedia;
+    if (sentMedia && sentMedia.length > 0) {
+      setMessages(prev => [...prev, ...sentMedia]);
+      // Clear the param so we don't process it again
+      navigation.setParams({ sentMedia: undefined } as any);
+      
+      // Simulate delivery pipeline for media messages
+      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
+      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
+      scheduleTimer(() => {
+        setIsOtherUserTyping(true);
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 2400);
+      scheduleTimer(() => {
+        setIsOtherUserTyping(false);
+        const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
+        setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
+      }, 4000);
+    }
+  }, [route.params, navigation, scheduleTimer]);
 
   const filteredMessages = useMemo(
     () =>
@@ -192,18 +215,25 @@ export function ChatScreen() {
       if (!permission.granted) return;
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos', 'livePhotos'] as ImagePicker.MediaType[],
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
         quality: 0.85,
+        selectionLimit: 10,
       });
       if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        if (!asset) return;
-        addMediaMessage({ id: Date.now().toString(), text: asset.fileName ?? 'Photo', sender: 'me', time: formatTime(), timestamp: Date.now(), status: 'sent', type: 'image', uri: asset.uri });
+        navigation.navigate('MediaPreview', {
+          media: result.assets.map(a => ({
+            uri: a.uri,
+            type: (a.type === 'video' ? 'video' : 'image') as 'image' | 'video',
+          })),
+          recipientName: name,
+          chatId: id,
+          source: 'gallery',
+        });
       }
     } finally {
       isPickingRef.current = false;
     }
-  }, [addMediaMessage]);
+  }, [navigation, name, id]);
 
   const handleOpenCamera = useCallback(async () => {
     if (isPickingRef.current) return;
@@ -213,19 +243,14 @@ export function ChatScreen() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) return;
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images', 'videos'] as ImagePicker.MediaType[],
-        quality: 0.85,
+      navigation.navigate('ChatCamera', {
+        recipientName: name,
+        chatId: id,
       });
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        if (!asset) return;
-        addMediaMessage({ id: Date.now().toString(), text: asset.fileName ?? 'Camera photo', sender: 'me', time: formatTime(), timestamp: Date.now(), status: 'sent', type: 'image', uri: asset.uri });
-      }
     } finally {
       isPickingRef.current = false;
     }
-  }, [addMediaMessage]);
+  }, [navigation, name, id]);
 
   const handlePickDocument = useCallback(async () => {
     if (isPickingRef.current) return;
