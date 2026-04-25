@@ -125,9 +125,10 @@ export function TransactionsScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     // Simulate a network request or data refresh
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setRefreshing(false);
     }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredSections = useMemo(() => {
@@ -226,7 +227,9 @@ export function TransactionsScreen() {
           />
         }
         ListEmptyComponent={renderEmptyState}
-        onEndReached={() => console.log("Load more transactions...")}
+        onEndReached={() => {
+          // In a real app, this would trigger loading the next page of transactions
+        }}
         onEndReachedThreshold={0.5}
         ListHeaderComponent={
           <>

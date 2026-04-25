@@ -72,7 +72,7 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   ChangeEmail: undefined;
   ChangePhone: undefined;
-  ChatScreen: { id: string; name: string; avatar: string; online: boolean };
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean; sentMedia?: any[] | undefined };
   Hub: undefined;
   MiniApp: { appId: string };
   ContactsProfile: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
@@ -88,4 +88,5 @@ export type RootStackParamList = {
   Withdraw: undefined;
   StatementDownload: undefined;
   Transactions: { balance: string };
+  ChatInfoScreen: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
 };

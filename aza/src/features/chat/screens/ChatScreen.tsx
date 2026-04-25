@@ -78,12 +78,11 @@ export default function ChatScreen() {
 
   // Listen for media returned from MediaPreviewScreen
   useEffect(() => {
-    // @ts-expect-error - Sent media returns from MediaPreview
-    const sentMedia: Message[] | undefined = route.params?.sentMedia;
+    const sentMedia = route.params?.sentMedia as Message[] | undefined;
     if (sentMedia && sentMedia.length > 0) {
       setMessages(prev => [...prev, ...sentMedia]);
       // Clear the param so we don't process it again
-      navigation.setParams({ sentMedia: undefined } as any);
+      navigation.setParams({ sentMedia: undefined });
       
       // Simulate delivery pipeline for media messages
       scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
@@ -114,7 +113,7 @@ export default function ChatScreen() {
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
   const handleProfilePress = useCallback(() => {
-    navigation.navigate('ContactsProfile', {
+    navigation.navigate('ChatInfoScreen', {
       name,
       username: name.toLowerCase().replace(/\s+/g, '_'),
       avatar,
