@@ -9,7 +9,7 @@ import {
   ChatWithUsScreen,
   HelpAndSupportScreen
 } from '../features/customercare';
-import { ChatScreen, CameraScreen, MediaPreviewScreen } from '../features/chat';
+import { ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen } from '../features/chat';
 import { ContactsProfileScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
 import {
@@ -82,10 +82,22 @@ export default function AppNavigator() {
       <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
       <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
       <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
-      <Stack.Screen name="Details" component={DetailsScreen} />
+      <Stack.Screen 
+        name="Details" 
+        component={DetailsScreen} 
+        options={{ presentation: 'modal' }}
+      />
       <Stack.Screen name="Spending" component={SpendingScreen} />
-      <Stack.Screen name="Withdraw" component={WithdrawScreen} />
-      <Stack.Screen name="StatementDownload" component={StatementDownloadScreen} />
+      <Stack.Screen 
+        name="Withdraw" 
+        component={WithdrawScreen} 
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen 
+        name="StatementDownload" 
+        component={StatementDownloadScreen} 
+        options={{ presentation: 'modal' }}
+      />
       <Stack.Screen name="Transactions" component={TransactionsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
@@ -110,6 +122,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChatCamera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="MediaPreview" component={MediaPreviewScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="ContactsProfile" component={ContactsProfileScreen} />
+      <Stack.Screen name="ChatInfoScreen" component={ChatInfoScreen} />
       <Stack.Screen
         name="MiniApp"
         component={MiniAppPlayerScreen}
