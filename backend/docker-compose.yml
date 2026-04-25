@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: aza-postgres
+    environment:
+      POSTGRES_DB: aza_db
+      POSTGRES_USER: aza_user
+      POSTGRES_PASSWORD: aza_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: aza_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
