@@ -19,8 +19,15 @@ import {
   SendPinScreen,
   SendSuccessScreen,
   RequestContactScreen,
-  RequestAmountScreen
+  RequestAmountScreen,
+  DetailsScreen,
+  SpendingScreen
 } from '../features/transfer';
+import { 
+  WithdrawScreen, 
+  StatementDownloadScreen, 
+  TransactionsScreen 
+} from '../features/home';
 
 // Wrap the entire transfer flow so a crash in any send/receive screen
 // shows the error boundary instead of taking down the whole app.
@@ -75,6 +82,11 @@ export default function AppNavigator() {
       <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
       <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
       <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
+      <Stack.Screen name="Details" component={DetailsScreen} />
+      <Stack.Screen name="Spending" component={SpendingScreen} />
+      <Stack.Screen name="Withdraw" component={WithdrawScreen} />
+      <Stack.Screen name="StatementDownload" component={StatementDownloadScreen} />
+      <Stack.Screen name="Transactions" component={TransactionsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />

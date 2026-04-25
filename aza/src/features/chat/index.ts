@@ -1,4 +1,4 @@
-export * from './ChatScreen';
-export * from './ChatContactsScreen';
-export * from './CameraScreen';
-export * from './MediaPreviewScreen';
+export { default as ChatScreen } from './screens/ChatScreen';
+export { default as ChatContactsScreen } from './screens/ChatContactsScreen';
+export { default as CameraScreen } from './screens/CameraScreen';
+export { default as MediaPreviewScreen } from './screens/MediaPreviewScreen';

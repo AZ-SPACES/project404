@@ -2,11 +2,9 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from './AuthProvider';
 
-import type { Notification, NotificationPermissionsStatus } from 'expo-notifications';
-
 type NotificationContextType = {
-  checkPermissions: () => Promise<NotificationPermissionsStatus>;
-  requestPermissions: () => Promise<NotificationPermissionsStatus>;
+  checkPermissions: () => Promise<any>;
+  requestPermissions: () => Promise<any>;
   registerForNotifications: () => Promise<boolean>;
   sendLocalNotification: (title: string, body: string, data?: any) => Promise<string | undefined>;
 };

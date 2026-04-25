@@ -83,4 +83,9 @@ export type RootStackParamList = {
     chatId: string;
     source: 'gallery' | 'camera';
   };
+  Details: undefined;
+  Spending: undefined;
+  Withdraw: undefined;
+  StatementDownload: undefined;
+  Transactions: { balance: string };
 };

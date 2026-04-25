@@ -44,7 +44,7 @@ const VOLUME_OPTIONS: VolumeOption[] = [
   "More than GH₵ 100,000"
 ];
 
-export default function PEPAccountPurposeScreen() {
+export function PEPAccountPurposeScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
