@@ -23,7 +23,7 @@ import { useKYC } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPDetails">;
 
-export default function PEPDetailsScreen() {
+export function PEPDetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
