@@ -1,4 +1,9 @@
 .agents
 .superset
 .idea
-.superset
+.vscode
+.DS_Store
+**/node_modules/
+**/target/
+**/*.env
+!**/.env.example

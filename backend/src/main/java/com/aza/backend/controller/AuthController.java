@@ -27,10 +27,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(
+    public ResponseEntity<ApiResponse<String>> login(
             @Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        authService.preLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone. Please verify to complete login."));
     }
 
     @PostMapping("/logout")
@@ -57,8 +57,13 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<ApiResponse<String>> verifyOtp(
+    public ResponseEntity<ApiResponse<Object>> verifyOtp(
             @Valid @RequestBody OtpVerifyRequest request) {
+        if ("login".equalsIgnoreCase(request.getPurpose())) {
+            AuthResponse response = authService.loginWithOtp(request);
+            return ResponseEntity.ok(ApiResponse.success(response));
+        }
+        
         authService.verifyOtp(request.getIdentifier(), request.getCode(), request.getPurpose());
         return ResponseEntity.ok(ApiResponse.success("OTP verified successfully"));
     }

@@ -8,13 +8,14 @@ import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.security.JwtUtil;
+import com.aza.backend.util.EmailService;
+import com.aza.backend.util.SmsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -34,6 +35,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
+    private final SmsService smsService;
+    private final EmailService emailService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
@@ -89,7 +92,7 @@ public class AuthService {
 
     // ==================== LOGIN ====================
 
-    public AuthResponse login(LoginRequest request) {
+    public void preLogin(LoginRequest request) {
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
@@ -98,6 +101,22 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
+        // Credentials are valid, send OTP for the second step
+        sendOtp(request.getIdentifier(), "login");
+    }
+
+    @Transactional
+    public AuthResponse loginWithOtp(OtpVerifyRequest request) {
+        verifyOtp(request.getIdentifier(), request.getCode(), "login");
+
+        User user = userRepository
+                .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return finalizeLogin(user);
+    }
+
+    private AuthResponse finalizeLogin(User user) {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
@@ -169,12 +188,27 @@ public class AuthService {
         String key = OTP_PREFIX + purpose + ":" + identifier;
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
 
-        // TODO: Send OTP via SMS (Africa's Talking) or Email (SendGrid)
-        // For now, log it so you can test
+        // Always log for debugging
         System.out.println("========================================");
         System.out.println("OTP for " + identifier + " (" + purpose + "): " + otp);
         System.out.println("========================================");
+
+        // Determine if identifier is email or phone and send accordingly
+        if (identifier.contains("@")) {
+            // It's an email — send via Resend
+            boolean sent = emailService.sendOtp(identifier, otp);
+            if (!sent) {
+                System.out.println("WARNING: Email OTP delivery failed, use console OTP");
+            }
+        } else {
+            // It's a phone number — send via Arkesel SMS
+            boolean sent = smsService.sendOtp(identifier, otp);
+            if (!sent) {
+                System.out.println("WARNING: SMS OTP delivery failed, use console OTP");
+            }
+        }
     }
+
 
     public boolean verifyOtp(String identifier, String code, String purpose) {
         String key = OTP_PREFIX + purpose + ":" + identifier;
