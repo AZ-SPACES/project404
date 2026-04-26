@@ -12,5 +12,4 @@ public interface KycRecordRepository extends JpaRepository<KycRecord, UUID> {
 
     Optional<KycRecord> findByUserId(UUID userId);
 
-    boolean existsByUserId(UUID userId);
 }

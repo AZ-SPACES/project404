@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -28,23 +29,54 @@ public class CloudinaryService {
     }
 
     /**
-     * Uploads an image to Cloudinary with a 256x256 crop transformation.
-     *
-     * @param file the multipart file to upload
-     * @return the secure URL of the uploaded image
+     * Upload profile image — resized to 256x256
      */
     public String uploadProfileImage(MultipartFile file) {
+        return upload(file, "aza/profile-images", "c_fill,w_256,h_256");
+    }
+
+    /**
+     * Upload KYC ID document (front or back)
+     */
+    public String uploadKycDocument(MultipartFile file, String userId) {
+        return upload(file, "aza/kyc/" + userId, null);
+    }
+
+    /**
+     * Upload KYC selfie
+     */
+    public String uploadKycSelfie(MultipartFile file, String userId) {
+        return upload(file, "aza/kyc/" + userId, null);
+    }
+
+    /**
+     * Upload KYC proof-of-wealth document
+     */
+    public String uploadKycProofDocument(MultipartFile file, String userId) {
+        return upload(file, "aza/kyc/" + userId, null);
+    }
+
+    /**
+     * Core upload method used by all upload types
+     */
+    private String upload(MultipartFile file, String folder, String transformation) {
         try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("folder", folder);
+            params.put("resource_type", "auto"); // supports images and PDFs
+
+            if (transformation != null) {
+                params.put("transformation", transformation);
+            }
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                    "folder", "aza/profile-images",
-                    "transformation", "c_fill,w_256,h_256",
-                    "resource_type", "image"
-            ));
-            return (String) result.get("secure_url");
+            Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+            String url = (String) result.get("secure_url");
+            log.info("Cloudinary upload success: folder={}", folder);
+            return url;
         } catch (IOException e) {
             log.error("Cloudinary upload failed: {}", e.getMessage());
-            throw new RuntimeException("Failed to upload image to Cloudinary");
+            throw new RuntimeException("Failed to upload file");
         }
     }
 }

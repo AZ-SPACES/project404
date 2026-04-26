@@ -9,8 +9,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "kyc_records")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class KycRecord {
 
@@ -34,15 +36,14 @@ public class KycRecord {
     @Enumerated(EnumType.STRING)
     private IdType idType;
     private String idNumber;
-    private String idFrontImageUrl;
-    private String idBackImageUrl;
+    private String idFrontImageUrl;   // Cloudinary URL
+    private String idBackImageUrl;    // Cloudinary URL
 
     // Step 4 — Face Verification
-    private String selfieImageUrl;
+    private String selfieImageUrl;    // Cloudinary URL
 
     // Step 5 — PEP Screening
-    @Builder.Default
-    private Boolean isPep = false;
+    private Boolean isPep;
 
     @Enumerated(EnumType.STRING)
     private PepStatus pepStatus;
@@ -53,7 +54,7 @@ public class KycRecord {
     private String pepMonthlyVolume;
     private String pepWealthSource;
     private String pepProofDocType;
-    private String pepProofDocUrl;
+    private String pepProofDocUrl;    // Cloudinary URL
 
     // Status
     @Enumerated(EnumType.STRING)
@@ -61,6 +62,10 @@ public class KycRecord {
     private KycStatus status = KycStatus.PENDING;
 
     private String rejectionReason;
+
+    // Verification result (simulated for demo)
+    private String verificationProvider;  // "SIMULATED" for demo, "SMILE_IDENTITY" for production
+    private String verificationReference; // Provider reference ID
 
     @CreationTimestamp
     private LocalDateTime createdAt;

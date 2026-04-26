@@ -1,7 +1,6 @@
 package com.aza.backend.dto.auth;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
