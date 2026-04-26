@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 
 @RestController
 @RequestMapping("/api/v1/kyc")
@@ -40,22 +42,25 @@ public class KycController {
     @PostMapping("/identity")
     public ResponseEntity<ApiResponse<KycStatusResponse>> submitIdentity(
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody KycIdentityRequest request) {
-        // TODO: Handle multipart file upload for ID front/back images
-        // For now, pass placeholder URLs
-        String frontUrl = "placeholder-front-" + System.currentTimeMillis();
-        String backUrl = "placeholder-back-" + System.currentTimeMillis();
+            @RequestParam("idType") String idType,
+            @RequestParam("idNumber") String idNumber,
+            @RequestParam("frontImage") MultipartFile frontImage,
+            @RequestParam("backImage") MultipartFile backImage) {
+
+        KycIdentityRequest request = new KycIdentityRequest();
+        request.setIdType(idType);
+        request.setIdNumber(idNumber);
+
         return ResponseEntity.ok(ApiResponse.success(
-                kycService.submitIdentity(user, request, frontUrl, backUrl)));
+                kycService.submitIdentity(user, request, frontImage, backImage)));
     }
 
     @PostMapping("/selfie")
     public ResponseEntity<ApiResponse<KycStatusResponse>> submitSelfie(
-            @AuthenticationPrincipal User user) {
-        // TODO: Handle multipart file upload for selfie
-        String selfieUrl = "placeholder-selfie-" + System.currentTimeMillis();
+            @AuthenticationPrincipal User user,
+            @RequestParam("selfie") MultipartFile selfie) {
         return ResponseEntity.ok(ApiResponse.success(
-                kycService.submitSelfie(user, selfieUrl)));
+                kycService.submitSelfie(user, selfie)));
     }
 
     @PostMapping("/pep-screening")
@@ -64,6 +69,22 @@ public class KycController {
             @Valid @RequestBody KycPepRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 kycService.submitPepScreening(user, request)));
+    }
+
+    @PostMapping("/pep-details")
+    public ResponseEntity<ApiResponse<KycStatusResponse>> submitPepDetails(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody KycPepDetailsRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                kycService.submitPepDetails(user, request)));
+    }
+
+    @PostMapping("/proof-of-wealth")
+    public ResponseEntity<ApiResponse<KycStatusResponse>> submitProofOfWealth(
+            @AuthenticationPrincipal User user,
+            @RequestParam("document") MultipartFile document) {
+        return ResponseEntity.ok(ApiResponse.success(
+                kycService.submitProofOfWealth(user, document)));
     }
 
     @PostMapping("/submit")

@@ -5,19 +5,37 @@ import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.KycRecordRepository;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class KycService {
 
     private final KycRecordRepository kycRecordRepository;
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
+    private static final long MAX_DOC_SIZE = 10 * 1204 * 1024; //10MB
+    private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg","image/png");
+    private static final List<String> ALLOWED_DOC_TYPES = List.of("image/jpeg", "image/png", "application/pdf");
+
+    //DemoKYC for now
+    @Value("${kyc.auto-verify:true}")
+    private boolean autoVerify;
+
+    /* Get KYC Status*/
     public KycStatusResponse getStatus(User user) {
         KycRecord record = kycRecordRepository.findByUserId(user.getId()).orElse(null);
 
@@ -29,7 +47,7 @@ public class KycService {
         }
 
         int steps = 0;
-        if (record.getBiometricConsent()) steps++;
+        if (Boolean.TRUE.equals(record.getBiometricConsent())) steps++;
         if (record.getFundsSource() != null) steps++;
         if (record.getIdNumber() != null) steps++;
         if (record.getSelfieImageUrl() != null) steps++;
@@ -40,18 +58,25 @@ public class KycService {
         return KycStatusResponse.builder()
                 .status(record.getStatus().name())
                 .completionPercentage(percentage)
-                .consentGiven(record.getBiometricConsent())
+                .consentGiven(Boolean.TRUE.equals(record.getBiometricConsent()))
                 .fundsSourceSubmitted(record.getFundsSource() != null)
                 .idDocumentSubmitted(record.getIdNumber() != null)
                 .selfieSubmitted(record.getSelfieImageUrl() != null)
                 .pepScreeningDone(record.getIsPep() != null)
                 .submitted(record.getSubmittedAt() != null)
+                .rejectionReason(record.getRejectionReason())
+                .verificationProvider(record.getVerificationProvider())
                 .build();
     }
 
+    //STEP 1: COSENT
     @Transactional
     public KycStatusResponse recordConsent(User user) {
         KycRecord record = getOrCreateRecord(user);
+
+        if (Boolean.TRUE.equals(record.getBiometricConsent())) {
+            throw new RuntimeException("Consent already recorded");
+        }
         record.setBiometricConsent(true);
         record.setConsentTimestamp(LocalDateTime.now());
         kycRecordRepository.save(record);
@@ -60,63 +85,203 @@ public class KycService {
         return getStatus(user);
     }
 
+    //STEP 2: SOURCE OF FUNDS
     @Transactional
     public KycStatusResponse submitFundsSource(User user, KycFundsSourceRequest request) {
         KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
         record.setFundsSource(request.getFundsSource());
         record.setOtherFundsText(request.getOtherFundsText());
         kycRecordRepository.save(record);
         return getStatus(user);
     }
 
+    //STEP3: ID DOCUMENT
     @Transactional
     public KycStatusResponse submitIdentity(User user, KycIdentityRequest request,
-                                             String frontImageUrl, String backImageUrl) {
+                                             MultipartFile frontImage, MultipartFile backImage) {
         KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
+        //Validate ID type
+        try {
+            KycRecord.IdType.valueOf(request.getIdType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid id type");
+        }
+
+        //Validate and upload front image
+        validateFile(frontImage,MAX_IMAGE_SIZE,ALLOWED_IMAGE_TYPES, "ID front image");
+        String frontUrl = cloudinaryService.uploadKycDocument(
+                frontImage, user.getId().toString()
+        );
+
+        //Validate and upload back image
+        validateFile(backImage,MAX_IMAGE_SIZE,ALLOWED_IMAGE_TYPES, "ID back image");
+        String backUrl = cloudinaryService.uploadKycDocument(
+                backImage, user.getId().toString()
+        );
+
         record.setIdType(KycRecord.IdType.valueOf(request.getIdType().toUpperCase()));
         record.setIdNumber(request.getIdNumber());
-        record.setIdFrontImageUrl(frontImageUrl);
-        record.setIdBackImageUrl(backImageUrl);
+        record.setIdFrontImageUrl(frontUrl);
+        record.setIdBackImageUrl(backUrl);
         kycRecordRepository.save(record);
+
         return getStatus(user);
     }
 
+    //STEP 4: SELFIE
+
     @Transactional
-    public KycStatusResponse submitSelfie(User user, String selfieUrl) {
+    public KycStatusResponse submitSelfie(User user, MultipartFile selfie) {
         KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
+        validateFile(selfie, MAX_IMAGE_SIZE, ALLOWED_IMAGE_TYPES, "Selfie");
+
+        String selfieUrl = cloudinaryService.uploadKycSelfie(
+                selfie, user.getId().toString());
+
         record.setSelfieImageUrl(selfieUrl);
         kycRecordRepository.save(record);
+
         return getStatus(user);
     }
+
+    //STEP 5: PEP SCREENING
 
     @Transactional
     public KycStatusResponse submitPepScreening(User user, KycPepRequest request) {
         KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
         record.setIsPep(request.getIsPep());
-        if (request.getIsPep() && request.getPepStatus() != null) {
-            record.setPepStatus(KycRecord.PepStatus.valueOf(request.getPepStatus().toUpperCase()));
+        if (Boolean.TRUE.equals(request.getIsPep()) && request.getPepStatus() != null) {
+            try {
+                record.setPepStatus(KycRecord.PepStatus.valueOf(request.getPepStatus().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid PEP status. Accepted; SELF, FAMILY_ASSOCIATE");
+            }
             record.setPepRole(request.getPepRole());
         }
         kycRecordRepository.save(record);
         return getStatus(user);
     }
 
+    //STEP 6: PEP DETAILS
+    @Transactional
+    public KycStatusResponse submitPepDetails(User user, KycPepDetailsRequest request) {
+        KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
+        if (!Boolean.TRUE.equals(record.getIsPep())) {
+            throw new RuntimeException("PEP details only required for Politically Exposed Persons");
+        }
+
+        record.setPepAccountPurpose(request.getAccountPurpose());
+        record.setPepMonthlyVolume(request.getMonthlyVolume());
+        record.setPepWealthSource(request.getWealthSource());
+        kycRecordRepository.save(record);
+
+        return getStatus(user);
+    }
+    //STEP 6b: PROOF OF WEALTH
+    @Transactional
+    public KycStatusResponse submitProofOfWealth(User user, MultipartFile proofDoc) {
+        KycRecord record = getOrCreateRecord(user);
+        ensureNotSubmitted(record);
+
+        if (!Boolean.TRUE.equals(record.getIsPep())) {
+            throw new RuntimeException("Proof of wealth only required for Politically Exposed Persons");
+        }
+
+        validateFile(proofDoc, MAX_DOC_SIZE, ALLOWED_DOC_TYPES, "Proof of wealth document");
+
+        String docUrl = cloudinaryService.uploadKycProofDocument(
+                proofDoc, user.getId().toString());
+
+        record.setPepProofDocUrl(docUrl);
+        kycRecordRepository.save(record);
+
+        return getStatus(user);
+    }
+
+    //STEP 7: SUMBIT
     @Transactional
     public KycStatusResponse submitKyc(User user) {
         KycRecord record = kycRecordRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new RuntimeException("No KYC record found — complete all steps first"));
 
-        if (!record.getBiometricConsent()) throw new RuntimeException("Consent not given");
-        if (record.getFundsSource() == null) throw new RuntimeException("Funds source not submitted");
-        if (record.getIdNumber() == null) throw new RuntimeException("ID document not submitted");
-        if (record.getSelfieImageUrl() == null) throw new RuntimeException("Selfie not submitted");
-        if (record.getIsPep() == null) throw new RuntimeException("PEP screening not completed");
+        // Validate all required steps are complete
+        if (!Boolean.TRUE.equals(record.getBiometricConsent())) {
+            throw new RuntimeException("Step 1 incomplete: biometric consent not given");
+        }
+        if (record.getFundsSource() == null) {
+            throw new RuntimeException("Step 2 incomplete: funds source not submitted");
+        }
+        if (record.getIdNumber() == null || record.getIdFrontImageUrl() == null) {
+            throw new RuntimeException("Step 3 incomplete: ID document not submitted");
+        }
+        if (record.getSelfieImageUrl() == null) {
+            throw new RuntimeException("Step 4 incomplete: selfie not submitted");
+        }
+        if (record.getIsPep() == null) {
+            throw new RuntimeException("Step 5 incomplete: PEP screening not completed");
+        }
 
-        record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
+        // If PEP, ensure EDD details are provided
+        if (record.getIsPep()) {
+            if (record.getPepAccountPurpose() == null || record.getPepWealthSource() == null) {
+                throw new RuntimeException("Step 6 incomplete: PEP enhanced due diligence details required");
+            }
+        }
+
+        // Prevent re-submission
+        if (record.getSubmittedAt() != null) {
+            throw new RuntimeException("KYC already submitted. Current status: " + record.getStatus().name());
+        }
+
         record.setSubmittedAt(LocalDateTime.now());
-        kycRecordRepository.save(record);
 
-        updateUserKycStatus(user, User.KycStatus.UNDER_REVIEW);
+        if (autoVerify) {
+            /*
+             * ============================================================
+             * SIMULATED VERIFICATION (Demo / Final Year Project)
+             * ============================================================
+             * In production, this is where you would:
+             *
+             * 1. Call a KYC provider API (e.g. Smile Identity, Onfido, Veriff)
+             *    - Send the ID document images for OCR and validation
+             *    - Send the selfie for face-match comparison against the ID photo
+             *    - Run the user against PEP and sanctions watchlists
+             *
+             * 2. The provider would return a verification result asynchronously
+             *    via a webhook endpoint (POST /api/v1/kyc/webhook)
+             *
+             * 3. The webhook handler would update the KYC status to
+             *    VERIFIED or REJECTED based on the provider's response
+             *
+             * For this demo, we auto-approve immediately.
+             * ============================================================
+             */
+            record.setStatus(KycRecord.KycStatus.VERIFIED);
+            record.setVerifiedAt(LocalDateTime.now());
+            record.setVerificationProvider("SIMULATED");
+            record.setVerificationReference("DEMO-" + UUID.randomUUID().toString().substring(0, 8));
+
+            log.info("KYC auto-verified for user {} (demo mode)", user.getId());
+
+            updateUserKycStatus(user, User.KycStatus.VERIFIED);
+        } else {
+            record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
+            updateUserKycStatus(user, User.KycStatus.UNDER_REVIEW);
+
+            log.info("KYC submitted for manual review for user {}", user.getId());
+        }
+
+        kycRecordRepository.save(record);
         return getStatus(user);
     }
 
@@ -132,8 +297,55 @@ public class KycService {
                 });
     }
 
+    private void ensureNotSubmitted(KycRecord record) {
+        if (record.getSubmittedAt() != null) {
+            throw new RuntimeException("KYC already submitted — cannot modify. Current status: "
+                    + record.getStatus().name());
+        }
+    }
+
     private void updateUserKycStatus(User user, User.KycStatus status) {
         user.setKycStatus(status);
         userRepository.save(user);
+    }
+
+    private void validateFile(MultipartFile file, long maxSize, List<String> allowedTypes, String fieldName) {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException(fieldName + " is required");
+        }
+        if (file.getSize() > maxSize) {
+            throw new RuntimeException(fieldName + " exceeds maximum size of " + (maxSize / 1024 / 1024) + "MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !allowedTypes.contains(contentType)) {
+            throw new RuntimeException(fieldName + " must be one of: " + String.join(", ", allowedTypes));
+        }
+
+        // Validate actual file bytes (magic bytes check)
+        try {
+            byte[] bytes = file.getBytes();
+            if (!isValidFileContent(bytes, allowedTypes)) {
+                throw new RuntimeException(fieldName + " content does not match its declared type");
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read " + fieldName);
+        }
+    }
+
+    private boolean isValidFileContent(byte[] bytes, List<String> allowedTypes) {
+        if (bytes.length < 4) return false;
+
+        // JPEG: FF D8 FF
+        boolean isJpeg = (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8 && (bytes[2] & 0xFF) == 0xFF;
+        // PNG: 89 50 4E 47
+        boolean isPng = (bytes[0] & 0xFF) == 0x89 && (bytes[1] & 0xFF) == 0x50
+                && (bytes[2] & 0xFF) == 0x4E && (bytes[3] & 0xFF) == 0x47;
+        // PDF: 25 50 44 46 (%PDF)
+        boolean isPdf = (bytes[0] & 0xFF) == 0x25 && (bytes[1] & 0xFF) == 0x50
+                && (bytes[2] & 0xFF) == 0x44 && (bytes[3] & 0xFF) == 0x46;
+
+        if (allowedTypes.contains("image/jpeg") && isJpeg) return true;
+        if (allowedTypes.contains("image/png") && isPng) return true;
+        return allowedTypes.contains("application/pdf") && isPdf;
     }
 }

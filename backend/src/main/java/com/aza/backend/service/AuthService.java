@@ -121,6 +121,15 @@ public class AuthService {
 
         saveRefreshToken(user.getId(), refreshToken, deviceName, deviceOs, ipAddress);
 
+        // Send security notification for new login
+        emailService.sendLoginNotification(
+                user.getEmail(),
+                user.getFirstName(),
+                deviceName,
+                deviceOs,
+                ipAddress
+        );
+
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 

@@ -16,4 +16,6 @@ public class KycStatusResponse {
     private boolean selfieSubmitted;
     private boolean pepScreeningDone;
     private boolean submitted;
+    private String rejectionReason;
+    private String verificationProvider;
 }
