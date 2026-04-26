@@ -19,4 +19,7 @@ public class OtpVerifyRequest {
 
     @NotBlank(message = "Purpose is required")
     private String purpose;  // "signup", "login", "password_reset"
+
+    private String deviceName;
+    private String deviceOs;
 }

@@ -32,9 +32,17 @@ public class User {
     private String firstName;
     private String lastName;
     private String displayName;
+
+    @Column(unique = true)
+    private String handle;
+
     private String pronouns;
     private LocalDate dateOfBirth;
     private String profileImageUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
 
     // --- Address ---
     private String homeAddress;
@@ -54,9 +62,14 @@ public class User {
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
 
+    private String deactivationReason;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private KycStatus kycStatus = KycStatus.NOT_STARTED;
+
+    @Column(columnDefinition = "TEXT")
+    private String notificationPreferences;
 
     // --- Security ---
     @Builder.Default
@@ -109,5 +122,9 @@ public class User {
 
     public enum KycStatus {
         NOT_STARTED, PENDING, UNDER_REVIEW, VERIFIED, REJECTED
+    }
+
+    public enum OnlineStatus {
+        ONLINE, OFFLINE, AWAY
     }
 }

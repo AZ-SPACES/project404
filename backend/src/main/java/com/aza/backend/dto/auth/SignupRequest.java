@@ -22,7 +22,11 @@ public class SignupRequest {
     private String firstName;
     private String lastName;
     private String displayName;
+    private String handle;
     private String dateOfBirth;       // "YYYY-MM-DD"
+
+    private String deviceName;
+    private String deviceOs;
 
     // Address fields
     private String homeAddress;

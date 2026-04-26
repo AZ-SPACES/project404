@@ -23,6 +23,7 @@ public class AuthResponse {
         private String firstName;
         private String lastName;
         private String displayName;
+        private String handle;
         private String profileImageUrl;
         private String kycStatus;
         private boolean passcodeSet;
