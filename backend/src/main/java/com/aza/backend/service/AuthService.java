@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
@@ -40,6 +39,7 @@ public class AuthService {
     private final SmsService smsService;
     private final EmailService emailService;
     private final RateLimitService rateLimitService;
+    private final UserService userService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
@@ -65,18 +65,13 @@ public class AuthService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .displayName(request.getDisplayName())
+                .handle(request.getHandle())
                 .homeAddress(request.getHomeAddress())
                 .city(request.getCity())
                 .nationality(request.getNationality())
                 .build();
 
-        if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
-            user.setDateOfBirth(LocalDate.parse(request.getDateOfBirth()));
-        }
-        if (request.getEmploymentStatus() != null && !request.getEmploymentStatus().isBlank()) {
-            user.setEmploymentStatus(
-                    User.EmploymentStatus.valueOf(request.getEmploymentStatus().toUpperCase()));
-        }
+        userService.applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
         user = userRepository.save(user);
 
@@ -86,13 +81,7 @@ public class AuthService {
                 .build();
         walletRepository.save(wallet);
 
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
-
-        // Store hashed refresh token in DB
-        saveRefreshToken(user.getId(), refreshToken);
-
-        return buildAuthResponse(user, accessToken, refreshToken);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
     }
 
     // ==================== LOGIN ====================
@@ -113,24 +102,24 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse loginWithOtp(OtpVerifyRequest request) {
+    public AuthResponse loginWithOtp(OtpVerifyRequest request, String ipAddress) {
         verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return finalizeLogin(user);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
     }
 
-    private AuthResponse finalizeLogin(User user) {
+    private AuthResponse finalizeLogin(User user, String deviceName, String deviceOs, String ipAddress) {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), refreshToken);
+        saveRefreshToken(user.getId(), refreshToken, deviceName, deviceOs, ipAddress);
 
         return buildAuthResponse(user, accessToken, refreshToken);
     }
@@ -184,7 +173,7 @@ public class AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), newRefreshToken);
+        saveRefreshToken(user.getId(), newRefreshToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
@@ -222,7 +211,7 @@ public class AuthService {
     }
 
 
-    public boolean verifyOtp(String identifier, String code, String purpose) {
+    public void verifyOtp(String identifier, String code, String purpose) {
         //Check attempt limit
         String attemptKey = "otp:attempts:" + purpose + ":" + identifier;
         String attemptsStr = redisTemplate.opsForValue().get(attemptKey);
@@ -249,7 +238,6 @@ public class AuthService {
         // Delete OTP after successful verification
         redisTemplate.delete(key);
         redisTemplate.delete(attemptKey);
-        return true;
     }
 
     // ==================== FORGOT / RESET PASSWORD ====================
@@ -290,7 +278,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public boolean verifyPasscode(User user, String passcode) {
+    public void verifyPasscode(User user, String passcode) {
         if (user.getPasscodeHash() == null) {
             throw new RuntimeException("Passcode not set. Please set a passcode first.");
         }
@@ -313,15 +301,17 @@ public class AuthService {
 
         // Reset attempts on success
         redisTemplate.delete(attemptsKey);
-        return true;
     }
 
     // ==================== HELPERS ====================
 
-    private void saveRefreshToken(UUID userId, String rawToken) {
+    private void saveRefreshToken(UUID userId, String rawToken, String deviceName, String deviceOs, String ipAddress) {
         RefreshToken rt = RefreshToken.builder()
                 .userId(userId)
                 .tokenHash(hashToken(rawToken))
+                .deviceName(deviceName)
+                .deviceOs(deviceOs)
+                .ipAddress(ipAddress)
                 .expiresAt(LocalDateTime.now().plusDays(30))
                 .build();
         refreshTokenRepository.save(rt);
@@ -342,17 +332,7 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .user(AuthResponse.UserInfo.builder()
-                        .id(user.getId().toString())
-                        .email(user.getEmail())
-                        .phone(user.getPhone())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .displayName(user.getDisplayName())
-                        .profileImageUrl(user.getProfileImageUrl())
-                        .kycStatus(user.getKycStatus().name())
-                        .passcodeSet(user.getPasscodeHash() != null)
-                        .build())
+                .user(userService.getProfile(user))
                 .build();
     }
 }

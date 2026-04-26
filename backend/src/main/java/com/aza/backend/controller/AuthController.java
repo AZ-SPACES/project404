@@ -60,9 +60,10 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<Object>> verifyOtp(
-            @Valid @RequestBody OtpVerifyRequest request) {
+            @Valid @RequestBody OtpVerifyRequest request, HttpServletRequest httpRequest) {
         if ("login".equalsIgnoreCase(request.getPurpose())) {
-            AuthResponse response = authService.loginWithOtp(request);
+            String ipAddress = getClientIp(httpRequest);
+            AuthResponse response = authService.loginWithOtp(request, ipAddress);
             return ResponseEntity.ok(ApiResponse.success(response));
         }
         

@@ -132,6 +132,13 @@
 			<version>9.3.0</version>
 		</dependency>
 
+		<!-- Cloudinary (profile image uploads) -->
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http5</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+
 		<!-- Swagger / OpenAPI (auto-generates API docs) -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
