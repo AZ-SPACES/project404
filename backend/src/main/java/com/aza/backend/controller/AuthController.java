@@ -21,15 +21,17 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthResponse>> signup(
-            @Valid @RequestBody SignupRequest request) {
-        AuthResponse response = authService.signup(request);
+            @Valid @RequestBody SignupRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        AuthResponse response = authService.signup(request, ipAddress);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<String>> login(
-            @Valid @RequestBody LoginRequest request) {
-        authService.preLogin(request);
+            @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        authService.preLogin(request, ipAddress);
         return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone. Please verify to complete login."));
     }
 
@@ -104,5 +106,13 @@ public class AuthController {
             @Valid @RequestBody PasscodeRequest request) {
         authService.verifyPasscode(user, request.getPasscode());
         return ResponseEntity.ok(ApiResponse.success("Passcode verified"));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader == null || xfHeader.isEmpty()) {
+            return request.getRemoteAddr();
+        }
+        return xfHeader.split(",")[0].trim();
     }
 }
