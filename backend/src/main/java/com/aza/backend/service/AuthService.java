@@ -9,8 +9,10 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.EmailService;
+import com.aza.backend.util.RateLimitService;
 import com.aza.backend.util.SmsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,11 +24,11 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
-import java.util.Random;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -37,6 +39,7 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final SmsService smsService;
     private final EmailService emailService;
+    private final RateLimitService rateLimitService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
@@ -45,12 +48,14 @@ public class AuthService {
     // ==================== SIGNUP ====================
 
     @Transactional
-    public AuthResponse signup(SignupRequest request) {
+    public AuthResponse signup(SignupRequest request, String ipAddress) {
+        rateLimitService.enforceRateLimit("signup:" + ipAddress, 3, Duration.ofHours(1));
+
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered");
+            throw new RuntimeException("An account with this email or phone already exists");
         }
         if (userRepository.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("Phone number already registered");
+            throw new RuntimeException("An account with this email or phone already exists");
         }
 
         User user = User.builder()
@@ -92,7 +97,9 @@ public class AuthService {
 
     // ==================== LOGIN ====================
 
-    public void preLogin(LoginRequest request) {
+    public void preLogin(LoginRequest request, String ipAddress) {
+        rateLimitService.enforceRateLimit("login:" + ipAddress, 5, Duration.ofMinutes(15));
+
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
@@ -149,8 +156,12 @@ public class AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String token = request.getRefreshToken();
 
-        if (!jwtUtil.validateToken(token)) {
+        if (jwtUtil.isInvalid(token)) {
             throw new RuntimeException("Invalid or expired refresh token");
+        }
+
+        if (!"REFRESH".equals(jwtUtil.getTokenType(token))) {
+            throw new RuntimeException("Invalid token type");
         }
 
         String tokenHash = hashToken(token);
@@ -181,16 +192,17 @@ public class AuthService {
     // ==================== OTP ====================
 
     public void sendOtp(String identifier, String purpose) {
-        // Generate 6-digit OTP
-        String otp = String.format("%06d", new Random().nextInt(999999));
+        rateLimitService.enforceRateLimit("otp:" + identifier, 3, Duration.ofMinutes(10));
 
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new java.security.SecureRandom().nextInt(999999));
         // Store in Redis with 5-minute TTL
         String key = OTP_PREFIX + purpose + ":" + identifier;
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
 
         // Always log for debugging
         System.out.println("========================================");
-        System.out.println("OTP for " + identifier + " (" + purpose + "): " + otp);
+        log.debug("OTP for {} ({}): {}", identifier, purpose, otp);
         System.out.println("========================================");
 
         // Determine if identifier is email or phone and send accordingly
@@ -211,6 +223,18 @@ public class AuthService {
 
 
     public boolean verifyOtp(String identifier, String code, String purpose) {
+        //Check attempt limit
+        String attemptKey = "otp:attempts:" + purpose + ":" + identifier;
+        String attemptsStr = redisTemplate.opsForValue().get(attemptKey);
+        int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
+
+        if (attempts >=5) {
+            //Delete the OTP entirely
+            redisTemplate.delete(OTP_PREFIX + purpose + ":" + identifier);
+            redisTemplate.delete(attemptKey);
+            throw new RuntimeException("Too many failed OTP attempts. Request a new code.");
+        }
+
         String key = OTP_PREFIX + purpose + ":" + identifier;
         String storedOtp = redisTemplate.opsForValue().get(key);
 
@@ -218,22 +242,23 @@ public class AuthService {
             throw new RuntimeException("OTP expired or not found");
         }
         if (!storedOtp.equals(code)) {
-            throw new RuntimeException("Invalid OTP code");
+            redisTemplate.opsForValue().set(attemptKey, String.valueOf(attempts + 1), Duration.ofMinutes(5));
+            throw new RuntimeException("Invalid OTP code.");
         }
 
         // Delete OTP after successful verification
         redisTemplate.delete(key);
+        redisTemplate.delete(attemptKey);
         return true;
     }
 
     // ==================== FORGOT / RESET PASSWORD ====================
 
     public void forgotPassword(ForgotPasswordRequest request) {
-        // Verify user exists
-        userRepository.findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
-                .orElseThrow(() -> new RuntimeException("No account found with that email or phone"));
+        rateLimitService.enforceRateLimit("forgot_pwd:" + request.getIdentifier(), 3, Duration.ofMinutes(10));
 
-        sendOtp(request.getIdentifier(), "password_reset");
+        userRepository.findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
+                        .ifPresent(user -> sendOtp(request.getIdentifier(), "password_reset"));
     }
 
     public void resetPassword(ResetPasswordRequest request) {

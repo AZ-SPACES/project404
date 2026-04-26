@@ -44,7 +44,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7); // Remove "Bearer "
 
         // 2. Validate token
-        if (!jwtUtil.validateToken(token)) {
+        if (jwtUtil.isInvalid(token)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (!"ACCESS".equals(jwtUtil.getTokenType(token))) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -59,6 +64,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UUID userId = jwtUtil.getUserIdFromToken(token);
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
             filterChain.doFilter(request, response);
             return;
         }

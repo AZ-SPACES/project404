@@ -21,6 +21,9 @@ public class JwtUtil {
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.access-expiration-ms}") long accessExpirationMs,
             @Value("${app.jwt.refresh-expiration-ms}") long refreshExpirationMs) {
+        if (secret == null || secret.length() < 64) {
+            throw new IllegalArgumentException("JWT secret must be at least 64 characters long");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessExpirationMs = accessExpirationMs;
         this.refreshExpirationMs = refreshExpirationMs;
@@ -62,24 +65,21 @@ public class JwtUtil {
         return UUID.fromString(claims.getSubject());
     }
 
-    /**
-     * Extract email from a token
-     */
-    public String getEmailFromToken(String token) {
-        Claims claims = parseToken(token);
-        return claims.get("email", String.class);
-    }
 
     /**
-     * Check if token is valid (signature + not expired)
+     * Check if token is invalid (signature error or expired)
      */
-    public boolean validateToken(String token) {
+    public boolean isInvalid(String token) {
         try {
             parseToken(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
             return false;
+        } catch (JwtException | IllegalArgumentException e) {
+            return true;
         }
+    }
+    public String getTokenType(String token) {
+        Claims claims = parseToken(token);
+        return claims.get("type", String.class);
     }
 
     /**
