@@ -28,6 +28,7 @@ public class Transaction {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
+    @Column(length = 500)
     private String note;
 
     @Enumerated(EnumType.STRING)
@@ -40,6 +41,11 @@ public class Transaction {
 
     @Builder.Default
     private Boolean isRequest = false;
+
+    @Column(unique = true)
+    private String idempotencyKey;
+
+    private LocalDateTime expiresAt;
 
     @CreationTimestamp
     private LocalDateTime initiatedAt;
