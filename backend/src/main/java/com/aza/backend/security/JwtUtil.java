@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
 
@@ -80,6 +81,12 @@ public class JwtUtil {
     public String getTokenType(String token) {
         Claims claims = parseToken(token);
         return claims.get("type", String.class);
+    }
+
+    public Duration getRemainingValidity(String token) {
+        Date expiry = parseToken(token).getExpiration();
+        long remaining = expiry.getTime() - System.currentTimeMillis();
+        return remaining > 0 ? Duration.ofMillis(remaining) : Duration.ZERO;
     }
 
     /**
