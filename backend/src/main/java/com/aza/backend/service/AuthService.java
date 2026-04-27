@@ -41,11 +41,14 @@ public class AuthService {
     private final EmailService emailService;
     private final RateLimitService rateLimitService;
     private final UserService userService;
-
     private final BiometricService biometricService;
+    private final TotpService totpService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
+    private static final String TOTP_PREAUTH_PREFIX = "totp:preauth:";
+    private static final String TOTP_SETUP_PREFIX = "totp:setup:";
+    private static final String TOTP_USED_PREFIX = "totp:used:";
 
     // ==================== SIGNUP ====================
 
@@ -108,13 +111,25 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse loginWithOtp(OtpVerifyRequest request, String ipAddress) {
+    public Object loginWithOtp(OtpVerifyRequest request, String ipAddress) {
         rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 10, Duration.ofMinutes(15));
         verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            String preAuthToken = UUID.randomUUID().toString();
+            // Pipe-delimited: userId|deviceName|deviceOs|ipAddress
+            String value = user.getId()
+                    + "|" + sanitize(request.getDeviceName())
+                    + "|" + sanitize(request.getDeviceOs())
+                    + "|" + sanitize(ipAddress);
+            redisTemplate.opsForValue().set(
+                    TOTP_PREAUTH_PREFIX + preAuthToken, value, Duration.ofMinutes(5));
+            return TotpPendingResponse.builder().preAuthToken(preAuthToken).build();
+        }
 
         return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
     }
@@ -157,6 +172,7 @@ public class AuthService {
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
     }
+
     // ==================== REFRESH TOKEN ====================
 
     @Transactional
@@ -209,7 +225,6 @@ public class AuthService {
                 new java.security.SecureRandom().nextInt(1_000_000));
         String key = OTP_PREFIX + purpose + ":" + identifier;
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
-
 
         if (identifier.contains("@")) {
             boolean sent = emailService.sendOtp(identifier, otp);
@@ -269,7 +284,6 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Invalidate all sessions — password reset implies potential account compromise
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
     }
@@ -285,13 +299,90 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Revoke all other sessions so stolen tokens can't outlive the password change
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
     }
 
-    // ==================== HELPERS ====================
+    // ==================== TOTP / 2FA ====================
 
+    public TotpSetupResponse initiateTotpSetup(User user) {
+        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            throw new RuntimeException("Two-factor authentication is already enabled");
+        }
+        String secret = totpService.generateSecret();
+        // Store pending secret for 10 minutes — not committed until user confirms
+        redisTemplate.opsForValue().set(
+                TOTP_SETUP_PREFIX + user.getId(), secret, Duration.ofMinutes(10));
+        String qrUri = totpService.getQrUri(secret, user.getEmail(), "AZA");
+        return TotpSetupResponse.builder().secret(secret).qrUri(qrUri).build();
+    }
+
+    @Transactional
+    public void confirmTotpSetup(User user, String code) {
+        String secret = redisTemplate.opsForValue().get(TOTP_SETUP_PREFIX + user.getId());
+        if (secret == null) {
+            throw new RuntimeException("Setup session expired. Please start 2FA setup again.");
+        }
+        if (totpService.isCodeInvalid(secret, code)) {
+            throw new RuntimeException("Invalid code. Make sure your authenticator app is synced and try again.");
+        }
+        // Secret stored as plain Base32 — encrypt at rest in production using a KMS key
+        user.setTwoFactorSecret(secret);
+        user.setTwoFactorEnabled(true);
+        userRepository.save(user);
+        redisTemplate.delete(TOTP_SETUP_PREFIX + user.getId());
+        log.info("2FA enabled for user {}", user.getId());
+    }
+
+    @Transactional
+    public AuthResponse verifyTotpLogin(TotpLoginRequest request, String ipAddress) {
+        rateLimitService.enforceRateLimit("totp_login:" + ipAddress, 5, Duration.ofMinutes(15));
+
+        String value = redisTemplate.opsForValue().get(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
+        if (value == null) {
+            throw new RuntimeException("2FA session expired or invalid. Please log in again.");
+        }
+
+        String[] parts = value.split("\\|", 4);
+        UUID userId = UUID.fromString(parts[0]);
+        String deviceName = parts.length > 1 ? parts[1] : null;
+        String deviceOs   = parts.length > 2 ? parts[2] : null;
+        String storedIp   = parts.length > 3 ? parts[3] : ipAddress;
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (totpService.isCodeInvalid(user.getTwoFactorSecret(), request.getCode())) {
+            throw new RuntimeException("Invalid authenticator code");
+        }
+
+        // Replay prevention — a TOTP code is valid for one use within its 90-second window
+        String replayKey = TOTP_USED_PREFIX + userId + ":" + request.getCode();
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(replayKey))) {
+            throw new RuntimeException("This code has already been used. Wait for the next code.");
+        }
+        redisTemplate.opsForValue().set(replayKey, "used", Duration.ofSeconds(90));
+
+        redisTemplate.delete(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
+
+        return finalizeLogin(user, deviceName, deviceOs, storedIp);
+    }
+
+    @Transactional
+    public void disableTotp(User user, String code) {
+        if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            throw new RuntimeException("Two-factor authentication is not enabled");
+        }
+        if (totpService.isCodeInvalid(user.getTwoFactorSecret(), code)) {
+            throw new RuntimeException("Invalid authenticator code");
+        }
+        user.setTwoFactorSecret(null);
+        user.setTwoFactorEnabled(false);
+        userRepository.save(user);
+        log.info("2FA disabled for user {}", user.getId());
+    }
+
+    // ==================== HELPERS ====================
 
     public void saveRefreshToken(UUID userId, String rawToken,
                                  String deviceName, String deviceOs, String ipAddress) {
@@ -314,6 +405,10 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
         }
+    }
+
+    private String sanitize(String value) {
+        return value != null ? value.replace("|", "") : "";
     }
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
