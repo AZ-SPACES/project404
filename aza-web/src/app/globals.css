@@ -1,0 +1,620 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Dark mode triggers on data-theme attribute (matches legacy behaviour) */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-inter);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ============================================================
+   AZA LIGHT THEME
+   ============================================================ */
+:root {
+  /* Shadcn mapped vars — Aza palette */
+  --background: #E6ECE1;
+  --foreground: #0E0F0C;
+  --card: #FFFFFF;
+  --card-foreground: #0E0F0C;
+  --popover: #FFFFFF;
+  --popover-foreground: #0E0F0C;
+  --primary: #174717;
+  --primary-foreground: #ffffff;
+  --secondary: #ECEEF0;
+  --secondary-foreground: #0E0F0C;
+  --muted: #ECEEF0;
+  --muted-foreground: #5F6368;
+  --accent: #B7EE7A;
+  --accent-foreground: #174717;
+  --destructive: #EA4335;
+  --border: #DADCE0;
+  --input: #DADCE0;
+  --ring: #174717;
+  --radius: 0.75rem;
+  --sidebar: #F8F9FA;
+  --sidebar-foreground: #0E0F0C;
+  --sidebar-primary: #174717;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #B7EE7A;
+  --sidebar-accent-foreground: #174717;
+  --sidebar-border: #DADCE0;
+  --sidebar-ring: #174717;
+
+  /* Aza-specific tokens */
+  --aza-primary: #174717;
+  --aza-primary-hover: #1e5e1e;
+  --aza-accent: #B7EE7A;
+  --aza-accent-dark: #9DD65E;
+  --aza-bg: #E6ECE1;
+  --aza-surface: #F8F9FA;
+  --aza-surface-2: #ECEEF0;
+  --aza-text: #0E0F0C;
+  --aza-text-secondary: #5F6368;
+  --aza-border: #DADCE0;
+  --aza-card-bg: #FFFFFF;
+  --aza-card-shadow: 0 2px 16px rgba(23,71,23,0.08);
+  --aza-card-shadow-hover: 0 8px 32px rgba(23,71,23,0.16);
+  --aza-transition: 0.2s ease;
+
+  /* Sterling-gate kinetic navigation tokens */
+  --color-primary: #6366f1;
+  --color-dark: #131313;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-800: #262626;
+  --size-container: 1400px;
+  --container-padding: 2em;
+  --section-padding: 4em;
+  --gap: 1.5em;
+  --cubic-default: cubic-bezier(0.65, 0.05, 0, 1);
+}
+
+/* ============================================================
+   AZA DARK THEME
+   ============================================================ */
+[data-theme="dark"] {
+  --background: #121212;
+  --foreground: #F8F9FA;
+  --card: #1E1E1E;
+  --card-foreground: #F8F9FA;
+  --popover: #1E1E1E;
+  --popover-foreground: #F8F9FA;
+  --primary: #174717;
+  --primary-foreground: #ffffff;
+  --secondary: #2A2A2A;
+  --secondary-foreground: #F8F9FA;
+  --muted: #2A2A2A;
+  --muted-foreground: #9AA0A6;
+  --accent: #B7EE7A;
+  --accent-foreground: #174717;
+  --destructive: #EA4335;
+  --border: #3C4043;
+  --input: #3C4043;
+  --ring: #B7EE7A;
+  --sidebar: #1E1E1E;
+  --sidebar-foreground: #F8F9FA;
+  --sidebar-primary: #174717;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #B7EE7A;
+  --sidebar-accent-foreground: #174717;
+  --sidebar-border: #3C4043;
+  --sidebar-ring: #B7EE7A;
+
+  --aza-bg: #121212;
+  --aza-surface: #1E1E1E;
+  --aza-surface-2: #2A2A2A;
+  --aza-text: #F8F9FA;
+  --aza-text-secondary: #9AA0A6;
+  --aza-border: #3C4043;
+  --aza-card-bg: #1E1E1E;
+  --aza-card-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  --aza-card-shadow-hover: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  html { scroll-behavior: smooth; }
+  a { text-decoration: none; color: inherit; }
+  img { max-width: 100%; display: block; }
+}
+
+/* ============================================================
+   CINEMATIC INTRO — hide navbar until card animation ends
+   ============================================================ */
+.cinematic-active #navbar {
+  display: none;
+  pointer-events: none;
+}
+
+/* ============================================================
+   SCROLL REVEAL ANIMATIONS
+   ============================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.55s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+.reveal-x-left { opacity: 0; transform: translateX(-24px); transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.55s cubic-bezier(0.22,1,0.36,1); }
+.reveal-x-left.is-visible { opacity: 1; transform: translateX(0); }
+
+.reveal-x-right { opacity: 0; transform: translateX(24px); transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.55s cubic-bezier(0.22,1,0.36,1); }
+.reveal-x-right.is-visible { opacity: 1; transform: translateX(0); }
+
+.reveal-scale { opacity: 0; transform: scale(0.92) translateY(12px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
+.reveal-scale.is-visible { opacity: 1; transform: scale(1) translateY(0); }
+
+/* ============================================================
+   NAVBAR — entrance animation (used by header-2.tsx island div)
+   ============================================================ */
+@keyframes navEntrance {
+  from { opacity: 0; transform: translateY(-24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================================
+   BADGE PULSE
+   ============================================================ */
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+.badge-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  background: var(--aza-accent);
+  border-radius: 999px;
+  animation: badgePulse 2s infinite;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   PHONE MOCKUP
+   ============================================================ */
+.phone-mockup__frame {
+  width: 280px;
+  background: var(--aza-primary);
+  border-radius: 44px;
+  padding: 12px;
+  box-shadow:
+    0 40px 80px rgba(23,71,23,0.35),
+    0 0 0 1px rgba(255,255,255,0.1) inset;
+}
+
+.phone-screen {
+  background: var(--aza-surface);
+  border-radius: 34px;
+  overflow: hidden;
+  position: relative;
+  height: 520px;
+}
+
+[data-theme="dark"] .phone-screen { background: #1a1a1a; }
+
+.phone-screen::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px; height: 28px;
+  background: var(--aza-primary);
+  border-radius: 999px;
+  z-index: 10;
+}
+
+.phone-slide {
+  position: absolute;
+  inset: 0;
+  padding: 60px 16px 16px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity 0.3s cubic-bezier(0.22,1,0.36,1), transform 0.3s cubic-bezier(0.22,1,0.36,1);
+}
+.phone-slide.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.phone-slide.exiting {
+  opacity: 0;
+  transform: translateX(-16px);
+  pointer-events: none;
+}
+
+.screen--home  { background: #E6ECE1; }
+.screen--send  { background: var(--aza-surface); }
+.screen--chat  { background: var(--aza-surface); display: flex; flex-direction: column; }
+
+[data-theme="dark"] .screen--home { background: #1a2a1a; }
+[data-theme="dark"] .screen--send { background: #1a1a1a; }
+[data-theme="dark"] .screen--chat { background: #1a1a1a; }
+
+/* ============================================================
+   HERO GLOW
+   ============================================================ */
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.hero__glow {
+  position: absolute;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(183,238,122,0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   STEP CONNECTOR
+   ============================================================ */
+.step__connector {
+  flex: 0 0 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--aza-primary), var(--aza-accent));
+  margin-top: 44px;
+  opacity: 0.4;
+}
+
+/* ============================================================
+   QR MOCKUP
+   ============================================================ */
+.qr-inner {
+  width: 100%; height: 100%;
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(23,71,23,0.06) 3px, rgba(23,71,23,0.06) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(23,71,23,0.06) 3px, rgba(23,71,23,0.06) 4px);
+}
+
+/* ============================================================
+   FEATURE CARD HOVER
+   ============================================================ */
+.feature-card {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.feature-card:hover {
+  box-shadow: var(--aza-card-shadow-hover);
+  border-color: rgba(183,238,122,0.4);
+}
+
+/* ============================================================
+   HUB APP HOVER
+   ============================================================ */
+.hub-app { transition: opacity 0.15s ease; }
+.hub-app:hover { opacity: 0.85; }
+.hub-app__icon-wrap { transition: box-shadow 0.15s ease; }
+.hub-app:hover .hub-app__icon-wrap { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+/* ============================================================
+   STORE BUTTON
+   ============================================================ */
+.store-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: #fff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+.store-btn:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.4);
+}
+
+/* ============================================================
+   TESTIMONIAL CARD
+   ============================================================ */
+.testimonial-card {
+  transition: box-shadow 0.15s ease;
+}
+.testimonial-card:hover {
+  box-shadow: var(--aza-card-shadow-hover);
+}
+
+/* ============================================================
+   SOCIAL LINK
+   ============================================================ */
+.social-link { transition: background 0.15s ease, color 0.15s ease; }
+.social-link:hover { background: #174717 !important; color: #B7EE7A !important; }
+
+/* ============================================================
+   SECTION SPACING
+   ============================================================ */
+.section-py { padding-top: 80px; padding-bottom: 80px; }
+
+@media (max-width: 768px) {
+  .section-py { padding-top: 56px; padding-bottom: 56px; }
+}
+
+@media (max-width: 480px) {
+  .section-py { padding-top: 40px; padding-bottom: 40px; }
+}
+
+/* ============================================================
+   WAITLIST / TESTIMONIALS ANIMATIONS
+   ============================================================ */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes spin-slow-reverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.7) translateY(20px); }
+  60%  { opacity: 1; transform: scale(1.05) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes success-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.3;  transform: scale(1.08); }
+}
+@keyframes success-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(183,238,122,0.4); }
+  50%       { box-shadow: 0 0 0 16px rgba(183,238,122,0); }
+}
+@keyframes checkmark-draw {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes celebration-ring {
+  0%   { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.animate-spin-slow         { animation: spin-slow 12s linear infinite; }
+.animate-spin-slow-reverse { animation: spin-slow-reverse 18s linear infinite; }
+.animate-bounce-in         { animation: bounce-in 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-success-pulse     { animation: success-pulse 2.5s ease-in-out infinite; }
+.animate-success-glow      { animation: success-glow 2s ease-in-out infinite; }
+.animate-checkmark-draw    { stroke-dasharray: 48; animation: checkmark-draw 0.45s cubic-bezier(0.22,1,0.36,1) 0.15s both; }
+.animate-celebration-ring  { animation: celebration-ring 1.2s ease-out forwards; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr !important; }
+  .footer-brand-col { grid-column: span 3 !important; }
+}
+
+/* Large mobile / small tablet */
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr !important; }
+  .hero-visual-order { order: -1; }
+  .security-grid { grid-template-columns: 1fr !important; }
+  .download-grid { grid-template-columns: 1fr !important; text-align: center; }
+  .download-btns { justify-content: center; }
+
+  .step__connector { flex: 0 0 2px !important; width: 2px !important; height: 40px !important; margin-top: 0 !important; margin-left: 0 !important; }
+  .steps-layout { flex-direction: column !important; align-items: center !important; }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .features-grid { grid-template-columns: 1fr !important; }
+  .features-grid > * { grid-column: span 1 !important; }
+  .testimonials-grid { grid-template-columns: 1fr !important; }
+  .hero-cta { flex-direction: column; }
+  .hero-cta a { width: 100%; justify-content: center; }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr !important; }
+  .footer-brand-col { grid-column: span 1 !important; }
+}
+
+/* ============================================================
+   CINEMATIC HERO — Component Styles
+   (Moved from inline dangerouslySetInnerHTML in cinematic-landing-hero.tsx)
+   ============================================================ */
+.gsap-reveal { visibility: hidden; }
+
+/* Environment Overlays */
+.film-grain {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 50; opacity: 0.05; mix-blend-mode: overlay;
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+}
+
+.bg-grid-theme {
+  background-size: 60px 60px;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-foreground) 5%, transparent) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
+}
+
+/* Outside card: theme-aware text */
+.text-3d-matte {
+  color: var(--color-foreground);
+  text-shadow:
+    0 10px 30px color-mix(in srgb, var(--color-foreground) 20%, transparent),
+    0 2px 4px color-mix(in srgb, var(--color-foreground) 10%, transparent);
+}
+
+.text-silver-matte {
+  background: linear-gradient(180deg, var(--color-foreground) 0%, color-mix(in srgb, var(--color-foreground) 40%, transparent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transform: translateZ(0);
+  filter:
+    drop-shadow(0px 10px 20px color-mix(in srgb, var(--color-foreground) 15%, transparent))
+    drop-shadow(0px 2px 4px color-mix(in srgb, var(--color-foreground) 10%, transparent));
+}
+
+/* Inside card: silver text for dark background */
+.text-card-silver-matte {
+  background: linear-gradient(180deg, #FFFFFF 0%, #A1A1AA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transform: translateZ(0);
+  filter:
+    drop-shadow(0px 4px 8px rgba(0,0,0,0.6))
+    drop-shadow(0px 2px 4px rgba(0,0,0,0.4));
+}
+
+/* Deep Physical Card — Aza dark green */
+.premium-depth-card {
+  background: linear-gradient(145deg, #1a4a1a 0%, #0a2b0a 100%);
+  box-shadow:
+    0 8px 24px -4px rgba(0, 0, 0, 0.6),
+    0 4px 12px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(183,238,122,0.06);
+  position: relative;
+}
+
+.card-sheen {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 50;
+  background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(183,238,122,0.04) 0%, transparent 40%);
+  mix-blend-mode: screen; transition: opacity 0.3s ease;
+}
+
+/* iPhone Mockup */
+.iphone-bezel {
+  background-color: #111;
+  box-shadow:
+    inset 0 0 0 2px #52525B,
+    inset 0 0 0 7px #000,
+    0 8px 24px -4px rgba(0,0,0,0.6),
+    0 4px 12px -2px rgba(0,0,0,0.4);
+  transform-style: preserve-3d;
+}
+
+.hardware-btn {
+  background: linear-gradient(90deg, #404040 0%, #171717 100%);
+  box-shadow:
+    -2px 0 5px rgba(0,0,0,0.8),
+    inset -1px 0 1px rgba(255,255,255,0.15),
+    inset 1px 0 2px rgba(0,0,0,0.8);
+  border-left: 1px solid rgba(255,255,255,0.05);
+}
+
+.screen-glare {
+  background: linear-gradient(110deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 45%);
+}
+
+.widget-depth {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.2),
+    inset 0 1px 1px rgba(255,255,255,0.05),
+    inset 0 -1px 1px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.floating-ui-badge {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 4px 12px -2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255,255,255,0.2),
+    inset 0 -1px 1px rgba(0,0,0,0.3);
+}
+
+/* CTA Buttons (cinematic hero) */
+.btn-modern-light, .btn-modern-dark {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-modern-light {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+  color: #0F172A;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1);
+}
+.btn-modern-light:hover {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EDF0F4 100%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,1);
+}
+.btn-modern-light:active {
+  background: linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 100%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 2px rgba(0,0,0,0.06);
+}
+.btn-modern-dark {
+  background: linear-gradient(180deg, #27272A 0%, #18181B 100%);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.15);
+}
+.btn-modern-dark:hover {
+  background: linear-gradient(180deg, #3F3F46 0%, #27272A 100%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn-modern-dark:active {
+  background: #18181B;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 4px rgba(0,0,0,0.6);
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  transform-origin: center;
+  stroke-dasharray: 402;
+  stroke-dashoffset: 402;
+  stroke-linecap: round;
+}
+
+/* Children mode: landing page inside the card */
+.card-children-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--background);
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   Platform,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
@@ -27,6 +28,10 @@ export default function MainTabsNavigator() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
+  const handleTabPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -36,15 +41,19 @@ export default function MainTabsNavigator() {
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
       }}
+      screenListeners={{
+        tabPress: handleTabPress,
+      }}
     >
       <Tab.Screen
         name="HomeTab"
         component={HomeScreen}
         options={{
           tabBarLabel: "Home",
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size || 24} color={color} />
           ),
+          tabBarAccessibilityLabel: "Home Tab",
         }}
       />
       <Tab.Screen
@@ -52,9 +61,10 @@ export default function MainTabsNavigator() {
         component={ContactsScreen}
         options={{
           tabBarLabel: "Contacts",
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size || 24} color={color} />
           ),
+          tabBarAccessibilityLabel: "Contacts Tab",
         }}
       />
 
@@ -69,15 +79,19 @@ export default function MainTabsNavigator() {
               pointerEvents="box-none"
             >
               <TouchableOpacity
-                onPress={props.onPress ?? undefined}
+                onPress={(e) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  props.onPress?.(e);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Scan QR Code"
                 accessibilityState={props.accessibilityState}
-                accessibilityLabel={props.accessibilityLabel}
                 style={styles.centerButton}
-                activeOpacity={0.9}
+                activeOpacity={0.8}
               >
                 <Ionicons
                   name="qr-code-outline"
-                  size={24}
+                  size={26}
                   color={Colors.white}
                 />
               </TouchableOpacity>
@@ -91,13 +105,14 @@ export default function MainTabsNavigator() {
         component={ChatContactsScreen}
         options={{
           tabBarLabel: "Chat",
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="chatbubble-outline"
               size={size || 24}
               color={color}
             />
           ),
+          tabBarAccessibilityLabel: "Chat Tab",
         }}
       />
       <Tab.Screen
@@ -105,9 +120,10 @@ export default function MainTabsNavigator() {
         component={HubScreen}
         options={{
           tabBarLabel: "Hub",
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons name="apps-outline" size={size || 24} color={color} />
           ),
+          tabBarAccessibilityLabel: "Hub Tab",
         }}
       />
     </Tab.Navigator>

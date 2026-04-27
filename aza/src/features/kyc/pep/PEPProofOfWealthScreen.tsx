@@ -30,7 +30,7 @@ const DOC_TYPES: DocumentType[] = [
   "Tax Return"
 ];
 
-export default function PEPProofOfWealthScreen() {
+export function PEPProofOfWealthScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
