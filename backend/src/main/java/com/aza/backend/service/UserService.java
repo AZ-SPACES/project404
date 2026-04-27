@@ -9,6 +9,7 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,7 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final CloudinaryService cloudinaryService;
     private final StringRedisTemplate redisTemplate;
+    private final PasswordEncoder passwordEncoder;
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_CONTENT_TYPES = List.of("image/jpeg", "image/png");
@@ -197,6 +199,37 @@ public class UserService {
         RefreshToken token = refreshTokenRepository.findByIdAndUserId(deviceId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Device not found"));
         refreshTokenRepository.delete(token);
+    }
+
+    // ==================== PASSCODE (PIN) ====================
+
+    @Transactional
+    public void setPasscode(User user, String passcode) {
+        user.setPasscodeHash(passwordEncoder.encode(passcode));
+        userRepository.save(user);
+    }
+
+    public void verifyPasscode(User user, String passcode) {
+        if (user.getPasscodeHash() == null) {
+            throw new RuntimeException("Passcode not set. Please set a passcode first.");
+        }
+
+        String attemptsKey = "pin:attempts:" + user.getId();
+        String attemptsStr = redisTemplate.opsForValue().get(attemptsKey);
+        int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
+
+        if (attempts >= 5) {
+            throw new RuntimeException("Too many failed attempts. Try again in 5 minutes.");
+        }
+
+        if (!passwordEncoder.matches(passcode, user.getPasscodeHash())) {
+            redisTemplate.opsForValue().set(attemptsKey,
+                    String.valueOf(attempts + 1), 5, TimeUnit.MINUTES);
+            throw new RuntimeException(
+                    "Invalid passcode. " + (4 - attempts) + " attempts remaining.");
+        }
+
+        redisTemplate.delete(attemptsKey);
     }
 
     public void applyDateOfBirthAndEmployment(User user, String dob, String employmentStatus) {

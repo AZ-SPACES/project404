@@ -4,6 +4,7 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.auth.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AuthService;
+import com.aza.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthResponse>> signup(
@@ -47,7 +49,7 @@ public class AuthController {
     @PostMapping("/logout-everywhere")
     public ResponseEntity<ApiResponse<String>> logoutEverywhere(
             @AuthenticationPrincipal User user) {
-        authService.logoutEverywhere(user.getId());
+        authService.logoutEverywhere(user); // pass user, not user.getId()
         return ResponseEntity.ok(ApiResponse.success("All sessions revoked"));
     }
 
@@ -97,7 +99,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> setPasscode(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PasscodeRequest request) {
-        authService.setPasscode(user, request);
+        userService.setPasscode(user, request.getPasscode());
         return ResponseEntity.ok(ApiResponse.success("Passcode set successfully"));
     }
 
@@ -105,7 +107,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> verifyPasscode(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PasscodeRequest request) {
-        authService.verifyPasscode(user, request.getPasscode());
+        userService.verifyPasscode(user, request.getPasscode());
         return ResponseEntity.ok(ApiResponse.success("Passcode verified"));
     }
 
