@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { Contact, CONTACTS } from "../../../components/chat/chatTypes";
 import {
   useAppTheme,
   ThemeColors,
@@ -21,72 +22,7 @@ import {
   Radius,
 } from "../../../theme";
 
-interface Contact {
-  id: string;
-  name: string;
-  lastMessage: string;
-  time: string;
-  unread: number;
-  online: boolean;
-  avatar: string;
-}
 
-const CONTACTS: Contact[] = [
-  {
-    id: "1",
-    name: "Michael Owusu Addo",
-    lastMessage: "Thanks.",
-    time: "2mins",
-    unread: 0,
-    online: true,
-    avatar: "https://i.pravatar.cc/150?u=michael",
-  },
-  {
-    id: "2",
-    name: "Serwaa Amihere",
-    lastMessage: "Did you receive the package?",
-    time: "",
-    unread: 1,
-    online: true,
-    avatar: "https://i.pravatar.cc/150?u=serwaa",
-  },
-  {
-    id: "3",
-    name: "Joselyn Dumas",
-    lastMessage: "Okay, great!",
-    time: "",
-    unread: 2,
-    online: true,
-    avatar: "https://i.pravatar.cc/150?u=joselyn",
-  },
-  {
-    id: "4",
-    name: "Kwame Nkrumah",
-    lastMessage: "I'm still waiting for the payment.",
-    time: "30sec",
-    unread: 0,
-    online: false,
-    avatar: "https://i.pravatar.cc/150?u=kwame",
-  },
-  {
-    id: "5",
-    name: "John Dumelo",
-    lastMessage: "The funds should be ...",
-    time: "1min",
-    unread: 0,
-    online: false,
-    avatar: "https://i.pravatar.cc/150?u=john",
-  },
-  {
-    id: "6",
-    name: "Samuel Nartey George",
-    lastMessage: "Sure hahaha",
-    time: "45sec",
-    unread: 0,
-    online: false,
-    avatar: "https://i.pravatar.cc/150?u=samuel",
-  },
-];
 
 export default function ChatContactsScreen() {
   const { colors: Colors } = useAppTheme();

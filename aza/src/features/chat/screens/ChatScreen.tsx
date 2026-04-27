@@ -21,8 +21,10 @@ import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
+import { ForwardModal } from '../../../components/chat/ForwardModal';
 import {
   Message,
+  Contact,
   ReplyInfo,
   MoreAction,
   MenuAnchor,
@@ -60,6 +62,11 @@ export default function ChatScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ReplyInfo | null>(null);
+
+  // Forward state
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Cleanup all timers on unmount
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
@@ -222,6 +229,19 @@ export default function ChatScreen() {
     setSelectedMessage(null);
   }, [selectedMessage]);
 
+  const handleOpenForward = useCallback(() => {
+    if (!selectedMessage) return;
+    setForwardMessage(selectedMessage);
+    setShowForwardModal(true);
+    setSelectedMessage(null);
+  }, [selectedMessage]);
+
+  const handleForwardAction = useCallback((contacts: Contact[], message: Message) => {
+    setShowForwardModal(false);
+    setToastMessage(`Forwarded to ${contacts.length} contact${contacts.length > 1 ? 's' : ''}`);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
   // --------------------------------------------------------------------------
   // Media pickers
   // --------------------------------------------------------------------------
@@ -325,7 +345,7 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const messageActions = useMemo<MoreAction[]>(() => [
     { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
-    { icon: 'corner-up-right', label: 'Forward', onPress: handleCloseMessageModal },
+    { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
     { icon: 'copy', label: 'Copy', onPress: handleCopy },
     { icon: 'info', label: 'Info', onPress: handleCloseMessageModal },
     { icon: 'star', label: 'Star', onPress: handleCloseMessageModal },
@@ -486,6 +506,24 @@ export default function ChatScreen() {
           </View>
         )}
       </Modal>
+
+      {/* Forward Modal */}
+      <ForwardModal
+        visible={showForwardModal}
+        message={forwardMessage}
+        onClose={() => setShowForwardModal(false)}
+        onForward={handleForwardAction}
+      />
+
+      {/* Toast */}
+      {toastMessage && (
+        <View style={styles.toastContainer}>
+          <View style={styles.toast}>
+            <Feather name="check-circle" size={18} color="#fff" />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -556,4 +594,31 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       paddingVertical: Platform.OS === 'ios' ? 10 : 6,
     },
     searchInput: { flex: 1, ...Typography.body, fontSize: 15, color: Colors.textPrimary },
+    toastContainer: {
+      position: 'absolute',
+      bottom: Platform.OS === 'ios' ? 100 : 80,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      zIndex: 100,
+    },
+    toast: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#111827',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.full,
+      gap: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    toastText: {
+      ...Typography.body,
+      color: '#fff',
+      fontWeight: '500',
+    },
   });
