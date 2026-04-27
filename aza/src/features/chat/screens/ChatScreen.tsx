@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect, memo } from '
 import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
-  Pressable, TextInput,
+  Pressable, TextInput, DeviceEventEmitter,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
@@ -20,8 +20,10 @@ import { ChatMessageBubble, ChatTypingIndicator } from '../../../components/chat
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
+import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
 import {
   Message,
+  ReplyInfo,
   MoreAction,
   MenuAnchor,
   AttachmentAnchor,
@@ -57,6 +59,7 @@ export default function ChatScreen() {
   const [attachmentAnchor, setAttachmentAnchor] = useState<AttachmentAnchor | null>(null);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [replyTo, setReplyTo] = useState<ReplyInfo | null>(null);
 
   // Cleanup all timers on unmount
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
@@ -78,26 +81,29 @@ export default function ChatScreen() {
 
   // Listen for media returned from MediaPreviewScreen
   useEffect(() => {
-    const sentMedia = route.params?.sentMedia as Message[] | undefined;
-    if (sentMedia && sentMedia.length > 0) {
-      setMessages(prev => [...prev, ...sentMedia]);
-      // Clear the param so we don't process it again
-      navigation.setParams({ sentMedia: undefined });
-      
-      // Simulate delivery pipeline for media messages
-      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
-      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
-      scheduleTimer(() => {
-        setIsOtherUserTyping(true);
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 2400);
-      scheduleTimer(() => {
-        setIsOtherUserTyping(false);
-        const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
-        setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
-      }, 4000);
-    }
-  }, [route.params, navigation, scheduleTimer]);
+    const subscription = DeviceEventEmitter.addListener('chat_media_sent', (sentMedia: Message[]) => {
+      if (sentMedia && sentMedia.length > 0) {
+        setMessages(prev => [...prev, ...sentMedia]);
+        
+        // Simulate delivery pipeline for media messages
+        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
+        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
+        scheduleTimer(() => {
+          setIsOtherUserTyping(true);
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 2400);
+        scheduleTimer(() => {
+          setIsOtherUserTyping(false);
+          const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
+          setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
+        }, 4000);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [scheduleTimer]);
 
   const filteredMessages = useMemo(
     () =>
@@ -159,15 +165,34 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   // Send
   // --------------------------------------------------------------------------
+  const handleSwipeToReply = useCallback((msg: Message) => {
+    setReplyTo({ id: msg.id, text: msg.text || msg.caption || msg.fileName || 'Media', sender: msg.sender });
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTo(null);
+  }, []);
+
   const handleSend = useCallback(() => {
     if (!message.trim()) return;
     const msgId = Date.now().toString();
     const msgText = message.trim();
     const msgTime = formatTime();
     const msgTimestamp = Date.now();
+    const currentReply = replyTo;
 
-    setMessages(prev => [...prev, { id: msgId, text: msgText, sender: 'me', time: msgTime, timestamp: msgTimestamp, status: 'sent', type: 'text' }]);
+    setMessages(prev => [...prev, {
+      id: msgId,
+      text: msgText,
+      sender: 'me',
+      time: msgTime,
+      timestamp: msgTimestamp,
+      status: 'sent',
+      type: 'text',
+      ...(currentReply ? { replyTo: currentReply.id, replyToMessage: currentReply } : {}),
+    }]);
     setMessage('');
+    setReplyTo(null);
 
     scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)), 800);
     scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'read' } : m)), 1800);
@@ -180,7 +205,7 @@ export default function ChatScreen() {
       const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
     }, 4000);
-  }, [message, scheduleTimer]);
+  }, [message, replyTo, scheduleTimer]);
 
   // --------------------------------------------------------------------------
   // Message actions
@@ -299,13 +324,13 @@ export default function ChatScreen() {
   // Message long-press actions
   // --------------------------------------------------------------------------
   const messageActions = useMemo<MoreAction[]>(() => [
-    { icon: 'corner-up-left', label: 'Reply', onPress: handleCloseMessageModal },
+    { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
     { icon: 'corner-up-right', label: 'Forward', onPress: handleCloseMessageModal },
     { icon: 'copy', label: 'Copy', onPress: handleCopy },
     { icon: 'info', label: 'Info', onPress: handleCloseMessageModal },
     { icon: 'star', label: 'Star', onPress: handleCloseMessageModal },
     { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
-  ], [handleCloseMessageModal, handleCopy, handleDelete]);
+  ], [handleCloseMessageModal, handleCopy, handleDelete, selectedMessage, handleSwipeToReply]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
@@ -320,10 +345,12 @@ export default function ChatScreen() {
             <Text style={styles.dateHeaderText}>{formatDateHeader(item.timestamp)}</Text>
           </View>
         )}
-        <ChatMessageBubble message={item} onLongPress={() => handleSelectMessage(item)} />
+        <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
+          <ChatMessageBubble message={item} onLongPress={() => handleSelectMessage(item)} />
+        </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, handleSelectMessage]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, handleSelectMessage, handleSwipeToReply]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
@@ -376,6 +403,9 @@ export default function ChatScreen() {
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={listFooter}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
             removeClippedSubviews
           />
           <ChatInputArea
@@ -384,6 +414,8 @@ export default function ChatScreen() {
             onSend={handleSend}
             isAddOpen={showAttachment}
             onAddPress={handleAddPress}
+            replyTo={replyTo}
+            onCancelReply={handleCancelReply}
           />
         </KeyboardAvoidingView>
       ) : (
@@ -396,6 +428,9 @@ export default function ChatScreen() {
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={listFooter}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
             removeClippedSubviews
           />
           <ChatInputArea
@@ -404,6 +439,8 @@ export default function ChatScreen() {
             onSend={handleSend}
             isAddOpen={showAttachment}
             onAddPress={handleAddPress}
+            replyTo={replyTo}
+            onCancelReply={handleCancelReply}
           />
         </View>
       )}
