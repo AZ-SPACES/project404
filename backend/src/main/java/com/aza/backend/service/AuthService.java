@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -99,6 +100,10 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new RuntimeException("Invalid credentials");
+        }
+
         sendOtp(request.getIdentifier(), "login");
     }
 
@@ -115,6 +120,10 @@ public class AuthService {
 
     private AuthResponse finalizeLogin(User user, String deviceName,
                                        String deviceOs, String ipAddress) {
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new RuntimeException("Account is not active");
+        }
+
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
@@ -132,11 +141,14 @@ public class AuthService {
     // ==================== LOGOUT ====================
 
     public void logout(String accessToken) {
-        redisTemplate.opsForValue().set(
-                BLACKLIST_PREFIX + hashToken(accessToken),
-                "blacklisted",
-                Duration.ofMinutes(15)
-        );
+        Duration remaining = jwtUtil.getRemainingValidity(accessToken);
+        if (!remaining.isZero()) {
+            redisTemplate.opsForValue().set(
+                    BLACKLIST_PREFIX + hashToken(accessToken),
+                    "blacklisted",
+                    remaining
+            );
+        }
     }
 
     @Transactional
@@ -189,7 +201,7 @@ public class AuthService {
         rateLimitService.enforceRateLimit("otp:" + identifier, 3, Duration.ofMinutes(10));
 
         String otp = String.format("%06d",
-                new java.security.SecureRandom().nextInt(999999));
+                new java.security.SecureRandom().nextInt(1_000_000));
         String key = OTP_PREFIX + purpose + ":" + identifier;
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
 
@@ -241,6 +253,7 @@ public class AuthService {
                 .ifPresent(user -> sendOtp(request.getIdentifier(), "password_reset"));
     }
 
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
 
@@ -250,10 +263,15 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Invalidate all sessions — password reset implies potential account compromise
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+        biometricService.revokeAllBiometricTokens(user);
     }
 
     // ==================== CHANGE PASSWORD ====================
 
+    @Transactional
     public void changePassword(User user, ChangePasswordRequest request) {
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Current password is incorrect");
@@ -261,6 +279,10 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Revoke all other sessions so stolen tokens can't outlive the password change
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+        biometricService.revokeAllBiometricTokens(user);
     }
 
     // ==================== HELPERS ====================
@@ -282,7 +304,7 @@ public class AuthService {
     public String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes());
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);

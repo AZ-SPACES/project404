@@ -10,12 +10,14 @@ import com.aza.backend.repository.BiometricTokenRepository;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.security.JwtUtil;
+import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -36,6 +38,7 @@ public class BiometricService {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final RateLimitService rateLimitService;
+    private final EmailService emailService;
 
     private static final int TOKEN_EXPIRY_DAYS = 90;
 
@@ -57,11 +60,17 @@ public class BiometricService {
         // 2. Verify passcode — proves user has physical access + knows their PIN
         userService.verifyPasscode(user, request.getPasscode());
 
-        // 3. If a biometric token already exists for this device, revoke it first
+        // 3. If a biometric token already exists for this device, revoke it and alert the user
         biometricTokenRepository.findByUserIdAndDeviceId(user.getId(), request.getDeviceId())
                 .ifPresent(existing -> {
                     biometricTokenRepository.delete(existing);
                     log.info("Revoked existing biometric token for device: {}", request.getDeviceId());
+                    emailService.sendEmail(
+                            user.getEmail(),
+                            "Biometric login re-enrolled on your device",
+                            "Hi " + user.getFirstName() + ", biometric authentication was re-enrolled on device \""
+                                    + request.getDeviceName() + "\". If this wasn't you, secure your account immediately."
+                    );
                 });
 
         // 4. Generate a cryptographically secure random token (32 bytes = 256 bits)
@@ -200,7 +209,7 @@ public class BiometricService {
     private String hashToken(String rawToken) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(rawToken.getBytes());
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
