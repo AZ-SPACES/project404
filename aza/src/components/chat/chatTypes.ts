@@ -3,6 +3,12 @@
 // ----------------------------------------------------------------------------
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
+export type ReplyInfo = {
+  id: string;
+  text: string;
+  sender: 'me' | 'other';
+};
+
 export interface Message {
   id: string;
   text: string;
@@ -11,6 +17,7 @@ export interface Message {
   timestamp: number;
   status?: MessageStatus;
   replyTo?: string;
+  replyToMessage?: ReplyInfo;
   type?: 'text' | 'image' | 'document';
   uri?: string;
   mimeType?: string;
@@ -18,6 +25,7 @@ export interface Message {
   fileName?: string;
   caption?: string;
 }
+
 
 export type MoreAction = { icon: string; label: string; color?: string; onPress: () => void };
 
