@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.transfer.*;
+import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
@@ -20,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,6 +34,7 @@ public class TransferService {
     private final UserRepository userRepository;
     private final UserService userService;
     private final RateLimitService rateLimitService;
+    private final WebSocketPublisher webSocketPublisher;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -190,6 +193,14 @@ public class TransferService {
         User recipient = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
+        webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                Map.of(
+                        "transactionId", transaction.getId().toString(),
+                        "amount", transaction.getAmount().toString(),
+                        "from", sender.getFirstName() + " " + sender.getLastName(),
+                        "note", transaction.getNote() != null ? transaction.getNote() : ""
+                ));
+
         return buildTransferResponse(transaction, sender, recipient);
     }
 
@@ -317,6 +328,14 @@ public class TransferService {
 
         User requester = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        webSocketPublisher.publishNotification(requester.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                Map.of(
+                        "transactionId", transaction.getId().toString(),
+                        "amount", transaction.getAmount().toString(),
+                        "from", payer.getFirstName() + " " + payer.getLastName(),
+                        "note", transaction.getNote() != null ? transaction.getNote() : ""
+                ));
 
         return buildTransferResponse(transaction, payer, requester);
     }
