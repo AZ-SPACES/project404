@@ -25,6 +25,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const isMe = message.sender === 'me';
   const isImageType = message.type === 'image';
   const docIcon = getDocIcon(message.mimeType);
+  const replyInfo = message.replyToMessage;
 
   const statusIcon = useMemo(() => {
     if (!isMe || !message.status) return null;
@@ -47,6 +48,20 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     </View>
   );
 
+  const replyPreview = replyInfo ? (
+    <View style={[styles.replyPreview, isMe ? styles.replyPreviewMe : styles.replyPreviewOther]}>
+      <View style={[styles.replyBar, { backgroundColor: isMe ? 'rgba(255,255,255,0.5)' : Colors.primary }]} />
+      <View style={styles.replyContent}>
+        <Text style={[styles.replySender, isMe ? styles.replySenderMe : styles.replySenderOther]} numberOfLines={1}>
+          {replyInfo.sender === 'me' ? 'You' : 'Them'}
+        </Text>
+        <Text style={[styles.replyText, isMe ? styles.replyTextMe : styles.replyTextOther]} numberOfLines={2}>
+          {replyInfo.text}
+        </Text>
+      </View>
+    </View>
+  ) : null;
+
   return (
     <TouchableOpacity
       onLongPress={onLongPress}
@@ -56,6 +71,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     >
       {isImageType && message.uri ? (
         <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther, hasCaption && { padding: 4 }]}>
+          {replyPreview}
           <Image 
             source={{ uri: message.uri }} 
             style={[styles.imageContent, hasCaption && { borderRadius: 12 }]} 
@@ -73,6 +89,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         </View>
       ) : message.type === 'document' ? (
         <View style={[styles.bubble, styles.docBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
           <View style={styles.docCard}>
             <View style={[styles.docIconBox, { backgroundColor: docIcon.color + '22' }]}>
               <Feather name={docIcon.name as any} size={22} color={docIcon.color} />
@@ -92,6 +109,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         </View>
       ) : (
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
           <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.text}</Text>
           {metaRow}
         </View>
@@ -99,6 +117,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     </TouchableOpacity>
   );
 });
+
 
 // ----------------------------------------------------------------------------
 // Typing indicator — placed here as it uses the same style factory
@@ -178,4 +197,40 @@ const createStyles = (Colors: ThemeColors) =>
     timeTextMe: { color: 'rgba(255,255,255,0.7)' },
     timeTextOther: { color: Colors.textSecondary },
     statusIcon: { marginLeft: 4 },
+    // Reply preview inside bubble
+    replyPreview: {
+      flexDirection: 'row',
+      borderRadius: 6,
+      marginBottom: 6,
+      overflow: 'hidden',
+    },
+    replyPreviewMe: {
+      backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    replyPreviewOther: {
+      backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    replyBar: {
+      width: 3,
+    },
+    replyContent: {
+      flex: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    replySender: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontWeight: '700',
+      marginBottom: 1,
+    },
+    replySenderMe: { color: 'rgba(255,255,255,0.85)' },
+    replySenderOther: { color: Colors.primary },
+    replyText: {
+      ...Typography.caption,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    replyTextMe: { color: 'rgba(255,255,255,0.65)' },
+    replyTextOther: { color: Colors.textSecondary },
   });
