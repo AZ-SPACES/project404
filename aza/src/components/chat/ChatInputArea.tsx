@@ -1,8 +1,8 @@
 import React, { memo, useMemo, useRef, useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
-import type { AttachmentAnchor } from './chatTypes';
+import type { AttachmentAnchor, ReplyInfo } from './chatTypes';
 
 // ----------------------------------------------------------------------------
 // Props
@@ -13,6 +13,8 @@ type ChatInputAreaProps = {
   onSend: () => void;
   onAddPress: (anchor: AttachmentAnchor) => void;
   isAddOpen: boolean;
+  replyTo?: ReplyInfo | null;
+  onCancelReply?: () => void;
 };
 
 // ----------------------------------------------------------------------------
@@ -24,6 +26,8 @@ export const ChatInputArea = memo(function ChatInputArea({
   onSend,
   onAddPress,
   isAddOpen,
+  replyTo,
+  onCancelReply,
 }: ChatInputAreaProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
@@ -46,36 +50,55 @@ export const ChatInputArea = memo(function ChatInputArea({
   const handleBlur = useCallback(() => setIsFocused(false), []);
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        ref={addButtonRef}
-        style={[styles.actionButton, isAddOpen && styles.actionButtonActive]}
-        activeOpacity={0.8}
-        onPress={handleAddPress}
-      >
-        <Feather name={isAddOpen ? 'x' : 'plus'} size={22} color={Colors.white} />
-      </TouchableOpacity>
+    <View>
+      {replyTo ? (
+        <View style={styles.replyBanner}>
+          <View style={[styles.replyBannerBar, { backgroundColor: Colors.primary }]} />
+          <View style={styles.replyBannerContent}>
+            <Text style={styles.replyBannerSender} numberOfLines={1}>
+              Replying to {replyTo.sender === 'me' ? 'yourself' : 'them'}
+            </Text>
+            <Text style={styles.replyBannerText} numberOfLines={1}>
+              {replyTo.text}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onCancelReply} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
-      <View style={styles.inputWrapper}>
-        {showIcon && (
-          <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
-        )}
-        <TextInput
-          style={styles.textInput}
-          placeholder="Type here"
-          placeholderTextColor={Colors.textSecondary}
-          value={message}
-          onChangeText={setMessage}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          multiline
-          accessibilityLabel="Message input"
-        />
+      <View style={styles.container}>
+        <TouchableOpacity
+          ref={addButtonRef}
+          style={[styles.actionButton, isAddOpen && styles.actionButtonActive]}
+          activeOpacity={0.8}
+          onPress={handleAddPress}
+        >
+          <Feather name={isAddOpen ? 'x' : 'plus'} size={22} color={Colors.white} />
+        </TouchableOpacity>
+
+        <View style={styles.inputWrapper}>
+          {showIcon && (
+            <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
+          )}
+          <TextInput
+            style={styles.textInput}
+            placeholder="Type here"
+            placeholderTextColor={Colors.textSecondary}
+            value={message}
+            onChangeText={setMessage}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            multiline
+            accessibilityLabel="Message input"
+          />
+        </View>
+
+        <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>
+          <Feather name="send" size={20} color={Colors.white} style={styles.sendIcon} />
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>
-        <Feather name="send" size={20} color={Colors.white} style={styles.sendIcon} />
-      </TouchableOpacity>
     </View>
   );
 });
@@ -122,5 +145,40 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       paddingVertical: Platform.OS === 'ios' ? 10 : 8,
     },
     sendIcon: { marginRight: 2, marginTop: 2 },
+    // Reply banner
+    replyBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: Spacing.lg,
+      paddingRight: Spacing.md,
+      backgroundColor: isDark ? Colors.surface : '#F9FAFB',
+      borderTopLeftRadius: 8,
+      borderTopRightRadius: 8,
+      borderWidth: 1,
+      borderBottomWidth: 0,
+      borderColor: Colors.border,
+      overflow: 'hidden',
+    },
+    replyBannerBar: {
+      width: 3,
+      alignSelf: 'stretch',
+    },
+    replyBannerContent: {
+      flex: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    replyBannerSender: {
+      ...Typography.caption,
+      fontSize: 12,
+      fontWeight: '600',
+      color: Colors.primary,
+      marginBottom: 1,
+    },
+    replyBannerText: {
+      ...Typography.caption,
+      fontSize: 13,
+      color: Colors.textSecondary,
+    },
   });
 

@@ -1,4 +1,6 @@
 import { StatusBar, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AnimatedSplashScreen from "./src/components/ui/AnimatedSplashScreen";
@@ -52,7 +54,9 @@ function AppContent() {
 
 export default function App() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
+
       <ErrorBoundary>
         <NetworkProvider>
           <AuthProvider>
@@ -71,5 +75,7 @@ export default function App() {
         </NetworkProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
+
 }

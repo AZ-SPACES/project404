@@ -55,7 +55,13 @@ export const ChatHeader = memo(function ChatHeader({
         onPress={onProfilePress}
         disabled={!onProfilePress}
       >
-        <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
+        {avatar ? (
+          <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: isDark ? Colors.surface : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }]}>
+            <Feather name="user" size={24} color={Colors.textSecondary} />
+          </View>
+        )}
         <View style={styles.nameContainer}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {online && <Text style={styles.onlineText}>online</Text>}
