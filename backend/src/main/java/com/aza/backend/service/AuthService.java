@@ -109,6 +109,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse loginWithOtp(OtpVerifyRequest request, String ipAddress) {
+        rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 10, Duration.ofMinutes(15));
         verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository
@@ -185,6 +186,10 @@ public class AuthService {
         UUID userId = jwtUtil.getUserIdFromToken(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new RuntimeException("Account is not active");
+        }
 
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());

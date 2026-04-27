@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -26,13 +27,18 @@ public class KycService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
 
-    private static final long MAX_DOC_SIZE = 10 * 1204 * 1024; //10MB
+    private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg","image/png");
     private static final List<String> ALLOWED_DOC_TYPES = List.of("image/jpeg", "image/png", "application/pdf");
+    private static final Set<String> ALLOWED_FUNDS_SOURCES = Set.of(
+            "salary", "savings", "business", "investment", "pension", "gift", "rental", "remittance", "other"
+    );
+    // Alphanumeric + hyphens only, 4–30 chars — covers all supported ID formats
+    private static final java.util.regex.Pattern ID_NUMBER_PATTERN =
+            java.util.regex.Pattern.compile("^[A-Z0-9\\-]{4,30}$");
 
-    //DemoKYC for now
-    @Value("${kyc.auto-verify:true}")
+    @Value("${kyc.auto-verify:false}")
     private boolean autoVerify;
 
     /* Get KYC Status*/
@@ -69,9 +75,9 @@ public class KycService {
                 .build();
     }
 
-    //STEP 1: COSENT
+    //STEP 1: CONSENT
     @Transactional
-    public KycStatusResponse recordConsent(User user) {
+    public KycStatusResponse recordConsent(User user, String ipAddress) {
         KycRecord record = getOrCreateRecord(user);
 
         if (Boolean.TRUE.equals(record.getBiometricConsent())) {
@@ -79,6 +85,7 @@ public class KycService {
         }
         record.setBiometricConsent(true);
         record.setConsentTimestamp(LocalDateTime.now());
+        record.setConsentIpAddress(ipAddress);
         kycRecordRepository.save(record);
 
         updateUserKycStatus(user, User.KycStatus.PENDING);
@@ -91,7 +98,15 @@ public class KycService {
         KycRecord record = getOrCreateRecord(user);
         ensureNotSubmitted(record);
 
-        record.setFundsSource(request.getFundsSource());
+        for (String source : request.getFundsSource().split(",")) {
+            String s = source.strip().toLowerCase();
+            if (!ALLOWED_FUNDS_SOURCES.contains(s)) {
+                throw new RuntimeException("Invalid funds source: \"" + s
+                        + "\". Allowed values: " + ALLOWED_FUNDS_SOURCES);
+            }
+        }
+
+        record.setFundsSource(request.getFundsSource().strip().toLowerCase());
         record.setOtherFundsText(request.getOtherFundsText());
         kycRecordRepository.save(record);
         return getStatus(user);
@@ -103,6 +118,13 @@ public class KycService {
                                              MultipartFile frontImage, MultipartFile backImage) {
         KycRecord record = getOrCreateRecord(user);
         ensureNotSubmitted(record);
+
+        if (request.getIdType() == null || request.getIdType().isBlank()) {
+            throw new RuntimeException("ID type is required");
+        }
+        if (request.getIdNumber() == null || request.getIdNumber().isBlank()) {
+            throw new RuntimeException("ID number is required");
+        }
 
         //Validate ID type
         try {
@@ -123,8 +145,13 @@ public class KycService {
                 backImage, user.getId().toString()
         );
 
+        String idNumber = request.getIdNumber().replaceAll("\\s", "").toUpperCase();
+        if (!ID_NUMBER_PATTERN.matcher(idNumber).matches()) {
+            throw new RuntimeException("Invalid ID number format. Only letters, digits, and hyphens are accepted (4–30 characters).");
+        }
+
         record.setIdType(KycRecord.IdType.valueOf(request.getIdType().toUpperCase()));
-        record.setIdNumber(request.getIdNumber());
+        record.setIdNumber(idNumber);
         record.setIdFrontImageUrl(frontUrl);
         record.setIdBackImageUrl(backUrl);
         kycRecordRepository.save(record);

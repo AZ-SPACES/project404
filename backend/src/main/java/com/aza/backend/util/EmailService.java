@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -91,40 +92,44 @@ public class EmailService {
     }
 
     /**
-     * Send login notification email
+     * Send login notification email asynchronously to avoid blocking the calling thread.
+     * The geo-IP lookup and SMTP send happen off the request thread.
      */
     public void sendLoginNotification(String email, String name, String deviceName, String deviceOs, String ipAddress) {
-        String subject = "Security Alert: New Login to your AZA Account";
-        
-        try {
-            log.info("Preparing Login Notification email for {}...", email);
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        CompletableFuture.runAsync(() -> {
+            String subject = "Security Alert: New Login to your AZA Account";
+            try {
+                log.info("Preparing Login Notification email for {}...", email);
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("AZA Security <" + fromEmail + ">");
-            helper.setTo(email);
-            helper.setSubject(subject);
+                helper.setFrom("AZA Security <" + fromEmail + ">");
+                helper.setTo(email);
+                helper.setSubject(subject);
 
-            Context context = new Context();
-            context.setVariable("name", name);
-            context.setVariable("deviceName", deviceName);
-            context.setVariable("deviceOs", deviceOs);
-            context.setVariable("ipAddress", ipAddress);
-            context.setVariable("location", fetchLocation(ipAddress));
-            context.setVariable("loginTime", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
-            
-            String htmlContent = templateEngine.process("email/login-notification", context);
-            helper.setText(htmlContent, true);
+                Context context = new Context();
+                context.setVariable("name", name);
+                context.setVariable("deviceName", deviceName);
+                context.setVariable("deviceOs", deviceOs);
+                context.setVariable("ipAddress", ipAddress);
+                context.setVariable("location", fetchLocation(ipAddress));
+                context.setVariable("loginTime", java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
 
-            // Add the paper-plane logo as an inline resource
-            ClassPathResource res = new ClassPathResource("static/images/paper-plane.png");
-            helper.addInline("paperplane", res);
+                String htmlContent = templateEngine.process("email/login-notification", context);
+                helper.setText(htmlContent, true);
 
-            mailSender.send(message);
-            log.info("Login Notification email sent successfully to {}", email);
-        } catch (MessagingException e) {
-            log.error("Failed to send login notification to {}: {}", email, e.getMessage());
-        }
+                ClassPathResource res = new ClassPathResource("static/images/paper-plane.png");
+                helper.addInline("paperplane", res);
+
+                mailSender.send(message);
+                log.info("Login Notification email sent successfully to {}", email);
+            } catch (MessagingException e) {
+                log.error("Failed to send login notification to {}: {}", email, e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error sending login notification to {}: {}", email, e.getMessage());
+            }
+        });
     }
 
     /**
@@ -137,7 +142,7 @@ public class EmailService {
         
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://ip-api.com/json/" + ip))
+                    .uri(URI.create("https://ip-api.com/json/" + ip))
                     .GET()
                     .build();
 

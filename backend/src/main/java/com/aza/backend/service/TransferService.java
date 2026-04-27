@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,8 @@ public class TransferService {
 
     @Value("${transfer.max-daily-amount:50000}")
     private BigDecimal maxDailyAmount;
+
+    private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
     // WALLET
 
@@ -80,10 +83,10 @@ public class TransferService {
             throw new RuntimeException("Amount exceeds max single transfer limit of GHS " + maxSingleAmount);
         }
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                sender.getId(), startOfDay, endOfDay
+                sender.getId(), startOfDay, endOfDay, LocalDateTime.now()
         );
         if (todayTotal.add(request.getAmount()).compareTo(maxDailyAmount) > 0) {
             BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
@@ -218,6 +221,18 @@ public class TransferService {
 
     @Transactional
     public TransferResponse requestMoney(User requester, MoneyRequestDto request) {
+        if (requester.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new RuntimeException("Your account is not active");
+        }
+        if (requester.getKycStatus() != User.KycStatus.VERIFIED) {
+            throw new RuntimeException("KYC verification required before requesting money");
+        }
+        rateLimitService.enforceRateLimit("request:" + requester.getId(), 20, Duration.ofHours(1));
+
+        if (request.getAmount().compareTo(maxSingleAmount) > 0) {
+            throw new RuntimeException("Requested amount exceeds the single transfer limit of GHS " + maxSingleAmount);
+        }
+
         User fromUser = userRepository
                 .findByEmailOrPhone(request.getFromIdentifier(), request.getFromIdentifier())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -246,6 +261,9 @@ public class TransferService {
         if (payer.getStatus() != User.AccountStatus.ACTIVE) {
             throw new RuntimeException("Your account is not active");
         }
+        if (payer.getKycStatus() != User.KycStatus.VERIFIED) {
+            throw new RuntimeException("KYC verification required before sending money");
+        }
 
         userService.verifyPasscode(payer, passcode);
 
@@ -268,10 +286,10 @@ public class TransferService {
             throw new RuntimeException("Amount exceeds your single transfer limit of GHS " + maxSingleAmount);
         }
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                payer.getId(), startOfDay, endOfDay);
+                payer.getId(), startOfDay, endOfDay, LocalDateTime.now());
         if (todayTotal.add(transaction.getAmount()).compareTo(maxDailyAmount) > 0) {
             throw new RuntimeException("Accepting this request would exceed your daily transfer limit of GHS " + maxDailyAmount);
         }

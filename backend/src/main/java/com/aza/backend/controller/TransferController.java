@@ -66,7 +66,7 @@ public class TransferController {
             @RequestParam(defaultValue = "20") int size) {
         int cappedSize = Math.min(size, 100);
         return ResponseEntity.ok(ApiResponse.success(
-                transferService.getTransactionHistory(user.getId(), type, status, page, size)));
+                transferService.getTransactionHistory(user.getId(), type, status, page, cappedSize)));
     }
 
     @GetMapping("/transfers/{id}")

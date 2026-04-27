@@ -32,16 +32,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                                @Param("status") Transaction.TransactionStatus status,
                                                Pageable pageable);
 
-    /* Get total amount sent today for daily limit enforcement. Only counts COMPLETED and PENDING transfers. */
+    /* Get total amount sent today for daily limit enforcement.
+     * Counts COMPLETED transfers and PENDING transfers that have not yet expired. */
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.senderId = :userId " +
-            "AND t.status IN ('COMPLETED', 'PENDING') " +
             "AND t.type = 'TRANSFER' " +
             "AND t.initiatedAt >= :startOfDay " +
-            "AND t.initiatedAt < :endOfDay")
+            "AND t.initiatedAt < :endOfDay " +
+            "AND (t.status = 'COMPLETED' OR " +
+            "     (t.status = 'PENDING' AND (t.expiresAt IS NULL OR t.expiresAt > :now)))")
     BigDecimal getTotalSentToday(@Param("userId") UUID userId,
                                  @Param("startOfDay") LocalDateTime startofDay,
-                                 @Param("endOfDay") LocalDateTime endofDay);
+                                 @Param("endOfDay") LocalDateTime endofDay,
+                                 @Param("now") LocalDateTime now);
 
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
