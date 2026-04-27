@@ -1,0 +1,38 @@
+package com.aza.backend.dto.auth;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+@Data
+public class SignupRequest {
+
+    @NotBlank(message = "Phone number is required")
+    private String phone;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    private String email;
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    private String password;
+
+    private String firstName;
+    private String lastName;
+    private String displayName;
+    private String handle;
+    private String dateOfBirth;       // "YYYY-MM-DD"
+
+    private String deviceName;
+    private String deviceOs;
+
+    // Address fields
+    private String homeAddress;
+    private String city;
+    private String nationality;
+
+    // Employment
+    private String employmentStatus;  // STUDENT, FULL_TIME, etc.
+}

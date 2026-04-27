@@ -26,7 +26,7 @@ const PEP_OPTIONS: PEPOptions[] = [
   "Yes, I am a family member or close associate of a PEP"
 ];
 
-export default function PEPStatusScreen() {
+export function PEPStatusScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);

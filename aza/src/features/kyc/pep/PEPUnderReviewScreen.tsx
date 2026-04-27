@@ -12,7 +12,7 @@ import { useToast } from '../../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPUnderReview">;
 
-export default function PEPUnderReviewScreen() {
+export function PEPUnderReviewScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
