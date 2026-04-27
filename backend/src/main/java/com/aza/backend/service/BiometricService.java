@@ -41,6 +41,7 @@ public class BiometricService {
     private final EmailService emailService;
 
     private static final int TOKEN_EXPIRY_DAYS = 90;
+    private static final int MAX_ENROLLED_DEVICES = 5;
 
     // ==================== ISSUE BIOMETRIC TOKEN ====================
 
@@ -60,7 +61,16 @@ public class BiometricService {
         // 2. Verify passcode — proves user has physical access + knows their PIN
         userService.verifyPasscode(user, request.getPasscode());
 
-        // 3. If a biometric token already exists for this device, revoke it and alert the user
+        // 3. Enforce device cap — count existing tokens not on this device
+        long enrolledCount = biometricTokenRepository.findAllByUserId(user.getId()).stream()
+                .filter(t -> !t.getDeviceId().equals(request.getDeviceId()))
+                .count();
+        if (enrolledCount >= MAX_ENROLLED_DEVICES) {
+            throw new RuntimeException(
+                    "Maximum of " + MAX_ENROLLED_DEVICES + " enrolled devices reached. Remove an existing device first.");
+        }
+
+        // 4. If a biometric token already exists for this device, revoke it and alert the user
         biometricTokenRepository.findByUserIdAndDeviceId(user.getId(), request.getDeviceId())
                 .ifPresent(existing -> {
                     biometricTokenRepository.delete(existing);
@@ -73,12 +83,12 @@ public class BiometricService {
                     );
                 });
 
-        // 4. Generate a cryptographically secure random token (32 bytes = 256 bits)
+        // 5. Generate a cryptographically secure random token (32 bytes = 256 bits)
         byte[] rawTokenBytes = new byte[32];
         new SecureRandom().nextBytes(rawTokenBytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(rawTokenBytes);
 
-        // 5. Store only the hash — never store the raw token
+        // 6. Store only the hash — never store the raw token
         String tokenHash = hashToken(rawToken);
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(TOKEN_EXPIRY_DAYS);
 
@@ -93,13 +103,13 @@ public class BiometricService {
 
         biometricTokenRepository.save(biometricToken);
 
-        // 6. Update user entity to reflect biometrics are enabled
+        // 7. Update user entity to reflect biometrics are enabled
         user.setBiometricsEnabled(true);
         userRepository.save(user);
 
         log.info("Biometric token issued for user {} on device {}", user.getId(), request.getDeviceId());
 
-        // 7. Return the raw token — device must store this in SecureStore immediately
+        // 8. Return the raw token — device must store this in SecureStore immediately
         return BiometricTokenResponse.builder()
                 .biometricToken(rawToken)
                 .deviceId(request.getDeviceId())
@@ -162,6 +172,10 @@ public class BiometricService {
 
         // Store hashed refresh token
         saveRefreshToken(user.getId(), refreshToken, stored.getDeviceName(), stored.getDeviceOs(), ipAddress);
+
+        // Notify user of biometric login — same signal as password login
+        emailService.sendLoginNotification(
+                user.getEmail(), user.getFirstName(), stored.getDeviceName(), stored.getDeviceOs(), ipAddress);
 
         log.info("Biometric login successful for user {} on device {}", user.getId(), request.getDeviceId());
 

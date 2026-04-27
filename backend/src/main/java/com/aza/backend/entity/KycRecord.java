@@ -27,6 +27,7 @@ public class KycRecord {
     @Builder.Default
     private Boolean biometricConsent = false;
     private LocalDateTime consentTimestamp;
+    private String consentIpAddress;
 
     // Step 2 — Source of Funds
     private String fundsSource;       // comma-separated: "salary,savings,business"
