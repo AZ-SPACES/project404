@@ -29,7 +29,7 @@ public class TransferService {
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
-    private final AuthService authService;
+    private final UserService userService;
     private final RateLimitService rateLimitService;
 
     @Value("${transfer.max-single-amount:10000}")
@@ -135,7 +135,7 @@ public class TransferService {
             throw new RuntimeException("Your account is not active");
         }
         //Verify passcode
-        authService.verifyPasscode(sender, passcode);
+        userService.verifyPasscode(sender, passcode);
 
         // Find the pending transaction
         Transaction transaction = transactionRepository.findById(transactionId)
@@ -247,7 +247,7 @@ public class TransferService {
             throw new RuntimeException("Your account is not active");
         }
 
-        authService.verifyPasscode(payer, passcode);
+        userService.verifyPasscode(payer, passcode);
 
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));

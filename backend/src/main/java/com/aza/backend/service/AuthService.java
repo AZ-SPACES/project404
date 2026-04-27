@@ -41,9 +41,10 @@ public class AuthService {
     private final RateLimitService rateLimitService;
     private final UserService userService;
 
+    private final BiometricService biometricService;
+
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
-    private static final String PIN_ATTEMPTS_PREFIX = "pin:attempts:";
 
     // ==================== SIGNUP ====================
 
@@ -71,7 +72,8 @@ public class AuthService {
                 .nationality(request.getNationality())
                 .build();
 
-        userService.applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
+        userService.applyDateOfBirthAndEmployment(
+                user, request.getDateOfBirth(), request.getEmploymentStatus());
 
         user = userRepository.save(user);
 
@@ -97,7 +99,6 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        // Credentials are valid, send OTP for the second step
         sendOtp(request.getIdentifier(), "login");
     }
 
@@ -112,7 +113,8 @@ public class AuthService {
         return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
     }
 
-    private AuthResponse finalizeLogin(User user, String deviceName, String deviceOs, String ipAddress) {
+    private AuthResponse finalizeLogin(User user, String deviceName,
+                                       String deviceOs, String ipAddress) {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
@@ -121,14 +123,8 @@ public class AuthService {
 
         saveRefreshToken(user.getId(), refreshToken, deviceName, deviceOs, ipAddress);
 
-        // Send security notification for new login
         emailService.sendLoginNotification(
-                user.getEmail(),
-                user.getFirstName(),
-                deviceName,
-                deviceOs,
-                ipAddress
-        );
+                user.getEmail(), user.getFirstName(), deviceName, deviceOs, ipAddress);
 
         return buildAuthResponse(user, accessToken, refreshToken);
     }
@@ -137,17 +133,17 @@ public class AuthService {
 
     public void logout(String accessToken) {
         redisTemplate.opsForValue().set(
-                BLACKLIST_PREFIX + accessToken,
+                BLACKLIST_PREFIX + hashToken(accessToken),
                 "blacklisted",
                 Duration.ofMinutes(15)
         );
     }
 
     @Transactional
-    public void logoutEverywhere(UUID userId) {
-        refreshTokenRepository.deleteAllByUserId(userId);
+    public void logoutEverywhere(User user) {
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+        biometricService.revokeAllBiometricTokens(user);
     }
-
     // ==================== REFRESH TOKEN ====================
 
     @Transactional
@@ -164,25 +160,25 @@ public class AuthService {
 
         String tokenHash = hashToken(token);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RuntimeException("Refresh token not found — may have been revoked"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Refresh token not found — may have been revoked"));
 
         if (stored.isExpired()) {
             refreshTokenRepository.delete(stored);
             throw new RuntimeException("Refresh token expired");
         }
 
-        // Delete old refresh token
         refreshTokenRepository.delete(stored);
 
         UUID userId = jwtUtil.getUserIdFromToken(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Issue new tokens
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), newRefreshToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
+        saveRefreshToken(user.getId(), newRefreshToken,
+                stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
@@ -192,42 +188,27 @@ public class AuthService {
     public void sendOtp(String identifier, String purpose) {
         rateLimitService.enforceRateLimit("otp:" + identifier, 3, Duration.ofMinutes(10));
 
-        // Generate 6-digit OTP
-        String otp = String.format("%06d", new java.security.SecureRandom().nextInt(999999));
-        // Store in Redis with 5-minute TTL
+        String otp = String.format("%06d",
+                new java.security.SecureRandom().nextInt(999999));
         String key = OTP_PREFIX + purpose + ":" + identifier;
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
 
-        // Always log for debugging
-        System.out.println("========================================");
-        log.debug("OTP for {} ({}): {}", identifier, purpose, otp);
-        System.out.println("========================================");
 
-        // Determine if identifier is email or phone and send accordingly
         if (identifier.contains("@")) {
-            // It's an email — send via Resend
             boolean sent = emailService.sendOtp(identifier, otp);
-            if (!sent) {
-                System.out.println("WARNING: Email OTP delivery failed, use console OTP");
-            }
+            if (!sent) log.warn("Email OTP delivery failed for {}", identifier);
         } else {
-            // It's a phone number — send via Arkesel SMS
             boolean sent = smsService.sendOtp(identifier, otp);
-            if (!sent) {
-                System.out.println("WARNING: SMS OTP delivery failed, use console OTP");
-            }
+            if (!sent) log.warn("SMS OTP delivery failed for {}", identifier);
         }
     }
 
-
     public void verifyOtp(String identifier, String code, String purpose) {
-        //Check attempt limit
         String attemptKey = "otp:attempts:" + purpose + ":" + identifier;
         String attemptsStr = redisTemplate.opsForValue().get(attemptKey);
         int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
 
-        if (attempts >=5) {
-            //Delete the OTP entirely
+        if (attempts >= 5) {
             redisTemplate.delete(OTP_PREFIX + purpose + ":" + identifier);
             redisTemplate.delete(attemptKey);
             throw new RuntimeException("Too many failed OTP attempts. Request a new code.");
@@ -240,11 +221,11 @@ public class AuthService {
             throw new RuntimeException("OTP expired or not found");
         }
         if (!storedOtp.equals(code)) {
-            redisTemplate.opsForValue().set(attemptKey, String.valueOf(attempts + 1), Duration.ofMinutes(5));
+            redisTemplate.opsForValue().set(attemptKey,
+                    String.valueOf(attempts + 1), Duration.ofMinutes(5));
             throw new RuntimeException("Invalid OTP code.");
         }
 
-        // Delete OTP after successful verification
         redisTemplate.delete(key);
         redisTemplate.delete(attemptKey);
     }
@@ -252,10 +233,12 @@ public class AuthService {
     // ==================== FORGOT / RESET PASSWORD ====================
 
     public void forgotPassword(ForgotPasswordRequest request) {
-        rateLimitService.enforceRateLimit("forgot_pwd:" + request.getIdentifier(), 3, Duration.ofMinutes(10));
+        rateLimitService.enforceRateLimit(
+                "forgot_pwd:" + request.getIdentifier(), 3, Duration.ofMinutes(10));
 
-        userRepository.findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
-                        .ifPresent(user -> sendOtp(request.getIdentifier(), "password_reset"));
+        userRepository.findByEmailOrPhone(
+                        request.getIdentifier(), request.getIdentifier())
+                .ifPresent(user -> sendOtp(request.getIdentifier(), "password_reset"));
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -280,41 +263,11 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    // ==================== PASSCODE (PIN) ====================
-
-    public void setPasscode(User user, PasscodeRequest request) {
-        user.setPasscodeHash(passwordEncoder.encode(request.getPasscode()));
-        userRepository.save(user);
-    }
-
-    public void verifyPasscode(User user, String passcode) {
-        if (user.getPasscodeHash() == null) {
-            throw new RuntimeException("Passcode not set. Please set a passcode first.");
-        }
-
-        // Check lockout
-        String attemptsKey = PIN_ATTEMPTS_PREFIX + user.getId();
-        String attemptsStr = redisTemplate.opsForValue().get(attemptsKey);
-        int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
-
-        if (attempts >= 5) {
-            throw new RuntimeException("Too many failed attempts. Try again in 5 minutes.");
-        }
-
-        if (!passwordEncoder.matches(passcode, user.getPasscodeHash())) {
-            // Increment failed attempts with 5-min TTL
-            redisTemplate.opsForValue().set(attemptsKey,
-                    String.valueOf(attempts + 1), Duration.ofMinutes(5));
-            throw new RuntimeException("Invalid passcode. " + (4 - attempts) + " attempts remaining.");
-        }
-
-        // Reset attempts on success
-        redisTemplate.delete(attemptsKey);
-    }
-
     // ==================== HELPERS ====================
 
-    private void saveRefreshToken(UUID userId, String rawToken, String deviceName, String deviceOs, String ipAddress) {
+
+    public void saveRefreshToken(UUID userId, String rawToken,
+                                 String deviceName, String deviceOs, String ipAddress) {
         RefreshToken rt = RefreshToken.builder()
                 .userId(userId)
                 .tokenHash(hashToken(rawToken))
@@ -326,7 +279,7 @@ public class AuthService {
         refreshTokenRepository.save(rt);
     }
 
-    private String hashToken(String token) {
+    public String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(token.getBytes());
