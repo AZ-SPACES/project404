@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect, memo } from '
 import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
-  Pressable, TextInput,
+  Pressable, TextInput, DeviceEventEmitter,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
@@ -81,26 +81,29 @@ export default function ChatScreen() {
 
   // Listen for media returned from MediaPreviewScreen
   useEffect(() => {
-    const sentMedia = route.params?.sentMedia as Message[] | undefined;
-    if (sentMedia && sentMedia.length > 0) {
-      setMessages(prev => [...prev, ...sentMedia]);
-      // Clear the param so we don't process it again
-      navigation.setParams({ sentMedia: undefined });
-      
-      // Simulate delivery pipeline for media messages
-      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
-      scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
-      scheduleTimer(() => {
-        setIsOtherUserTyping(true);
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 2400);
-      scheduleTimer(() => {
-        setIsOtherUserTyping(false);
-        const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
-        setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
-      }, 4000);
-    }
-  }, [route.params, navigation, scheduleTimer]);
+    const subscription = DeviceEventEmitter.addListener('chat_media_sent', (sentMedia: Message[]) => {
+      if (sentMedia && sentMedia.length > 0) {
+        setMessages(prev => [...prev, ...sentMedia]);
+        
+        // Simulate delivery pipeline for media messages
+        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
+        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
+        scheduleTimer(() => {
+          setIsOtherUserTyping(true);
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 2400);
+        scheduleTimer(() => {
+          setIsOtherUserTyping(false);
+          const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
+          setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
+        }, 4000);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [scheduleTimer]);
 
   const filteredMessages = useMemo(
     () =>
@@ -400,6 +403,9 @@ export default function ChatScreen() {
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={listFooter}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
             removeClippedSubviews
           />
           <ChatInputArea
@@ -422,6 +428,9 @@ export default function ChatScreen() {
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={listFooter}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
             removeClippedSubviews
           />
           <ChatInputArea
