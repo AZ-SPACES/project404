@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -164,5 +165,21 @@ public class ChatController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(
                 chatService.getTotalUnreadCount(user.getId())));
+    }
+
+    /**
+     * POST /api/v1/chats/media/upload
+     * Upload chat media (image, video, voice note, or document) to Cloudinary.
+     * Returns a mediaKey (Cloudinary URL) to include in the subsequent SendMessageRequest.
+     * Rate-limited to 20 uploads per hour per user.
+     */
+    @PostMapping(value = "/media/upload", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<ChatMediaResponse>> uploadChatMedia(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file,
+            @Valid @ModelAttribute ChatMediaUploadRequest request) {
+        ChatMediaResponse response = chatService.uploadChatMedia(
+                user, file, request.getChatId(), request.getType());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 }
