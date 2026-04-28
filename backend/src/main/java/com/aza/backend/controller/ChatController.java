@@ -19,4 +19,150 @@ import java.util.UUID;
 @RequestMapping("/api/v1/chats")
 @RequiredArgsConstructor
 public class ChatController {
+
+    private final ChatService chatService;
+
+    /**
+     * GET /api/v1/chats
+     * List all conversations for the current user, most recent first.
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ChatResponse>>> listChats(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(chatService.listChats(user)));
+    }
+
+    /**
+     * POST /api/v1/chats/{userId}
+     * Get or create a 1:1 chat with another user.
+     */
+    @PostMapping("/{userId}")
+    public ResponseEntity<ApiResponse<ChatResponse>> getOrCreateChat(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID userId) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(chatService.getOrCreateChat(user, userId)));
+    }
+
+    /**
+     * GET /api/v1/chats/{chatId}
+     * Get a specific chat by ID.
+     */
+    @GetMapping("/{chatId}")
+    public ResponseEntity<ApiResponse<ChatResponse>> getChat(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(chatService.getChat(user, chatId)));
+    }
+
+    /**
+     * POST /api/v1/chats/messages
+     * Send an encrypted message to a chat.
+     */
+    @PostMapping("/messages")
+    public ResponseEntity<ApiResponse<MessageResponse>> sendMessage(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody SendMessageRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(chatService.sendMessage(user, request)));
+    }
+
+    /**
+     * GET /api/v1/chats/{chatId}/messages
+     * Get paginated message history for a chat.
+     */
+    @GetMapping("/{chatId}/messages")
+    public ResponseEntity<ApiResponse<Page<MessageResponse>>> getMessages(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                chatService.getMessages(user, chatId, page, size)));
+    }
+
+    /**
+     * PUT /api/v1/chats/{chatId}/read
+     * Mark all messages in a chat as read.
+     */
+    @PutMapping("/{chatId}/read")
+    public ResponseEntity<ApiResponse<String>> markAsRead(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId) {
+        chatService.markAsRead(user, chatId);
+        return ResponseEntity.ok(ApiResponse.success("Messages marked as read"));
+    }
+
+    /**
+     * PUT /api/v1/chats/{chatId}/delivered
+     * Mark all messages in a chat as delivered.
+     */
+    @PutMapping("/{chatId}/delivered")
+    public ResponseEntity<ApiResponse<String>> markAsDelivered(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId) {
+        chatService.markAsDelivered(user, chatId);
+        return ResponseEntity.ok(ApiResponse.success("Messages marked as delivered"));
+    }
+
+    /**
+     * POST /api/v1/chats/typing
+     * Send a typing indicator to the other participant.
+     */
+    @PostMapping("/typing")
+    public ResponseEntity<ApiResponse<String>> sendTypingIndicator(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TypingRequest request) {
+        chatService.sendTypingIndicator(user, request);
+        return ResponseEntity.ok(ApiResponse.success("Typing indicator sent"));
+    }
+
+    /**
+     * DELETE /api/v1/chats/messages/{messageId}
+     * Delete (unsend) a message.
+     */
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<ApiResponse<String>> deleteMessage(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID messageId) {
+        chatService.deleteMessage(user, messageId);
+        return ResponseEntity.ok(ApiResponse.success("Message deleted"));
+    }
+
+    /**
+     * PUT /api/v1/chats/{chatId}/mute     *  or unmute a chat.
+     */
+    @PutMapping("/{chatId}/mute")
+    public ResponseEntity<ApiResponse<String>> muteChat(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId,
+            @RequestParam boolean mute) {
+        chatService.muteChat(user, chatId, mute);
+        return ResponseEntity.ok(ApiResponse.success(
+                mute ? "Chat muted" : "Chat unmuted"));
+    }
+
+    /**
+     * PUT /api/v1/chats/{chatId}/archive     *  or unarchive a chat.
+     */
+    @PutMapping("/{chatId}/archive")
+    public ResponseEntity<ApiResponse<String>> archiveChat(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId,
+            @RequestParam boolean archive) {
+        chatService.archiveChat(user, chatId, archive);
+        return ResponseEntity.ok(ApiResponse.success(
+                archive ? "Chat archived" : "Chat unarchived"));
+    }
+
+    /**
+     * GET /api/v1/chats/unread
+     * Get total unread message count across all chats.
+     */
+    @GetMapping("/unread")
+    public ResponseEntity<ApiResponse<Long>> getTotalUnreadCount(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                chatService.getTotalUnreadCount(user.getId())));
+    }
 }
