@@ -20,9 +20,12 @@ import { ChatMessageBubble, ChatTypingIndicator } from '../../../components/chat
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
+import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
+import { ForwardModal } from '../../../components/chat/ForwardModal';
 import {
   Message,
+  Contact,
   ReplyInfo,
   MoreAction,
   MenuAnchor,
@@ -55,11 +58,21 @@ export default function ChatScreen() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
+  
+  // Call menu state
+  const [showCallMenu, setShowCallMenu] = useState(false);
+  const [callMenuAnchor, setCallMenuAnchor] = useState<MenuAnchor | null>(null);
+
   const [showAttachment, setShowAttachment] = useState(false);
   const [attachmentAnchor, setAttachmentAnchor] = useState<AttachmentAnchor | null>(null);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ReplyInfo | null>(null);
+
+  // Forward state
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Cleanup all timers on unmount
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
@@ -105,6 +118,24 @@ export default function ChatScreen() {
     };
   }, [scheduleTimer]);
 
+  // Handle injected forwarded message
+  useEffect(() => {
+    const forwardedMessage = route.params?.forwardedMessage;
+    if (forwardedMessage) {
+      setMessages(prev => {
+        // Prevent duplicate injection
+        if (prev.some(m => m.id === forwardedMessage.id)) return prev;
+        return [...prev, forwardedMessage];
+      });
+      // Clear param so it doesn't re-trigger
+      navigation.setParams({ forwardedMessage: undefined });
+      
+      // Simulate delivery pipeline
+      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'delivered' } : m)), 800);
+      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'read' } : m)), 1800);
+    }
+  }, [route.params?.forwardedMessage, navigation, scheduleTimer]);
+
   const filteredMessages = useMemo(
     () =>
       searchQuery.trim()
@@ -131,7 +162,23 @@ export default function ChatScreen() {
     setShowMoreMenu(true);
   }, []);
 
+  const handleCallPress = useCallback((anchor: MenuAnchor) => {
+    setCallMenuAnchor(anchor);
+    setShowCallMenu(true);
+  }, []);
+
   const handleCloseMoreMenu = useCallback(() => setShowMoreMenu(false), []);
+  const handleCloseCallMenu = useCallback(() => setShowCallMenu(false), []);
+
+  const handleAudioCall = useCallback(() => {
+    setShowCallMenu(false);
+    navigation.navigate('AudioCall', { name, avatar });
+  }, [navigation, name, avatar]);
+
+  const handleVideoCall = useCallback(() => {
+    setShowCallMenu(false);
+    navigation.navigate('VideoCall', { name, avatar });
+  }, [navigation, name, avatar]);
 
   const handleAddPress = useCallback((anchor: AttachmentAnchor) => {
     setAttachmentAnchor(anchor);
@@ -221,6 +268,41 @@ export default function ChatScreen() {
     setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
     setSelectedMessage(null);
   }, [selectedMessage]);
+
+  const handleOpenForward = useCallback(() => {
+    if (!selectedMessage) return;
+    setForwardMessage(selectedMessage);
+    setShowForwardModal(true);
+    setSelectedMessage(null);
+  }, [selectedMessage]);
+
+  const handleForwardAction = useCallback((contacts: Contact[], message: Message) => {
+    setShowForwardModal(false);
+    
+    if (contacts.length === 1) {
+      const contact = contacts[0];
+      if (!contact) return;
+      const newForwardedMessage: Message = {
+        ...message,
+        id: Date.now().toString(),
+        sender: 'me',
+        status: 'sent',
+        timestamp: Date.now(),
+        time: formatTime(),
+      };
+      
+      navigation.push('ChatScreen', {
+        id: contact.id,
+        name: contact.name,
+        avatar: contact.avatar,
+        online: contact.online,
+        forwardedMessage: newForwardedMessage,
+      });
+    } else {
+      setToastMessage(`Forwarded to ${contacts.length} contact${contacts.length > 1 ? 's' : ''}`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, [navigation]);
 
   // --------------------------------------------------------------------------
   // Media pickers
@@ -325,7 +407,7 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const messageActions = useMemo<MoreAction[]>(() => [
     { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
-    { icon: 'corner-up-right', label: 'Forward', onPress: handleCloseMessageModal },
+    { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
     { icon: 'copy', label: 'Copy', onPress: handleCopy },
     { icon: 'info', label: 'Info', onPress: handleCloseMessageModal },
     { icon: 'star', label: 'Star', onPress: handleCloseMessageModal },
@@ -374,6 +456,8 @@ export default function ChatScreen() {
         onProfilePress={handleProfilePress}
         isMenuOpen={showMoreMenu}
         onMorePress={handleMorePress}
+        isCallMenuOpen={showCallMenu}
+        onCallPress={handleCallPress}
       />
 
       {searchActive && (
@@ -465,6 +549,15 @@ export default function ChatScreen() {
         actions={moreMenuActions}
       />
 
+      <ChatCallModal
+        visible={showCallMenu}
+        isDark={isDark}
+        anchor={callMenuAnchor}
+        onClose={handleCloseCallMenu}
+        onAudioCall={handleAudioCall}
+        onVideoCall={handleVideoCall}
+      />
+
       {/* Message long-press modal */}
       <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={handleCloseMessageModal}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleCloseMessageModal}>
@@ -486,6 +579,24 @@ export default function ChatScreen() {
           </View>
         )}
       </Modal>
+
+      {/* Forward Modal */}
+      <ForwardModal
+        visible={showForwardModal}
+        message={forwardMessage}
+        onClose={() => setShowForwardModal(false)}
+        onForward={handleForwardAction}
+      />
+
+      {/* Toast */}
+      {toastMessage && (
+        <View style={styles.toastContainer}>
+          <View style={styles.toast}>
+            <Feather name="check-circle" size={18} color="#fff" />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -556,4 +667,31 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       paddingVertical: Platform.OS === 'ios' ? 10 : 6,
     },
     searchInput: { flex: 1, ...Typography.body, fontSize: 15, color: Colors.textPrimary },
+    toastContainer: {
+      position: 'absolute',
+      bottom: Platform.OS === 'ios' ? 100 : 80,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      zIndex: 100,
+    },
+    toast: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#111827',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.full,
+      gap: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    toastText: {
+      ...Typography.body,
+      color: '#fff',
+      fontWeight: '500',
+    },
   });
