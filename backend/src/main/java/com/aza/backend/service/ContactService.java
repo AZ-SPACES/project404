@@ -190,11 +190,13 @@ public class ContactService {
             Optional<User> azaUser = userRepository.findById(contact.getContactUserId());
             if (azaUser.isPresent()) {
                 User user = azaUser.get();
-                profileImageUrl = user.getProfileImageUrl();
-                handle = user.getHandle();
 
-                // Respect privacy — hide phone/email if user opted out
-                if (!Boolean.TRUE.equals(user.getFindMeByPhone())) {
+                // Only surface Aza identity if the user still allows discovery
+                if (Boolean.TRUE.equals(user.getFindMeByPhone())) {
+                    profileImageUrl = user.getProfileImageUrl();
+                    handle = user.getHandle();
+                } else {
+                    // User revoked discoverability — hide all identifying Aza fields
                     responsePhone = null;
                 }
                 if (!Boolean.TRUE.equals(user.getFindMeByEmail())) {

@@ -6,14 +6,21 @@ import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -27,6 +34,10 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final CloudinaryService cloudinaryService;
     private final StringRedisTemplate redisTemplate;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+    private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_CONTENT_TYPES = List.of("image/jpeg", "image/png");
@@ -170,10 +181,23 @@ public class UserService {
         // Invalidate all refresh tokens (logout everywhere)
         refreshTokenRepository.deleteAllByUserId(user.getId());
 
-        // Blacklist the current access token in Redis for 15 minutes
+        // Blacklist the current access token for its remaining validity
         if (accessToken != null && accessToken.startsWith("Bearer ")) {
             String token = accessToken.substring(7);
-            redisTemplate.opsForValue().set("blacklist:" + token, "true", 15, TimeUnit.MINUTES);
+            Duration remaining = jwtUtil.getRemainingValidity(token);
+            if (!remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + hashToken(token), "blacklisted", remaining);
+            }
+        }
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
         }
     }
 
@@ -199,9 +223,46 @@ public class UserService {
         refreshTokenRepository.delete(token);
     }
 
+    // ==================== PASSCODE (PIN) ====================
+
+    @Transactional
+    public void setPasscode(User user, String passcode) {
+        user.setPasscodeHash(passwordEncoder.encode(passcode));
+        userRepository.save(user);
+    }
+
+    public void verifyPasscode(User user, String passcode) {
+        if (user.getPasscodeHash() == null) {
+            throw new RuntimeException("Passcode not set. Please set a passcode first.");
+        }
+
+        String attemptsKey = "pin:attempts:" + user.getId();
+        String attemptsStr = redisTemplate.opsForValue().get(attemptsKey);
+        int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
+
+        if (attempts >= 5) {
+            throw new RuntimeException("Too many failed attempts. Try again in 5 minutes.");
+        }
+
+        if (!passwordEncoder.matches(passcode, user.getPasscodeHash())) {
+            redisTemplate.opsForValue().set(attemptsKey,
+                    String.valueOf(attempts + 1), 5, TimeUnit.MINUTES);
+            throw new RuntimeException("Invalid passcode.");
+        }
+
+        redisTemplate.delete(attemptsKey);
+    }
+
     public void applyDateOfBirthAndEmployment(User user, String dob, String employmentStatus) {
         if (dob != null && !dob.isBlank()) {
-            user.setDateOfBirth(LocalDate.parse(dob));
+            LocalDate birthDate = LocalDate.parse(dob);
+            if (birthDate.isAfter(LocalDate.now().minusYears(18))) {
+                throw new RuntimeException("You must be at least 18 years old to register.");
+            }
+            if (birthDate.isBefore(LocalDate.now().minusYears(120))) {
+                throw new RuntimeException("Invalid date of birth.");
+            }
+            user.setDateOfBirth(birthDate);
         }
         if (employmentStatus != null && !employmentStatus.isBlank()) {
             user.setEmploymentStatus(
