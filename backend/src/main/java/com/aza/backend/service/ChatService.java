@@ -8,13 +8,18 @@ import com.aza.backend.entity.User;
 import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.util.CloudinaryService;
+import com.aza.backend.util.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -29,6 +34,18 @@ public class ChatService {
     private final WebSocketPublisher webSocketPublisher;
     private final PresenceService presenceService;
     private final NotificationService notificationService;
+    private final CloudinaryService cloudinaryService;
+    private final RateLimitService rateLimitService;
+
+    private static final long   MAX_MEDIA_SIZE   = 25L * 1024 * 1024; // 25 MB
+    private static final List<String> ALLOWED_MEDIA_TYPES = List.of(
+            "image/jpeg", "image/png", "image/gif",
+            "video/mp4",
+            "audio/mpeg", "audio/mp4", "audio/aac",
+            "application/pdf"
+    );
+    // Content-type-only fallback — no reliable magic bytes for these
+    private static final Set<String> MAGIC_BYTES_FALLBACK = Set.of("audio/aac");
 
     // ==================== LIST CHATS ====================
 
@@ -270,6 +287,22 @@ public class ChatService {
         return chatMessageRepository.countTotalUnread(userId);
     }
 
+    // ==================== MEDIA UPLOAD ====================
+
+    public ChatMediaResponse uploadChatMedia(User user, MultipartFile file, UUID chatId, String type) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        assertParticipant(chat, user.getId());
+
+        rateLimitService.enforceRateLimit("chat_media:" + user.getId(), 20, Duration.ofHours(1));
+
+        validateMediaFile(file);
+
+        String url = cloudinaryService.uploadChatMedia(file, chatId.toString());
+        log.info("Chat media uploaded by user {} to chat {}: type={}", user.getId(), chatId, type);
+        return new ChatMediaResponse(url, type.toUpperCase(), chatId.toString());
+    }
+
     // ==================== HELPERS ====================
 
     private void assertParticipant(Chat chat, UUID userId) {
@@ -315,6 +348,57 @@ public class ChatService {
                 .isMuted(isMuted)
                 .isArchived(isArchived)
                 .build();
+    }
+
+    private void validateMediaFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("File is required");
+        }
+        if (file.getSize() > MAX_MEDIA_SIZE) {
+            throw new RuntimeException("File exceeds the 25 MB limit");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MEDIA_TYPES.contains(contentType)) {
+            throw new RuntimeException("Unsupported file type. Allowed: JPEG, PNG, GIF, MP4, MP3, AAC, audio/mp4, PDF");
+        }
+        // Skip magic-byte check for types where it is unreliable
+        if (MAGIC_BYTES_FALLBACK.contains(contentType)) return;
+
+        try {
+            byte[] bytes = file.getBytes();
+            if (!isValidMagicBytes(bytes, contentType)) {
+                throw new RuntimeException("File content does not match its declared type");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read uploaded file");
+        }
+    }
+
+    private boolean isValidMagicBytes(byte[] b, String contentType) {
+        if (b.length < 4) return false;
+        return switch (contentType) {
+            case "image/jpeg" ->
+                    (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF;
+            case "image/png" ->
+                    (b[0] & 0xFF) == 0x89 && (b[1] & 0xFF) == 0x50
+                    && (b[2] & 0xFF) == 0x4E && (b[3] & 0xFF) == 0x47;
+            case "image/gif" ->
+                    // GIF87a or GIF89a — first 3 bytes are "GIF"
+                    (b[0] & 0xFF) == 0x47 && (b[1] & 0xFF) == 0x49 && (b[2] & 0xFF) == 0x46;
+            case "application/pdf" ->
+                    (b[0] & 0xFF) == 0x25 && (b[1] & 0xFF) == 0x50
+                    && (b[2] & 0xFF) == 0x44 && (b[3] & 0xFF) == 0x46;
+            case "video/mp4", "audio/mp4" ->
+                    // ISO base media file: 'ftyp' box starts at byte 4
+                    b.length >= 8
+                    && (b[4] & 0xFF) == 0x66 && (b[5] & 0xFF) == 0x74
+                    && (b[6] & 0xFF) == 0x79 && (b[7] & 0xFF) == 0x70;
+            case "audio/mpeg" ->
+                    // ID3 tag header or raw MPEG sync word (FF FB / FF FA / FF F3 / FF F2)
+                    ((b[0] & 0xFF) == 0x49 && (b[1] & 0xFF) == 0x44 && (b[2] & 0xFF) == 0x33)
+                    || ((b[0] & 0xFF) == 0xFF && (b[1] & 0xE0) == 0xE0);
+            default -> false;
+        };
     }
 
     private MessageResponse toMessageResponse(ChatMessage message) {
