@@ -20,6 +20,7 @@ import { ChatMessageBubble, ChatTypingIndicator } from '../../../components/chat
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
+import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
 import { ForwardModal } from '../../../components/chat/ForwardModal';
 import {
@@ -57,6 +58,11 @@ export default function ChatScreen() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
+  
+  // Call menu state
+  const [showCallMenu, setShowCallMenu] = useState(false);
+  const [callMenuAnchor, setCallMenuAnchor] = useState<MenuAnchor | null>(null);
+
   const [showAttachment, setShowAttachment] = useState(false);
   const [attachmentAnchor, setAttachmentAnchor] = useState<AttachmentAnchor | null>(null);
   const [searchActive, setSearchActive] = useState(false);
@@ -112,6 +118,24 @@ export default function ChatScreen() {
     };
   }, [scheduleTimer]);
 
+  // Handle injected forwarded message
+  useEffect(() => {
+    const forwardedMessage = route.params?.forwardedMessage;
+    if (forwardedMessage) {
+      setMessages(prev => {
+        // Prevent duplicate injection
+        if (prev.some(m => m.id === forwardedMessage.id)) return prev;
+        return [...prev, forwardedMessage];
+      });
+      // Clear param so it doesn't re-trigger
+      navigation.setParams({ forwardedMessage: undefined });
+      
+      // Simulate delivery pipeline
+      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'delivered' } : m)), 800);
+      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'read' } : m)), 1800);
+    }
+  }, [route.params?.forwardedMessage, navigation, scheduleTimer]);
+
   const filteredMessages = useMemo(
     () =>
       searchQuery.trim()
@@ -138,7 +162,23 @@ export default function ChatScreen() {
     setShowMoreMenu(true);
   }, []);
 
+  const handleCallPress = useCallback((anchor: MenuAnchor) => {
+    setCallMenuAnchor(anchor);
+    setShowCallMenu(true);
+  }, []);
+
   const handleCloseMoreMenu = useCallback(() => setShowMoreMenu(false), []);
+  const handleCloseCallMenu = useCallback(() => setShowCallMenu(false), []);
+
+  const handleAudioCall = useCallback(() => {
+    setShowCallMenu(false);
+    navigation.navigate('AudioCall', { name, avatar });
+  }, [navigation, name, avatar]);
+
+  const handleVideoCall = useCallback(() => {
+    setShowCallMenu(false);
+    navigation.navigate('VideoCall', { name, avatar });
+  }, [navigation, name, avatar]);
 
   const handleAddPress = useCallback((anchor: AttachmentAnchor) => {
     setAttachmentAnchor(anchor);
@@ -238,9 +278,31 @@ export default function ChatScreen() {
 
   const handleForwardAction = useCallback((contacts: Contact[], message: Message) => {
     setShowForwardModal(false);
-    setToastMessage(`Forwarded to ${contacts.length} contact${contacts.length > 1 ? 's' : ''}`);
-    setTimeout(() => setToastMessage(null), 3000);
-  }, []);
+    
+    if (contacts.length === 1) {
+      const contact = contacts[0];
+      if (!contact) return;
+      const newForwardedMessage: Message = {
+        ...message,
+        id: Date.now().toString(),
+        sender: 'me',
+        status: 'sent',
+        timestamp: Date.now(),
+        time: formatTime(),
+      };
+      
+      navigation.push('ChatScreen', {
+        id: contact.id,
+        name: contact.name,
+        avatar: contact.avatar,
+        online: contact.online,
+        forwardedMessage: newForwardedMessage,
+      });
+    } else {
+      setToastMessage(`Forwarded to ${contacts.length} contact${contacts.length > 1 ? 's' : ''}`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, [navigation]);
 
   // --------------------------------------------------------------------------
   // Media pickers
@@ -394,6 +456,8 @@ export default function ChatScreen() {
         onProfilePress={handleProfilePress}
         isMenuOpen={showMoreMenu}
         onMorePress={handleMorePress}
+        isCallMenuOpen={showCallMenu}
+        onCallPress={handleCallPress}
       />
 
       {searchActive && (
@@ -483,6 +547,15 @@ export default function ChatScreen() {
         anchor={menuAnchor}
         onClose={handleCloseMoreMenu}
         actions={moreMenuActions}
+      />
+
+      <ChatCallModal
+        visible={showCallMenu}
+        isDark={isDark}
+        anchor={callMenuAnchor}
+        onClose={handleCloseCallMenu}
+        onAudioCall={handleAudioCall}
+        onVideoCall={handleVideoCall}
       />
 
       {/* Message long-press modal */}
