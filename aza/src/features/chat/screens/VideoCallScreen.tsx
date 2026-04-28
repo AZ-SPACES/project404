@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,11 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { RootStackParamList } from '../../../navigation/types';
 import { Typography } from '../../../theme';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const PIP_WIDTH = 100;
 const PIP_HEIGHT = 140;
 const THEME_GREEN = '#174717';
@@ -30,9 +31,19 @@ export default function VideoCallScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [isCameraFlipped, setIsCameraFlipped] = useState(false);
+  const [facing, setFacing] = useState<'front' | 'back'>('front');
   const [duration, setDuration] = useState(0);
 
+  const [permission, requestPermission] = useCameraPermissions();
+
+  // Request camera permission on mount
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
+
+  // Duration timer
   useEffect(() => {
     const interval = setInterval(() => setDuration(prev => prev + 1), 1000);
     return () => clearInterval(interval);
@@ -43,6 +54,12 @@ export default function VideoCallScreen() {
     const sec = (s % 60).toString().padStart(2, '0');
     return `${m}:${sec}`;
   };
+
+  const toggleCameraFacing = () => {
+    setFacing(prev => (prev === 'front' ? 'back' : 'front'));
+  };
+
+  const cameraReady = permission?.granted && !isVideoOff;
 
   return (
     <View style={styles.container}>
@@ -74,21 +91,25 @@ export default function VideoCallScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* PiP self view */}
+      {/* PiP self view — live camera */}
       <View style={[styles.pipContainer, { bottom: 140 + Math.max(insets.bottom, 16) }]}>
-        {isVideoOff ? (
-          <View style={styles.pipPlaceholder}>
-            <Feather name="video-off" size={22} color="rgba(255,255,255,0.5)" />
-          </View>
-        ) : (
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/150?u=me' }}
-            style={[styles.pipImage, isCameraFlipped && { transform: [{ scaleX: -1 }] }]}
+        {cameraReady ? (
+          <CameraView
+            style={styles.pipCamera}
+            facing={facing}
           />
+        ) : (
+          <View style={styles.pipPlaceholder}>
+            <Feather
+              name={isVideoOff ? 'video-off' : 'camera-off'}
+              size={22}
+              color="rgba(255,255,255,0.5)"
+            />
+          </View>
         )}
         <TouchableOpacity
           style={styles.pipFlipButton}
-          onPress={() => setIsCameraFlipped(prev => !prev)}
+          onPress={toggleCameraFacing}
           activeOpacity={0.7}
         >
           <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
@@ -205,10 +226,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  pipImage: {
+  pipCamera: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   pipPlaceholder: {
     flex: 1,
