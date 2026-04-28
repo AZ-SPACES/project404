@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 type Props = { isOpen: boolean; onClose: () => void };
 
 const devLinks = [
-  { label: 'API Reference',    desc: 'REST & WebSocket endpoints',       href: '#', shape: '1' },
+  { label: 'API Reference',    desc: 'REST & WebSocket endpoints',       href: '/developers/api-explorer', shape: '1' },
   { label: 'SDKs & Libraries', desc: 'iOS, Android, Web & Node.js',      href: '#', shape: '2' },
   { label: 'Documentation',    desc: 'Guides, tutorials & quick starts', href: '#', shape: '3' },
   { label: 'Changelog',        desc: 'Latest updates & deprecations',    href: '#', shape: '4' },
@@ -253,16 +253,21 @@ export function DeveloperMenu({ isOpen, onClose }: Props) {
                   </a>
                 </div>
 
-                {/* Login */}
-                <div data-dev-fade>
-                  <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.38)', marginBottom: '10px' }}>
-                    Already have an account?
-                  </p>
+                {/* Login / Signup */}
+                <div data-dev-fade style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <a
-                    href="#"
+                    href="/developers/login"
+                    onClick={onClose}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '11px 20px', borderRadius: '10px', background: '#B7EE7A', color: '#174717', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}
                   >
                     Log in to Dashboard
+                  </a>
+                  <a
+                    href="/developers/signup"
+                    onClick={onClose}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '11px 20px', borderRadius: '10px', background: 'rgba(183,238,122,0.08)', border: '1px solid rgba(183,238,122,0.2)', color: '#B7EE7A', fontWeight: 600, fontSize: '0.88rem', textDecoration: 'none' }}
+                  >
+                    Create an account
                   </a>
                 </div>
 
