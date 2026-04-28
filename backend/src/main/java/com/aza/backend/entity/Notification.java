@@ -44,6 +44,7 @@ public class Notification {
 
     public enum NotificationType {
         NEW_MESSAGE,
+        INCOMING_CALL,
         MISSED_CALL,
         MONEY_RECEIVED,
         MONEY_REQUESTED,

@@ -166,11 +166,19 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Two-factor authentication disabled"));
     }
 
+    private static final java.util.regex.Pattern IP_PATTERN =
+            java.util.regex.Pattern.compile(
+                    "^(([0-9]{1,3}\\.){3}[0-9]{1,3}|[0-9a-fA-F:]{2,39})$");
+
     private String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null || xfHeader.isEmpty()) {
-            return request.getRemoteAddr();
+        if (xfHeader != null && !xfHeader.isBlank()) {
+            // Take the leftmost IP — the original client address
+            String candidate = xfHeader.split(",")[0].trim();
+            if (IP_PATTERN.matcher(candidate).matches()) {
+                return candidate;
+            }
         }
-        return xfHeader.split(",")[0].trim();
+        return request.getRemoteAddr();
     }
 }
