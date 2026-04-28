@@ -9,7 +9,7 @@ import {
   ChatWithUsScreen,
   HelpAndSupportScreen
 } from '../features/customercare';
-import { ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen } from '../features/chat';
+import { ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, AudioCallScreen, VideoCallScreen } from '../features/chat';
 import { ContactsProfileScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
 import {
@@ -123,6 +123,8 @@ export default function AppNavigator() {
       <Stack.Screen name="MediaPreview" component={MediaPreviewScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="ContactsProfile" component={ContactsProfileScreen} />
       <Stack.Screen name="ChatInfoScreen" component={ChatInfoScreen} />
+      <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen
         name="MiniApp"
         component={MiniAppPlayerScreen}
