@@ -30,6 +30,13 @@ public class WebSocketPublisher {
     }
 
     /**
+     * Broadcast an event to all participants subscribed to a chat room topic.
+     */
+    public void publishToChatRoom(String chatId, WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.CHAT_CHANNEL_PREFIX + chatId, type, payload);
+    }
+
+    /**
      * Broadcast a presence event (USER_ONLINE / USER_OFFLINE) to all connected clients.
      */
     public void publishPresence(WebSocketEventType type, Object payload) {
