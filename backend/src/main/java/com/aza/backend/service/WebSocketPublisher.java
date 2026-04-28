@@ -37,6 +37,14 @@ public class WebSocketPublisher {
     }
 
     /**
+     * Send a call signalling event to a specific user via Redis pub/sub.
+     * The RedisMessageSubscriber forwards it to the user's /queue/calls.
+     */
+    public void publishCallEvent(UUID userId, WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.CALL_CHANNEL_PREFIX + userId, type, payload);
+    }
+
+    /**
      * Broadcast a presence event (USER_ONLINE / USER_OFFLINE) to all connected clients.
      */
     public void publishPresence(WebSocketEventType type, Object payload) {

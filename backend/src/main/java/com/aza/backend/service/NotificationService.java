@@ -117,6 +117,20 @@ public class NotificationService {
                 data);
     }
 
+    public void sendIncomingCallNotification(UUID recipientId, String callerName,
+                                              String callId, boolean isVideo) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("callId", callId);
+        data.put("isVideo", isVideo);
+
+        sendNotification(
+                recipientId,
+                Notification.NotificationType.INCOMING_CALL,
+                (isVideo ? "Incoming video call" : "Incoming call"),
+                callerName + " is calling you",
+                data);
+    }
+
     public void sendMissedCallNotification(UUID recipientId, String callerName,
                                            String callId, boolean isVideo) {
         Map<String, Object> data = new HashMap<>();
