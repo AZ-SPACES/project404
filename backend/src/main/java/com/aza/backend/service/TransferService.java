@@ -35,6 +35,7 @@ public class TransferService {
     private final UserService userService;
     private final RateLimitService rateLimitService;
     private final WebSocketPublisher webSocketPublisher;
+    private final NotificationService notificationService;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -200,6 +201,12 @@ public class TransferService {
                         "from", sender.getFirstName() + " " + sender.getLastName(),
                         "note", transaction.getNote() != null ? transaction.getNote() : ""
                 ));
+
+        notificationService.sendMoneyReceivedNotification(
+                transaction.getRecipientId(),
+                sender.getFirstName() + " " + sender.getLastName(),
+                transaction.getAmount().toString(),
+                transaction.getId().toString());
 
         return buildTransferResponse(transaction, sender, recipient);
     }

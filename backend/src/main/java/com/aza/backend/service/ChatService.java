@@ -28,6 +28,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final WebSocketPublisher webSocketPublisher;
     private final PresenceService presenceService;
+    private final NotificationService notificationService;
 
     // ==================== LIST CHATS ====================
 
@@ -108,6 +109,13 @@ public class ChatService {
         chatRepository.save(chat);
 
         MessageResponse response = toMessageResponse(message);
+
+        // Notify recipient if they're not the sender
+        UUID recipientId = getOtherParticipantId(chat, sender.getId());
+        notificationService.sendNewMessageNotification(
+                recipientId,
+                sender.getFirstName() + " " + sender.getLastName(),
+                chat.getId().toString());
 
         // Publish to the chat room via Redis Pub/Sub
         // Both participants receive this in real time
