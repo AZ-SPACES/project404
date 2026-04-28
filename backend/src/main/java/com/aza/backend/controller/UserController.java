@@ -5,7 +5,9 @@ import com.aza.backend.dto.user.DeactivateRequest;
 import com.aza.backend.dto.user.PrivacySettingsRequest;
 import com.aza.backend.dto.user.UpdateProfileRequest;
 import com.aza.backend.entity.User;
+import com.aza.backend.service.PresenceService;
 import com.aza.backend.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +24,8 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final PresenceService presenceService;
+    private final ObjectMapper objectMapper;
 
     // ==================== CURRENT USER ====================
 
@@ -58,6 +62,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfileByHandle(handle)));
     }
 
+    // ==================== ONLINE STATUS ====================
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<String>> getOnlineStatus(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(presenceService.getStatus(id)));
+    }
+
     // ==================== PRIVACY ====================
 
     @PutMapping("/me/privacy")
@@ -74,14 +85,13 @@ public class UserController {
     public ResponseEntity<ApiResponse<Object>> updateNotifications(
             @AuthenticationPrincipal User user,
             @RequestBody Map<String, Object> preferences) {
-        // Store the raw JSON object as a string
-        String json = new com.fasterxml.jackson.databind.ObjectMapper()
-                .valueToTree(preferences).toString();
-                
+        String json = objectMapper.valueToTree(preferences).toString();
+
         if (json.length() > 2048) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("BAD_REQUEST", "Notification preferences too large (max 2048 chars)"));
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("BAD_REQUEST", "Notification preferences too large (max 2048 chars)"));
         }
-        
+
         userService.updateNotificationPreferences(user, json);
         return ResponseEntity.ok(ApiResponse.success("Notification preferences updated"));
     }

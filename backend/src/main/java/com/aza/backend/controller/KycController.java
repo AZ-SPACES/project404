@@ -4,6 +4,7 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.kyc.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.KycService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +28,10 @@ public class KycController {
 
     @PostMapping("/consent")
     public ResponseEntity<ApiResponse<KycStatusResponse>> recordConsent(
-            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.success(kycService.recordConsent(user)));
+            @AuthenticationPrincipal User user,
+            HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success(kycService.recordConsent(user, ip)));
     }
 
     @PostMapping("/funds-source")
@@ -91,5 +94,13 @@ public class KycController {
     public ResponseEntity<ApiResponse<KycStatusResponse>> submitKyc(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(kycService.submitKyc(user)));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }
