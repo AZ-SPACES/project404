@@ -38,8 +38,13 @@ public class SendMessageRequest {
     private String type = "TEXT";
 
     /**
-     * S3 key for encrypted media attachment.
+     * Cloudinary URL for encrypted media attachment.
      * Only set for IMAGE, VIDEO, DOCUMENT, VOICE_NOTE messages.
      */
     private String mediaKey;
+
+    /**
+     * If true, the mediaKey is wiped server-side after the recipient views the media once.
+     */
+    private boolean viewOnce = false;
 }

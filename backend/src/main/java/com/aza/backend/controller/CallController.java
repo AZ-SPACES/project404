@@ -152,4 +152,72 @@ public class CallController {
         return ResponseEntity.ok(ApiResponse.success(
                 callService.getCallHistory(user.getId(), page, size)));
     }
+
+    // ── Video upgrade ──────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/calls/{callId}/upgrade
+     * Request to upgrade an active VOICE call to VIDEO.
+     * Sends CALL_UPGRADE_REQUEST to the other participant.
+     */
+    @PostMapping("/{callId}/upgrade")
+    public ResponseEntity<ApiResponse<CallResponse>> requestUpgrade(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID callId) {
+        return ResponseEntity.ok(ApiResponse.success(callService.requestUpgrade(user, callId)));
+    }
+
+    /**
+     * POST /api/v1/calls/{callId}/upgrade/accept
+     * Accept a pending video upgrade request.
+     * Both sides receive CALL_UPGRADE_ACCEPTED and must renegotiate WebRTC.
+     */
+    @PostMapping("/{callId}/upgrade/accept")
+    public ResponseEntity<ApiResponse<CallResponse>> acceptUpgrade(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID callId) {
+        return ResponseEntity.ok(ApiResponse.success(callService.acceptUpgrade(user, callId)));
+    }
+
+    /**
+     * POST /api/v1/calls/{callId}/upgrade/decline
+     * Decline a pending video upgrade request.
+     * Sends CALL_UPGRADE_DECLINED to the requester only.
+     */
+    @PostMapping("/{callId}/upgrade/decline")
+    public ResponseEntity<ApiResponse<String>> declineUpgrade(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID callId) {
+        callService.declineUpgrade(user, callId);
+        return ResponseEntity.ok(ApiResponse.success("Upgrade request declined"));
+    }
+
+    // ── Reconnection ───────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/calls/{callId}/reconnect
+     * Signal an ICE failure — transitions call to RECONNECTING.
+     * Both participants receive CALL_RECONNECTING and must perform an ICE restart
+     * by exchanging a fresh SDP offer/answer via the existing /sdp-offer and /sdp-answer endpoints.
+     */
+    @PostMapping("/{callId}/reconnect")
+    public ResponseEntity<ApiResponse<String>> reconnectCall(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID callId) {
+        callService.reconnectCall(user, callId);
+        return ResponseEntity.ok(ApiResponse.success("Reconnecting"));
+    }
+
+    /**
+     * POST /api/v1/calls/{callId}/reconnected
+     * Confirm that ICE restart succeeded — transitions call back to ACTIVE.
+     * Both participants receive CALL_RECONNECTED.
+     */
+    @PostMapping("/{callId}/reconnected")
+    public ResponseEntity<ApiResponse<String>> confirmReconnected(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID callId) {
+        callService.confirmReconnected(user, callId);
+        return ResponseEntity.ok(ApiResponse.success("Call reconnected"));
+    }
 }

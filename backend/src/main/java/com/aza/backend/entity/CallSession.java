@@ -42,17 +42,24 @@ public class CallSession {
     // Duration in seconds (set when call ends)
     private Integer durationSeconds;
 
+    // Video upgrade — set when one participant requests to switch VOICE → VIDEO
+    @Builder.Default
+    private Boolean upgradeRequested = false;
+
+    private UUID upgradeRequestedBy; // userId who initiated the upgrade
+
     public enum CallType {
         VOICE, VIDEO
     }
 
     public enum CallStatus {
-        INITIATING,  // caller sent invite, waiting for callee
-        RINGING,     // callee received the invite
-        ACTIVE,      // call accepted, WebRTC connected
-        ENDED,       // call ended normally
-        DECLINED,    // callee declined
-        MISSED,      // callee didn't answer in 30s
-        FAILED       // technical failure
+        INITIATING,    // caller sent invite, waiting for callee
+        RINGING,       // callee received the invite
+        ACTIVE,        // call accepted, WebRTC connected
+        RECONNECTING,  // ICE failure detected; both sides attempting ICE restart
+        ENDED,         // call ended normally
+        DECLINED,      // callee declined
+        MISSED,        // callee didn't answer in 30s
+        FAILED         // technical failure
     }
 }

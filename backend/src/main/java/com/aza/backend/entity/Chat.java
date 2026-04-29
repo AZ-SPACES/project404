@@ -25,6 +25,9 @@ public class Chat {
 
     private LocalDateTime lastMessageAt;
 
+    /** Seconds after which new messages auto-delete. Null = disabled. */
+    private Integer disappearingMessagesTtl;
+
     @Builder.Default
     private Boolean isMutedByOne = false;
 
