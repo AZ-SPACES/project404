@@ -10,22 +10,11 @@ const COLUMN_COUNT = 3;
 const ITEM_SIZE = width / COLUMN_COUNT;
 
 // Mock data
-const MOCK_MEDIA = [
-  { id: '1', uri: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&h=300&fit=crop' },
-  { id: '2', uri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop' },
-  { id: '3', uri: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&h=300&fit=crop' },
-  { id: '4', uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop' },
-];
+const MOCK_MEDIA: any[] = [];
 
-const MOCK_DOCS = [
-  { id: '1', name: 'Project_Proposal.pdf', size: '2.4 MB', date: 'Oct 24' },
-  { id: '2', name: 'Q3_Financials.xlsx', size: '1.1 MB', date: 'Oct 21' },
-];
+const MOCK_DOCS: any[] = [];
 
-const MOCK_LINKS = [
-  { id: '1', url: 'https://github.com', title: 'GitHub: Where the world builds software', domain: 'github.com' },
-  { id: '2', url: 'https://reactnative.dev', title: 'React Native', domain: 'reactnative.dev' },
-];
+const MOCK_LINKS: any[] = [];
 
 export default function SharedMediaScreen() {
   const { colors: Colors } = useAppTheme();
