@@ -26,6 +26,9 @@ public class PaymentRequest {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Version
+    private Long version;
+
     @Column(name = "chat_id", nullable = false)
     private UUID chatId;
 

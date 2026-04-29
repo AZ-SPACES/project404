@@ -8,10 +8,13 @@ import com.aza.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -20,6 +23,9 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+
+    @Value("${app.trusted-proxy-ips:}")
+    private String trustedProxyIps;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthResponse>> signup(
@@ -60,6 +66,8 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    private static final Set<String> VALID_OTP_PURPOSES = Set.of("login", "signup", "password_reset");
+
     /**
      * Verifies an OTP code. For login purpose, returns either:
      * - AuthResponse (full JWT) if 2FA is not enabled
@@ -68,13 +76,19 @@ public class AuthController {
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<Object>> verifyOtp(
             @Valid @RequestBody OtpVerifyRequest request, HttpServletRequest httpRequest) {
-        if ("login".equalsIgnoreCase(request.getPurpose())) {
+        String purpose = request.getPurpose() != null ? request.getPurpose().toLowerCase() : "";
+        if (!VALID_OTP_PURPOSES.contains(purpose)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("BAD_REQUEST", "Invalid OTP purpose"));
+        }
+
+        if ("login".equals(purpose)) {
             String ipAddress = getClientIp(httpRequest);
             Object response = authService.loginWithOtp(request, ipAddress);
             return ResponseEntity.ok(ApiResponse.success(response));
         }
 
-        authService.verifyOtp(request.getIdentifier(), request.getCode(), request.getPurpose());
+        authService.verifyOtp(request.getIdentifier(), request.getCode(), purpose);
         return ResponseEntity.ok(ApiResponse.success("OTP verified successfully"));
     }
 
@@ -197,14 +211,19 @@ public class AuthController {
                     "^(([0-9]{1,3}\\.){3}[0-9]{1,3}|[0-9a-fA-F:]{2,39})$");
 
     private String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isBlank()) {
-            // Take the leftmost IP — the original client address
-            String candidate = xfHeader.split(",")[0].trim();
-            if (IP_PATTERN.matcher(candidate).matches()) {
-                return candidate;
+        String remoteAddr = request.getRemoteAddr();
+        if (trustedProxyIps != null && !trustedProxyIps.isBlank()) {
+            Set<String> trusted = Set.of(trustedProxyIps.split(","));
+            if (trusted.contains(remoteAddr)) {
+                String xfHeader = request.getHeader("X-Forwarded-For");
+                if (xfHeader != null && !xfHeader.isBlank()) {
+                    String candidate = xfHeader.split(",")[0].trim();
+                    if (IP_PATTERN.matcher(candidate).matches()) {
+                        return candidate;
+                    }
+                }
             }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 }

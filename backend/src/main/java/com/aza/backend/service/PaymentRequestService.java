@@ -19,12 +19,15 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,6 +47,14 @@ public class PaymentRequestService {
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
     private final UserService userService;
+
+    private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
+
+    @Value("${transfer.max-single-amount:10000}")
+    private BigDecimal maxSingleAmount;
+
+    @Value("${transfer.max-daily-amount:50000}")
+    private BigDecimal maxDailyAmount;
 
     // ==================== SEND PAYMENT REQUEST ====================
 
@@ -65,6 +76,10 @@ public class PaymentRequestService {
 
         if (blockedUserRepository.existsBlockBetween(requester.getId(), payerId)) {
             throw new RuntimeException("Cannot send payment request to this user");
+        }
+
+        if (req.getAmount().compareTo(maxSingleAmount) > 0) {
+            throw new RuntimeException("Amount exceeds maximum payment request limit of GHS " + maxSingleAmount);
         }
 
         LocalDateTime expiresAt = req.getExpiresInHours() != null
@@ -106,11 +121,9 @@ public class PaymentRequestService {
 
         PaymentRequestResponse response = toResponse(paymentRequest);
 
-        // Publish real-time event to the chat room
         webSocketPublisher.publishToChatRoom(
-                req.getChatId().toString(),
-                WebSocketEventType.PAYMENT_REQUEST_RECEIVED,
-                response);
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.PAYMENT_REQUEST_RECEIVED, response);
 
         // FCM push to payer (respects silent hours with amount threshold)
         User requesterUser = requester;
@@ -151,6 +164,16 @@ public class PaymentRequestService {
 
         userService.verifyPasscode(payer, passcode);
 
+        // Enforce daily transfer limit — same cap applies regardless of transfer path
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        BigDecimal todayTotal = transactionRepository.getTotalSentToday(
+                payer.getId(), startOfDay, endOfDay, LocalDateTime.now());
+        if (todayTotal.add(pr.getAmount()).compareTo(maxDailyAmount) > 0) {
+            BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
+            throw new RuntimeException("Payment would exceed your daily limit. Remaining: GHS " + remaining);
+        }
+
         // Pessimistic lock both wallets
         Wallet payerWallet = walletRepository.findByUserIdForUpdate(payer.getId())
                 .orElseThrow(() -> new RuntimeException("Payer wallet not found"));
@@ -185,10 +208,11 @@ public class PaymentRequestService {
 
         PaymentRequestResponse response = toResponse(pr);
 
+        Chat approvedChat = chatRepository.findById(pr.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
         webSocketPublisher.publishToChatRoom(
-                pr.getChatId().toString(),
-                WebSocketEventType.PAYMENT_REQUEST_PAID,
-                response);
+                approvedChat.getParticipantOneId(), approvedChat.getParticipantTwoId(),
+                WebSocketEventType.PAYMENT_REQUEST_PAID, response);
 
         User requesterUser = userRepository.findById(pr.getRequesterId()).orElse(null);
         String payerName = payer.getFirstName() + " " + payer.getLastName();
@@ -222,10 +246,11 @@ public class PaymentRequestService {
 
         PaymentRequestResponse response = toResponse(pr);
 
+        Chat declinedChat = chatRepository.findById(pr.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
         webSocketPublisher.publishToChatRoom(
-                pr.getChatId().toString(),
-                WebSocketEventType.PAYMENT_REQUEST_DECLINED,
-                response);
+                declinedChat.getParticipantOneId(), declinedChat.getParticipantTwoId(),
+                WebSocketEventType.PAYMENT_REQUEST_DECLINED, response);
 
         String payerName = payer.getFirstName() + " " + payer.getLastName();
         notificationService.sendPaymentRequestDeclinedNotification(
@@ -255,10 +280,11 @@ public class PaymentRequestService {
 
         PaymentRequestResponse response = toResponse(pr);
 
+        Chat cancelledChat = chatRepository.findById(pr.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
         webSocketPublisher.publishToChatRoom(
-                pr.getChatId().toString(),
-                WebSocketEventType.PAYMENT_REQUEST_CANCELLED,
-                response);
+                cancelledChat.getParticipantOneId(), cancelledChat.getParticipantTwoId(),
+                WebSocketEventType.PAYMENT_REQUEST_CANCELLED, response);
 
         String requesterName = requester.getFirstName() + " " + requester.getLastName();
         notificationService.sendPaymentRequestCancelledNotification(
@@ -281,10 +307,10 @@ public class PaymentRequestService {
             paymentRequestRepository.save(pr);
 
             PaymentRequestResponse response = toResponse(pr);
-            webSocketPublisher.publishToChatRoom(
-                    pr.getChatId().toString(),
-                    WebSocketEventType.PAYMENT_REQUEST_EXPIRED,
-                    response);
+            chatRepository.findById(pr.getChatId()).ifPresent(chat ->
+                webSocketPublisher.publishToChatRoom(
+                        chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                        WebSocketEventType.PAYMENT_REQUEST_EXPIRED, response));
 
             notificationService.sendPaymentRequestExpiredNotification(
                     pr.getRequesterId(), pr.getAmount(), pr.getId().toString());
