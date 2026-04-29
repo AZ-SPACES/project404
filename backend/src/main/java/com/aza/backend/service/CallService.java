@@ -33,7 +33,7 @@ public class CallService {
     private final PresenceService presenceService;
     private final com.aza.backend.repository.BlockedUserRepository blockedUserRepository;
 
-    @Value("${turn.secret:aza-turn-secret-change-in-production}")
+    @Value("${turn.secret}")
     private String turnSecret;
 
     @Value("${turn.host:turn.azapay.app}")

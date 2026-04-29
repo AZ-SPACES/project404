@@ -157,12 +157,9 @@ public class ChatService {
                 sender.getFirstName() + " " + sender.getLastName(),
                 chat.getId().toString());
 
-        // Publish to the chat room via Redis Pub/Sub
-        // Both participants receive this in real time
         webSocketPublisher.publishToChatRoom(
-                chat.getId().toString(),
-                WebSocketEventType.CHAT_MESSAGE,
-                response);
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.CHAT_MESSAGE, response);
 
         log.debug("Message sent in chat {} by user {}", chat.getId(), sender.getId());
         return response;
@@ -202,9 +199,8 @@ public class ChatService {
             payload.put("readAt", LocalDateTime.now().toString());
 
             webSocketPublisher.publishToChatRoom(
-                    chatId.toString(),
-                    WebSocketEventType.CHAT_READ,
-                    payload);
+                    chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                    WebSocketEventType.CHAT_READ, payload);
         }
     }
 
@@ -228,9 +224,8 @@ public class ChatService {
             payload.put("deliveredAt", LocalDateTime.now().toString());
 
             webSocketPublisher.publishToChatRoom(
-                    chatId.toString(),
-                    WebSocketEventType.CHAT_DELIVERED,
-                    payload);
+                    chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                    WebSocketEventType.CHAT_DELIVERED, payload);
         }
     }
 
@@ -248,9 +243,8 @@ public class ChatService {
         payload.put("isTyping", request.isTyping());
 
         webSocketPublisher.publishToChatRoom(
-                request.getChatId().toString(),
-                WebSocketEventType.CHAT_TYPING,
-                payload);
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.CHAT_TYPING, payload);
     }
 
     // ==================== DELETE MESSAGE ====================
@@ -326,7 +320,8 @@ public class ChatService {
         payload.put("ttlSeconds", ttlSeconds);
         payload.put("updatedBy", user.getId().toString());
 
-        webSocketPublisher.publishToChatRoom(chatId.toString(),
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_DISAPPEARING_UPDATED, payload);
 
         log.info("Disappearing messages set to {}s in chat {} by {}",
@@ -346,12 +341,15 @@ public class ChatService {
             msg.setMediaKey(null);
             chatMessageRepository.save(msg);
 
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("messageId", msg.getId().toString());
-            payload.put("chatId", msg.getChatId().toString());
-            payload.put("reason", "expired");
-            webSocketPublisher.publishToChatRoom(msg.getChatId().toString(),
-                    WebSocketEventType.CHAT_MESSAGE_DELETED, payload);
+            chatRepository.findById(msg.getChatId()).ifPresent(chat -> {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("messageId", msg.getId().toString());
+                payload.put("chatId", msg.getChatId().toString());
+                payload.put("reason", "expired");
+                webSocketPublisher.publishToChatRoom(
+                        chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                        WebSocketEventType.CHAT_MESSAGE_DELETED, payload);
+            });
         }
         if (!expired.isEmpty()) {
             log.info("Purged {} expired disappearing message(s)", expired.size());
@@ -390,7 +388,8 @@ public class ChatService {
         payload.put("messageId", messageId.toString());
         payload.put("chatId", message.getChatId().toString());
         payload.put("viewedAt", message.getViewedAt().toString());
-        webSocketPublisher.publishToChatRoom(message.getChatId().toString(),
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MEDIA_VIEWED, payload);
 
         log.debug("View-once message {} consumed by {}", messageId, viewer.getId());
@@ -426,7 +425,10 @@ public class ChatService {
 
         MessageResponse response = toMessageResponse(message);
 
-        webSocketPublisher.publishToChatRoom(message.getChatId().toString(),
+        Chat chat = chatRepository.findById(message.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE_EDITED, response);
 
         log.debug("Message {} edited by {}", messageId, editor.getId());

@@ -30,10 +30,13 @@ public class WebSocketPublisher {
     }
 
     /**
-     * Broadcast an event to all participants subscribed to a chat room topic.
+     * Send a chat event to both participants via their private per-user queues.
+     * Replaces the old /topic/chat/{chatId} broadcast which any subscriber could eavesdrop on.
      */
-    public void publishToChatRoom(String chatId, WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.CHAT_CHANNEL_PREFIX + chatId, type, payload);
+    public void publishToChatRoom(UUID participantOne, UUID participantTwo,
+                                   WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantOne, type, payload);
+        publish(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX + participantTwo, type, payload);
     }
 
     /**

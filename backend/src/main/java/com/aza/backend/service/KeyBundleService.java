@@ -5,6 +5,7 @@ import com.aza.backend.dto.e2ee.KeyBundleUploadRequest;
 import com.aza.backend.dto.e2ee.OtpkReplenishRequest;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -21,6 +22,7 @@ import java.util.*;
 @Slf4j
 public class KeyBundleService {
     private final UserRepository userRepository;
+    private final ChatRepository chatRepository;
     private final ObjectMapper objectMapper;
     private final WebSocketPublisher webSocketPublisher;
     
@@ -45,7 +47,11 @@ public class KeyBundleService {
     }
 
     @Transactional
-    public KeyBundleResponse fetchKeyBundle(UUID recipientId) {
+    public KeyBundleResponse fetchKeyBundle(UUID requesterId, UUID recipientId) {
+        // Only allow key bundle fetches between users who share a chat
+        chatRepository.findByParticipants(requesterId, recipientId)
+                .orElseThrow(() -> new RuntimeException("Key bundle not available"));
+
         User recipient = userRepository.findById(recipientId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

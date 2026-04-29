@@ -20,9 +20,9 @@ public class RedisMessageSubscriber implements MessageListener {
         String payload = new String(message.getBody());
 
         try {
-            if (channel.startsWith("aza:chat:")) {
-                String chatId = channel.replace("aza:chat:", "");
-                messagingTemplate.convertAndSend("/topic/chat/" + chatId, payload);
+            if (channel.startsWith("aza:chat_user:")) {
+                String userId = channel.replace("aza:chat_user:", "");
+                messagingTemplate.convertAndSendToUser(userId, "/queue/chat", payload);
 
             } else if (channel.startsWith("aza:call:")) {
                 String userId = channel.replace("aza:call:", "");

@@ -251,7 +251,6 @@ public class BiometricService {
                 .user(AuthResponse.UserInfo.builder()
                         .id(user.getId().toString())
                         .email(user.getEmail())
-                        .phone(user.getPhone())
                         .firstName(user.getFirstName())
                         .lastName(user.getLastName())
                         .displayName(user.getDisplayName())

@@ -56,7 +56,7 @@ public class KeyBundleController {
                             "Cannot fetch your own key bundle for session initiation"));
         }
 
-        KeyBundleResponse response = keyBundleService.fetchKeyBundle(id);
+        KeyBundleResponse response = keyBundleService.fetchKeyBundle(user.getId(), id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
