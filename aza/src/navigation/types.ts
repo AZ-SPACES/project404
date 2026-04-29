@@ -91,4 +91,8 @@ export type RootStackParamList = {
   ChatInfoScreen: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
   AudioCall: { name: string; avatar: string };
   VideoCall: { name: string; avatar: string };
+  StarredMessages: undefined;
+  SharedMedia: undefined;
+  ManageStorage: undefined;
+  MessageInfo: { message: any };
 };

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -148,6 +149,9 @@ export default function ChatInfoScreen() {
   } = route.params;
 
   const [nickname, setNickname] = useState<string | null>(null);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
+  const [disappearingTimer, setDisappearingTimer] = useState("Off");
 
   // Derive initials for fallback avatar
   const initials = name
@@ -285,6 +289,7 @@ export default function ChatInfoScreen() {
             label="Media, links and docs"
             value="111"
             Colors={Colors}
+            onPress={() => navigation.navigate("SharedMedia" as any)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -299,6 +304,14 @@ export default function ChatInfoScreen() {
             label="Starred"
             value="None"
             Colors={Colors}
+            onPress={() => navigation.navigate("StarredMessages" as any)}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="database" size={20} color={Colors.textPrimary} />}
+            label="Storage and Data"
+            Colors={Colors}
+            onPress={() => navigation.navigate("ManageStorage" as any)}
           />
         </View>
 
@@ -314,6 +327,7 @@ export default function ChatInfoScreen() {
             icon={<MaterialCommunityIcons name="palette-outline" size={20} color={Colors.textPrimary} />}
             label="Chat theme"
             Colors={Colors}
+            onPress={() => setShowThemeModal(true)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -329,8 +343,9 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Ionicons name="timer-outline" size={20} color={Colors.textPrimary} />}
             label="Disappearing messages"
-            value="Off"
+            value={disappearingTimer}
             Colors={Colors}
+            onPress={() => setShowDisappearingModal(true)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -355,6 +370,28 @@ export default function ChatInfoScreen() {
 
         <View style={{ height: Spacing.xl * 2 }} />
       </ScrollView>
+
+      <ChatThemeModal
+        visible={showThemeModal}
+        isDark={Colors.isDark}
+        Colors={Colors}
+        onClose={() => setShowThemeModal(false)}
+        onSelectTheme={(theme) => {
+          Alert.alert("Theme Selected", `Theme set to ${theme}`);
+        }}
+      />
+
+      <DisappearingMessagesModal
+        visible={showDisappearingModal}
+        currentValue={disappearingTimer}
+        isDark={Colors.isDark}
+        Colors={Colors}
+        onClose={() => setShowDisappearingModal(false)}
+        onSelect={(val) => {
+          setDisappearingTimer(val);
+          setShowDisappearingModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
