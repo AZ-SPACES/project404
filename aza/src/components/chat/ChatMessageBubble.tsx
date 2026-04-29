@@ -125,8 +125,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             </TouchableOpacity>
             <View style={styles.audioWaveform}>
               <View style={[styles.audioWaveLine, { backgroundColor: isMe ? 'rgba(255,255,255,0.4)' : Colors.border }]} />
-              <View style={[styles.audioWaveProgress, { width: '30%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
-              <View style={[styles.audioWaveDot, { left: '30%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+              <View style={[styles.audioWaveProgress, { width: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+              <View style={[styles.audioWaveDot, { left: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
             </View>
             <Text style={[styles.audioTime, isMe ? styles.textMe : styles.textOther]}>
               {formatDuration(message.duration ?? 0)}

@@ -45,6 +45,7 @@ export const ChatInputArea = memo(function ChatInputArea({
 
   const showIcon = !isFocused && !message && !isRecording;
   const isMessageEmpty = !message.trim();
+  const recordMode = useRef<'none' | 'tap' | 'hold'>('none');
 
   // Handle audio timer
   useEffect(() => {
@@ -91,7 +92,32 @@ export const ChatInputArea = memo(function ChatInputArea({
       await audioRecorder.stop();
     } catch (e) {}
     setIsRecording(false);
+    recordMode.current = 'none';
   }, [audioRecorder]);
+
+  const handleMicPress = useCallback(() => {
+    if (recordMode.current === 'none' && !isRecording) {
+      handleStartRecording();
+      recordMode.current = 'tap';
+    } else if (recordMode.current === 'tap' && isRecording) {
+      handleStopRecording();
+      recordMode.current = 'none';
+    }
+  }, [isRecording, handleStartRecording, handleStopRecording]);
+
+  const handleMicLongPress = useCallback(() => {
+    if (!isRecording) {
+      handleStartRecording();
+      recordMode.current = 'hold';
+    }
+  }, [isRecording, handleStartRecording]);
+
+  const handleMicPressOut = useCallback(() => {
+    if (recordMode.current === 'hold') {
+      handleStopRecording();
+      recordMode.current = 'none';
+    }
+  }, [handleStopRecording]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -171,13 +197,15 @@ export const ChatInputArea = memo(function ChatInputArea({
           )}
         </View>
 
-        {isMessageEmpty && !isRecording ? (
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={handleStartRecording}>
-            <Feather name="mic" size={20} color={Colors.white} />
-          </TouchableOpacity>
-        ) : isRecording ? (
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#EF4444' }]} activeOpacity={0.8} onPress={handleStopRecording}>
-            <Feather name="stop-circle" size={20} color={Colors.white} />
+        {isMessageEmpty ? (
+          <TouchableOpacity 
+            style={[styles.actionButton, isRecording && { backgroundColor: '#EF4444' }]} 
+            activeOpacity={0.8} 
+            onPress={handleMicPress}
+            onLongPress={handleMicLongPress}
+            onPressOut={handleMicPressOut}
+          >
+            <Feather name={isRecording ? "stop-circle" : "mic"} size={20} color={Colors.white} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>

@@ -13,6 +13,7 @@ import {
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
+import { formatBytes, StorageDetails } from "../../../components/chat/chatTypes";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -26,6 +27,8 @@ type ChatInfoParams = {
   phone?: string;
   status?: string;
   accountProvider?: string;
+  mediaCount?: number;
+  storageStats?: StorageDetails;
 };
 
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
@@ -146,6 +149,8 @@ export default function ChatInfoScreen() {
     phone = "+233 55 219 4339",
     status = "Available",
     accountProvider = "Aza Finance",
+    mediaCount = 0,
+    storageStats,
   } = route.params;
 
   const [nickname, setNickname] = useState<string | null>(null);
@@ -287,7 +292,7 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Ionicons name="images-outline" size={20} color={Colors.textPrimary} />}
             label="Media, links and docs"
-            value="111"
+            value={mediaCount.toString()}
             Colors={Colors}
             onPress={() => navigation.navigate("SharedMedia" as any)}
           />
@@ -295,8 +300,9 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Feather name="hard-drive" size={20} color={Colors.textPrimary} />}
             label="Manage storage"
-            value="71.7 MB"
+            value={storageStats?.totalSize ? formatBytes(storageStats.totalSize) : "0 B"}
             Colors={Colors}
+            onPress={() => navigation.navigate("ManageStorage" as any, { storageStats })}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -305,13 +311,6 @@ export default function ChatInfoScreen() {
             value="None"
             Colors={Colors}
             onPress={() => navigation.navigate("StarredMessages" as any)}
-          />
-          <View style={styles.rowDivider} />
-          <SettingsRow
-            icon={<Feather name="database" size={20} color={Colors.textPrimary} />}
-            label="Storage and Data"
-            Colors={Colors}
-            onPress={() => navigation.navigate("ManageStorage" as any)}
           />
         </View>
 

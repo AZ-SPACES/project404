@@ -35,6 +35,7 @@ import {
   isSameDay,
   formatDateHeader,
   formatTime,
+  calculateStorageAsync,
 } from '../../../components/chat/chatTypes';
 
 // ----------------------------------------------------------------------------
@@ -118,8 +119,15 @@ export default function ChatScreen() {
       }
     });
 
+    const clearMediaSub = DeviceEventEmitter.addListener('clear_media_messages', (idsToClear: string[]) => {
+      if (idsToClear && idsToClear.length > 0) {
+        setMessages(prev => prev.filter(m => !idsToClear.includes(m.id)));
+      }
+    });
+
     return () => {
       subscription.remove();
+      clearMediaSub.remove();
     };
   }, [scheduleTimer]);
 
@@ -154,13 +162,19 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
-  const handleProfilePress = useCallback(() => {
+  const handleProfilePress = useCallback(async () => {
+    const mediaCount = messages.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'document').length;
+    
+    const storageStats = await calculateStorageAsync(messages);
+
     navigation.navigate('ChatInfoScreen', {
       name,
       username: name.toLowerCase().replace(/\s+/g, '_'),
       avatar,
+      mediaCount,
+      storageStats,
     });
-  }, [navigation, name, avatar]);
+  }, [navigation, name, avatar, messages]);
 
   const handleMorePress = useCallback((anchor: MenuAnchor) => {
     setMenuAnchor(anchor);

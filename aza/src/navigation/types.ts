@@ -88,11 +88,11 @@ export type RootStackParamList = {
   Withdraw: undefined;
   StatementDownload: undefined;
   Transactions: { balance: string };
-  ChatInfoScreen: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
+  ChatInfoScreen: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
   AudioCall: { name: string; avatar: string };
   VideoCall: { name: string; avatar: string };
   StarredMessages: undefined;
   SharedMedia: undefined;
-  ManageStorage: undefined;
+  ManageStorage: { storageStats?: any } | undefined;
   MessageInfo: { message: any };
 };

@@ -1,3 +1,5 @@
+import * as FileSystem from 'expo-file-system';
+
 // ----------------------------------------------------------------------------
 // Shared types
 // ----------------------------------------------------------------------------
@@ -18,7 +20,7 @@ export interface Message {
   status?: MessageStatus;
   replyTo?: string;
   replyToMessage?: ReplyInfo;
-  type?: 'text' | 'image' | 'document' | 'audio';
+  type?: 'text' | 'image' | 'document' | 'audio' | 'video';
   uri?: string;
   mimeType?: string;
   fileSize?: number;
@@ -26,7 +28,18 @@ export interface Message {
   caption?: string;
   duration?: number; // For audio messages
   isStarred?: boolean;
+  resolvedSize?: number;
 }
+
+export type CategoryStats = { size: number; messages: Message[] };
+
+export type StorageDetails = {
+  photos: CategoryStats;
+  videos: CategoryStats;
+  docs: CategoryStats;
+  audio: CategoryStats;
+  totalSize: number;
+};
 
 
 export type MoreAction = { icon: string; label: string; color?: string; onPress: () => void };
@@ -180,4 +193,62 @@ export const formatBytes = (bytes?: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
+};
+
+// ----------------------------------------------------------------------------
+// Storage helpers
+// ----------------------------------------------------------------------------
+export const calculateStorageAsync = async (messages: Message[]): Promise<StorageDetails> => {
+  const details: StorageDetails = {
+    photos: { size: 0, messages: [] },
+    videos: { size: 0, messages: [] },
+    docs: { size: 0, messages: [] },
+    audio: { size: 0, messages: [] },
+    totalSize: 0,
+  };
+
+  const promises = messages.map(async (m) => {
+    let size = m.fileSize || 0;
+    
+    // If no explicit fileSize, try to fetch it if there is a local URI
+    if (!size && m.uri && !m.uri.startsWith('http')) {
+      try {
+        const info = await FileSystem.getInfoAsync(m.uri);
+        if (info.exists && !info.isDirectory) {
+          size = info.size;
+        }
+      } catch (err) {
+        // Fallback
+      }
+    } 
+    
+    // Final fallback estimation for mock items
+    if (!size) {
+      if (m.type === 'image') size = 2.5 * 1024 * 1024;
+      else if (m.type === 'video') size = 15 * 1024 * 1024;
+      else if (m.type === 'audio') size = Math.max(1, m.duration || 5) * 10 * 1024;
+    }
+
+    if (size > 0) {
+      const updatedMsg = { ...m, resolvedSize: size };
+      details.totalSize += size;
+      if (m.type === 'image') {
+        details.photos.size += size;
+        details.photos.messages.push(updatedMsg);
+      } else if (m.type === 'video') {
+        details.videos.size += size;
+        details.videos.messages.push(updatedMsg);
+      } else if (m.type === 'document') {
+        details.docs.size += size;
+        details.docs.messages.push(updatedMsg);
+      } else if (m.type === 'audio') {
+        details.audio.size += size;
+        details.audio.messages.push(updatedMsg);
+      }
+    }
+  });
+
+  await Promise.all(promises);
+
+  return details;
 };
