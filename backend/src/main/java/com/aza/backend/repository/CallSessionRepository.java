@@ -25,4 +25,8 @@ public interface CallSessionRepository extends JpaRepository<CallSession, UUID> 
 
     List<CallSession> findByStatusInAndInitiatedAtBefore(
             List<CallSession.CallStatus> statuses, LocalDateTime cutoff);
+
+    @Query("SELECT c FROM CallSession c WHERE (c.callerId = :userId OR c.calleeId = :userId) " +
+           "AND c.status IN ('ACTIVE', 'RECONNECTING')")
+    java.util.Optional<CallSession> findActiveCallByUserId(@Param("userId") UUID userId);
 }

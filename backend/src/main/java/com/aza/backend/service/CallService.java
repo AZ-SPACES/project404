@@ -31,6 +31,7 @@ public class CallService {
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
     private final PresenceService presenceService;
+    private final com.aza.backend.repository.BlockedUserRepository blockedUserRepository;
 
     @Value("${turn.secret:aza-turn-secret-change-in-production}")
     private String turnSecret;
@@ -57,6 +58,9 @@ public class CallService {
         if (callee.getStatus() != User.AccountStatus.ACTIVE) {
             throw new RuntimeException("User is not available");
         }
+        if (blockedUserRepository.existsBlockBetween(caller.getId(), callee.getId())) {
+            throw new RuntimeException("User is not available");
+        }
 
         CallSession.CallType callType;
         try {
@@ -77,19 +81,30 @@ public class CallService {
 
         // Build payload to send to callee
         Map<String, Object> payload = buildCallPayload(session, caller, callee);
-        payload.put("action", "incoming_call");
 
-        // Notify callee via WebSocket
-        webSocketPublisher.publishCallEvent(
-                callee.getId(), WebSocketEventType.CALL_INITIATE, payload);
+        // Check if the callee is already in an active call — send CALL_WAITING instead
+        boolean calleeIsBusy = callSessionRepository
+                .findActiveCallByUserId(callee.getId()).isPresent();
 
-        // If callee is offline, push an incoming-call notification so they see it
-        if (!presenceService.isOnline(callee.getId())) {
-            notificationService.sendIncomingCallNotification(
-                    callee.getId(),
-                    caller.getFirstName() + " " + caller.getLastName(),
-                    session.getId().toString(),
-                    callType == CallSession.CallType.VIDEO);
+        if (calleeIsBusy) {
+            payload.put("action", "call_waiting");
+            webSocketPublisher.publishCallEvent(
+                    callee.getId(), WebSocketEventType.CALL_WAITING, payload);
+            log.info("Call {} queued as WAITING — callee {} is already on a call",
+                    session.getId(), callee.getId());
+        } else {
+            payload.put("action", "incoming_call");
+            webSocketPublisher.publishCallEvent(
+                    callee.getId(), WebSocketEventType.CALL_INITIATE, payload);
+
+            // Push notification only when callee is offline (not already handling the event)
+            if (!presenceService.isOnline(callee.getId())) {
+                notificationService.sendIncomingCallNotification(
+                        callee.getId(),
+                        caller.getFirstName() + " " + caller.getLastName(),
+                        session.getId().toString(),
+                        callType == CallSession.CallType.VIDEO);
+            }
         }
 
         log.info("{} call initiated: {} → {}, callId={}",
@@ -229,6 +244,150 @@ public class CallService {
         ));
     }
 
+    // UPGRADE VOICE → VIDEO
+
+    @Transactional
+    public CallResponse requestUpgrade(User requester, UUID callId) {
+        CallSession session = callSessionRepository.findById(callId)
+                .orElseThrow(() -> new RuntimeException("Call not found"));
+        assertParticipant(session, requester.getId());
+
+        if (session.getStatus() != CallSession.CallStatus.ACTIVE) {
+            throw new RuntimeException("Can only upgrade an active call");
+        }
+        if (session.getType() == CallSession.CallType.VIDEO) {
+            throw new RuntimeException("Call is already a video call");
+        }
+        if (Boolean.TRUE.equals(session.getUpgradeRequested())) {
+            throw new RuntimeException("An upgrade request is already pending");
+        }
+
+        session.setUpgradeRequested(true);
+        session.setUpgradeRequestedBy(requester.getId());
+        callSessionRepository.save(session);
+
+        User caller = userRepository.findById(session.getCallerId()).orElseThrow();
+        User callee = userRepository.findById(session.getCalleeId()).orElseThrow();
+        UUID targetId = getOtherParticipantId(session, requester.getId());
+
+        Map<String, Object> payload = buildCallPayload(session, caller, callee);
+        payload.put("requestedBy", requester.getId().toString());
+        webSocketPublisher.publishCallEvent(targetId, WebSocketEventType.CALL_UPGRADE_REQUEST, payload);
+
+        log.info("Video upgrade requested by {} on call {}", requester.getId(), callId);
+        return toCallResponse(session, caller, callee);
+    }
+
+    @Transactional
+    public CallResponse acceptUpgrade(User acceptor, UUID callId) {
+        CallSession session = callSessionRepository.findById(callId)
+                .orElseThrow(() -> new RuntimeException("Call not found"));
+        assertParticipant(session, acceptor.getId());
+
+        if (!Boolean.TRUE.equals(session.getUpgradeRequested())) {
+            throw new RuntimeException("No pending upgrade request for this call");
+        }
+        if (acceptor.getId().equals(session.getUpgradeRequestedBy())) {
+            throw new RuntimeException("Cannot accept your own upgrade request");
+        }
+
+        session.setType(CallSession.CallType.VIDEO);
+        session.setUpgradeRequested(false);
+        session.setUpgradeRequestedBy(null);
+        callSessionRepository.save(session);
+
+        User caller = userRepository.findById(session.getCallerId()).orElseThrow();
+        User callee = userRepository.findById(session.getCalleeId()).orElseThrow();
+        Map<String, Object> payload = buildCallPayload(session, caller, callee);
+
+        // Notify both — both sides must renegotiate WebRTC to add the video track
+        webSocketPublisher.publishCallEvent(session.getCallerId(), WebSocketEventType.CALL_UPGRADE_ACCEPTED, payload);
+        webSocketPublisher.publishCallEvent(session.getCalleeId(), WebSocketEventType.CALL_UPGRADE_ACCEPTED, payload);
+
+        log.info("Video upgrade accepted by {} on call {}", acceptor.getId(), callId);
+        return toCallResponse(session, caller, callee);
+    }
+
+    @Transactional
+    public void declineUpgrade(User decliner, UUID callId) {
+        CallSession session = callSessionRepository.findById(callId)
+                .orElseThrow(() -> new RuntimeException("Call not found"));
+        assertParticipant(session, decliner.getId());
+
+        if (!Boolean.TRUE.equals(session.getUpgradeRequested())) {
+            throw new RuntimeException("No pending upgrade request for this call");
+        }
+        if (decliner.getId().equals(session.getUpgradeRequestedBy())) {
+            throw new RuntimeException("Cannot decline your own upgrade request");
+        }
+
+        UUID requesterId = session.getUpgradeRequestedBy();
+        session.setUpgradeRequested(false);
+        session.setUpgradeRequestedBy(null);
+        callSessionRepository.save(session);
+
+        User caller = userRepository.findById(session.getCallerId()).orElseThrow();
+        User callee = userRepository.findById(session.getCalleeId()).orElseThrow();
+        Map<String, Object> payload = buildCallPayload(session, caller, callee);
+        payload.put("declinedBy", decliner.getId().toString());
+
+        // Only notify the requester
+        webSocketPublisher.publishCallEvent(requesterId, WebSocketEventType.CALL_UPGRADE_DECLINED, payload);
+
+        log.info("Video upgrade declined by {} on call {}", decliner.getId(), callId);
+    }
+
+    // RECONNECTION
+
+    @Transactional
+    public void reconnectCall(User user, UUID callId) {
+        CallSession session = callSessionRepository.findById(callId)
+                .orElseThrow(() -> new RuntimeException("Call not found"));
+        assertParticipant(session, user.getId());
+
+        if (session.getStatus() != CallSession.CallStatus.ACTIVE &&
+                session.getStatus() != CallSession.CallStatus.RECONNECTING) {
+            throw new RuntimeException("Call is not in a reconnectable state");
+        }
+
+        session.setStatus(CallSession.CallStatus.RECONNECTING);
+        callSessionRepository.save(session);
+
+        User caller = userRepository.findById(session.getCallerId()).orElseThrow();
+        User callee = userRepository.findById(session.getCalleeId()).orElseThrow();
+        Map<String, Object> payload = buildCallPayload(session, caller, callee);
+        payload.put("initiatedBy", user.getId().toString());
+
+        // Notify both — both sides restart ICE and exchange a fresh SDP offer/answer
+        webSocketPublisher.publishCallEvent(session.getCallerId(), WebSocketEventType.CALL_RECONNECTING, payload);
+        webSocketPublisher.publishCallEvent(session.getCalleeId(), WebSocketEventType.CALL_RECONNECTING, payload);
+
+        log.info("Call {} entering RECONNECTING state, triggered by {}", callId, user.getId());
+    }
+
+    @Transactional
+    public void confirmReconnected(User user, UUID callId) {
+        CallSession session = callSessionRepository.findById(callId)
+                .orElseThrow(() -> new RuntimeException("Call not found"));
+        assertParticipant(session, user.getId());
+
+        if (session.getStatus() != CallSession.CallStatus.RECONNECTING) {
+            throw new RuntimeException("Call is not in RECONNECTING state");
+        }
+
+        session.setStatus(CallSession.CallStatus.ACTIVE);
+        callSessionRepository.save(session);
+
+        User caller = userRepository.findById(session.getCallerId()).orElseThrow();
+        User callee = userRepository.findById(session.getCalleeId()).orElseThrow();
+        Map<String, Object> payload = buildCallPayload(session, caller, callee);
+
+        webSocketPublisher.publishCallEvent(session.getCallerId(), WebSocketEventType.CALL_RECONNECTED, payload);
+        webSocketPublisher.publishCallEvent(session.getCalleeId(), WebSocketEventType.CALL_RECONNECTED, payload);
+
+        log.info("Call {} successfully reconnected", callId);
+    }
+
     //  TURN CREDENTIALS
 
     /**
@@ -301,7 +460,7 @@ public class CallService {
 
         callSessionRepository.findByStatusInAndInitiatedAtBefore(
                 List.of(CallSession.CallStatus.INITIATING, CallSession.CallStatus.RINGING),
-                cutoff)
+                cutoff) // RECONNECTING is intentionally excluded — those calls are still active
                 .forEach(session -> {
                     session.setStatus(CallSession.CallStatus.MISSED);
                     session.setEndedAt(LocalDateTime.now());
@@ -328,6 +487,12 @@ public class CallService {
     }
 
     // HELPERS
+
+    private void assertParticipant(CallSession session, UUID userId) {
+        if (!session.getCallerId().equals(userId) && !session.getCalleeId().equals(userId)) {
+            throw new RuntimeException("Not a participant of this call");
+        }
+    }
 
     private CallSession getCallAndVerifyCallee(UUID callId, UUID calleeId) {
         CallSession session = callSessionRepository.findById(callId)
@@ -378,6 +543,9 @@ public class CallService {
                 .endedAt(session.getEndedAt() != null
                         ? session.getEndedAt().toString() : null)
                 .durationSeconds(session.getDurationSeconds())
+                .upgradeRequested(session.getUpgradeRequested())
+                .upgradeRequestedBy(session.getUpgradeRequestedBy() != null
+                        ? session.getUpgradeRequestedBy().toString() : null)
                 .build();
     }
 

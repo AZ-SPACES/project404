@@ -1,6 +1,7 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.contact.BlockedUserResponse;
 import com.aza.backend.dto.contact.ContactResponse;
 import com.aza.backend.dto.contact.ContactSyncRequest;
 import com.aza.backend.dto.contact.ContactSyncResponse;
@@ -12,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import java.util.UUID;
 
@@ -94,5 +97,42 @@ public class ContactController {
             @PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(
                 contactService.unmarkFavorite(user.getId(), id)));
+    }
+
+    // ── Block / Unblock ───────────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/contacts/block/{userId}
+     * Block a user — prevents them from messaging or calling you.
+     */
+    @PostMapping("/block/{userId}")
+    public ResponseEntity<ApiResponse<String>> blockUser(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID userId) {
+        contactService.blockUser(user, userId);
+        return ResponseEntity.ok(ApiResponse.success("User blocked"));
+    }
+
+    /**
+     * DELETE /api/v1/contacts/block/{userId}
+     * Unblock a previously blocked user.
+     */
+    @DeleteMapping("/block/{userId}")
+    public ResponseEntity<ApiResponse<String>> unblockUser(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID userId) {
+        contactService.unblockUser(user, userId);
+        return ResponseEntity.ok(ApiResponse.success("User unblocked"));
+    }
+
+    /**
+     * GET /api/v1/contacts/blocked
+     * List all users you have blocked.
+     */
+    @GetMapping("/blocked")
+    public ResponseEntity<ApiResponse<List<BlockedUserResponse>>> getBlockedUsers(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                contactService.getBlockedUsers(user.getId())));
     }
 }

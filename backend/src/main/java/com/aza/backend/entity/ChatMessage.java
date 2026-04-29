@@ -53,6 +53,19 @@ public class ChatMessage {
 
     private String mediaKey;
 
+    /** If true, mediaKey is wiped after the recipient views it once. */
+    @Builder.Default
+    private Boolean viewOnce = false;
+
+    /** Set when the recipient views a view-once media item. mediaKey is cleared at that point. */
+    private LocalDateTime viewedAt;
+
+    /** Set when the sender edits the message (TEXT only, within 15 minutes of sending). */
+    private LocalDateTime editedAt;
+
+    /** Set when the chat has disappearing messages enabled. Message is purged after this time. */
+    private LocalDateTime expiresAt;
+
     public enum MessageType {
         TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE
     }

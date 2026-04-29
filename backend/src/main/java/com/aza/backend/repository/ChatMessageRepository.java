@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,4 +59,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             "AND m.isDeleted = false")
     long countTotalUnread(@Param("userId") UUID userId);
 
+    /** Find messages whose disappearing-message timer has elapsed and haven't been wiped yet. */
+    @Query("SELECT m FROM ChatMessage m WHERE m.expiresAt IS NOT NULL " +
+           "AND m.expiresAt <= :now AND m.isDeleted = false")
+    List<ChatMessage> findExpiredMessages(@Param("now") LocalDateTime now);
 }

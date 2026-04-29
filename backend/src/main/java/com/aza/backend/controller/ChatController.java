@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/v1/chats")
@@ -165,6 +166,49 @@ public class ChatController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(
                 chatService.getTotalUnreadCount(user.getId())));
+    }
+
+    /**
+     * PUT /api/v1/chats/{chatId}/disappearing
+     * Enable or disable disappearing messages for a chat.
+     * ttlSeconds=0 disables it. Common values: 86400 (24 h), 604800 (7 days), 7776000 (90 days).
+     */
+    @PutMapping("/{chatId}/disappearing")
+    public ResponseEntity<ApiResponse<String>> setDisappearingMessages(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId,
+            @Valid @RequestBody DisappearingMessageRequest request) {
+        chatService.setDisappearingMessages(user, chatId, request.getTtlSeconds());
+        String msg = request.getTtlSeconds() == 0
+                ? "Disappearing messages disabled"
+                : "Disappearing messages set to " + request.getTtlSeconds() + " seconds";
+        return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
+    /**
+     * POST /api/v1/chats/messages/{messageId}/viewed
+     * Mark a view-once media message as viewed.
+     * The server wipes the mediaKey immediately — the media cannot be accessed again.
+     */
+    @PostMapping("/messages/{messageId}/viewed")
+    public ResponseEntity<ApiResponse<MessageResponse>> markMediaViewed(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID messageId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                chatService.markMediaViewed(user, messageId)));
+    }
+
+    /**
+     * PUT /api/v1/chats/messages/{messageId}
+     * Edit a sent text message (sender only, within 15 minutes of sending).
+     */
+    @PutMapping("/messages/{messageId}")
+    public ResponseEntity<ApiResponse<MessageResponse>> editMessage(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID messageId,
+            @Valid @RequestBody EditMessageRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                chatService.editMessage(user, messageId, request.getCiphertext())));
     }
 
     /**

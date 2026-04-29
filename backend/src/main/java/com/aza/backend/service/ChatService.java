@@ -5,6 +5,7 @@ import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Chat;
 import com.aza.backend.entity.ChatMessage;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.BlockedUserRepository;
 import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.UserRepository;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,6 +38,9 @@ public class ChatService {
     private final NotificationService notificationService;
     private final CloudinaryService cloudinaryService;
     private final RateLimitService rateLimitService;
+    private final BlockedUserRepository blockedUserRepository;
+
+    private static final int MESSAGE_EDIT_WINDOW_MINUTES = 15;
 
     private static final long   MAX_MEDIA_SIZE   = 25L * 1024 * 1024; // 25 MB
     private static final List<String> ALLOWED_MEDIA_TYPES = List.of(
@@ -99,12 +104,28 @@ public class ChatService {
 
         assertParticipant(chat, sender.getId());
 
+        UUID recipientId = getOtherParticipantId(chat, sender.getId());
+
+        // Enforce block in both directions
+        if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(recipientId, sender.getId())) {
+            throw new RuntimeException("You cannot send messages to this user");
+        }
+        if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(sender.getId(), recipientId)) {
+            throw new RuntimeException("You cannot send messages to this user");
+        }
+
         // Validate message type
         ChatMessage.MessageType messageType;
         try {
             messageType = ChatMessage.MessageType.valueOf(request.getType().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid message type: " + request.getType());
+        }
+
+        // Compute expiry for disappearing messages
+        LocalDateTime expiresAt = null;
+        if (chat.getDisappearingMessagesTtl() != null && chat.getDisappearingMessagesTtl() > 0) {
+            expiresAt = LocalDateTime.now().plusSeconds(chat.getDisappearingMessagesTtl());
         }
 
         // Save message
@@ -117,6 +138,8 @@ public class ChatService {
                 .type(messageType)
                 .status(ChatMessage.MessageStatus.SENT)
                 .mediaKey(request.getMediaKey())
+                .viewOnce(request.isViewOnce())
+                .expiresAt(expiresAt)
                 .build();
 
         message = chatMessageRepository.save(message);
@@ -126,9 +149,6 @@ public class ChatService {
         chatRepository.save(chat);
 
         MessageResponse response = toMessageResponse(message);
-
-        // Notify recipient if they're not the sender
-        UUID recipientId = getOtherParticipantId(chat, sender.getId());
         notificationService.sendNewMessageNotification(
                 recipientId,
                 sender.getFirstName() + " " + sender.getLastName(),
@@ -287,6 +307,129 @@ public class ChatService {
         return chatMessageRepository.countTotalUnread(userId);
     }
 
+    // ==================== DISAPPEARING MESSAGES ====================
+
+    @Transactional
+    public void setDisappearingMessages(User user, UUID chatId, Integer ttlSeconds) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        assertParticipant(chat, user.getId());
+
+        chat.setDisappearingMessagesTtl(ttlSeconds == 0 ? null : ttlSeconds);
+        chatRepository.save(chat);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("chatId", chatId.toString());
+        payload.put("ttlSeconds", ttlSeconds);
+        payload.put("updatedBy", user.getId().toString());
+
+        webSocketPublisher.publishToChatRoom(chatId.toString(),
+                WebSocketEventType.CHAT_DISAPPEARING_UPDATED, payload);
+
+        log.info("Disappearing messages set to {}s in chat {} by {}",
+                ttlSeconds, chatId, user.getId());
+    }
+
+    /** Scheduled job — runs every minute, wipes content of expired messages. */
+    @Scheduled(fixedDelay = 60_000)
+    @Transactional
+    public void purgeExpiredMessages() {
+        List<ChatMessage> expired = chatMessageRepository.findExpiredMessages(LocalDateTime.now());
+        for (ChatMessage msg : expired) {
+            msg.setIsDeleted(true);
+            msg.setCiphertext("[expired]");
+            msg.setEphemeralKey(null);
+            msg.setPreKeyId(null);
+            msg.setMediaKey(null);
+            chatMessageRepository.save(msg);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("messageId", msg.getId().toString());
+            payload.put("chatId", msg.getChatId().toString());
+            payload.put("reason", "expired");
+            webSocketPublisher.publishToChatRoom(msg.getChatId().toString(),
+                    WebSocketEventType.CHAT_MESSAGE_DELETED, payload);
+        }
+        if (!expired.isEmpty()) {
+            log.info("Purged {} expired disappearing message(s)", expired.size());
+        }
+    }
+
+    // ==================== VIEW-ONCE MEDIA ====================
+
+    @Transactional
+    public MessageResponse markMediaViewed(User viewer, UUID messageId) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!Boolean.TRUE.equals(message.getViewOnce())) {
+            throw new RuntimeException("This message is not a view-once message");
+        }
+        if (message.getSenderId().equals(viewer.getId())) {
+            throw new RuntimeException("Sender cannot consume their own view-once message");
+        }
+        if (message.getViewedAt() != null) {
+            throw new RuntimeException("This media has already been viewed");
+        }
+
+        // Verify the viewer is a participant of the chat
+        Chat chat = chatRepository.findById(message.getChatId())
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        assertParticipant(chat, viewer.getId());
+
+        message.setViewedAt(LocalDateTime.now());
+        message.setMediaKey(null); // wipe the URL — media is consumed
+        chatMessageRepository.save(message);
+
+        MessageResponse response = toMessageResponse(message);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messageId", messageId.toString());
+        payload.put("chatId", message.getChatId().toString());
+        payload.put("viewedAt", message.getViewedAt().toString());
+        webSocketPublisher.publishToChatRoom(message.getChatId().toString(),
+                WebSocketEventType.CHAT_MEDIA_VIEWED, payload);
+
+        log.debug("View-once message {} consumed by {}", messageId, viewer.getId());
+        return response;
+    }
+
+    // ==================== MESSAGE EDITING ====================
+
+    @Transactional
+    public MessageResponse editMessage(User editor, UUID messageId, String newCiphertext) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getSenderId().equals(editor.getId())) {
+            throw new RuntimeException("You can only edit your own messages");
+        }
+        if (Boolean.TRUE.equals(message.getIsDeleted())) {
+            throw new RuntimeException("Cannot edit a deleted message");
+        }
+        if (message.getType() != ChatMessage.MessageType.TEXT) {
+            throw new RuntimeException("Only text messages can be edited");
+        }
+        if (message.getSentAt() != null &&
+                message.getSentAt().isBefore(
+                        LocalDateTime.now().minusMinutes(MESSAGE_EDIT_WINDOW_MINUTES))) {
+            throw new RuntimeException(
+                    "Messages can only be edited within " + MESSAGE_EDIT_WINDOW_MINUTES + " minutes of sending");
+        }
+
+        message.setCiphertext(newCiphertext);
+        message.setEditedAt(LocalDateTime.now());
+        chatMessageRepository.save(message);
+
+        MessageResponse response = toMessageResponse(message);
+
+        webSocketPublisher.publishToChatRoom(message.getChatId().toString(),
+                WebSocketEventType.CHAT_MESSAGE_EDITED, response);
+
+        log.debug("Message {} edited by {}", messageId, editor.getId());
+        return response;
+    }
+
     // ==================== MEDIA UPLOAD ====================
 
     public ChatMediaResponse uploadChatMedia(User user, MultipartFile file, UUID chatId, String type) {
@@ -418,6 +561,10 @@ public class ChatService {
                 .readAt(message.getReadAt() != null ? message.getReadAt().toString() : null)
                 .isDeleted(Boolean.TRUE.equals(message.getIsDeleted()))
                 .mediaKey(message.getMediaKey())
+                .viewOnce(Boolean.TRUE.equals(message.getViewOnce()))
+                .viewedAt(message.getViewedAt() != null ? message.getViewedAt().toString() : null)
+                .editedAt(message.getEditedAt() != null ? message.getEditedAt().toString() : null)
+                .expiresAt(message.getExpiresAt() != null ? message.getExpiresAt().toString() : null)
                 .build();
     }
 }
