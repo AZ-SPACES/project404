@@ -1,8 +1,10 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.contact.*;
+import com.aza.backend.entity.BlockedUser;
 import com.aza.backend.entity.Contact;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.BlockedUserRepository;
 import com.aza.backend.repository.ContactRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.RateLimitService;
@@ -26,6 +28,7 @@ public class ContactService {
 
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
+    private final BlockedUserRepository blockedUserRepository;
     private final RateLimitService rateLimitService;
 
     //LIST CONTACTS
@@ -153,6 +156,54 @@ public class ContactService {
         contact.setIsFavorite(false);
         contact = contactRepository.save(contact);
         return toContactResponse(contact);
+    }
+
+    // BLOCK / UNBLOCK
+
+    @Transactional
+    public void blockUser(User blocker, UUID targetUserId) {
+        if (blocker.getId().equals(targetUserId)) {
+            throw new RuntimeException("You cannot block yourself");
+        }
+        userRepository.findById(targetUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId)) {
+            throw new RuntimeException("User is already blocked");
+        }
+
+        blockedUserRepository.save(BlockedUser.builder()
+                .blockerId(blocker.getId())
+                .blockedUserId(targetUserId)
+                .build());
+
+        log.info("User {} blocked {}", blocker.getId(), targetUserId);
+    }
+
+    @Transactional
+    public void unblockUser(User blocker, UUID targetUserId) {
+        if (!blockedUserRepository.existsByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId)) {
+            throw new RuntimeException("This user is not blocked");
+        }
+        blockedUserRepository.deleteByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId);
+        log.info("User {} unblocked {}", blocker.getId(), targetUserId);
+    }
+
+    public List<BlockedUserResponse> getBlockedUsers(UUID userId) {
+        return blockedUserRepository.findAllByBlockerId(userId).stream()
+                .map(block -> {
+                    User target = userRepository.findById(block.getBlockedUserId()).orElse(null);
+                    return BlockedUserResponse.builder()
+                            .blockedUserId(block.getBlockedUserId().toString())
+                            .displayName(target != null
+                                    ? target.getFirstName() + " " + target.getLastName() : "Unknown")
+                            .handle(target != null ? target.getHandle() : null)
+                            .profileImageUrl(target != null ? target.getProfileImageUrl() : null)
+                            .blockedAt(block.getCreatedAt() != null
+                                    ? block.getCreatedAt().toString() : null)
+                            .build();
+                })
+                .toList();
     }
 
     //  HELPERS

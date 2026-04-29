@@ -5,6 +5,7 @@ import com.aza.backend.entity.User;
 import com.aza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,9 @@ import java.util.UUID;
 public class PresenceService {
 
     private static final String PRESENCE_PREFIX = "presence:";
-    private static final Duration PRESENCE_TTL = Duration.ofSeconds(65);
+
+    @Value("${app.presence.ttl-seconds:65}")
+    private int ttlSeconds;
 
     private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
@@ -26,7 +29,7 @@ public class PresenceService {
 
     public void setOnline(UUID userId) {
         try {
-            redisTemplate.opsForValue().set(PRESENCE_PREFIX + userId, "ONLINE", PRESENCE_TTL);
+            redisTemplate.opsForValue().set(PRESENCE_PREFIX + userId, "ONLINE", Duration.ofSeconds(ttlSeconds));
 
             userRepository.findById(userId).ifPresent(user -> {
                 user.setOnlineStatus(User.OnlineStatus.ONLINE);
@@ -61,7 +64,7 @@ public class PresenceService {
     }
 
     public void heartbeat(UUID userId) {
-        redisTemplate.expire(PRESENCE_PREFIX + userId, PRESENCE_TTL);
+        redisTemplate.expire(PRESENCE_PREFIX + userId, Duration.ofSeconds(ttlSeconds));
     }
 
     public String getStatus(UUID userId) {

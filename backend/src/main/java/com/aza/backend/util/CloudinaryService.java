@@ -57,6 +57,14 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload chat media (image, video, audio, document).
+     * resource_type=auto lets Cloudinary detect and transcode correctly.
+     */
+    public String uploadChatMedia(MultipartFile file, String chatId) {
+        return upload(file, "aza/chat-media/" + chatId, null);
+    }
+
+    /**
      * Core upload method used by all upload types
      */
     private String upload(MultipartFile file, String folder, String transformation) {

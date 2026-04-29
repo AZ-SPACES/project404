@@ -3,9 +3,9 @@ services:
     image: postgres:16
     container_name: aza-postgres
     environment:
-      POSTGRES_DB: aza_db
-      POSTGRES_USER: aza_user
-      POSTGRES_PASSWORD: aza_password
+      POSTGRES_DB: ${DB_NAME:-aza_db}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -14,6 +14,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: aza_redis
+    command: >
+      sh -c "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-server --requirepass $$REDIS_PASSWORD; else redis-server; fi"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "6379:6379"
 
