@@ -30,6 +30,21 @@ public class WebSocketPublisher {
     }
 
     /**
+     * Broadcast an event to all participants subscribed to a chat room topic.
+     */
+    public void publishToChatRoom(String chatId, WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.CHAT_CHANNEL_PREFIX + chatId, type, payload);
+    }
+
+    /**
+     * Send a call signalling event to a specific user via Redis pub/sub.
+     * The RedisMessageSubscriber forwards it to the user's /queue/calls.
+     */
+    public void publishCallEvent(UUID userId, WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.CALL_CHANNEL_PREFIX + userId, type, payload);
+    }
+
+    /**
      * Broadcast a presence event (USER_ONLINE / USER_OFFLINE) to all connected clients.
      */
     public void publishPresence(WebSocketEventType type, Object payload) {

@@ -8,6 +8,10 @@ public enum WebSocketEventType {
 
     // Chat
     CHAT_MESSAGE("chat.message"),
+    CHAT_MESSAGE_EDITED("chat.message.edited"),
+    CHAT_MESSAGE_DELETED("chat.message.deleted"),
+    CHAT_MEDIA_VIEWED("chat.media.viewed"),
+    CHAT_DISAPPEARING_UPDATED("chat.disappearing.updated"),
     CHAT_TYPING("chat.typing"),
     CHAT_READ("chat.read"),
     CHAT_DELIVERED("chat.delivered"),
@@ -18,11 +22,17 @@ public enum WebSocketEventType {
 
     // Call signaling
     CALL_INITIATE("call.initiate"),
+    CALL_WAITING("call.waiting"),
     CALL_RINGING("call.ringing"),
     CALL_ACCEPT("call.accept"),
     CALL_DECLINE("call.decline"),
     CALL_END("call.end"),
     CALL_MISSED("call.missed"),
+    CALL_UPGRADE_REQUEST("call.upgrade.request"),
+    CALL_UPGRADE_ACCEPTED("call.upgrade.accepted"),
+    CALL_UPGRADE_DECLINED("call.upgrade.declined"),
+    CALL_RECONNECTING("call.reconnecting"),
+    CALL_RECONNECTED("call.reconnected"),
     SDP_OFFER("sdp.offer"),
     SDP_ANSWER("sdp.answer"),
     ICE_CANDIDATE("ice.candidate"),

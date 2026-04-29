@@ -1,9 +1,11 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.auth.*;
+import com.aza.backend.entity.RecoveryCode;
 import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
+import com.aza.backend.repository.RecoveryCodeRepository;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
@@ -21,9 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -43,7 +48,10 @@ public class AuthService {
     private final UserService userService;
     private final BiometricService biometricService;
     private final TotpService totpService;
+    private final TotpEncryptionService totpEncryptionService;
+    private final RecoveryCodeRepository recoveryCodeRepository;
 
+    private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
     private static final String OTP_PREFIX = "otp:";
     private static final String TOTP_PREAUTH_PREFIX = "totp:preauth:";
@@ -318,7 +326,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void confirmTotpSetup(User user, String code) {
+    public RecoveryCodesResponse confirmTotpSetup(User user, String code) {
         String secret = redisTemplate.opsForValue().get(TOTP_SETUP_PREFIX + user.getId());
         if (secret == null) {
             throw new RuntimeException("Setup session expired. Please start 2FA setup again.");
@@ -326,12 +334,14 @@ public class AuthService {
         if (totpService.isCodeInvalid(secret, code)) {
             throw new RuntimeException("Invalid code. Make sure your authenticator app is synced and try again.");
         }
-        // Secret stored as plain Base32 — encrypt at rest in production using a KMS key
-        user.setTwoFactorSecret(secret);
+        user.setTwoFactorSecret(totpEncryptionService.encrypt(secret));
         user.setTwoFactorEnabled(true);
         userRepository.save(user);
         redisTemplate.delete(TOTP_SETUP_PREFIX + user.getId());
-        log.info("2FA enabled for user {}", user.getId());
+
+        List<String> plainCodes = generateAndSaveCodes(user.getId());
+        log.info("2FA enabled for user {} — {} recovery codes issued", user.getId(), plainCodes.size());
+        return new RecoveryCodesResponse(plainCodes, plainCodes.size());
     }
 
     @Transactional
@@ -352,7 +362,8 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (totpService.isCodeInvalid(user.getTwoFactorSecret(), request.getCode())) {
+        String totpSecret = totpEncryptionService.decrypt(user.getTwoFactorSecret());
+        if (totpService.isCodeInvalid(totpSecret, request.getCode())) {
             throw new RuntimeException("Invalid authenticator code");
         }
 
@@ -373,13 +384,85 @@ public class AuthService {
         if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             throw new RuntimeException("Two-factor authentication is not enabled");
         }
-        if (totpService.isCodeInvalid(user.getTwoFactorSecret(), code)) {
+        if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), code)) {
             throw new RuntimeException("Invalid authenticator code");
         }
         user.setTwoFactorSecret(null);
         user.setTwoFactorEnabled(false);
         userRepository.save(user);
-        log.info("2FA disabled for user {}", user.getId());
+        recoveryCodeRepository.deleteAllByUserId(user.getId());
+        log.info("2FA disabled for user {} — recovery codes purged", user.getId());
+    }
+
+    @Transactional
+    public AuthResponse redeemRecoveryCode(RedeemRecoveryCodeRequest request, String ipAddress) {
+        rateLimitService.enforceRateLimit("recovery:" + ipAddress, 5, Duration.ofMinutes(15));
+
+        String value = redisTemplate.opsForValue().get(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
+        if (value == null) {
+            throw new RuntimeException("Session expired or invalid. Please log in again.");
+        }
+
+        String[] parts = value.split("\\|", 4);
+        UUID userId    = UUID.fromString(parts[0]);
+        String deviceName = parts.length > 1 ? parts[1] : null;
+        String deviceOs   = parts.length > 2 ? parts[2] : null;
+        String storedIp   = parts.length > 3 ? parts[3] : ipAddress;
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<RecoveryCode> unused = recoveryCodeRepository.findAllByUserIdAndUsedFalse(userId);
+        RecoveryCode matched = unused.stream()
+                .filter(rc -> passwordEncoder.matches(request.getRecoveryCode(), rc.getCodeHash()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Invalid or already-used recovery code"));
+
+        matched.setUsed(true);
+        matched.setUsedAt(LocalDateTime.now());
+        recoveryCodeRepository.save(matched);
+        redisTemplate.delete(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
+
+        long remaining = recoveryCodeRepository.countByUserIdAndUsedFalse(userId);
+        log.warn("Recovery code used for user {} — {} code(s) remaining", userId, remaining);
+
+        return finalizeLogin(user, deviceName, deviceOs, storedIp);
+    }
+
+    @Transactional
+    public RecoveryCodesResponse regenerateRecoveryCodes(User user, String totpCode) {
+        if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            throw new RuntimeException("Two-factor authentication is not enabled");
+        }
+        if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), totpCode)) {
+            throw new RuntimeException("Invalid authenticator code");
+        }
+        recoveryCodeRepository.deleteAllByUserId(user.getId());
+        List<String> plainCodes = generateAndSaveCodes(user.getId());
+        log.info("Recovery codes regenerated for user {}", user.getId());
+        return new RecoveryCodesResponse(plainCodes, plainCodes.size());
+    }
+
+    // ── Recovery-code helpers ─────────────────────────────────────────────────
+
+    private List<String> generateAndSaveCodes(UUID userId) {
+        SecureRandom rng = new SecureRandom();
+        List<String> plain = new ArrayList<>(RECOVERY_CODE_COUNT);
+        List<RecoveryCode> entities = new ArrayList<>(RECOVERY_CODE_COUNT);
+
+        for (int i = 0; i < RECOVERY_CODE_COUNT; i++) {
+            // Format: "XXXX-XXXX-XXXX" — 12 hex chars split into 3 groups for readability
+            String code = String.format("%04x-%04x-%04x",
+                    rng.nextInt(0x10000), rng.nextInt(0x10000), rng.nextInt(0x10000));
+            plain.add(code);
+            entities.add(RecoveryCode.builder()
+                    .userId(userId)
+                    .codeHash(passwordEncoder.encode(code))
+                    .build());
+        }
+
+        recoveryCodeRepository.saveAll(entities);
+        return plain;
     }
 
     // ==================== HELPERS ====================

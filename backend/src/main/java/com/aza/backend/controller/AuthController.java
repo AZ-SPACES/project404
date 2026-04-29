@@ -131,14 +131,15 @@ public class AuthController {
 
     /**
      * Step 2 of 2FA setup: verifies the first TOTP code from the authenticator app.
-     * On success, 2FA is enabled for the account.
+     * On success, 2FA is enabled and 8 one-time recovery codes are returned.
+     * These codes are shown ONLY ONCE — the client must prompt the user to save them.
      */
     @PostMapping("/2fa/confirm")
-    public ResponseEntity<ApiResponse<String>> confirmTotp(
+    public ResponseEntity<ApiResponse<RecoveryCodesResponse>> confirmTotp(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody TotpToggleRequest request) {
-        authService.confirmTotpSetup(user, request.getCode());
-        return ResponseEntity.ok(ApiResponse.success("Two-factor authentication enabled successfully"));
+        RecoveryCodesResponse codes = authService.confirmTotpSetup(user, request.getCode());
+        return ResponseEntity.ok(ApiResponse.success(codes));
     }
 
     /**
@@ -156,6 +157,31 @@ public class AuthController {
     }
 
     /**
+     * Alternative 2FA login using a one-time recovery code instead of the authenticator app.
+     * The recovery code is consumed immediately and cannot be reused.
+     */
+    @PostMapping("/2fa/recovery")
+    public ResponseEntity<ApiResponse<AuthResponse>> redeemRecoveryCode(
+            @Valid @RequestBody RedeemRecoveryCodeRequest request,
+            HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        AuthResponse response = authService.redeemRecoveryCode(request, ipAddress);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Regenerates all recovery codes for the account.
+     * Old codes are invalidated immediately. Requires a valid TOTP code.
+     */
+    @PostMapping("/2fa/recovery/regenerate")
+    public ResponseEntity<ApiResponse<RecoveryCodesResponse>> regenerateRecoveryCodes(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TotpToggleRequest request) {
+        RecoveryCodesResponse codes = authService.regenerateRecoveryCodes(user, request.getCode());
+        return ResponseEntity.ok(ApiResponse.success(codes));
+    }
+
+    /**
      * Disables 2FA on the account. Requires a valid TOTP code to confirm intent.
      */
     @DeleteMapping("/2fa")
@@ -166,11 +192,19 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Two-factor authentication disabled"));
     }
 
+    private static final java.util.regex.Pattern IP_PATTERN =
+            java.util.regex.Pattern.compile(
+                    "^(([0-9]{1,3}\\.){3}[0-9]{1,3}|[0-9a-fA-F:]{2,39})$");
+
     private String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null || xfHeader.isEmpty()) {
-            return request.getRemoteAddr();
+        if (xfHeader != null && !xfHeader.isBlank()) {
+            // Take the leftmost IP — the original client address
+            String candidate = xfHeader.split(",")[0].trim();
+            if (IP_PATTERN.matcher(candidate).matches()) {
+                return candidate;
+            }
         }
-        return xfHeader.split(",")[0].trim();
+        return request.getRemoteAddr();
     }
 }
