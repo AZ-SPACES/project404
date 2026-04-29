@@ -58,6 +58,12 @@
     },
     "plugins": [
       "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Aza to access your microphone to record voice messages."
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       [

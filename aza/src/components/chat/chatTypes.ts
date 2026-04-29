@@ -18,12 +18,14 @@ export interface Message {
   status?: MessageStatus;
   replyTo?: string;
   replyToMessage?: ReplyInfo;
-  type?: 'text' | 'image' | 'document';
+  type?: 'text' | 'image' | 'document' | 'audio';
   uri?: string;
   mimeType?: string;
   fileSize?: number;
   fileName?: string;
   caption?: string;
+  duration?: number; // For audio messages
+  isStarred?: boolean;
 }
 
 
@@ -109,6 +111,8 @@ export interface Contact {
   unread: number;
   online: boolean;
   avatar: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
 }
 
 export const CONTACTS: Contact[] = [
@@ -120,6 +124,7 @@ export const CONTACTS: Contact[] = [
     unread: 0,
     online: true,
     avatar: "https://i.pravatar.cc/150?u=michael",
+    isFavorite: true,
   },
   {
     id: "2",
@@ -138,6 +143,7 @@ export const CONTACTS: Contact[] = [
     unread: 2,
     online: true,
     avatar: "https://i.pravatar.cc/150?u=joselyn",
+    isFavorite: true,
   },
   {
     id: "4",
@@ -165,6 +171,7 @@ export const CONTACTS: Contact[] = [
     unread: 0,
     online: false,
     avatar: "https://i.pravatar.cc/150?u=samuel",
+    isArchived: true,
   },
 ];
 

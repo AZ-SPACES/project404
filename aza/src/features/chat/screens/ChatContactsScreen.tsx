@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  Animated,
+  TextInput,
+  Easing,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -28,8 +31,51 @@ export default function ChatContactsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchAnim = React.useRef(new Animated.Value(0)).current;
+
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const toggleSearch = () => {
+    if (searchActive) {
+      Animated.timing(searchAnim, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start(() => {
+        setSearchActive(false);
+        setSearchQuery("");
+      });
+    } else {
+      setSearchActive(true);
+      Animated.timing(searchAnim, {
+        toValue: 1,
+        duration: 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start();
+    }
+  };
+
+  const filteredContacts = React.useMemo(() => {
+    let result = CONTACTS;
+    if (activeFilter === "Favorites") {
+      result = result.filter(c => c.isFavorite);
+    } else if (activeFilter === "Archived") {
+      result = result.filter(c => c.isArchived);
+    } else {
+      // "All" or "Recent" - hide archived by default
+      result = result.filter(c => !c.isArchived);
+    }
+
+    if (searchQuery.trim()) {
+      result = result.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return result;
+  }, [activeFilter, searchQuery]);
 
   const FILTERS = ["All", "Favorites", "Recent", "Archived"];
 
@@ -90,19 +136,45 @@ export default function ChatContactsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
 
       <View style={styles.header}>
-        <Text style={[Typography.h1, styles.headerTitle]}>Chats</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-            <Feather name="search" size={20} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-            <Feather
-              name="more-horizontal"
-              size={20}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
-        </View>
+        {!searchActive ? (
+          <>
+            <Text style={[Typography.h1, styles.headerTitle]}>Chats</Text>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.iconButton} activeOpacity={0.8} onPress={toggleSearch}>
+                <Feather name="search" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
+                <Feather
+                  name="more-horizontal"
+                  size={20}
+                  color={Colors.textPrimary}
+                />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <Animated.View style={[styles.searchContainer, { opacity: searchAnim, transform: [{ scaleX: searchAnim }] }]}>
+            <View style={styles.searchInputWrapper}>
+              <Feather name="search" size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search contacts..."
+                placeholderTextColor={Colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.7} style={{ padding: 4 }}>
+                  <Feather name="x-circle" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity onPress={toggleSearch} style={styles.cancelSearchBtn}>
+              <Text style={styles.cancelSearchText}>Cancel</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </View>
 
       <View style={styles.filtersContainer}>
@@ -117,11 +189,16 @@ export default function ChatContactsScreen() {
       </View>
 
       <FlatList
-        data={CONTACTS}
+        data={filteredContacts}
         renderItem={renderContact}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.contactsListContent}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No contacts found</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -158,6 +235,36 @@ function createStyles(Colors: ThemeColors) {
       backgroundColor: isDark ? Colors.surface : "#F3F4F6",
       alignItems: "center",
       justifyContent: "center",
+    },
+    searchContainer: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      height: 44,
+    },
+    searchInputWrapper: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDark ? Colors.surface : "#F3F4F6",
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.md,
+      height: "100%",
+    },
+    searchInput: {
+      flex: 1,
+      ...Typography.body,
+      color: Colors.textPrimary,
+      paddingVertical: 0,
+    },
+    cancelSearchBtn: {
+      marginLeft: Spacing.sm,
+      paddingHorizontal: Spacing.xs,
+    },
+    cancelSearchText: {
+      ...Typography.body,
+      color: Colors.primary,
+      fontWeight: "500",
     },
     filtersContainer: {
       marginBottom: Spacing.md,
@@ -251,6 +358,15 @@ function createStyles(Colors: ThemeColors) {
       ...Typography.caption,
       color: Colors.white,
       fontWeight: "600",
+    },
+    emptyContainer: {
+      padding: Spacing.xl * 2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyText: {
+      ...Typography.body,
+      color: Colors.textSecondary,
     },
   });
 }

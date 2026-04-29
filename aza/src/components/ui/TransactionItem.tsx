@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
-import { Transaction } from "../../features/home/TransactionsScreen";
+import { Transaction } from "../../features/home/screens/TransactionsScreen";
 
 export type TransactionItemProps = {
   item: Transaction;
