@@ -52,7 +52,12 @@ public class Notification {
         KYC_REJECTED,
         TRANSFER_COMPLETED,
         SECURITY_ALERT,
-        LOW_OPK
+        LOW_OPK,
+        PAYMENT_REQUEST_RECEIVED,
+        PAYMENT_REQUEST_PAID,
+        PAYMENT_REQUEST_DECLINED,
+        PAYMENT_REQUEST_EXPIRED,
+        PAYMENT_REQUEST_CANCELLED
     }
 
 }

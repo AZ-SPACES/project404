@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.user.DeactivateRequest;
 import com.aza.backend.dto.user.PrivacySettingsRequest;
+import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.dto.user.UpdateProfileRequest;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.PresenceService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
 
@@ -106,6 +108,16 @@ public class UserController {
         String token = httpRequest.getHeader("Authorization");
         userService.deactivateAccount(user, request, token);
         return ResponseEntity.ok(ApiResponse.success("Account deactivated"));
+    }
+
+    // ==================== SILENT HOURS ====================
+
+    @PutMapping("/me/silent-hours")
+    public ResponseEntity<ApiResponse<Object>> updateSilentHours(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody SilentHoursRequest request) {
+        userService.updateSilentHours(user, request);
+        return ResponseEntity.ok(ApiResponse.success("Silent hours updated"));
     }
 
     // ==================== DEVICES ====================

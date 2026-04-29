@@ -53,6 +53,9 @@ public class ChatMessage {
 
     private String mediaKey;
 
+    /** Set for PAYMENT_REQUEST messages — links to the PaymentRequest record. */
+    private UUID paymentRequestId;
+
     /** If true, mediaKey is wiped after the recipient views it once. */
     @Builder.Default
     private Boolean viewOnce = false;
@@ -67,7 +70,7 @@ public class ChatMessage {
     private LocalDateTime expiresAt;
 
     public enum MessageType {
-        TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE
+        TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE, PAYMENT_REQUEST
     }
 
     public enum MessageStatus {

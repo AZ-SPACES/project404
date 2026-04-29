@@ -2,6 +2,7 @@ package com.aza.backend.service;
 
 import com.aza.backend.dto.auth.AuthResponse;
 import com.aza.backend.dto.user.*;
+import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.RefreshTokenRepository;
@@ -199,6 +200,22 @@ public class UserService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
         }
+    }
+
+    // ==================== SILENT HOURS ====================
+
+    @Transactional
+    public void updateSilentHours(User user, SilentHoursRequest request) {
+        if (Boolean.TRUE.equals(request.getEnabled())) {
+            if (request.getStartTime() == null || request.getEndTime() == null) {
+                throw new RuntimeException("startTime and endTime are required when enabling silent hours");
+            }
+        }
+        user.setSilentHoursEnabled(request.getEnabled());
+        user.setSilentHoursStart(request.getStartTime());
+        user.setSilentHoursEnd(request.getEndTime());
+        user.setSilentHoursPaymentThreshold(request.getPaymentThreshold());
+        userRepository.save(user);
     }
 
     // ==================== DEVICES ====================
