@@ -25,4 +25,5 @@ public class MessageResponse {
     private String viewedAt;   // non-null = media has been consumed, mediaKey is gone
     private String editedAt;   // non-null = message was edited
     private String expiresAt;  // non-null = message will disappear at this time
+    private PaymentRequestResponse paymentRequest; // non-null for type=PAYMENT_REQUEST
 }

@@ -37,6 +37,13 @@ public enum WebSocketEventType {
     SDP_ANSWER("sdp.answer"),
     ICE_CANDIDATE("ice.candidate"),
 
+    // Payment Requests
+    PAYMENT_REQUEST_RECEIVED("payment.request.received"),
+    PAYMENT_REQUEST_PAID("payment.request.paid"),
+    PAYMENT_REQUEST_DECLINED("payment.request.declined"),
+    PAYMENT_REQUEST_CANCELLED("payment.request.cancelled"),
+    PAYMENT_REQUEST_EXPIRED("payment.request.expired"),
+
     // System
     TRANSFER_UPDATE("transfer.update"),
     NOTIFICATION_NEW("notification.new");

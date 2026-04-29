@@ -4,6 +4,7 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.chat.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.ChatService;
+import com.aza.backend.service.PaymentRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ import jakarta.validation.constraints.Min;
 public class ChatController {
 
     private final ChatService chatService;
+    private final PaymentRequestService paymentRequestService;
 
     /**
      * GET /api/v1/chats
@@ -209,6 +211,18 @@ public class ChatController {
             @Valid @RequestBody EditMessageRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 chatService.editMessage(user, messageId, request.getCiphertext())));
+    }
+
+    /**
+     * GET /api/v1/chats/{chatId}/financial-summary
+     * Returns aggregated payment request stats for a chat.
+     */
+    @GetMapping("/{chatId}/financial-summary")
+    public ResponseEntity<ApiResponse<ChatFinancialSummary>> getFinancialSummary(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentRequestService.getChatFinancialSummary(user, chatId)));
     }
 
     /**

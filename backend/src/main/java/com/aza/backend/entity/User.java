@@ -88,6 +88,23 @@ public class User {
     @Builder.Default
     private Boolean findMeByEmail = true;
 
+    // --- Silent Hours ---
+    @Builder.Default
+    private Boolean silentHoursEnabled = false;
+
+    /** HH:mm 24-hour start of silent period (e.g. "22:00"). */
+    private String silentHoursStart;
+
+    /** HH:mm 24-hour end of silent period (e.g. "07:00"). Wraps midnight if before start. */
+    private String silentHoursEnd;
+
+    /**
+     * Minimum payment amount (GHS) that bypasses silent hours and triggers a push.
+     * Null = no payment notifications break through during silent hours.
+     * Zero = all payment notifications break through.
+     */
+    private java.math.BigDecimal silentHoursPaymentThreshold;
+
     // --- E2EE Key Bundle ---
     @Column(columnDefinition = "TEXT")
     private String identityPublicKey;

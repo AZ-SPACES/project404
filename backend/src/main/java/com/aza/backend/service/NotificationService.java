@@ -5,8 +5,10 @@ import com.aza.backend.dto.notification.NotificationResponse;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.FcmToken;
 import com.aza.backend.entity.Notification;
+import com.aza.backend.entity.User;
 import com.aza.backend.repository.FcmTokenRepository;
 import com.aza.backend.repository.NotificationRepository;
+import com.aza.backend.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +35,12 @@ public class NotificationService {
 
     private final FcmTokenRepository fcmTokenRepository;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
     private final WebSocketPublisher webSocketPublisher;
     private final PresenceService presenceService;
     private final ObjectMapper objectMapper;
+
+    private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
     //  FCM TOKEN MANAGEMENT
 
@@ -96,9 +105,39 @@ public class NotificationService {
         webSocketPublisher.publishNotification(
                 userId, WebSocketEventType.NOTIFICATION_NEW, response);
 
-        // Also send FCM push if user is offline — ensures they see it
+        // Also send FCM push if user is offline — subject to silent hours gating
         if (!presenceService.isOnline(userId)) {
-            sendFcmPush(userId, title, body, data);
+            sendFcmPushIfAllowed(userId, title, body, data, null);
+        }
+    }
+
+    @Transactional
+    public void sendNotification(UUID userId, Notification.NotificationType type,
+                                 String title, String body, Map<String, Object> data,
+                                 BigDecimal paymentAmount) {
+        String dataJson = null;
+        try {
+            if (data != null) dataJson = objectMapper.writeValueAsString(data);
+        } catch (Exception e) {
+            log.warn("Failed to serialize notification data: {}", e.getMessage());
+        }
+
+        Notification notification = Notification.builder()
+                .userId(userId)
+                .type(type)
+                .title(title)
+                .body(body)
+                .data(dataJson)
+                .build();
+
+        notification = notificationRepository.save(notification);
+
+        NotificationResponse response = toNotificationResponse(notification);
+        webSocketPublisher.publishNotification(
+                userId, WebSocketEventType.NOTIFICATION_NEW, response);
+
+        if (!presenceService.isOnline(userId)) {
+            sendFcmPushIfAllowed(userId, title, body, data, paymentAmount);
         }
     }
 
@@ -173,6 +212,78 @@ public class NotificationService {
                 data);
     }
 
+    public void sendPaymentRequestReceivedNotification(UUID payerId, String requesterName,
+                                                        BigDecimal amount, String paymentRequestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentRequestId", paymentRequestId);
+        data.put("type", "PAYMENT_REQUEST_RECEIVED");
+
+        sendNotification(
+                payerId,
+                Notification.NotificationType.PAYMENT_REQUEST_RECEIVED,
+                "Payment Request",
+                requesterName + " is requesting GHS " + amount,
+                data,
+                amount);
+    }
+
+    public void sendPaymentRequestPaidNotification(UUID requesterId, String payerName,
+                                                    BigDecimal amount, String paymentRequestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentRequestId", paymentRequestId);
+        data.put("type", "PAYMENT_REQUEST_PAID");
+
+        sendNotification(
+                requesterId,
+                Notification.NotificationType.PAYMENT_REQUEST_PAID,
+                "Payment Received",
+                payerName + " paid your request for GHS " + amount,
+                data,
+                amount);
+    }
+
+    public void sendPaymentRequestDeclinedNotification(UUID requesterId, String payerName,
+                                                        BigDecimal amount, String paymentRequestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentRequestId", paymentRequestId);
+        data.put("type", "PAYMENT_REQUEST_DECLINED");
+
+        sendNotification(
+                requesterId,
+                Notification.NotificationType.PAYMENT_REQUEST_DECLINED,
+                "Payment Request Declined",
+                payerName + " declined your request for GHS " + amount,
+                data);
+    }
+
+    public void sendPaymentRequestCancelledNotification(UUID payerId, String requesterName,
+                                                         BigDecimal amount, String paymentRequestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentRequestId", paymentRequestId);
+        data.put("type", "PAYMENT_REQUEST_CANCELLED");
+
+        sendNotification(
+                payerId,
+                Notification.NotificationType.PAYMENT_REQUEST_CANCELLED,
+                "Payment Request Cancelled",
+                requesterName + " cancelled their request for GHS " + amount,
+                data);
+    }
+
+    public void sendPaymentRequestExpiredNotification(UUID userId, BigDecimal amount,
+                                                       String paymentRequestId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("paymentRequestId", paymentRequestId);
+        data.put("type", "PAYMENT_REQUEST_EXPIRED");
+
+        sendNotification(
+                userId,
+                Notification.NotificationType.PAYMENT_REQUEST_EXPIRED,
+                "Payment Request Expired",
+                "A payment request for GHS " + amount + " has expired",
+                data);
+    }
+
     public void sendSecurityAlert(UUID userId, String deviceName, String ipAddress) {
         Map<String, Object> data = new HashMap<>();
         data.put("type", "SECURITY_ALERT");
@@ -217,6 +328,45 @@ public class NotificationService {
     }
 
     // FCM PUSH
+
+    private void sendFcmPushIfAllowed(UUID userId, String title, String body,
+                                      Map<String, Object> data, BigDecimal paymentAmount) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && isSuppressedBySilentHours(user, paymentAmount)) {
+            log.debug("FCM push suppressed by silent hours for user {}", userId);
+            return;
+        }
+        sendFcmPush(userId, title, body, data);
+    }
+
+    private boolean isSuppressedBySilentHours(User user, BigDecimal paymentAmount) {
+        if (!Boolean.TRUE.equals(user.getSilentHoursEnabled())) return false;
+        if (user.getSilentHoursStart() == null || user.getSilentHoursEnd() == null) return false;
+
+        LocalTime nowTime = ZonedDateTime.now(GHANA_TZ).toLocalTime();
+        LocalTime start = LocalTime.parse(user.getSilentHoursStart());
+        LocalTime end = LocalTime.parse(user.getSilentHoursEnd());
+
+        boolean inSilentWindow;
+        if (!start.isAfter(end)) {
+            inSilentWindow = !nowTime.isBefore(start) && nowTime.isBefore(end);
+        } else {
+            // Wraps midnight, e.g. 22:00 – 07:00
+            inSilentWindow = !nowTime.isBefore(start) || nowTime.isBefore(end);
+        }
+        if (!inSilentWindow) return false;
+
+        // In silent window — check if payment breaks through
+        if (paymentAmount != null) {
+            BigDecimal threshold = user.getSilentHoursPaymentThreshold();
+            if (threshold != null && paymentAmount.compareTo(threshold) >= 0) {
+                return false; // payment amount meets or exceeds threshold — send it
+            }
+            // threshold null means no payment breaks through
+        }
+
+        return true; // suppress
+    }
 
     /**
      * Send FCM push notification to all the user's registered devices.

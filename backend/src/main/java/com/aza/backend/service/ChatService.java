@@ -5,9 +5,11 @@ import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Chat;
 import com.aza.backend.entity.ChatMessage;
 import com.aza.backend.entity.User;
+import com.aza.backend.dto.chat.PaymentRequestResponse;
 import com.aza.backend.repository.BlockedUserRepository;
 import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
+import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.util.RateLimitService;
@@ -39,6 +41,7 @@ public class ChatService {
     private final CloudinaryService cloudinaryService;
     private final RateLimitService rateLimitService;
     private final BlockedUserRepository blockedUserRepository;
+    private final PaymentRequestRepository paymentRequestRepository;
 
     private static final int MESSAGE_EDIT_WINDOW_MINUTES = 15;
 
@@ -545,6 +548,30 @@ public class ChatService {
     }
 
     private MessageResponse toMessageResponse(ChatMessage message) {
+        PaymentRequestResponse paymentRequest = null;
+        if (message.getType() == ChatMessage.MessageType.PAYMENT_REQUEST
+                && message.getPaymentRequestId() != null) {
+            paymentRequest = paymentRequestRepository.findById(message.getPaymentRequestId())
+                    .map(pr -> PaymentRequestResponse.builder()
+                            .id(pr.getId().toString())
+                            .chatId(pr.getChatId().toString())
+                            .requesterId(pr.getRequesterId().toString())
+                            .payerId(pr.getPayerId().toString())
+                            .amount(pr.getAmount())
+                            .currency(pr.getCurrency())
+                            .note(pr.getNote())
+                            .status(pr.getStatus().name())
+                            .transactionId(pr.getTransactionId() != null
+                                    ? pr.getTransactionId().toString() : null)
+                            .expiresAt(pr.getExpiresAt() != null ? pr.getExpiresAt().toString() : null)
+                            .paidAt(pr.getPaidAt() != null ? pr.getPaidAt().toString() : null)
+                            .declinedAt(pr.getDeclinedAt() != null ? pr.getDeclinedAt().toString() : null)
+                            .cancelledAt(pr.getCancelledAt() != null ? pr.getCancelledAt().toString() : null)
+                            .createdAt(pr.getCreatedAt() != null ? pr.getCreatedAt().toString() : null)
+                            .build())
+                    .orElse(null);
+        }
+
         return MessageResponse.builder()
                 .id(message.getId().toString())
                 .chatId(message.getChatId().toString())
@@ -565,6 +592,7 @@ public class ChatService {
                 .viewedAt(message.getViewedAt() != null ? message.getViewedAt().toString() : null)
                 .editedAt(message.getEditedAt() != null ? message.getEditedAt().toString() : null)
                 .expiresAt(message.getExpiresAt() != null ? message.getExpiresAt().toString() : null)
+                .paymentRequest(paymentRequest)
                 .build();
     }
 }
