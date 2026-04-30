@@ -53,6 +53,67 @@ export const unregisterFcmToken = (deviceId: string) =>
 export const totpLogin = (preAuthToken: string, code: string) =>
   api.post('/api/v1/auth/2fa/login', { preAuthToken, code });
 
+// --- KYC Endpoints ---
+
+export const getKycStatus = () => api.get('/api/v1/kyc/status');
+
+export const recordKycConsent = () => api.post('/api/v1/kyc/consent');
+
+export const submitFundsSource = (fundsSource: string, otherFundsText?: string) =>
+  api.post('/api/v1/kyc/funds-source', { fundsSource, otherFundsText });
+
+export const submitIdentity = (idType: string, idNumber: string, frontImage: any, backImage: any) => {
+  const formData = new FormData();
+  formData.append('idType', idType);
+  formData.append('idNumber', idNumber);
+  formData.append('frontImage', frontImage);
+  formData.append('backImage', backImage);
+
+  return api.post('/api/v1/kyc/identity', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const submitSelfie = (selfie: any) => {
+  const formData = new FormData();
+  formData.append('selfie', selfie);
+
+  return api.post('/api/v1/kyc/selfie', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const submitPepScreening = (isPep: boolean, pepStatus?: string, pepRole?: string) =>
+  api.post('/api/v1/kyc/pep-screening', { isPep, pepStatus, pepRole });
+
+export const submitPepDetails = (accountPurpose: string, monthlyVolume: string, wealthSource: string) =>
+  api.post('/api/v1/kyc/pep-details', { accountPurpose, monthlyVolume, wealthSource });
+
+export const submitProofOfWealth = (document: any) => {
+  const formData = new FormData();
+  formData.append('document', document);
+
+  return api.post('/api/v1/kyc/proof-of-wealth', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const submitKycFinal = () => api.post('/api/v1/kyc/submit');
+
+// --- User Endpoints ---
+
+export const checkHandleAvailability = (handle: string) => 
+  api.get(`/api/v1/users/check-handle?handle=${encodeURIComponent(handle)}`);
+
+export const suggestHandles = (firstName: string, lastName: string) =>
+  api.get(`/api/v1/users/suggest-handles?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`);
+
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;
 let failedQueue: Array<{

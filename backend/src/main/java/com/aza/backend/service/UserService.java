@@ -295,6 +295,40 @@ public class UserService {
                     User.EmploymentStatus.valueOf(employmentStatus.toUpperCase()));
         }
     }
+    
+    public boolean isHandleAvailable(String handle) {
+        if (handle == null || handle.isBlank()) return false;
+        String normalized = handle.toLowerCase().trim();
+        if (!HANDLE_PATTERN.matcher(normalized).matches()) {
+            return false;
+        }
+        return !userRepository.existsByHandle(normalized);
+    }
+
+    public List<String> suggestHandles(String firstName, String lastName) {
+        String base = (firstName + lastName).replaceAll("[^a-z0-9]", "").toLowerCase();
+        if (base.isEmpty()) base = "user";
+        
+        List<String> suggestions = new java.util.ArrayList<>();
+        int suffix = 1;
+        while (suggestions.size() < 3 && suffix < 1000) {
+            String candidate = base + suffix;
+            if (candidate.length() >= 3 && !userRepository.existsByHandle(candidate)) {
+                suggestions.add(candidate);
+            }
+            suffix++;
+        }
+        
+        // Add some more variations if we need 3
+        if (suggestions.size() < 3 && !firstName.isEmpty() && !lastName.isEmpty()) {
+            String altBase = firstName.toLowerCase().replaceAll("[^a-z0-9]", "") + "_" + lastName.toLowerCase().replaceAll("[^a-z0-9]", "");
+            if (altBase.length() >= 3 && altBase.length() <= 30 && !userRepository.existsByHandle(altBase)) {
+                suggestions.add(altBase);
+            }
+        }
+        
+        return suggestions;
+    }
 
     private boolean isValidImage(byte[] bytes) {
         if (bytes.length < 4) return false;

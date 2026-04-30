@@ -19,11 +19,15 @@ import {
   SignUpEmailScreen,
   SignUpPasswordScreen,
   SignUpNameScreen,
+  SignUpHandleScreen,
   SignUpAddressScreen,
   SignUpPronounsScreen,
   SignUpEmploymentScreen,
   SignUpBirthdayScreen,
   TaxResidencyScreen,
+  CreatePasscodeScreen,
+  ConfirmPasscodeScreen,
+  ConsentScreen,
 } from '../features/auth';
 
 import { createNativeStackNavigator as createStack } from '@react-navigation/native-stack';
@@ -54,11 +58,15 @@ export default function AuthNavigator() {
       <Stack.Screen name="SignUpEmail" component={SignUpEmailScreen} />
       <Stack.Screen name="SignUpPassword" component={SignUpPasswordScreen} />
       <Stack.Screen name="SignUpName" component={SignUpNameScreen} />
+      <Stack.Screen name="SignUpHandle" component={SignUpHandleScreen} />
       <Stack.Screen name="SignUpAddress" component={SignUpAddressScreen} />
       <Stack.Screen name="SignUpPronouns" component={SignUpPronounsScreen} />
       <Stack.Screen name="SignUpEmployment" component={SignUpEmploymentScreen} />
       <Stack.Screen name="SignUpBirthday" component={SignUpBirthdayScreen} />
       <Stack.Screen name="TaxResidency" component={TaxResidencyScreen} />
+      <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
+      <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
+      <Stack.Screen name="Consent" component={ConsentScreen} />
     </Stack.Navigator>
     </SignUpProvider>
   );

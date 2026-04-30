@@ -12,6 +12,7 @@ export const LightColors = {
   background: '#E6ECE1',
   surface:    '#F8F9FA',
   border:     '#DADCE0',
+  success:    '#34A853',
   white: '#FFFFFF',
   black: '#000000',
   white10: 'rgba(255, 255, 255, 0.1)',
@@ -48,6 +49,7 @@ export const DarkColors = {
   background: '#121212',
   surface:    '#1E1E1E',
   border:     '#3C4043',
+  success:    '#81C995',
   isDark: true,
 } as const;
 
