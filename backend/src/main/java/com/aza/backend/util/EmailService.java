@@ -133,6 +133,42 @@ public class EmailService {
     }
 
     /**
+     * Send KYC status update email
+     */
+    public void sendKycStatusEmail(String email, String name, boolean approved, String reason) {
+        CompletableFuture.runAsync(() -> {
+            String subject = approved ? "AZA - Verification Successful" : "AZA - Verification Update Required";
+            try {
+                log.info("Preparing KYC Status email for {} (approved: {})...", email, approved);
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setFrom("AZA Support <" + fromEmail + ">");
+                helper.setTo(email);
+                helper.setSubject(subject);
+
+                Context context = new Context();
+                context.setVariable("name", name);
+                context.setVariable("approved", approved);
+                context.setVariable("reason", reason);
+
+                String htmlContent = templateEngine.process("email/kyc-status", context);
+                helper.setText(htmlContent, true);
+
+                ClassPathResource res = new ClassPathResource("static/images/paper-plane.png");
+                helper.addInline("paperplane", res);
+
+                mailSender.send(message);
+                log.info("KYC Status email sent successfully to {}", email);
+            } catch (MessagingException e) {
+                log.error("Failed to send KYC status email to {}: {}", email, e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error sending KYC status email to {}: {}", email, e.getMessage());
+            }
+        });
+    }
+
+    /**
      * Fetch city and country from IP address using a free GeoIP API
      */
     private String fetchLocation(String ip) {

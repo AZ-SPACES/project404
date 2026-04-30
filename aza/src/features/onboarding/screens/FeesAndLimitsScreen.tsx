@@ -13,6 +13,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC } from "../../../providers/KYCProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "FeesAndLimits">;
 
@@ -40,7 +41,10 @@ export default function FeesAndLimitsScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { data: kycData } = useKYC();
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const isVerified = kycData.status === 'VERIFIED';
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -134,10 +138,15 @@ export default function FeesAndLimitsScreen() {
 
           {/* Tier explanation */}
           <View style={styles.tierNote}>
-            <MaterialIcons name="upgrade" size={16} color={Colors.primary} />
+            <MaterialIcons 
+              name={isVerified ? "upgrade" : "hourglass-empty"} 
+              size={16} 
+              color={Colors.primary} 
+            />
             <Text style={styles.tierNoteText}>
-              Your account is already at <Text style={styles.bold}>Tier 2</Text> — KYC
-              verification was completed during sign-up. Higher limits apply immediately.
+              {isVerified 
+                ? <>Your account is already at <Text style={styles.bold}>Tier 2</Text> — KYC verification was completed during sign-up. Higher limits apply immediately.</>
+                : <>Your account is currently at <Text style={styles.bold}>Tier 1</Text> while we review your identity documents. Tier 2 limits will apply once verified.</>}
             </Text>
           </View>
 
