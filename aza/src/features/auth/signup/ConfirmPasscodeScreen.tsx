@@ -22,7 +22,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
-import { useSignUp } from "../../../providers/SignUpProvider";
+import { useSignupStore } from "../../../store/signupStore";
 import { api } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<
@@ -40,7 +40,7 @@ export default function ConfirmPasscodeScreen() {
   const route = useRoute<ConfirmPageRouteProp>();
   const { firstPasscode } = route.params;
   const { userToken, savePasscodeValue } = useAuth();
-  const { update } = useSignUp();
+  const update = useSignupStore((state) => state.updateData);
 
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
@@ -91,27 +91,23 @@ export default function ConfirmPasscodeScreen() {
     if (isNavigatingRef.current || passcode.length !== 4 || isLocked) return;
 
     if (String(passcode).trim() === String(firstPasscode).trim()) {
+      isNavigatingRef.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (userToken) {
-        // Standalone case: Already logged in, set passcode via API
         try {
-          isNavigatingRef.current = true;
           await api.post('/api/v1/auth/passcode/set', { passcode });
           await savePasscodeValue(passcode);
-          navigation.navigate("Consent");
         } catch (e: any) {
-          isNavigatingRef.current = false;
-          setServerError(e?.response?.data?.message || "Failed to set passcode. Please try again.");
-          setPasscode("");
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          console.error("Passcode sync error:", e);
         }
-      } else if (update) {
-        // Signup case: Not logged in yet, store in signup data
-        isNavigatingRef.current = true;
-        update({ passcode });
-        navigation.navigate("Consent");
       }
+
+      update({ passcode });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Consent" }],
+      });
     } else {
       const newCount = attemptCount + 1;
       setAttemptCount(newCount);
@@ -132,16 +128,13 @@ export default function ConfirmPasscodeScreen() {
 
   // Automatic verification when 4 digits are entered
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (passcode.length === 4) {
-      // Small delay for visual confirmation of the last digit
-      timer = setTimeout(() => {
-        handleContinue();
-      }, 300);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
+    if (passcode.length !== 4 || isNavigatingRef.current) return;
+
+    // Small delay for visual confirmation of the last digit
+    const timer = setTimeout(() => {
+      handleContinue();
+    }, 400);
+    return () => clearTimeout(timer);
   }, [passcode, handleContinue]);
 
   const handleTextChange = (text: string) => {

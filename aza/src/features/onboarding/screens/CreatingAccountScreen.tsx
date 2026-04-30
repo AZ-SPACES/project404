@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors } from "../../../theme";
+import { useKYC } from "../../../providers/KYCProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatingAccount">;
 
@@ -15,9 +16,12 @@ export default function CreatingAccountScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { data: kycData } = useKYC();
   
   const [status, setStatus] = useState("Securing your profile");
   const [isDone, setIsDone] = useState(false);
+
+  const isVerified = kycData.status === 'VERIFIED';
   
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,7 +66,7 @@ export default function CreatingAccountScreen() {
     }, DURATION * 0.4);
 
     const stage2 = setTimeout(() => {
-      setStatus("Everything is ready");
+      setStatus(isVerified ? "Everything is ready" : "Review in progress");
       setIsDone(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       

@@ -6,6 +6,7 @@ import com.aza.backend.entity.User;
 import com.aza.backend.repository.KycRecordRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
+import com.aza.backend.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class KycService {
     private final KycRecordRepository kycRecordRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final EmailService emailService;
 
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
@@ -52,27 +55,7 @@ public class KycService {
                     .build();
         }
 
-        int steps = 0;
-        if (Boolean.TRUE.equals(record.getBiometricConsent())) steps++;
-        if (record.getFundsSource() != null) steps++;
-        if (record.getIdNumber() != null) steps++;
-        if (record.getSelfieImageUrl() != null) steps++;
-        if (record.getIsPep() != null) steps++;
-
-        int percentage = (steps * 100) / 5;
-
-        return KycStatusResponse.builder()
-                .status(record.getStatus().name())
-                .completionPercentage(percentage)
-                .consentGiven(Boolean.TRUE.equals(record.getBiometricConsent()))
-                .fundsSourceSubmitted(record.getFundsSource() != null)
-                .idDocumentSubmitted(record.getIdNumber() != null)
-                .selfieSubmitted(record.getSelfieImageUrl() != null)
-                .pepScreeningDone(record.getIsPep() != null)
-                .submitted(record.getSubmittedAt() != null)
-                .rejectionReason(record.getRejectionReason())
-                .verificationProvider(record.getVerificationProvider())
-                .build();
+        return getStatusForRecord(record);
     }
 
     //STEP 1: CONSENT
@@ -310,6 +293,92 @@ public class KycService {
 
         kycRecordRepository.save(record);
         return getStatus(user);
+    }
+
+    // ==================== ADMIN METHODS ====================
+
+    public List<KycStatusResponse> getPendingReviews() {
+        return kycRecordRepository.findAllByStatus(KycRecord.KycStatus.UNDER_REVIEW)
+                .stream()
+                .map(record -> {
+                    User user = userRepository.findById(record.getUserId()).orElse(null);
+                    KycStatusResponse status = getStatusForRecord(record);
+                    if (user != null) {
+                        status.setDisplayName(user.getDisplayName());
+                        status.setEmail(user.getEmail());
+                        status.setUserId(user.getId().toString());
+                    }
+                    return status;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public KycStatusResponse reviewRecord(UUID userId, boolean approve, String rejectionReason) {
+        KycRecord record = kycRecordRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("KYC record not found"));
+
+        if (record.getStatus() != KycRecord.KycStatus.UNDER_REVIEW) {
+            throw new RuntimeException("Record is not under review. Current status: " + record.getStatus());
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (approve) {
+            record.setStatus(KycRecord.KycStatus.VERIFIED);
+            record.setVerifiedAt(LocalDateTime.now());
+            record.setVerificationProvider("MANUAL");
+            record.setVerificationReference("ADMIN-" + UUID.randomUUID().toString().substring(0, 8));
+            updateUserKycStatus(user, User.KycStatus.VERIFIED);
+            log.info("KYC manually approved for user {}", userId);
+        } else {
+            record.setStatus(KycRecord.KycStatus.REJECTED);
+            record.setRejectionReason(rejectionReason);
+            // Allow re-submission
+            record.setSubmittedAt(null);
+            updateUserKycStatus(user, User.KycStatus.REJECTED);
+            log.info("KYC manually rejected for user {}. Reason: {}", userId, rejectionReason);
+        }
+
+        kycRecordRepository.save(record);
+
+        // Send notification email
+        String name = user.getFirstName() != null ? user.getFirstName() : user.getDisplayName();
+        emailService.sendKycStatusEmail(user.getEmail(), name, approve, rejectionReason);
+
+        return getStatus(user);
+    }
+
+    private KycStatusResponse getStatusForRecord(KycRecord record) {
+        int steps = 0;
+        if (Boolean.TRUE.equals(record.getBiometricConsent())) steps++;
+        if (record.getFundsSource() != null) steps++;
+        if (record.getIdNumber() != null) steps++;
+        if (record.getSelfieImageUrl() != null) steps++;
+        if (record.getIsPep() != null) steps++;
+
+        int percentage = (steps * 100) / 5;
+
+        return KycStatusResponse.builder()
+                .status(record.getStatus().name())
+                .completionPercentage(percentage)
+                .consentGiven(Boolean.TRUE.equals(record.getBiometricConsent()))
+                .fundsSourceSubmitted(record.getFundsSource() != null)
+                .idDocumentSubmitted(record.getIdNumber() != null)
+                .selfieSubmitted(record.getSelfieImageUrl() != null)
+                .pepScreeningDone(record.getIsPep() != null)
+                .submitted(record.getSubmittedAt() != null)
+                .rejectionReason(record.getRejectionReason())
+                .verificationProvider(record.getVerificationProvider())
+                .idFrontUrl(record.getIdFrontImageUrl())
+                .idBackUrl(record.getIdBackImageUrl())
+                .selfieUrl(record.getSelfieImageUrl())
+                .idType(record.getIdType() != null ? record.getIdType().name() : null)
+                .idNumber(record.getIdNumber())
+                .fundsSource(record.getFundsSource())
+                .isPep(record.getIsPep())
+                .build();
     }
 
     // ==================== HELPERS ====================

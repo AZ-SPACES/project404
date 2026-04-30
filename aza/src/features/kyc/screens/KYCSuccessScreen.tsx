@@ -7,6 +7,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC } from "../../../providers/KYCProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "KYCSuccess">;
 
@@ -90,7 +91,12 @@ export default function KYCSuccessScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { data: kycData } = useKYC();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const isVerified = kycData.status === 'VERIFIED';
+  const isReviewing = kycData.status === 'UNDER_REVIEW';
+  const isRejected = kycData.status === 'REJECTED';
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -112,9 +118,15 @@ export default function KYCSuccessScreen() {
           <MaterialIcons name="check-circle" size={64} color={Colors.primary} />
         </Animated.View>
 
-        <Text style={styles.title}>Verification Complete</Text>
+        <Text style={styles.title}>
+          {isVerified ? "Verification Successful" : isRejected ? "Verification Failed" : "Verification Complete"}
+        </Text>
         <Text style={styles.subtitle}>
-          We’re reviewing it now. You’ll receive a{"\n"}notification and an email as soon as it is verified
+          {isVerified 
+            ? "Your identity has been verified. You can now access all features."
+            : isRejected 
+            ? `Your verification was not successful: ${kycData.rejectionReason || "Please contact support."}`
+            : "We’re reviewing it now. You’ll receive a\nnotification and an email as soon as it is verified"}
         </Text>
 
         <View style={styles.checksContainer}>
@@ -134,7 +146,7 @@ export default function KYCSuccessScreen() {
           
           <ReviewCheckItem 
             label="Verify your identity" 
-            status="reviewing" 
+            status={isVerified ? "completed" : "reviewing"} 
             delay={800}
           />
         </View>
