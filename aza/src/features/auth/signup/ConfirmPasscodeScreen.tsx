@@ -47,6 +47,7 @@ export default function ConfirmPasscodeScreen() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const isNavigatingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
 
   const MAX_ATTEMPTS = 5;
@@ -87,38 +88,41 @@ export default function ConfirmPasscodeScreen() {
   }, [shakeAnim]);
 
   const handleContinue = useCallback(async () => {
-    if (passcode.length === 4 && !isLocked) {
-      if (String(passcode).trim() === String(firstPasscode).trim()) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        if (userToken) {
-          // Standalone case: Already logged in, set passcode via API
-          try {
-            await api.post('/api/v1/auth/passcode/set', { passcode });
-            await savePasscodeValue(passcode);
-            navigation.navigate("Consent");
-          } catch (e: any) {
-            setServerError(e?.response?.data?.message || "Failed to set passcode. Please try again.");
-            setPasscode("");
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          }
-        } else if (update) {
-          // Signup case: Not logged in yet, store in signup data
-          update({ passcode });
+    if (isNavigatingRef.current || passcode.length !== 4 || isLocked) return;
+
+    if (String(passcode).trim() === String(firstPasscode).trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (userToken) {
+        // Standalone case: Already logged in, set passcode via API
+        try {
+          isNavigatingRef.current = true;
+          await api.post('/api/v1/auth/passcode/set', { passcode });
+          await savePasscodeValue(passcode);
           navigation.navigate("Consent");
+        } catch (e: any) {
+          isNavigatingRef.current = false;
+          setServerError(e?.response?.data?.message || "Failed to set passcode. Please try again.");
+          setPasscode("");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
-      } else {
-        const newCount = attemptCount + 1;
-        setAttemptCount(newCount);
-        if (newCount >= MAX_ATTEMPTS) {
-          setIsLocked(true);
-        }
-        setErrorStatus(true);
-        startShake();
-        setPasscode("");
+      } else if (update) {
+        // Signup case: Not logged in yet, store in signup data
+        isNavigatingRef.current = true;
+        update({ passcode });
+        navigation.navigate("Consent");
       }
+    } else {
+      const newCount = attemptCount + 1;
+      setAttemptCount(newCount);
+      if (newCount >= MAX_ATTEMPTS) {
+        setIsLocked(true);
+      }
+      setErrorStatus(true);
+      startShake();
+      setPasscode("");
     }
-  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked]);
+  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked, userToken, savePasscodeValue]);
 
   useEffect(() => {
     if (isLocked) return;

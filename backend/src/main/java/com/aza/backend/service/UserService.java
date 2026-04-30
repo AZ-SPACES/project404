@@ -58,6 +58,8 @@ public class UserService {
                 .profileImageUrl(user.getProfileImageUrl())
                 .kycStatus(user.getKycStatus().name())
                 .passcodeSet(user.getPasscodeHash() != null)
+                .homeAddress(user.getHomeAddress())
+                .city(user.getCity())
                 .nationality(user.getNationality())
                 .otherNationality(user.getOtherNationality())
                 .isTaxResidentAbroad(user.getIsTaxResidentAbroad())
