@@ -64,8 +64,7 @@ export default function OnboardingScreen() {
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
   // Replace this placeholder with your actual Cloudflare Stream video URL (HLS / m3u8 recommended for best streaming experience)
-  const splashVideo =
-    "https://customer-xxxxxxxxxx.cloudflarestream.com/xxxxxxxxxxxxxx/manifest/video.m3u8";
+  const splashVideo = require("../../../assets/videos/splash.mp4");
 
   const player = useVideoPlayer(splashVideo);
 
