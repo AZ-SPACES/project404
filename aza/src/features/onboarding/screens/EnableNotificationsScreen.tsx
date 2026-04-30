@@ -9,47 +9,58 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useNotifications } from '../../../providers/NotificationProvider';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import Button from '../../../components/ui/Button';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 
-import * as LocalAuthentication from 'expo-local-authentication';
-import { useAuth } from '../../../providers/AuthProvider';
-import { useNotifications } from '../../../providers/NotificationProvider';
-
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
-export default function EnableNotificationsScreen() {
+type EnableNotificationsProps = {
+  onComplete?: () => void;
+};
+
+export default function EnableNotificationsScreen({ onComplete }: EnableNotificationsProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { registerForNotifications, sendLocalNotification } = useNotifications();
-  const { setPasscode } = useAuth();
+  const { checkPermissions, registerForNotifications, sendLocalNotification } = useNotifications();
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isChecking, setIsChecking] = React.useState(true);
+
+  const handleFinish = React.useCallback(() => {
+    if (onComplete) {
+      onComplete();
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation, onComplete]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const checkInitialStatus = async () => {
+      try {
+        const { status } = await checkPermissions();
+        if (status === 'granted' && isMounted) {
+          handleFinish();
+        }
+      } catch (error) {
+        console.error('Error checking notification status:', error);
+      } finally {
+        if (isMounted) {
+          setIsChecking(false);
+        }
+      }
+    };
+
+    checkInitialStatus();
+    return () => { isMounted = false; };
+  }, [checkPermissions, handleFinish]);
 
   const handleClose = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      setPasscode();
-    }
-  };
-
-  const navigateNext = async () => {
-    try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      
-      if (hasHardware && isEnrolled) {
-        navigation.navigate('EnableBiometrics');
-      } else {
-        setPasscode();
-      }
-    } catch (e) {
-      setPasscode();
-    }
+    handleFinish();
   };
 
   const handleEnable = async () => {
@@ -67,13 +78,24 @@ export default function EnableNotificationsScreen() {
       console.error('Error enabling notifications:', error);
     } finally {
       setIsLoading(false);
-      await navigateNext();
+      handleFinish();
     }
   };
 
   const handleNotNow = async () => {
-    await navigateNext();
+    handleFinish();
   };
+
+  if (isChecking) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
+        <View style={styles.loadingContainer}>
+          {/* Subtle loading state or just empty while checking */}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -134,6 +156,10 @@ function createStyles(Colors: ThemeColors) {
   container: {
     flex: 1,
     backgroundColor: Colors.background },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center' },
   header: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm },
@@ -172,7 +198,8 @@ function createStyles(Colors: ThemeColors) {
     textAlign: 'center',
     marginBottom: Spacing.lg },
   button: {
-    borderRadius: Radius.full },
+    borderRadius: Radius.md },
   spacer: {
     height: Spacing.md } });
 }
+

@@ -14,6 +14,12 @@ import { NetworkProvider } from "./src/providers/NetworkProvider";
 import { ToastProvider } from "./src/providers/ToastProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
+import { useAuth } from "./src/providers/AuthProvider";
+import { useNotifications } from "./src/providers/NotificationProvider";
+import EnableNotificationsScreen from "./src/features/onboarding/screens/EnableNotificationsScreen";
+import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiometricsScreen";
+import * as LocalAuthentication from "expo-local-authentication";
+import React, { useEffect, useState } from "react";
 
 const linking = {
   prefixes: ['aza://', 'https://aza.me'],
@@ -37,6 +43,38 @@ const linking = {
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
+  const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } = useAuth();
+  const { checkPermissions } = useNotifications();
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [showBiometricsPrompt, setShowBiometricsPrompt] = useState(false);
+
+  useEffect(() => {
+    // Only check if user is fully onboarded and logged in
+    if (userToken && hasPasscode && isKYCVerified) {
+      const checkStatus = async () => {
+        try {
+          // 1. Check Biometrics first
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          
+          if (!isBiometricsEnabled && hasHardware && isEnrolled) {
+            setShowBiometricsPrompt(true);
+            return; // Wait for biometrics to finish before checking notifications
+          }
+
+          // 2. Check Notifications
+          const { status } = await checkPermissions();
+          if (status !== 'granted') {
+            setShowNotificationPrompt(true);
+          }
+        } catch (error) {
+          console.error('App: Failed to check service status', error);
+        }
+      };
+      checkStatus();
+    }
+  }, [userToken, hasPasscode, isKYCVerified, isBiometricsEnabled, checkPermissions]);
+
   return (
     <View style={{ flex: 1 }}>
       <StatusBar barStyle={activeColorScheme === "dark" ? "light-content" : "dark-content"} />
@@ -44,7 +82,17 @@ function AppContent() {
         theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}
         linking={linking as any}
       >
-        <RootNavigator />
+        {showBiometricsPrompt ? (
+          <EnableBiometricsScreen 
+            onComplete={() => setShowBiometricsPrompt(false)} 
+          />
+        ) : showNotificationPrompt ? (
+          <EnableNotificationsScreen 
+            onComplete={() => setShowNotificationPrompt(false)} 
+          />
+        ) : (
+          <RootNavigator />
+        )}
       </NavigationContainer>
       <OfflineBanner />
       <PrivacyOverlay />

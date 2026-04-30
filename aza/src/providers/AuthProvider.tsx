@@ -29,6 +29,7 @@ type AuthContextType = AuthState & {
   setPasscode: () => void;
   toggleBiometrics: (enabled: boolean) => void;
   savePasscodeValue: (code: string) => Promise<void>;
+  getPasscodeValue: () => Promise<string | null>;
   verifyPasscode: (code: string) => Promise<boolean>;
   checkPinLockout: () => Promise<PinLockoutResult>;
   recordPinFailure: () => Promise<PinLockoutResult>;
@@ -38,7 +39,7 @@ type AuthContextType = AuthState & {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STATE_KEY = "aza_auth_state";
-const PASSCODE_VALUE_KEY = "aza_passcode";
+export const PASSCODE_VALUE_KEY = "aza_passcode";
 const PIN_ATTEMPTS_KEY = "aza_pin_attempts";
 const MAX_PIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -135,6 +136,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     saveState({ hasPasscode: true });
   };
 
+  const getPasscodeValue = useCallback(async (): Promise<string | null> => {
+    try {
+      return await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
+    } catch (e) {
+      console.error("Failed to read passcode value", e);
+      return null;
+    }
+  }, []);
+
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
@@ -226,6 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setPasscode,
         toggleBiometrics,
         savePasscodeValue,
+        getPasscodeValue,
         verifyPasscode,
         checkPinLockout,
         recordPinFailure,

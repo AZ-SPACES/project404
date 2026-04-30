@@ -14,5 +14,9 @@ public class UpdateProfileRequest {
     private String homeAddress;
     private String city;
     private String nationality;
+    private String otherNationality;
+    private Boolean isTaxResidentAbroad;
+    private String taxCountry;
+    private Boolean isUSPerson;
     private String employmentStatus;
 }

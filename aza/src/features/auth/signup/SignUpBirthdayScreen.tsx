@@ -16,10 +16,12 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
+import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -60,29 +62,25 @@ export default function SignUpBirthdayScreen() {
 
   const handleNext = useCallback(async () => {
     try {
-      // 1. Submit data to backend
       const response = await submitSignup();
-      
-      // 2. Set profile locally for UX (optional, but good)
+      const authPayload = response?.data ?? response;
+      const { accessToken, refreshToken } = authPayload;
+
       const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
       if (fullName) await setDisplayName(fullName);
       if (data.email) await setEmail(data.email);
       if (data.phoneNumber) await setPhone(data.phoneNumber);
-      
-      // 3. Clear wizard state
+
       reset();
-      
-      // 4. Optionally log them in immediately or redirect to login.
-      // The backend /signup usually returns an AuthResponse (JWT) or requires OTP.
-      // Let's assume we route them to the Login screen with a success message.
-      showToast('Account created successfully! Please login.', 'success');
-      navigation.navigate('Login');
-      
+
+      await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+      // hasPasscode=false routes new user through SetupNavigator; RootNavigator handles transition
+      login(accessToken, false, false);
     } catch (error: any) {
-      // Error is handled/logged in the store, but we can show a specific toast here if needed
       showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
     }
-  }, [submitSignup, reset, data, setDisplayName, setEmail, setPhone, navigation, showToast]);
+  }, [submitSignup, reset, data, setDisplayName, setEmail, setPhone, login, showToast]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 

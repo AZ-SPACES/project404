@@ -51,7 +51,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("Email sent successfully to {}", to);
             return true;
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
             return false;
         }
@@ -85,7 +85,7 @@ public class EmailService {
             mailSender.send(message);
             log.info("OTP email sent successfully to {}", email);
             return true;
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send OTP email to {}: {}", email, e.getMessage());
             return false;
         }
