@@ -19,9 +19,11 @@ import Button from '../../../components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
-import { useAuth } from '../../../providers/AuthProvider';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { api } from '../../../services/api';
+import { useAuthStore } from '../../../store/authStore';
+import { useToast } from '../../../providers/ToastProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
@@ -33,11 +35,13 @@ const OTPScreen: React.FC = () => {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<OTPRouteProp>();
-  const { login } = useAuth();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [timeLeft, setTimeLeft] = useState(57);
+  const [isLoading, setIsLoading] = useState(false);
   const phoneNumber = route.params?.phoneNumber ?? '';
+  const setTokens = useAuthStore(state => state.setTokens);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -86,10 +90,37 @@ const OTPScreen: React.FC = () => {
     }
   };
 
-  const handleVerify = () => {
-    // TODO: send otp.join('') to backend for verification
-    const isLogin = route.params?.isLogin;
-    login('dummy-token-from-otp', isLogin, isLogin);
+  const handleVerify = async () => {
+    const code = otp.join('');
+    if (code.length < 6) return;
+    
+    setIsLoading(true);
+    try {
+      const payload = {
+        identifier: phoneNumber,
+        code,
+        purpose: 'login', // Explicitly stating it's for login
+      };
+      
+      const { data } = await api.post('/api/v1/auth/verify-otp', payload);
+      
+      // If 2FA is enabled, the backend returns a TotpPendingResponse with a preAuthToken
+      if (data.data?.preAuthToken) {
+        showToast('2FA Login is not yet supported in the app.', 'error');
+        setIsLoading(false);
+        return;
+      } else if (data.data?.accessToken && data.data?.refreshToken) {
+        // Complete login
+        await setTokens(data.data.accessToken, data.data.refreshToken);
+        // The AppNavigator should automatically re-render based on isAuthenticated=true
+      }
+    } catch (error: any) {
+      console.error('OTP verification failed', error);
+      const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -161,6 +192,8 @@ const OTPScreen: React.FC = () => {
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
+              loading={isLoading}
+              disabled={isLoading || otp.join('').length < 6}
             />
         </View>
       </KeyboardAvoidingView>
