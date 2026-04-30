@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { View,Text,StyleSheet,TouchableOpacity,Animated,TextInput,TouchableWithoutFeedback,Keyboard,KeyboardAvoidingView,Platform,StatusBar, } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+} from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import {  useAppTheme, ThemeColors, Typography, Spacing,  } from "../../../theme";
+import { useAppTheme, ThemeColors, Spacing } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -12,19 +24,44 @@ import { RootStackParamList } from "../../../navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePasscode">;
 
+const validatePasscode = (code: string): string | null => {
+  // All same (1111, 2222, etc.)
+  const allSame = code[0] === code[1] && code[1] === code[2] && code[2] === code[3];
+  if (allSame) return "Please choose a more complex passcode.";
+
+  // Sequential (1234, 4321, 0123, 6789, etc.)
+  const isSequentialForward = "0123456789".includes(code);
+  const isSequentialBackward = "9876543210".includes(code);
+  if (isSequentialForward || isSequentialBackward) return "Passcodes cannot be common sequences.";
+
+  // Three or more of the same digit (e.g. 1112, 1211, 2111)
+  const counts: Record<string, number> = {};
+  for (const char of code) {
+    counts[char] = (counts[char] || 0) + 1;
+    if (counts[char]! >= 3) return "Please choose a more complex passcode.";
+  }
+
+  // Simple patterns (1212, 1122, 2211)
+  const isAlternating = code[0] === code[2] && code[1] === code[3];
+  const isTwoPairs = code[0] === code[1] && code[2] === code[3];
+  if (isAlternating || isTwoPairs) return "Please choose a more complex passcode.";
+
+  return null;
+};
+
 export default function CreatePasscodeScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isNavigating, setIsNavigating] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isNavigatingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
-  
+
   const scaleAnims = useRef([
     new Animated.Value(1),
     new Animated.Value(1),
@@ -33,6 +70,14 @@ export default function CreatePasscodeScreen() {
   ]).current;
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset state when screen regains focus (user pressed back from ConfirmPasscode)
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+      setPasscode("");
+    }, [])
+  );
 
   const startShake = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -44,92 +89,56 @@ export default function CreatePasscodeScreen() {
     ]).start();
   }, [shakeAnim]);
 
-  const validatePasscode = (code: string) => {
-    // 1. All same (1111, 2222, etc.)
-    const allSame = code[0] === code[1] && code[1] === code[2] && code[2] === code[3];
-    if (allSame) return "Please choose a more complex passcode.";
-
-    // 2. Sequential (1234, 4321, 0123, 6789, etc.)
-    const isSequentialForward = "0123456789".includes(code);
-    const isSequentialBackward = "9876543210".includes(code);
-    if (isSequentialForward || isSequentialBackward) return "Passcodes cannot be common sequences.";
-    
-    // 3. Three or more of the same digit (e.g. 1112, 1211, 2111)
-    const counts: Record<string, number> = {};
-    for (const char of code) {
-      counts[char] = (counts[char] || 0) + 1;
-      if (counts[char]! >= 3) return "Please choose a more complex passcode.";
-    }
-
-    // 4. Simple patterns (1212, 1122, 2211)
-    const isAlternating = code[0] === code[2] && code[1] === code[3];
-    const isTwoPairs = code[0] === code[1] && code[2] === code[3];
-    if (isAlternating || isTwoPairs) return "Please choose a more complex passcode.";
-
-    return null;
-  };
-
-  // Stable navigation callback
   const handleContinue = useCallback(() => {
-    if (isNavigating) return;
-    
-    if (passcode.length === 4) {
-      const error = validatePasscode(passcode);
-      if (error) {
-        setErrorMessage(error);
-        setErrorStatus(true);
-        startShake();
-        setPasscode("");
-        return;
-      }
-      
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+    if (isNavigatingRef.current || passcode.length !== 4) return;
 
-      setIsNavigating(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.navigate("ConfirmPasscode", { firstPasscode: passcode });
-      
-      // Reset navigation flag after a short delay
-      setTimeout(() => setIsNavigating(false), 1000);
+    const error = validatePasscode(passcode);
+    if (error) {
+      setErrorMessage(error);
+      setErrorStatus(true);
+      startShake();
+      setPasscode("");
+      return;
     }
-  }, [passcode, navigation, startShake, isNavigating]);
+
+    isNavigatingRef.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    navigation.navigate("ConfirmPasscode", { firstPasscode: passcode });
+  }, [passcode, navigation, startShake]);
+
+  // Keep a ref to the latest handleContinue so the auto-trigger effect
+  // doesn't re-fire when handleContinue's identity changes.
+  const handleContinueRef = useRef(handleContinue);
+  handleContinueRef.current = handleContinue;
 
   useEffect(() => {
-    // Focus keyboard on mount
     const timer = setTimeout(() => inputRef.current?.focus(), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Automatic Navigation when 4 digits are entered
+  // Automatic navigation when 4 digits are entered.
+  // Only depends on `passcode` — uses a ref for the callback.
   useEffect(() => {
-    if (passcode.length === 4) {
-      // Small delay for visual confirmation of the last digit
-      timerRef.current = setTimeout(() => {
-        handleContinue();
-      }, 300);
-    }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [passcode, handleContinue]);
+    if (passcode.length !== 4) return;
+
+    const timer = setTimeout(() => {
+      handleContinueRef.current();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [passcode]);
 
   const handleTextChange = (text: string) => {
     if (errorStatus) {
       setErrorStatus(false);
       setErrorMessage("");
     }
-    
-    // Only allow numbers and max length of 4
+
     const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
-    
+
     // Animate box if a new digit was added
     if (cleaned.length > passcode.length) {
       const index = cleaned.length - 1;
-      
-      // Haptic feedback for each tap
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       Animated.sequence([
@@ -145,14 +154,14 @@ export default function CreatePasscodeScreen() {
         }),
       ]).start();
     }
-    
+
     setPasscode(cleaned);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
@@ -181,8 +190,8 @@ export default function CreatePasscodeScreen() {
 
               {/* Passcode Visualizer (Tappable to focus keyboard) */}
               <Animated.View style={[{ transform: [{ translateX: shakeAnim }] }]}>
-                <TouchableOpacity 
-                  activeOpacity={1} 
+                <TouchableOpacity
+                  activeOpacity={1}
                   style={styles.passcodeContainer}
                   onPress={() => inputRef.current?.focus()}
                 >
@@ -240,8 +249,8 @@ function createStyles(Colors: ThemeColors) {
     flex: 1,
   },
   header: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   backButton: {
     width: 44,
@@ -254,18 +263,18 @@ function createStyles(Colors: ThemeColors) {
   content: {
     flex: 1,
     alignItems: "center",
-    paddingTop: Spacing.xl,
+    paddingTop: 24,
   },
   title: {
     fontSize: 34,
     fontWeight: "700",
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
-    marginBottom: Spacing.xl * 2,
+    marginBottom: 48,
   },
   hiddenInput: {
     position: 'absolute',
@@ -304,17 +313,15 @@ function createStyles(Colors: ThemeColors) {
   },
   errorText: {
     color: Colors.error,
-    marginTop: Spacing.md,
+    marginTop: 12,
     fontSize: 14,
     fontWeight: "500",
     textAlign: 'center',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: 16,
   },
   footer: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
 });
 }
-
-

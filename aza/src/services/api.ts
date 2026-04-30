@@ -1,10 +1,11 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 
-// Use localhost for iOS simulator, 10.0.2.2 for Android emulator, or a physical IP for real devices.
-// Adjust this value based on your actual testing environment.
-export const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080';
+// Use your machine's LAN IP for physical devices (both iOS & Android via Expo Go).
+// localhost only works for iOS Simulator; 10.0.2.2 only works for Android Emulator.
+// Update this IP if your network changes.
+const LAN_IP = '192.168.2.57';
+export const BASE_URL = `http://${LAN_IP}:8080`;
 
 export const api = axios.create({
   baseURL: BASE_URL,
