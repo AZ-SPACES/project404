@@ -9,3 +9,4 @@
 !**/.env.example
 backend/src/main/resources/ firebase-service-account.json
 *.pdf
+backend/_env.bin

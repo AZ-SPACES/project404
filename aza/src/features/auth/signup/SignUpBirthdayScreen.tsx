@@ -19,6 +19,7 @@ import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -28,8 +29,9 @@ export default function SignUpBirthdayScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { login } = useAuth();
-  const { data, update, reset } = useSignUp();
+  const { data, update, reset, submitSignup, isLoading } = useSignUp();
   const { setDisplayName, setEmail, setPhone } = useProfile();
+  const { showToast } = useToast();
 
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -57,13 +59,30 @@ export default function SignUpBirthdayScreen() {
   }, []);
 
   const handleNext = useCallback(async () => {
-    const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-    if (fullName) await setDisplayName(fullName);
-    if (data.email) await setEmail(data.email);
-    if (data.phoneNumber) await setPhone(data.phoneNumber);
-    login("signup-token-placeholder", false, false);
-    reset();
-  }, [login, reset, data.firstName, data.lastName, data.email, data.phoneNumber, setDisplayName, setEmail, setPhone]);
+    try {
+      // 1. Submit data to backend
+      const response = await submitSignup();
+      
+      // 2. Set profile locally for UX (optional, but good)
+      const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+      if (fullName) await setDisplayName(fullName);
+      if (data.email) await setEmail(data.email);
+      if (data.phoneNumber) await setPhone(data.phoneNumber);
+      
+      // 3. Clear wizard state
+      reset();
+      
+      // 4. Optionally log them in immediately or redirect to login.
+      // The backend /signup usually returns an AuthResponse (JWT) or requires OTP.
+      // Let's assume we route them to the Login screen with a success message.
+      showToast('Account created successfully! Please login.', 'success');
+      navigation.navigate('Login');
+      
+    } catch (error: any) {
+      // Error is handled/logged in the store, but we can show a specific toast here if needed
+      showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
+    }
+  }, [submitSignup, reset, data, setDisplayName, setEmail, setPhone, navigation, showToast]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -139,7 +158,8 @@ export default function SignUpBirthdayScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={isDisabled}
+            disabled={isDisabled || isLoading}
+            loading={isLoading}
           />
         </View>
       </View>

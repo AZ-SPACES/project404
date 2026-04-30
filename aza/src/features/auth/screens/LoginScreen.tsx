@@ -24,6 +24,7 @@ import { Alert } from 'react-native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../../utils/validation';
+import { api } from '../../../services/api';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -55,8 +56,15 @@ const LoginScreen: React.FC = () => {
     if (!isFormValid) return;
     setIsLoading(true);
     try {
-      // TODO: call login API, then navigate on success
-      navigation.navigate('OTP', { isLogin: true });
+      const identifier = useEmail ? email : phoneNumber;
+      await api.post('/api/v1/auth/login', { identifier, password });
+      
+      // On success, navigate to OTP
+      navigation.navigate('OTP', { isLogin: true, phoneNumber: identifier });
+    } catch (error: any) {
+      console.error('Login failed', error);
+      const errorMsg = error.response?.data?.message || 'Invalid credentials. Please try again.';
+      showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
     }
