@@ -10,8 +10,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  Alert
 } from "react-native";
+import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -44,9 +47,54 @@ export default function SignUpAddressScreen() {
     extrapolate: "clamp",
   });
 
+  const [isDetecting, setIsDetecting] = React.useState(false);
+
   const handleNext = () => {
     // Navigate to the next screen in the signup flow
     navigation.navigate("TaxResidency");
+  };
+
+  const handleDetectLocation = async () => {
+    try {
+      setIsDetecting(true);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Please enable location services in your settings to use this feature."
+        );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (reverseGeocode.length > 0) {
+        const addr = reverseGeocode[0];
+        const streetAddress = [
+          addr.streetNumber,
+          addr.street,
+          addr.district
+        ].filter(Boolean).join(" ");
+
+        update({
+          homeAddress: streetAddress || addr.name || "",
+          city: addr.city || addr.subregion || "",
+        });
+      }
+    } catch (error) {
+      console.error("Location error:", error);
+      Alert.alert("Error", "Could not detect your location. Please enter it manually.");
+    } finally {
+      setIsDetecting(false);
+    }
   };
 
   const isFormValid = data.homeAddress.trim().length > 0 && data.city.trim().length > 0;
@@ -107,6 +155,21 @@ export default function SignUpAddressScreen() {
               Enter the address you live in most of the time. We may need to ask
               for proof of this address.
             </Text>
+
+            <TouchableOpacity
+              style={styles.detectLocationButton}
+              onPress={handleDetectLocation}
+              disabled={isDetecting}
+            >
+              {isDetecting ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <MaterialIcons name="my-location" size={18} color={Colors.primary} />
+              )}
+              <Text style={styles.detectLocationText}>
+                {isDetecting ? "Detecting location..." : "Use current location"}
+              </Text>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Home address</Text>
             <View style={styles.inputContainer}>
@@ -264,6 +327,17 @@ function createStyles(Colors: ThemeColors) {
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  detectLocationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
+  },
+  detectLocationText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.primary,
   },
 });
 }

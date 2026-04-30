@@ -27,6 +27,8 @@ public class AuthResponse {
         private String profileImageUrl;
         private String kycStatus;
         private boolean passcodeSet;
+        private String homeAddress;
+        private String city;
         private String nationality;
         private String otherNationality;
         private Boolean isTaxResidentAbroad;
