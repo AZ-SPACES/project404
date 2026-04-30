@@ -25,7 +25,6 @@ import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
-
 const TERMS_URL = ""; // TODO: add production URL
 const PRIVACY_URL = ""; // TODO: add production URL
 
