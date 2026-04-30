@@ -19,6 +19,8 @@ public class SignupRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
+    private String passcode; // 4-digit PIN
+
     private String firstName;
     private String lastName;
     private String displayName;

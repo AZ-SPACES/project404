@@ -56,7 +56,7 @@ export default function SignUpNameScreen() {
 
   const handleNext = () => {
     // Navigate to the next screen in the signup flow
-    navigation.navigate("SignUpAddress");
+    navigation.navigate("SignUpHandle");
   };
 
   const isFormValid = isValidName(data.firstName) && isValidName(data.lastName);

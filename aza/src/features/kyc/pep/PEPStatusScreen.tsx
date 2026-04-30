@@ -15,6 +15,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useKYC, PEPStatus } from '../../../providers/KYCProvider';
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPStatus">;
 
@@ -31,7 +32,8 @@ export function PEPStatusScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { update } = useKYC();
+  const { submitPepStatus, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -45,16 +47,22 @@ export function PEPStatusScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    if (selectedOption === "No, I am not") {
-      update({ isPEP: false, pepStatus: null });
-      navigation.navigate("VerifyIdentity", { isPEP: false });
-    } else {
-      const pepStatus: PEPStatus = selectedOption === 'Yes, I am a Politically Exposed Person'
-        ? 'self'
-        : 'family_associate';
-      update({ isPEP: true, pepStatus });
-      navigation.navigate("PEPDetails");
+  const handleNext = async () => {
+    try {
+      if (selectedOption === "No, I am not") {
+        await submitPepStatus(false);
+        navigation.navigate("VerifyIdentity", { isPEP: false });
+      } else {
+        const pepStatus: PEPStatus = selectedOption === 'Yes, I am a Politically Exposed Person'
+          ? 'self'
+          : 'family_associate';
+        // We'll update the role in the next screen (PEPDetails)
+        await submitPepStatus(true, pepStatus);
+        navigation.navigate("PEPDetails");
+      }
+    } catch (error) {
+      console.error('Failed to submit PEP status:', error);
+      showToast('Submission failed. Please try again.', 'error');
     }
   };
 
@@ -149,7 +157,8 @@ export function PEPStatusScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={selectedOption === null}
+            loading={isSubmitting}
+            disabled={selectedOption === null || isSubmitting}
           />
         </View>
       </View>

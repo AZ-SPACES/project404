@@ -15,6 +15,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useKYC, PEPAccountPurpose, PEPMonthlyVolume } from '../../../providers/KYCProvider';
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPAccountPurpose">;
 
@@ -49,7 +50,8 @@ export function PEPAccountPurposeScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { data, update } = useKYC();
+  const { data, submitPepDetails, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [purpose, setPurpose] = useState<PurposeOption | null>(data.pepAccountPurpose as PurposeOption ?? null);
   const [volume, setVolume] = useState<VolumeOption | null>(data.pepMonthlyVolume as VolumeOption ?? null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -66,13 +68,19 @@ export function PEPAccountPurposeScreen() {
 
   const isFormValid = purpose !== null && volume !== null;
 
-  const handleNext = () => {
-    // Proceed to Document Upload for PEP EDD
-    update({
-      pepAccountPurpose: purpose as PEPAccountPurpose ?? null,
-      pepMonthlyVolume: volume as PEPMonthlyVolume ?? null,
-    });
-    navigation.navigate("PEPProofOfWealth");
+  const handleNext = async () => {
+    try {
+      if (purpose && volume) {
+        await submitPepDetails(
+          purpose as PEPAccountPurpose, 
+          volume as PEPMonthlyVolume
+        );
+        navigation.navigate("PEPProofOfWealth");
+      }
+    } catch (error) {
+      console.error('Failed to submit PEP details:', error);
+      showToast('Submission failed. Please try again.', 'error');
+    }
   };
 
   const renderPurposeOption = (label: PurposeOption) => (
@@ -200,7 +208,8 @@ export function PEPAccountPurposeScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!isFormValid}
+            loading={isSubmitting}
+            disabled={!isFormValid || isSubmitting}
           />
         </View>
       </View>

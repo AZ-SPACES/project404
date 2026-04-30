@@ -134,4 +134,18 @@ public class UserController {
         userService.removeDevice(user, id);
         return ResponseEntity.ok(ApiResponse.success("Device removed"));
     }
+
+    // ==================== HANDLES (PUBLIC) ====================
+
+    @GetMapping("/check-handle")
+    public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
+        return ResponseEntity.ok(ApiResponse.success(userService.isHandleAvailable(handle)));
+    }
+
+    @GetMapping("/suggest-handles")
+    public ResponseEntity<ApiResponse<java.util.List<String>>> suggestHandles(
+            @RequestParam String firstName,
+            @RequestParam String lastName) {
+        return ResponseEntity.ok(ApiResponse.success(userService.suggestHandles(firstName, lastName)));
+    }
 }

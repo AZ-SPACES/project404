@@ -25,13 +25,19 @@ public class FirebaseConfig {
             if (FirebaseApp.getApps().isEmpty()) {
                 InputStream serviceAccount;
 
-                // Try classpath first (dev), then file system (production)
+                // Try loading from classpath first, then fall back to absolute file path
                 try {
                     serviceAccount = new ClassPathResource(credentialsPath).getInputStream();
                 } catch (IOException e) {
-                    log.warn("Firebase credentials not found at '{}' — " +
-                            "push notifications will be disabled", credentialsPath);
-                    return;
+                    // Fallback to file system if not found in classpath
+                    java.io.File file = new java.io.File(credentialsPath);
+                    if (file.exists()) {
+                        serviceAccount = new java.io.FileInputStream(file);
+                    } else {
+                        log.warn("Firebase credentials not found at classpath or path '{}' — " +
+                                "push notifications will be disabled", credentialsPath);
+                        return;
+                    }
                 }
 
                 FirebaseOptions options = FirebaseOptions.builder()

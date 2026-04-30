@@ -35,7 +35,8 @@ export function PEPProofOfWealthScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { update } = useKYC();
+  const { submitProofOfWealth, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [docType, setDocType] = useState<DocumentType | null>(null);
   const [fileUploaded, setFileUploaded] = useState<boolean>(false);
   const [fileDetails, setFileDetails] = useState<{ name: string; size: string } | null>(null);
@@ -52,14 +53,16 @@ export function PEPProofOfWealthScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    // Proceed to standard KYC part of the EDD flow
-    update({
-      pepProofDocType: docType as PEPProofDocType ?? null,
-      pepProofDocumentUri: fileUri,
-      pepProofDocumentName: fileDetails?.name ?? null,
-    });
-    navigation.navigate("VerifyIdentity", { isPEP: true });
+  const handleNext = async () => {
+    try {
+      if (fileUri) {
+        await submitProofOfWealth(fileUri, fileDetails?.name);
+        navigation.navigate("VerifyIdentity", { isPEP: true });
+      }
+    } catch (error) {
+      console.error('Failed to submit proof of wealth:', error);
+      showToast('Submission failed. Please try again.', 'error');
+    }
   };
 
   const handleSelectDocument = async () => {
@@ -215,7 +218,8 @@ export function PEPProofOfWealthScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!docType || !fileUploaded}
+            loading={isSubmitting}
+            disabled={!docType || !fileUploaded || isSubmitting}
           />
         </View>
       </View>
