@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { useAuth } from './AuthProvider';
+import { registerFcmToken, unregisterFcmToken, getDeviceId } from '../services/api';
 
 type NotificationContextType = {
   checkPermissions: () => Promise<any>;
@@ -13,6 +16,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userToken } = useAuth();
+  const prevTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Dynamically require to avoid boot-time side-effects in Expo Go Android
@@ -31,9 +35,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Cancel all pending local notifications on logout
+  // Cancel local notifications and unregister FCM token on logout
   useEffect(() => {
-    if (userToken === null) {
+    if (userToken === null && prevTokenRef.current !== null) {
       try {
         const Notifications = require('expo-notifications');
         Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
@@ -41,7 +45,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       } catch (e) {
         // Notifications not available on this platform
       }
+      getDeviceId().then((deviceId) => unregisterFcmToken(deviceId)).catch(() => {});
     }
+    prevTokenRef.current = userToken;
   }, [userToken]);
 
   const checkPermissions = async () => {
@@ -58,12 +64,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const Notifications = require('expo-notifications');
     const { status: existingStatus } = await checkPermissions();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== 'granted') {
       const { status } = await requestPermissions();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== 'granted') {
       return false;
     }
@@ -75,6 +81,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
       });
+    }
+
+    try {
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        (Constants as any).easConfig?.projectId;
+      const { data: pushToken } = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined,
+      );
+      const deviceId = await getDeviceId();
+      const deviceName = Device.modelName ?? 'Unknown Device';
+      const platform = Platform.OS;
+      await registerFcmToken(pushToken, deviceId, deviceName, platform);
+    } catch (e) {
+      console.warn('NotificationProvider: Could not register push token', e);
     }
 
     return true;

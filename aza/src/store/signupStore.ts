@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import { api } from '../services/api';
 
 export type PronounOption = 'he/his' | 'she/her' | 'they/them' | 'custom' | null;
@@ -95,11 +97,18 @@ export const useSignupStore = create<SignupState>((set, get) => ({
         firstName: data.firstName,
         lastName: data.lastName,
         displayName: `${data.firstName} ${data.lastName}`.trim(),
+        pronouns: data.pronoun === 'custom' ? data.customPronoun : data.pronoun,
         homeAddress: data.homeAddress,
         city: data.city,
-        nationality: data.nationality === 'Other' ? data.otherNationality : data.nationality,
-        employmentStatus: data.employmentStatus, 
+        nationality: data.nationality,
+        otherNationality: data.otherNationality,
+        isTaxResidentAbroad: data.isTaxResidentAbroad === 'Yes',
+        taxCountry: data.taxCountry,
+        isUSPerson: data.isUSPerson === 'Yes',
+        employmentStatus: data.employmentStatus,
         dateOfBirth: data.dateOfBirth,
+        deviceName: Device.modelName ?? undefined,
+        deviceOs: Device.osName ?? Platform.OS,
       };
 
       const response = await api.post('/api/v1/auth/signup', payload);

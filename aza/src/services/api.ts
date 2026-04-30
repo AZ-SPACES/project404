@@ -16,6 +16,42 @@ export const api = axios.create({
 // Keys for secure store
 export const TOKEN_KEY = 'aza_access_token';
 export const REFRESH_TOKEN_KEY = 'aza_refresh_token';
+export const BIOMETRIC_TOKEN_KEY = 'aza_biometric_token';
+export const DEVICE_ID_KEY = 'aza_device_id';
+
+export const getDeviceId = async (): Promise<string> => {
+  const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  if (existing) return existing;
+  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+  await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
+  return id;
+};
+
+export const biometricEnroll = (
+  passcode: string,
+  deviceId: string,
+  deviceName: string,
+  deviceOs: string,
+) => api.post('/api/v1/auth/biometric-token', { passcode, deviceId, deviceName, deviceOs });
+
+export const biometricLogin = (biometricToken: string, deviceId: string) =>
+  api.post('/api/v1/auth/biometric-login', { biometricToken, deviceId });
+
+export const registerFcmToken = (
+  token: string,
+  deviceId: string,
+  deviceName: string,
+  platform: string,
+) => api.post('/api/v1/notifications/fcm-token', { token, deviceId, deviceName, platform });
+
+export const unregisterFcmToken = (deviceId: string) =>
+  api.delete(`/api/v1/notifications/fcm-token/${deviceId}`);
+
+export const totpLogin = (preAuthToken: string, code: string) =>
+  api.post('/api/v1/auth/2fa/login', { preAuthToken, code });
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;

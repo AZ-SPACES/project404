@@ -21,9 +21,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
-import { api } from '../../../services/api';
-import { useAuthStore } from '../../../store/authStore';
+import { api, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../services/api';
+import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import * as Device from 'expo-device';
+import * as SecureStore from 'expo-secure-store';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
@@ -40,7 +42,7 @@ const OTPScreen: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(57);
   const [isLoading, setIsLoading] = useState(false);
   const phoneNumber = route.params?.phoneNumber ?? '';
-  const setTokens = useAuthStore(state => state.setTokens);
+  const { login } = useAuth();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -93,30 +95,40 @@ const OTPScreen: React.FC = () => {
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length < 6) return;
-    
+
     setIsLoading(true);
     try {
-      const payload = {
+      const { data } = await api.post('/api/v1/auth/verify-otp', {
         identifier: phoneNumber,
         code,
-        purpose: 'login', // Explicitly stating it's for login
-      };
-      
-      const { data } = await api.post('/api/v1/auth/verify-otp', payload);
-      
-      // If 2FA is enabled, the backend returns a TotpPendingResponse with a preAuthToken
+        purpose: 'login',
+        deviceName: Device.modelName ?? undefined,
+        deviceOs: Device.osName ?? undefined,
+      });
+
       if (data.data?.preAuthToken) {
-        showToast('2FA Login is not yet supported in the app.', 'error');
-        setIsLoading(false);
-        return;
+        navigation.navigate('TotpLogin', { preAuthToken: data.data.preAuthToken });
       } else if (data.data?.accessToken && data.data?.refreshToken) {
-        // Complete login
-        await setTokens(data.data.accessToken, data.data.refreshToken);
-        // The AppNavigator should automatically re-render based on isAuthenticated=true
+        await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.data.refreshToken);
+        login(
+          data.data.accessToken,
+          data.data.hasPasscode ?? false,
+          data.data.kycVerified ?? false,
+        );
       }
     } catch (error: any) {
       console.error('OTP verification failed', error);
-      const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';
+      let errorMsg = 'An unexpected error occurred. Please try again.';
+      
+      if (error.response) {
+        errorMsg = error.response.data?.message || 'Invalid code. Please try again.';
+      } else if (error.request) {
+        errorMsg = 'Network error. Please check your connection and ensure the server is running.';
+      } else {
+        errorMsg = error.message || 'Verification failed. Please try again.';
+      }
+      
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);

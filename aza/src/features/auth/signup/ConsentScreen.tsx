@@ -17,6 +17,7 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useAuth } from "../../../providers/AuthProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
@@ -25,6 +26,7 @@ const PRIVACY_URL = ""; // TODO: add production URL
 
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
+  const { setPasscode } = useAuth();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const isDark = Colors.isDark;
@@ -58,7 +60,7 @@ export default function ConsentScreen() {
   };
 
   const handleContinue = () => {
-    navigation.navigate("EnableNotification");
+    setPasscode();
   };
 
   return (

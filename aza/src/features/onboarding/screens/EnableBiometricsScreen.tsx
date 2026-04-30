@@ -5,7 +5,9 @@ import {
   View,
   Image,
   TouchableOpacity,
-  StatusBar } from 'react-native';
+  StatusBar,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -14,19 +16,33 @@ import type { RootStackParamList } from '../../../navigation/types';
 import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../providers/AuthProvider';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Alert } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import * as Device from 'expo-device';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { biometricEnroll, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiometrics'>;
 
-export default function EnableBiometricsScreen() {
+type EnableBiometricsProps = {
+  onComplete?: () => void;
+};
+
+export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { setPasscode, toggleBiometrics } = useAuth();
+  const { toggleBiometrics, getPasscodeValue } = useAuth();
   const [isBiometricAvailable, setIsBiometricAvailable] = React.useState<boolean | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleFinish = React.useCallback(() => {
+    if (onComplete) {
+      onComplete();
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation, onComplete]);
 
   React.useEffect(() => {
     async function checkAvailability() {
@@ -42,16 +58,12 @@ export default function EnableBiometricsScreen() {
   }, []);
 
   const handleClose = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      setPasscode();
-    }
+    handleFinish();
   };
 
   const handleSetup = async () => {
     if (isBiometricAvailable === false) {
-      setPasscode();
+      handleFinish();
       return;
     }
     setIsLoading(true);
@@ -62,19 +74,30 @@ export default function EnableBiometricsScreen() {
       });
 
       if (result.success) {
+        const passcode = await getPasscodeValue();
+        if (!passcode) {
+          Alert.alert('Error', 'Passcode not found. Please set your passcode first.');
+          return;
+        }
+        const deviceId = await getDeviceId();
+        const deviceName = Device.modelName ?? 'Unknown Device';
+        const deviceOs = Device.osName ?? 'Unknown OS';
+        const response = await biometricEnroll(passcode, deviceId, deviceName, deviceOs);
+        const payload = response.data?.data ?? response.data;
+        await SecureStore.setItemAsync(BIOMETRIC_TOKEN_KEY, payload.biometricToken);
         toggleBiometrics(true);
-        setPasscode();
+        handleFinish();
       }
     } catch (e) {
       console.error(e);
-      Alert.alert('Error', 'An error occurred while setting up biometrics.');
+      Alert.alert('Error', 'An error occurred while setting up biometrics. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleNotNow = () => {
-    setPasscode();
+    handleFinish();
   };
 
   return (
@@ -168,7 +191,7 @@ function createStyles(Colors: ThemeColors) {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg },
   button: {
-    borderRadius: Radius.full },
+    borderRadius: Radius.md },
   spacer: {
     height: Spacing.md } });
 }

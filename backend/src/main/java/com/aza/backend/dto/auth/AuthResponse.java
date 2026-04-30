@@ -23,8 +23,14 @@ public class AuthResponse {
         private String lastName;
         private String displayName;
         private String handle;
+        private String pronouns;
         private String profileImageUrl;
         private String kycStatus;
         private boolean passcodeSet;
+        private String nationality;
+        private String otherNationality;
+        private Boolean isTaxResidentAbroad;
+        private String taxCountry;
+        private Boolean isUSPerson;
     }
 }

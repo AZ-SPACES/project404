@@ -64,7 +64,8 @@ public class AuthService {
     public AuthResponse signup(SignupRequest request, String ipAddress) {
         rateLimitService.enforceRateLimit("signup:" + ipAddress, 3, Duration.ofHours(1));
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = request.getEmail().toLowerCase().trim();
+        if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("An account with this email or phone already exists");
         }
         if (userRepository.existsByPhone(request.getPhone())) {
@@ -73,15 +74,20 @@ public class AuthService {
 
         User user = User.builder()
                 .phone(request.getPhone())
-                .email(request.getEmail())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .displayName(request.getDisplayName())
                 .handle(request.getHandle())
+                .pronouns(request.getPronouns())
                 .homeAddress(request.getHomeAddress())
                 .city(request.getCity())
                 .nationality(request.getNationality())
+                .otherNationality(request.getOtherNationality())
+                .isTaxResidentAbroad(request.getIsTaxResidentAbroad())
+                .taxCountry(request.getTaxCountry())
+                .isUSPerson(request.getIsUSPerson())
                 .build();
 
         userService.applyDateOfBirthAndEmployment(
@@ -101,10 +107,15 @@ public class AuthService {
     // ==================== LOGIN ====================
 
     public void preLogin(LoginRequest request, String ipAddress) {
-        rateLimitService.enforceRateLimit("login:" + ipAddress, 5, Duration.ofMinutes(15));
+        rateLimitService.enforceRateLimit("login:" + ipAddress, 50, Duration.ofMinutes(15));
+
+        String identifier = request.getIdentifier().trim();
+        if (identifier.contains("@")) {
+            identifier = identifier.toLowerCase();
+        }
 
         User user = userRepository
-                .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
+                .findByEmailOrPhone(identifier, identifier)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -115,12 +126,12 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        sendOtp(request.getIdentifier(), "login");
+        sendOtp(identifier, "login");
     }
 
     @Transactional
     public Object loginWithOtp(OtpVerifyRequest request, String ipAddress) {
-        rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 10, Duration.ofMinutes(15));
+        rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 100, Duration.ofMinutes(15));
         verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository

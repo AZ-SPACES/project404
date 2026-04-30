@@ -23,6 +23,7 @@ public class SignupRequest {
     private String lastName;
     private String displayName;
     private String handle;
+    private String pronouns;
     private String dateOfBirth;       // "YYYY-MM-DD"
 
     private String deviceName;
@@ -32,6 +33,10 @@ public class SignupRequest {
     private String homeAddress;
     private String city;
     private String nationality;
+    private String otherNationality;
+    private Boolean isTaxResidentAbroad;
+    private String taxCountry;
+    private Boolean isUSPerson;
 
     // Employment
     private String employmentStatus;  // STUDENT, FULL_TIME, etc.

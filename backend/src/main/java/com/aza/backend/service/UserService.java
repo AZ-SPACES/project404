@@ -54,9 +54,15 @@ public class UserService {
                 .lastName(user.getLastName())
                 .displayName(user.getDisplayName())
                 .handle(user.getHandle())
+                .pronouns(user.getPronouns())
                 .profileImageUrl(user.getProfileImageUrl())
                 .kycStatus(user.getKycStatus().name())
                 .passcodeSet(user.getPasscodeHash() != null)
+                .nationality(user.getNationality())
+                .otherNationality(user.getOtherNationality())
+                .isTaxResidentAbroad(user.getIsTaxResidentAbroad())
+                .taxCountry(user.getTaxCountry())
+                .isUSPerson(user.getIsUSPerson())
                 .build();
     }
 
@@ -68,6 +74,10 @@ public class UserService {
         if (request.getHomeAddress() != null) user.setHomeAddress(request.getHomeAddress());
         if (request.getCity() != null) user.setCity(request.getCity());
         if (request.getNationality() != null) user.setNationality(request.getNationality());
+        if (request.getOtherNationality() != null) user.setOtherNationality(request.getOtherNationality());
+        if (request.getIsTaxResidentAbroad() != null) user.setIsTaxResidentAbroad(request.getIsTaxResidentAbroad());
+        if (request.getTaxCountry() != null) user.setTaxCountry(request.getTaxCountry());
+        if (request.getIsUSPerson() != null) user.setIsUSPerson(request.getIsUSPerson());
 
         if (request.getHandle() != null) {
             String newHandle = request.getHandle().toLowerCase();

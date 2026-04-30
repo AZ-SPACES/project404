@@ -24,7 +24,8 @@ import { Alert } from 'react-native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../../utils/validation';
-import { api } from '../../../services/api';
+import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import * as SecureStore from 'expo-secure-store';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -87,7 +88,18 @@ const LoginScreen: React.FC = () => {
       });
 
       if (result.success) {
-        login('biometric-token', true, true);
+        const storedToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
+        if (!storedToken) {
+          showToast('Biometric not set up. Please log in with your passcode.', 'error');
+          return;
+        }
+        const deviceId = await getDeviceId();
+        const response = await biometricLogin(storedToken, deviceId);
+        const payload = response.data?.data ?? response.data;
+        const { accessToken, refreshToken } = payload;
+        await SecureStore.setItemAsync('aza_access_token', accessToken);
+        await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
+        login(accessToken, true, payload.kycVerified ?? true);
       }
     } catch (e) {
       showToast('Biometric authentication failed. Please try again.', 'error');
