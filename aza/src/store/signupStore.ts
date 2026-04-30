@@ -31,6 +31,8 @@ export type SignupData = {
   customPronoun: string;
   employmentStatus: EmploymentOption;
   dateOfBirth: string;
+  passcode: string;
+  handle: string;
 };
 
 const INITIAL_DATA: SignupData = {
@@ -50,6 +52,8 @@ const INITIAL_DATA: SignupData = {
   customPronoun: '',
   employmentStatus: null,
   dateOfBirth: '',
+  passcode: '',
+  handle: '',
 };
 
 interface SignupState {
@@ -107,6 +111,8 @@ export const useSignupStore = create<SignupState>((set, get) => ({
         isUSPerson: data.isUSPerson === 'Yes',
         employmentStatus: data.employmentStatus,
         dateOfBirth: data.dateOfBirth,
+        passcode: data.passcode,
+        handle: data.handle,
         deviceName: Device.modelName ?? undefined,
         deviceOs: Device.osName ?? Platform.OS,
       };

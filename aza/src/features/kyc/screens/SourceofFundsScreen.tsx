@@ -56,7 +56,7 @@ export default function SourceofFundsScreen() {
   const route = useRoute<SourceofFundRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
-  const { data, update } = useKYC();
+  const { data, submitFundsSource, isSubmitting } = useKYC();
   const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>(data.fundsSource as SourceOptions[]);
   const [otherText, setOtherText] = useState(data.otherFundsText);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -71,9 +71,13 @@ export default function SourceofFundsScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    update({ fundsSource: selectedOptions as FundsSource[], otherFundsText: otherText });
-    navigation.navigate('Idtype', { isPEP: isPEP as boolean })
+  const handleNext = async () => {
+    try {
+      await submitFundsSource(selectedOptions as FundsSource[], otherText);
+      navigation.navigate('Idtype', { isPEP: isPEP as boolean });
+    } catch (error) {
+      console.error('Failed to submit funds source:', error);
+    }
   };
 
   const isFormValid = selectedOptions.length > 0 && (!selectedOptions.includes("Other") || otherText.trim().length > 0);
@@ -197,7 +201,8 @@ export default function SourceofFundsScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!isFormValid}
+            loading={isSubmitting}
+            disabled={!isFormValid || isSubmitting}
           />
         </View>
         </KeyboardAvoidingView>

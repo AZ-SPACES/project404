@@ -76,6 +76,8 @@ public class AuthService {
                 .phone(request.getPhone())
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .passcodeHash(request.getPasscode() != null && !request.getPasscode().isEmpty() 
+                    ? passwordEncoder.encode(request.getPasscode()) : null)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .displayName(request.getDisplayName())

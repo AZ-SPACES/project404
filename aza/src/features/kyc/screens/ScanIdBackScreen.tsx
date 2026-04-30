@@ -38,7 +38,7 @@ export default function ScanIdBackScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const { showToast } = useToast();
-  const { update } = useKYC();
+  const { update, submitIdentity, isSubmitting } = useKYC();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ScanIdBackRouteProp>();
@@ -125,12 +125,20 @@ export default function ScanIdBackScreen() {
     setIsModalVisible(false);
   };
 
-  const handleLooksGood = () => {
-    setIsModalVisible(false);
+  const handleLooksGood = async () => {
     if (capturedImage && capturedImage !== 'placeholder') {
       update({ idBackImageUri: capturedImage });
+      
+      try {
+        // Passing capturedImage directly to avoid stale state issues
+        await submitIdentity(capturedImage);
+        setIsModalVisible(false);
+        navigation.navigate("SelfieScan", { isPEP: !!isPEP });
+      } catch (error) {
+        console.error('Failed to submit identity:', error);
+        showToast('Identity submission failed. Please try again.', 'error');
+      }
     }
-    navigation.navigate("SelfieScan", { isPEP: !!isPEP });
   };
 
   if (!permission) {
@@ -292,6 +300,8 @@ export default function ScanIdBackScreen() {
                 borderRadius={30}
                 paddingVertical={16}
                 fontSize={Typography.button.fontSize}
+                loading={isSubmitting}
+                disabled={isSubmitting}
               />
               <View style={{ height: Spacing.md }} />
               <Button

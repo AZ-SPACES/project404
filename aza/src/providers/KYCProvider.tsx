@@ -4,6 +4,7 @@ import React, {
   useContext,
   useState,
 } from 'react';
+import * as api from '../services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,6 +136,15 @@ type KYCContextType = {
   submit: (latestFields?: Partial<KYCData>) => Promise<void>;
   reset: () => void;
   isSubmitting: boolean;
+
+  // Step-by-step methods
+  recordConsent: () => Promise<void>;
+  submitFundsSource: (funds: FundsSource[], otherText?: string) => Promise<void>;
+  submitIdentity: (backImageUri?: string) => Promise<void>;
+  submitSelfie: (selfieUri?: string) => Promise<void>;
+  submitPepStatus: (isPep: boolean, status?: PEPStatus, role?: string) => Promise<void>;
+  submitPepDetails: (purpose?: PEPAccountPurpose, volume?: PEPMonthlyVolume, wealthSource?: string) => Promise<void>;
+  submitProofOfWealth: (documentUri?: string, documentName?: string) => Promise<void>;
 };
 
 const KYCContext = createContext<KYCContextType | undefined>(undefined);
@@ -153,70 +163,174 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     setData(INITIAL_DATA);
   }, []);
 
-  const submit = useCallback(async (latestFields?: Partial<KYCData>) => {
+  const recordConsent = useCallback(async () => {
     setIsSubmitting(true);
-    // Merge any just-set fields so we don't hit a stale-closure on fields
-    // that were updated via `update()` immediately before calling `submit()`.
-    // React state (data) may not have flushed yet at the time submit() runs.
-    const merged: KYCData = latestFields ? { ...data, ...latestFields } : data;
     try {
-      // Validate that required fields are present before submitting
-      if (
-        !merged.idType ||
-        !merged.idFrontImageUri ||
-        !merged.idBackImageUri ||
-        !merged.selfieImageUri
-      ) {
-        throw new Error('Incomplete KYC data');
-      }
-
-      const payload: KYCPayload = {
-        biometricConsent: merged.biometricConsent,
-        fundsSource: merged.fundsSource,
-        ...(merged.otherFundsText ? { otherFundsText: merged.otherFundsText } : {}),
-        idType: merged.idType,
-        idNumber: merged.idNumber,
-        idFrontImageUri: merged.idFrontImageUri,
-        idBackImageUri: merged.idBackImageUri,
-        selfieImageUri: merged.selfieImageUri,
-        isPEP: merged.isPEP,
-        ...(merged.isPEP && {
-          ...(merged.pepStatus != null && { pepStatus: merged.pepStatus }),
-          ...(merged.pepRole && { pepRole: merged.pepRole }),
-          ...(merged.pepWealthSource && { pepWealthSource: merged.pepWealthSource }),
-          ...(merged.pepAccountPurpose != null && { pepAccountPurpose: merged.pepAccountPurpose }),
-          ...(merged.pepMonthlyVolume != null && { pepMonthlyVolume: merged.pepMonthlyVolume }),
-          ...(merged.pepProofDocType != null && { pepProofDocType: merged.pepProofDocType }),
-          ...(merged.pepProofDocumentUri != null && { pepProofDocumentUri: merged.pepProofDocumentUri }),
-          ...(merged.pepProofDocumentName != null && { pepProofDocumentName: merged.pepProofDocumentName }),
-        }),
-      };
-
-      // TODO: replace with real API call
-      // Step 1 – upload images and swap URIs for backend URLs:
-      //   const [frontUrl, backUrl, selfieUrl] = await Promise.all([
-      //     uploadImage(payload.idFrontImageUri),
-      //     uploadImage(payload.idBackImageUri),
-      //     uploadImage(payload.selfieImageUri),
-      //   ]);
-      //   payload.idFrontImageUri = frontUrl;
-      //   payload.idBackImageUri  = backUrl;
-      //   payload.selfieImageUri  = selfieUrl;
-      //
-      // Step 2 – submit full KYC payload:
-      //   await api.post('/kyc/submit', payload);
-
-      // NOTE: Do NOT call completeKYC() here. Doing so sets isKYCVerified: true
-      // immediately, which causes RootNavigator to swap KYCNavigator → AppNavigator
-      // before KYCSuccess / CreatingAccount / AccountReady screens can render.
-      // AccountReadyScreen already calls completeKYC() on the final "Go to Home" tap.
+      await api.recordKycConsent();
+      update({ biometricConsent: true });
     } finally {
       setIsSubmitting(false);
     }
-  }, [data]);
+  }, [update]);
+
+  const submitFundsSource = useCallback(async (funds: FundsSource[], otherText?: string) => {
+    setIsSubmitting(true);
+    try {
+      const sourceMap: Record<string, string> = {
+        'Salary/Employment Income': 'salary',
+        'Business Profits': 'business',
+        'Personal Savings': 'savings',
+        'Inheritance or Gifts': 'gift',
+        'Sale of Assets': 'asset_sale',
+        'Investment Dividends': 'investment',
+        'Pension / Retirement Distributions': 'pension',
+        'Other': 'other'
+      };
+      const mappedFunds = funds.map(f => sourceMap[f] || f);
+      const fundsStr = mappedFunds.join(',');
+      await api.submitFundsSource(fundsStr, otherText);
+      update({ fundsSource: funds, otherFundsText: otherText || '' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [update]);
+
+  const submitIdentity = useCallback(async (backImageUri?: string) => {
+    setIsSubmitting(true);
+    try {
+      const finalBackUri = backImageUri || data.idBackImageUri;
+      if (!data.idType || !data.idNumber || !data.idFrontImageUri || !finalBackUri) {
+        throw new Error('Identity data incomplete');
+      }
+
+      // Convert local URIs to the format expected by FormData
+      const frontFile = {
+        uri: data.idFrontImageUri,
+        name: 'front.jpg',
+        type: 'image/jpeg',
+      };
+      const backFile = {
+        uri: finalBackUri,
+        name: 'back.jpg',
+        type: 'image/jpeg',
+      };
+
+      await api.submitIdentity(data.idType, data.idNumber, frontFile, backFile);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data.idType, data.idNumber, data.idFrontImageUri, data.idBackImageUri]);
+
+  const submitSelfie = useCallback(async (selfieUri?: string) => {
+    setIsSubmitting(true);
+    try {
+      const finalSelfieUri = selfieUri || data.selfieImageUri;
+      if (!finalSelfieUri) throw new Error('Selfie missing');
+
+      const selfieFile = {
+        uri: finalSelfieUri,
+        name: 'selfie.jpg',
+        type: 'image/jpeg',
+      };
+
+      await api.submitSelfie(selfieFile);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data.selfieImageUri]);
+
+  const submitPepStatus = useCallback(async (isPep: boolean, status?: PEPStatus, role?: string) => {
+    setIsSubmitting(true);
+    try {
+      await api.submitPepScreening(isPep, status || undefined, role || undefined);
+      update({ isPEP: isPep, pepStatus: status || null, pepRole: role || '' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [update]);
+
+  const submitPepDetails = useCallback(async (purpose?: PEPAccountPurpose, volume?: PEPMonthlyVolume, wealthSource?: string) => {
+    setIsSubmitting(true);
+    try {
+      const finalPurpose = purpose || data.pepAccountPurpose;
+      const finalVolume = volume || data.pepMonthlyVolume;
+      const finalWealthSource = wealthSource || data.pepWealthSource;
+
+      if (!finalPurpose || !finalVolume || !finalWealthSource) {
+        throw new Error('PEP details incomplete');
+      }
+      
+      // Map frontend types to backend expected strings if needed
+      const purposeMap: Record<string, string> = {
+        'Day-to-day spending': 'day_to_day',
+        'Savings & Investments': 'savings',
+        'Business transactions': 'business',
+        'Salary receiving': 'salary'
+      };
+
+      const volumeMap: Record<string, string> = {
+        'Less than GH₵ 10,000': 'below_10k',
+        'GH₵ 10,000 - 50,000': '10k_50k',
+        'GH₵ 50,000 - 100,000': '50k_100k',
+        'More than GH₵ 100,000': 'above_100k'
+      };
+
+      await api.submitPepDetails(
+        purposeMap[finalPurpose] || finalPurpose,
+        volumeMap[finalVolume] || finalVolume,
+        finalWealthSource
+      );
+      
+      update({
+        pepAccountPurpose: finalPurpose,
+        pepMonthlyVolume: finalVolume,
+        pepWealthSource: finalWealthSource
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data.pepAccountPurpose, data.pepMonthlyVolume, data.pepWealthSource, update]);
+
+  const submitProofOfWealth = useCallback(async (documentUri?: string, documentName?: string) => {
+    setIsSubmitting(true);
+    try {
+      const finalUri = documentUri || data.pepProofDocumentUri;
+      const finalName = documentName || data.pepProofDocumentName;
+
+      if (!finalUri) throw new Error('Proof document missing');
+
+      const docFile = {
+        uri: finalUri,
+        name: finalName || 'document.pdf',
+        type: 'application/pdf', // Assuming PDF for now
+      };
+
+      await api.submitProofOfWealth(docFile);
+      
+      update({
+        pepProofDocumentUri: finalUri,
+        pepProofDocumentName: finalName
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data.pepProofDocumentUri, data.pepProofDocumentName, update]);
+
+  const submit = useCallback(async (latestFields?: Partial<KYCData>) => {
+    setIsSubmitting(true);
+    try {
+      await api.submitKycFinal();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
 
   return (
-    <KYCContext.Provider value={{ data, update, submit, reset, isSubmitting }}>
+    <KYCContext.Provider value={{ 
+      data, update, submit, reset, isSubmitting,
+      recordConsent, submitFundsSource, submitIdentity,
+      submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth
+    }}>
       {children}
     </KYCContext.Provider>
   );

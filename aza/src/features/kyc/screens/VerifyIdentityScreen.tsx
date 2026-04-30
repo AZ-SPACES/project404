@@ -28,7 +28,7 @@ export default function VerifyIdentityScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { update } = useKYC();
+  const { recordConsent, isSubmitting } = useKYC();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
@@ -45,9 +45,14 @@ export default function VerifyIdentityScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    update({ biometricConsent: true });
-    navigation.navigate('SourceofFund', { isPEP: !!isPEP });
+  const handleNext = async () => {
+    try {
+      await recordConsent();
+      navigation.navigate('SourceofFund', { isPEP: !!isPEP });
+    } catch (error) {
+      console.error('Failed to record consent:', error);
+      // Ideally show a toast or error message here
+    }
   };
 
   return (
@@ -155,7 +160,8 @@ export default function VerifyIdentityScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!biometricConsent}
+            loading={isSubmitting}
+            disabled={!biometricConsent || isSubmitting}
           />
         </View>
       </View>

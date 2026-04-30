@@ -21,6 +21,8 @@ export default function CreatePasscodeScreen() {
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<TextInput>(null);
   
   const scaleAnims = useRef([
@@ -69,6 +71,8 @@ export default function CreatePasscodeScreen() {
 
   // Stable navigation callback
   const handleContinue = useCallback(() => {
+    if (isNavigating) return;
+    
     if (passcode.length === 4) {
       const error = validatePasscode(passcode);
       if (error) {
@@ -79,10 +83,19 @@ export default function CreatePasscodeScreen() {
         return;
       }
       
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
+      setIsNavigating(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate("ConfirmPasscode", { firstPasscode: passcode });
+      
+      // Reset navigation flag after a short delay
+      setTimeout(() => setIsNavigating(false), 1000);
     }
-  }, [passcode, navigation, startShake]);
+  }, [passcode, navigation, startShake, isNavigating]);
 
   useEffect(() => {
     // Focus keyboard on mount
@@ -92,15 +105,14 @@ export default function CreatePasscodeScreen() {
 
   // Automatic Navigation when 4 digits are entered
   useEffect(() => {
-    let timer: NodeJS.Timeout;
     if (passcode.length === 4) {
       // Small delay for visual confirmation of the last digit
-      timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         handleContinue();
       }, 300);
     }
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [passcode, handleContinue]);
 

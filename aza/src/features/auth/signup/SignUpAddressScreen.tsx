@@ -9,7 +9,6 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Animated,
   StatusBar
 } from "react-native";

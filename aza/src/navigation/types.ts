@@ -16,6 +16,7 @@ export type RootStackParamList = {
   SignUpEmail: undefined;
   SignUpPassword: undefined;
   SignUpName: undefined;
+  SignUpHandle: undefined;
   SignUpAddress: undefined;
   SignUpPronouns: undefined;
   SignUpEmployment: undefined;
