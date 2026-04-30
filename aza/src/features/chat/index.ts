@@ -5,3 +5,7 @@ export { default as MediaPreviewScreen } from './screens/MediaPreviewScreen';
 export { default as ChatInfoScreen } from './screens/ChatInfoScreen';
 export { default as AudioCallScreen } from './screens/AudioCallScreen';
 export { default as VideoCallScreen } from './screens/VideoCallScreen';
+export { default as StarredMessagesScreen } from './screens/StarredMessagesScreen';
+export { default as SharedMediaScreen } from './screens/SharedMediaScreen';
+export { default as ManageStorageScreen } from './screens/ManageStorageScreen';
+export { default as MessageInfoScreen } from './screens/MessageInfoScreen';

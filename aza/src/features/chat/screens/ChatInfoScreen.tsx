@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
+import { formatBytes, StorageDetails } from "../../../components/chat/chatTypes";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -25,6 +27,8 @@ type ChatInfoParams = {
   phone?: string;
   status?: string;
   accountProvider?: string;
+  mediaCount?: number;
+  storageStats?: StorageDetails;
 };
 
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
@@ -145,9 +149,14 @@ export default function ChatInfoScreen() {
     phone = "+233 55 219 4339",
     status = "Available",
     accountProvider = "Aza Finance",
+    mediaCount = 0,
+    storageStats,
   } = route.params;
 
   const [nickname, setNickname] = useState<string | null>(null);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
+  const [disappearingTimer, setDisappearingTimer] = useState("Off");
 
   // Derive initials for fallback avatar
   const initials = name
@@ -283,15 +292,17 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Ionicons name="images-outline" size={20} color={Colors.textPrimary} />}
             label="Media, links and docs"
-            value="111"
+            value={mediaCount.toString()}
             Colors={Colors}
+            onPress={() => navigation.navigate("SharedMedia" as any)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
             icon={<Feather name="hard-drive" size={20} color={Colors.textPrimary} />}
             label="Manage storage"
-            value="71.7 MB"
+            value={storageStats?.totalSize ? formatBytes(storageStats.totalSize) : "0 B"}
             Colors={Colors}
+            onPress={() => navigation.navigate("ManageStorage" as any, { storageStats })}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -299,6 +310,7 @@ export default function ChatInfoScreen() {
             label="Starred"
             value="None"
             Colors={Colors}
+            onPress={() => navigation.navigate("StarredMessages" as any)}
           />
         </View>
 
@@ -314,6 +326,7 @@ export default function ChatInfoScreen() {
             icon={<MaterialCommunityIcons name="palette-outline" size={20} color={Colors.textPrimary} />}
             label="Chat theme"
             Colors={Colors}
+            onPress={() => setShowThemeModal(true)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -329,8 +342,9 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Ionicons name="timer-outline" size={20} color={Colors.textPrimary} />}
             label="Disappearing messages"
-            value="Off"
+            value={disappearingTimer}
             Colors={Colors}
+            onPress={() => setShowDisappearingModal(true)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -355,6 +369,28 @@ export default function ChatInfoScreen() {
 
         <View style={{ height: Spacing.xl * 2 }} />
       </ScrollView>
+
+      <ChatThemeModal
+        visible={showThemeModal}
+        isDark={Colors.isDark}
+        Colors={Colors}
+        onClose={() => setShowThemeModal(false)}
+        onSelectTheme={(theme) => {
+          Alert.alert("Theme Selected", `Theme set to ${theme}`);
+        }}
+      />
+
+      <DisappearingMessagesModal
+        visible={showDisappearingModal}
+        currentValue={disappearingTimer}
+        isDark={Colors.isDark}
+        Colors={Colors}
+        onClose={() => setShowDisappearingModal(false)}
+        onSelect={(val) => {
+          setDisappearingTimer(val);
+          setShowDisappearingModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

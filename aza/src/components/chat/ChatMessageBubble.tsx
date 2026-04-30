@@ -41,6 +41,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
 
   const metaRow = (
     <View style={[styles.metaContainer, overlayMeta && styles.metaContainerOverlay]}>
+      {message.isStarred && (
+        <Feather name="star" size={10} color={isMe ? 'rgba(255,255,255,0.8)' : '#F59E0B'} style={{ marginRight: 4 }} />
+      )}
       <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
         {message.time}
       </Text>
@@ -61,6 +64,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       </View>
     </View>
   ) : null;
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <TouchableOpacity
@@ -104,6 +113,24 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 </Text>
               )}
             </View>
+          </View>
+          {metaRow}
+        </View>
+      ) : message.type === 'audio' ? (
+        <View style={[styles.bubble, styles.audioBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
+          <View style={styles.audioRow}>
+            <TouchableOpacity style={[styles.audioPlayBtn, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : Colors.primary + '15' }]}>
+              <Feather name="play" size={16} color={isMe ? '#FFF' : Colors.primary} style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
+            <View style={styles.audioWaveform}>
+              <View style={[styles.audioWaveLine, { backgroundColor: isMe ? 'rgba(255,255,255,0.4)' : Colors.border }]} />
+              <View style={[styles.audioWaveProgress, { width: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+              <View style={[styles.audioWaveDot, { left: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+            </View>
+            <Text style={[styles.audioTime, isMe ? styles.textMe : styles.textOther]}>
+              {formatDuration(message.duration ?? 0)}
+            </Text>
           </View>
           {metaRow}
         </View>
@@ -197,6 +224,49 @@ const createStyles = (Colors: ThemeColors) =>
     timeTextMe: { color: 'rgba(255,255,255,0.7)' },
     timeTextOther: { color: Colors.textSecondary },
     statusIcon: { marginLeft: 4 },
+    // Audio bubble
+    audioBubble: { minWidth: 200, maxWidth: '80%' },
+    audioRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    audioPlayBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    audioWaveform: {
+      flex: 1,
+      height: 20,
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    audioWaveLine: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 3,
+      borderRadius: 2,
+    },
+    audioWaveProgress: {
+      position: 'absolute',
+      left: 0,
+      height: 3,
+      borderRadius: 2,
+      zIndex: 1,
+    },
+    audioWaveDot: {
+      position: 'absolute',
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginTop: -3.5,
+      zIndex: 2,
+    },
+    audioTime: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontVariant: ['tabular-nums'],
+    },
     // Reply preview inside bubble
     replyPreview: {
       flexDirection: 'row',

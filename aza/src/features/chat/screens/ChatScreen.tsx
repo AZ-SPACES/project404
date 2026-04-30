@@ -23,6 +23,7 @@ import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
 import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
 import { ForwardModal } from '../../../components/chat/ForwardModal';
+import { BlockContactModal, ReportModal } from '../../../components/chat/ChatSettingsModals';
 import {
   Message,
   Contact,
@@ -34,6 +35,7 @@ import {
   isSameDay,
   formatDateHeader,
   formatTime,
+  calculateStorageAsync,
 } from '../../../components/chat/chatTypes';
 
 // ----------------------------------------------------------------------------
@@ -74,6 +76,10 @@ export default function ChatScreen() {
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Settings modals
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
   // Cleanup all timers on unmount
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
@@ -113,8 +119,15 @@ export default function ChatScreen() {
       }
     });
 
+    const clearMediaSub = DeviceEventEmitter.addListener('clear_media_messages', (idsToClear: string[]) => {
+      if (idsToClear && idsToClear.length > 0) {
+        setMessages(prev => prev.filter(m => !idsToClear.includes(m.id)));
+      }
+    });
+
     return () => {
       subscription.remove();
+      clearMediaSub.remove();
     };
   }, [scheduleTimer]);
 
@@ -149,13 +162,19 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
-  const handleProfilePress = useCallback(() => {
+  const handleProfilePress = useCallback(async () => {
+    const mediaCount = messages.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'document').length;
+    
+    const storageStats = await calculateStorageAsync(messages);
+
     navigation.navigate('ChatInfoScreen', {
       name,
       username: name.toLowerCase().replace(/\s+/g, '_'),
       avatar,
+      mediaCount,
+      storageStats,
     });
-  }, [navigation, name, avatar]);
+  }, [navigation, name, avatar, messages]);
 
   const handleMorePress = useCallback((anchor: MenuAnchor) => {
     setMenuAnchor(anchor);
@@ -254,6 +273,30 @@ export default function ChatScreen() {
     }, 4000);
   }, [message, replyTo, scheduleTimer]);
 
+  const handleSendAudio = useCallback((uri: string, duration: number) => {
+    const msgId = Date.now().toString();
+    const msgTime = formatTime();
+    const msgTimestamp = Date.now();
+    const currentReply = replyTo;
+
+    setMessages(prev => [...prev, {
+      id: msgId,
+      text: 'Voice message',
+      sender: 'me',
+      time: msgTime,
+      timestamp: msgTimestamp,
+      status: 'sent',
+      type: 'audio',
+      uri,
+      duration,
+      ...(currentReply ? { replyTo: currentReply.id, replyToMessage: currentReply } : {}),
+    }]);
+    setReplyTo(null);
+
+    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)), 800);
+    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'read' } : m)), 1800);
+  }, [replyTo, scheduleTimer]);
+
   // --------------------------------------------------------------------------
   // Message actions
   // --------------------------------------------------------------------------
@@ -266,6 +309,12 @@ export default function ChatScreen() {
   const handleDelete = useCallback(() => {
     if (!selectedMessage) return;
     setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+    setSelectedMessage(null);
+  }, [selectedMessage]);
+
+  const handleStarMessage = useCallback(() => {
+    if (!selectedMessage) return;
+    setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, isStarred: !m.isStarred } : m));
     setSelectedMessage(null);
   }, [selectedMessage]);
 
@@ -396,10 +445,10 @@ export default function ChatScreen() {
     { icon: 'download', label: 'Request Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('RequestAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
-    { icon: 'image', label: 'Shared Media', onPress: handleCloseMoreMenu },
+    { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia' as any); } },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
-    { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: handleCloseMoreMenu },
-    { icon: 'flag', label: 'Report', color: '#EF4444', onPress: handleCloseMoreMenu },
+    { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
+    { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
   ], [isMuted, name, avatar, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat]);
 
   // --------------------------------------------------------------------------
@@ -409,10 +458,10 @@ export default function ChatScreen() {
     { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
     { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
     { icon: 'copy', label: 'Copy', onPress: handleCopy },
-    { icon: 'info', label: 'Info', onPress: handleCloseMessageModal },
-    { icon: 'star', label: 'Star', onPress: handleCloseMessageModal },
+    { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); navigation.navigate('MessageInfo' as any, { message: selectedMessage }); } },
+    { icon: 'star', label: selectedMessage?.isStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
     { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
-  ], [handleCloseMessageModal, handleCopy, handleDelete, selectedMessage, handleSwipeToReply]);
+  ], [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
@@ -500,6 +549,7 @@ export default function ChatScreen() {
             onAddPress={handleAddPress}
             replyTo={replyTo}
             onCancelReply={handleCancelReply}
+            onSendAudio={handleSendAudio}
           />
         </KeyboardAvoidingView>
       ) : (
@@ -586,6 +636,30 @@ export default function ChatScreen() {
         message={forwardMessage}
         onClose={() => setShowForwardModal(false)}
         onForward={handleForwardAction}
+      />
+
+      <BlockContactModal
+        visible={showBlockModal}
+        contactName={name}
+        isDark={isDark}
+        Colors={Colors}
+        onClose={() => setShowBlockModal(false)}
+        onBlock={() => {
+          setShowBlockModal(false);
+          navigation.goBack();
+        }}
+      />
+
+      <ReportModal
+        visible={showReportModal}
+        contactName={name}
+        isDark={isDark}
+        Colors={Colors}
+        onClose={() => setShowReportModal(false)}
+        onReport={(reason) => {
+          setShowReportModal(false);
+          // Toast could be used here
+        }}
       />
 
       {/* Toast */}
