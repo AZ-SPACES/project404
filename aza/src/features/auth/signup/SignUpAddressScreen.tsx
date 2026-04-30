@@ -78,16 +78,18 @@ export default function SignUpAddressScreen() {
 
       if (reverseGeocode.length > 0) {
         const addr = reverseGeocode[0];
-        const streetAddress = [
-          addr.streetNumber,
-          addr.street,
-          addr.district
-        ].filter(Boolean).join(" ");
+        if (addr) {
+          const streetAddress = [
+            addr.streetNumber,
+            addr.street,
+            addr.district
+          ].filter(Boolean).join(" ");
 
-        update({
-          homeAddress: streetAddress || addr.name || "",
-          city: addr.city || addr.subregion || "",
-        });
+          update({
+            homeAddress: streetAddress || addr.name || "",
+            city: addr.city || addr.subregion || "",
+          });
+        }
       }
     } catch (error) {
       console.error("Location error:", error);

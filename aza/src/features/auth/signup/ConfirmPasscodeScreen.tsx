@@ -103,20 +103,16 @@ export default function ConfirmPasscodeScreen() {
     if (isNavigatingRef.current || passcode.length !== 4 || isLocked) return;
 
     if (String(passcode).trim() === String(firstPasscode).trim()) {
+      isNavigatingRef.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       isNavigatingRef.current = true;
 
       if (userToken) {
-        // Standalone case: Already logged in, set passcode via API
         try {
           await api.post('/api/v1/auth/passcode/set', { passcode });
           await savePasscodeValue(passcode);
-          navigation.navigate("Consent");
         } catch (e: any) {
-          isNavigatingRef.current = false;
-          setServerError(e?.response?.data?.message || "Failed to set passcode. Please try again.");
-          setPasscode("");
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          console.error("Passcode sync error:", e);
         }
       } else {
         // Signup case: Not logged in yet, store in signup data.
@@ -125,6 +121,12 @@ export default function ConfirmPasscodeScreen() {
         update({ passcode });
         navigation.navigate("Consent");
       }
+
+      update({ passcode });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Consent" }],
+      });
     } else {
       const newCount = attemptCount + 1;
       setAttemptCount(newCount);

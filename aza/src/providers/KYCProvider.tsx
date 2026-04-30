@@ -78,6 +78,10 @@ export type KYCData = {
   pepProofDocType: PEPProofDocType | null;
   pepProofDocumentUri: string | null;
   pepProofDocumentName: string | null;
+
+  // -- Backend Status --
+  status: string; // 'NOT_STARTED', 'PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED'
+  rejectionReason?: string;
 };
 
 // ─── Submission payload (what the backend receives) ───────────────────────────
@@ -124,6 +128,7 @@ const INITIAL_DATA: KYCData = {
   pepProofDocType: null,
   pepProofDocumentUri: null,
   pepProofDocumentName: null,
+  status: 'NOT_STARTED',
 };
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -145,6 +150,7 @@ type KYCContextType = {
   submitPepStatus: (isPep: boolean, status?: PEPStatus, role?: string) => Promise<void>;
   submitPepDetails: (purpose?: PEPAccountPurpose, volume?: PEPMonthlyVolume, wealthSource?: string) => Promise<void>;
   submitProofOfWealth: (documentUri?: string, documentName?: string) => Promise<void>;
+  refreshStatus: () => Promise<string>;
 };
 
 const KYCContext = createContext<KYCContextType | undefined>(undefined);
@@ -319,17 +325,38 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
   const submit = useCallback(async (latestFields?: Partial<KYCData>) => {
     setIsSubmitting(true);
     try {
-      await api.submitKycFinal();
+      const response = await api.submitKycFinal();
+      if (response.data?.status) {
+        update({ status: response.data.status });
+      }
     } finally {
       setIsSubmitting(false);
     }
-  }, []);
+  }, [update]);
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const response = await api.getKycStatus();
+      if (response.data?.status) {
+        update({ 
+          status: response.data.status,
+          rejectionReason: response.data.rejectionReason 
+        });
+        return response.data.status;
+      }
+      return 'NOT_STARTED';
+    } catch (error) {
+      console.error('Failed to refresh KYC status:', error);
+      return 'NOT_STARTED';
+    }
+  }, [update]);
 
   return (
     <KYCContext.Provider value={{ 
       data, update, submit, reset, isSubmitting,
       recordConsent, submitFundsSource, submitIdentity,
-      submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth
+      submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth,
+      refreshStatus
     }}>
       {children}
     </KYCContext.Provider>
