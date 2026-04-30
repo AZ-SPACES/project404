@@ -60,27 +60,9 @@ export default function SignUpBirthdayScreen() {
     setCurrentMonth(dateString);
   }, []);
 
-  const handleNext = useCallback(async () => {
-    try {
-      const response = await submitSignup();
-      const authPayload = response?.data ?? response;
-      const { accessToken, refreshToken } = authPayload;
-
-      const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-      if (fullName) await setDisplayName(fullName);
-      if (data.email) await setEmail(data.email);
-      if (data.phoneNumber) await setPhone(data.phoneNumber);
-
-      reset();
-
-      await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
-      // hasPasscode=false routes new user through SetupNavigator; RootNavigator handles transition
-      login(accessToken, false, false);
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
-    }
-  }, [submitSignup, reset, data, setDisplayName, setEmail, setPhone, login, showToast]);
+  const handleNext = useCallback(() => {
+    navigation.navigate("CreatePasscode");
+  }, [navigation]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 

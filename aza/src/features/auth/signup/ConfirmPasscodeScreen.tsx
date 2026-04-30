@@ -22,6 +22,8 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
+import { useSignUp } from "../../../providers/SignUpProvider";
+import { api } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -37,10 +39,12 @@ export default function ConfirmPasscodeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ConfirmPageRouteProp>();
   const { firstPasscode } = route.params;
-  const { savePasscodeValue } = useAuth();
+  const { userToken, savePasscodeValue } = useAuth();
+  const { update } = useSignUp();
 
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -84,10 +88,25 @@ export default function ConfirmPasscodeScreen() {
 
   const handleContinue = useCallback(async () => {
     if (passcode.length === 4 && !isLocked) {
-      if (passcode === firstPasscode) {
+      if (String(passcode).trim() === String(firstPasscode).trim()) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await savePasscodeValue(passcode);
-        navigation.navigate("Consent");
+        
+        if (userToken) {
+          // Standalone case: Already logged in, set passcode via API
+          try {
+            await api.post('/api/v1/auth/passcode/set', { passcode });
+            await savePasscodeValue(passcode);
+            navigation.navigate("Consent");
+          } catch (e: any) {
+            setServerError(e?.response?.data?.message || "Failed to set passcode. Please try again.");
+            setPasscode("");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          }
+        } else if (update) {
+          // Signup case: Not logged in yet, store in signup data
+          update({ passcode });
+          navigation.navigate("Consent");
+        }
       } else {
         const newCount = attemptCount + 1;
         setAttemptCount(newCount);
@@ -99,7 +118,7 @@ export default function ConfirmPasscodeScreen() {
         setPasscode("");
       }
     }
-  }, [passcode, firstPasscode, navigation, startShake, savePasscodeValue, attemptCount, isLocked]);
+  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked]);
 
   useEffect(() => {
     if (isLocked) return;
@@ -123,9 +142,8 @@ export default function ConfirmPasscodeScreen() {
 
   const handleTextChange = (text: string) => {
     if (isLocked) return;
-    if (errorStatus) {
-      setErrorStatus(false);
-    }
+    if (errorStatus) setErrorStatus(false);
+    if (serverError) setServerError(null);
 
     // Only allow numbers and max length of 4
     const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
@@ -228,6 +246,8 @@ export default function ConfirmPasscodeScreen() {
                 <Text style={styles.errorText}>
                   Too many failed attempts. Please go back and start over.
                 </Text>
+              ) : serverError ? (
+                <Text style={styles.errorText}>{serverError}</Text>
               ) : errorStatus ? (
                 <Text style={styles.errorText}>
                   Passcodes do not match. {MAX_ATTEMPTS - attemptCount} attempt{MAX_ATTEMPTS - attemptCount === 1 ? "" : "s"} remaining.

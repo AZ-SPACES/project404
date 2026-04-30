@@ -2,6 +2,7 @@ export { default as SignUpNumberScreen } from './SignUpNumberScreen';
 export { default as SignUpEmailScreen } from './SignUpEmailScreen';
 export { default as SignUpPasswordScreen } from './SignUpPasswordScreen';
 export { default as SignUpNameScreen } from './SignUpNameScreen';
+export { default as SignUpHandleScreen } from './SignUpHandleScreen';
 export { default as SignUpAddressScreen } from './SignUpAddressScreen';
 export { default as SignUpPronounsScreen } from './SignUpPronounsScreen';
 export { default as SignUpEmploymentScreen } from './SignUpEmploymentScreen';

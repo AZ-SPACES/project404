@@ -44,7 +44,7 @@ export default function SelfieScanScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const { showToast } = useToast();
-  const { update, submit, isSubmitting } = useKYC();
+  const { update, submitSelfie, submit, isSubmitting } = useKYC();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SelfieScanRouteProp>();
@@ -124,22 +124,25 @@ export default function SelfieScanScreen() {
 
   const handleLooksGood = async () => {
     setIsModalVisible(false);
-    // Pass selfieImageUri directly to submit() so it doesn't rely on React
-    // state having flushed — update() is async and the KYC closure would
-    // otherwise still see selfieImageUri: null, triggering a false error.
     const selfieUri = capturedImage && capturedImage !== 'placeholder' ? capturedImage : undefined;
     if (selfieUri) {
       update({ selfieImageUri: selfieUri });
     }
     try {
-      await submit(selfieUri ? { selfieImageUri: selfieUri } : undefined);
-      if (isPEP) {
-        navigation.navigate('PEPUnderReview');
-      } else {
+      await submitSelfie(selfieUri);
+      
+      // If NOT PEP, we can submit the final KYC here or wait for the CreatingAccount screen.
+      // The user's request was "integrate all in kyc folder... with the backend".
+      // submit() in KYCProvider now calls /submit endpoint.
+      if (!isPEP) {
+        await submit();
         navigation.navigate('KYCSuccess');
+      } else {
+        navigation.navigate('PEPUnderReview');
       }
-    } catch {
-      showToast('Submission failed. Please try again.', 'error');
+    } catch (error) {
+      console.error('Failed to submit selfie:', error);
+      showToast('Selfie submission failed. Please try again.', 'error');
     }
   };
 

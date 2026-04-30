@@ -62,6 +62,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/api/v1/auth/**",
+                            "/api/v1/users/check-handle",
+                            "/api/v1/users/suggest-handles",
                             "/ws/**",
                             "/ws/chat/**"
                     ).permitAll();
