@@ -16,10 +16,10 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { displayName, profileImageUri } = useProfile();
+  const { displayName, profileImageUri, handle } = useProfile();
   const { showToast } = useToast();
-  const userHandle = "naaddo";
-  const profileLink = `aza.me/${userHandle}`;
+  const userHandle = handle || "username";
+  const profileLink = `http://localhost:8080/${userHandle}`;
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

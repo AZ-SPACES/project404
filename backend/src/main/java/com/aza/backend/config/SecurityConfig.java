@@ -75,6 +75,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll();
                     }
+                    auth.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
                     auth.anyRequest().authenticated();
             })
             .addFilterBefore(jwtAuthenticationFilter,

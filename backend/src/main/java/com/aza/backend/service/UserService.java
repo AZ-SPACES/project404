@@ -57,6 +57,7 @@ public class UserService {
                 .pronouns(user.getPronouns())
                 .profileImageUrl(user.getProfileImageUrl())
                 .kycStatus(user.getKycStatus().name())
+                .role(user.getRole() != null ? user.getRole().name() : "USER")
                 .passcodeSet(user.getPasscodeHash() != null)
                 .homeAddress(user.getHomeAddress())
                 .city(user.getCity())
@@ -155,10 +156,22 @@ public class UserService {
 
         return PublicProfileResponse.builder()
                 .id(user.getId().toString())
-                .displayName(user.getDisplayName())
+                .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
+                .handle(user.getHandle())
                 .profileImageUrl(user.getProfileImageUrl())
                 .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until contacts system is built
                 .build();
+    }
+
+    public org.springframework.data.domain.Page<PublicProfileResponse> searchUsers(String query, int page, int size) {
+        return userRepository.searchUsers(query, org.springframework.data.domain.PageRequest.of(page, size))
+                .map(user -> PublicProfileResponse.builder()
+                        .id(user.getId().toString())
+                        .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
+                        .handle(user.getHandle())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .onlineStatus("OFFLINE")
+                        .build());
     }
 
     // ==================== PRIVACY ====================
