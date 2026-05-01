@@ -1,26 +1,26 @@
-package com.aza.backend.dto.transfer;
+package com.aza.backend.dto.admin;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
-@AllArgsConstructor
-public class TransferResponse {
+public class AdminTransactionResponse {
     private String id;
     private String senderId;
     private String senderName;
+    private String senderHandle;
     private String recipientId;
     private String recipientName;
+    private String recipientHandle;
     private BigDecimal amount;
-    private String currency;
     private String note;
     private String type;
     private String status;
-    private String direction; // INCOMING or OUTGOING
-    private String initiatedAt;
-    private String completedAt;
+    private LocalDateTime initiatedAt;
+    private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
 }

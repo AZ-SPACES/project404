@@ -18,15 +18,10 @@ import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSupportChat } from "../../../hooks/useSupportChat";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ChatWithUs">;
 
-interface Message {
-  id: string;
-  text: string;
-  isSender: boolean;
-  imageUri?: string;
-}
 
 export default function ChatWithUsScreen() {
   const { colors: Colors } = useAppTheme();
@@ -37,11 +32,11 @@ export default function ChatWithUsScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "1", text: "Hi there! How can we help you today?", isSender: false }
-  ]);
+  const { messages, loading, sendMessage, isOtherTyping, sendTypingStatus } = useSupportChat();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAttach = async () => {
+    // Attachment logic remains same but in a real app would upload to backend
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
@@ -59,31 +54,27 @@ export default function ChatWithUsScreen() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim() && !selectedImage) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      ...(selectedImage ? { imageUri: selectedImage } : {}),
-      isSender: true };
+    try {
+      const textToSend = inputText.trim();
+      setInputText("");
+      setSelectedImage(null);
+      
+      await sendMessage(textToSend);
+    } catch (err) {
+      alert("Failed to send message");
+    }
+  };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputText("");
-    setSelectedImage(null);
-
-    // Simulate auto-reply
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          text: selectedImage 
-            ? "We've received your attachment. Let us review it." 
-            : "Thank you for reaching out. One of our agents will be with you shortly.",
-          isSender: false },
-      ]);
-    }, 1500);
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    sendTypingStatus(true);
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 3000);
   };
 
   return (
@@ -113,7 +104,7 @@ export default function ChatWithUsScreen() {
           contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          {messages.map((msg) => (
+          {messages.map((msg: any) => (
             <View 
               key={msg.id} 
               style={[
@@ -136,6 +127,11 @@ export default function ChatWithUsScreen() {
               )}
             </View>
           ))}
+          {isOtherTyping && (
+            <View style={styles.typingIndicator}>
+              <Text style={styles.typingText}>Agent is typing...</Text>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.inputContainer}>
@@ -159,7 +155,7 @@ export default function ChatWithUsScreen() {
               placeholder="Ask me anything..."
               placeholderTextColor={Colors.textSecondary}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={handleInputChange}
               multiline
             />
           </View>
@@ -297,5 +293,17 @@ function createStyles(Colors: any) {
     justifyContent: 'center' },
   sendButtonDisabled: {
     backgroundColor: Colors.border,
-    opacity: 0.5 } });
+    opacity: 0.5 },
+  typingIndicator: {
+    alignSelf: 'flex-start',
+    backgroundColor: isDark ? Colors.surface : Colors.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderTopLeftRadius: 4,
+    marginTop: 4 },
+  typingText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic' } });
 }

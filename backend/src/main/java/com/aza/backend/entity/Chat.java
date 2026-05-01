@@ -40,6 +40,9 @@ public class Chat {
     @Builder.Default
     private Boolean isArchivedByTwo = false;
 
+    @Builder.Default
+    private boolean isSupport = false;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.admin.AdminStatsResponse;
+import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
@@ -77,6 +78,31 @@ public class AdminService {
         }
         userRepository.save(user);
         return toAdminUserResponse(user);
+    }
+
+    public Page<AdminTransactionResponse> getTransactions(int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        return transactionRepository.findAllOrderByInitiatedAtDesc(pageable)
+                .map(tx -> {
+                    User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+                    User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+                    return AdminTransactionResponse.builder()
+                            .id(tx.getId().toString())
+                            .senderId(tx.getSenderId().toString())
+                            .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                            .senderHandle(sender != null ? sender.getHandle() : null)
+                            .recipientId(tx.getRecipientId().toString())
+                            .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                            .recipientHandle(recipient != null ? recipient.getHandle() : null)
+                            .amount(tx.getAmount())
+                            .note(tx.getNote())
+                            .type(tx.getType().name())
+                            .status(tx.getStatus().name())
+                            .initiatedAt(tx.getInitiatedAt())
+                            .completedAt(tx.getCompletedAt())
+                            .cancelledAt(tx.getCancelledAt())
+                            .build();
+                });
     }
 
     public AdminStatsResponse getStats() {

@@ -26,8 +26,11 @@ public class ChatMessage {
     @Column(nullable = false)
     private UUID senderId;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String ciphertext;
+
+    @Column(columnDefinition = "TEXT")
+    private String content; // plaintext, used only when chat.isSupport = true
 
     @Column(columnDefinition = "TEXT")
     private String ephemeralKey;

@@ -15,6 +15,18 @@ export function clearTokens() {
   localStorage.removeItem("aza_admin_refresh_token");
 }
 
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.map((callback) => callback(token));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(callback: (token: string) => void) {
+  refreshSubscribers.push(callback);
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -26,10 +38,58 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
 
-  if (res.status === 401 || res.status === 403) {
-    clearTokens();
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
+  if (res.status === 401) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      const refreshToken = localStorage.getItem("aza_admin_refresh_token");
+      if (!refreshToken) {
+        clearTokens();
+        window.location.href = "/login";
+        throw new Error("No refresh token");
+      }
+
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        const refreshBody = await refreshRes.json();
+        
+        if (refreshRes.ok && refreshBody.success) {
+          const { accessToken, refreshToken: newRefreshToken } = refreshBody.data;
+          saveTokens(accessToken, newRefreshToken);
+          isRefreshing = false;
+          onTokenRefreshed(accessToken);
+        } else {
+          throw new Error("Refresh failed");
+        }
+      } catch (e) {
+        isRefreshing = false;
+        clearTokens();
+        window.location.href = "/login";
+        throw new Error("Session expired");
+      }
+    }
+
+    return new Promise((resolve) => {
+      addRefreshSubscriber((newToken) => {
+        resolve(request(path, {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${newToken}`,
+          },
+        }));
+      });
+    });
+  }
+
+  if (res.status === 403) {
+    // 403 is often "Forbidden" (wrong role) not just expired.
+    // If it's truly a session issue, the backend should return 401.
+    // We only kick out on 403 if it's persistent, but for now let's be less aggressive.
+    throw new Error("Forbidden: You don't have permission for this action");
   }
 
   const body = await res.json();
@@ -211,4 +271,77 @@ export function updateUserRole(userId: string, role: string): Promise<AdminUser>
     method: "PATCH",
     body: JSON.stringify({ role }),
   });
+}
+
+// ── Support ───────────────────────────────────────────────────────────────────
+
+export interface SupportChatSummary {
+  chatId: string;
+  userId: string;
+  userName: string;
+  userHandle: string | null;
+  userAvatar: string | null;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+}
+
+export interface SupportMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string | null;
+  type: string;
+  status: string;
+  sentAt: string | null;
+  isDeleted: boolean;
+  isSelf?: boolean;
+}
+
+export function getSupportChats(page = 0, size = 20): Promise<Page<SupportChatSummary>> {
+  return request(`/api/v1/admin/support/chats?page=${page}&size=${size}`);
+}
+
+export function getSupportChat(chatId: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}`);
+}
+
+export function getSupportChatMessages(chatId: string, page = 0, size = 50): Promise<Page<SupportMessage>> {
+  return request(`/api/v1/admin/support/chats/${chatId}/messages?page=${page}&size=${size}`);
+}
+
+export function sendSupportReply(chatId: string, content: string): Promise<SupportMessage> {
+  return request(`/api/v1/admin/support/chats/${chatId}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+export function sendTypingIndicator(chatId: string, isTyping: boolean): Promise<void> {
+  return request(`/api/v1/chats/typing`, {
+    method: "POST",
+    body: JSON.stringify({ chatId, isTyping }),
+  });
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+
+export interface AdminTransaction {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderHandle: string | null;
+  recipientId: string;
+  recipientName: string;
+  recipientHandle: string | null;
+  amount: number;
+  note: string | null;
+  type: string;
+  status: string;
+  initiatedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export function getAdminTransactions(page = 0, size = 20): Promise<Page<AdminTransaction>> {
+  return request(`/api/v1/admin/dashboard/transactions?page=${page}&size=${size}`);
 }
