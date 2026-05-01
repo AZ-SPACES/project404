@@ -64,6 +64,14 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfileByHandle(handle)));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<com.aza.backend.dto.user.PublicProfileResponse>>> searchUsers(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(userService.searchUsers(q, page, size)));
+    }
+
     // ==================== ONLINE STATUS ====================
 
     @GetMapping("/{id}/status")

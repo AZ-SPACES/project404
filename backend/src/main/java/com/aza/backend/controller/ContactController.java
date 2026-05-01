@@ -114,6 +114,18 @@ public class ContactController {
     }
 
     /**
+     * POST /api/v1/contacts/add/{targetUserId}
+     * Add an Aza user as a contact manually.
+     */
+    @PostMapping("/add/{targetUserId}")
+    public ResponseEntity<ApiResponse<ContactResponse>> addContact(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID targetUserId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                contactService.addContact(user, targetUserId)));
+    }
+
+    /**
      * DELETE /api/v1/contacts/block/{userId}
      * Unblock a previously blocked user.
      */

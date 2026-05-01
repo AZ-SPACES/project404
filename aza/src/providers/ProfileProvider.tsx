@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
+import { api } from '../services/api';
 
 const PROFILE_STORAGE_KEY = 'aza_profile';
 
@@ -9,6 +10,7 @@ type ProfileData = {
   profileImageUri: string | null;
   email: string | null;
   phone: string | null;
+  handle: string | null;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -16,6 +18,7 @@ const INITIAL_PROFILE: ProfileData = {
   profileImageUri: null,
   email: null,
   phone: null,
+  handle: null,
 };
 
 type ProfileContextType = ProfileData & {
@@ -23,6 +26,8 @@ type ProfileContextType = ProfileData & {
   setProfileImage: (uri: string | null) => Promise<void>;
   setEmail: (email: string | null) => Promise<void>;
   setPhone: (phone: string | null) => Promise<void>;
+  setHandle: (handle: string | null) => Promise<void>;
+  fetchProfile: () => Promise<void>;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -47,6 +52,31 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       AsyncStorage.removeItem(PROFILE_STORAGE_KEY).catch(() => {});
     }
   }, [userToken]);
+
+  const fetchProfile = useCallback(async () => {
+    if (!userToken) return;
+    try {
+      const { data } = await api.get('/api/v1/users/me');
+      const userData = data.data;
+      const updated = {
+        displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
+        profileImageUri: userData.profileImageUrl,
+        email: userData.email,
+        phone: userData.phone,
+        handle: userData.handle,
+      };
+      setProfile(updated);
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to fetch profile', error);
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (userToken) {
+      fetchProfile();
+    }
+  }, [userToken, fetchProfile]);
 
   const setDisplayName = useCallback(async (name: string) => {
     const updated = { ...profile, displayName: name };
@@ -88,8 +118,18 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [profile]);
 
+  const setHandle = useCallback(async (handle: string | null) => {
+    const updated = { ...profile, handle };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save handle', e);
+    }
+  }, [profile]);
+
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone }}>
+    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, fetchProfile }}>
       {children}
     </ProfileContext.Provider>
   );

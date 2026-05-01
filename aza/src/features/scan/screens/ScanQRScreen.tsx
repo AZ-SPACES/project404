@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useContactStore } from '../../../store/contactStore';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
@@ -22,6 +23,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const [frameLayout, setFrameLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const scanAnim = useRef(new Animated.Value(0)).current;
   const isProcessing = useRef(false);
+  const { findUserByHandle } = useContactStore();
 
   useEffect(() => {
     if (!permission) requestPermission();
@@ -68,19 +70,33 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      Alert.alert(
-        'Success',
-        `QR Code detected: ${data}`,
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              setScanned(false);
-              isProcessing.current = false;
-            } 
-          }
-        ]
-      );
+      // Parse the data. Format expected: aza.me/handle or just handle
+      let handle = data.trim();
+      if (handle.includes('aza.me/')) {
+        handle = handle.split('aza.me/')[1] || '';
+      } else if (handle.includes('localhost:8080/')) {
+        handle = handle.split('localhost:8080/')[1] || '';
+      }
+      
+      try {
+        const user = await findUserByHandle(handle);
+        if (user) {
+          navigation.navigate('SendAmount', {
+            id: user.id,
+            name: user.displayName,
+            username: `@${user.handle}`,
+            avatar: user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`,
+          });
+        } else {
+          Alert.alert('User Not Found', `No Aza user found with handle @${handle}`, [
+            { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+          ]);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to resolve QR code. Please try again.', [
+          { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+        ]);
+      }
     }
   };
 

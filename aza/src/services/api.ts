@@ -115,6 +115,44 @@ export const checkHandleAvailability = (handle: string) =>
 export const suggestHandles = (firstName: string, lastName: string) =>
   api.get(`/api/v1/users/suggest-handles?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`);
 
+// --- Contact Endpoints ---
+
+export const getContacts = (page = 0, size = 50) =>
+  api.get(`/api/v1/contacts?page=${page}&size=${size}`);
+
+export const syncContacts = (contacts: any[]) =>
+  api.post('/api/v1/contacts/sync', { contacts });
+
+export const searchContacts = (q: string, page = 0, size = 20) =>
+  api.get(`/api/v1/contacts/search?q=${encodeURIComponent(q)}&page=${page}&size=${size}`);
+
+export const getContactDetails = (id: string) =>
+  api.get(`/api/v1/contacts/${id}`);
+
+export const markContactFavorite = (id: string) =>
+  api.post(`/api/v1/contacts/${id}/favorite`);
+
+export const unmarkContactFavorite = (id: string) =>
+  api.delete(`/api/v1/contacts/${id}/favorite`);
+
+export const blockUser = (userId: string) =>
+  api.post(`/api/v1/contacts/block/${userId}`);
+
+export const unblockUser = (userId: string) =>
+  api.delete(`/api/v1/contacts/block/${userId}`);
+
+export const getBlockedUsers = () =>
+  api.get('/api/v1/contacts/blocked');
+
+export const addContact = (userId: string) =>
+  api.post(`/api/v1/contacts/add/${userId}`);
+
+export const getUserByHandle = (handle: string) =>
+  api.get(`/api/v1/users/by-handle/${handle}`);
+
+export const searchUsersGlobal = (q: string, page = 0, size = 20) =>
+  api.get(`/api/v1/users/search?q=${encodeURIComponent(q)}&page=${page}&size=${size}`);
+
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;
 let failedQueue: Array<{

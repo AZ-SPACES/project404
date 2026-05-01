@@ -48,4 +48,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
+    long countByStatus(Transaction.TransactionStatus status);
+
+    long countByInitiatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'COMPLETED'")
+    java.math.BigDecimal sumCompletedVolume();
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.initiatedAt >= :start AND t.initiatedAt < :end AND t.status = 'COMPLETED'")
+    java.math.BigDecimal sumVolumeByInitiatedAtBetween(
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
+
+    @Query("SELECT t FROM Transaction t ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findAllOrderByInitiatedAtDesc(Pageable pageable);
 }

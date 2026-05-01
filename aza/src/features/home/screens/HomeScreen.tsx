@@ -111,7 +111,7 @@ export default function HomeScreen() {
         <SafeAreaView>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[Typography.h1, { color: Colors.white }]}>
+            <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
               {`${greeting}${firstName ? `, ${firstName}` : ""}`}
             </Text>
             <View style={styles.headerRight}>

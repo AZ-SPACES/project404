@@ -56,11 +56,11 @@ export type RootStackParamList = {
   HelpAndSupport: undefined;
   Inbox: undefined;
   NotificationSettings: undefined;
-  SendAmount: { name: string; username: string; avatar: string };
+  SendAmount: { id?: string; name: string; username: string; avatar: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string };
   SendPin: { name: string; username: string; avatar: string; amount: number; note: string };
   SendSuccess: { name: string; username: string; avatar: string; amount: number; note: string };
-  RequestAmount: { name: string; username: string; avatar: string };
+  RequestAmount: { id?: string; name: string; username: string; avatar: string };
   SecurityAndPrivacy: undefined;
   ChangePassword: undefined;
   SecureAccount: undefined;
@@ -77,7 +77,7 @@ export type RootStackParamList = {
   ChatScreen: { id: string; name: string; avatar: string; online: boolean; sentMedia?: any[] | undefined; forwardedMessage?: any };
   Hub: undefined;
   MiniApp: { appId: string };
-  ContactsProfile: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
+  ContactsProfile: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
   ChatCamera: { recipientName: string; chatId: string };
   MediaPreview: {
     media: Array<{ uri: string; type: 'image' | 'video' }>;
@@ -90,7 +90,7 @@ export type RootStackParamList = {
   Withdraw: undefined;
   StatementDownload: undefined;
   Transactions: { balance: string };
-  ChatInfoScreen: { name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
+  ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
   AudioCall: { name: string; avatar: string };
   VideoCall: { name: string; avatar: string };
   StarredMessages: undefined;

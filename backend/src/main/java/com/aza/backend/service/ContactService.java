@@ -132,6 +132,37 @@ public class ContactService {
 
     //GET SINGLE CONTACT
 
+    @Transactional
+    public ContactResponse addContact(User owner, UUID targetUserId) {
+        if (owner.getId().equals(targetUserId)) {
+            throw new RuntimeException("You cannot add yourself as a contact");
+        }
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if already a contact
+        Optional<Contact> existing = contactRepository.findByOwnerUserIdAndContactUserId(
+                owner.getId(), targetUserId);
+        
+        if (existing.isPresent()) {
+            return toContactResponse(existing.get());
+        }
+
+        Contact contact = Contact.builder()
+                .ownerUserId(owner.getId())
+                .contactUserId(targetUserId)
+                .displayName(targetUser.getFirstName() + " " + targetUser.getLastName())
+                .phoneNumber(targetUser.getPhone())
+                .email(targetUser.getEmail())
+                .isAzaUser(true)
+                .isFavorite(false)
+                .build();
+
+        contact = contactRepository.save(contact);
+        return toContactResponse(contact);
+    }
+
     public ContactResponse getContact(UUID userId, UUID contactId) {
         Contact contact = contactRepository.findByIdAndOwnerUserId(contactId, userId)
                 .orElseThrow(() -> new RuntimeException("Contact not found"));
