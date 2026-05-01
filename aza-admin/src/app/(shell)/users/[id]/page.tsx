@@ -1,10 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { getUserDetail, updateUserStatus, updateUserRole, type AdminUser } from "@/lib/admin-api";
+import {
+  getUserDetail,
+  updateUserStatus,
+  updateUserRole,
+  getKycRecord,
+  getUserTransactions,
+  type AdminUser,
+  type KycRecord,
+  type AdminTransaction,
+} from "@/lib/admin-api";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Loader2, ShieldCheck, ShieldAlert, Crown } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  ShieldCheck,
+  ShieldAlert,
+  Crown,
+  ZoomIn,
+  ArrowUpRight,
+  ArrowDownLeft,
+} from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
   return (
@@ -28,6 +47,43 @@ const KYC_COLORS: Record<string, string> = {
   NOT_STARTED: "bg-white/10 text-white/40",
 };
 
+const TX_STATUS_COLORS: Record<string, string> = {
+  COMPLETED: "bg-green-500/10 text-green-400 border-green-500/20",
+  PENDING: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
+  CANCELLED: "bg-white/10 text-white/40 border-white/10",
+  DECLINED: "bg-red-500/10 text-red-400 border-red-500/20",
+  REVERSED: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+};
+
+function DocImage({ url, label }: { url: string | null; label: string }) {
+  const [enlarged, setEnlarged] = useState(false);
+  if (!url) return (
+    <div className="aspect-video bg-white/5 rounded-xl flex items-center justify-center text-white/20 text-xs border border-white/5">
+      Not provided
+    </div>
+  );
+  return (
+    <>
+      <div
+        className="relative aspect-video bg-white/5 rounded-xl overflow-hidden cursor-pointer group border border-white/5"
+        onClick={() => setEnlarged(true)}
+      >
+        <Image src={url} alt={label} fill className="object-cover" unoptimized />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+          <ZoomIn size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+        <p className="absolute bottom-2 left-2 text-xs text-white/60 bg-black/50 px-2 py-0.5 rounded">{label}</p>
+      </div>
+      {enlarged && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setEnlarged(false)}>
+          <Image src={url} alt={label} width={1200} height={800} className="object-contain w-full h-auto max-h-[90vh] rounded-xl" unoptimized />
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function UserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
@@ -36,15 +92,38 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [kycRecord, setKycRecord] = useState<KycRecord | null>(null);
+  const [userTxs, setUserTxs] = useState<AdminTransaction[]>([]);
+
   const [statusModal, setStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [reason, setReason] = useState("");
   const [updating, setUpdating] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState(false);
 
-  useEffect(() => {
-    getUserDetail(userId).then(setUser).catch(e => setError(e.message)).finally(() => setLoading(false));
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [userResult] = await Promise.all([
+        getUserDetail(userId),
+        getKycRecord(userId)
+          .then(setKycRecord)
+          .catch(() => { /* silently ignore — no KYC submission yet */ }),
+        getUserTransactions(userId, 0, 5)
+          .then(page => setUserTxs(page.content))
+          .catch(() => { /* silently ignore */ }),
+      ]);
+      setUser(userResult);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load user");
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function applyStatus() {
     if (!newStatus) return;
@@ -143,6 +222,80 @@ export default function UserDetailPage() {
             <span className="text-sm text-white/70">Biometrics {user.biometricsEnabled ? "enabled" : "disabled"}</span>
           </div>
         </div>
+      </div>
+
+      {/* KYC Documents */}
+      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <p className="text-white/30 text-xs uppercase tracking-wider mb-4">KYC Documents</p>
+        {!kycRecord ? (
+          <p className="text-white/20 text-sm">No KYC submission found.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <div>
+                <p className="text-white/30 text-xs mb-1">ID Type</p>
+                <p className="text-white text-sm font-medium">{kycRecord.idType ?? "—"}</p>
+              </div>
+              <div className="ml-6">
+                <p className="text-white/30 text-xs mb-1">Status</p>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${
+                  KYC_COLORS[kycRecord.status] ?? "bg-white/10 text-white/40"
+                } border-transparent`}>
+                  {kycRecord.status.replace(/_/g, " ")}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <DocImage url={kycRecord.idFrontUrl} label="ID Front" />
+              <DocImage url={kycRecord.idBackUrl} label="ID Back" />
+              <DocImage url={kycRecord.selfieUrl} label="Selfie" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Transaction History */}
+      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Recent Transactions</p>
+        {userTxs.length === 0 ? (
+          <p className="text-white/20 text-sm">No transactions found.</p>
+        ) : (
+          <div className="space-y-1">
+            {userTxs.map(tx => {
+              const isOutgoing = tx.senderId === userId;
+              const counterparty = isOutgoing ? tx.recipientName : tx.senderName;
+              const dateStr = tx.initiatedAt
+                ? new Date(tx.initiatedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })
+                : "—";
+              return (
+                <div key={tx.id} className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
+                    isOutgoing ? "bg-red-500/10" : "bg-emerald-500/10"
+                  }`}>
+                    {isOutgoing
+                      ? <ArrowUpRight size={14} className="text-red-400" />
+                      : <ArrowDownLeft size={14} className="text-emerald-400" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{counterparty}</p>
+                    <p className="text-white/30 text-xs">{dateStr}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-sm font-semibold ${isOutgoing ? "text-red-400" : "text-emerald-400"}`}>
+                      {isOutgoing ? "-" : "+"}GHS {Number(tx.amount).toFixed(2)}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      TX_STATUS_COLORS[tx.status] ?? "bg-white/10 text-white/40 border-white/10"
+                    }`}>
+                      {tx.status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Admin role toggle */}

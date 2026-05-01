@@ -283,6 +283,10 @@ export interface SupportChatSummary {
   userAvatar: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
+  status: "OPEN" | "PENDING" | "RESOLVED";
+  priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+  category: string | null;
+  unreadCount: number;
 }
 
 export interface SupportMessage {
@@ -297,8 +301,10 @@ export interface SupportMessage {
   isSelf?: boolean;
 }
 
-export function getSupportChats(page = 0, size = 20): Promise<Page<SupportChatSummary>> {
-  return request(`/api/v1/admin/support/chats?page=${page}&size=${size}`);
+export function getSupportChats(page = 0, size = 20, status?: string): Promise<Page<SupportChatSummary>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/support/chats?${params}`);
 }
 
 export function getSupportChat(chatId: string): Promise<SupportChatSummary> {
@@ -428,4 +434,60 @@ export function broadcastNotification(
 
 export function getAdminTransaction(id: string): Promise<AdminTransaction> {
   return request(`/api/v1/admin/dashboard/transactions/${id}`);
+}
+
+// ── Live Stats ────────────────────────────────────────────────────────────────
+
+export interface LiveStats {
+  onlineUsers: number;
+  transactionsLastHour: number;
+  pendingKycCount: number;
+}
+
+export function getLiveStats(): Promise<LiveStats> {
+  return request("/api/v1/admin/dashboard/live-stats");
+}
+
+// ── KYC record for any user (not just pending) ────────────────────────────────
+
+export function getKycRecord(userId: string): Promise<KycRecord> {
+  return request(`/api/v1/admin/kyc/user/${userId}`);
+}
+
+// ── User transactions ─────────────────────────────────────────────────────────
+
+export function getUserTransactions(userId: string, page = 0, size = 10): Promise<Page<AdminTransaction>> {
+  return request(`/api/v1/admin/users/${userId}/transactions?page=${page}&size=${size}`);
+}
+
+// ── Support management ────────────────────────────────────────────────────────
+
+export interface SupportStats {
+  open: number;
+  resolved: number;
+}
+
+export function getSupportStats(): Promise<SupportStats> {
+  return request("/api/v1/admin/support/stats");
+}
+
+export function resolveChat(chatId: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/resolve`, { method: "POST" });
+}
+
+export function reopenChat(chatId: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/reopen`, { method: "POST" });
+}
+
+export function updateChatPriority(chatId: string, priority: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/priority`, {
+    method: "PATCH",
+    body: JSON.stringify({ priority }),
+  });
+}
+
+// ── Transaction reversal ──────────────────────────────────────────────────────
+
+export function reverseTransaction(txId: string): Promise<AdminTransaction> {
+  return request(`/api/v1/admin/dashboard/transactions/${txId}/reverse`, { method: "POST" });
 }

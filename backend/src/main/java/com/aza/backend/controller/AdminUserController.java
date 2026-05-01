@@ -2,6 +2,7 @@ package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.AdminRoleRequest;
+import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminUserStatusRequest;
 import com.aza.backend.entity.User;
@@ -41,6 +42,14 @@ public class AdminUserController {
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable UUID userId) {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
+    }
+
+    @GetMapping("/{userId}/transactions")
+    public ResponseEntity<ApiResponse<Page<AdminTransactionResponse>>> getUserTransactions(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getUserTransactions(userId, page, Math.min(size, 50))));
     }
 
     @PatchMapping("/{userId}/role")

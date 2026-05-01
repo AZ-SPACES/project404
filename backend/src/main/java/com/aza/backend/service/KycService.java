@@ -3,10 +3,12 @@ package com.aza.backend.service;
 import com.aza.backend.dto.kyc.*;
 import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.User;
+import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.KycRecordRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.util.EmailService;
+import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -311,6 +313,19 @@ public class KycService {
                     return status;
                 })
                 .collect(Collectors.toList());
+    }
+
+    public KycStatusResponse getKycStatusForAdmin(UUID userId) {
+        KycRecord record = kycRecordRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "KYC record not found for user", HttpStatus.NOT_FOUND));
+        User user = userRepository.findById(userId).orElse(null);
+        KycStatusResponse status = getStatusForRecord(record);
+        if (user != null) {
+            status.setDisplayName(user.getDisplayName());
+            status.setEmail(user.getEmail());
+            status.setUserId(user.getId().toString());
+        }
+        return status;
     }
 
     @Transactional

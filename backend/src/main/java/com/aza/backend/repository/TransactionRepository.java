@@ -62,4 +62,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT t FROM Transaction t ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllOrderByInitiatedAtDesc(Pageable pageable);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.initiatedAt > :since")
+    long countByInitiatedAtAfter(@Param("since") java.time.LocalDateTime since);
 }
