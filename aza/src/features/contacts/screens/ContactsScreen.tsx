@@ -107,8 +107,19 @@ export default function ContactsScreen() {
     })();
   }, []);
 
+  // Deduplicate by id — backend may return the same contact more than once
+  // (e.g. matched by both phone and email during sync)
+  const uniqueContacts = React.useMemo(() => {
+    const seen = new Set<string>();
+    return backendContacts.filter((c) => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+  }, [backendContacts]);
+
   // Map backend contacts to UI Recipients
-  const contactsList: Recipient[] = backendContacts.map(c => ({
+  const contactsList: Recipient[] = uniqueContacts.map(c => ({
     id: c.id,
     name: c.displayName,
     username: c.handle ? `@${c.handle}` : (c.phoneNumber || c.email || ''),
@@ -301,7 +312,7 @@ export default function ContactsScreen() {
         {/* List */}
         <SectionList
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderItem}
           renderSectionHeader={({ section: { title } }) => (
             <View style={styles.sectionHeader}>

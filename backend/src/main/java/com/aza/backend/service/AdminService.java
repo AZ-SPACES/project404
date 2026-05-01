@@ -3,10 +3,14 @@ package com.aza.backend.service;
 import com.aza.backend.dto.admin.AdminStatsResponse;
 import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.admin.AdminUserResponse;
+import com.aza.backend.dto.admin.AdminWalletResponse;
+import com.aza.backend.dto.admin.KycAnalyticsResponse;
+import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.repository.KycRecordRepository;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
@@ -31,6 +35,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final KycRecordRepository kycRecordRepository;
 
     public Page<AdminUserResponse> getUsers(String query, String status, String kycStatus, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -139,6 +144,106 @@ public class AdminService {
                 .totalTransactionVolume(totalVolume != null ? totalVolume : BigDecimal.ZERO)
                 .transactionsToday(transactionsToday)
                 .volumeToday(volumeToday != null ? volumeToday : BigDecimal.ZERO)
+                .build();
+    }
+
+    // ==================== WALLET MANAGEMENT ====================
+
+    public Page<AdminWalletResponse> getWallets(int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("lastUpdatedAt").descending());
+        return walletRepository.findAll(pageable).map(wallet -> {
+            User user = userRepository.findById(wallet.getUserId()).orElse(null);
+            return AdminWalletResponse.builder()
+                    .walletId(wallet.getId().toString())
+                    .userId(wallet.getUserId().toString())
+                    .userName(user != null ? user.getFirstName() + " " + user.getLastName() : "Unknown")
+                    .userHandle(user != null ? user.getHandle() : null)
+                    .userEmail(user != null ? user.getEmail() : null)
+                    .balance(wallet.getBalance())
+                    .currency(wallet.getCurrency())
+                    .frozen(wallet.getFrozen())
+                    .lastUpdatedAt(wallet.getLastUpdatedAt())
+                    .build();
+        });
+    }
+
+    @Transactional
+    public AdminWalletResponse freezeWallet(UUID userId, boolean freeze) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Wallet not found for user", HttpStatus.NOT_FOUND));
+        wallet.setFrozen(freeze);
+        walletRepository.save(wallet);
+
+        User user = userRepository.findById(userId).orElse(null);
+        return AdminWalletResponse.builder()
+                .walletId(wallet.getId().toString())
+                .userId(wallet.getUserId().toString())
+                .userName(user != null ? user.getFirstName() + " " + user.getLastName() : "Unknown")
+                .userHandle(user != null ? user.getHandle() : null)
+                .userEmail(user != null ? user.getEmail() : null)
+                .balance(wallet.getBalance())
+                .currency(wallet.getCurrency())
+                .frozen(wallet.getFrozen())
+                .lastUpdatedAt(wallet.getLastUpdatedAt())
+                .build();
+    }
+
+    // ==================== KYC ANALYTICS ====================
+
+    public KycAnalyticsResponse getKycAnalytics() {
+        long notStarted = userRepository.countByKycStatus(User.KycStatus.NOT_STARTED);
+        long pending = userRepository.countByKycStatus(User.KycStatus.PENDING);
+        long underReview = userRepository.countByKycStatus(User.KycStatus.UNDER_REVIEW);
+        long verified = userRepository.countByKycStatus(User.KycStatus.VERIFIED);
+        long rejected = userRepository.countByKycStatus(User.KycStatus.REJECTED);
+
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+
+        long approvedLast30Days = kycRecordRepository.countByStatusAndVerifiedAtAfter(
+                KycRecord.KycStatus.VERIFIED, thirtyDaysAgo);
+        long rejectedLast30Days = kycRecordRepository.countByStatusAndSubmittedAtAfter(
+                KycRecord.KycStatus.REJECTED, thirtyDaysAgo);
+        long submittedLast30Days = kycRecordRepository.countBySubmittedAtAfter(thirtyDaysAgo);
+
+        double approvalRate = (verified + rejected) > 0
+                ? (double) verified / (verified + rejected) * 100.0
+                : 0.0;
+
+        return KycAnalyticsResponse.builder()
+                .notStarted(notStarted)
+                .pending(pending)
+                .underReview(underReview)
+                .verified(verified)
+                .rejected(rejected)
+                .approvedLast30Days(approvedLast30Days)
+                .rejectedLast30Days(rejectedLast30Days)
+                .submittedLast30Days(submittedLast30Days)
+                .approvalRate(Math.round(approvalRate * 100.0) / 100.0)
+                .build();
+    }
+
+    // ==================== TRANSACTION DETAIL ====================
+
+    public AdminTransactionResponse getTransactionById(UUID id) {
+        Transaction tx = transactionRepository.findById(id)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+        User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        return AdminTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .senderId(tx.getSenderId().toString())
+                .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                .senderHandle(sender != null ? sender.getHandle() : null)
+                .recipientId(tx.getRecipientId().toString())
+                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipient != null ? recipient.getHandle() : null)
+                .amount(tx.getAmount())
+                .note(tx.getNote())
+                .type(tx.getType().name())
+                .status(tx.getStatus().name())
+                .initiatedAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
+                .cancelledAt(tx.getCancelledAt())
                 .build();
     }
 

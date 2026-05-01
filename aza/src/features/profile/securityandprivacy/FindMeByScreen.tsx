@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, useRef, useEffect } from "react";
+import React, { ComponentProps, useState, useRef, useEffect, useCallback } from "react";
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { updatePrivacySettings, api } from "../../../services/api";
 
 const { height } = Dimensions.get("window");
 
@@ -86,6 +87,40 @@ export function FindMeByScreen() {
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [phoneEnabled, setPhoneEnabled] = useState(true);
 
+  // Fetch initial privacy settings from /me endpoint
+  useEffect(() => {
+    api.get('/api/v1/users/me').then(({ data }) => {
+      const u = data.data ?? data;
+      if (u.findMeByHandle != null) setWiseTagEnabled(u.findMeByHandle);
+      if (u.findMeByEmail != null) setEmailEnabled(u.findMeByEmail);
+      if (u.findMeByPhone != null) setPhoneEnabled(u.findMeByPhone);
+    }).catch(() => {});
+  }, []);
+
+  // Debounce timer ref for batching rapid toggle changes
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<{ findMeByHandle?: boolean; findMeByEmail?: boolean; findMeByPhone?: boolean }>({});
+
+  const schedulePrivacySave = useCallback((patch: typeof pendingRef.current) => {
+    pendingRef.current = { ...pendingRef.current, ...patch };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updatePrivacySettings(pendingRef.current);
+      } catch {
+        // Silently fail — non-critical setting
+      } finally {
+        pendingRef.current = {};
+      }
+    }, 800);
+  }, []);
+
+  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }, []);
+
+  const handleWiseTagChange = (v: boolean) => { setWiseTagEnabled(v); schedulePrivacySave({ findMeByHandle: v }); };
+  const handleEmailChange = (v: boolean) => { setEmailEnabled(v); schedulePrivacySave({ findMeByEmail: v }); };
+  const handlePhoneChange = (v: boolean) => { setPhoneEnabled(v); schedulePrivacySave({ findMeByPhone: v }); };
+
   const [isModalVisible, setModalVisible] = useState(false);
   const modalAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -143,10 +178,10 @@ export function FindMeByScreen() {
         <View style={styles.section}>
           <SettingRow
             iconType="Custom"
-            title="Wisetag"
-            subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'} // handle from backend
+            title="Aza tag"
+            subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'}
             switchValue={wiseTagEnabled}
-            onSwitchChange={setWiseTagEnabled}
+            onSwitchChange={handleWiseTagChange}
           />
 
           <SettingRow
@@ -155,7 +190,7 @@ export function FindMeByScreen() {
             title="Email address"
             subtitle={email ?? 'Not set'}
             switchValue={emailEnabled}
-            onSwitchChange={setEmailEnabled}
+            onSwitchChange={handleEmailChange}
           />
 
           <SettingRow
@@ -164,7 +199,7 @@ export function FindMeByScreen() {
             title="Phone number"
             subtitle={phone ?? 'Not set'}
             switchValue={phoneEnabled}
-            onSwitchChange={setPhoneEnabled}
+            onSwitchChange={handlePhoneChange}
           />
         </View>
 

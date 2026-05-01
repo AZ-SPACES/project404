@@ -40,11 +40,12 @@ public class AdminSupportController {
 
     @GetMapping("/chats/{chatId}/messages")
     public ResponseEntity<ApiResponse<Page<MessageResponse>>> getChatMessages(
+            @AuthenticationPrincipal User agent,
             @PathVariable UUID chatId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return ResponseEntity.ok(ApiResponse.success(
-                supportService.getChatMessages(chatId, page, size)));
+                supportService.getChatMessages(chatId, agent.getId(), page, size)));
     }
 
     @PostMapping("/chats/{chatId}/reply")

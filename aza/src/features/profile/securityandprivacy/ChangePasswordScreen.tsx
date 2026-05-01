@@ -10,6 +10,7 @@ import Button from '../../../components/ui/Button';
 import { isValidPassword, getPasswordRules } from '../../../utils/validation';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
+import { changePassword as changePasswordApi } from '../../../services/api';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -31,11 +32,12 @@ export function ChangePasswordScreen() {
     if (!isFormValid) return;
     setIsLoading(true);
     try {
-      // TODO: call change-password API, then navigate on success
+      await changePasswordApi(currentPassword, newPassword);
       showToast('Password updated successfully', 'success');
       navigation.goBack();
-    } catch {
-      showToast('Failed to update password. Please try again.', 'error');
+    } catch (err: unknown) {
+      const message = (err as any)?.response?.data?.message ?? 'Failed to update password. Please try again.';
+      showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }

@@ -177,9 +177,11 @@ const OTPScreen: React.FC = () => {
                   onChangeText={(text) => handleOtpChange(text, index)}
                   onKeyPress={(e) => handleKeyPress(e, index)}
                   keyboardType="number-pad"
-                  maxLength={1}
+                  maxLength={index === 0 ? 6 : 1}
                   autoFocus={index === 0}
                   cursorColor={Colors.primary}
+                  textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
                 />
                 {!digit && <View style={styles.dash} pointerEvents="none" />}
               </View>

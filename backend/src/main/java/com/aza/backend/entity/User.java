@@ -92,6 +92,12 @@ public class User {
     @Builder.Default
     private Boolean findMeByEmail = true;
 
+    @Builder.Default
+    private Boolean findMeByHandle = true;
+
+    @Builder.Default
+    private Boolean syncContacts = true;
+
     // --- Silent Hours ---
     @Builder.Default
     private Boolean silentHoursEnabled = false;

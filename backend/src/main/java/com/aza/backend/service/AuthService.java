@@ -167,7 +167,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), refreshToken, deviceName, deviceOs, ipAddress);
+        saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, ipAddress);
 
         if (isSignup) {
             emailService.sendSignupNotification(user.getEmail(), user.getFirstName());
@@ -196,6 +196,24 @@ public class AuthService {
     public void logoutEverywhere(User user) {
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
+    }
+
+    @Transactional
+    public void secureAccount(User user, String accessToken) {
+        // Revoke all refresh tokens and biometric tokens
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+        biometricService.revokeAllBiometricTokens(user);
+
+        // Blacklist the current access token for its remaining validity
+        if (accessToken != null) {
+            Duration remaining = jwtUtil.getRemainingValidity(accessToken);
+            if (!remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + hashToken(accessToken),
+                        "blacklisted",
+                        remaining);
+            }
+        }
     }
 
     // ==================== REFRESH TOKEN ====================
@@ -236,7 +254,7 @@ public class AuthService {
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
         saveRefreshToken(user.getId(), newRefreshToken,
-                stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
+                newAccessToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
@@ -484,11 +502,17 @@ public class AuthService {
 
     // ==================== HELPERS ====================
 
-    public void saveRefreshToken(UUID userId, String rawToken,
+    public void saveRefreshToken(UUID userId, String rawRefreshToken, String rawAccessToken,
                                  String deviceName, String deviceOs, String ipAddress) {
+        Duration accessValidity = jwtUtil.getRemainingValidity(rawAccessToken);
+        LocalDateTime accessExpiresAt = accessValidity.isZero()
+                ? LocalDateTime.now()
+                : LocalDateTime.now().plus(accessValidity);
         RefreshToken rt = RefreshToken.builder()
                 .userId(userId)
-                .tokenHash(hashToken(rawToken))
+                .tokenHash(hashToken(rawRefreshToken))
+                .accessTokenHash(hashToken(rawAccessToken))
+                .accessTokenExpiresAt(accessExpiresAt)
                 .deviceName(deviceName)
                 .deviceOs(deviceOs)
                 .ipAddress(ipAddress)

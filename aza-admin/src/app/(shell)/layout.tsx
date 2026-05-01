@@ -9,15 +9,25 @@ import {
   ShieldCheck,
   Users,
   Headset,
+  ArrowLeftRight,
   LogOut,
   Menu,
+  Wallet,
+  BarChart3,
+  ScrollText,
+  Bell,
 } from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/kyc", label: "KYC Review", icon: ShieldCheck },
+  { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3 },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/wallets", label: "Wallets", icon: Wallet },
+  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/support", label: "Support", icon: Headset },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/audit-log", label: "Audit Log", icon: ScrollText },
 ];
 
 export default function ShellLayout({
@@ -68,7 +78,10 @@ export default function ShellLayout({
 
         <nav className="flex-1 py-4 space-y-1 px-3">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+            const active =
+              href === "/kyc"
+                ? pathname === "/kyc" || pathname.startsWith("/kyc/")
+                : pathname.startsWith(href);
             return (
               <Link
                 key={href}

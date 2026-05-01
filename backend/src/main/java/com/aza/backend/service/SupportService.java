@@ -142,9 +142,9 @@ public class SupportService {
         });
     }
 
-    public Page<MessageResponse> getChatMessages(UUID chatId, int page, int size) {
+    public Page<MessageResponse> getChatMessages(UUID chatId, UUID currentUserId, int page, int size) {
         return chatMessageRepository.findByChatId(chatId, PageRequest.of(page, Math.min(size, 50)))
-                .map(this::toMessageResponse);
+                .map(m -> toMessageResponse(m, currentUserId));
     }
 
     @Transactional
@@ -172,7 +172,9 @@ public class SupportService {
         chat.setLastMessageAt(LocalDateTime.now());
         chatRepository.save(chat);
 
-        MessageResponse response = toMessageResponse(message);
+        MessageResponse agentResponse = toMessageResponse(message, agent.getId());
+        // For broadcast, send without isSelf so each subscriber sees their own perspective
+        MessageResponse broadcastResponse = toMessageResponse(message);
 
         notificationService.sendNewMessageNotification(
                 chat.getParticipantOneId(),
@@ -181,10 +183,10 @@ public class SupportService {
 
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
-                WebSocketEventType.CHAT_MESSAGE, response);
+                WebSocketEventType.CHAT_MESSAGE, broadcastResponse);
 
         log.debug("Admin {} replied to support chat {}", agent.getId(), chatId);
-        return response;
+        return agentResponse;
     }
 
     public List<AgentStatus> getAvailableAgents() {
