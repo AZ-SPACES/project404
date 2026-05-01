@@ -59,6 +59,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("All sessions revoked"));
     }
 
+    @PostMapping("/secure-account")
+    public ResponseEntity<ApiResponse<String>> secureAccount(
+            @AuthenticationPrincipal User user,
+            HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        authService.secureAccount(user, authHeader != null && authHeader.startsWith("Bearer ")
+                ? authHeader.substring(7) : null);
+        return ResponseEntity.ok(ApiResponse.success("Account secured. All sessions revoked."));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request) {

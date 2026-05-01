@@ -1,11 +1,22 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 
-// Use localhost for iOS simulator, 10.0.2.2 for Android emulator, or a physical IP for real devices.
-// Adjust this value based on your actual testing environment.
-export const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:8080" : "http://localhost:8080";
+const getBaseUrl = (): string => {
+  const metroHost = Constants.expoConfig?.hostUri?.split(":")[0];
+
+  if (metroHost) {
+    return `http://${metroHost}:8080`;
+  }
+
+  // Fallback for emulators when no Metro host is available
+  return Platform.OS === "android"
+    ? "http://10.0.2.2:8080"
+    : "http://localhost:8080";
+};
+
+export const BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -210,6 +221,43 @@ export const getWalletBalance = () => api.get("/api/v1/wallet/balance");
 
 export const getTransactions = (page = 0, size = 20, type?: string, status?: string) =>
   api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`);
+
+// --- Security & Privacy Endpoints ---
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  api.post("/api/v1/auth/change-password", { currentPassword, newPassword });
+
+export const logoutEverywhere = () =>
+  api.post("/api/v1/auth/logout-everywhere");
+
+export const secureAccount = () =>
+  api.post("/api/v1/auth/secure-account");
+
+export const getDevices = () => api.get("/api/v1/users/me/devices");
+
+export const removeDevice = (deviceId: string) =>
+  api.delete(`/api/v1/users/me/devices/${encodeURIComponent(deviceId)}`);
+
+export const updatePrivacySettings = (settings: {
+  findMeByPhone?: boolean;
+  findMeByEmail?: boolean;
+  findMeByHandle?: boolean;
+  syncContacts?: boolean;
+}) => api.put("/api/v1/users/me/privacy", settings);
+
+// --- 2FA / TOTP Endpoints ---
+
+export const setup2FA = () => api.post("/api/v1/auth/2fa/setup");
+
+export const confirm2FA = (code: string) =>
+  api.post("/api/v1/auth/2fa/confirm", { code });
+
+export const disable2FA = (code: string) =>
+  api.delete("/api/v1/auth/2fa", { data: { code } });
+
+export const regenerateRecoveryCodes = (code: string) =>
+  api.post("/api/v1/auth/2fa/recovery/regenerate", { code });
+
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;

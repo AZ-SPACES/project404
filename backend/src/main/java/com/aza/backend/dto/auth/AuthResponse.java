@@ -35,5 +35,12 @@ public class AuthResponse {
         private Boolean isTaxResidentAbroad;
         private String taxCountry;
         private Boolean isUSPerson;
+        // Privacy settings
+        private Boolean findMeByPhone;
+        private Boolean findMeByEmail;
+        private Boolean findMeByHandle;
+        private Boolean syncContacts;
+        // Security
+        private Boolean twoFactorEnabled;
     }
 }

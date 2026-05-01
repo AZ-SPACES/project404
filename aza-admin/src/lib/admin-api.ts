@@ -345,3 +345,87 @@ export interface AdminTransaction {
 export function getAdminTransactions(page = 0, size = 20): Promise<Page<AdminTransaction>> {
   return request(`/api/v1/admin/dashboard/transactions?page=${page}&size=${size}`);
 }
+
+// ── Wallets ───────────────────────────────────────────────────────────────────
+
+export interface AdminWallet {
+  walletId: string;
+  userId: string;
+  userName: string;
+  userHandle: string | null;
+  userEmail: string;
+  balance: number;
+  currency: string;
+  frozen: boolean;
+  lastUpdatedAt: string | null;
+}
+
+export function getAdminWallets(page = 0, size = 20): Promise<Page<AdminWallet>> {
+  return request(`/api/v1/admin/wallets?page=${page}&size=${size}`);
+}
+
+export function freezeWallet(userId: string, freeze: boolean): Promise<AdminWallet> {
+  return request(`/api/v1/admin/wallets/${userId}/freeze`, {
+    method: "POST",
+    body: JSON.stringify({ freeze }),
+  });
+}
+
+// ── KYC Analytics ─────────────────────────────────────────────────────────────
+
+export interface KycAnalytics {
+  notStarted: number;
+  pending: number;
+  underReview: number;
+  verified: number;
+  rejected: number;
+  approvedLast30Days: number;
+  rejectedLast30Days: number;
+  submittedLast30Days: number;
+  approvalRate: number;
+}
+
+export function getKycAnalytics(): Promise<KycAnalytics> {
+  return request("/api/v1/admin/kyc/analytics");
+}
+
+// ── Audit Log ─────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  adminId: string;
+  adminEmail: string;
+  adminName: string;
+  action: string;
+  targetUserId: string | null;
+  targetUserEmail: string | null;
+  details: string | null;
+  timestamp: string;
+}
+
+export function getAuditLog(page = 0, size = 20): Promise<Page<AuditLogEntry>> {
+  return request(`/api/v1/admin/audit-log?page=${page}&size=${size}`);
+}
+
+// ── Broadcast Notifications ───────────────────────────────────────────────────
+
+export interface BroadcastResult {
+  sent: number;
+}
+
+export function broadcastNotification(
+  title: string,
+  body: string,
+  audience: "ALL" | "KYC_VERIFIED" | "ACTIVE_ONLY"
+): Promise<BroadcastResult> {
+  return request("/api/v1/admin/notifications/broadcast", {
+    method: "POST",
+    body: JSON.stringify({ title, body, audience }),
+  });
+}
+
+// ── Transaction Detail ────────────────────────────────────────────────────────
+
+export function getAdminTransaction(id: string): Promise<AdminTransaction> {
+  return request(`/api/v1/admin/dashboard/transactions/${id}`);
+}

@@ -11,6 +11,7 @@ import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,6 +67,11 @@ public class UserService {
                 .isTaxResidentAbroad(user.getIsTaxResidentAbroad())
                 .taxCountry(user.getTaxCountry())
                 .isUSPerson(user.getIsUSPerson())
+                .findMeByPhone(user.getFindMeByPhone())
+                .findMeByEmail(user.getFindMeByEmail())
+                .findMeByHandle(user.getFindMeByHandle())
+                .syncContacts(user.getSyncContacts())
+                .twoFactorEnabled(user.getTwoFactorEnabled())
                 .build();
     }
 
@@ -184,6 +190,12 @@ public class UserService {
         if (request.getFindMeByEmail() != null) {
             user.setFindMeByEmail(request.getFindMeByEmail());
         }
+        if (request.getFindMeByHandle() != null) {
+            user.setFindMeByHandle(request.getFindMeByHandle());
+        }
+        if (request.getSyncContacts() != null) {
+            user.setSyncContacts(request.getSyncContacts());
+        }
         userRepository.save(user);
     }
 
@@ -245,8 +257,10 @@ public class UserService {
     // ==================== DEVICES ====================
 
     public List<DeviceResponse> getDevices(User user) {
-        List<RefreshToken> tokens = refreshTokenRepository.findAllByUserId(user.getId());
-        return tokens.stream()
+        return refreshTokenRepository.findAllByUserId(user.getId())
+                .stream()
+                .filter(token -> !token.isExpired())
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(token -> DeviceResponse.builder()
                         .id(token.getId().toString())
                         .deviceName(token.getDeviceName())
@@ -260,8 +274,28 @@ public class UserService {
     @Transactional
     public void removeDevice(User user, UUID deviceId) {
         RefreshToken token = refreshTokenRepository.findByIdAndUserId(deviceId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Device not found"));
+                .orElseThrow(() -> new RuntimeException("Device not found or does not belong to this account"));
+
+        // Immediately blacklist the paired access token so the device is logged out right now,
+        // not just when its JWT naturally expires.
+        if (token.getAccessTokenHash() != null && token.getAccessTokenExpiresAt() != null) {
+            Duration remaining = Duration.between(java.time.LocalDateTime.now(), token.getAccessTokenExpiresAt());
+            if (!remaining.isNegative() && !remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + token.getAccessTokenHash(),
+                        "revoked",
+                        remaining);
+            }
+        }
+
         refreshTokenRepository.delete(token);
+    }
+
+    /** Purges expired refresh tokens every hour to keep the devices list clean. */
+    @Scheduled(fixedRate = 3_600_000)
+    @Transactional
+    public void purgeExpiredRefreshTokens() {
+        refreshTokenRepository.deleteByExpiresAtBefore(java.time.LocalDateTime.now());
     }
 
     // ==================== PASSCODE (PIN) ====================

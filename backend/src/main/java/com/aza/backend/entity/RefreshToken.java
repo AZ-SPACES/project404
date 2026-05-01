@@ -24,8 +24,15 @@ public class RefreshToken {
     @Column(nullable = false, unique = true)
     private String tokenHash;
 
+    /** SHA-256 hash of the paired access token — used to blacklist it on device removal. */
+    @Column(unique = true)
+    private String accessTokenHash;
+
     @Column(nullable = false)
     private LocalDateTime expiresAt;
+
+    /** Expiry of the paired access token — needed to set the correct Redis TTL on blacklist. */
+    private LocalDateTime accessTokenExpiresAt;
 
     private String deviceName;
     private String deviceOs;

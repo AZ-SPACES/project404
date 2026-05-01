@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/admin/dashboard")
 @RequiredArgsConstructor
@@ -28,5 +30,11 @@ public class AdminDashboardController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(adminService.getTransactions(page, Math.min(size, 50))));
+    }
+
+    @GetMapping("/transactions/{id}")
+    public ResponseEntity<ApiResponse<AdminTransactionResponse>> getTransaction(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTransactionById(id)));
     }
 }
