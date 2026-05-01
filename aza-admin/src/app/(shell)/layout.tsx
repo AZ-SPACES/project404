@@ -4,41 +4,32 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearTokens } from "@/lib/admin-api";
-import {
-  LayoutDashboard,
-  ShieldCheck,
-  Users,
-  LogOut,
-  Menu,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Users, LogOut, Menu } from "lucide-react";
 
 const NAV = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/kyc", label: "KYC Review", icon: ShieldCheck },
-  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/kyc", label: "KYC Review", icon: ShieldCheck },
+  { href: "/users", label: "Users", icon: Users },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function ShellLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (pathname === "/admin/login") { setReady(true); return; }
     const token = localStorage.getItem("aza_admin_token");
-    if (!token) { router.replace("/admin/login"); return; }
+    if (!token) { router.replace("/login"); return; }
     setReady(true);
-  }, [pathname, router]);
+  }, [router]);
 
   function logout() {
     clearTokens();
-    router.replace("/admin/login");
+    router.replace("/login");
   }
 
   if (!ready) return null;
-  if (pathname === "/admin/login") return <>{children}</>;
 
   return (
     <div className="flex h-screen bg-[#0f0f0f] text-white overflow-hidden">
@@ -51,7 +42,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           lg:static lg:translate-x-0
         `}
       >
-        {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-white/5">
           <span className="text-xl font-semibold tracking-tight">
             aza <span className="text-[#F5A623] text-xs font-normal ml-1">admin</span>
@@ -92,17 +82,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Top bar (mobile) */}
         <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 lg:hidden">
           <button onClick={() => setOpen(true)} className="text-white/60 hover:text-white">
             <Menu size={22} />
@@ -111,9 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-6" />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

@@ -5,17 +5,10 @@ import { getStats, type AdminStats } from "@/lib/admin-api";
 import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2 } from "lucide-react";
 
 function StatCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  color = "text-white",
+  label, value, sub, icon: Icon, color = "text-white",
 }: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ElementType;
-  color?: string;
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color?: string;
 }) {
   return (
     <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
@@ -33,22 +26,16 @@ function StatCard({
   );
 }
 
-function fmt(n: number) {
-  return n.toLocaleString();
-}
-
-function fmtGhs(n: number) {
-  return `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+const fmt = (n: number) => n.toLocaleString();
+const fmtGhs = (n: number) =>
+  `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getStats()
-      .then(setStats)
-      .catch(e => setError(e.message));
+    getStats().then(setStats).catch(e => setError(e.message));
   }, []);
 
   if (error) return <p className="text-red-400">{error}</p>;
@@ -65,7 +52,6 @@ export default function DashboardPage() {
         <p className="text-white/40 text-sm mt-1">Platform overview</p>
       </div>
 
-      {/* Users */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-4">Users</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -76,7 +62,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* KYC */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-4">KYC</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -87,20 +72,13 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Transactions */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-4">Transactions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard label="Total" value={fmt(stats.totalTransactions)} icon={TrendingUp} />
           <StatCard label="Completed" value={fmt(stats.completedTransactions)} icon={TrendingUp} color="text-emerald-400" />
           <StatCard label="Total Volume" value={fmtGhs(stats.totalTransactionVolume)} icon={DollarSign} />
-          <StatCard
-            label="Today"
-            value={fmt(stats.transactionsToday)}
-            sub={fmtGhs(stats.volumeToday)}
-            icon={TrendingUp}
-            color="text-[#F5A623]"
-          />
+          <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#F5A623]" />
         </div>
       </section>
     </div>

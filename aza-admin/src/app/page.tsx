@@ -2,8 +2,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function AdminRoot() {
+export default function Root() {
   const router = useRouter();
-  useEffect(() => { router.replace("/admin/dashboard"); }, [router]);
+  useEffect(() => { router.replace("/dashboard"); }, [router]);
   return null;
 }

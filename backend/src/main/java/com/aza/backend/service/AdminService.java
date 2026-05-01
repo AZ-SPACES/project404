@@ -57,6 +57,15 @@ public class AdminService {
     }
 
     @Transactional
+    public AdminUserResponse updateUserRole(UUID userId, String newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND));
+        user.setRole(User.UserRole.valueOf(newRole.toUpperCase()));
+        userRepository.save(user);
+        return toAdminUserResponse(user);
+    }
+
+    @Transactional
     public AdminUserResponse updateUserStatus(UUID userId, String newStatus, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND));

@@ -25,10 +25,7 @@ export default function KycQueuePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getPendingKyc()
-      .then(setRecords)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+    getPendingKyc().then(setRecords).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
@@ -39,13 +36,11 @@ export default function KycQueuePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">KYC Review</h1>
-          <p className="text-white/40 text-sm mt-1">
-            {records.length} submission{records.length !== 1 ? "s" : ""} awaiting review
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-white">KYC Review</h1>
+        <p className="text-white/40 text-sm mt-1">
+          {records.length} submission{records.length !== 1 ? "s" : ""} awaiting review
+        </p>
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -61,7 +56,7 @@ export default function KycQueuePage() {
         {records.map(r => (
           <Link
             key={r.userId}
-            href={`/admin/kyc/${r.userId}`}
+            href={`/kyc/${r.userId}`}
             className="flex items-center justify-between bg-[#161616] border border-white/5 rounded-2xl p-4 hover:border-white/15 transition-colors group"
           >
             <div className="flex items-center gap-4">

@@ -2,33 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  adminLoginStep1,
-  adminLoginStep2,
-  adminLoginTotp,
-  saveTokens,
-} from "@/lib/admin-api";
+import { adminLoginStep1, adminLoginStep2, adminLoginTotp, saveTokens } from "@/lib/admin-api";
 import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 
 type Step = "credentials" | "otp" | "totp";
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("credentials");
-
-  // Credentials
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-
-  // OTP
   const [otpCode, setOtpCode] = useState("");
-
-  // TOTP
   const [preAuthToken, setPreAuthToken] = useState("");
   const [totpCode, setTotpCode] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,7 +45,7 @@ export default function AdminLoginPage() {
         return;
       }
       saveTokens(result.accessToken, result.refreshToken);
-      router.replace("/admin/dashboard");
+      router.replace("/dashboard");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Verification failed";
       if (msg.startsWith("TOTP_REQUIRED:")) {
@@ -82,7 +70,7 @@ export default function AdminLoginPage() {
         return;
       }
       saveTokens(result.accessToken, result.refreshToken);
-      router.replace("/admin/dashboard");
+      router.replace("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -171,11 +159,8 @@ export default function AdminLoginPage() {
               {loading && <Loader2 size={16} className="animate-spin" />}
               Verify OTP
             </button>
-            <button
-              type="button"
-              onClick={() => { setStep("credentials"); setError(""); setOtpCode(""); }}
-              className="w-full text-sm text-white/40 hover:text-white/70"
-            >
+            <button type="button" onClick={() => { setStep("credentials"); setError(""); setOtpCode(""); }}
+              className="w-full text-sm text-white/40 hover:text-white/70">
               ← Back
             </button>
           </form>
@@ -207,11 +192,8 @@ export default function AdminLoginPage() {
               {loading && <Loader2 size={16} className="animate-spin" />}
               Verify
             </button>
-            <button
-              type="button"
-              onClick={() => { setStep("credentials"); setError(""); setTotpCode(""); }}
-              className="w-full text-sm text-white/40 hover:text-white/70"
-            >
+            <button type="button" onClick={() => { setStep("credentials"); setError(""); }}
+              className="w-full text-sm text-white/40 hover:text-white/70">
               ← Back to login
             </button>
           </form>
