@@ -26,6 +26,7 @@ public class AuthResponse {
         private String pronouns;
         private String profileImageUrl;
         private String kycStatus;
+        private String role;
         private boolean passcodeSet;
         private String homeAddress;
         private String city;

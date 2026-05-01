@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useContactStore } from "../../../store/contactStore";
 
 // ─── Types ──────────────────────────────────────────────────────────
 type ContactsProfileRouteProp = RouteProp<RootStackParamList, "ContactsProfile">;
@@ -92,10 +93,13 @@ export default function ContactsProfileScreen() {
   const route = useRoute<ContactsProfileRouteProp>();
 
   const {
-    name = "Kevin Okyere",
-    username = "@kokyere",
+    id,
+    name = "User",
+    username = "@user",
     avatar,
   } = route.params || {};
+
+  const { blockUser } = useContactStore();
 
   // Derive initials for fallback avatar
   const initials = name
@@ -113,7 +117,16 @@ export default function ContactsProfileScreen() {
   const handleBlock = () => {
     Alert.alert("Block Contact", `Are you sure you want to block ${name}?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Block", style: "destructive", onPress: () => navigation.goBack() },
+      { 
+        text: "Block", 
+        style: "destructive", 
+        onPress: async () => {
+          if (id) {
+            await blockUser(id);
+            navigation.goBack();
+          }
+        } 
+      },
     ]);
   };
 

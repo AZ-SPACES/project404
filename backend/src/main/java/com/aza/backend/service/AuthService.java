@@ -103,7 +103,7 @@ public class AuthService {
                 .build();
         walletRepository.save(wallet);
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress, true);
     }
 
     // ==================== LOGIN ====================
@@ -152,11 +152,11 @@ public class AuthService {
             return TotpPendingResponse.builder().preAuthToken(preAuthToken).build();
         }
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress, false);
     }
 
     private AuthResponse finalizeLogin(User user, String deviceName,
-                                       String deviceOs, String ipAddress) {
+                                       String deviceOs, String ipAddress, boolean isSignup) {
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
             throw new RuntimeException("Account is not active");
         }
@@ -169,8 +169,12 @@ public class AuthService {
 
         saveRefreshToken(user.getId(), refreshToken, deviceName, deviceOs, ipAddress);
 
-        emailService.sendLoginNotification(
-                user.getEmail(), user.getFirstName(), deviceName, deviceOs, ipAddress);
+        if (isSignup) {
+            emailService.sendSignupNotification(user.getEmail(), user.getFirstName());
+        } else {
+            emailService.sendLoginNotification(
+                    user.getEmail(), user.getFirstName(), deviceName, deviceOs, ipAddress);
+        }
 
         return buildAuthResponse(user, accessToken, refreshToken);
     }
@@ -389,7 +393,7 @@ public class AuthService {
 
         redisTemplate.delete(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
 
-        return finalizeLogin(user, deviceName, deviceOs, storedIp);
+        return finalizeLogin(user, deviceName, deviceOs, storedIp, false);
     }
 
     @Transactional
@@ -439,7 +443,7 @@ public class AuthService {
         long remaining = recoveryCodeRepository.countByUserIdAndUsedFalse(userId);
         log.warn("Recovery code used for user {} — {} code(s) remaining", userId, remaining);
 
-        return finalizeLogin(user, deviceName, deviceOs, storedIp);
+        return finalizeLogin(user, deviceName, deviceOs, storedIp, false);
     }
 
     @Transactional

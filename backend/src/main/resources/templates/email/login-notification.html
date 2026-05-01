@@ -42,7 +42,10 @@
                     </tr>
                     <tr>
                         <td style="padding-bottom: 8px; font-size: 14px; color: #6b7280;">Location</td>
-                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;" th:text="${location}">Unknown Location</td>
+                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;">
+                            <span th:text="${location}">Unknown Location</span>
+                            <a th:if="${mapUrl != null}" th:href="${mapUrl}" style="margin-left: 8px; font-size: 12px; color: #2563eb; text-decoration: none;">(View on Map)</a>
+                        </td>
                     </tr>
                     <tr>
                         <td style="font-size: 14px; color: #6b7280;">Time</td>

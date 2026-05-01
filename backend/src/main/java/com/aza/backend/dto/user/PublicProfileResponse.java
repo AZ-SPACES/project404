@@ -10,6 +10,7 @@ import lombok.Data;
 public class PublicProfileResponse {
     private String id;
     private String displayName;
+    private String handle;
     private String profileImageUrl;
     private String onlineStatus;
 }

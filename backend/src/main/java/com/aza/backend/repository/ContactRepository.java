@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ContactRepository extends JpaRepository<Contact,Integer> {
+public interface ContactRepository extends JpaRepository<Contact, UUID> {
     /* List contacts for a user, Aza contacts first */
     @Query("SELECT c FROM Contact c WHERE c.ownerUserId = :userId ORDER BY c.isAzaUser DESC, c.isFavorite DESC, c.displayName ASC")
     Page<Contact> findAllByOwnerUserId(@Param("userId") UUID userId, Pageable pageable);
@@ -20,6 +20,9 @@ public interface ContactRepository extends JpaRepository<Contact,Integer> {
 
     /* Find a contact by ID and owner (ownership check) */
     Optional<Contact> findByIdAndOwnerUserId(UUID id, UUID ownerUserId);
+
+    /* Find a contact by owner and contact user ID */
+    Optional<Contact> findByOwnerUserIdAndContactUserId(UUID ownerUserId, UUID contactUserId);
 
     /*Search contacts by name, phone or email*/
     @Query("SELECT c FROM Contact c WHERE c.ownerUserId = :userId AND (" +

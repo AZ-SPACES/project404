@@ -68,6 +68,10 @@ public class User {
     @Builder.Default
     private KycStatus kycStatus = KycStatus.NOT_STARTED;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private UserRole role = UserRole.USER;
+
     @Column(columnDefinition = "TEXT")
     private String notificationPreferences;
 
@@ -143,5 +147,9 @@ public class User {
 
     public enum OnlineStatus {
         ONLINE, OFFLINE, AWAY
+    }
+
+    public enum UserRole {
+        USER, ADMIN
     }
 }
