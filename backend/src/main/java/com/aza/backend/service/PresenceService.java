@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -69,6 +70,16 @@ public class PresenceService {
 
     public String getStatus(UUID userId) {
         return isOnline(userId) ? "ONLINE" : "OFFLINE";
+    }
+
+    public long countOnlineUsers() {
+        try {
+            Set<String> keys = redisTemplate.keys(PRESENCE_PREFIX + "*");
+            return keys != null ? keys.size() : 0;
+        } catch (Exception e) {
+            log.error("Failed to count online users: {}", e.getMessage());
+            return 0;
+        }
     }
 
     private void publishPresenceEvent(UUID userId, String status) {

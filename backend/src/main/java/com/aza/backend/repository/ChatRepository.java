@@ -35,4 +35,11 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
 
     @Query("SELECT c FROM Chat c WHERE c.isSupport = true ORDER BY c.lastMessageAt DESC NULLS LAST")
     org.springframework.data.domain.Page<Chat> findAllSupportChats(org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT c FROM Chat c WHERE c.isSupport = true AND c.status = :status ORDER BY c.lastMessageAt DESC NULLS LAST")
+    org.springframework.data.domain.Page<Chat> findAllSupportChatsByStatus(
+            @Param("status") Chat.ChatStatus status,
+            org.springframework.data.domain.Pageable pageable);
+
+    long countByIsSupportTrueAndStatus(Chat.ChatStatus status);
 }

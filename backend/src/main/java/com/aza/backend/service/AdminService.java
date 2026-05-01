@@ -5,6 +5,7 @@ import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminWalletResponse;
 import com.aza.backend.dto.admin.KycAnalyticsResponse;
+import com.aza.backend.dto.admin.LiveStatsResponse;
 import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
@@ -36,6 +37,8 @@ public class AdminService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final KycRecordRepository kycRecordRepository;
+    private final PresenceService presenceService;
+    private final AdminAuditService auditService;
 
     public Page<AdminUserResponse> getUsers(String query, String status, String kycStatus, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -110,6 +113,31 @@ public class AdminService {
                 });
     }
 
+    public Page<AdminTransactionResponse> getUserTransactions(UUID userId, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        return transactionRepository.findAllByUserId(userId, pageable)
+                .map(tx -> {
+                    User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+                    User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+                    return AdminTransactionResponse.builder()
+                            .id(tx.getId().toString())
+                            .senderId(tx.getSenderId().toString())
+                            .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                            .senderHandle(sender != null ? sender.getHandle() : null)
+                            .recipientId(tx.getRecipientId().toString())
+                            .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                            .recipientHandle(recipient != null ? recipient.getHandle() : null)
+                            .amount(tx.getAmount())
+                            .note(tx.getNote())
+                            .type(tx.getType().name())
+                            .status(tx.getStatus().name())
+                            .initiatedAt(tx.getInitiatedAt())
+                            .completedAt(tx.getCompletedAt())
+                            .cancelledAt(tx.getCancelledAt())
+                            .build();
+                });
+    }
+
     public AdminStatsResponse getStats() {
         long totalUsers = userRepository.count();
         long activeUsers = userRepository.countByStatus(User.AccountStatus.ACTIVE);
@@ -144,6 +172,17 @@ public class AdminService {
                 .totalTransactionVolume(totalVolume != null ? totalVolume : BigDecimal.ZERO)
                 .transactionsToday(transactionsToday)
                 .volumeToday(volumeToday != null ? volumeToday : BigDecimal.ZERO)
+                .build();
+    }
+
+    public LiveStatsResponse getLiveStats() {
+        long onlineUsers = presenceService.countOnlineUsers();
+        long transactionsLastHour = transactionRepository.countByInitiatedAtAfter(LocalDateTime.now().minusHours(1));
+        long pendingKyc = userRepository.countByKycStatus(User.KycStatus.UNDER_REVIEW);
+        return LiveStatsResponse.builder()
+                .onlineUsers(onlineUsers)
+                .transactionsLastHour(transactionsLastHour)
+                .pendingKycCount(pendingKyc)
                 .build();
     }
 
@@ -227,6 +266,60 @@ public class AdminService {
     public AdminTransactionResponse getTransactionById(UUID id) {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+        User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        return AdminTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .senderId(tx.getSenderId().toString())
+                .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                .senderHandle(sender != null ? sender.getHandle() : null)
+                .recipientId(tx.getRecipientId().toString())
+                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipient != null ? recipient.getHandle() : null)
+                .amount(tx.getAmount())
+                .note(tx.getNote())
+                .type(tx.getType().name())
+                .status(tx.getStatus().name())
+                .initiatedAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
+                .cancelledAt(tx.getCancelledAt())
+                .build();
+    }
+
+    @Transactional
+    public AdminTransactionResponse reverseTransaction(UUID transactionId, User admin) {
+        Transaction tx = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+
+        if (tx.getStatus() != Transaction.TransactionStatus.COMPLETED) {
+            throw new AppException("INVALID_STATE", "Only COMPLETED transactions can be reversed", HttpStatus.BAD_REQUEST);
+        }
+
+        // Add amount back to sender
+        Wallet senderWallet = walletRepository.findByUserId(tx.getSenderId())
+                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Sender wallet not found", HttpStatus.NOT_FOUND));
+        senderWallet.setBalance(senderWallet.getBalance().add(tx.getAmount()));
+        walletRepository.save(senderWallet);
+
+        // Deduct from recipient (check they have enough)
+        Wallet recipientWallet = walletRepository.findByUserId(tx.getRecipientId())
+                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Recipient wallet not found", HttpStatus.NOT_FOUND));
+        if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS", "Recipient has insufficient funds for reversal", HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+        recipientWallet.setBalance(recipientWallet.getBalance().subtract(tx.getAmount()));
+        walletRepository.save(recipientWallet);
+
+        tx.setStatus(Transaction.TransactionStatus.REVERSED);
+        tx.setCancelledAt(LocalDateTime.now());
+        transactionRepository.save(tx);
+
+        // Log the action
+        User targetUser = userRepository.findById(tx.getSenderId()).orElse(null);
+        auditService.log(admin, "REVERSE_TRANSACTION",
+                targetUser,
+                "transactionId=" + transactionId + " amount=" + tx.getAmount());
+
         User sender = userRepository.findById(tx.getSenderId()).orElse(null);
         User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
         return AdminTransactionResponse.builder()

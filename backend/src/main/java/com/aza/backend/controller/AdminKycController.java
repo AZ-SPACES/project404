@@ -39,6 +39,11 @@ public class AdminKycController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getKycAnalytics()));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<KycStatusResponse>> getKycRecord(@PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.success(kycService.getKycStatusForAdmin(userId)));
+    }
+
     @PostMapping("/review/{userId}")
     public ResponseEntity<ApiResponse<KycStatusResponse>> reviewKyc(
             @PathVariable UUID userId,

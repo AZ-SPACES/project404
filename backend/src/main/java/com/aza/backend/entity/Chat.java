@@ -43,6 +43,23 @@ public class Chat {
     @Builder.Default
     private boolean isSupport = false;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ChatStatus status = ChatStatus.OPEN;
+
+    private LocalDateTime resolvedAt;
+    private String resolvedByName;
+
+    /** Topic the user selected before starting the chat. */
+    private String category;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Priority priority = Priority.NORMAL;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    public enum ChatStatus { OPEN, PENDING, RESOLVED }
+    public enum Priority { LOW, NORMAL, HIGH, URGENT }
 }

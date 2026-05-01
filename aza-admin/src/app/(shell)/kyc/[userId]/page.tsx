@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getPendingKyc, reviewKyc, type KycRecord } from "@/lib/admin-api";
+import { getKycRecord, reviewKyc, type KycRecord } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Check, X, Loader2, ZoomIn } from "lucide-react";
@@ -48,13 +48,9 @@ export default function KycReviewPage() {
   const [done, setDone] = useState<"approved" | "rejected" | null>(null);
 
   useEffect(() => {
-    getPendingKyc()
-      .then(records => {
-        const found = records.find(r => r.userId === userId);
-        if (!found) setError("KYC record not found or already reviewed.");
-        else setRecord(found);
-      })
-      .catch(e => setError(e.message))
+    getKycRecord(userId)
+      .then(setRecord)
+      .catch(e => setError(e.message ?? "KYC record not found."))
       .finally(() => setLoading(false));
   }, [userId]);
 

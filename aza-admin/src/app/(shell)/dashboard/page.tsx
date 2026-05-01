@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStats, type AdminStats } from "@/lib/admin-api";
-import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2 } from "lucide-react";
+import { getStats, getLiveStats, type AdminStats, type LiveStats } from "@/lib/admin-api";
+import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity } from "lucide-react";
 
 function StatCard({
   label, value, sub, icon: Icon, color = "text-white",
@@ -26,16 +26,45 @@ function StatCard({
   );
 }
 
+function LiveCard({
+  label, value, icon: Icon,
+}: {
+  label: string; value: number; icon: React.ElementType;
+}) {
+  return (
+    <div className="bg-[#161616] border border-white/5 rounded-2xl p-4 flex items-center gap-4">
+      <div className="p-2 rounded-xl bg-white/5">
+        <Icon size={18} className="text-white/40" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white/50 text-xs font-medium uppercase tracking-wider truncate">{label}</p>
+        <p className="text-2xl font-semibold text-white mt-0.5">{value.toLocaleString()}</p>
+      </div>
+      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+    </div>
+  );
+}
+
 const fmt = (n: number) => n.toLocaleString();
 const fmtGhs = (n: number) =>
   `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getStats().then(setStats).catch(e => setError(e.message));
+  }, []);
+
+  useEffect(() => {
+    function fetchLive() {
+      getLiveStats().then(setLiveStats).catch(() => { /* silently ignore live stat errors */ });
+    }
+    fetchLive();
+    const interval = setInterval(fetchLive, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   if (error) return <p className="text-red-400">{error}</p>;
@@ -81,6 +110,20 @@ export default function DashboardPage() {
           <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#F5A623]" />
         </div>
       </section>
+
+      {liveStats && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium">Live</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <LiveCard label="Users Online" value={liveStats.onlineUsers} icon={Users} />
+            <LiveCard label="Transactions (1h)" value={liveStats.transactionsLastHour} icon={Activity} />
+            <LiveCard label="Pending KYC" value={liveStats.pendingKycCount} icon={ShieldAlert} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,8 +37,14 @@ public class SupportService {
 
     // ==================== USER-FACING ====================
 
+    /** Overload kept for backward-compat — delegates with no category. */
     @Transactional
     public Chat getOrCreateSupportChat(User user) {
+        return getOrCreateSupportChat(user, null);
+    }
+
+    @Transactional
+    public Chat getOrCreateSupportChat(User user, String category) {
         return chatRepository.findSupportChatByUserId(user.getId())
                 .orElseGet(() -> {
                     // Assign to any available admin; the admin dashboard shows all support chats
@@ -51,6 +58,7 @@ public class SupportService {
                             .participantOneId(user.getId())
                             .participantTwoId(agent.getId())
                             .isSupport(true)
+                            .category(category)
                             .build();
                     return chatRepository.save(chat);
                 });
@@ -99,16 +107,25 @@ public class SupportService {
     }
 
     // ==================== ADMIN-FACING ====================
-    
+
     public SupportChatSummary getSupportChatSummary(UUID chatId) {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Support chat not found", HttpStatus.NOT_FOUND));
-        
+
         UUID userId = chat.getParticipantOneId();
         User user = userRepository.findById(userId).orElse(null);
         ChatMessage last = chatMessageRepository
                 .findByChatId(chat.getId(), PageRequest.of(0, 1))
                 .getContent().stream().findFirst().orElse(null);
+
+        // Count unread messages sent by the user (participantOne) that are still SENT (not READ)
+        List<ChatMessage> recentMessages = chatMessageRepository
+                .findByChatId(chat.getId(), PageRequest.of(0, 200))
+                .getContent();
+        int unreadCount = (int) recentMessages.stream()
+                .filter(m -> userId.equals(m.getSenderId())
+                        && ChatMessage.MessageStatus.SENT.equals(m.getStatus()))
+                .count();
 
         return new SupportChatSummary(
                 chat.getId().toString(),
@@ -117,19 +134,44 @@ public class SupportService {
                 user != null ? user.getHandle() : null,
                 user != null ? user.getProfileImageUrl() : null,
                 last != null ? last.getContent() : null,
-                chat.getLastMessageAt() != null ? chat.getLastMessageAt().toString() : null
+                chat.getLastMessageAt() != null ? chat.getLastMessageAt().toString() : null,
+                chat.getStatus() != null ? chat.getStatus().name() : Chat.ChatStatus.OPEN.name(),
+                chat.getPriority() != null ? chat.getPriority().name() : Chat.Priority.NORMAL.name(),
+                chat.getCategory(),
+                unreadCount
         );
     }
 
     public Page<SupportChatSummary> listAllSupportChats(int page, int size) {
-        Page<Chat> chats = chatRepository.findAllSupportChats(
-                PageRequest.of(page, size, Sort.by("lastMessageAt").descending()));
+        return listAllSupportChats(page, size, null);
+    }
+
+    public Page<SupportChatSummary> listAllSupportChats(int page, int size, String status) {
+        Page<Chat> chats;
+        if (status != null && !status.isBlank()) {
+            Chat.ChatStatus chatStatus = Chat.ChatStatus.valueOf(status.toUpperCase());
+            chats = chatRepository.findAllSupportChatsByStatus(
+                    chatStatus,
+                    PageRequest.of(page, size));
+        } else {
+            chats = chatRepository.findAllSupportChats(
+                    PageRequest.of(page, size, Sort.by("lastMessageAt").descending()));
+        }
         return chats.map(chat -> {
             UUID userId = chat.getParticipantOneId();
             User user = userRepository.findById(userId).orElse(null);
             ChatMessage last = chatMessageRepository
                     .findByChatId(chat.getId(), PageRequest.of(0, 1))
                     .getContent().stream().findFirst().orElse(null);
+
+            List<ChatMessage> recentMessages = chatMessageRepository
+                    .findByChatId(chat.getId(), PageRequest.of(0, 200))
+                    .getContent();
+            int unreadCount = (int) recentMessages.stream()
+                    .filter(m -> userId.equals(m.getSenderId())
+                            && ChatMessage.MessageStatus.SENT.equals(m.getStatus()))
+                    .count();
+
             return new SupportChatSummary(
                     chat.getId().toString(),
                     userId.toString(),
@@ -137,7 +179,11 @@ public class SupportService {
                     user != null ? user.getHandle() : null,
                     user != null ? user.getProfileImageUrl() : null,
                     last != null ? last.getContent() : null,
-                    chat.getLastMessageAt() != null ? chat.getLastMessageAt().toString() : null
+                    chat.getLastMessageAt() != null ? chat.getLastMessageAt().toString() : null,
+                    chat.getStatus() != null ? chat.getStatus().name() : Chat.ChatStatus.OPEN.name(),
+                    chat.getPriority() != null ? chat.getPriority().name() : Chat.Priority.NORMAL.name(),
+                    chat.getCategory(),
+                    unreadCount
             );
         });
     }
@@ -189,6 +235,47 @@ public class SupportService {
         return agentResponse;
     }
 
+    @Transactional
+    public SupportChatSummary resolveChat(UUID chatId, User agent) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Support chat not found", HttpStatus.NOT_FOUND));
+        if (!chat.isSupport()) {
+            throw new AppException("NOT_SUPPORT_CHAT", "Not a support chat", HttpStatus.BAD_REQUEST);
+        }
+        chat.setStatus(Chat.ChatStatus.RESOLVED);
+        chat.setResolvedAt(LocalDateTime.now());
+        chat.setResolvedByName(agent.getFirstName() + " " + agent.getLastName());
+        chatRepository.save(chat);
+        return getSupportChatSummary(chatId);
+    }
+
+    @Transactional
+    public SupportChatSummary reopenChat(UUID chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Support chat not found", HttpStatus.NOT_FOUND));
+        chat.setStatus(Chat.ChatStatus.OPEN);
+        chat.setResolvedAt(null);
+        chat.setResolvedByName(null);
+        chatRepository.save(chat);
+        return getSupportChatSummary(chatId);
+    }
+
+    @Transactional
+    public SupportChatSummary updatePriority(UUID chatId, String priority) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Not found", HttpStatus.NOT_FOUND));
+        chat.setPriority(Chat.Priority.valueOf(priority.toUpperCase()));
+        chatRepository.save(chat);
+        return getSupportChatSummary(chatId);
+    }
+
+    public Map<String, Long> getSupportStats() {
+        return Map.of(
+                "open", chatRepository.countByIsSupportTrueAndStatus(Chat.ChatStatus.OPEN),
+                "resolved", chatRepository.countByIsSupportTrueAndStatus(Chat.ChatStatus.RESOLVED)
+        );
+    }
+
     public List<AgentStatus> getAvailableAgents() {
         return userRepository.findAllByRole(User.UserRole.ADMIN).stream()
                 .filter(u -> "ONLINE".equals(presenceService.getStatus(u.getId())))
@@ -229,7 +316,11 @@ public class SupportService {
             String userHandle,
             String userAvatar,
             String lastMessage,
-            String lastMessageAt
+            String lastMessageAt,
+            String status,
+            String priority,
+            String category,
+            int unreadCount
     ) {}
 
     public record AgentStatus(

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   getAdminTransactions,
   getAdminTransaction,
+  reverseTransaction,
   AdminTransaction,
   Page,
 } from "@/lib/admin-api";
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   X,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 
 function fmt(iso: string | null) {
@@ -56,6 +58,11 @@ function StatusBadge({ status }: { status: string }) {
       className: "bg-red-500/10 text-red-400 border-red-500/20",
       icon: <AlertCircle size={11} />,
     },
+    REVERSED: {
+      label: "Reversed",
+      className: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      icon: <RotateCcw size={11} />,
+    },
   };
   const s = map[status] ?? {
     label: status,
@@ -84,22 +91,50 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 function TransactionDrawer({
   txId,
   onClose,
+  onReversed,
 }: {
   txId: string;
   onClose: () => void;
+  onReversed?: (tx: AdminTransaction) => void;
 }) {
   const [tx, setTx] = useState<AdminTransaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Reversal state
+  const [showReverseConfirm, setShowReverseConfirm] = useState(false);
+  const [reversing, setReversing] = useState(false);
+  const [reverseError, setReverseError] = useState<string | null>(null);
+  const [reversed, setReversed] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setShowReverseConfirm(false);
+    setReversed(false);
+    setReverseError(null);
     getAdminTransaction(txId)
       .then(setTx)
       .catch((e: any) => setError(e.message ?? "Failed to load transaction"))
       .finally(() => setLoading(false));
   }, [txId]);
+
+  async function handleReverse() {
+    if (!tx) return;
+    setReversing(true);
+    setReverseError(null);
+    try {
+      const updated = await reverseTransaction(tx.id);
+      setTx(updated);
+      setReversed(true);
+      setShowReverseConfirm(false);
+      onReversed?.(updated);
+    } catch (e: any) {
+      setReverseError(e.message ?? "Reversal failed");
+    } finally {
+      setReversing(false);
+    }
+  }
 
   return (
     <>
@@ -206,6 +241,64 @@ function TransactionDrawer({
                   )}
                 </div>
               </div>
+
+              {/* Reversal success */}
+              {reversed && (
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 flex items-center gap-2 text-purple-400 text-sm">
+                  <RotateCcw size={14} />
+                  Transaction reversed successfully.
+                </div>
+              )}
+
+              {/* Reverse button — only for COMPLETED transactions */}
+              {tx.status === "COMPLETED" && !reversed && (
+                <div>
+                  {!showReverseConfirm ? (
+                    <button
+                      onClick={() => setShowReverseConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                      <RotateCcw size={15} />
+                      Reverse Transaction
+                    </button>
+                  ) : (
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-4 space-y-3">
+                      <p className="text-white text-sm font-medium">Confirm Reversal</p>
+                      <p className="text-white/50 text-sm">
+                        This will return{" "}
+                        <span className="text-white font-medium">
+                          GHS {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>{" "}
+                        to{" "}
+                        <span className="text-white font-medium">{tx.senderName}</span>.
+                        Are you sure?
+                      </p>
+                      {reverseError && (
+                        <p className="text-red-400 text-xs">{reverseError}</p>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleReverse}
+                          disabled={reversing}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/25 transition-colors disabled:opacity-50"
+                        >
+                          {reversing
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <RotateCcw size={14} />
+                          }
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => { setShowReverseConfirm(false); setReverseError(null); }}
+                          className="px-4 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : null}
         </div>
@@ -238,6 +331,16 @@ export default function TransactionsPage() {
   useEffect(() => {
     load(0);
   }, [load]);
+
+  function handleReversed(updated: AdminTransaction) {
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        content: prev.content.map(tx => tx.id === updated.id ? updated : tx),
+      };
+    });
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -355,7 +458,11 @@ export default function TransactionsPage() {
       )}
 
       {selectedTxId && (
-        <TransactionDrawer txId={selectedTxId} onClose={() => setSelectedTxId(null)} />
+        <TransactionDrawer
+          txId={selectedTxId}
+          onClose={() => setSelectedTxId(null)}
+          onReversed={handleReversed}
+        />
       )}
     </div>
   );

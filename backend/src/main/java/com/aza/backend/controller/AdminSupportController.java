@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -26,9 +27,10 @@ public class AdminSupportController {
     @GetMapping("/chats")
     public ResponseEntity<ApiResponse<Page<SupportService.SupportChatSummary>>> listChats(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status) {
         return ResponseEntity.ok(ApiResponse.success(
-                supportService.listAllSupportChats(page, size)));
+                supportService.listAllSupportChats(page, size, status)));
     }
 
     @GetMapping("/chats/{chatId}")
@@ -55,6 +57,31 @@ public class AdminSupportController {
             @RequestBody ReplyRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 supportService.replyToChat(agent, chatId, request.getContent())));
+    }
+
+    @PostMapping("/chats/{chatId}/resolve")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> resolveChat(
+            @PathVariable UUID chatId,
+            @AuthenticationPrincipal User agent) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.resolveChat(chatId, agent)));
+    }
+
+    @PostMapping("/chats/{chatId}/reopen")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> reopenChat(
+            @PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.reopenChat(chatId)));
+    }
+
+    @PatchMapping("/chats/{chatId}/priority")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> updatePriority(
+            @PathVariable UUID chatId,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.updatePriority(chatId, body.get("priority"))));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getStats() {
+        return ResponseEntity.ok(ApiResponse.success(supportService.getSupportStats()));
     }
 
     @GetMapping("/agents/available")
