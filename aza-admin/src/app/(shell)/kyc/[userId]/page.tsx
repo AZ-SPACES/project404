@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { getPendingKyc, reviewKyc, type KycRecord } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,13 +27,8 @@ function DocImage({ url, label }: { url: string | null; label: string }) {
         <p className="absolute bottom-2 left-2 text-xs text-white/60 bg-black/50 px-2 py-0.5 rounded">{label}</p>
       </div>
       {enlarged && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setEnlarged(false)}
-        >
-          <div className="relative max-w-3xl w-full max-h-[90vh]">
-            <Image src={url} alt={label} width={1200} height={800} className="object-contain w-full h-auto rounded-xl" unoptimized />
-          </div>
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setEnlarged(false)}>
+          <Image src={url} alt={label} width={1200} height={800} className="object-contain w-full h-auto max-h-[90vh] rounded-xl" unoptimized />
         </div>
       )}
     </>
@@ -42,13 +37,11 @@ function DocImage({ url, label }: { url: string | null; label: string }) {
 
 export default function KycReviewPage() {
   const params = useParams();
-  const router = useRouter();
   const userId = params.userId as string;
 
   const [record, setRecord] = useState<KycRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [submitting, setSubmitting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
@@ -67,71 +60,48 @@ export default function KycReviewPage() {
 
   async function approve() {
     setSubmitting(true);
-    try {
-      await reviewKyc(userId, true, "");
-      setDone("approved");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSubmitting(false);
-    }
+    try { await reviewKyc(userId, true, ""); setDone("approved"); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
+    finally { setSubmitting(false); }
   }
 
   async function reject() {
     if (!rejectReason.trim()) return;
     setSubmitting(true);
-    try {
-      await reviewKyc(userId, false, rejectReason);
-      setDone("rejected");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSubmitting(false);
-    }
+    try { await reviewKyc(userId, false, rejectReason); setDone("rejected"); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
+    finally { setSubmitting(false); }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-white/40" size={28} />
-    </div>
-  );
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
 
   if (done) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
       <div className={`w-16 h-16 rounded-full flex items-center justify-center ${done === "approved" ? "bg-emerald-400/15" : "bg-red-400/15"}`}>
         {done === "approved" ? <Check size={28} className="text-emerald-400" /> : <X size={28} className="text-red-400" />}
       </div>
-      <p className="text-white font-medium">
-        KYC {done === "approved" ? "approved" : "rejected"} successfully.
-      </p>
-      <Link href="/admin/kyc" className="text-[#F5A623] text-sm hover:underline">← Back to queue</Link>
+      <p className="text-white font-medium">KYC {done === "approved" ? "approved" : "rejected"} successfully.</p>
+      <Link href="/kyc" className="text-[#F5A623] text-sm hover:underline">← Back to queue</Link>
     </div>
   );
 
-  if (error) return (
+  if (error || !record) return (
     <div className="space-y-4">
-      <p className="text-red-400">{error}</p>
-      <Link href="/admin/kyc" className="text-white/50 text-sm hover:text-white flex items-center gap-1">
-        <ArrowLeft size={14} /> Back to queue
-      </Link>
+      <p className="text-red-400">{error || "Record not found"}</p>
+      <Link href="/kyc" className="text-white/50 text-sm hover:text-white flex items-center gap-1"><ArrowLeft size={14} /> Back</Link>
     </div>
   );
-
-  if (!record) return null;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link href="/admin/kyc" className="text-white/40 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
+        <Link href="/kyc" className="text-white/40 hover:text-white transition-colors"><ArrowLeft size={20} /></Link>
         <div>
           <h1 className="text-xl font-semibold text-white">KYC Review</h1>
           <p className="text-white/40 text-sm">{record.displayName ?? record.email}</p>
         </div>
       </div>
 
-      {/* User info */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {[
           ["Email", record.email],
@@ -148,7 +118,6 @@ export default function KycReviewPage() {
         ))}
       </div>
 
-      {/* Documents */}
       <div>
         <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-3">Documents</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -158,56 +127,36 @@ export default function KycReviewPage() {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
         {!showReject ? (
           <>
-            <button
-              onClick={approve}
-              disabled={submitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium text-sm hover:bg-emerald-500/25 transition-colors disabled:opacity-50"
-            >
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-              Approve
+            <button onClick={approve} disabled={submitting}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium text-sm hover:bg-emerald-500/25 transition-colors disabled:opacity-50">
+              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Approve
             </button>
-            <button
-              onClick={() => setShowReject(true)}
-              disabled={submitting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 transition-colors disabled:opacity-50"
-            >
-              <X size={16} />
-              Reject
+            <button onClick={() => setShowReject(true)} disabled={submitting}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 transition-colors disabled:opacity-50">
+              <X size={16} /> Reject
             </button>
           </>
         ) : (
           <div className="flex-1 space-y-3">
-            <textarea
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-              placeholder="Reason for rejection (required)"
-              rows={3}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-red-500/50 text-sm resize-none"
-            />
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection (required)" rows={3}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-red-500/50 text-sm resize-none" />
             <div className="flex gap-3">
-              <button
-                onClick={reject}
-                disabled={submitting || !rejectReason.trim()}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 transition-colors disabled:opacity-50"
-              >
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
-                Confirm Rejection
+              <button onClick={reject} disabled={submitting || !rejectReason.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 disabled:opacity-50">
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />} Confirm Rejection
               </button>
-              <button
-                onClick={() => setShowReject(false)}
-                className="px-4 py-3 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white transition-colors"
-              >
+              <button onClick={() => setShowReject(false)}
+                className="px-4 py-3 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white">
                 Cancel
               </button>
             </div>
           </div>
         )}
       </div>
-
       {error && <p className="text-red-400 text-sm">{error}</p>}
     </div>
   );

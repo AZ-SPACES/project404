@@ -1,6 +1,7 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.admin.AdminRoleRequest;
 import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminUserStatusRequest;
 import com.aza.backend.service.AdminService;
@@ -34,6 +35,14 @@ public class AdminUserController {
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable UUID userId) {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
+    }
+
+    @PatchMapping("/{userId}/role")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserRole(
+            @PathVariable UUID userId,
+            @RequestBody AdminRoleRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                adminService.updateUserRole(userId, request.getRole())));
     }
 
     @PatchMapping("/{userId}/status")

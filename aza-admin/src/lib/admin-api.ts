@@ -1,6 +1,6 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-function getToken(): string | null {
+export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("aza_admin_token");
 }
@@ -28,7 +28,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (res.status === 401 || res.status === 403) {
     clearTokens();
-    window.location.href = "/admin/login";
+    window.location.href = "/login";
     throw new Error("Unauthorized");
   }
 
@@ -54,7 +54,6 @@ export interface LoginResult {
   };
 }
 
-/** Step 1: submit credentials → OTP is sent, returns nothing meaningful on success */
 export async function adminLoginStep1(identifier: string, password: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/v1/auth/login`, {
     method: "POST",
@@ -65,7 +64,6 @@ export async function adminLoginStep1(identifier: string, password: string): Pro
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Login failed");
 }
 
-/** Step 2: verify OTP → returns LoginResult or throws "TOTP_REQUIRED:<preAuthToken>" */
 export async function adminLoginStep2(
   identifier: string,
   code: string,
@@ -83,7 +81,6 @@ export async function adminLoginStep2(
   return body.data as LoginResult;
 }
 
-/** Step 3 (optional): TOTP verification */
 export async function adminLoginTotp(preAuthToken: string, code: string): Promise<LoginResult> {
   const res = await fetch(`${BASE_URL}/api/v1/auth/2fa/login`, {
     method: "POST",
@@ -202,13 +199,16 @@ export function getUserDetail(userId: string): Promise<AdminUser> {
   return request(`/api/v1/admin/users/${userId}`);
 }
 
-export function updateUserStatus(
-  userId: string,
-  status: string,
-  reason?: string
-): Promise<AdminUser> {
+export function updateUserStatus(userId: string, status: string, reason?: string): Promise<AdminUser> {
   return request(`/api/v1/admin/users/${userId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status, reason }),
+  });
+}
+
+export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
+  return request(`/api/v1/admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
   });
 }
