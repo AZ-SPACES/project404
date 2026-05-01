@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { KYCProvider } from '../providers/KYCProvider';
-import { 
+import { useAuth } from '../providers/AuthProvider';
+import { getKycStatus } from '../services/api';
+import {
   VerifyIdentityScreen,
   SourceofFundsScreen,
   IdtypeScreen,
@@ -17,7 +19,7 @@ import {
   PEPUnderReviewScreen,
   KYCSuccessScreen,
 } from '../features/kyc';
-import { 
+import {
   CreatingAccountScreen,
   AccountReadyScreen,
   FeesAndLimitsScreen,
@@ -25,9 +27,26 @@ import {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+function KYCStatusGate({ children }: { children: React.ReactNode }) {
+  const { completeKYC } = useAuth();
+
+  useEffect(() => {
+    getKycStatus()
+      .then((res) => {
+        if (res.data?.status === 'VERIFIED') {
+          completeKYC();
+        }
+      })
+      .catch(() => {});
+  }, [completeKYC]);
+
+  return <>{children}</>;
+}
+
 export default function KYCNavigator() {
   return (
     <KYCProvider>
+      <KYCStatusGate>
       <Stack.Navigator
         initialRouteName="PEPStatus"
         screenOptions={{ headerShown: false }}
@@ -49,6 +68,7 @@ export default function KYCNavigator() {
         <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
         <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
       </Stack.Navigator>
+      </KYCStatusGate>
     </KYCProvider>
   );
 }

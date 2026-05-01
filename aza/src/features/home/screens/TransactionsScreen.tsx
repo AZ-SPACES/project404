@@ -12,6 +12,7 @@ import {
   Modal,
   Pressable,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ import {
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { INITIAL_RECIPIENTS } from "../../contacts";
 import Button from "../../../components/ui/Button";
+import { useTransactions } from "../../../hooks/useTransactions";
 
 export type Transaction = {
   id: string;
@@ -37,6 +39,7 @@ export type Transaction = {
   amount: number;
   isCredit: boolean;
   isPending?: boolean;
+  fullDate: string;
 };
 
 export type Section = {
@@ -56,6 +59,7 @@ export const mockTransactions: Section[] = [
         amount: 150000.1,
         isCredit: false,
         isPending: true,
+        fullDate: "2024-01-22T11:45:00Z",
       },
       {
         id: "1",
@@ -64,6 +68,7 @@ export const mockTransactions: Section[] = [
         time: "10:25 AM",
         amount: 2000000.0,
         isCredit: true,
+        fullDate: "2024-01-22T10:25:00Z",
       },
       {
         id: "2",
@@ -72,6 +77,7 @@ export const mockTransactions: Section[] = [
         time: "10:26 AM",
         amount: 594200.0,
         isCredit: false,
+        fullDate: "2024-01-22T10:26:00Z",
       },
       {
         id: "3",
@@ -80,6 +86,7 @@ export const mockTransactions: Section[] = [
         time: "10:23 AM",
         amount: 1204000.0,
         isCredit: false,
+        fullDate: "2024-01-22T10:23:00Z",
       },
     ],
   },
@@ -93,6 +100,7 @@ export const mockTransactions: Section[] = [
         time: "10:25 AM",
         amount: 17200.0,
         isCredit: false,
+        fullDate: "2024-01-21T10:25:00Z",
       },
       {
         id: "5",
@@ -101,6 +109,7 @@ export const mockTransactions: Section[] = [
         time: "10:25 AM",
         amount: 8000000.0,
         isCredit: true,
+        fullDate: "2024-01-21T10:25:00Z",
       },
     ],
   },
@@ -115,42 +124,24 @@ export function TransactionsScreen() {
   const balance = route.params?.balance || "GH₵ 0.00";
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<
-    "All" | "Money In" | "Money Out" | "Pending"
-  >("All");
-  const [refreshing, setRefreshing] = useState(false);
+  const { sections, loading, refreshing, refresh, loadMore, hasMore, error, filter, setFilter } = useTransactions();
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    // Simulate a network request or data refresh
-    const timer = setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    refresh();
+  }, [refresh]);
 
   const filteredSections = useMemo(() => {
-    return mockTransactions
-      .map((section) => {
-        const filteredData = section.data.filter((tx) => {
-          const matchesSearch =
-            tx.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            tx.type.toLowerCase().includes(searchQuery.toLowerCase());
-          if (!matchesSearch) return false;
-
-          if (selectedFilter === "Money In" && !tx.isCredit) return false;
-          if (selectedFilter === "Money Out" && tx.isCredit) return false;
-          if (selectedFilter === "Pending" && !tx.isPending) return false;
-
-          return true;
-        });
-
-        return { ...section, data: filteredData };
-      })
-      .filter((section) => section.data.length > 0);
-  }, [searchQuery, selectedFilter]);
+    if (!searchQuery) return sections;
+    return sections.map(section => ({
+      ...section,
+      data: section.data.filter(tx => 
+        tx.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tx.type.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })).filter(section => section.data.length > 0);
+  }, [sections, searchQuery]);
 
   const formatCurrency = (amount: number) => {
     return `GH₵ ${amount.toLocaleString(undefined, {
@@ -226,11 +217,20 @@ export function TransactionsScreen() {
             tintColor={Colors.primary}
           />
         }
-        ListEmptyComponent={renderEmptyState}
-        onEndReached={() => {
-          // In a real app, this would trigger loading the next page of transactions
-        }}
+        ListEmptyComponent={loading && sections.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: Spacing.xl * 2 }}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : renderEmptyState}
+        onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loading && sections.length > 0 ? (
+            <View style={{ paddingVertical: Spacing.md }}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+            </View>
+          ) : null
+        }
         ListHeaderComponent={
           <>
             <View style={styles.balanceCard}>
@@ -277,16 +277,16 @@ export function TransactionsScreen() {
               contentContainerStyle={styles.filtersContainer}
             >
               {(["All", "Money In", "Money Out", "Pending"] as const).map(
-                (filter) => {
-                  const isActive = selectedFilter === filter;
+                (f) => {
+                  const isActive = filter === f;
                   return (
                     <TouchableOpacity
-                      key={filter}
+                      key={f}
                       style={[
                         styles.filterChip,
                         isActive && styles.filterChipActive,
                       ]}
-                      onPress={() => setSelectedFilter(filter)}
+                      onPress={() => setFilter(f)}
                     >
                       <Text
                         style={[
@@ -294,7 +294,7 @@ export function TransactionsScreen() {
                           isActive && styles.filterChipTextActive,
                         ]}
                       >
-                        {filter}
+                        {f}
                       </Text>
                     </TouchableOpacity>
                   );

@@ -4,15 +4,27 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearTokens } from "@/lib/admin-api";
-import { LayoutDashboard, ShieldCheck, Users, LogOut, Menu } from "lucide-react";
+import {
+  LayoutDashboard,
+  ShieldCheck,
+  Users,
+  Headset,
+  LogOut,
+  Menu,
+} from "lucide-react";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/kyc", label: "KYC Review", icon: ShieldCheck },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/support", label: "Support", icon: Headset },
 ];
 
-export default function ShellLayout({ children }: { children: React.ReactNode }) {
+export default function ShellLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -20,7 +32,10 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const token = localStorage.getItem("aza_admin_token");
-    if (!token) { router.replace("/login"); return; }
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
     setReady(true);
   }, [router]);
 
@@ -44,7 +59,10 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
       >
         <div className="h-16 flex items-center px-6 border-b border-white/5">
           <span className="text-xl font-semibold tracking-tight">
-            aza <span className="text-[#F5A623] text-xs font-normal ml-1">admin</span>
+            aza{" "}
+            <span className="text-[#F5A623] text-xs font-normal ml-1">
+              admin
+            </span>
           </span>
         </div>
 
@@ -58,9 +76,10 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
                 onClick={() => setOpen(false)}
                 className={`
                   flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                  ${active
-                    ? "bg-[#F5A623]/15 text-[#F5A623]"
-                    : "text-white/60 hover:text-white hover:bg-white/5"
+                  ${
+                    active
+                      ? "bg-[#F5A623]/15 text-[#F5A623]"
+                      : "text-white/60 hover:text-white hover:bg-white/5"
                   }
                 `}
               >
@@ -83,12 +102,18 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
       )}
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <header className="h-16 flex items-center justify-between px-4 border-b border-white/5 lg:hidden">
-          <button onClick={() => setOpen(true)} className="text-white/60 hover:text-white">
+          <button
+            onClick={() => setOpen(true)}
+            className="text-white/60 hover:text-white"
+          >
             <Menu size={22} />
           </button>
           <span className="text-sm font-medium">aza admin</span>

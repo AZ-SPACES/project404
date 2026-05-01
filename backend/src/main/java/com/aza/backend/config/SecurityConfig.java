@@ -78,6 +78,11 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
                     auth.anyRequest().authenticated();
             })
+            .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint((request, response, authException) ->
+                            response.sendError(401, "Unauthorized"))
+                    .accessDeniedHandler((request, response, accessDeniedException) ->
+                            response.sendError(403, "Forbidden")))
             .addFilterBefore(jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class);
 

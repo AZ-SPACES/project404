@@ -66,14 +66,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           stateFromStorage = JSON.parse(storedState);
         }
       } catch (e) {
-        // Restoring state failed
         console.error("Failed to load auth state", e);
+      }
+
+      // Fall back to checking the actual passcode value so users who logged in
+      // before the hasPasscode flag was correctly persisted aren't sent to setup.
+      let hasPasscodeResolved = stateFromStorage?.hasPasscode || false;
+      if (!hasPasscodeResolved && stateFromStorage?.userToken) {
+        try {
+          const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
+          hasPasscodeResolved = stored !== null;
+        } catch (_) {}
       }
 
       setAuthState({
         userToken: stateFromStorage?.userToken || null,
         isKYCVerified: stateFromStorage?.isKYCVerified || false,
-        hasPasscode: stateFromStorage?.hasPasscode || false,
+        hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
         isLoading: false,
       });

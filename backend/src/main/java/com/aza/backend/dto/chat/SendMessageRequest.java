@@ -1,6 +1,5 @@
 package com.aza.backend.dto.chat;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,8 +15,8 @@ public class SendMessageRequest {
      * The encrypted message ciphertext.
      * Server stores this opaquely — cannot read the content.
      */
-    @NotBlank(message = "Ciphertext is required")
     private String ciphertext;
+    private String content;
 
     /**
      * X3DH ephemeral public key.
