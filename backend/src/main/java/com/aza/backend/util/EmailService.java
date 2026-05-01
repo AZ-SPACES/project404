@@ -92,6 +92,40 @@ public class EmailService {
     }
 
     /**
+     * Send signup welcome email asynchronously
+     */
+    public void sendSignupNotification(String email, String name) {
+        CompletableFuture.runAsync(() -> {
+            String subject = "Welcome to AZA!";
+            try {
+                log.info("Preparing Signup Notification email for {}...", email);
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setFrom("AZA <" + fromEmail + ">");
+                helper.setTo(email);
+                helper.setSubject(subject);
+
+                Context context = new Context();
+                context.setVariable("name", name);
+
+                String htmlContent = templateEngine.process("email/signup-notification", context);
+                helper.setText(htmlContent, true);
+
+                ClassPathResource res = new ClassPathResource("static/images/paper-plane.png");
+                helper.addInline("paperplane", res);
+
+                mailSender.send(message);
+                log.info("Signup Notification email sent successfully to {}", email);
+            } catch (MessagingException e) {
+                log.error("Failed to send signup notification to {}: {}", email, e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error sending signup notification to {}: {}", email, e.getMessage());
+            }
+        });
+    }
+
+    /**
      * Send login notification email asynchronously to avoid blocking the calling thread.
      * The geo-IP lookup and SMTP send happen off the request thread.
      */
@@ -112,7 +146,11 @@ public class EmailService {
                 context.setVariable("deviceName", deviceName);
                 context.setVariable("deviceOs", deviceOs);
                 context.setVariable("ipAddress", ipAddress);
-                context.setVariable("location", fetchLocation(ipAddress));
+                
+                LocationInfo loc = fetchLocationDetails(ipAddress);
+                context.setVariable("location", loc.getDescription());
+                context.setVariable("mapUrl", loc.getMapUrl());
+                
                 context.setVariable("loginTime", java.time.LocalDateTime.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
 
@@ -169,16 +207,16 @@ public class EmailService {
     }
 
     /**
-     * Fetch city and country from IP address using a free GeoIP API
+     * Fetch detailed location from IP address
      */
-    private String fetchLocation(String ip) {
+    private LocationInfo fetchLocationDetails(String ip) {
         if (ip == null || ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1")) {
-            return "Localhost";
+            return new LocationInfo("Localhost", null);
         }
         
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://ip-api.com/json/" + ip))
+                    .uri(URI.create("https://ip-api.com/json/" + ip + "?fields=status,message,country,regionName,city,lat,lon"))
                     .GET()
                     .build();
 
@@ -187,12 +225,40 @@ public class EmailService {
             if (response.statusCode() == 200) {
                 JsonNode node = objectMapper.readTree(response.body());
                 if ("success".equals(node.get("status").asText())) {
-                    return node.get("city").asText() + ", " + node.get("country").asText();
+                    String city = node.has("city") ? node.get("city").asText() : "";
+                    String region = node.has("regionName") ? node.get("regionName").asText() : "";
+                    String country = node.has("country") ? node.get("country").asText() : "";
+                    
+                    StringBuilder sb = new StringBuilder();
+                    if (!city.isBlank()) sb.append(city);
+                    if (!region.isBlank()) {
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(region);
+                    }
+                    if (!country.isBlank()) {
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(country);
+                    }
+                    
+                    String description = sb.length() > 0 ? sb.toString() : "Unknown Location";
+                    String mapUrl = null;
+                    if (node.has("lat") && node.has("lon")) {
+                        mapUrl = String.format("https://www.google.com/maps?q=%s,%s", 
+                                node.get("lat").asText(), node.get("lon").asText());
+                    }
+                    
+                    return new LocationInfo(description, mapUrl);
                 }
             }
         } catch (Exception e) {
             log.warn("Failed to fetch location for IP {}: {}", ip, e.getMessage());
         }
-        return "Unknown Location";
+        return new LocationInfo("Unknown Location", null);
+    }
+
+    @lombok.Value
+    private static class LocationInfo {
+        String description;
+        String mapUrl;
     }
 }

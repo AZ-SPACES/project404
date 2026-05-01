@@ -35,10 +35,13 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import * as Contacts from "expo-contacts";
 import Button from "../../../components/ui/Button";
+import { useContactStore } from "../../../store/contactStore";
+import { Contact as BackendContact } from "../types";
 
 const AZA_ICON = require("../../../assets/aza-z.png");
 
-// Type definitions
+// Type definitions - mapping backend contact to UI recipient if needed, 
+// but better to use BackendContact directly where possible.
 export type Recipient = {
   id: string;
   name: string;
@@ -46,88 +49,34 @@ export type Recipient = {
   avatar: string;
   isOnAza?: boolean;
   isFavorite?: boolean;
+  phoneNumber?: string | undefined;
+  email?: string | undefined;
 };
 
-// Mock data
-export const INITIAL_RECIPIENTS: Recipient[] = [
-  {
-    id: "1",
-    name: "Paapa Cobbold",
-    username: "@pcobbold",
-    isOnAza: true,
-    isFavorite: true,
-    avatar:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Davies Opoku",
-    username: "@dopoku",
-    isOnAza: true,
-    isFavorite: true,
-    avatar:
-      "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&fit=crop",
-  },
-  {
-    id: "3",
-    name: "Ibrahim Mahama",
-    username: "@ibmahama",
-    isOnAza: true,
-    isFavorite: true,
-    avatar:
-      "https://i0.wp.com/ghanamedia.net/wp-content/uploads/2026/03/img_9680.jpg?fit=1200%2C812&ssl=1",
-  },
-  {
-    id: "4",
-    name: "Charlotte osei",
-    username: "@cosei",
-    isOnAza: true,
-    isFavorite: false,
-    avatar:
-      "https://i0.wp.com/www.gbcghanaonline.com/wp-content/uploads/2024/08/FB_IMG_1723196462221-e1723205205559.jpg",
-  },
-  {
-    id: "5",
-    name: "Kevin Okyere",
-    username: "@kokyere",
-    isOnAza: true,
-    isFavorite: false,
-    avatar:
-      "https://prod.cdn-medias.theafricareport.com/medias/2025/11/28/gvaffltwmaecdxx.jpg",
-  },
-  {
-    id: "6",
-    name: "Shirley Ayorkor Botchwey",
-    username: "@sabotchwey",
-    isOnAza: false,
-    avatar:
-      "https://www.happyghana.com/wp-content/uploads/2024/10/Ayorko-Botchwey-2048x1365.jpg",
-  },
-  {
-    id: "7",
-    name: "Rita Akosua Dickson",
-    username: "@radickson",
-    isOnAza: false,
-    avatar:
-      "https://focusfmknust.com/wp-content/uploads/2024/07/GDbhQpdXAAA7sUf-1600x1066.jpg",
-  },
-];
+// Mock data is no longer needed but kept for reference if needed
+export const INITIAL_RECIPIENTS: Recipient[] = [];
 
 export default function ContactsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [inviteQuery, setInviteQuery] = useState("");
-  const [addUserQuery, setAddUserQuery] = useState("");
-  const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(
-    null,
-  );
-  const [contactsList, setContactsList] =
-    useState<Recipient[]>(INITIAL_RECIPIENTS);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const { 
+    contacts: backendContacts, 
+    fetchContacts, 
+    syncDeviceContacts, 
+    isLoading, 
+    isSyncing,
+    toggleFavorite,
+    addContactByUserId,
+    findUserByHandle,
+    searchGlobal
+  } = useContactStore();
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -135,47 +84,67 @@ export default function ContactsScreen() {
       if (status === "granted") {
         const { data } = await Contacts.getContactsAsync({
           fields: [
+            Contacts.Fields.FirstName,
+            Contacts.Fields.LastName,
             Contacts.Fields.PhoneNumbers,
             Contacts.Fields.Emails,
-            Contacts.Fields.Image,
           ],
         });
 
         if (data.length > 0) {
-          const deviceContacts: Recipient[] = data
-            .filter((c) => c.name)
-            .map((c, index) => ({
-              id: `device-${c.id || index}`,
-              name: c.name,
-              username:
-                c.phoneNumbers?.[0]?.number ||
-                c.emails?.[0]?.email ||
-                "No contact info",
-              avatar:
-                c.image?.uri ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=random`,
-              isOnAza: false,
+          const deviceContacts = data
+            .filter((c) => c.name || (c.firstName || c.lastName))
+            .map((c) => ({
+              displayName: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+              phoneNumber: c.phoneNumbers?.[0]?.number,
+              email: c.emails?.[0]?.email,
             }));
 
-          setContactsList([...INITIAL_RECIPIENTS, ...deviceContacts]);
+          // Sync with backend
+          await syncDeviceContacts(deviceContacts);
         }
       }
     })();
   }, []);
 
+  // Map backend contacts to UI Recipients
+  const contactsList: Recipient[] = backendContacts.map(c => ({
+    id: c.id,
+    name: c.displayName,
+    username: c.handle ? `@${c.handle}` : (c.phoneNumber || c.email || ''),
+    avatar: c.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.displayName)}&background=random`,
+    isOnAza: c.isAzaUser,
+    isFavorite: c.isFavorite,
+    phoneNumber: c.phoneNumber,
+    email: c.email
+  }));
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [addUserQuery, setAddUserQuery] = useState("");
+  const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(
+    null,
+  );
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+
   // Simple filter logic
   const filteredRecipients = contactsList.filter(
     (r) =>
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.username.toLowerCase().includes(searchQuery.toLowerCase()),
+      r.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.phoneNumber && r.phoneNumber.includes(searchQuery)) ||
+      (r.email && r.email.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
   const favorites = filteredRecipients.filter((r) => r.isFavorite);
   const azaUsers = filteredRecipients.filter((r) => r.isOnAza);
+  const otherContacts = filteredRecipients.filter((r) => !r.isOnAza);
 
 
   const sections = [
     { title: "On Aza", data: azaUsers },
+    { title: "Others", data: otherContacts },
   ].filter((section) => section.data.length > 0);
 
   const openSheet = (recipient: Recipient) => {
@@ -190,6 +159,7 @@ export default function ContactsScreen() {
     if (selectedRecipient) {
       closeSheet();
       navigation.navigate("SendAmount", {
+        id: selectedRecipient.id,
         name: selectedRecipient.name,
         username: selectedRecipient.username,
         avatar: selectedRecipient.avatar,
@@ -201,6 +171,7 @@ export default function ContactsScreen() {
     if (selectedRecipient) {
       closeSheet();
       navigation.navigate("RequestAmount", {
+        id: selectedRecipient.id,
         name: selectedRecipient.name,
         username: selectedRecipient.username,
         avatar: selectedRecipient.avatar,
@@ -416,6 +387,7 @@ export default function ContactsScreen() {
                         if (selectedRecipient) {
                           closeSheet();
                           navigation.navigate("ContactsProfile", {
+                            id: selectedRecipient.id,
                             name: selectedRecipient.name,
                             username: selectedRecipient.username,
                             avatar: selectedRecipient.avatar,
@@ -575,14 +547,14 @@ export default function ContactsScreen() {
               </View>
 
               <Text style={[Typography.body, styles.addUserSubtitle]}>
-                Search for friends by their @username or email to add them to
+                Search for friends by their @username or name to add them to
                 your contacts.
               </Text>
 
               <View style={styles.addUserInputContainer}>
                 <TextInput
                   style={styles.addUserInput}
-                  placeholder="@username or email"
+                  placeholder="@username or name"
                   placeholderTextColor={Colors.textSecondary}
                   value={addUserQuery}
                   onChangeText={setAddUserQuery}
@@ -591,21 +563,85 @@ export default function ContactsScreen() {
                 />
               </View>
 
+              {addUserQuery.length >= 2 && (
+                <View style={styles.globalSearchResults}>
+                  <TouchableOpacity
+                    style={styles.globalSearchButton}
+                    onPress={async () => {
+                      const query = addUserQuery.trim().replace(/^@/, '');
+                      try {
+                        const results = await searchGlobal(query);
+                        if (results.length > 0) {
+                          // For simplicity, just show the first one or we could render a list
+                          const user = results[0];
+                          if (user) {
+                            Alert.alert(
+                              "User Found",
+                              `Add ${user.displayName} (@${user.handle}) to contacts?`,
+                              [
+                                { text: "Cancel", style: "cancel" },
+                                { 
+                                  text: "Add", 
+                                  onPress: async () => {
+                                    await addContactByUserId(user.id);
+                                    setShowAddUserModal(false);
+                                    setAddUserQuery("");
+                                  } 
+                                }
+                              ]
+                            );
+                          }
+                        } else {
+                          Alert.alert("Not Found", "No users matched your search.");
+                        }
+                      } catch (error) {
+                        Alert.alert("Error", "Search failed.");
+                      }
+                    }}
+                  >
+                    <Feather name="search" size={18} color={Colors.secondary} />
+                    <Text style={styles.globalSearchButtonText}>Search globally for "{addUserQuery}"</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <Button
                 title="Search and Add"
-                onPress={() => {
-                  if (addUserQuery.trim()) {
-                    Alert.alert(
-                      "Searching...",
-                      `Looking for user: ${addUserQuery}`,
-                    );
-                    setShowAddUserModal(false);
-                    setAddUserQuery("");
+                onPress={async () => {
+                  const query = addUserQuery.trim().replace(/^@/, '');
+                  if (query) {
+                    try {
+                      // First find the user by exact handle if possible
+                      const user = await findUserByHandle(query);
+                      if (user) {
+                        await addContactByUserId(user.id);
+                        Alert.alert("Success", `@${query} added to contacts`);
+                        setShowAddUserModal(false);
+                        setAddUserQuery("");
+                      } else {
+                        // Try broader search
+                        const results = await searchGlobal(query);
+                        if (results.length > 0) {
+                          const topUser = results[0];
+                          if (topUser) {
+                             await addContactByUserId(topUser.id);
+                             Alert.alert("Success", `${topUser.displayName} added to contacts`);
+                             setShowAddUserModal(false);
+                             setAddUserQuery("");
+                          }
+                        } else {
+                          Alert.alert("Not Found", `No user found matching "${query}"`);
+                        }
+                      }
+                    } catch (error) {
+                      Alert.alert("Error", "Failed to add user. They might already be in your contacts.");
+                    }
                   }
                 }}
                 paddingVertical={14}
                 borderRadius={10}
-                disabled={!addUserQuery.trim()}
+                disabled={!addUserQuery.trim() || isLoading}
+                loading={isLoading}
               />
             </View>
           </KeyboardAvoidingView>
@@ -977,6 +1013,23 @@ function createStyles(Colors: ThemeColors) {
     addUserInput: {
       ...Typography.body,
       color: Colors.textPrimary,
+    },
+    globalSearchResults: {
+      marginTop: -Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    globalSearchButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDark ? Colors.surface : "#F3F4F6",
+      padding: Spacing.sm,
+      borderRadius: Radius.md,
+    },
+    globalSearchButtonText: {
+      ...Typography.caption,
+      color: Colors.primary,
+      marginLeft: Spacing.xs,
+      fontWeight: "600",
     },
   });
 }
