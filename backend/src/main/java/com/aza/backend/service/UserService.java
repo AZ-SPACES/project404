@@ -166,8 +166,7 @@ public class UserService {
     public PublicProfileResponse getPublicProfileByHandle(String handle) {
         User user = userRepository.findByHandle(handle)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getStatus() == User.AccountStatus.DEACTIVATED || !Boolean.TRUE.equals(user.getFindMeByHandle())) {
+        if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new RuntimeException("User not found");
         }
 
@@ -176,7 +175,7 @@ public class UserService {
                 .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
                 .handle(user.getHandle())
                 .profileImageUrl(user.getProfileImageUrl())
-                .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until contacts system is built
+                .onlineStatus("OFFLINE")
                 .build();
     }
 

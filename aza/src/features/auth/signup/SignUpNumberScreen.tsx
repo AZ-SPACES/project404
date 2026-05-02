@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import { debounce } from "lodash";
 import {
   View,
   Text,
@@ -10,7 +11,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -33,28 +35,83 @@ export default function SignUpNumberScreen() {
   const { data, update } = useSignUp();
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const phoneError = touched && data.phoneNumber.length > 0 && !isValidPhone(data.phoneNumber)
+  const phoneError = (touched && data.phoneNumber.length > 0 && !isValidPhone(data.phoneNumber))
     ? "Enter a valid phone number"
-    : null;
+    : error;
+
+  const validatePhone = useCallback(
+    debounce(async (phone: string) => {
+      if (!isValidPhone(phone)) {
+        setIsAvailable(null);
+        setIsValidating(false);
+        return;
+      }
+
+      try {
+        const response = await checkPhoneAvailability(phone);
+        const available = response.data?.success && response.data?.data === true;
+        setIsAvailable(available);
+        if (!available) {
+          setError("This phone number is already linked to an account.");
+        } else {
+          setError(null);
+        }
+      } catch (err: any) {
+        if (err.response?.status === 409) {
+          setIsAvailable(false);
+          setError("This phone number is already linked to an account.");
+        } else {
+          console.error("Availability check failed", err);
+          // Don't show error while typing for transient network issues
+        }
+      } finally {
+        setIsValidating(false);
+      }
+    }, 600),
+    []
+  );
 
   const handleNext = async () => {
     if (!isValidPhone(data.phoneNumber)) return;
     
+    if (isAvailable === false) return;
     setLoading(true);
+    setError(null);
     try {
       const response = await checkPhoneAvailability(data.phoneNumber);
       if (response.data?.success && response.data?.data === true) {
         navigation.navigate("SignUpEmail");
       } else {
-        Alert.alert("Already Registered", "This phone number is already linked to an account.");
+        setIsAvailable(false);
+        setError("This phone number is already linked to an account.");
       }
-    } catch (error) {
-      console.error("Availability check failed", error);
-      // Fallback: let them proceed and handle it at the final signup step if API fails
-      navigation.navigate("SignUpEmail");
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        setIsAvailable(false);
+        setError("This phone number is already linked to an account.");
+      } else {
+        console.error("Availability check failed", err);
+        setError("Unable to verify phone number. Please try again.");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTextChange = (t: string) => {
+    update({ phoneNumber: t });
+    setError(null);
+    setIsAvailable(null);
+    
+    if (isValidPhone(t)) {
+      setIsValidating(true);
+      validatePhone(t);
+    } else {
+      setIsValidating(false);
     }
   };
 
@@ -87,7 +144,11 @@ export default function SignUpNumberScreen() {
               Your number will be used for signing into your account.
             </Text>
             <Text style={styles.label}>Your Phone Number</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              isAvailable === true && styles.inputSuccess,
+              isAvailable === false && styles.inputError
+            ]}>
               <MaterialIcons
                 name="smartphone"
                 size={24}
@@ -99,7 +160,7 @@ export default function SignUpNumberScreen() {
                 placeholder="000 000 0000"
                 placeholderTextColor={Colors.textSecondary}
                 value={data.phoneNumber}
-                onChangeText={(t) => update({ phoneNumber: t })}
+                onChangeText={handleTextChange}
                 onBlur={() => setTouched(true)}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
@@ -107,6 +168,13 @@ export default function SignUpNumberScreen() {
                 cursorColor={Colors.primary}
                 selectionColor={Colors.primary}
               />
+              {isValidating && <ActivityIndicator size="small" color={Colors.primary} />}
+              {!isValidating && isAvailable === true && (
+                <MaterialIcons name="check-circle" size={20} color={Colors.success} />
+              )}
+              {!isValidating && isAvailable === false && (
+                <MaterialIcons name="error" size={20} color={Colors.error} />
+              )}
             </View>
             {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
           </View>
@@ -118,11 +186,11 @@ export default function SignUpNumberScreen() {
               onPress={handleNext}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
-              borderRadius={30}
+              borderRadius={Radius.sm}
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
-              disabled={!isValidPhone(data.phoneNumber)}
+              disabled={!isValidPhone(data.phoneNumber) || isAvailable === false || isValidating}
               loading={loading}
             />
           </View>
@@ -196,6 +264,12 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  inputSuccess: {
+    borderColor: Colors.success,
+  },
+  inputError: {
+    borderColor: Colors.error,
   },
   errorText: {
     fontSize: 12,

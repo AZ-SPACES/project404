@@ -17,8 +17,6 @@ export default function RootNavigator() {
   const { userToken, isKYCVerified, hasPasscode, isLoading } = useAuth();
 
   if (isLoading) {
-    // We can return a loading splash screen here if desired,
-    // but the app already uses AnimatedSplashScreen in App.tsx.
     return null;
   }
 
@@ -26,8 +24,10 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) :  !hasPasscode ? (
+      ) : !hasPasscode ? (
         <Stack.Screen name="Setup" component={SetupNavigator} />
+      ) : !isKYCVerified ? (
+        <Stack.Screen name="KYC" component={KYCWithBoundary} />
       ) : (
         <Stack.Screen name="App" component={AppNavigator} />
       )}

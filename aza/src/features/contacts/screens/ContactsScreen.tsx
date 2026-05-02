@@ -15,12 +15,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import {
   Feather,
   MaterialCommunityIcons,
   AntDesign,
-  FontAwesome5,
 } from "@expo/vector-icons";
 import {
   useAppTheme,
@@ -162,6 +163,10 @@ export default function ContactsScreen() {
     { title: "On Aza", data: azaUsers },
     { title: "Others", data: otherContacts },
   ].filter((section) => section.data.length > 0);
+
+  const handleRefresh = async () => {
+    await fetchContacts();
+  };
 
   const openSheet = (recipient: Recipient) => {
     setSelectedRecipient(recipient);
@@ -315,19 +320,48 @@ export default function ContactsScreen() {
         )}
 
         {/* List */}
-        <SectionList
-          sections={sections}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          renderItem={renderItem}
-          renderSectionHeader={({ section: { title } }) => (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionHeaderText}>{title}</Text>
-            </View>
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-        />
+        {isLoading && contactsList.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : sections.length === 0 && !searchQuery ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="users" size={48} color={Colors.textSecondary} />
+            <Text style={[Typography.bodyLg, styles.emptyTitle]}>No contacts yet</Text>
+            <Text style={[Typography.body, styles.emptySubtitle]}>
+              Sync your phone contacts or add people by their @tag
+            </Text>
+          </View>
+        ) : sections.length === 0 && searchQuery ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="search" size={48} color={Colors.textSecondary} />
+            <Text style={[Typography.bodyLg, styles.emptyTitle]}>No results</Text>
+            <Text style={[Typography.body, styles.emptySubtitle]}>
+              No contacts match "{searchQuery}"
+            </Text>
+          </View>
+        ) : (
+          <SectionList
+            sections={sections}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            renderItem={renderItem}
+            renderSectionHeader={({ section: { title } }) => (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>{title}</Text>
+              </View>
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            stickySectionHeadersEnabled={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading && contactsList.length > 0}
+                onRefresh={handleRefresh}
+                tintColor={Colors.primary}
+              />
+            }
+          />
+        )}
       </SafeAreaView>
 
       {/* Detail Bottom Sheet Modal manually managed via native Modal component */}
@@ -1046,6 +1080,31 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.primary,
       marginLeft: Spacing.xs,
       fontWeight: "600",
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: Spacing.xl * 2,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: Spacing.xl * 2,
+      paddingHorizontal: Spacing.xl,
+    },
+    emptyTitle: {
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      marginTop: Spacing.md,
+      marginBottom: Spacing.xs,
+      textAlign: "center",
+    },
+    emptySubtitle: {
+      color: Colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
     },
   });
 }

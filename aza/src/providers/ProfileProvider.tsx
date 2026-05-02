@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
-import { api } from '../services/api';
+import { getMe, updateMe, uploadProfileImage, api } from '../services/api';
 
 const PROFILE_STORAGE_KEY = 'aza_profile';
 
@@ -18,6 +18,11 @@ type ProfileData = {
   emailTwoFactorEnabled: boolean;
   appTwoFactorEnabled: boolean;
   passkeysEnabled: boolean;
+  notificationPreferences: Record<string, any> | null;
+  findMeByPhone: boolean;
+  findMeByEmail: boolean;
+  findMeByHandle: boolean;
+  biometricData: boolean;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -33,6 +38,11 @@ const INITIAL_PROFILE: ProfileData = {
   emailTwoFactorEnabled: false,
   appTwoFactorEnabled: false,
   passkeysEnabled: false,
+  notificationPreferences: null,
+  findMeByPhone: true,
+  findMeByEmail: true,
+  findMeByHandle: true,
+  biometricData: true,
 };
 
 type ProfileContextType = ProfileData & {
@@ -44,6 +54,8 @@ type ProfileContextType = ProfileData & {
   setSyncContacts: (enabled: boolean) => Promise<void>;
   setBillForwardingEnabled: (enabled: boolean) => Promise<void>;
   toggleApp2fa: (enabled: boolean) => Promise<void>;
+  updateProfile: (data: Partial<ProfileData>) => Promise<void>;
+  updateNotificationPreferences: (prefs: Record<string, any>) => Promise<void>;
   fetchProfile: () => Promise<void>;
 };
 
@@ -73,7 +85,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const fetchProfile = useCallback(async () => {
     if (!userToken) return;
     try {
-      const { data } = await api.get('/api/v1/users/me');
+      const { data } = await getMe();
       const userData = data.data;
       const updated: ProfileData = {
         displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
@@ -88,6 +100,11 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
         appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
         passkeysEnabled: userData.passkeysEnabled ?? false,
+        notificationPreferences: userData.notificationPreferences ? JSON.parse(userData.notificationPreferences) : null,
+        findMeByPhone: userData.findMeByPhone ?? true,
+        findMeByEmail: userData.findMeByEmail ?? true,
+        findMeByHandle: userData.findMeByHandle ?? true,
+        biometricData: userData.biometricData ?? true,
       };
       setProfile(updated);
       await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
@@ -113,73 +130,144 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [userToken, fetchProfile]);
 
   const setDisplayName = useCallback(async (name: string) => {
-    const updated = { ...profile, displayName: name };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await updateMe({ displayName: name });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save display name', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const setProfileImage = useCallback(async (uri: string | null) => {
-    const updated = { ...profile, profileImageUri: uri };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      if (uri) {
+        // Upload to backend
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : `image`;
+        
+        const photo = {
+          uri,
+          name: filename,
+          type,
+        } as any;
+
+        await uploadProfileImage(photo);
+      } else {
+        // Handle removal if backend supports it (optional)
+        // For now, just clear locally
+      }
+      await fetchProfile();
     } catch (e) {
-      console.error('Failed to save profile image', e);
+      console.error('Failed to upload profile image', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const setEmail = useCallback(async (email: string | null) => {
-    const updated = { ...profile, email };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await updateMe({ email });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save email', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const setPhone = useCallback(async (phone: string | null) => {
-    const updated = { ...profile, phone };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await updateMe({ phone });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save phone', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const setHandle = useCallback(async (handle: string | null) => {
-    const updated = { ...profile, handle };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await updateMe({ handle });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save handle', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const setSyncContacts = useCallback(async (enabled: boolean) => {
-    const updated = { ...profile, syncContacts: enabled };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await api.put("/api/v1/users/me/privacy", { syncContacts: enabled });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save syncContacts setting', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
   const setBillForwardingEnabled = useCallback(async (enabled: boolean) => {
-    const updated = { ...profile, billForwardingEnabled: enabled };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await api.put("/api/v1/users/me/privacy", { billForwardingEnabled: enabled });
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to save billForwardingEnabled setting', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
+
+  const updateProfile = useCallback(async (data: Partial<ProfileData>) => {
+    try {
+      // Split fields by backend endpoint
+      const PRIVACY_FIELDS = ['findMeByHandle', 'findMeByEmail', 'findMeByPhone', 'syncContacts', 'billForwardingEnabled', 'biometricData'] as const;
+      type PrivacyKey = typeof PRIVACY_FIELDS[number];
+
+      const privacyData: Partial<Record<PrivacyKey, boolean>> = {};
+      const profileData: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(data)) {
+        if ((PRIVACY_FIELDS as readonly string[]).includes(key)) {
+          privacyData[key as PrivacyKey] = value as boolean;
+        } else {
+          profileData[key] = value;
+        }
+      }
+
+      const requests: Promise<unknown>[] = [];
+      if (Object.keys(privacyData).length > 0) {
+        requests.push(api.put('/api/v1/users/me/privacy', privacyData));
+      }
+      if (Object.keys(profileData).length > 0) {
+        requests.push(updateMe(profileData));
+      }
+
+      await Promise.all(requests);
+      await fetchProfile();
+    } catch (e) {
+      console.error('Failed to update profile', e);
+      throw e;
+    }
+  }, [fetchProfile]);
+
+  const updateNotificationPreferencesInProvider = useCallback(async (prefs: Record<string, any>) => {
+    try {
+      await api.put("/api/v1/users/me/notifications", prefs);
+      // Update local state immediately for responsiveness
+      setProfile(prev => ({
+        ...prev,
+        notificationPreferences: prefs
+      }));
+      // Also persist to AsyncStorage
+      const updated = { ...profile, notificationPreferences: prefs };
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      
+      // Update the specific notification prefs key for other parts of the app
+      if (userToken) {
+        await AsyncStorage.setItem(`@notification_prefs_${userToken}`, JSON.stringify(prefs));
+      }
+    } catch (e) {
+      console.error('Failed to update notification preferences', e);
+      throw e;
+    }
+  }, [profile, userToken]);
 
   const toggleApp2fa = useCallback(async (enabled: boolean) => {
     const updated = { ...profile, appTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
@@ -193,7 +281,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [profile]);
 
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, toggleApp2fa, fetchProfile }}>
+    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, toggleApp2fa, updateProfile, updateNotificationPreferences: updateNotificationPreferencesInProvider, fetchProfile }}>
       {children}
     </ProfileContext.Provider>
   );

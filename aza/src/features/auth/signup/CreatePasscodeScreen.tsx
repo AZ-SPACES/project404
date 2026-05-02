@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useNavigation } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import {  useAppTheme, ThemeColors, Typography, Spacing,  } from "../../../theme";
+import {  useAppTheme, ThemeColors, Spacing, Radius } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -218,7 +218,7 @@ export default function CreatePasscodeScreen() {
                 backgroundColor={passcode.length === 4 ? Colors.primary : isDark ? Colors.white10 : "#E5E7EB"}
                 textColor={passcode.length === 4 ? Colors.secondary : isDark ? Colors.textSecondary : "#9CA3AF"}
                 disabled={passcode.length !== 4}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
               />
             </View>

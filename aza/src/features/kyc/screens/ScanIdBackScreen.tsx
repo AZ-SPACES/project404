@@ -15,7 +15,7 @@ import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture"
 import { useToast } from '../../../providers/ToastProvider';
 import { useKYC } from '../../../providers/KYCProvider';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -297,7 +297,7 @@ export default function ScanIdBackScreen() {
                 onPress={handleLooksGood}
                 backgroundColor={Colors.primary}
                 textColor={Colors.secondary}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
                 fontSize={Typography.button.fontSize}
                 loading={isSubmitting}
@@ -309,7 +309,7 @@ export default function ScanIdBackScreen() {
                 onPress={handleRetake}
                 backgroundColor={Colors.secondary}
                 textColor={Colors.primary}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
                 fontSize={Typography.button.fontSize}
               />

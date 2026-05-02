@@ -170,6 +170,20 @@ export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
 // --- User Endpoints ---
 
+export const getMe = () => api.get("/api/v1/users/me");
+
+export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
+
+export const uploadProfileImage = (file: any) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.put("/api/v1/users/me/profile-image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 export const checkHandleAvailability = (handle: string) =>
   api.get(`/api/v1/users/check-handle?handle=${encodeURIComponent(handle)}`);
 
