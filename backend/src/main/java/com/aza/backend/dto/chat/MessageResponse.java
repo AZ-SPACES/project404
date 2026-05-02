@@ -12,6 +12,7 @@ public class MessageResponse {
     private String chatId;
     private String senderId;
     private String ciphertext;
+    private String content;
     private String ephemeralKey;
     private String preKeyId;
     private String type;
@@ -20,6 +21,7 @@ public class MessageResponse {
     private String deliveredAt;
     private String readAt;
     private boolean isDeleted;
+    private Boolean isSelf;
     private String mediaKey;
     private boolean viewOnce;
     private String viewedAt;   // non-null = media has been consumed, mediaKey is gone

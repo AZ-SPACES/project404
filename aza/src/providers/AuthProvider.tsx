@@ -15,6 +15,8 @@ type AuthState = {
   isKYCVerified: boolean;
   hasPasscode: boolean;
   isBiometricsEnabled: boolean;
+  forcePasswordReset: boolean;
+  requireSelfieVerification: boolean;
   isLoading: boolean;
 };
 
@@ -25,6 +27,8 @@ type AuthContextType = AuthState & {
     token: string,
     hasPasscodeArg?: boolean,
     isKYCVerifiedArg?: boolean,
+    forcePasswordReset?: boolean,
+    requireSelfieVerification?: boolean,
   ) => void;
   logout: () => void;
   completeKYC: () => void;
@@ -56,8 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isKYCVerified: false,
     hasPasscode: false,
     isBiometricsEnabled: false,
+    forcePasswordReset: false,
+    requireSelfieVerification: false,
     isLoading: true,
   });
+
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -68,15 +75,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           stateFromStorage = JSON.parse(storedState);
         }
       } catch (e) {
-        // Restoring state failed
         console.error("Failed to load auth state", e);
+      }
+
+      let hasPasscodeResolved = stateFromStorage?.hasPasscode || false;
+      if (!hasPasscodeResolved && stateFromStorage?.userToken) {
+        try {
+          const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
+          hasPasscodeResolved = stored !== null;
+        } catch (_) {}
       }
 
       setAuthState({
         userToken: stateFromStorage?.userToken || null,
         isKYCVerified: stateFromStorage?.isKYCVerified || false,
-        hasPasscode: stateFromStorage?.hasPasscode || false,
+        hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
+        forcePasswordReset: stateFromStorage?.forcePasswordReset || false,
+        requireSelfieVerification: stateFromStorage?.requireSelfieVerification || false,
         isLoading: false,
       });
     };
@@ -115,11 +131,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     token: string,
     hasPasscodeArg: boolean = false,
     isKYCVerifiedArg: boolean = false,
+    forcePasswordResetArg: boolean = false,
+    requireSelfieVerificationArg: boolean = false,
   ) => {
     saveState({
       userToken: token,
       hasPasscode: hasPasscodeArg,
       isKYCVerified: isKYCVerifiedArg,
+      forcePasswordReset: forcePasswordResetArg,
+      requireSelfieVerification: requireSelfieVerificationArg,
     });
   }, [saveState]);
 
@@ -130,6 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isKYCVerified: false,
       hasPasscode: false,
       isBiometricsEnabled: false,
+      forcePasswordReset: false,
+      requireSelfieVerification: false,
       isLoading: false,
     });
     // Clear all persisted secrets in the background
@@ -166,11 +188,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-      // Do NOT set hasPasscode: true here. Setting it triggers RootNavigator to
-      // swap SetupNavigator → KYCNavigator immediately, before the navigator
-      // can proceed to the Consent screen (blank screen bug). The setPasscode()
-      // call at the end of the onboarding flow (EnableNotificationsScreen /
-      // EnableBiometricsScreen) is responsible for that state transition.
     } catch (e) {
       console.error("Failed to save passcode value", e);
       Alert.alert(
@@ -240,9 +257,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const toggleBiometrics = useCallback((enabled: boolean) => {
+  const toggleBiometrics = async (enabled: boolean) => {
     saveState({ isBiometricsEnabled: enabled });
-  }, [saveState]);
+    try {
+      const { updatePrivacySettings } = await import("../services/api");
+      await updatePrivacySettings({ biometricsEnabled: enabled });
+    } catch (e) {
+      console.error("Failed to sync biometrics setting to backend", e);
+    }
+  };
 
   return (
     <AuthContext.Provider

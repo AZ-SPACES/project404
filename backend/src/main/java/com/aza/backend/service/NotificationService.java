@@ -82,6 +82,20 @@ public class NotificationService {
     @Transactional
     public void sendNotification(UUID userId, Notification.NotificationType type,
                                  String title, String body, Map<String, Object> data) {
+        sendNotificationWithImage(userId, type, title, body, data, null, null);
+    }
+
+    @Transactional
+    public void sendNotification(UUID userId, Notification.NotificationType type,
+                                 String title, String body, Map<String, Object> data,
+                                 BigDecimal paymentAmount) {
+        sendNotificationWithImage(userId, type, title, body, data, paymentAmount, null);
+    }
+
+    @Transactional
+    public void sendNotificationWithImage(UUID userId, Notification.NotificationType type,
+                                 String title, String body, Map<String, Object> data,
+                                 BigDecimal paymentAmount, String imageUrl) {
         // Save in-app notification
         String dataJson = null;
         try {
@@ -96,6 +110,7 @@ public class NotificationService {
                 .title(title)
                 .body(body)
                 .data(dataJson)
+                .imageUrl(imageUrl)
                 .build();
 
         notification = notificationRepository.save(notification);
@@ -107,39 +122,10 @@ public class NotificationService {
 
         // Also send FCM push if user is offline — subject to silent hours gating
         if (!presenceService.isOnline(userId)) {
-            sendFcmPushIfAllowed(userId, title, body, data, null);
+            sendFcmPushIfAllowed(userId, title, body, data, paymentAmount, imageUrl);
         }
     }
 
-    @Transactional
-    public void sendNotification(UUID userId, Notification.NotificationType type,
-                                 String title, String body, Map<String, Object> data,
-                                 BigDecimal paymentAmount) {
-        String dataJson = null;
-        try {
-            if (data != null) dataJson = objectMapper.writeValueAsString(data);
-        } catch (Exception e) {
-            log.warn("Failed to serialize notification data: {}", e.getMessage());
-        }
-
-        Notification notification = Notification.builder()
-                .userId(userId)
-                .type(type)
-                .title(title)
-                .body(body)
-                .data(dataJson)
-                .build();
-
-        notification = notificationRepository.save(notification);
-
-        NotificationResponse response = toNotificationResponse(notification);
-        webSocketPublisher.publishNotification(
-                userId, WebSocketEventType.NOTIFICATION_NEW, response);
-
-        if (!presenceService.isOnline(userId)) {
-            sendFcmPushIfAllowed(userId, title, body, data, paymentAmount);
-        }
-    }
 
     //CONVENIENCE METHODS
 
@@ -317,6 +303,11 @@ public class NotificationService {
     }
 
     @Transactional
+    public void deleteAll(UUID userId) {
+        notificationRepository.deleteAllByUserId(userId);
+    }
+
+    @Transactional
     public void markAsRead(UUID userId, UUID notificationId) {
         notificationRepository.findById(notificationId).ifPresent(notification -> {
             if (!notification.getUserId().equals(userId)) {
@@ -330,13 +321,13 @@ public class NotificationService {
     // FCM PUSH
 
     private void sendFcmPushIfAllowed(UUID userId, String title, String body,
-                                      Map<String, Object> data, BigDecimal paymentAmount) {
+                                      Map<String, Object> data, BigDecimal paymentAmount, String imageUrl) {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null && isSuppressedBySilentHours(user, paymentAmount)) {
             log.debug("FCM push suppressed by silent hours for user {}", userId);
             return;
         }
-        sendFcmPush(userId, title, body, data);
+        sendFcmPush(userId, title, body, data, imageUrl);
     }
 
     private boolean isSuppressedBySilentHours(User user, BigDecimal paymentAmount) {
@@ -375,7 +366,7 @@ public class NotificationService {
      * See FirebaseConfig.java for setup instructions.
      */
     private void sendFcmPush(UUID userId, String title, String body,
-                             Map<String, Object> data) {
+                             Map<String, Object> data, String imageUrl) {
         if (com.google.firebase.FirebaseApp.getApps().isEmpty()) {
             log.debug("Firebase not initialised — skipping push for user {}", userId);
             return;
@@ -395,6 +386,7 @@ public class NotificationService {
                         com.google.firebase.messaging.Notification.builder()
                                 .setTitle(title)
                                 .setBody(body)
+                                .setImage(imageUrl)
                                 .build();
 
                 Message message = Message.builder()
@@ -432,6 +424,7 @@ public class NotificationService {
                 .title(n.getTitle())
                 .body(n.getBody())
                 .data(n.getData())
+                .imageUrl(n.getImageUrl())
                 .isRead(Boolean.TRUE.equals(n.getIsRead()))
                 .createdAt(n.getCreatedAt() != null ? n.getCreatedAt().toString() : null)
                 .build();

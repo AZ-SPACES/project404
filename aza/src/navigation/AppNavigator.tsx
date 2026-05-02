@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuth } from '../providers/AuthProvider';
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
@@ -68,6 +69,16 @@ import { InboxScreen } from '../features/notifications';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+  const { forcePasswordReset } = useAuth();
+
+  if (forcePasswordReset) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
     <Stack.Navigator
       initialRouteName="MainTabs"

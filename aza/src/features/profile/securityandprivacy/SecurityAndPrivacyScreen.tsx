@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, useRef, useEffect } from 'react';
+import React, { ComponentProps, useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
@@ -6,7 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { updatePrivacySettings, api, unsyncContacts } from '../../../services/api';
 
 const { height } = Dimensions.get('window');
 
@@ -71,14 +73,39 @@ export function SecurityAndPrivacyScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
+  const { syncContacts, setSyncContacts: setSyncContactsInProvider } = useProfile();
 
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // State for toggles
-  const [syncContacts, setSyncContacts] = useState(true);
   const [biometricData, setBiometricData] = useState(true);
-  
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  // Fetch initial privacy/security settings
+  useEffect(() => {
+    api.get('/api/v1/users/me').then(({ data }) => {
+      const u = data.data ?? data;
+      if (u.twoFactorEnabled != null) setTwoFactorEnabled(u.twoFactorEnabled);
+    }).catch(() => {});
+  }, []);
+
+  // Debounced save for syncContacts
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSyncContactsChange = useCallback((v: boolean) => {
+    setSyncContactsInProvider(v);
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(async () => {
+      try { 
+        await updatePrivacySettings({ syncContacts: v }); 
+        if (v === false) {
+           await unsyncContacts();
+        }
+      } catch { /* silent */ }
+    }, 800);
+  }, [setSyncContactsInProvider]);
+  useEffect(() => () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); }, []);
+
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
   const bottomSheetAnim = useRef(new Animated.Value(height)).current;
@@ -172,7 +199,7 @@ export function SecurityAndPrivacyScreen() {
             iconType="MaterialCommunityIcons" 
             iconName="fingerprint" 
             title="2-step verification" 
-            subtitle="Status: On"
+            subtitle={twoFactorEnabled ? "Status: On" : "Status: Off"}
             onPress={() => navigation.navigate("TwoStepVerification")}
           />
           
@@ -234,10 +261,10 @@ export function SecurityAndPrivacyScreen() {
             iconType="Feather" 
             iconName="users" 
             title="Sync your phone contacts" 
-            subtitle="Send and request from your contacts who have a Aza account"
+            subtitle="Send and request from your contacts who have an Aza account"
             showSwitch
             switchValue={syncContacts}
-            onSwitchChange={setSyncContacts}
+            onSwitchChange={handleSyncContactsChange}
           />
           
           <SettingRow 

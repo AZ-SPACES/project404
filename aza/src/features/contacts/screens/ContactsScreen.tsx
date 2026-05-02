@@ -36,6 +36,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import * as Contacts from "expo-contacts";
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
+import { useProfile } from "../../../providers/ProfileProvider";
 import { Contact as BackendContact } from "../types";
 
 const AZA_ICON = require("../../../assets/aza-z.png");
@@ -73,12 +74,16 @@ export default function ContactsScreen() {
     findUserByHandle,
     searchGlobal
   } = useContactStore();
+  const { syncContacts: isSyncAllowed } = useProfile();
 
   useEffect(() => {
     fetchContacts();
   }, []);
 
   useEffect(() => {
+    // Only sync if the user has enabled the setting in Privacy settings
+    if (!isSyncAllowed) return;
+
     (async () => {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status === "granted") {
@@ -105,10 +110,21 @@ export default function ContactsScreen() {
         }
       }
     })();
-  }, []);
+  }, [isSyncAllowed]);
+
+  // Deduplicate by id — backend may return the same contact more than once
+  // (e.g. matched by both phone and email during sync)
+  const uniqueContacts = React.useMemo(() => {
+    const seen = new Set<string>();
+    return backendContacts.filter((c) => {
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+  }, [backendContacts]);
 
   // Map backend contacts to UI Recipients
-  const contactsList: Recipient[] = backendContacts.map(c => ({
+  const contactsList: Recipient[] = uniqueContacts.map(c => ({
     id: c.id,
     name: c.displayName,
     username: c.handle ? `@${c.handle}` : (c.phoneNumber || c.email || ''),
@@ -301,7 +317,7 @@ export default function ContactsScreen() {
         {/* List */}
         <SectionList
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderItem}
           renderSectionHeader={({ section: { title } }) => (
             <View style={styles.sectionHeader}>

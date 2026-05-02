@@ -59,6 +59,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("All sessions revoked"));
     }
 
+    @PostMapping("/secure-account")
+    public ResponseEntity<ApiResponse<String>> secureAccount(
+            @AuthenticationPrincipal User user,
+            HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        authService.secureAccount(user, authHeader != null && authHeader.startsWith("Bearer ")
+                ? authHeader.substring(7) : null);
+        return ResponseEntity.ok(ApiResponse.success("Account secured. All sessions revoked."));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request) {
@@ -101,17 +111,26 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
+            @Valid @RequestBody ResetPasswordRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        authService.resetPassword(request, ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully"));
     }
 
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(user, request);
+            @Valid @RequestBody ChangePasswordRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        authService.changePassword(user, request, ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
+    }
+
+    @PostMapping("/secure-account-with-token")
+    public ResponseEntity<ApiResponse<String>> secureWithToken(
+            @RequestParam String token) {
+        authService.secureAccountWithToken(token);
+        return ResponseEntity.ok(ApiResponse.success("Account secured successfully"));
     }
 
     @PostMapping("/passcode/set")

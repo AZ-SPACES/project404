@@ -35,8 +35,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             "LOWER(u.displayName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
-            "u.status = 'ACTIVE'")
+            "u.status = 'ACTIVE' AND u.findMeByHandle = true")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE u.phone = :phone AND u.status = 'ACTIVE' AND u.findMeByPhone = true")
+    Optional<User> findByPhoneAndPrivacy(@Param("phone") String phone);
+
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.status = 'ACTIVE' AND u.findMeByEmail = true")
+    Optional<User> findByEmailAndPrivacy(@Param("email") String email);
 
     // Admin queries — no status filter
     @Query("SELECT u FROM User u WHERE " +
@@ -55,4 +61,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByStatus(User.AccountStatus status);
 
     long countByKycStatus(User.KycStatus kycStatus);
+
+    java.util.List<User> findAllByRole(User.UserRole role);
+
+    java.util.List<User> findAllByKycStatus(User.KycStatus kycStatus);
+
+    java.util.List<User> findAllByStatus(User.AccountStatus status);
 }

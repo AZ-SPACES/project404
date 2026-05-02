@@ -36,6 +36,9 @@ public class Notification {
     @Column(columnDefinition = "TEXT")
     private String data;
 
+    @Column
+    private String imageUrl;
+
     @Builder.Default
     private Boolean isRead = false;
 
@@ -57,7 +60,8 @@ public class Notification {
         PAYMENT_REQUEST_PAID,
         PAYMENT_REQUEST_DECLINED,
         PAYMENT_REQUEST_EXPIRED,
-        PAYMENT_REQUEST_CANCELLED
+        PAYMENT_REQUEST_CANCELLED,
+        SYSTEM_BROADCAST
     }
 
 }

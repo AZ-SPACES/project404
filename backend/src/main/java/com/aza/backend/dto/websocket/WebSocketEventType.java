@@ -44,6 +44,10 @@ public enum WebSocketEventType {
     PAYMENT_REQUEST_CANCELLED("payment.request.cancelled"),
     PAYMENT_REQUEST_EXPIRED("payment.request.expired"),
 
+    // Admin support inbox
+    SUPPORT_NEW_MESSAGE("support.new_message"),
+    SUPPORT_CHAT_UPDATED("support.chat_updated"),
+
     // System
     TRANSFER_UPDATE("transfer.update"),
     NOTIFICATION_NEW("notification.new");

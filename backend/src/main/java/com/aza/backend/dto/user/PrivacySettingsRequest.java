@@ -6,4 +6,8 @@ import lombok.Data;
 public class PrivacySettingsRequest {
     private Boolean findMeByPhone;
     private Boolean findMeByEmail;
+    private Boolean findMeByHandle;
+    private Boolean syncContacts;
+    private Boolean billForwardingEnabled;
+    private Boolean biometricsEnabled;
 }

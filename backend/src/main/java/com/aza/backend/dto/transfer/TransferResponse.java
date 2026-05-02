@@ -20,6 +20,7 @@ public class TransferResponse {
     private String note;
     private String type;
     private String status;
+    private String direction; // INCOMING or OUTGOING
     private String initiatedAt;
     private String completedAt;
 }

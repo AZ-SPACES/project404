@@ -25,9 +25,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useDisplayContext } from "../../../providers/DisplayProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
-import { mockTransactions } from "./TransactionsScreen";
+import { useNotifications } from "../../../providers/NotificationProvider";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { ActionTarget } from "../components/ActionTarget";
+import { useWallet } from "../../../hooks/useWallet";
 
 const { height } = Dimensions.get("window");
 
@@ -48,10 +49,17 @@ export default function HomeScreen() {
   const { displayName, profileImageUri } = useProfile();
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
+  const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
+  const { unreadCount } = useNotifications();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   const [updateText, setUpdateText] = React.useState("Updated just now");
+
+  React.useEffect(() => {
+    if (!loading && !refreshing) {
+      setLastUpdated(new Date());
+    }
+  }, [loading, refreshing]);
 
   React.useEffect(() => {
     const updateTimer = () => {
@@ -78,20 +86,13 @@ export default function HomeScreen() {
   }, [lastUpdated]);
 
   const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    // Simulate a network request or data refresh
-    setTimeout(() => {
-      setLastUpdated(new Date());
-      setRefreshing(false);
-    }, 1500);
-  }, []);
+    refresh();
+  }, [refresh]);
 
   const firstName = displayName?.trim().split(" ")[0];
   const greeting = getGreeting();
   
-  const recentTransactions = React.useMemo(() => {
-    return mockTransactions.flatMap((section) => section.data).slice(0, 3);
-  }, []);
+  // Use recentTransactions from useWallet
 
   return (
     <View style={styles.container}>
@@ -144,6 +145,13 @@ export default function HomeScreen() {
                 accessibilityLabel="Open notifications"
               >
                 <Feather name="bell" size={24} color={Colors.white} />
+                {unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -154,13 +162,17 @@ export default function HomeScreen() {
               Main • GHS
             </Text>
             <View style={styles.balanceRow}>
-              <Text
-                style={[Typography.h1, styles.balanceText]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {isBalanceVisible ? "GH₵ 392.00" : "••••"}
-              </Text>
+                {loading && !wallet ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text
+                    style={[Typography.h1, styles.balanceText]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                  </Text>
+                )}
               <TouchableOpacity
                 style={styles.eyeIcon}
                 accessibilityLabel="Toggle balance visibility"
@@ -231,12 +243,16 @@ export default function HomeScreen() {
           <Text style={[Typography.h3, styles.transactionsTitle]}>
             Transactions
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: "GH₵ 392.00" })}>
+          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || "GH₵ 0.00" })}>
             <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {recentTransactions.length > 0 ? (
+        {loading && recentTransactions.length === 0 ? (
+          <View style={[styles.emptyStateCard, { justifyContent: 'center', padding: Spacing.xl }]}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+          </View>
+        ) : recentTransactions.length > 0 ? (
           <View style={styles.recentTransactionsList}>
             {recentTransactions.map((item) => (
               <TransactionItem key={item.id} item={item} />
@@ -342,6 +358,25 @@ function createStyles(Colors: ThemeColors) {
       backgroundColor: "rgba(0, 0, 0, 0.28)",
       justifyContent: "center",
       alignItems: "center",
+    },
+    unreadBadge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      backgroundColor: Colors.error || "#EF4444",
+      borderRadius: Radius.full,
+      minWidth: 16,
+      height: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+      borderWidth: 1.5,
+      borderColor: Colors.primary,
+    },
+    unreadBadgeText: {
+      color: Colors.white,
+      fontSize: 10,
+      fontWeight: "bold",
     },
     balanceSection: {
       alignItems: "center",

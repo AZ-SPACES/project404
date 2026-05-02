@@ -55,6 +55,14 @@ public class WebSocketPublisher {
     }
 
     /**
+     * Broadcast a support inbox event to all admin agents subscribed to /topic/admin/support.
+     * Used to push live inbox updates when any user sends a support message.
+     */
+    public void publishToAdminSupport(WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.ADMIN_SUPPORT_CHANNEL, type, payload);
+    }
+
+    /**
      * Send directly to a user on this instance — no Redis hop.
      * Use for low-latency responses to the sender (e.g. heartbeat ack).
      */

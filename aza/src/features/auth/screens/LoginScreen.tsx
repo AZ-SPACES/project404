@@ -41,9 +41,16 @@ const LoginScreen: React.FC = () => {
   const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
-  const { login, isBiometricsEnabled } = useAuth();
+  const [hasBiometricToken, setHasBiometricToken] = useState(false);
+  const { login } = useAuth();
   const { showToast } = useToast();
   usePreventScreenCapture();
+
+  React.useEffect(() => {
+    SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY).then((token) => {
+      setHasBiometricToken(!!token);
+    });
+  }, []);
 
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
   const credentialError = touched && !credentialValid
@@ -84,25 +91,43 @@ const LoginScreen: React.FC = () => {
 
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to aza',
-        disableDeviceFallback: true,
+        disableDeviceFallback: false,
+        fallbackLabel: 'Use passcode',
       });
 
-      if (result.success) {
-        const storedToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
-        if (!storedToken) {
-          showToast('Biometric not set up. Please log in with your passcode.', 'error');
-          return;
+      if (!result.success) {
+        if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+          showToast(
+            result.error === 'not_enrolled'
+              ? 'Biometrics not set up on this device.'
+              : `Authentication failed: ${result.error ?? 'unknown error'}`,
+            'error',
+          );
         }
-        const deviceId = await getDeviceId();
-        const response = await biometricLogin(storedToken, deviceId);
-        const payload = response.data?.data ?? response.data;
-        const { accessToken, refreshToken } = payload;
-        await SecureStore.setItemAsync('aza_access_token', accessToken);
-        await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
-        login(accessToken, true, payload.kycVerified ?? true);
+        return;
       }
-    } catch (e) {
-      showToast('Biometric authentication failed. Please try again.', 'error');
+
+      const storedToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
+      if (!storedToken) {
+        showToast('Biometric login not set up. Please log in with your credentials first.', 'error');
+        return;
+      }
+      const deviceId = await getDeviceId();
+      const response = await biometricLogin(storedToken, deviceId);
+      const payload = response.data?.data ?? response.data;
+      const { accessToken, refreshToken } = payload;
+      await SecureStore.setItemAsync('aza_access_token', accessToken);
+      await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
+      login(
+        accessToken, 
+        payload.user?.passcodeSet ?? true, 
+        payload.user?.kycStatus === 'VERIFIED',
+        payload.user?.forcePasswordReset ?? false,
+        payload.user?.requireSelfieVerification ?? false,
+      );
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      showToast(msg || 'Biometric authentication failed. Please try again.', 'error');
     } finally {
       setIsBiometricLoading(false);
     }
@@ -150,6 +175,7 @@ const LoginScreen: React.FC = () => {
               <MaterialIcons name="mail-outline" color={Colors.primary} style={styles.inputIcon}/>
             )}
             <TextInput
+              key={useEmail ? 'email' : 'phone'}
               style={styles.input}
               placeholder={useEmail ? 'Email Address' : 'Phone Number'}
               placeholderTextColor={Colors.textSecondary}
@@ -159,6 +185,8 @@ const LoginScreen: React.FC = () => {
                 : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
               onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}
+              autoComplete={useEmail ? 'email' : 'tel'}
+              textContentType={useEmail ? 'emailAddress' : 'telephoneNumber'}
               autoCapitalize="none"
               accessibilityLabel={useEmail ? 'Email address' : 'Phone number'}
               maxLength={useEmail ? undefined : 10}
@@ -218,7 +246,7 @@ const LoginScreen: React.FC = () => {
             disabled={isLoading}
           />
 
-          {isBiometricsEnabled && (
+          {hasBiometricToken && (
             <TouchableOpacity
               style={styles.biometricButton}
               onPress={handleBiometricAuth}

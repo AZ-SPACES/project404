@@ -13,6 +13,7 @@ public class NotificationResponse {
     private String title;
     private String body;
     private String data;
+    private String imageUrl;
     private boolean isRead;
     private String createdAt;
 }

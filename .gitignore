@@ -10,3 +10,7 @@
 backend/src/main/resources/ firebase-service-account.json
 *.pdf
 backend/_env.bin
+aza-admin/.env.local
+aza-admin/.next
+aza-web/.next
+

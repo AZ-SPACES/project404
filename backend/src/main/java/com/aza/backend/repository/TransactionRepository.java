@@ -16,6 +16,8 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
+    java.util.List<Transaction> findAllBySenderIdAndStatus(UUID senderId, Transaction.TransactionStatus status);
+
     /* Find all transactions where user is sender or recipient, ordered by most recent first. */
     @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId OR t.recipientId = :userId ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllByUserId(@Param("userId") UUID userId, Pageable pageable);
@@ -46,6 +48,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                  @Param("endOfDay") LocalDateTime endofDay,
                                  @Param("now") LocalDateTime now);
 
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.senderId = :userId " +
+            "AND t.type = 'TRANSFER' " +
+            "AND t.status = 'COMPLETED' " +
+            "AND t.initiatedAt >= :start " +
+            "AND t.initiatedAt < :end")
+    BigDecimal getTotalSpentBetween(@Param("userId") UUID userId,
+                                    @Param("start") LocalDateTime start,
+                                    @Param("end") LocalDateTime end);
+
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
     long countByStatus(Transaction.TransactionStatus status);
@@ -62,4 +74,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT t FROM Transaction t ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllOrderByInitiatedAtDesc(Pageable pageable);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.initiatedAt > :since")
+    long countByInitiatedAtAfter(@Param("since") java.time.LocalDateTime since);
 }

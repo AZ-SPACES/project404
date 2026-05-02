@@ -15,6 +15,7 @@ import {
   NewDeviceLoginScreen,
   ResetPasswordScreen,
   ResetOTPScreen,
+  ResetNewPasswordScreen,
   SignUpNumberScreen,
   SignUpEmailScreen,
   SignUpPasswordScreen,
@@ -54,6 +55,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="NewDeviceLogin" component={NewDeviceLoginScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="ResetOTP" component={ResetOTPScreen} />
+      <Stack.Screen name="ResetNewPassword" component={ResetNewPasswordScreen} />
       <Stack.Screen name="SignUpNumber" component={SignUpNumberScreen} />
       <Stack.Screen name="SignUpEmail" component={SignUpEmailScreen} />
       <Stack.Screen name="SignUpPassword" component={SignUpPasswordScreen} />
