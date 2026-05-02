@@ -140,7 +140,7 @@ function createStyles(Colors: ThemeColors) {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
     justifyContent: 'center',
     alignItems: 'center' },
   scrollContent: {

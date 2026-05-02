@@ -115,6 +115,8 @@ const OTPScreen: React.FC = () => {
           data.data.accessToken,
           data.data.user?.passcodeSet ?? false,
           data.data.user?.kycStatus === 'VERIFIED',
+          data.data.user?.forcePasswordReset ?? false,
+          data.data.user?.requireSelfieVerification ?? false,
         );
       }
     } catch (error: any) {

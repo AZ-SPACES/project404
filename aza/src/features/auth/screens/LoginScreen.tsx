@@ -118,7 +118,13 @@ const LoginScreen: React.FC = () => {
       const { accessToken, refreshToken } = payload;
       await SecureStore.setItemAsync('aza_access_token', accessToken);
       await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
-      login(accessToken, payload.user?.passcodeSet ?? true, payload.user?.kycStatus === 'VERIFIED');
+      login(
+        accessToken, 
+        payload.user?.passcodeSet ?? true, 
+        payload.user?.kycStatus === 'VERIFIED',
+        payload.user?.forcePasswordReset ?? false,
+        payload.user?.requireSelfieVerification ?? false,
+      );
     } catch (e: any) {
       const msg = e?.response?.data?.message;
       showToast(msg || 'Biometric authentication failed. Please try again.', 'error');

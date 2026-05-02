@@ -111,17 +111,26 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
+            @Valid @RequestBody ResetPasswordRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        authService.resetPassword(request, ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully"));
     }
 
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<String>> changePassword(
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(user, request);
+            @Valid @RequestBody ChangePasswordRequest request, HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        authService.changePassword(user, request, ipAddress);
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully"));
+    }
+
+    @PostMapping("/secure-account-with-token")
+    public ResponseEntity<ApiResponse<String>> secureWithToken(
+            @RequestParam String token) {
+        authService.secureAccountWithToken(token);
+        return ResponseEntity.ok(ApiResponse.success("Account secured successfully"));
     }
 
     @PostMapping("/passcode/set")

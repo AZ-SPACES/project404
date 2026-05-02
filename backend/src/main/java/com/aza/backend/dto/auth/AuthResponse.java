@@ -43,6 +43,8 @@ public class AuthResponse {
         private Boolean billForwardingEnabled;
         // Security
         private Boolean twoFactorEnabled;
+        private Boolean forcePasswordReset;
+        private Boolean requireSelfieVerification;
         private String notificationPreferences;
     }
 }

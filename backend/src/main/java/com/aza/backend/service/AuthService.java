@@ -5,8 +5,10 @@ import com.aza.backend.entity.RecoveryCode;
 import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
+import com.aza.backend.entity.Transaction;
 import com.aza.backend.repository.RecoveryCodeRepository;
 import com.aza.backend.repository.RefreshTokenRepository;
+import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.security.JwtUtil;
@@ -39,6 +41,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TransactionRepository transactionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
@@ -204,6 +207,11 @@ public class AuthService {
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
 
+        // Set security flags
+        user.setForcePasswordReset(true);
+        user.setRequireSelfieVerification(true);
+        userRepository.save(user);
+
         // Blacklist the current access token for its remaining validity
         if (accessToken != null) {
             Duration remaining = jwtUtil.getRemainingValidity(accessToken);
@@ -214,6 +222,16 @@ public class AuthService {
                         remaining);
             }
         }
+
+        // Cancel all pending transfers where user is sender
+        java.util.List<Transaction> pending = transactionRepository.findAllBySenderIdAndStatus(
+                user.getId(), Transaction.TransactionStatus.PENDING);
+
+        for (Transaction t : pending) {
+            t.setStatus(Transaction.TransactionStatus.CANCELLED);
+            t.setCancelledAt(java.time.LocalDateTime.now());
+        }
+        transactionRepository.saveAll(pending);
     }
 
     // ==================== REFRESH TOKEN ====================
@@ -317,7 +335,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
+    public void resetPassword(ResetPasswordRequest request, String ipAddress) {
         verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
 
         User user = userRepository
@@ -329,21 +347,45 @@ public class AuthService {
 
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
+
+        notifyPasswordChanged(user, ipAddress);
     }
 
     // ==================== CHANGE PASSWORD ====================
 
     @Transactional
-    public void changePassword(User user, ChangePasswordRequest request) {
+    public void changePassword(User user, ChangePasswordRequest request, String ipAddress) {
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Current password is incorrect");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setForcePasswordReset(false);
         userRepository.save(user);
 
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
+
+        notifyPasswordChanged(user, ipAddress);
+    }
+
+    private void notifyPasswordChanged(User user, String ipAddress) {
+        String secureToken = java.util.UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set("secure_token:" + secureToken, user.getId().toString(), Duration.ofHours(24));
+        emailService.sendPasswordChangedNotification(user.getEmail(), user.getFirstName(), ipAddress, secureToken);
+    }
+
+    public void secureAccountWithToken(String token) {
+        String userIdStr = redisTemplate.opsForValue().get("secure_token:" + token);
+        if (userIdStr == null) {
+            throw new RuntimeException("Invalid or expired security token");
+        }
+
+        User user = userRepository.findById(java.util.UUID.fromString(userIdStr))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        secureAccount(user, null);
+        redisTemplate.delete("secure_token:" + token);
     }
 
     // ==================== TOTP / 2FA ====================

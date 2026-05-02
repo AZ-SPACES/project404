@@ -11,7 +11,8 @@ export type RootStackParamList = {
   AccountDeactivated: undefined;
   NewDeviceLogin: undefined;
   ResetPassword: undefined;
-  ResetOTP: undefined;
+  ResetOTP: { email: string };
+  ResetNewPassword: { email: string; code: string };
   SignUpNumber: undefined;
   SignUpEmail: undefined;
   SignUpPassword: undefined;
@@ -67,6 +68,8 @@ export type RootStackParamList = {
   LogoutEverywhere: undefined;
   Devices: undefined;
   TwoStepVerification: undefined;
+  TotpSetup: undefined;
+  RecoveryCodes: { codes: string[] };
   FindMeBy: undefined;
   BillForwardingIntro: undefined;
   BillForwardingDetails: undefined;
