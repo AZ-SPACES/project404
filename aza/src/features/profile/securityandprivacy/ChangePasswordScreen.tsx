@@ -5,6 +5,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
+import { useAuth } from '../../../providers/AuthProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 import { isValidPassword, getPasswordRules } from '../../../utils/validation';
@@ -14,6 +15,7 @@ import { changePassword as changePasswordApi } from '../../../services/api';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
+  const { logout, forcePasswordReset } = useAuth();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChangePassword'>>();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -33,8 +35,8 @@ export function ChangePasswordScreen() {
     setIsLoading(true);
     try {
       await changePasswordApi(currentPassword, newPassword);
-      showToast('Password updated successfully', 'success');
-      navigation.goBack();
+      showToast('Password updated successfully. Please login again.', 'success');
+      logout();
     } catch (err: unknown) {
       const message = (err as any)?.response?.data?.message ?? 'Failed to update password. Please try again.';
       showToast(message, 'error');
@@ -50,14 +52,16 @@ export function ChangePasswordScreen() {
         backgroundColor={Colors.background} 
       />
       
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      {!forcePasswordReset && (
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

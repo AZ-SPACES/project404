@@ -255,6 +255,15 @@ export const getTransactions = (page = 0, size = 20, type?: string, status?: str
 export const changePassword = (currentPassword: string, newPassword: string) =>
   api.post("/api/v1/auth/change-password", { currentPassword, newPassword });
 
+export const forgotPassword = (identifier: string) =>
+  api.post("/api/v1/auth/forgot-password", { identifier });
+
+export const resetPassword = (identifier: string, code: string, newPassword: string) =>
+  api.post("/api/v1/auth/reset-password", { identifier, code, newPassword });
+
+export const verifyOtp = (identifier: string, code: string, purpose: string) =>
+  api.post("/api/v1/auth/verify-otp", { identifier, code, purpose });
+
 export const logoutEverywhere = () =>
   api.post("/api/v1/auth/logout-everywhere");
 

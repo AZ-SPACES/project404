@@ -16,6 +16,8 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
+    java.util.List<Transaction> findAllBySenderIdAndStatus(UUID senderId, Transaction.TransactionStatus status);
+
     /* Find all transactions where user is sender or recipient, ordered by most recent first. */
     @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId OR t.recipientId = :userId ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllByUserId(@Param("userId") UUID userId, Pageable pageable);

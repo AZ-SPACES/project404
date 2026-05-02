@@ -13,6 +13,8 @@ type AuthState = {
   isKYCVerified: boolean;
   hasPasscode: boolean;
   isBiometricsEnabled: boolean;
+  forcePasswordReset: boolean;
+  requireSelfieVerification: boolean;
   isLoading: boolean;
 };
 
@@ -23,6 +25,8 @@ type AuthContextType = AuthState & {
     token: string,
     hasPasscodeArg?: boolean,
     isKYCVerifiedArg?: boolean,
+    forcePasswordReset?: boolean,
+    requireSelfieVerification?: boolean,
   ) => void;
   logout: () => void;
   completeKYC: () => void;
@@ -54,6 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isKYCVerified: false,
     hasPasscode: false,
     isBiometricsEnabled: false,
+    forcePasswordReset: false,
+    requireSelfieVerification: false,
     isLoading: true,
   });
 
@@ -63,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isKYCVerified: false,
       hasPasscode: false,
       isBiometricsEnabled: false,
+      forcePasswordReset: false,
+      requireSelfieVerification: false,
       isLoading: false,
     });
     Promise.all([
@@ -97,6 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isKYCVerified: stateFromStorage?.isKYCVerified || false,
         hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
+        forcePasswordReset: stateFromStorage?.forcePasswordReset || false,
+        requireSelfieVerification: stateFromStorage?.requireSelfieVerification || false,
         isLoading: false,
       });
     };
@@ -129,11 +139,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     token: string,
     hasPasscodeArg: boolean = false,
     isKYCVerifiedArg: boolean = false,
+    forcePasswordResetArg: boolean = false,
+    requireSelfieVerificationArg: boolean = false,
   ) => {
     saveState({
       userToken: token,
       hasPasscode: hasPasscodeArg,
       isKYCVerified: isKYCVerifiedArg,
+      forcePasswordReset: forcePasswordResetArg,
+      requireSelfieVerification: requireSelfieVerificationArg,
     });
   };
 

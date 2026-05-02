@@ -18,7 +18,9 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Button from "../../../components/ui/Button";
+import { Alert } from "react-native";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { forgotPassword } from "../../../services/api";
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -91,8 +93,11 @@ export default function ResetPasswordScreen() {
                   if (!isValidEmail(email)) { setTouched(true); return; }
                   setIsLoading(true);
                   try {
-                    // TODO: call send-reset-email API, then navigate on success
-                    navigation.navigate("ResetOTP");
+                    await forgotPassword(email);
+                    navigation.navigate("ResetOTP", { email });
+                  } catch (err: any) {
+                    const msg = err.response?.data?.message || "Failed to send reset code";
+                    Alert.alert("Error", msg);
                   } finally {
                     setIsLoading(false);
                   }

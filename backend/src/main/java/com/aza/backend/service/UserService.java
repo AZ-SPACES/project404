@@ -75,6 +75,8 @@ public class UserService {
                 .syncContacts(user.getSyncContacts())
                 .billForwardingEnabled(user.getBillForwardingEnabled())
                 .twoFactorEnabled(user.getTwoFactorEnabled())
+                .forcePasswordReset(user.getForcePasswordReset())
+                .requireSelfieVerification(user.getRequireSelfieVerification())
                 .notificationPreferences(user.getNotificationPreferences())
                 .build();
     }
