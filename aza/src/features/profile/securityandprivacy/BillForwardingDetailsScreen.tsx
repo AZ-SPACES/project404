@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { updatePrivacySettings } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -26,11 +27,21 @@ export function BillForwardingDetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [enabled, setEnabled] = useState(true);
+  const { billForwardingEnabled, setBillForwardingEnabled, handle, email } = useProfile();
+  const [enabled, setEnabled] = useState(billForwardingEnabled);
   const [copied, setCopied] = useState(false);
-  const { email } = useProfile();
-  // TODO: replace with user-specific billing address from backend (e.g. bills+{handle}@aza.app)
-  const emailAddress = email ? `bills+${email.split('@')[0]}@aza.app` : 'Pending account setup';
+  // Using user-specific billing address from backend (e.g. bills+{handle}@aza.app)
+  const emailAddress = handle ? `bills+${handle}@aza.app` : 'Pending account setup';
+
+  const handleToggle = async (value: boolean) => {
+    setEnabled(value);
+    try {
+      await updatePrivacySettings({ billForwardingEnabled: value });
+      await setBillForwardingEnabled(value);
+    } catch (e) {
+      setEnabled(!value); // Revert on failure
+    }
+  };
 
   const handleCopy = () => {
     Clipboard.setString(emailAddress);
@@ -82,7 +93,7 @@ export function BillForwardingDetailsScreen() {
             </View>
             <Switch
               value={enabled}
-              onValueChange={setEnabled}
+              onValueChange={handleToggle}
               trackColor={{ false: "#E5E7EB", true: "#243b14" }}
               thumbColor={Colors.white}
               ios_backgroundColor="#E5E7EB"
@@ -98,13 +109,21 @@ export function BillForwardingDetailsScreen() {
               <View style={styles.emailContainer}>
                 <Text style={styles.label}>Send bills or invoices to</Text>
                 <Text style={styles.emailText}>
-                  {emailAddress}
+                  bills@azapay.com
+                </Text>
+                <Text style={[Typography.caption, { color: Colors.primary, marginTop: 8, fontWeight: '600' }]}>
+                  Important: Must be forwarded from {email}
                 </Text>
               </View>
               <TouchableOpacity 
                 style={[styles.copyButton, copied && { backgroundColor: "#DCFCE7" }]} 
                 activeOpacity={0.7}
-                onPress={handleCopy}
+                onPress={() => {
+                  Clipboard.setString('bills@azapay.com');
+                  setCopied(true);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setTimeout(() => setCopied(false), 3000);
+                }}
               >
                 <Text style={[styles.copyButtonText, copied && { color: "#166534" }]}>
                   {copied ? "Copied" : "Copy"}

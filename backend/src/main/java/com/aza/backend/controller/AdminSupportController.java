@@ -1,8 +1,12 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.admin.CannedResponseDto;
+import com.aza.backend.dto.admin.SupportAnalyticsResponse;
+import com.aza.backend.dto.admin.SupportNoteResponse;
 import com.aza.backend.dto.chat.MessageResponse;
 import com.aza.backend.entity.User;
+import com.aza.backend.service.AdminSupportExtensionService;
 import com.aza.backend.service.SupportService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,9 @@ import java.util.UUID;
 public class AdminSupportController {
 
     private final SupportService supportService;
+    private final AdminSupportExtensionService extensionService;
+
+    // ── Existing endpoints ────────────────────────────────────────────────────
 
     @GetMapping("/chats")
     public ResponseEntity<ApiResponse<Page<SupportService.SupportChatSummary>>> listChats(
@@ -89,8 +96,70 @@ public class AdminSupportController {
         return ResponseEntity.ok(ApiResponse.success(supportService.getAvailableAgents()));
     }
 
+    // ── Category update ───────────────────────────────────────────────────────
+
+    @PatchMapping("/chats/{chatId}/category")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> updateCategory(
+            @PathVariable UUID chatId,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.updateCategory(chatId, body.get("category"))));
+    }
+
+    // ── Internal Notes ────────────────────────────────────────────────────────
+
+    @GetMapping("/chats/{chatId}/notes")
+    public ResponseEntity<ApiResponse<List<SupportNoteResponse>>> getNotes(@PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(extensionService.getNotes(chatId)));
+    }
+
+    @PostMapping("/chats/{chatId}/notes")
+    public ResponseEntity<ApiResponse<SupportNoteResponse>> addNote(
+            @AuthenticationPrincipal User agent,
+            @PathVariable UUID chatId,
+            @RequestBody NoteRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(extensionService.addNote(agent, chatId, request.getContent())));
+    }
+
+    // ── Canned Responses ──────────────────────────────────────────────────────
+
+    @GetMapping("/canned-responses")
+    public ResponseEntity<ApiResponse<List<CannedResponseDto>>> getCannedResponses() {
+        return ResponseEntity.ok(ApiResponse.success(extensionService.getCannedResponses()));
+    }
+
+    @PostMapping("/canned-responses")
+    public ResponseEntity<ApiResponse<CannedResponseDto>> createCannedResponse(
+            @AuthenticationPrincipal User agent,
+            @RequestBody CannedResponseRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                extensionService.createCannedResponse(agent, request.getTitle(), request.getContent(), request.getCategory())));
+    }
+
+    @DeleteMapping("/canned-responses/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteCannedResponse(@PathVariable UUID id) {
+        extensionService.deleteCannedResponse(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // ── Support Analytics ─────────────────────────────────────────────────────
+
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponse<SupportAnalyticsResponse>> getAnalytics() {
+        return ResponseEntity.ok(ApiResponse.success(extensionService.getAnalytics()));
+    }
+
+    // ── Request body inner classes ────────────────────────────────────────────
+
     @Data
-    static class ReplyRequest {
+    static class ReplyRequest { private String content; }
+
+    @Data
+    static class NoteRequest { private String content; }
+
+    @Data
+    static class CannedResponseRequest {
+        private String title;
         private String content;
+        private String category;
     }
 }

@@ -31,6 +31,11 @@ export const REFRESH_TOKEN_KEY = "aza_refresh_token";
 export const BIOMETRIC_TOKEN_KEY = "aza_biometric_token";
 export const DEVICE_ID_KEY = "aza_device_id";
 
+let onAuthFailure: (() => void) | null = null;
+export const setOnAuthFailure = (cb: () => void) => {
+  onAuthFailure = cb;
+};
+
 export const getDeviceId = async (): Promise<string> => {
   const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
@@ -73,6 +78,21 @@ export const registerFcmToken = (
 
 export const unregisterFcmToken = (deviceId: string) =>
   api.delete(`/api/v1/notifications/fcm-token/${deviceId}`);
+
+export const getNotifications = (page: number = 0, size: number = 20) =>
+  api.get(`/api/v1/notifications?page=${page}&size=${size}`);
+
+export const getUnreadNotificationCount = () =>
+  api.get("/api/v1/notifications/unread-count");
+
+export const markAllNotificationsAsRead = () =>
+  api.put("/api/v1/notifications/read-all");
+
+export const markNotificationAsRead = (id: string) =>
+  api.put(`/api/v1/notifications/${id}/read`);
+
+export const deleteAllNotifications = () =>
+  api.delete("/api/v1/notifications");
 
 export const totpLogin = (preAuthToken: string, code: string) =>
   api.post("/api/v1/auth/2fa/login", { preAuthToken, code });
@@ -163,7 +183,7 @@ export const suggestHandles = (firstName: string, lastName: string) =>
 export const getOrCreateSupportChat = () => api.post("/api/v1/support/chat");
 
 export const getSupportMessages = (page = 0, size = 50) =>
-  api.get(`/api/v1/support/chat/messages?page=${page}&size=${size}`);
+  api.get(`/api/v1/support/chat/messages?page=${page}&size=${size}&_t=${Date.now()}`);
 
 export const sendSupportMessage = (content: string) =>
   api.post("/api/v1/support/chat/message", { content });
@@ -181,6 +201,9 @@ export const getContacts = (page = 0, size = 50) =>
 
 export const syncContacts = (contacts: any[]) =>
   api.post("/api/v1/contacts/sync", { contacts });
+
+export const unsyncContacts = () =>
+  api.delete("/api/v1/contacts/sync");
 
 export const searchContacts = (q: string, page = 0, size = 20) =>
   api.get(
@@ -219,6 +242,11 @@ export const searchUsersGlobal = (q: string, page = 0, size = 20) =>
 
 export const getWalletBalance = () => api.get("/api/v1/wallet/balance");
 
+export const getSpendingSummary = () => api.get("/api/v1/wallet/spending");
+
+export const getYearlySpendingSummary = (year?: number) =>
+  api.get(`/api/v1/wallet/spending/yearly${year ? `?year=${year}` : ""}`);
+
 export const getTransactions = (page = 0, size = 20, type?: string, status?: string) =>
   api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`);
 
@@ -235,6 +263,9 @@ export const secureAccount = () =>
 
 export const getDevices = () => api.get("/api/v1/users/me/devices");
 
+export const removeSelfEverywhere = () =>
+  api.delete("/api/v1/users/me/privacy");
+
 export const removeDevice = (deviceId: string) =>
   api.delete(`/api/v1/users/me/devices/${encodeURIComponent(deviceId)}`);
 
@@ -243,7 +274,12 @@ export const updatePrivacySettings = (settings: {
   findMeByEmail?: boolean;
   findMeByHandle?: boolean;
   syncContacts?: boolean;
+  billForwardingEnabled?: boolean;
+  biometricsEnabled?: boolean;
 }) => api.put("/api/v1/users/me/privacy", settings);
+
+export const updateNotificationPreferences = (preferences: Record<string, boolean>) =>
+  api.put("/api/v1/users/me/notifications", preferences);
 
 // --- 2FA / TOTP Endpoints ---
 
@@ -355,6 +391,7 @@ api.interceptors.response.use(
         // If refresh fails, clear tokens. We will rely on Zustand store to catch this or trigger logout.
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        if (onAuthFailure) onAuthFailure();
 
         return Promise.reject(err);
       } finally {

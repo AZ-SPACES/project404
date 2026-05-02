@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image } from "react-native";
+  Image,
+  Alert,
+  ActivityIndicator
+} from "react-native";
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Spacing, Radius } from "../../../theme";
@@ -19,6 +22,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupportChat } from "../../../hooks/useSupportChat";
+import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ChatWithUs">;
 
@@ -32,8 +36,42 @@ export default function ChatWithUsScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const { messages, loading, sendMessage, isOtherTyping, sendTypingStatus } = useSupportChat();
+  const { messages, loading, sendMessage, isOtherTyping, sendTypingStatus, loadHistory } = useSupportChat();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [loadHistory])
+  );
+
+  const [callingSupport, setCallingSupport] = useState(false);
+
+  const handleCallSupport = async () => {
+    setCallingSupport(true);
+    try {
+      const res = await getAvailableSupportAgents();
+      const agents: any[] = res.data?.data ?? [];
+      if (agents.length === 0) {
+        Alert.alert(
+          "No agents available",
+          "All support agents are currently busy.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      const agent = agents[0];
+      await initiateCall(agent.userId, "VOICE");
+      navigation.navigate("AudioCall", {
+        name: agent.name ?? "AZA Support",
+        avatar: agent.avatarUrl ?? "",
+      });
+    } catch (err) {
+      Alert.alert("Error", "Could not connect to support. Please try again.");
+    } finally {
+      setCallingSupport(false);
+    }
+  };
 
   const handleAttach = async () => {
     // Attachment logic remains same but in a real app would upload to backend
@@ -85,16 +123,30 @@ export default function ChatWithUsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <MaterialIcons
+                name="chevron-left"
+                size={28}
+                color={Colors.textPrimary}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.callButton}
+              onPress={handleCallSupport}
+              disabled={callingSupport}
+            >
+              {callingSupport ? (
+                <ActivityIndicator size="small" color={Colors.textPrimary} />
+              ) : (
+                <Feather name="phone" size={20} color={Colors.textPrimary} />
+              )}
+            </TouchableOpacity>
+          </View>
           <Text style={styles.title}>Paapa</Text>
           <Text style={styles.subtitle}>Typically replies within a minute.</Text>
         </View>
@@ -190,7 +242,18 @@ function createStyles(Colors: any) {
     borderRadius: Radius.full,
     backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "center" },
+  callButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
+    alignItems: "center",
+    justifyContent: "center" },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.md },
   title: {
     fontSize: 32,

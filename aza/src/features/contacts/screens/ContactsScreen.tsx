@@ -36,6 +36,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import * as Contacts from "expo-contacts";
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
+import { useProfile } from "../../../providers/ProfileProvider";
 import { Contact as BackendContact } from "../types";
 
 const AZA_ICON = require("../../../assets/aza-z.png");
@@ -73,12 +74,16 @@ export default function ContactsScreen() {
     findUserByHandle,
     searchGlobal
   } = useContactStore();
+  const { syncContacts: isSyncAllowed } = useProfile();
 
   useEffect(() => {
     fetchContacts();
   }, []);
 
   useEffect(() => {
+    // Only sync if the user has enabled the setting in Privacy settings
+    if (!isSyncAllowed) return;
+
     (async () => {
       const { status } = await Contacts.requestPermissionsAsync();
       if (status === "granted") {
@@ -105,7 +110,7 @@ export default function ContactsScreen() {
         }
       }
     })();
-  }, []);
+  }, [isSyncAllowed]);
 
   // Deduplicate by id — backend may return the same contact more than once
   // (e.g. matched by both phone and email during sync)

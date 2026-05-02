@@ -34,6 +34,9 @@ public class RedisMessageSubscriber implements MessageListener {
             } else if (channel.startsWith("aza:notify:")) {
                 String userId = channel.replace("aza:notify:", "");
                 messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", payload);
+
+            } else if (channel.equals("aza:admin_support")) {
+                messagingTemplate.convertAndSend("/topic/admin/support", payload);
             }
 
         } catch (Exception e) {

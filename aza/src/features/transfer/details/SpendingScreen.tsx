@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { RootStackParamList } from "../../../navigation/types";
+import { getYearlySpendingSummary } from "../../../services/api";
 
 const { width } = Dimensions.get("window");
 
@@ -21,26 +22,32 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 type MonthData = { spent: number; avg: number };
 
-const SPENDING_DATA: Record<string, MonthData> = {
-  Jan: { spent: 450.2, avg: 922.54 },
-  Feb: { spent: 120.0, avg: 922.54 },
-  Mar: { spent: 0, avg: 922.54 },
-  Apr: { spent: 890.5, avg: 922.54 },
-  May: { spent: 300.0, avg: 922.54 },
-  Jun: { spent: 0, avg: 922.54 },
-  Jul: { spent: 0, avg: 922.54 },
-  Aug: { spent: 0, avg: 922.54 },
-  Sep: { spent: 0, avg: 922.54 },
-  Oct: { spent: 0, avg: 922.54 },
-  Nov: { spent: 0, avg: 922.54 },
-  Dec: { spent: 0, avg: 922.54 },
-};
-
 export default function SpendingScreen() {
-  const [selectedMonth, setSelectedMonth] = useState<string>("Sep");
+  const currentMonthIdx = new Date().getMonth();
+  const [selectedMonth, setSelectedMonth] = useState<string>(MONTHS[currentMonthIdx]!);
+  const [spendingData, setSpendingData] = useState<Record<string, MonthData>>({});
+  const [currency, setCurrency] = useState<string>("GHS");
+  const [loading, setLoading] = useState<boolean>(true);
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await getYearlySpendingSummary();
+        if (response.data?.data) {
+          setSpendingData(response.data.data.months || {});
+          setCurrency(response.data.data.currency || "GHS");
+        }
+      } catch (error) {
+        console.error("Failed to load spending data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -66,19 +73,24 @@ export default function SpendingScreen() {
               showsHorizontalScrollIndicator={false} 
               contentContainerStyle={styles.chartBars}
             >
-              {MONTHS.map((month) => {
-                const isSelected = month === selectedMonth;
-                const data = SPENDING_DATA[month];
-                const hasData = data && data.spent > 0;
-                
-                // Calculate height based on spent amount (max 120)
-                // Just a mock calculation for visual purposes
-                const barHeight = hasData ? Math.max(40, Math.min(120, (data.spent / 1000) * 120)) : 0;
-                
-                // In the design, selected empty month can still be visually distinct
-                // Or we can just use the exact logic they want. We will highlight the selected month.
-                
-                return (
+              {(() => {
+                const maxSpent = Object.keys(spendingData).length > 0
+                  ? Math.max(...Object.values(spendingData).map(m => m.spent))
+                  : 0;
+
+                return MONTHS.map((month) => {
+                  const isSelected = month === selectedMonth;
+                  const data = spendingData[month];
+                  const hasData = data && data.spent > 0;
+                  
+                  // Calculate height based on spent amount
+                  let barHeight = 0;
+                  if (hasData) {
+                     const ratio = maxSpent > 0 ? data.spent / maxSpent : 0;
+                     barHeight = Math.max(10, ratio * 120);
+                  }
+                  
+                  return (
                   <TouchableOpacity 
                     key={month} 
                     style={styles.barColumn}
@@ -101,29 +113,28 @@ export default function SpendingScreen() {
                     <Text style={[styles.monthLabel, isSelected && styles.monthLabelSelected]}>{month}</Text>
                   </TouchableOpacity>
                 );
-              })}
+              })})()}
             </ScrollView>
 
             {/* Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statLeft}>
-                <Text style={styles.statAmount}>{SPENDING_DATA[selectedMonth]?.avg.toFixed(2) || "0.00"} GHS</Text>
+                <Text style={styles.statAmount}>{spendingData[selectedMonth]?.avg.toFixed(2) || "0.00"} {currency}</Text>
                 <View style={styles.statLabelRow}>
                   <Text style={styles.statLabel}>Avg monthly spend</Text>
                   <Feather name="help-circle" size={16} color={Colors.textPrimary} style={{ marginLeft: 4 }} />
                 </View>
               </View>
               <View style={styles.statRight}>
-                <Text style={styles.statAmountRight}>{SPENDING_DATA[selectedMonth]?.spent.toFixed(2) || "0.00"} GHS</Text>
+                <Text style={styles.statAmountRight}>{spendingData[selectedMonth]?.spent.toFixed(2) || "0.00"} {currency}</Text>
                 <Text style={styles.statLabelRight}>Spent this month</Text>
               </View>
             </View>
           </View>
 
           {/* Empty State / Illustration */}
-          {(!SPENDING_DATA[selectedMonth] || SPENDING_DATA[selectedMonth].spent === 0) ? (
+          {(!spendingData[selectedMonth] || spendingData[selectedMonth].spent === 0) ? (
             <View style={styles.emptyStateContainer}>
-              {/* Using a placeholder image for the illustration. In a real app this would be a local asset or a Lottie animation. */}
               <Image
                 source={{ uri: "https://cdn3d.iconscout.com/3d/premium/thumb/money-stack-5120300-4277708.png" }}
                 style={styles.illustration}
@@ -136,7 +147,7 @@ export default function SpendingScreen() {
           ) : (
             <View style={styles.emptyStateContainer}>
               <Text style={styles.emptyStateText}>
-                You spent {SPENDING_DATA[selectedMonth].spent.toFixed(2)} GHS in {selectedMonth}.
+                You spent {spendingData[selectedMonth].spent.toFixed(2)} {currency} in {selectedMonth}.
               </Text>
             </View>
           )}

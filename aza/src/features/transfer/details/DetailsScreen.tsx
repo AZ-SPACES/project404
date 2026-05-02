@@ -12,11 +12,34 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { RootStackParamList } from "../../../navigation/types";
+import { getSpendingSummary } from "../../../services/api";
+import { formatCurrency } from "../../../utils/transactionUtils";
 
 export default function DetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const [spentThisMonth, setSpentThisMonth] = React.useState<number>(0);
+  const [spentLastMonth, setSpentLastMonth] = React.useState<number>(0);
+  const [currency, setCurrency] = React.useState<string>("GHS");
+
+  React.useEffect(() => {
+    const fetchSpending = async () => {
+      try {
+        const response = await getSpendingSummary();
+        if (response.data?.data) {
+          setSpentThisMonth(response.data.data.spentThisMonth);
+          setSpentLastMonth(response.data.data.spentLastMonth);
+          setCurrency(response.data.data.currency || "GHS");
+        }
+      } catch (error) {
+        console.error("Failed to fetch spending summary:", error);
+      }
+    };
+
+    fetchSpending();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -53,7 +76,7 @@ export default function DetailsScreen() {
               </View>
               <View style={styles.spendingInfo}>
                 <Text style={styles.periodText}>Spent this month</Text>
-                <Text style={styles.amountText}>0.00 GHS</Text>
+                <Text style={styles.amountText}>{formatCurrency(spentThisMonth, currency)}</Text>
               </View>
             </View>
 
@@ -66,7 +89,7 @@ export default function DetailsScreen() {
               </View>
               <View style={styles.spendingInfo}>
                 <Text style={styles.periodText}>Spent last month</Text>
-                <Text style={styles.amountText}>0.00 GHS</Text>
+                <Text style={styles.amountText}>{formatCurrency(spentLastMonth, currency)}</Text>
               </View>
             </View>
           </View>
@@ -191,7 +214,7 @@ function createStyles(Colors: ThemeColors) {
       width: '100%',
       height: 1.5,
       backgroundColor: Colors.textPrimary,
-      opacity: 0, // In case we just want the simple rectangle with circle
+      opacity: 0,
     },
     spendingInfo: {
       flex: 1,

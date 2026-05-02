@@ -25,7 +25,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useDisplayContext } from "../../../providers/DisplayProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
-import { mockTransactions } from "./TransactionsScreen";
+import { useNotifications } from "../../../providers/NotificationProvider";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
@@ -50,6 +50,7 @@ export default function HomeScreen() {
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(true);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
+  const { unreadCount } = useNotifications();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   const [updateText, setUpdateText] = React.useState("Updated just now");
@@ -144,6 +145,13 @@ export default function HomeScreen() {
                 accessibilityLabel="Open notifications"
               >
                 <Feather name="bell" size={24} color={Colors.white} />
+                {unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -350,6 +358,25 @@ function createStyles(Colors: ThemeColors) {
       backgroundColor: "rgba(0, 0, 0, 0.28)",
       justifyContent: "center",
       alignItems: "center",
+    },
+    unreadBadge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      backgroundColor: Colors.error || "#EF4444",
+      borderRadius: Radius.full,
+      minWidth: 16,
+      height: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+      borderWidth: 1.5,
+      borderColor: Colors.primary,
+    },
+    unreadBadgeText: {
+      color: Colors.white,
+      fontSize: 10,
+      fontWeight: "bold",
     },
     balanceSection: {
       alignItems: "center",

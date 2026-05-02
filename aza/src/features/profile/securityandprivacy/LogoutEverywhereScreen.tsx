@@ -23,12 +23,13 @@ export function LogoutEverywhereScreen() {
     setIsLoading(true);
     try {
       await logoutEverywhereApi();
-    } catch {
-      // Best-effort — even if the API fails, clear local tokens
-    } finally {
+      showToast("All sessions have been revoked.", "success");
+      // Small delay for the toast to be seen before logout resets navigation
+      setTimeout(() => logout(), 500);
+    } catch (e) {
+      showToast("Failed to revoke all sessions. Please try again.", "error");
       setIsLoading(false);
     }
-    logout();
   };
 
   return (

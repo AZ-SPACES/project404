@@ -103,6 +103,11 @@ public class SupportService {
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE, response);
 
+        // Push inbox update to all admins watching the support dashboard
+        webSocketPublisher.publishToAdminSupport(
+                WebSocketEventType.SUPPORT_NEW_MESSAGE,
+                getSupportChatSummary(chat.getId()));
+
         return response;
     }
 
@@ -231,6 +236,11 @@ public class SupportService {
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE, broadcastResponse);
 
+        // Update inbox on all admin dashboards so they see the latest reply and timestamp
+        webSocketPublisher.publishToAdminSupport(
+                WebSocketEventType.SUPPORT_CHAT_UPDATED,
+                getSupportChatSummary(chatId));
+
         log.debug("Admin {} replied to support chat {}", agent.getId(), chatId);
         return agentResponse;
     }
@@ -265,6 +275,15 @@ public class SupportService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Not found", HttpStatus.NOT_FOUND));
         chat.setPriority(Chat.Priority.valueOf(priority.toUpperCase()));
+        chatRepository.save(chat);
+        return getSupportChatSummary(chatId);
+    }
+
+    @Transactional
+    public SupportChatSummary updateCategory(UUID chatId, String category) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Not found", HttpStatus.NOT_FOUND));
+        chat.setCategory(category);
         chatRepository.save(chat);
         return getSupportChatSummary(chatId);
     }

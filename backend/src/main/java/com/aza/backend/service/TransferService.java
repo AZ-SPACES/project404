@@ -59,6 +59,56 @@ public class TransferService {
                 .build();
     }
 
+    public SpendingResponse getSpendingSummary(UUID userId) {
+        LocalDateTime now = LocalDateTime.now(GHANA_TZ);
+        
+        LocalDateTime startOfThisMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+        LocalDateTime startOfNextMonth = startOfThisMonth.plusMonths(1);
+        
+        LocalDateTime startOfLastMonth = startOfThisMonth.minusMonths(1);
+        
+        BigDecimal spentThisMonth = transactionRepository.getTotalSpentBetween(userId, startOfThisMonth, startOfNextMonth);
+        BigDecimal spentLastMonth = transactionRepository.getTotalSpentBetween(userId, startOfLastMonth, startOfThisMonth);
+        
+        return SpendingResponse.builder()
+                .spentThisMonth(spentThisMonth)
+                .spentLastMonth(spentLastMonth)
+                .currency("GHS")
+                .build();
+    }
+
+    public YearlySpendingResponse getYearlySpendingSummary(UUID userId, int year) {
+        String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        java.util.Map<String, YearlySpendingResponse.MonthSpending> monthsMap = new java.util.LinkedHashMap<>();
+        
+        BigDecimal totalSpentYear = BigDecimal.ZERO;
+        int currentMonthValue = LocalDateTime.now(GHANA_TZ).getYear() == year ? LocalDateTime.now(GHANA_TZ).getMonthValue() : 12;
+
+        for (int i = 1; i <= 12; i++) {
+            LocalDateTime startOfMonth = LocalDateTime.of(year, i, 1, 0, 0);
+            LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
+            
+            BigDecimal spentMonth = transactionRepository.getTotalSpentBetween(userId, startOfMonth, endOfMonth);
+            totalSpentYear = totalSpentYear.add(spentMonth);
+            
+            monthsMap.put(monthNames[i - 1], YearlySpendingResponse.MonthSpending.builder()
+                    .spent(spentMonth)
+                    .avg(BigDecimal.ZERO)
+                    .build());
+        }
+        
+        BigDecimal avg = currentMonthValue > 0 ? totalSpentYear.divide(BigDecimal.valueOf(currentMonthValue), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        
+        for (String month : monthNames) {
+            monthsMap.get(month).setAvg(avg);
+        }
+
+        return YearlySpendingResponse.builder()
+                .months(monthsMap)
+                .currency("GHS")
+                .build();
+    }
+
     // INITIATE TRANSFER
 
     @Transactional
@@ -389,7 +439,7 @@ public class TransferService {
                 transactions = transactionRepository.findAllByUserIdAndStatus(
                         userId, Transaction.TransactionStatus.valueOf(status.toUpperCase()), pageRequest);
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid status. Accepted values: PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
+                throw new RuntimeException("Invalid status. Accepted values: DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
             }
         } else {
             transactions = transactionRepository.findAllByUserId(userId, pageRequest);

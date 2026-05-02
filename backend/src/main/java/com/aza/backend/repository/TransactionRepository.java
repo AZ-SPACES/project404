@@ -46,6 +46,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                  @Param("endOfDay") LocalDateTime endofDay,
                                  @Param("now") LocalDateTime now);
 
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.senderId = :userId " +
+            "AND t.type = 'TRANSFER' " +
+            "AND t.status = 'COMPLETED' " +
+            "AND t.initiatedAt >= :start " +
+            "AND t.initiatedAt < :end")
+    BigDecimal getTotalSpentBetween(@Param("userId") UUID userId,
+                                    @Param("start") LocalDateTime start,
+                                    @Param("end") LocalDateTime end);
+
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
     long countByStatus(Transaction.TransactionStatus status);

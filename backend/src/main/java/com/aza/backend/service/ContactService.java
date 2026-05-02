@@ -111,6 +111,12 @@ public class ContactService {
                 .build();
     }
 
+    @Transactional
+    public void deleteAllContacts(UUID userId) {
+        contactRepository.deleteAllByOwnerUserId(userId);
+        log.info("Deleted all contacts for user {}", userId);
+    }
+
     // SEARCH CONTACTS
 
     public Page<ContactResponse> searchContacts(UUID userId, String query, int page, int size) {

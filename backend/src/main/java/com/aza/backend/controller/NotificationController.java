@@ -93,4 +93,15 @@ public class NotificationController {
         notificationService.markAsRead(user.getId(), id);
         return ResponseEntity.ok(ApiResponse.success("Notification marked as read"));
     }
+
+    /**
+     * DELETE /api/v1/notifications
+     * Delete all notifications for the current user.
+     */
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<String>> deleteAllNotifications(
+            @AuthenticationPrincipal User user) {
+        notificationService.deleteAll(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("All notifications deleted"));
+    }
 }

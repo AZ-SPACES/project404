@@ -1,6 +1,8 @@
+import 'fast-text-encoding';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getOrCreateSupportChat, getSupportMessages, sendSupportMessage, BASE_URL, TOKEN_KEY } from '../services/api';
 import * as SecureStore from 'expo-secure-store';
+import { Client } from '@stomp/stompjs';
 
 export interface Message {
   id: string;
@@ -14,21 +16,25 @@ export const useSupportChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatId, setChatId] = useState<string | null>(null);
-  const ws = useRef<WebSocket | null>(null);
+  const clientRef = useRef<Client | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await getSupportMessages();
+      const res = await getSupportMessages(0, 100);
       const page = res.data?.data ?? res.data;
-      const formatted: Message[] = (page?.content ?? []).map((m: any) => ({
+      const fetched: Message[] = (page?.content ?? []).map((m: any) => ({
         id: m.id,
         text: m.content ?? '',
         isSender: m.isSelf ?? false,
         timestamp: m.sentAt ? new Date(m.sentAt).getTime() : Date.now(),
       })).reverse();
-      setMessages(formatted);
+      
+      setMessages((prev) => {
+        const map = new Map(prev.map(m => [m.id, m]));
+        fetched.forEach(m => map.set(m.id, m));
+        return Array.from(map.values()).sort((a, b) => a.timestamp - b.timestamp);
+      });
     } catch (err) {
       console.error('Failed to load support messages', err);
     } finally {
@@ -41,27 +47,26 @@ export const useSupportChat = () => {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
 
-      const wsUrl = BASE_URL.replace('https', 'wss').replace('http', 'ws') + '/ws/websocket';
-      const socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        const connectFrame = `CONNECT\naccept-version:1.2\nhost:localhost\nAuthorization:Bearer ${token}\n\n\0`;
-        socket.send(connectFrame);
-      };
-
-      socket.onmessage = (event) => {
-        const data = event.data as string;
-        if (data.startsWith('CONNECTED')) {
-          const subFrame = `SUBSCRIBE\nid:sub-0\ndestination:/user/queue/chat\n\n\0`;
-          socket.send(subFrame);
-        } else if (data.includes('MESSAGE')) {
-          const bodyStart = data.indexOf('\n\n') + 2;
-          const bodyEnd = data.lastIndexOf('\0');
-          const body = data.slice(bodyStart, bodyEnd > bodyStart ? bodyEnd : data.length);
-          try {
-            const msg = JSON.parse(body);
-            if (msg.payload?.chatId === id) {
-              if (msg.type === 'CHAT_MESSAGE') {
+      // Ensure proper protocol
+      let wsUrl = BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+      if (!wsUrl.endsWith('/')) wsUrl += '/';
+      wsUrl += 'ws/websocket';
+      
+      const client = new Client({
+        brokerURL: wsUrl,
+        connectHeaders: { Authorization: `Bearer ${token}` },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+        forceBinaryWSFrames: true,
+        appendMissingNULLonIncoming: true,
+        onConnect: () => {
+          client.subscribe("/user/queue/chat", (frame) => {
+            try {
+              const msg = JSON.parse(frame.body);
+              if (msg.payload?.chatId !== id) return;
+              
+              if (msg.type === "CHAT_MESSAGE") {
                 const p = msg.payload;
                 setMessages((prev) => {
                   if (prev.some((m) => m.id === p.id)) return prev;
@@ -69,31 +74,34 @@ export const useSupportChat = () => {
                     ...prev,
                     {
                       id: p.id,
-                      text: p.content ?? '',
+                      text: p.content ?? "",
                       isSender: p.isSelf ?? false,
                       timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
                     },
                   ];
                 });
                 setIsOtherTyping(false);
-              } else if (msg.type === 'CHAT_TYPING') {
+              } else if (msg.type === "CHAT_TYPING") {
                 if (!msg.payload.isSelf) {
                   setIsOtherTyping(msg.payload.isTyping);
                 }
               }
+            } catch (e) {
+              console.error("Failed to parse WS message", e);
             }
-          } catch (e) {
-            console.error('Failed to parse WS message', e);
-          }
+          });
+        },
+        onStompError: (frame) => {
+          console.error("Broker reported error: " + frame.headers["message"]);
+          console.error("Additional details: " + frame.body);
+        },
+        onWebSocketError: (event) => {
+          console.error("WebSocket Error: ", event);
         }
-      };
+      });
 
-      socket.onerror = (e) => console.error('WS Error', e);
-      socket.onclose = () => {
-        setTimeout(() => connectWebSocket(id), 5000);
-      };
-
-      ws.current = socket;
+      client.activate();
+      clientRef.current = client;
     } catch (err) {
       console.error('WS Connection failed', err);
     }
@@ -117,7 +125,9 @@ export const useSupportChat = () => {
     init();
 
     return () => {
-      if (ws.current) ws.current.close();
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+      }
     };
   }, [loadHistory, connectWebSocket]);
 
@@ -161,5 +171,5 @@ export const useSupportChat = () => {
     }
   }, [chatId]);
 
-  return { messages, loading, sendMessage, isOtherTyping, sendTypingStatus };
+  return { messages, loading, sendMessage, isOtherTyping, sendTypingStatus, loadHistory };
 };

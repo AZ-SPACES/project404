@@ -6,8 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { updatePrivacySettings, api } from '../../../services/api';
+import { updatePrivacySettings, api, unsyncContacts } from '../../../services/api';
 
 const { height } = Dimensions.get('window');
 
@@ -72,12 +73,12 @@ export function SecurityAndPrivacyScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
+  const { syncContacts, setSyncContacts: setSyncContactsInProvider } = useProfile();
 
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // State for toggles
-  const [syncContacts, setSyncContacts] = useState(true);
   const [biometricData, setBiometricData] = useState(true);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
@@ -85,7 +86,6 @@ export function SecurityAndPrivacyScreen() {
   useEffect(() => {
     api.get('/api/v1/users/me').then(({ data }) => {
       const u = data.data ?? data;
-      if (u.syncContacts != null) setSyncContacts(u.syncContacts);
       if (u.twoFactorEnabled != null) setTwoFactorEnabled(u.twoFactorEnabled);
     }).catch(() => {});
   }, []);
@@ -93,12 +93,17 @@ export function SecurityAndPrivacyScreen() {
   // Debounced save for syncContacts
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSyncContactsChange = useCallback((v: boolean) => {
-    setSyncContacts(v);
+    setSyncContactsInProvider(v);
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(async () => {
-      try { await updatePrivacySettings({ syncContacts: v }); } catch { /* silent */ }
+      try { 
+        await updatePrivacySettings({ syncContacts: v }); 
+        if (v === false) {
+           await unsyncContacts();
+        }
+      } catch { /* silent */ }
     }, 800);
-  }, []);
+  }, [setSyncContactsInProvider]);
   useEffect(() => () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); }, []);
 
   // State for bottom sheet

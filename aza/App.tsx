@@ -18,13 +18,16 @@ import { AuthProvider } from "./src/providers/AuthProvider";
 import { ProfileProvider } from "./src/providers/ProfileProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
 import { NetworkProvider } from "./src/providers/NetworkProvider";
+import { SecurityProvider, useSecurity } from "./src/providers/SecurityProvider";
 import { ToastProvider } from "./src/providers/ToastProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
+import { navigationRef, processNavigationQueue } from "./src/navigation/navigationRef";
 import { useAuth } from "./src/providers/AuthProvider";
 import { useNotifications } from "./src/providers/NotificationProvider";
 import EnableNotificationsScreen from "./src/features/notifications/screens/EnableNotificationsScreen";
 import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiometricsScreen";
+import AppLockScreen from "./src/features/security/screens/AppLockScreen";
 import * as LocalAuthentication from "expo-local-authentication";
 import React, { useEffect, useState } from "react";
 
@@ -52,6 +55,7 @@ function AppContent() {
   const { activeColorScheme } = useDisplayContext();
   const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } =
     useAuth();
+  const { isLocked } = useSecurity();
   const { checkPermissions } = useNotifications();
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [showBiometricsPrompt, setShowBiometricsPrompt] = useState(false);
@@ -97,10 +101,16 @@ function AppContent() {
         }
       />
       <NavigationContainer
+        ref={navigationRef}
+        onReady={() => {
+          processNavigationQueue();
+        }}
         theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}
         linking={linking as any}
       >
-        {showBiometricsPrompt ? (
+        {isLocked ? (
+          <AppLockScreen />
+        ) : showBiometricsPrompt ? (
           <EnableBiometricsScreen
             onComplete={() => setShowBiometricsPrompt(false)}
           />
@@ -125,17 +135,19 @@ export default function App() {
         <ErrorBoundary>
           <NetworkProvider>
             <AuthProvider>
-              <ProfileProvider>
-                <NotificationProvider>
-                  <DisplayProvider>
-                    <ToastProvider>
-                      <AnimatedSplashScreen>
-                        <AppContent />
-                      </AnimatedSplashScreen>
-                    </ToastProvider>
-                  </DisplayProvider>
-                </NotificationProvider>
-              </ProfileProvider>
+              <SecurityProvider>
+                <ProfileProvider>
+                  <NotificationProvider>
+                    <DisplayProvider>
+                      <ToastProvider>
+                        <AnimatedSplashScreen>
+                          <AppContent />
+                        </AnimatedSplashScreen>
+                      </ToastProvider>
+                    </DisplayProvider>
+                  </NotificationProvider>
+                </ProfileProvider>
+              </SecurityProvider>
             </AuthProvider>
           </NetworkProvider>
         </ErrorBoundary>
