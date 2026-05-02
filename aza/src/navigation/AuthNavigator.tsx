@@ -29,6 +29,7 @@ import {
   CreatePasscodeScreen,
   ConfirmPasscodeScreen,
   ConsentScreen,
+  LoginWaitApprovalScreen,
 } from '../features/auth';
 
 import { createNativeStackNavigator as createStack } from '@react-navigation/native-stack';
@@ -48,6 +49,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="TroubleLogin" component={TroubleLoginScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
       <Stack.Screen name="TotpLogin" component={TotpLoginScreen} />
+      <Stack.Screen name="LoginWaitApproval" component={LoginWaitApprovalScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="TwoStepVerificationIssue" component={TwoStepVerificationIssueScreen} />
       <Stack.Screen name="ChangePhoneNumber" component={ChangePhoneNumberScreen} />

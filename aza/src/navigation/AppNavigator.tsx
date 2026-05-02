@@ -52,6 +52,8 @@ import {
   LogoutEverywhereScreen,
   DevicesScreen,
   TwoStepVerificationScreen,
+  TotpSetupScreen,
+  RecoveryCodesScreen,
   ChangePasswordScreen,
   FindMeByScreen,
   BillForwardingIntroScreen,
@@ -63,6 +65,7 @@ import {
 } from '../features/profile';
 import { ReasonScreen, RefundScreen, StatementScreen } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
+import LoginApprovalScreen from '../features/security/screens/LoginApprovalScreen';
 
 // Exclude overlapping params from types since they are now separated
 // For AppNavigator, we only need the param list for the app stack.
@@ -123,6 +126,8 @@ export default function AppNavigator() {
       <Stack.Screen name="LogoutEverywhere" component={LogoutEverywhereScreen} />
       <Stack.Screen name="Devices" component={DevicesScreen} />
       <Stack.Screen name="TwoStepVerification" component={TwoStepVerificationScreen} />
+      <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
+      <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
       <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
       <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
@@ -142,6 +147,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
       <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
       <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
+      <Stack.Screen name="LoginApproval" component={LoginApprovalScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen

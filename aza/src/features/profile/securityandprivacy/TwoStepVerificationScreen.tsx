@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { useProfile } from '../../../providers/ProfileProvider';
 
 type VerificationMethodProps = (
   | { iconType: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
@@ -14,7 +15,7 @@ type VerificationMethodProps = (
 ) & {
   title: string;
   description: string;
-  securityLevel: string;
+  securityLevel: 'Very secure' | 'Fairly secure';
   isVerySecure?: boolean;
   onPress?: () => void;
 };
@@ -26,18 +27,26 @@ export function TwoStepVerificationScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'TwoStepVerification'>>();
+  const profile = useProfile();
 
-  const VerificationMethod = (props: VerificationMethodProps) => {
-    const { title, description, securityLevel, isVerySecure, onPress } = props;
+  const VerificationMethod = (props: VerificationMethodProps & { isEnabled?: boolean }) => {
+    const { title, description, securityLevel, isVerySecure, onPress, isEnabled } = props;
     return (
       <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.iconContainer}>
-          {props.iconType === 'Feather' && <Feather name={props.iconName} size={24} color={Colors.textPrimary} />}
-          {props.iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={props.iconName} size={24} color={Colors.textPrimary} />}
-          {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={24} color={Colors.textPrimary} />}
+          {props.iconType === 'Feather' && <Feather name={props.iconName} size={24} color={isEnabled ? Colors.primary : Colors.textPrimary} />}
+          {props.iconType === 'MaterialCommunityIcons' && <MaterialCommunityIcons name={props.iconName} size={24} color={isEnabled ? Colors.primary : Colors.textPrimary} />}
+          {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={24} color={isEnabled ? Colors.primary : Colors.textPrimary} />}
         </View>
         <View style={styles.methodInfo}>
-          <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
+            {isEnabled && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>Enabled</Text>
+              </View>
+            )}
+          </View>
           <Text style={[Typography.body, styles.methodDescription]}>{description}</Text>
           <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
             {securityLevel}
@@ -71,9 +80,6 @@ export function TwoStepVerificationScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={[Typography.body, styles.sectionLabel]}>Your verification methods</Text>
-          <TouchableOpacity>
-            <Text style={[Typography.body, { color: Colors.primary, fontWeight: '600' }]}>Change default</Text>
-          </TouchableOpacity>
         </View>
         <View style={styles.divider} />
 
@@ -81,10 +87,11 @@ export function TwoStepVerificationScreen() {
           <VerificationMethod 
             iconType="MaterialCommunityIcons"
             iconName="account-group-outline"
-            title="Passkeys (default)"
+            title="Passkeys"
             description="Log in with the more secure face and fingerprint recognition."
             securityLevel="Very secure"
             isVerySecure
+            isEnabled={profile.passkeysEnabled}
           />
           
           <VerificationMethod 
@@ -94,6 +101,8 @@ export function TwoStepVerificationScreen() {
             description="Verify yourself with this app. No need to wait for a text, and you just need an internet connection."
             securityLevel="Very secure"
             isVerySecure
+            isEnabled={profile.appTwoFactorEnabled}
+            onPress={() => profile.toggleApp2fa(!profile.appTwoFactorEnabled)}
           />
 
           <VerificationMethod 
@@ -102,6 +111,7 @@ export function TwoStepVerificationScreen() {
             title="Text message"
             description="Receive a verification code by text. You'll need phone signal for this."
             securityLevel="Fairly secure"
+            isEnabled={profile.smsTwoFactorEnabled}
           />
         </View>
 
@@ -111,15 +121,16 @@ export function TwoStepVerificationScreen() {
         <View style={styles.divider} />
 
         <View style={styles.contentSection}>
-          <TouchableOpacity style={styles.methodRow} activeOpacity={0.7}>
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="shield-check-outline" size={24} color={Colors.textPrimary} />
-            </View>
-            <View style={styles.methodInfo}>
-              <Text style={[Typography.bodyLg, styles.methodTitle]}>Authenticator app</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          <VerificationMethod 
+            iconType="MaterialCommunityIcons"
+            iconName="shield-check-outline"
+            title="Authenticator app"
+            description="Use an app like Google Authenticator or Authy to get codes."
+            securityLevel="Very secure"
+            isVerySecure
+            onPress={() => navigation.navigate('TotpSetup')}
+            isEnabled={profile.twoFactorEnabled}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -202,7 +213,19 @@ function createStyles(Colors: ThemeColors) {
     color: isDark ? Colors.primary : '#1E5128', // Dark green
   },
   fairlySecure: {
-    color: Colors.textSecondary } });
+    color: Colors.textSecondary,
+  },
+  activeBadge: {
+    backgroundColor: isDark ? 'rgba(34, 197, 94, 0.2)' : '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  activeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: isDark ? '#4ADE80' : '#166534',
+  },
+});
 }
-
-

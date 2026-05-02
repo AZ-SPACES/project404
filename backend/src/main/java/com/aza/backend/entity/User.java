@@ -84,6 +84,21 @@ public class User {
 
     private String twoFactorSecret; // TOTP secret
 
+    @Builder.Default
+    private Boolean smsTwoFactorEnabled = false;
+
+    @Builder.Default
+    private Boolean emailTwoFactorEnabled = false;
+
+    @Builder.Default
+    private Boolean appTwoFactorEnabled = false;
+
+    @Builder.Default
+    private Boolean passkeysEnabled = false;
+
+    @Enumerated(EnumType.STRING)
+    private TwoFactorMethod defaultTwoFactorMethod;
+
     private String passcodeHash; // 5-digit PIN hash
 
     @Builder.Default
@@ -166,5 +181,9 @@ public class User {
 
     public enum UserRole {
         USER, ADMIN
+    }
+
+    public enum TwoFactorMethod {
+        TOTP, SMS, EMAIL, APP, PASSKEY
     }
 }

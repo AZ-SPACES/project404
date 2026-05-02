@@ -107,7 +107,11 @@ const OTPScreen: React.FC = () => {
       });
 
       if (data.data?.preAuthToken) {
-        navigation.navigate('TotpLogin', { preAuthToken: data.data.preAuthToken });
+        navigation.navigate('TotpLogin', { 
+          preAuthToken: data.data.preAuthToken,
+          methods: data.data.methods,
+          defaultMethod: data.data.defaultMethod
+        });
       } else if (data.data?.accessToken && data.data?.refreshToken) {
         await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.data.refreshToken);
