@@ -171,7 +171,7 @@ public class BiometricService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
         // Store hashed refresh token
-        saveRefreshToken(user.getId(), refreshToken, stored.getDeviceName(), stored.getDeviceOs(), ipAddress);
+        saveRefreshToken(user.getId(), refreshToken, accessToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getDeviceId(), ipAddress);
 
         // Notify user of biometric login — same signal as password login
         emailService.sendLoginNotification(
@@ -230,16 +230,27 @@ public class BiometricService {
         }
     }
 
-    private void saveRefreshToken(UUID userId, String rawToken, String deviceName,
-                                  String deviceOs, String ipAddress) {
-        com.aza.backend.entity.RefreshToken rt = com.aza.backend.entity.RefreshToken.builder()
-                .userId(userId)
-                .tokenHash(hashToken(rawToken))
-                .expiresAt(LocalDateTime.now().plusDays(30))
-                .deviceName(deviceName)
-                .deviceOs(deviceOs)
-                .ipAddress(ipAddress)
-                .build();
+    private void saveRefreshToken(UUID userId, String rawRefreshToken, String rawAccessToken,
+                                  String deviceName, String deviceOs, String deviceId, String ipAddress) {
+        Duration accessValidity = jwtUtil.getRemainingValidity(rawAccessToken);
+        LocalDateTime accessExpiresAt = accessValidity.isZero()
+                ? LocalDateTime.now()
+                : LocalDateTime.now().plus(accessValidity);
+
+        // Check if a session already exists for this user and device
+        com.aza.backend.entity.RefreshToken rt = refreshTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
+                .orElse(new com.aza.backend.entity.RefreshToken());
+
+        rt.setUserId(userId);
+        rt.setTokenHash(hashToken(rawRefreshToken));
+        rt.setAccessTokenHash(hashToken(rawAccessToken));
+        rt.setAccessTokenExpiresAt(accessExpiresAt);
+        rt.setDeviceName(deviceName);
+        rt.setDeviceOs(deviceOs);
+        rt.setDeviceId(deviceId);
+        rt.setIpAddress(ipAddress);
+        rt.setExpiresAt(LocalDateTime.now().plusDays(30));
+
         refreshTokenRepository.save(rt);
     }
 

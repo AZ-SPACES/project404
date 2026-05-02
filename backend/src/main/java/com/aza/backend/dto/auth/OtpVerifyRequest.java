@@ -22,4 +22,5 @@ public class OtpVerifyRequest {
 
     private String deviceName;
     private String deviceOs;
+    private String deviceId;
 }

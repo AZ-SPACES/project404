@@ -103,8 +103,8 @@ export const markNotificationAsRead = (id: string) =>
 export const deleteAllNotifications = () =>
   api.delete("/api/v1/notifications");
 
-export const totpLogin = (preAuthToken: string, code: string) =>
-  api.post("/api/v1/auth/2fa/login", { preAuthToken, code });
+export const totpLogin = (preAuthToken: string, code: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
+  api.post("/api/v1/auth/2fa/login", { preAuthToken, code, deviceName, deviceOs, deviceId });
 
 // --- KYC Endpoints ---
 
@@ -179,8 +179,28 @@ export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
 // --- User Endpoints ---
 
+export const getMe = () => api.get("/api/v1/users/me");
+
+export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
+
+export const uploadProfileImage = (file: any) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.put("/api/v1/users/me/profile-image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 export const checkHandleAvailability = (handle: string) =>
   api.get(`/api/v1/users/check-handle?handle=${encodeURIComponent(handle)}`);
+
+export const checkEmailAvailability = (email: string) =>
+  api.get(`/api/v1/users/check-email?email=${encodeURIComponent(email)}`);
+
+export const checkPhoneAvailability = (phone: string) =>
+  api.get(`/api/v1/users/check-phone?phone=${encodeURIComponent(phone)}`);
 
 export const suggestHandles = (firstName: string, lastName: string) =>
   api.get(
@@ -270,8 +290,8 @@ export const forgotPassword = (identifier: string) =>
 export const resetPassword = (identifier: string, code: string, newPassword: string) =>
   api.post("/api/v1/auth/reset-password", { identifier, code, newPassword });
 
-export const verifyOtp = (identifier: string, code: string, purpose: string) =>
-  api.post("/api/v1/auth/verify-otp", { identifier, code, purpose });
+export const verifyOtp = (identifier: string, code: string, purpose: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
+  api.post("/api/v1/auth/verify-otp", { identifier, code, purpose, deviceName, deviceOs, deviceId });
 
 export const logoutEverywhere = () =>
   api.post("/api/v1/auth/logout-everywhere");
@@ -301,16 +321,34 @@ export const updateNotificationPreferences = (preferences: Record<string, boolea
 
 // --- 2FA / TOTP Endpoints ---
 
-export const setup2FA = () => api.post("/api/v1/auth/2fa/setup");
+export const initiateTotpSetup = () => api.post("/api/v1/auth/2fa/setup");
 
-export const confirm2FA = (code: string) =>
+export const confirmTotpSetup = (code: string) =>
   api.post("/api/v1/auth/2fa/confirm", { code });
 
-export const disable2FA = (code: string) =>
+export const disableTotp = (code: string) =>
   api.delete("/api/v1/auth/2fa", { data: { code } });
 
 export const regenerateRecoveryCodes = (code: string) =>
   api.post("/api/v1/auth/2fa/recovery/regenerate", { code });
+
+export const redeemRecoveryCode = (preAuthToken: string, recoveryCode: string) =>
+  api.post("/api/v1/auth/2fa/recovery", { preAuthToken, recoveryCode });
+
+export const requestApp2faApproval = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/app/request?preAuthToken=${preAuthToken}`);
+
+export const checkApp2faStatus = (preAuthToken: string, requestId: string) =>
+  api.post(`/api/v1/auth/2fa/app/status?preAuthToken=${preAuthToken}&requestId=${requestId}`);
+
+export const requestSms2fa = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/sms/request?preAuthToken=${preAuthToken}`);
+
+export const requestEmail2fa = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/email/request?preAuthToken=${preAuthToken}`);
+
+export const verify2faOtp = (preAuthToken: string, code: string, method: string) =>
+  api.post(`/api/v1/auth/2fa/otp/verify?preAuthToken=${preAuthToken}&code=${code}&method=${method}`);
 
 
 // In-memory queue for requests that fail while refreshing

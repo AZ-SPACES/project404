@@ -21,7 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
-import { api, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../services/api';
+import { api, TOKEN_KEY, REFRESH_TOKEN_KEY, getDeviceId } from '../../../services/api';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import * as Device from 'expo-device';
@@ -104,10 +104,15 @@ const OTPScreen: React.FC = () => {
         purpose: 'login',
         deviceName: Device.modelName ?? undefined,
         deviceOs: Device.osName ?? undefined,
+        deviceId: await getDeviceId(),
       });
 
       if (data.data?.preAuthToken) {
-        navigation.navigate('TotpLogin', { preAuthToken: data.data.preAuthToken });
+        navigation.navigate('TotpLogin', { 
+          preAuthToken: data.data.preAuthToken,
+          methods: data.data.methods,
+          defaultMethod: data.data.defaultMethod
+        });
       } else if (data.data?.accessToken && data.data?.refreshToken) {
         await SecureStore.setItemAsync(TOKEN_KEY, data.data.accessToken);
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.data.refreshToken);
@@ -117,6 +122,7 @@ const OTPScreen: React.FC = () => {
           data.data.user?.kycStatus === 'VERIFIED',
           data.data.user?.forcePasswordReset ?? false,
           data.data.user?.requireSelfieVerification ?? false,
+          false // isBiometricsEnabled
         );
       }
     } catch (error: any) {

@@ -10,10 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import AnimatedSplashScreen from "./src/components/ui/AnimatedSplashScreen";
 import ErrorBoundary from "./src/components/ui/ErrorBoundary";
 import RootNavigator from "./src/navigation/RootNavigator";
-import {
-  DisplayProvider,
-  useDisplayContext,
-} from "./src/providers/DisplayProvider";
+import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
 import { AuthProvider } from "./src/providers/AuthProvider";
 import { ProfileProvider } from "./src/providers/ProfileProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
@@ -29,6 +26,7 @@ import EnableNotificationsScreen from "./src/features/notifications/screens/Enab
 import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiometricsScreen";
 import AppLockScreen from "./src/features/security/screens/AppLockScreen";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 
 const linking = {
@@ -53,8 +51,7 @@ const linking = {
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
-  const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } =
-    useAuth();
+  const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } = useAuth();
   const { isLocked } = useSecurity();
   const { checkPermissions } = useNotifications();
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
@@ -70,8 +67,12 @@ function AppContent() {
           const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
           if (!isBiometricsEnabled && hasHardware && isEnrolled) {
-            setShowBiometricsPrompt(true);
-            return; // Wait for biometrics to finish before checking notifications
+            // Only show if we don't already have a biometric token stored
+            const storedToken = await SecureStore.getItemAsync("aza_biometric_token");
+            if (!storedToken) {
+              setShowBiometricsPrompt(true);
+              return;
+            }
           }
 
           // 2. Check Notifications

@@ -26,6 +26,7 @@ import { useToast } from '../../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeText } from '../../../utils/validation';
 import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
 import * as SecureStore from 'expo-secure-store';
+import * as Device from 'expo-device';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -65,7 +66,13 @@ const LoginScreen: React.FC = () => {
     setIsLoading(true);
     try {
       const identifier = useEmail ? email : phoneNumber;
-      await api.post('/api/v1/auth/login', { identifier, password });
+      await api.post('/api/v1/auth/login', { 
+        identifier, 
+        password,
+        deviceName: Device.modelName ?? undefined,
+        deviceOs: Device.osName ?? undefined,
+        deviceId: await getDeviceId(),
+      });
       
       // On success, navigate to OTP
       navigation.navigate('OTP', { isLogin: true, phoneNumber: identifier });
@@ -124,6 +131,7 @@ const LoginScreen: React.FC = () => {
         payload.user?.kycStatus === 'VERIFIED',
         payload.user?.forcePasswordReset ?? false,
         payload.user?.requireSelfieVerification ?? false,
+        true // isBiometricsEnabled is true for biometric login path
       );
     } catch (e: any) {
       const msg = e?.response?.data?.message;

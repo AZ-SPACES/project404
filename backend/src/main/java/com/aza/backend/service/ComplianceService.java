@@ -40,7 +40,6 @@ public class ComplianceService {
 
     public ComplianceStatsResponse getStats() {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
         long flaggedToday = flaggedRepository.countByFlaggedAtAfter(startOfDay);
         long pendingReview = flaggedRepository.countByStatus(FlaggedTransaction.FlagStatus.PENDING_REVIEW);

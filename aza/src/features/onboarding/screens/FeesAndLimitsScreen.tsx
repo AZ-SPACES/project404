@@ -168,7 +168,7 @@ export default function FeesAndLimitsScreen() {
             onPress={handleContinue}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
-            borderRadius={30}
+            borderRadius={Radius.sm}
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}

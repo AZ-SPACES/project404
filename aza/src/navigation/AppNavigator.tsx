@@ -52,6 +52,9 @@ import {
   LogoutEverywhereScreen,
   DevicesScreen,
   TwoStepVerificationScreen,
+  TotpSetupScreen,
+  DisableTotpScreen,
+  RecoveryCodesScreen,
   ChangePasswordScreen,
   FindMeByScreen,
   BillForwardingIntroScreen,
@@ -64,8 +67,7 @@ import {
 import { ReasonScreen, RefundScreen, StatementScreen } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
-// Exclude overlapping params from types since they are now separated
-// For AppNavigator, we only need the param list for the app stack.
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
@@ -123,6 +125,9 @@ export default function AppNavigator() {
       <Stack.Screen name="LogoutEverywhere" component={LogoutEverywhereScreen} />
       <Stack.Screen name="Devices" component={DevicesScreen} />
       <Stack.Screen name="TwoStepVerification" component={TwoStepVerificationScreen} />
+      <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
+      <Stack.Screen name="DisableTotp" component={DisableTotpScreen} />
+      <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
       <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
       <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />

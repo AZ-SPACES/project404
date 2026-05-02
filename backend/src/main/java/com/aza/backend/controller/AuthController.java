@@ -214,6 +214,83 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(codes));
     }
 
+    @PostMapping("/2fa/sms/setup")
+    public ResponseEntity<ApiResponse<String>> setupSms2fa(
+            @AuthenticationPrincipal User user) {
+        authService.initiateSms2faSetup(user);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your phone"));
+    }
+
+    @PostMapping("/2fa/sms/confirm")
+    public ResponseEntity<ApiResponse<RecoveryCodesResponse>> confirmSms2fa(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TotpToggleRequest request) {
+        RecoveryCodesResponse codes = authService.confirmSms2faSetup(user, request.getCode());
+        return ResponseEntity.ok(ApiResponse.success(codes));
+    }
+
+    @PostMapping("/2fa/email/setup")
+    public ResponseEntity<ApiResponse<String>> setupEmail2fa(
+            @AuthenticationPrincipal User user) {
+        authService.initiateEmail2faSetup(user);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your email"));
+    }
+
+    @PostMapping("/2fa/email/confirm")
+    public ResponseEntity<ApiResponse<RecoveryCodesResponse>> confirmEmail2fa(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TotpToggleRequest request) {
+        RecoveryCodesResponse codes = authService.confirmEmail2faSetup(user, request.getCode());
+        return ResponseEntity.ok(ApiResponse.success(codes));
+    }
+
+    @PostMapping("/2fa/app/toggle")
+    public ResponseEntity<ApiResponse<String>> toggleApp2fa(
+            @AuthenticationPrincipal User user,
+            @RequestParam boolean enabled) {
+        authService.toggleApp2fa(user, enabled);
+        return ResponseEntity.ok(ApiResponse.success("App 2FA updated"));
+    }
+
+    @PostMapping("/2fa/app/request")
+    public ResponseEntity<ApiResponse<String>> requestAppApproval(@RequestParam String preAuthToken) {
+        String requestId = authService.requestAppApproval(preAuthToken);
+        return ResponseEntity.ok(ApiResponse.success(requestId));
+    }
+
+    @PostMapping("/2fa/app/respond")
+    public ResponseEntity<ApiResponse<Void>> respondToAppApproval(@RequestParam String requestId, @RequestParam boolean approve) {
+        authService.respondToAppApproval(requestId, approve);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/2fa/app/status")
+    public ResponseEntity<ApiResponse<AuthResponse>> checkAppApprovalStatus(@RequestParam String preAuthToken, @RequestParam String requestId) {
+        AuthResponse authResponse = authService.checkAppApprovalStatus(preAuthToken, requestId);
+        return ResponseEntity.ok(ApiResponse.success(authResponse));
+    }
+
+    @PostMapping("/2fa/sms/request")
+    public ResponseEntity<ApiResponse<Void>> requestSms2fa(@RequestParam String preAuthToken) {
+        authService.requestSms2fa(preAuthToken);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/2fa/email/request")
+    public ResponseEntity<ApiResponse<Void>> requestEmail2fa(@RequestParam String preAuthToken) {
+        authService.requestEmail2fa(preAuthToken);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/2fa/otp/verify")
+    public ResponseEntity<ApiResponse<AuthResponse>> verify2faOtp(
+            @RequestParam String preAuthToken, 
+            @RequestParam String code, 
+            @RequestParam String method) {
+        AuthResponse response = authService.verify2faOtp(preAuthToken, code, method);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     /**
      * Disables 2FA on the account. Requires a valid TOTP code to confirm intent.
      */

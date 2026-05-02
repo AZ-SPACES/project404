@@ -36,6 +36,7 @@ public class RefreshToken {
 
     private String deviceName;
     private String deviceOs;
+    private String deviceId;
     private String ipAddress;
 
     @CreationTimestamp

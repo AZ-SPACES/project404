@@ -6,7 +6,7 @@ export type RootStackParamList = {
   OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
-  TotpLogin: { preAuthToken: string };
+  TotpLogin: { preAuthToken: string; methods?: string[]; defaultMethod?: string };
   ChangePhoneNumber: undefined;
   AccountDeactivated: undefined;
   NewDeviceLogin: undefined;
@@ -69,6 +69,7 @@ export type RootStackParamList = {
   Devices: undefined;
   TwoStepVerification: undefined;
   TotpSetup: undefined;
+  DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
   FindMeBy: undefined;
   BillForwardingIntro: undefined;

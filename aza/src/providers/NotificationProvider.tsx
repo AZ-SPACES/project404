@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { useAuth } from './AuthProvider';
-import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount } from '../services/api';
+import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount, getNotifications } from '../services/api';
 import { navigate } from '../navigation/navigationRef';
 
 type NotificationContextType = {
@@ -36,10 +36,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }),
       });
 
-      subscription = Notifications.addNotificationReceivedListener(() => {
+      subscription = Notifications.addNotificationReceivedListener((notification: any) => {
         if (userToken !== null) {
           fetchUnreadCount();
         }
+
+        const data = notification.request.content.data;
+        // Handle both standard and nested data (some FCM versions)
+        const type = data?.type || data?.notification?.type;
+        const requestId = data?.requestId || data?.notification?.requestId;
+        
+       
       });
 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
@@ -85,6 +92,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     prevTokenRef.current = userToken;
   }, [userToken]);
+
+  
 
   const fetchUnreadCount = async () => {
     try {

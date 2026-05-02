@@ -30,7 +30,6 @@ public class ReportService {
         if (txVolume == null) txVolume = BigDecimal.ZERO;
 
         long activeUsers = userRepository.countByStatus(User.AccountStatus.ACTIVE);
-        long totalUsers = userRepository.count();
 
         BigDecimal avgTx = txCount > 0
                 ? txVolume.divide(BigDecimal.valueOf(txCount), 2, RoundingMode.HALF_UP)

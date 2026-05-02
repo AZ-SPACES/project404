@@ -63,6 +63,8 @@ public class SecurityConfig {
                     auth.requestMatchers(
                             "/api/v1/auth/**",
                             "/api/v1/users/check-handle",
+                            "/api/v1/users/check-email",
+                            "/api/v1/users/check-phone",
                             "/api/v1/users/suggest-handles",
                             "/ws/**",
                             "/ws/chat/**"

@@ -6,7 +6,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Haptics from "expo-haptics";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RootStackParamList } from "../../../navigation/types";
-import { useAppTheme, ThemeColors } from "../../../theme";
+import { useAppTheme, ThemeColors, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { useAuth } from "../../../providers/AuthProvider";
 
@@ -54,7 +54,7 @@ export default function AccountReadyScreen() {
                 onPress={handleFinish}
                 backgroundColor={Colors.primary}
                 textColor={Colors.secondary}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
                 fontSize={16}
                 fontWeight="700"
