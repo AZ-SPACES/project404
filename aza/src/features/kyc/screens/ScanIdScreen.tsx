@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -287,7 +287,7 @@ export default function ScanIdScreen() {
                 onPress={handleLooksGood}
                 backgroundColor={Colors.primary}
                 textColor={Colors.secondary}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
                 fontSize={Typography.button.fontSize}
               />
@@ -297,7 +297,7 @@ export default function ScanIdScreen() {
                 onPress={handleRetake}
                 backgroundColor={Colors.secondary}
                 textColor={Colors.primary}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
                 fontSize={Typography.button.fontSize}
               />

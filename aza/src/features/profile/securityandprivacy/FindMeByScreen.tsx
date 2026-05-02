@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, useRef, useEffect, useCallback } from "react";
+import React, { ComponentProps, useState, useRef, useEffect } from "react";
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
-import { updatePrivacySettings, api, removeSelfEverywhere } from "../../../services/api";
+import { removeSelfEverywhere as removeSelfEverywhereApi } from "../../../services/api";
 
 const { height } = Dimensions.get("window");
 
@@ -81,45 +81,15 @@ export function FindMeByScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const navigation = useNavigation<NavigationProp>();
-  const { displayName, email, phone } = useProfile();
+  const { 
+    displayName, email, phone, 
+    findMeByHandle, findMeByEmail, findMeByPhone,
+    updateProfile, fetchProfile 
+  } = useProfile();
 
-  const [wiseTagEnabled, setWiseTagEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(true);
-  const [phoneEnabled, setPhoneEnabled] = useState(true);
-
-  // Fetch initial privacy settings from /me endpoint
-  useEffect(() => {
-    api.get('/api/v1/users/me').then(({ data }) => {
-      const u = data.data ?? data;
-      if (u.findMeByHandle != null) setWiseTagEnabled(u.findMeByHandle);
-      if (u.findMeByEmail != null) setEmailEnabled(u.findMeByEmail);
-      if (u.findMeByPhone != null) setPhoneEnabled(u.findMeByPhone);
-    }).catch(() => {});
-  }, []);
-
-  // Debounce timer ref for batching rapid toggle changes
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<{ findMeByHandle?: boolean; findMeByEmail?: boolean; findMeByPhone?: boolean }>({});
-
-  const schedulePrivacySave = useCallback((patch: typeof pendingRef.current) => {
-    pendingRef.current = { ...pendingRef.current, ...patch };
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await updatePrivacySettings(pendingRef.current);
-      } catch {
-        // Silently fail — non-critical setting
-      } finally {
-        pendingRef.current = {};
-      }
-    }, 800);
-  }, []);
-
-  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }, []);
-
-  const handleWiseTagChange = (v: boolean) => { setWiseTagEnabled(v); schedulePrivacySave({ findMeByHandle: v }); };
-  const handleEmailChange = (v: boolean) => { setEmailEnabled(v); schedulePrivacySave({ findMeByEmail: v }); };
-  const handlePhoneChange = (v: boolean) => { setPhoneEnabled(v); schedulePrivacySave({ findMeByPhone: v }); };
+  const handleWiseTagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
+  const handleEmailChange = (v: boolean) => { updateProfile({ findMeByEmail: v }); };
+  const handlePhoneChange = (v: boolean) => { updateProfile({ findMeByPhone: v }); };
 
   const [isModalVisible, setModalVisible] = useState(false);
   const modalAnim = useRef(new Animated.Value(height)).current;
@@ -171,7 +141,7 @@ export function FindMeByScreen() {
         <View style={styles.titleSection}>
           <Text style={[Typography.h1, styles.mainTitle]}>Find me by</Text>
           <Text style={[Typography.body, styles.description]}>
-            Set how people on Wise can find you to send and request money.
+            Set how people on Aza can find you to send and request money.
           </Text>
         </View>
 
@@ -180,7 +150,7 @@ export function FindMeByScreen() {
             iconType="Custom"
             title="Aza tag"
             subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'}
-            switchValue={wiseTagEnabled}
+            switchValue={findMeByHandle ?? true}
             onSwitchChange={handleWiseTagChange}
           />
 
@@ -189,7 +159,7 @@ export function FindMeByScreen() {
             iconName="mail"
             title="Email address"
             subtitle={email ?? 'Not set'}
-            switchValue={emailEnabled}
+            switchValue={findMeByEmail ?? true}
             onSwitchChange={handleEmailChange}
           />
 
@@ -198,7 +168,7 @@ export function FindMeByScreen() {
             iconName="phone"
             title="Phone number"
             subtitle={phone ?? 'Not set'}
-            switchValue={phoneEnabled}
+            switchValue={findMeByPhone ?? true}
             onSwitchChange={handlePhoneChange}
           />
         </View>
@@ -266,7 +236,7 @@ export function FindMeByScreen() {
           </View>
 
           <Text style={[Typography.bodyLg, styles.modalDescription]}>
-            If you have already been found by people on Wise, you can remove
+            If you have already been found by people on Aza, you can remove
             yourself - and become hidden in the future.
           </Text>
 
@@ -275,10 +245,8 @@ export function FindMeByScreen() {
               style={styles.destructiveButton}
               onPress={async () => {
                 try {
-                  await removeSelfEverywhere();
-                  setWiseTagEnabled(false);
-                  setEmailEnabled(false);
-                  setPhoneEnabled(false);
+                  await removeSelfEverywhereApi();
+                  await fetchProfile();
                   setModalVisible(false);
                   navigation.goBack();
                 } catch (e) {

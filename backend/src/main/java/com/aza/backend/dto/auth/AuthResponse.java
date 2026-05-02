@@ -43,6 +43,11 @@ public class AuthResponse {
         private Boolean billForwardingEnabled;
         // Security
         private Boolean twoFactorEnabled;
+        private Boolean smsTwoFactorEnabled;
+        private Boolean emailTwoFactorEnabled;
+        private Boolean appTwoFactorEnabled;
+        private Boolean passkeysEnabled;
+        private String defaultTwoFactorMethod;
         private Boolean forcePasswordReset;
         private Boolean requireSelfieVerification;
         private String notificationPreferences;

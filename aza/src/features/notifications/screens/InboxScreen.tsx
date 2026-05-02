@@ -15,7 +15,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { useNotifications } from "../../../providers/NotificationProvider";
 
-import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, deleteAllNotifications } from "../../../services/api";
+import { api, getNotifications, markAllNotificationsAsRead, markNotificationAsRead, deleteAllNotifications } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
@@ -39,7 +39,7 @@ const NotificationCard = ({
   item: NotificationItem, 
   styles: any, 
   Colors: any,
-  onPress: (id: string) => void
+  onPress: (id: string, approval?: boolean) => void
 }) => {
   const date = new Date(item.createdAt);
   const formattedDate = !isNaN(date.getTime()) 
@@ -73,6 +73,7 @@ const NotificationCard = ({
       <Text style={[Typography.body, styles.notificationContent]}>
         {item.body}
       </Text>
+      
     </TouchableOpacity>
   );
 };
@@ -88,6 +89,13 @@ export default function InboxScreen() {
 
   React.useEffect(() => {
     fetchNotifications();
+
+    const Notifications = require('expo-notifications');
+    const subscription = Notifications.addNotificationReceivedListener(() => {
+      fetchNotifications();
+    });
+
+    return () => subscription.remove();
   }, []);
 
   const fetchNotifications = async () => {
@@ -128,13 +136,16 @@ export default function InboxScreen() {
     }
   };
 
-  const handleNotificationPress = async (id: string) => {
+  const handleNotificationPress = async (id: string, approval?: boolean) => {
+    const notification = notifications.find(n => n.id === id);
+    if (!notification) return;
+
     try {
       await markNotificationAsRead(id);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
       fetchUnreadCount();
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('Failed to handle notification action:', error);
     }
   };
 
@@ -309,5 +320,37 @@ function createStyles(Colors: any) {
   emptyText: {
     color: Colors.textSecondary,
     textAlign: "center",
-    lineHeight: 20 } });
+    lineHeight: 20 },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: Spacing.md,
+    paddingLeft: 16
+  },
+  actionButton: {
+    flex: 1,
+    height: 36,
+    borderRadius: Radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  approveButton: {
+    backgroundColor: Colors.primary
+  },
+  approveButtonText: {
+    color: Colors.background,
+    fontWeight: '600',
+    fontSize: 14
+  },
+  rejectButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.border
+  },
+  rejectButtonText: {
+    color: Colors.error,
+    fontWeight: '600',
+    fontSize: 14
+  }
+});
 }

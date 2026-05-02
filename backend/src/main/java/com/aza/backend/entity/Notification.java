@@ -61,7 +61,8 @@ public class Notification {
         PAYMENT_REQUEST_DECLINED,
         PAYMENT_REQUEST_EXPIRED,
         PAYMENT_REQUEST_CANCELLED,
-        SYSTEM_BROADCAST
+        SYSTEM_BROADCAST,
+        LOGIN_APPROVAL
     }
 
 }

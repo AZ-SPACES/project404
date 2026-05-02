@@ -13,7 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing , Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 import * as SecureStore from "expo-secure-store";
@@ -134,7 +134,7 @@ export default function SignUpBirthdayScreen() {
             onPress={handleNext}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
-            borderRadius={30}
+            borderRadius={Radius.sm}
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}

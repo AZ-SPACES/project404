@@ -29,18 +29,15 @@ public class RiskService {
         PageRequest pageable = PageRequest.of(page, size);
         Page<RiskAlert> items;
 
-        boolean hasSeverity = severity != null && !severity.isBlank();
-        boolean hasStatus = status != null && !status.isBlank();
-
-        if (hasSeverity && hasStatus) {
+        if (severity != null && !severity.isBlank() && status != null && !status.isBlank()) {
             items = riskAlertRepository.findAllBySeverityAndStatusOrderByTriggeredAtDesc(
                     RiskAlert.Severity.valueOf(severity.toUpperCase()),
                     RiskAlert.AlertStatus.valueOf(status.toUpperCase()),
                     pageable);
-        } else if (hasSeverity) {
+        } else if (severity != null && !severity.isBlank()) {
             items = riskAlertRepository.findAllBySeverityOrderByTriggeredAtDesc(
                     RiskAlert.Severity.valueOf(severity.toUpperCase()), pageable);
-        } else if (hasStatus) {
+        } else if (status != null && !status.isBlank()) {
             items = riskAlertRepository.findAllByStatusOrderByTriggeredAtDesc(
                     RiskAlert.AlertStatus.valueOf(status.toUpperCase()), pageable);
         } else {

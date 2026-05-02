@@ -75,6 +75,11 @@ public class UserService {
                 .syncContacts(user.getSyncContacts())
                 .billForwardingEnabled(user.getBillForwardingEnabled())
                 .twoFactorEnabled(user.getTwoFactorEnabled())
+                .smsTwoFactorEnabled(user.getSmsTwoFactorEnabled())
+                .emailTwoFactorEnabled(user.getEmailTwoFactorEnabled())
+                .appTwoFactorEnabled(user.getAppTwoFactorEnabled())
+                .passkeysEnabled(user.getPasskeysEnabled())
+                .defaultTwoFactorMethod(user.getDefaultTwoFactorMethod() != null ? user.getDefaultTwoFactorMethod().name() : null)
                 .forcePasswordReset(user.getForcePasswordReset())
                 .requireSelfieVerification(user.getRequireSelfieVerification())
                 .notificationPreferences(user.getNotificationPreferences())
@@ -161,8 +166,7 @@ public class UserService {
     public PublicProfileResponse getPublicProfileByHandle(String handle) {
         User user = userRepository.findByHandle(handle)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getStatus() == User.AccountStatus.DEACTIVATED || !Boolean.TRUE.equals(user.getFindMeByHandle())) {
+        if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new RuntimeException("User not found");
         }
 
@@ -171,7 +175,7 @@ public class UserService {
                 .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
                 .handle(user.getHandle())
                 .profileImageUrl(user.getProfileImageUrl())
-                .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until contacts system is built
+                .onlineStatus("OFFLINE")
                 .build();
     }
 
@@ -414,6 +418,24 @@ public class UserService {
             return false;
         }
         return !userRepository.existsByHandle(normalized);
+    }
+
+    public boolean isEmailAvailable(String email) {
+        if (email == null || email.isBlank()) return false;
+        String normalized = email.toLowerCase().trim();
+        if (!EMAIL_PATTERN.matcher(normalized).matches()) {
+            return false;
+        }
+        return !userRepository.existsByEmail(normalized);
+    }
+
+    public boolean isPhoneAvailable(String phone) {
+        if (phone == null || phone.isBlank()) return false;
+        String normalized = normalizePhone(phone);
+        if (normalized == null || !PHONE_PATTERN.matcher(normalized).matches()) {
+            return false;
+        }
+        return !userRepository.existsByPhone(normalized);
     }
 
     public List<String> suggestHandles(String firstName, String lastName) {

@@ -30,6 +30,7 @@ public class SignupRequest {
 
     private String deviceName;
     private String deviceOs;
+    private String deviceId;
 
     // Address fields
     private String homeAddress;

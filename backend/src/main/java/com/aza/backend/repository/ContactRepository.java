@@ -35,7 +35,6 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
             @Param("userId") UUID userId,
             @Param("query") String query,
             Pageable pageable);
-
     @Modifying
     @Query("DELETE FROM Contact c WHERE c.ownerUserId = :userId")
     void deleteAllByOwnerUserId(@Param("userId") UUID userId);
