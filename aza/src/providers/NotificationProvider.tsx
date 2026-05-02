@@ -53,6 +53,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // navigate('App', { screen: 'Transactions' });
         } else if (data?.type?.includes('PAYMENT_REQUEST')) {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+        } else if (data?.type === 'LOGIN_APPROVAL') {
+          navigate('LoginApproval', { 
+            requestId: data.requestId, 
+            deviceName: data.deviceName, 
+            ipAddress: data.ipAddress 
+          });
         } else {
           // Default fallback is inbox for all general alerts (SYSTEM_BROADCAST, SECURITY_ALERT, etc)
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });

@@ -292,16 +292,34 @@ export const updateNotificationPreferences = (preferences: Record<string, boolea
 
 // --- 2FA / TOTP Endpoints ---
 
-export const setup2FA = () => api.post("/api/v1/auth/2fa/setup");
+export const initiateTotpSetup = () => api.post("/api/v1/auth/2fa/setup");
 
-export const confirm2FA = (code: string) =>
+export const confirmTotpSetup = (code: string) =>
   api.post("/api/v1/auth/2fa/confirm", { code });
 
-export const disable2FA = (code: string) =>
+export const disableTotp = (code: string) =>
   api.delete("/api/v1/auth/2fa", { data: { code } });
 
 export const regenerateRecoveryCodes = (code: string) =>
   api.post("/api/v1/auth/2fa/recovery/regenerate", { code });
+
+export const redeemRecoveryCode = (preAuthToken: string, recoveryCode: string) =>
+  api.post("/api/v1/auth/2fa/recovery", { preAuthToken, recoveryCode });
+
+export const requestApp2faApproval = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/app/request?preAuthToken=${preAuthToken}`);
+
+export const checkApp2faStatus = (preAuthToken: string, requestId: string) =>
+  api.post(`/api/v1/auth/2fa/app/status?preAuthToken=${preAuthToken}&requestId=${requestId}`);
+
+export const requestSms2fa = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/sms/request?preAuthToken=${preAuthToken}`);
+
+export const requestEmail2fa = (preAuthToken: string) =>
+  api.post(`/api/v1/auth/2fa/email/request?preAuthToken=${preAuthToken}`);
+
+export const verify2faOtp = (preAuthToken: string, code: string, method: string) =>
+  api.post(`/api/v1/auth/2fa/otp/verify?preAuthToken=${preAuthToken}&code=${code}&method=${method}`);
 
 
 // In-memory queue for requests that fail while refreshing

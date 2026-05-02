@@ -13,6 +13,11 @@ type ProfileData = {
   handle: string | null;
   syncContacts: boolean;
   billForwardingEnabled: boolean;
+  twoFactorEnabled: boolean;
+  smsTwoFactorEnabled: boolean;
+  emailTwoFactorEnabled: boolean;
+  appTwoFactorEnabled: boolean;
+  passkeysEnabled: boolean;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -23,6 +28,11 @@ const INITIAL_PROFILE: ProfileData = {
   handle: null,
   syncContacts: true,
   billForwardingEnabled: false,
+  twoFactorEnabled: false,
+  smsTwoFactorEnabled: false,
+  emailTwoFactorEnabled: false,
+  appTwoFactorEnabled: false,
+  passkeysEnabled: false,
 };
 
 type ProfileContextType = ProfileData & {
@@ -33,6 +43,7 @@ type ProfileContextType = ProfileData & {
   setHandle: (handle: string | null) => Promise<void>;
   setSyncContacts: (enabled: boolean) => Promise<void>;
   setBillForwardingEnabled: (enabled: boolean) => Promise<void>;
+  toggleApp2fa: (enabled: boolean) => Promise<void>;
   fetchProfile: () => Promise<void>;
 };
 
@@ -64,7 +75,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const { data } = await api.get('/api/v1/users/me');
       const userData = data.data;
-      const updated = {
+      const updated: ProfileData = {
         displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
         profileImageUri: userData.profileImageUrl,
         email: userData.email,
@@ -72,6 +83,11 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         handle: userData.handle,
         syncContacts: userData.syncContacts ?? true,
         billForwardingEnabled: userData.billForwardingEnabled ?? false,
+        twoFactorEnabled: userData.twoFactorEnabled ?? false,
+        smsTwoFactorEnabled: userData.smsTwoFactorEnabled ?? false,
+        emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
+        appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
+        passkeysEnabled: userData.passkeysEnabled ?? false,
       };
       setProfile(updated);
       await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
@@ -165,8 +181,19 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [profile]);
 
+  const toggleApp2fa = useCallback(async (enabled: boolean) => {
+    const updated = { ...profile, appTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
+    setProfile(updated);
+    try {
+      await api.post(`/api/v1/auth/2fa/app/toggle?enabled=${enabled}`);
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to toggle App 2FA', e);
+    }
+  }, [profile]);
+
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, fetchProfile }}>
+    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, toggleApp2fa, fetchProfile }}>
       {children}
     </ProfileContext.Provider>
   );

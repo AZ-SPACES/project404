@@ -17,6 +17,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     List<RefreshToken> findAllByUserId(UUID userId);
+    long countByUserId(UUID userId);
 
     Optional<RefreshToken> findByIdAndUserId(UUID id, UUID userId);
 

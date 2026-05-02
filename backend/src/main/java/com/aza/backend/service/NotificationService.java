@@ -92,7 +92,6 @@ public class NotificationService {
         sendNotificationWithImage(userId, type, title, body, data, paymentAmount, null);
     }
 
-    @Transactional
     public void sendNotificationWithImage(UUID userId, Notification.NotificationType type,
                                  String title, String body, Map<String, Object> data,
                                  BigDecimal paymentAmount, String imageUrl) {
@@ -281,6 +280,21 @@ public class NotificationService {
                 Notification.NotificationType.SECURITY_ALERT,
                 "New Sign-in Detected",
                 "Your account was accessed from " + deviceName,
+                data);
+    }
+
+    public void sendLoginApprovalRequest(UUID userId, String deviceName, String requestId, String ipAddress) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", "LOGIN_APPROVAL");
+        data.put("requestId", requestId);
+        data.put("deviceName", deviceName);
+        data.put("ipAddress", ipAddress);
+
+        sendNotification(
+                userId,
+                Notification.NotificationType.LOGIN_APPROVAL,
+                "Login Approval Request",
+                "A new device is trying to log in: " + deviceName,
                 data);
     }
 

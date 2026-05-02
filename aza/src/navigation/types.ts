@@ -6,10 +6,12 @@ export type RootStackParamList = {
   OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
-  TotpLogin: { preAuthToken: string };
+  TotpLogin: { preAuthToken: string; methods?: string[]; defaultMethod?: string };
   ChangePhoneNumber: undefined;
   AccountDeactivated: undefined;
   NewDeviceLogin: undefined;
+  LoginApproval: { requestId: string; deviceName?: string; ipAddress?: string };
+  LoginWaitApproval: { preAuthToken: string };
   ResetPassword: undefined;
   ResetOTP: { email: string };
   ResetNewPassword: { email: string; code: string };
