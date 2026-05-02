@@ -88,7 +88,7 @@ const TotpLoginScreen: React.FC = () => {
       login(
         payload.accessToken,
         payload.hasPasscode ?? true,
-        payload.kycVerified ?? false,
+        payload.kycVerified ?? true,
       );
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';

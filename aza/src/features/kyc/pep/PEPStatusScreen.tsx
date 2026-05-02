@@ -104,18 +104,20 @@ export function PEPStatusScreen() {
                 outputRange: ["transparent", Colors.border] }) },
           ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <MaterialIcons
+                name="chevron-left"
+                size={28}
+                color={Colors.textPrimary}
+              />
+            </TouchableOpacity>
+          )}
           <Animated.View
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
