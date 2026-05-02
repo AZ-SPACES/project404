@@ -57,6 +57,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading: true,
   });
 
+  const logout = useCallback(() => {
+    setAuthState({
+      userToken: null,
+      isKYCVerified: false,
+      hasPasscode: false,
+      isBiometricsEnabled: false,
+      isLoading: false,
+    });
+    Promise.all([
+      SecureStore.deleteItemAsync(AUTH_STATE_KEY),
+      SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
+      SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
+    ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
+  }, []);
+
   useEffect(() => {
     const bootstrapAsync = async () => {
       let stateFromStorage: AuthState | null = null;
@@ -69,8 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error("Failed to load auth state", e);
       }
 
-      // Fall back to checking the actual passcode value so users who logged in
-      // before the hasPasscode flag was correctly persisted aren't sent to setup.
       let hasPasscodeResolved = stateFromStorage?.hasPasscode || false;
       if (!hasPasscodeResolved && stateFromStorage?.userToken) {
         try {
@@ -89,7 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     bootstrapAsync();
-  }, []);
+
+    import("../services/api").then(({ setOnAuthFailure }) => {
+      setOnAuthFailure(logout);
+    });
+  }, [logout]);
 
   const saveState = async (newState: Partial<AuthState>) => {
     const updatedState = { ...authState, ...newState };
@@ -120,23 +137,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const logout = () => {
-    // Reset in-memory state immediately so navigation reacts at once
-    setAuthState({
-      userToken: null,
-      isKYCVerified: false,
-      hasPasscode: false,
-      isBiometricsEnabled: false,
-      isLoading: false,
-    });
-    // Clear all persisted secrets in the background
-    Promise.all([
-      SecureStore.deleteItemAsync(AUTH_STATE_KEY),
-      SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
-      SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
-    ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
-  };
-
   const completeKYC = () => {
     saveState({ isKYCVerified: true });
   };
@@ -157,11 +157,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-      // Do NOT set hasPasscode: true here. Setting it triggers RootNavigator to
-      // swap SetupNavigator → KYCNavigator immediately, before the navigator
-      // can proceed to the Consent screen (blank screen bug). The setPasscode()
-      // call at the end of the onboarding flow (EnableNotificationsScreen /
-      // EnableBiometricsScreen) is responsible for that state transition.
     } catch (e) {
       console.error("Failed to save passcode value", e);
       Alert.alert(
@@ -231,8 +226,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const toggleBiometrics = (enabled: boolean) => {
+  const toggleBiometrics = async (enabled: boolean) => {
     saveState({ isBiometricsEnabled: enabled });
+    try {
+      const { updatePrivacySettings } = await import("../services/api");
+      await updatePrivacySettings({ biometricsEnabled: enabled });
+    } catch (e) {
+      console.error("Failed to sync biometrics setting to backend", e);
+    }
   };
 
   return (

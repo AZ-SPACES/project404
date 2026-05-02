@@ -312,7 +312,7 @@ export function getSupportChat(chatId: string): Promise<SupportChatSummary> {
 }
 
 export function getSupportChatMessages(chatId: string, page = 0, size = 50): Promise<Page<SupportMessage>> {
-  return request(`/api/v1/admin/support/chats/${chatId}/messages?page=${page}&size=${size}`);
+  return request(`/api/v1/admin/support/chats/${chatId}/messages?page=${page}&size=${size}&_t=${Date.now()}`);
 }
 
 export function sendSupportReply(chatId: string, content: string): Promise<SupportMessage> {
@@ -326,6 +326,13 @@ export function sendTypingIndicator(chatId: string, isTyping: boolean): Promise<
   return request(`/api/v1/chats/typing`, {
     method: "POST",
     body: JSON.stringify({ chatId, isTyping }),
+  });
+}
+
+export function initiateCall(calleeId: string, type: "VOICE" | "VIDEO"): Promise<void> {
+  return request("/api/v1/calls", {
+    method: "POST",
+    body: JSON.stringify({ calleeId, type }),
   });
 }
 
@@ -422,11 +429,12 @@ export interface BroadcastResult {
 export function broadcastNotification(
   title: string,
   body: string,
-  audience: "ALL" | "KYC_VERIFIED" | "ACTIVE_ONLY"
+  audience: "ALL" | "KYC_VERIFIED" | "ACTIVE_ONLY",
+  imageUrl?: string
 ): Promise<BroadcastResult> {
   return request("/api/v1/admin/notifications/broadcast", {
     method: "POST",
-    body: JSON.stringify({ title, body, audience }),
+    body: JSON.stringify({ title, body, audience, imageUrl }),
   });
 }
 
@@ -490,4 +498,298 @@ export function updateChatPriority(chatId: string, priority: string): Promise<Su
 
 export function reverseTransaction(txId: string): Promise<AdminTransaction> {
   return request(`/api/v1/admin/dashboard/transactions/${txId}/reverse`, { method: "POST" });
+}
+
+// ── Internal Notes ────────────────────────────────────────────────────────────
+
+export interface InternalNote {
+  id: string;
+  chatId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export function getInternalNotes(chatId: string): Promise<InternalNote[]> {
+  return request(`/api/v1/admin/support/chats/${chatId}/notes`);
+}
+
+export function addInternalNote(chatId: string, content: string): Promise<InternalNote> {
+  return request(`/api/v1/admin/support/chats/${chatId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+// ── Canned Responses ──────────────────────────────────────────────────────────
+
+export interface CannedResponse {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  usageCount: number;
+}
+
+export function getCannedResponses(): Promise<CannedResponse[]> {
+  return request("/api/v1/admin/support/canned-responses");
+}
+
+export function createCannedResponse(data: { title: string; content: string; category: string }): Promise<CannedResponse> {
+  return request("/api/v1/admin/support/canned-responses", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCannedResponse(id: string): Promise<void> {
+  return request(`/api/v1/admin/support/canned-responses/${id}`, { method: "DELETE" });
+}
+
+// ── Update chat category ──────────────────────────────────────────────────────
+
+export function updateChatCategory(chatId: string, category: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/category`, {
+    method: "PATCH",
+    body: JSON.stringify({ category }),
+  });
+}
+
+// ── Support Analytics ─────────────────────────────────────────────────────────
+
+export interface SupportAnalytics {
+  totalTickets: number;
+  openTickets: number;
+  resolvedToday: number;
+  avgFirstResponseMinutes: number;
+  avgResolutionHours: number;
+  slaComplianceRate: number;
+  byCategory: { category: string; count: number }[];
+  byPriority: { priority: string; count: number }[];
+  recentTrend: { date: string; opened: number; resolved: number }[];
+}
+
+export function getSupportAnalytics(): Promise<SupportAnalytics> {
+  return request("/api/v1/admin/support/analytics");
+}
+
+// ── Compliance / AML ──────────────────────────────────────────────────────────
+
+export interface FlaggedTransaction {
+  id: string;
+  transactionId: string;
+  userId: string;
+  userName: string;
+  userHandle: string | null;
+  amount: number;
+  currency: string;
+  flagReason: string;
+  riskScore: number;
+  status: "PENDING_REVIEW" | "CLEARED" | "REPORTED";
+  flaggedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  notes: string | null;
+}
+
+export interface ComplianceStats {
+  flaggedToday: number;
+  pendingReview: number;
+  clearedThisMonth: number;
+  reportsFiledThisMonth: number;
+  highRiskUsers: number;
+  averageRiskScore: number;
+}
+
+export function getFlaggedTransactions(page = 0, size = 20, status?: string): Promise<Page<FlaggedTransaction>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/compliance/flagged?${params}`);
+}
+
+export function getComplianceStats(): Promise<ComplianceStats> {
+  return request("/api/v1/admin/compliance/stats");
+}
+
+export function reviewFlaggedTransaction(id: string, action: "CLEAR" | "REPORT", notes: string): Promise<FlaggedTransaction> {
+  return request(`/api/v1/admin/compliance/flagged/${id}/review`, {
+    method: "POST",
+    body: JSON.stringify({ action, notes }),
+  });
+}
+
+// ── Disputes ──────────────────────────────────────────────────────────────────
+
+export interface Dispute {
+  id: string;
+  referenceId: string;
+  transactionId: string;
+  userId: string;
+  userName: string;
+  userHandle: string | null;
+  amount: number;
+  currency: string;
+  category: "UNAUTHORIZED" | "WRONG_AMOUNT" | "NOT_RECEIVED" | "DUPLICATE" | "SERVICE_ISSUE" | "OTHER";
+  description: string;
+  evidence: string | null;
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED_APPROVED" | "RESOLVED_DENIED";
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface DisputeStats {
+  open: number;
+  underReview: number;
+  resolvedThisMonth: number;
+  totalValueDisputed: number;
+}
+
+export function getDisputes(page = 0, size = 20, status?: string): Promise<Page<Dispute>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/disputes?${params}`);
+}
+
+export function getDisputeStats(): Promise<DisputeStats> {
+  return request("/api/v1/admin/disputes/stats");
+}
+
+export function resolveDispute(id: string, action: "APPROVE" | "DENY", resolution: string): Promise<Dispute> {
+  return request(`/api/v1/admin/disputes/${id}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ action, resolution }),
+  });
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+export interface PlatformReport {
+  period: string;
+  startDate: string;
+  endDate: string;
+  totalRevenue: number;
+  feeRevenue: number;
+  transactionVolume: number;
+  transactionCount: number;
+  newUsers: number;
+  activeUsers: number;
+  kycVerifications: number;
+  averageTransactionSize: number;
+  topTransactionType: string;
+}
+
+export function getPlatformReport(period: "TODAY" | "WEEK" | "MONTH" | "QUARTER" | "YEAR"): Promise<PlatformReport> {
+  return request(`/api/v1/admin/reports/summary?period=${period}`);
+}
+
+// ── Risk Management ───────────────────────────────────────────────────────────
+
+export interface RiskAlert {
+  id: string;
+  userId: string;
+  userName: string;
+  userHandle: string | null;
+  alertType: "VELOCITY" | "LARGE_TRANSFER" | "UNUSUAL_PATTERN" | "MULTIPLE_DEVICES" | "BLACKLIST_MATCH" | "PEP_MATCH";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  description: string;
+  transactionId: string | null;
+  riskScore: number;
+  triggeredAt: string;
+  status: "OPEN" | "INVESTIGATING" | "RESOLVED" | "FALSE_POSITIVE";
+}
+
+export interface RiskStats {
+  openAlerts: number;
+  criticalAlerts: number;
+  investigatingAlerts: number;
+  resolvedToday: number;
+  averageRiskScore: number;
+}
+
+export function getRiskAlerts(page = 0, size = 20, severity?: string, status?: string): Promise<Page<RiskAlert>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (severity) params.set("severity", severity);
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/risk/alerts?${params}`);
+}
+
+export function getRiskStats(): Promise<RiskStats> {
+  return request("/api/v1/admin/risk/stats");
+}
+
+export function updateRiskAlert(id: string, status: string, notes?: string): Promise<RiskAlert> {
+  return request(`/api/v1/admin/risk/alerts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, notes }),
+  });
+}
+
+// ── System Settings ───────────────────────────────────────────────────────────
+
+export interface SystemSettings {
+  maintenanceMode: boolean;
+  registrationEnabled: boolean;
+  kycRequired: boolean;
+  maxDailyTransferGhs: number;
+  maxSingleTransactionGhs: number;
+  supportEmail: string;
+  supportPhone: string;
+  platformVersion: string;
+  featureFlags: {
+    biometricEnabled: boolean;
+    p2pEnabled: boolean;
+    notificationsEnabled: boolean;
+  };
+}
+
+export function getSystemSettings(): Promise<SystemSettings> {
+  return request("/api/v1/admin/settings");
+}
+
+export function updateSystemSettings(settings: Partial<Omit<SystemSettings, "platformVersion">>): Promise<SystemSettings> {
+  return request("/api/v1/admin/settings", {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}
+
+// ── Fee Management ────────────────────────────────────────────────────────────
+
+export interface FeeRule {
+  id: string;
+  name: string;
+  description: string;
+  transactionType: string;
+  feeType: "FLAT" | "PERCENTAGE";
+  amount: number;
+  minFee: number | null;
+  maxFee: number | null;
+  tierMinAmount: number | null;
+  tierMaxAmount: number | null;
+  active: boolean;
+  effectiveFrom: string;
+}
+
+export interface FeeStats {
+  totalFeeRevenueToday: number;
+  totalFeeRevenueMonth: number;
+  averageFeePerTransaction: number;
+  activeFeeRules: number;
+}
+
+export function getFeeRules(): Promise<FeeRule[]> {
+  return request("/api/v1/admin/fees");
+}
+
+export function getFeeStats(): Promise<FeeStats> {
+  return request("/api/v1/admin/fees/stats");
+}
+
+export function updateFeeRule(id: string, data: Partial<Pick<FeeRule, "amount" | "active" | "minFee" | "maxFee">>): Promise<FeeRule> {
+  return request(`/api/v1/admin/fees/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }

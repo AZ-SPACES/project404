@@ -98,6 +98,9 @@ public class User {
     @Builder.Default
     private Boolean syncContacts = true;
 
+    @Builder.Default
+    private Boolean billForwardingEnabled = false;
+
     // --- Silent Hours ---
     @Builder.Default
     private Boolean silentHoursEnabled = false;

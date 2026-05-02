@@ -113,9 +113,9 @@ export function DevicesScreen() {
   const getDeviceIcon = (os: string | null): React.ComponentProps<typeof Feather>['name'] => {
     if (!os) return 'smartphone';
     const lower = os.toLowerCase();
-    if (lower.includes('ios') || lower.includes('mac') || lower.includes('iphone')) return 'smartphone';
+    if (lower.includes('ios') || lower.includes('iphone')) return 'smartphone';
     if (lower.includes('android')) return 'smartphone';
-    if (lower.includes('windows') || lower.includes('linux') || lower.includes('mac')) return 'monitor';
+    if (lower.includes('windows') || lower.includes('linux') || lower.includes('mac') || lower.includes('desktop')) return 'monitor';
     return 'smartphone';
   };
 

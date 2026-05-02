@@ -47,7 +47,7 @@ export default function TalkToUsScreen() {
     setCallingSupport(true);
     try {
       const res = await getAvailableSupportAgents();
-      const agents: any[] = res.data ?? [];
+      const agents: any[] = res.data?.data ?? [];
       if (agents.length === 0) {
         Alert.alert(
           "No agents available",

@@ -36,6 +36,7 @@ export default function NotificationsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<Audience>("ALL");
+  const [imageUrl, setImageUrl] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<number | null>(null);
@@ -47,10 +48,11 @@ export default function NotificationsPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await broadcastNotification(title.trim(), body.trim(), audience);
+      const res = await broadcastNotification(title.trim(), body.trim(), audience, imageUrl.trim() || undefined);
       setResult(res.sent);
       setTitle("");
       setBody("");
+      setImageUrl("");
     } catch (e: any) {
       setError(e.message ?? "Failed to send notification");
     } finally {
@@ -142,6 +144,20 @@ export default function NotificationsPage() {
           />
         </div>
 
+        {/* Image URL */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-medium text-white/70">Image URL (Optional)</label>
+          </div>
+          <input
+            type="url"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://example.com/image.png"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm transition-colors"
+          />
+        </div>
+
         {/* Preview */}
         {(title || body) && (
           <div>
@@ -155,6 +171,19 @@ export default function NotificationsPage() {
                   </div>
                   <span className="text-xs text-white/40 font-medium">aza · now</span>
                 </div>
+                {imageUrl && (
+                  <div className="mb-2 w-full h-32 rounded-lg bg-black/20 overflow-hidden relative border border-white/5">
+                    {/* We use standard img for simple admin preview to avoid Next.js Image host config issues */}
+                    <img 
+                      src={imageUrl} 
+                      alt="Notification preview" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://via.placeholder.com/400x200/1a1a1a/F5A623?text=Invalid+Image+URL";
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="text-sm font-semibold text-white mb-0.5 leading-snug">
                   {title || <span className="text-white/20">Title here</span>}
                 </div>

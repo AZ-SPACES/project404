@@ -6,6 +6,7 @@ import com.aza.backend.dto.user.PrivacySettingsRequest;
 import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.dto.user.UpdateProfileRequest;
 import com.aza.backend.entity.User;
+import com.aza.backend.service.ContactService;
 import com.aza.backend.service.PresenceService;
 import com.aza.backend.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final ContactService contactService;
     private final PresenceService presenceService;
     private final ObjectMapper objectMapper;
 
@@ -87,6 +89,14 @@ public class UserController {
             @RequestBody PrivacySettingsRequest request) {
         userService.updatePrivacySettings(user, request);
         return ResponseEntity.ok(ApiResponse.success("Privacy settings updated"));
+    }
+
+    @DeleteMapping("/me/privacy")
+    public ResponseEntity<ApiResponse<Object>> removeSelfEverywhere(
+            @AuthenticationPrincipal User user) {
+        userService.removeSelfEverywhere(user);
+        contactService.deleteAllContacts(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("Removed from all discovery and contact lists"));
     }
 
     // ==================== NOTIFICATIONS ====================

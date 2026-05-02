@@ -39,12 +39,14 @@ public class AdminNotificationController {
             default -> userRepository.findAll();
         };
 
-        recipients.forEach(u -> notificationService.sendNotification(
+        recipients.forEach(u -> notificationService.sendNotificationWithImage(
                 u.getId(),
                 Notification.NotificationType.SYSTEM_BROADCAST,
                 request.getTitle(),
                 request.getBody(),
-                null));
+                null,
+                null,
+                request.getImageUrl()));
 
         auditService.log(admin, "BROADCAST_NOTIFICATION", null,
                 "audience=" + audience

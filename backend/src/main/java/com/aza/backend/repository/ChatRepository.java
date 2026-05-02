@@ -42,4 +42,16 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
             org.springframework.data.domain.Pageable pageable);
 
     long countByIsSupportTrueAndStatus(Chat.ChatStatus status);
+
+    long countByIsSupportTrue();
+
+    long countByIsSupportTrueAndStatusAndResolvedAtAfter(
+            Chat.ChatStatus status,
+            java.time.LocalDateTime since);
+
+    @Query("SELECT c.category, COUNT(c) FROM Chat c WHERE c.isSupport = true GROUP BY c.category")
+    java.util.List<Object[]> countSupportChatsByCategory();
+
+    @Query("SELECT c.priority, COUNT(c) FROM Chat c WHERE c.isSupport = true GROUP BY c.priority")
+    java.util.List<Object[]> countSupportChatsByPriority();
 }

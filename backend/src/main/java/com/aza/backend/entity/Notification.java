@@ -36,6 +36,9 @@ public class Notification {
     @Column(columnDefinition = "TEXT")
     private String data;
 
+    @Column
+    private String imageUrl;
+
     @Builder.Default
     private Boolean isRead = false;
 

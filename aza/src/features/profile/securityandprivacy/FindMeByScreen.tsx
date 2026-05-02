@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
-import { updatePrivacySettings, api } from "../../../services/api";
+import { updatePrivacySettings, api, removeSelfEverywhere } from "../../../services/api";
 
 const { height } = Dimensions.get("window");
 
@@ -273,7 +273,19 @@ export function FindMeByScreen() {
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.destructiveButton}
-              onPress={() => setModalVisible(false)}
+              onPress={async () => {
+                try {
+                  await removeSelfEverywhere();
+                  setWiseTagEnabled(false);
+                  setEmailEnabled(false);
+                  setPhoneEnabled(false);
+                  setModalVisible(false);
+                  navigation.goBack();
+                } catch (e) {
+                  // Handle error if needed
+                  setModalVisible(false);
+                }
+              }}
             >
               <Text style={styles.destructiveButtonText}>Remove yourself</Text>
             </TouchableOpacity>

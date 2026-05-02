@@ -207,6 +207,44 @@ public class EmailService {
     }
 
     /**
+     * Send email when a bill is forwarded and processed as a draft
+     */
+    public void sendBillReceivedEmail(String email, String name, String merchantName, java.math.BigDecimal amount) {
+        CompletableFuture.runAsync(() -> {
+            String subject = "AZA - New Bill Received from " + merchantName;
+            try {
+                log.info("Preparing Bill Received email for {}...", email);
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setFrom("AZA Bills <" + fromEmail + ">");
+                helper.setTo(email);
+                helper.setSubject(subject);
+
+                Context context = new Context();
+                context.setVariable("name", name);
+                context.setVariable("merchantName", merchantName);
+                context.setVariable("amount", amount);
+                context.setVariable("date", java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")));
+
+                String htmlContent = templateEngine.process("email/bill-received", context);
+                helper.setText(htmlContent, true);
+
+                ClassPathResource res = new ClassPathResource("static/images/paper-plane.png");
+                helper.addInline("paperplane", res);
+
+                mailSender.send(message);
+                log.info("Bill Received email sent successfully to {}", email);
+            } catch (MessagingException e) {
+                log.error("Failed to send bill received email to {}: {}", email, e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error sending bill received email to {}: {}", email, e.getMessage());
+            }
+        });
+    }
+
+    /**
      * Fetch detailed location from IP address
      */
     private LocationInfo fetchLocationDetails(String ip) {

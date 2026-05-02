@@ -13,84 +13,129 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
+import { useNotifications } from "../../../providers/NotificationProvider";
+
+import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, deleteAllNotifications } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
 interface NotificationItem {
   id: string;
+  type: string;
   title: string;
-  date: string;
-  content: string;
-  isUnread: boolean;
+  body: string;
+  data: string;
+  imageUrl?: string;
+  isRead: boolean;
+  createdAt: string;
 }
-
-const mockNotifications: NotificationItem[] = [
-  {
-    id: "1",
-    title: "Updates to our Privacy Notices",
-    date: "23 Jan",
-    content:
-      "We regularly review our Privacy Notice to make sure it’s clear, easy to navigate and up to date on how Wise handles your data. Changes will come into effect on 18 February 2026. Tap to read it now.",
-    isUnread: true },
-  {
-    id: "2",
-    title: "We’ve hidden some cancelled transfers",
-    date: "7 Sep 2025",
-    content:
-      "To make your Activity list easier to read, we’ve started hiding cancelled transfers that weren’t paid for. You can still find them by searching.",
-    isUnread: true },
-  {
-    id: "3",
-    title: "How did we do?",
-    date: "5 Sep 2025",
-    content:
-      "You can let us know by taking a quick survey. Your feedback helps us understand what we’re doing well, and what we need to improve. Tap to get started.",
-    isUnread: true },
-  {
-    id: "4",
-    title: "Got a sec?",
-    date: "3 Sep 2025",
-    content: "We’d love to know how you heard about us.",
-    isUnread: true },
-];
 
 const NotificationCard = ({ 
   item, 
   styles, 
-  Colors 
+  Colors,
+  onPress
 }: { 
   item: NotificationItem, 
   styles: any, 
-  Colors: any 
-}) => (
-  <View style={styles.notificationItem}>
-    <View style={styles.notificationHeader}>
-      <View style={styles.titleContainer}>
-        {item.isUnread && <View style={styles.unreadDot} />}
-        <Text style={[Typography.h3, styles.notificationTitle]}>
-          {item.title}
+  Colors: any,
+  onPress: (id: string) => void
+}) => {
+  const date = new Date(item.createdAt);
+  const formattedDate = !isNaN(date.getTime()) 
+    ? date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : item.createdAt;
+
+  return (
+    <TouchableOpacity 
+      style={styles.notificationItem}
+      onPress={() => onPress(item.id)}
+      disabled={item.isRead}
+    >
+      <View style={styles.notificationHeader}>
+        <View style={styles.titleContainer}>
+          {!item.isRead && <View style={styles.unreadDot} />}
+          <Text style={[Typography.h3, styles.notificationTitle]}>
+            {item.title}
+          </Text>
+        </View>
+        <Text style={[Typography.caption, styles.notificationDate]}>
+          {formattedDate}
         </Text>
       </View>
-      <Text style={[Typography.caption, styles.notificationDate]}>
-        {item.date}
+      {item.imageUrl && (
+        <Image 
+          source={{ uri: item.imageUrl }} 
+          style={styles.notificationImage} 
+          resizeMode="cover"
+        />
+      )}
+      <Text style={[Typography.body, styles.notificationContent]}>
+        {item.body}
       </Text>
-    </View>
-    <Text style={[Typography.body, styles.notificationContent]}>
-      {item.content}
-    </Text>
-  </View>
-);
+    </TouchableOpacity>
+  );
+};
 
 export default function InboxScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
-  const [notifications, setNotifications] =
-    useState<NotificationItem[]>(mockNotifications);
+  const { fetchUnreadCount } = useNotifications();
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleClearNotifications = () => {
-    setNotifications([]);
+  React.useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await getNotifications();
+      if (response.data?.data?.content) {
+        const mapped = response.data.data.content.map((n: any) => ({
+          ...n,
+          isRead: n.isRead !== undefined ? n.isRead : n.read
+        }));
+        setNotifications(mapped);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearNotifications = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      fetchUnreadCount();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    try {
+      await deleteAllNotifications();
+      setNotifications([]);
+      fetchUnreadCount();
+    } catch (error) {
+      console.error('Failed to delete all notifications:', error);
+    }
+  };
+
+  const handleNotificationPress = async (id: string) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      fetchUnreadCount();
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
   return (
@@ -104,14 +149,24 @@ export default function InboxScreen() {
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        {notifications.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={handleClearNotifications}
-          >
-            <Text style={styles.clearButtonText}>Clear notifications</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {notifications.length > 0 && (
+            <TouchableOpacity
+              style={[styles.clearButton, { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }]}
+              onPress={handleDeleteAllNotifications}
+            >
+              <Text style={[styles.clearButtonText, { color: Colors.textPrimary }]}>Clear</Text>
+            </TouchableOpacity>
+          )}
+          {notifications.some(n => !n.isRead) && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={handleClearNotifications}
+            >
+              <Text style={styles.clearButtonText}>Mark all as read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.titleSection}>
@@ -128,7 +183,7 @@ export default function InboxScreen() {
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NotificationCard item={item} styles={styles} Colors={Colors} />}
+        renderItem={({ item }) => <NotificationCard item={item} styles={styles} Colors={Colors} onPress={handleNotificationPress} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -202,6 +257,12 @@ function createStyles(Colors: any) {
     paddingBottom: Spacing.xl },
   notificationItem: {
     marginBottom: Spacing.xl },
+  notificationImage: {
+    width: "100%",
+    height: 160,
+    borderRadius: Radius.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm },
   notificationHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
