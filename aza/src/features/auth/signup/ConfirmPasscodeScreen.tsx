@@ -17,7 +17,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useAppTheme, ThemeColors, Spacing } from "../../../theme";
+import { useAppTheme, ThemeColors, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -271,7 +271,7 @@ export default function ConfirmPasscodeScreen() {
                       : "#9CA3AF"
                 }
                 disabled={passcode.length !== 4 || isLocked}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
               />
             </View>

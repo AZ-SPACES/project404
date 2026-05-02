@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,216 +8,228 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  Clipboard,
+  ActivityIndicator,
 } from "react-native";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
+import { getContactDetails } from "../../../services/api";
+import { Contact } from "../types";
 
-// ─── Types ──────────────────────────────────────────────────────────
 type ContactsProfileRouteProp = RouteProp<RootStackParamList, "ContactsProfile">;
 
-// ─── Detail Row Component ───────────────────────────────────────────
 type DetailRowProps = {
   label: string;
   value: string;
-  valueColor?: string;
-  copyable?: boolean;
   Colors: ThemeColors;
 };
 
-function DetailRow({ label, value, valueColor, copyable, Colors }: DetailRowProps) {
-  const handleCopy = () => {
-    Clipboard.setString(value);
-    Alert.alert("Copied", `${label} copied to clipboard`);
-  };
-
+function DetailRow({ label, value, Colors }: DetailRowProps) {
   return (
     <View style={styles.detailRow}>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.detailLabel, { color: Colors.textSecondary }]}>
-          {label}
-        </Text>
-        <Text
-          style={[
-            styles.detailValue,
-            { color: valueColor || Colors.textPrimary },
-          ]}
-        >
-          {value}
-        </Text>
-      </View>
-      {copyable && (
-        <TouchableOpacity onPress={handleCopy} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Feather name="copy" size={20} color={Colors.textPrimary} />
-        </TouchableOpacity>
-      )}
+      <Text style={[styles.detailLabel, { color: Colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: Colors.textPrimary }]}>{value}</Text>
     </View>
   );
 }
 
-// ─── Simple Row Component ───────────────────────────────────────────
-type SimpleRowProps = {
-  label: string;
-  value: string;
-  valueColor?: string;
-  Colors: ThemeColors;
-};
-
-function SimpleRow({ label, value, valueColor, Colors }: SimpleRowProps) {
-  return (
-    <View style={styles.simpleRow}>
-      <Text style={[styles.simpleRowLabel, { color: Colors.textSecondary }]}>
-        {label}
-      </Text>
-      <Text
-        style={[
-          styles.simpleRowValue,
-          { color: valueColor || Colors.textPrimary },
-        ]}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-// ─── Main Screen ────────────────────────────────────────────────────
 export default function ContactsProfileScreen() {
   const { colors: Colors } = useAppTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<ContactsProfileRouteProp>();
+  const { id, name = "User", username = "", avatar } = route.params || {};
 
-  const {
-    id,
-    name = "User",
-    username = "@user",
-    avatar,
-  } = route.params || {};
+  const { blockUser, toggleFavorite } = useContactStore();
 
-  const { blockUser } = useContactStore();
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Derive initials for fallback avatar
-  const initials = name
+  useEffect(() => {
+    if (!id) { setLoading(false); return; }
+    getContactDetails(id)
+      .then(({ data }) => {
+        const c: Contact = data.data ?? data;
+        setContact(c);
+      })
+      .catch(() => {
+        // Fall back to route params — contact still usable for navigation
+      })
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const displayName = contact?.displayName ?? name;
+  const displayHandle = contact?.handle ? `@${contact.handle}` : username;
+  const displayAvatar =
+    contact?.profileImageUrl ??
+    avatar ??
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+  const isFavorite = contact?.isFavorite ?? false;
+  // contactUserId is the actual Aza user ID behind this contact entry
+  const targetUserId = contact?.contactUserId ?? id;
+
+  const initials = displayName
     .split(" ")
     .map((w) => w[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
 
-  const handleBack = () => navigation.goBack();
-  const handleSend = () => navigation.navigate("SendAmount", { name, username, avatar: avatar || "" });
-  const handleReceive = () => navigation.navigate("RequestAmount", { name, username, avatar: avatar || "" });
-  const handleChat = () => navigation.navigate("ChatScreen", { id: username, name, avatar: avatar || "", online: true });
-  const handleShare = () => Alert.alert("Share", `Share ${name}'s profile`);
+  const handleSend = () => {
+    if (!targetUserId) return;
+    navigation.navigate("SendAmount", {
+      id: targetUserId,
+      name: displayName,
+      username: displayHandle,
+      avatar: displayAvatar,
+    });
+  };
+
+  const handleRequest = () => {
+    if (!targetUserId) return;
+    navigation.navigate("RequestAmount", {
+      id: targetUserId,
+      name: displayName,
+      username: displayHandle,
+      avatar: displayAvatar,
+    });
+  };
+
+  const handleChat = () =>
+    navigation.navigate("ChatScreen", {
+      id: displayHandle,
+      name: displayName,
+      avatar: displayAvatar,
+      online: true,
+    });
+
+  const handleToggleFavorite = async () => {
+    if (!id) return;
+    try {
+      await toggleFavorite(id, isFavorite);
+      setContact((prev) => prev ? { ...prev, isFavorite: !isFavorite } : prev);
+    } catch {
+      Alert.alert("Error", "Could not update favorite status.");
+    }
+  };
+
   const handleBlock = () => {
-    Alert.alert("Block Contact", `Are you sure you want to block ${name}?`, [
+    Alert.alert("Block Contact", `Are you sure you want to block ${displayName}?`, [
       { text: "Cancel", style: "cancel" },
-      { 
-        text: "Block", 
-        style: "destructive", 
+      {
+        text: "Block",
+        style: "destructive",
         onPress: async () => {
-          if (id) {
-            await blockUser(id);
+          if (targetUserId) {
+            await blockUser(targetUserId);
             navigation.goBack();
           }
-        } 
+        },
       },
     ]);
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar barStyle={Colors.isDark ? "light-content" : "dark-content"} />
 
-      {/* ── Header ───────────────────────────────────── */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.headerIcon}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
           <Feather name="chevron-left" size={28} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Ionicons name="shield-outline" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.headerIcon, { marginLeft: Spacing.md }]}>
-            <Feather name="upload" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.headerIcon}
+          onPress={handleToggleFavorite}
+          accessibilityLabel={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Ionicons
+            name={isFavorite ? "star" : "star-outline"}
+            size={24}
+            color={isFavorite ? "#F59E0B" : Colors.textPrimary}
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* ── Profile Section ────────────────────────── */}
+        {/* Avatar */}
         <View style={styles.profileSection}>
-          {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
+          {displayAvatar ? (
+            <Image source={{ uri: displayAvatar }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: Colors.primary }]}>
               <Text style={[styles.avatarInitials, { color: Colors.secondary }]}>{initials}</Text>
             </View>
           )}
-          <Text style={[styles.profileName, { color: Colors.textPrimary }]}>{name}</Text>
-          <Text style={[styles.profileUsername, { color: Colors.primary }]}>{username}</Text>
+          <Text style={[styles.profileName, { color: Colors.textPrimary }]}>{displayName}</Text>
+          {!!displayHandle && (
+            <Text style={[styles.profileHandle, { color: Colors.primary }]}>{displayHandle}</Text>
+          )}
         </View>
 
-        {/* ── Action Buttons ─────────────────────────── */}
+        {/* Action Buttons */}
         <View style={styles.actionRow}>
           <ActionItem icon="arrow-up" label="Send" onPress={handleSend} Colors={Colors} />
-          <ActionItem icon="arrow-down" label="Receive" onPress={handleReceive} Colors={Colors} />
+          <ActionItem icon="arrow-down" label="Request" onPress={handleRequest} Colors={Colors} />
           <ActionItem icon="message-circle" label="Chat" onPress={handleChat} Colors={Colors} />
-          <ActionItem icon="upload" label="Share" onPress={handleShare} Colors={Colors} />
         </View>
 
-        {/* ── Details Section ────────────────────────── */}
-        <View style={styles.detailsContainer}>
-          <Text style={[styles.sectionHeader, { color: Colors.textPrimary }]}>Account details</Text>
-          <View style={[styles.divider, { backgroundColor: Colors.border }]} />
-
-          <DetailRow
-            label="Account holder name"
-            value="Paapa Cobbold"
-            copyable
-            Colors={Colors}
-          />
-
-          <View style={{ marginTop: Spacing.md }}>
-            <SimpleRow
-              label="Tag"
-              value={username}
-              valueColor={Colors.primary}
-              Colors={Colors}
-            />
-            <SimpleRow
-              label="Total sent"
-              value="GH₵ 0.00"
-              Colors={Colors}
-            />
-            <SimpleRow
-              label="Total received"
-              value="GH₵ 1000.00"
-              Colors={Colors}
-            />
+        {/* Contact Details */}
+        {(contact?.email || contact?.phoneNumber) && (
+          <View style={[styles.detailsCard, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
+            <Text style={[styles.cardTitle, { color: Colors.textSecondary }]}>Contact info</Text>
+            {contact.email && <DetailRow label="Email" value={contact.email} Colors={Colors} />}
+            {contact.phoneNumber && <DetailRow label="Phone" value={contact.phoneNumber} Colors={Colors} />}
           </View>
+        )}
 
-          {/* ── Block Button ─────────────────────────── */}
-          <TouchableOpacity
-            style={styles.blockButton}
-            onPress={handleBlock}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.blockText, { color: Colors.error }]}>Block {name}</Text>
-            <Ionicons name="remove-circle-outline" size={24} color={Colors.error} />
-          </TouchableOpacity>
-        </View>
+        {/* Aza Tag */}
+        {contact?.handle && (
+          <View style={[styles.detailsCard, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
+            <Text style={[styles.cardTitle, { color: Colors.textSecondary }]}>Aza info</Text>
+            <DetailRow label="Tag" value={`@${contact.handle}`} Colors={Colors} />
+            <View style={[styles.azaBadgeRow]}>
+              <View style={[styles.azaPill, { backgroundColor: Colors.primary }]}>
+                <Text style={[styles.azaPillText, { color: Colors.secondary }]}>On Aza</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Block */}
+        <TouchableOpacity style={styles.blockButton} onPress={handleBlock} activeOpacity={0.7}>
+          <Text style={[styles.blockText, { color: Colors.error }]}>Block {displayName}</Text>
+          <Ionicons name="remove-circle-outline" size={24} color={Colors.error} />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function ActionItem({ icon, label, onPress, Colors }: { icon: string; label: string; onPress: () => void; Colors: ThemeColors }) {
+function ActionItem({
+  icon,
+  label,
+  onPress,
+  Colors,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  Colors: ThemeColors;
+}) {
   return (
     <TouchableOpacity style={styles.actionItem} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.actionIconContainer, { backgroundColor: Colors.primary }]}>
@@ -229,9 +241,8 @@ function ActionItem({ icon, label, onPress, Colors }: { icon: string; label: str
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,53 +250,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     height: 56,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIcon: {
-    padding: 4,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xl,
-  },
+  headerIcon: { padding: 4 },
+  scrollContent: { paddingBottom: Spacing.xl * 2 },
   profileSection: {
     alignItems: "center",
     marginTop: Spacing.md,
     marginBottom: Spacing.lg,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: Spacing.md,
   },
-  avatarFallback: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarInitials: {
-    fontSize: 48,
-    fontWeight: "700",
-  },
-  profileName: {
-    ...Typography.h2,
-    fontWeight: "700",
-  },
-  profileUsername: {
-    ...Typography.bodyLg,
-    fontWeight: "600",
-    marginTop: 2,
-  },
+  avatarFallback: { alignItems: "center", justifyContent: "center" },
+  avatarInitials: { fontSize: 40, fontWeight: "700" },
+  profileName: { ...Typography.h2, fontWeight: "700" },
+  profileHandle: { ...Typography.bodyLg, fontWeight: "600", marginTop: 2 },
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-evenly",
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.xl,
   },
-  actionItem: {
-    alignItems: "center",
-  },
+  actionItem: { alignItems: "center" },
   actionIconContainer: {
     width: 56,
     height: 56,
@@ -294,58 +282,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: Spacing.xs,
   },
-  actionLabel: {
-    ...Typography.caption,
-    fontWeight: "600",
-  },
-  detailsContainer: {
-    paddingHorizontal: Spacing.lg,
-  },
-  sectionHeader: {
-    ...Typography.h3,
-    fontWeight: "600",
-    marginBottom: Spacing.sm,
-  },
-  divider: {
-    height: 1,
-    width: "100%",
+  actionLabel: { ...Typography.caption, fontWeight: "600" },
+  detailsCard: {
+    marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    padding: Spacing.md,
+  },
+  cardTitle: {
+    ...Typography.caption,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
   },
   detailRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  detailLabel: {
-    ...Typography.body,
-    marginBottom: 2,
-  },
-  detailValue: {
-    ...Typography.bodyLg,
-    fontWeight: "600",
-  },
-  simpleRow: {
-    flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: Spacing.sm,
+    alignItems: "center",
+    paddingVertical: 6,
   },
-  simpleRowLabel: {
-    ...Typography.body,
+  detailLabel: { ...Typography.body },
+  detailValue: { ...Typography.body, fontWeight: "600" },
+  azaBadgeRow: { marginTop: Spacing.xs },
+  azaPill: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  simpleRowValue: {
-    ...Typography.body,
-    fontWeight: "700",
-  },
+  azaPillText: { fontSize: 12, fontWeight: "600" },
   blockButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginHorizontal: Spacing.lg,
     marginTop: Spacing.xl,
     paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: "#FEE2E2",
   },
-  blockText: {
-    ...Typography.bodyLg,
-    fontWeight: "600",
-  },
+  blockText: { ...Typography.bodyLg, fontWeight: "600" },
 });

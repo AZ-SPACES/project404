@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
+import { debounce } from "lodash";
 import {
   View,
   Text,
@@ -10,7 +11,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -33,28 +35,84 @@ export default function SignUpEmailScreen() {
   const { data, update } = useSignUp();
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const emailError = touched && data.email.trim().length > 0 && !isValidEmail(data.email)
+  const emailError = (touched && data.email.trim().length > 0 && !isValidEmail(data.email))
     ? "Enter a valid email address"
-    : null;
+    : error;
+
+  const validateEmail = useCallback(
+    debounce(async (email: string) => {
+      if (!isValidEmail(email)) {
+        setIsAvailable(null);
+        setIsValidating(false);
+        return;
+      }
+
+      try {
+        const response = await checkEmailAvailability(email);
+        const available = response.data?.success && response.data?.data === true;
+        setIsAvailable(available);
+        if (!available) {
+          setError("This email address is already linked to an account.");
+        } else {
+          setError(null);
+        }
+      } catch (err: any) {
+        if (err.response?.status === 409) {
+          setIsAvailable(false);
+          setError("This email address is already linked to an account.");
+        } else {
+          console.error("Availability check failed", err);
+        }
+      } finally {
+        setIsValidating(false);
+      }
+    }, 600),
+    []
+  );
 
   const handleNext = async () => {
     if (!isValidEmail(data.email)) return;
     
+    if (isAvailable === false) return;
+
     setLoading(true);
+    setError(null);
     try {
       const response = await checkEmailAvailability(data.email);
       if (response.data?.success && response.data?.data === true) {
         navigation.navigate("SignUpPassword");
       } else {
-        Alert.alert("Already Registered", "This email address is already linked to an account.");
+        setIsAvailable(false);
+        setError("This email address is already linked to an account.");
       }
-    } catch (error) {
-      console.error("Availability check failed", error);
-      // Fallback: let them proceed and handle it at the final signup step if API fails
-      navigation.navigate("SignUpPassword");
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        setIsAvailable(false);
+        setError("This email address is already linked to an account.");
+      } else {
+        console.error("Availability check failed", err);
+        setError("Unable to verify email. Please try again.");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTextChange = (t: string) => {
+    const sanitized = sanitizeText(t);
+    update({ email: sanitized });
+    setError(null);
+    setIsAvailable(null);
+    
+    if (isValidEmail(sanitized)) {
+      setIsValidating(true);
+      validateEmail(sanitized);
+    } else {
+      setIsValidating(false);
     }
   };
 
@@ -87,7 +145,11 @@ export default function SignUpEmailScreen() {
               We'll send you a code to verify this email when you sign in.
             </Text>
             <Text style={styles.label}>Your Email</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              isAvailable === true && styles.inputSuccess,
+              isAvailable === false && styles.inputError
+            ]}>
               <MaterialIcons
                 name="mail-outline"
                 size={24}
@@ -99,7 +161,7 @@ export default function SignUpEmailScreen() {
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
                 value={data.email}
-                onChangeText={(t) => update({ email: sanitizeText(t) })}
+                onChangeText={handleTextChange}
                 onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -107,6 +169,13 @@ export default function SignUpEmailScreen() {
                 cursorColor={Colors.primary}
                 selectionColor={Colors.primary}
               />
+              {isValidating && <ActivityIndicator size="small" color={Colors.primary} />}
+              {!isValidating && isAvailable === true && (
+                <MaterialIcons name="check-circle" size={20} color={Colors.success} />
+              )}
+              {!isValidating && isAvailable === false && (
+                <MaterialIcons name="error" size={20} color={Colors.error} />
+              )}
             </View>
             {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
           </View>
@@ -118,11 +187,11 @@ export default function SignUpEmailScreen() {
               onPress={handleNext}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
-              borderRadius={30}
+              borderRadius={Radius.sm}
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
-              disabled={!isValidEmail(data.email)}
+              disabled={!isValidEmail(data.email) || isAvailable === false || isValidating}
               loading={loading}
             />
           </View>
@@ -196,6 +265,12 @@ function createStyles(Colors: ThemeColors) {
     fontSize: Typography.bodyLg.fontSize,
     color: Colors.textPrimary,
     height: "100%",
+  },
+  inputSuccess: {
+    borderColor: Colors.success,
+  },
+  inputError: {
+    borderColor: Colors.error,
   },
   errorText: {
     fontSize: 12,

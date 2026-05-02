@@ -10,10 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import AnimatedSplashScreen from "./src/components/ui/AnimatedSplashScreen";
 import ErrorBoundary from "./src/components/ui/ErrorBoundary";
 import RootNavigator from "./src/navigation/RootNavigator";
-import {
-  DisplayProvider,
-  useDisplayContext,
-} from "./src/providers/DisplayProvider";
+import { DisplayProvider, useDisplayContext } from "./src/providers/DisplayProvider";
 import { AuthProvider } from "./src/providers/AuthProvider";
 import { ProfileProvider } from "./src/providers/ProfileProvider";
 import { NotificationProvider } from "./src/providers/NotificationProvider";
@@ -54,8 +51,7 @@ const linking = {
 
 function AppContent() {
   const { activeColorScheme } = useDisplayContext();
-  const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } =
-    useAuth();
+  const { userToken, hasPasscode, isKYCVerified, isBiometricsEnabled } = useAuth();
   const { isLocked } = useSecurity();
   const { checkPermissions } = useNotifications();
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);

@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { useToast } from '../../../providers/ToastProvider';
-import { updateNotificationPreferences } from '../../../services/api';
+import { useProfile } from '../../../providers/ProfileProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -76,6 +76,7 @@ export default function NotificationSettingsScreen() {
   const { checkPermissions, requestPermissions } = useNotifications();
   const { userToken } = useAuth();
   const { showToast } = useToast();
+  const { notificationPreferences, updateNotificationPreferences } = useProfile();
   const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -102,6 +103,7 @@ export default function NotificationSettingsScreen() {
   const [causesEmail, setCausesEmail] = useState(false);
   const [causesPush, setCausesPush] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const isSyncingRef = React.useRef(false);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -122,31 +124,53 @@ export default function NotificationSettingsScreen() {
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        const stored = await AsyncStorage.getItem(prefsKey);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setTransfersEmail(parsed.transfersEmail ?? true);
-          setTransfersPush(parsed.transfersPush ?? true);
-          setSecurityEmail(parsed.securityEmail ?? true);
-          setSecurityPush(parsed.securityPush ?? true);
-          setPersonalisedEmail(parsed.personalisedEmail ?? false);
-          setPersonalisedPush(parsed.personalisedPush ?? false);
-          setFeedbackEmail(parsed.feedbackEmail ?? true);
-          setFeedbackPush(parsed.feedbackPush ?? false);
-          setCausesEmail(parsed.causesEmail ?? false);
-          setCausesPush(parsed.causesPush ?? false);
+        const prefs = notificationPreferences;
+        isSyncingRef.current = true;
+        if (prefs) {
+          setTransfersEmail(prefs.transfersEmail ?? true);
+          setTransfersPush(prefs.transfersPush ?? true);
+          setSecurityEmail(prefs.securityEmail ?? true);
+          setSecurityPush(prefs.securityPush ?? true);
+          setPersonalisedEmail(prefs.personalisedEmail ?? false);
+          setPersonalisedPush(prefs.personalisedPush ?? false);
+          setFeedbackEmail(prefs.feedbackEmail ?? true);
+          setFeedbackPush(prefs.feedbackPush ?? false);
+          setCausesEmail(prefs.causesEmail ?? false);
+          setCausesPush(prefs.causesPush ?? false);
+        } else {
+          // Fallback to AsyncStorage if profile hasn't loaded yet
+          const stored = await AsyncStorage.getItem(prefsKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setTransfersEmail(parsed.transfersEmail ?? true);
+            setTransfersPush(parsed.transfersPush ?? true);
+            setSecurityEmail(parsed.securityEmail ?? true);
+            setSecurityPush(parsed.securityPush ?? true);
+            setPersonalisedEmail(parsed.personalisedEmail ?? false);
+            setPersonalisedPush(parsed.personalisedPush ?? false);
+            setFeedbackEmail(parsed.feedbackEmail ?? true);
+            setFeedbackPush(parsed.feedbackPush ?? false);
+            setCausesEmail(parsed.causesEmail ?? false);
+            setCausesPush(parsed.causesPush ?? false);
+          }
         }
+        // Small delay to ensure state updates are processed before we allow saving
+        setTimeout(() => {
+          isSyncingRef.current = false;
+        }, 100);
       } catch (e) {
         showToast('Could not load your notification preferences', 'error');
+        isSyncingRef.current = false;
       } finally {
         setIsLoaded(true);
       }
     };
     loadPreferences();
-  }, []);
+  }, [notificationPreferences, prefsKey]);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || isSyncingRef.current) return;
+    
     const savePreferences = async () => {
       try {
         const prefs = { 
@@ -167,14 +191,18 @@ export default function NotificationSettingsScreen() {
         showToast('Failed to save preferences. Please try again.', 'error');
       }
     };
-    savePreferences();
+
+    // Debounce the save to prevent multiple rapid API calls
+    const timeoutId = setTimeout(savePreferences, 1000);
+    return () => clearTimeout(timeoutId);
   }, [
     transfersEmail, transfersPush, 
     securityEmail, securityPush,
     personalisedEmail, personalisedPush, 
     feedbackEmail, feedbackPush, 
     causesEmail, causesPush, 
-    isLoaded
+    isLoaded,
+    prefsKey
   ]);
 
   const togglePushPreference = async (setter: (val: boolean) => void, currentVal: boolean) => {
