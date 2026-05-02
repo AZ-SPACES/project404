@@ -27,6 +27,7 @@ type AuthContextType = AuthState & {
     isKYCVerifiedArg?: boolean,
     forcePasswordReset?: boolean,
     requireSelfieVerification?: boolean,
+    isBiometricsEnabled?: boolean,
   ) => void;
   logout: () => void;
   completeKYC: () => void;
@@ -141,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isKYCVerifiedArg: boolean = false,
     forcePasswordResetArg: boolean = false,
     requireSelfieVerificationArg: boolean = false,
+    isBiometricsEnabledArg: boolean = false,
   ) => {
     saveState({
       userToken: token,
@@ -148,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isKYCVerified: isKYCVerifiedArg,
       forcePasswordReset: forcePasswordResetArg,
       requireSelfieVerification: requireSelfieVerificationArg,
+      isBiometricsEnabled: isBiometricsEnabledArg,
     });
   };
 

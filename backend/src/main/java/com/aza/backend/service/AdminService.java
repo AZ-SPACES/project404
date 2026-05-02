@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -305,7 +304,7 @@ public class AdminService {
         Wallet recipientWallet = walletRepository.findByUserId(tx.getRecipientId())
                 .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Recipient wallet not found", HttpStatus.NOT_FOUND));
         if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {
-            throw new AppException("INSUFFICIENT_FUNDS", "Recipient has insufficient funds for reversal", HttpStatus.UNPROCESSABLE_ENTITY);
+            throw new AppException("INSUFFICIENT_FUNDS", "Recipient has insufficient funds for reversal", HttpStatus.BAD_REQUEST);
         }
         recipientWallet.setBalance(recipientWallet.getBalance().subtract(tx.getAmount()));
         walletRepository.save(recipientWallet);

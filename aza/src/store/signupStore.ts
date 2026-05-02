@@ -115,6 +115,7 @@ export const useSignupStore = create<SignupState>((set, get) => ({
         handle: data.handle,
         deviceName: Device.modelName ?? undefined,
         deviceOs: Device.osName ?? Platform.OS,
+        deviceId: await (await import('../services/api')).getDeviceId(),
       };
 
       const response = await api.post('/api/v1/auth/signup', payload);

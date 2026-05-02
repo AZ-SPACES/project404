@@ -57,11 +57,6 @@ const TotpLoginScreen: React.FC = () => {
   const { login } = useAuth();
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (defaultMethod === 'APP') {
-       navigation.navigate('LoginWaitApproval', { preAuthToken });
-    }
-  }, []);
 
   useEffect(() => {
     if (currentMethod === 'SMS') {
@@ -102,6 +97,9 @@ const TotpLoginScreen: React.FC = () => {
       payload.accessToken,
       payload.user?.passcodeSet ?? false,
       payload.user?.kycStatus === 'VERIFIED',
+      payload.user?.forcePasswordReset ?? false,
+      payload.user?.requireSelfieVerification ?? false,
+      false
     );
   };
 
@@ -164,7 +162,6 @@ const TotpLoginScreen: React.FC = () => {
   const switchMethod = (method: VerificationMethod) => {
     if (method === 'APP') {
       setShowMethodSelector(false);
-      navigation.navigate('LoginWaitApproval', { preAuthToken });
       return;
     }
     setCurrentMethod(method);

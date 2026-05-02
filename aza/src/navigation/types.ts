@@ -10,8 +10,6 @@ export type RootStackParamList = {
   ChangePhoneNumber: undefined;
   AccountDeactivated: undefined;
   NewDeviceLogin: undefined;
-  LoginApproval: { requestId: string; deviceName?: string; ipAddress?: string };
-  LoginWaitApproval: { preAuthToken: string };
   ResetPassword: undefined;
   ResetOTP: { email: string };
   ResetNewPassword: { email: string; code: string };
@@ -71,6 +69,7 @@ export type RootStackParamList = {
   Devices: undefined;
   TwoStepVerification: undefined;
   TotpSetup: undefined;
+  DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
   FindMeBy: undefined;
   BillForwardingIntro: undefined;

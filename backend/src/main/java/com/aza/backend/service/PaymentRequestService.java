@@ -29,7 +29,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -214,7 +213,6 @@ public class PaymentRequestService {
                 approvedChat.getParticipantOneId(), approvedChat.getParticipantTwoId(),
                 WebSocketEventType.PAYMENT_REQUEST_PAID, response);
 
-        User requesterUser = userRepository.findById(pr.getRequesterId()).orElse(null);
         String payerName = payer.getFirstName() + " " + payer.getLastName();
         notificationService.sendPaymentRequestPaidNotification(
                 pr.getRequesterId(), payerName, pr.getAmount(), pr.getId().toString());

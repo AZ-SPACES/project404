@@ -70,10 +70,10 @@ public class AuthService {
 
         String email = request.getEmail().toLowerCase().trim();
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("An account with this email or phone already exists");
+            throw new com.aza.backend.exception.AppException("EMAIL_ALREADY_EXISTS", "This email address is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
         if (userRepository.existsByPhone(request.getPhone())) {
-            throw new RuntimeException("An account with this email or phone already exists");
+            throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
 
         User user = User.builder()
@@ -107,7 +107,7 @@ public class AuthService {
                 .build();
         walletRepository.save(wallet);
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress, true);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, true);
     }
 
     // ==================== LOGIN ====================
@@ -146,10 +146,11 @@ public class AuthService {
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             String preAuthToken = UUID.randomUUID().toString();
-            // Pipe-delimited: userId|deviceName|deviceOs|ipAddress
+            // Pipe-delimited: userId|deviceName|deviceOs|deviceId|ipAddress
             String value = user.getId()
                     + "|" + sanitize(request.getDeviceName())
                     + "|" + sanitize(request.getDeviceOs())
+                    + "|" + sanitize(request.getDeviceId())
                     + "|" + sanitize(ipAddress);
             redisTemplate.opsForValue().set(
                     TOTP_PREAUTH_PREFIX + preAuthToken, value, Duration.ofMinutes(5));
@@ -163,18 +164,23 @@ public class AuthService {
             }
             if (Boolean.TRUE.equals(user.getPasskeysEnabled())) methods.add("PASSKEY");
 
+            String defMethod = user.getDefaultTwoFactorMethod() != null ? user.getDefaultTwoFactorMethod().name() : null;
+            if (defMethod == null || !methods.contains(defMethod)) {
+                defMethod = methods.isEmpty() ? null : methods.getFirst();
+            }
+
             return TwoFactorPendingResponse.builder()
                     .preAuthToken(preAuthToken)
                     .methods(methods)
-                    .defaultMethod(user.getDefaultTwoFactorMethod() != null ? user.getDefaultTwoFactorMethod().name() : (methods.isEmpty() ? null : methods.getFirst()))
+                    .defaultMethod(defMethod)
                     .build();
         }
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), ipAddress, false);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false);
     }
 
     private AuthResponse finalizeLogin(User user, String deviceName,
-                                       String deviceOs, String ipAddress, boolean isSignup) {
+                                       String deviceOs, String deviceId, String ipAddress, boolean isSignup) {
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
             throw new RuntimeException("Account is not active");
         }
@@ -185,7 +191,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, ipAddress);
+        saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, deviceId, ipAddress);
 
         if (isSignup) {
             emailService.sendSignupNotification(user.getEmail(), user.getFirstName());
@@ -199,15 +205,19 @@ public class AuthService {
 
     // ==================== LOGOUT ====================
 
+    @Transactional
     public void logout(String accessToken) {
+        String tokenHash = hashToken(accessToken);
         Duration remaining = jwtUtil.getRemainingValidity(accessToken);
         if (!remaining.isZero()) {
             redisTemplate.opsForValue().set(
-                    BLACKLIST_PREFIX + hashToken(accessToken),
+                    BLACKLIST_PREFIX + tokenHash,
                     "blacklisted",
                     remaining
             );
         }
+        // Also remove the device session from database
+        refreshTokenRepository.deleteByAccessTokenHash(tokenHash);
     }
 
     @Transactional
@@ -287,7 +297,7 @@ public class AuthService {
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
         saveRefreshToken(user.getId(), newRefreshToken,
-                newAccessToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getIpAddress());
+                newAccessToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getDeviceId(), stored.getIpAddress());
 
         return buildAuthResponse(user, newAccessToken, newRefreshToken);
     }
@@ -443,7 +453,7 @@ public class AuthService {
         PreAuthSession session = getPreAuthSession(request.getPreAuthToken());
         User user = session.user();
         String[] parts = session.parts();
-        String storedIp = parts.length > 3 ? parts[3] : ipAddress;
+        String storedIp = parts.length > 4 ? parts[4] : ipAddress;
 
         String totpSecret = totpEncryptionService.decrypt(user.getTwoFactorSecret());
         if (totpService.isCodeInvalid(totpSecret, request.getCode())) {
@@ -459,7 +469,7 @@ public class AuthService {
 
         redisTemplate.delete(TOTP_PREAUTH_PREFIX + request.getPreAuthToken());
 
-        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, storedIp, false);
+        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
     @Transactional
@@ -484,8 +494,7 @@ public class AuthService {
         PreAuthSession session = getPreAuthSession(request.getPreAuthToken());
         User user = session.user();
         String[] parts = session.parts();
-        String storedIp = parts.length > 3 ? parts[3] : ipAddress;
-
+        String storedIp = parts.length > 4 ? parts[4] : ipAddress;
         List<RecoveryCode> unused = recoveryCodeRepository.findAllByUserIdAndUsedFalse(user.getId());
         RecoveryCode matched = unused.stream()
                 .filter(rc -> passwordEncoder.matches(request.getRecoveryCode(), rc.getCodeHash()))
@@ -500,7 +509,7 @@ public class AuthService {
         long remaining = recoveryCodeRepository.countByUserIdAndUsedFalse(user.getId());
         log.warn("Recovery code used for user {} — {} code(s) remaining", user.getId(), remaining);
 
-        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, storedIp, false);
+        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
     @Transactional
@@ -617,12 +626,12 @@ public class AuthService {
         PreAuthSession session = getPreAuthSession(preAuthToken);
         User user = session.user();
         String[] parts = session.parts();
-        String storedIp = parts.length > 3 ? parts[3] : null;
+        String storedIp = parts.length > 4 ? parts[4] : null;
 
         redisTemplate.delete(TOTP_PREAUTH_PREFIX + preAuthToken);
         redisTemplate.delete("login_request:" + requestId);
 
-        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, storedIp, false);
+        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
     public void requestSms2fa(String preAuthToken) {
@@ -653,10 +662,12 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired code");
         }
         
+        String storedIp = parts.length > 4 ? parts[4] : null;
+        
         redisTemplate.delete(OTP_PREFIX + identifier + ":2fa");
         redisTemplate.delete(TOTP_PREAUTH_PREFIX + preAuthToken);
         
-        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, false);
+        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
     // ── Recovery-code helpers ─────────────────────────────────────────────────
@@ -684,21 +695,26 @@ public class AuthService {
     // ==================== HELPERS ====================
 
     public void saveRefreshToken(UUID userId, String rawRefreshToken, String rawAccessToken,
-                                 String deviceName, String deviceOs, String ipAddress) {
+                                 String deviceName, String deviceOs, String deviceId, String ipAddress) {
         Duration accessValidity = jwtUtil.getRemainingValidity(rawAccessToken);
         LocalDateTime accessExpiresAt = accessValidity.isZero()
                 ? LocalDateTime.now()
                 : LocalDateTime.now().plus(accessValidity);
-        RefreshToken rt = RefreshToken.builder()
-                .userId(userId)
-                .tokenHash(hashToken(rawRefreshToken))
-                .accessTokenHash(hashToken(rawAccessToken))
-                .accessTokenExpiresAt(accessExpiresAt)
-                .deviceName(deviceName)
-                .deviceOs(deviceOs)
-                .ipAddress(ipAddress)
-                .expiresAt(LocalDateTime.now().plusDays(30))
-                .build();
+
+        // Check if a session already exists for this user and device
+        RefreshToken rt = refreshTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
+                .orElse(new RefreshToken());
+
+        rt.setUserId(userId);
+        rt.setTokenHash(hashToken(rawRefreshToken));
+        rt.setAccessTokenHash(hashToken(rawAccessToken));
+        rt.setAccessTokenExpiresAt(accessExpiresAt);
+        rt.setDeviceName(deviceName);
+        rt.setDeviceOs(deviceOs);
+        rt.setDeviceId(deviceId);
+        rt.setIpAddress(ipAddress);
+        rt.setExpiresAt(LocalDateTime.now().plusDays(30));
+
         refreshTokenRepository.save(rt);
     }
 
@@ -723,7 +739,7 @@ public class AuthService {
         if (value == null) {
             throw new RuntimeException("Session expired or invalid. Please log in again.");
         }
-        String[] parts = value.split("\\|", 4);
+        String[] parts = value.split("\\|", 5);
         User user = userRepository.findById(UUID.fromString(parts[0]))
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return new PreAuthSession(user, parts);

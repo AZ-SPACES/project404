@@ -128,7 +128,7 @@ export function TwoStepVerificationScreen() {
             description="Use an app like Google Authenticator or Authy to get codes."
             securityLevel="Very secure"
             isVerySecure
-            onPress={() => navigation.navigate('TotpSetup')}
+            onPress={() => navigation.navigate(profile.twoFactorEnabled ? 'DisableTotp' : 'TotpSetup')}
             isEnabled={profile.twoFactorEnabled}
           />
         </View>

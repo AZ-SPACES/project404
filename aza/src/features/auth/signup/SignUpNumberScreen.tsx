@@ -9,7 +9,8 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +21,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { isValidPhone } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
+import { checkPhoneAvailability } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpNumber">;
 
@@ -30,13 +32,30 @@ export default function SignUpNumberScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { data, update } = useSignUp();
   const [touched, setTouched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const phoneError = touched && data.phoneNumber.length > 0 && !isValidPhone(data.phoneNumber)
     ? "Enter a valid phone number"
     : null;
 
-  const handleNext = () => {
-    navigation.navigate("SignUpEmail");
+  const handleNext = async () => {
+    if (!isValidPhone(data.phoneNumber)) return;
+    
+    setLoading(true);
+    try {
+      const response = await checkPhoneAvailability(data.phoneNumber);
+      if (response.data?.success && response.data?.data === true) {
+        navigation.navigate("SignUpEmail");
+      } else {
+        Alert.alert("Already Registered", "This phone number is already linked to an account.");
+      }
+    } catch (error) {
+      console.error("Availability check failed", error);
+      // Fallback: let them proceed and handle it at the final signup step if API fails
+      navigation.navigate("SignUpEmail");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,6 +123,7 @@ export default function SignUpNumberScreen() {
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
               disabled={!isValidPhone(data.phoneNumber)}
+              loading={loading}
             />
           </View>
         </KeyboardAvoidingView>

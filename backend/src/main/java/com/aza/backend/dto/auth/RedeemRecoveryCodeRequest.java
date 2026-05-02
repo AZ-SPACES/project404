@@ -11,4 +11,8 @@ public class RedeemRecoveryCodeRequest {
 
     @NotBlank(message = "Recovery code is required")
     private String recoveryCode;
+
+    private String deviceName;
+    private String deviceOs;
+    private String deviceId;
 }

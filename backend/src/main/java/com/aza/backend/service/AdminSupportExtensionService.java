@@ -13,7 +13,6 @@ import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.SupportNoteRepository;
 import com.aza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +29,6 @@ public class AdminSupportExtensionService {
     private final SupportNoteRepository noteRepository;
     private final CannedResponseRepository cannedRepository;
     private final ChatRepository chatRepository;
-    private final UserRepository userRepository;
 
     // ── Internal Notes ────────────────────────────────────────────────────────
 

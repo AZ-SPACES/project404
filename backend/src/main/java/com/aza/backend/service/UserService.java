@@ -421,6 +421,24 @@ public class UserService {
         return !userRepository.existsByHandle(normalized);
     }
 
+    public boolean isEmailAvailable(String email) {
+        if (email == null || email.isBlank()) return false;
+        String normalized = email.toLowerCase().trim();
+        if (!EMAIL_PATTERN.matcher(normalized).matches()) {
+            return false;
+        }
+        return !userRepository.existsByEmail(normalized);
+    }
+
+    public boolean isPhoneAvailable(String phone) {
+        if (phone == null || phone.isBlank()) return false;
+        String normalized = normalizePhone(phone);
+        if (normalized == null || !PHONE_PATTERN.matcher(normalized).matches()) {
+            return false;
+        }
+        return !userRepository.existsByPhone(normalized);
+    }
+
     public List<String> suggestHandles(String firstName, String lastName) {
         String base = (firstName + lastName).replaceAll("[^a-z0-9]", "").toLowerCase();
         if (base.isEmpty()) base = "user";
