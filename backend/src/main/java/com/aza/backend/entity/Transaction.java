@@ -63,6 +63,6 @@ public class Transaction {
     }
 
     public enum TransactionStatus {
-        PENDING, COMPLETED, FAILED, CANCELLED, DECLINED
+        DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED, REVERSED
     }
 }

@@ -105,16 +105,23 @@ public class ChatService {
         Chat chat = chatRepository.findById(request.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
 
+        return sendMessage(sender, chat, request);
+    }
+
+    @Transactional
+    public MessageResponse sendMessage(User sender, Chat chat, SendMessageRequest request) {
         assertParticipant(chat, sender.getId());
 
         UUID recipientId = getOtherParticipantId(chat, sender.getId());
 
-        // Enforce block in both directions
-        if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(recipientId, sender.getId())) {
-            throw new RuntimeException("You cannot send messages to this user");
-        }
-        if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(sender.getId(), recipientId)) {
-            throw new RuntimeException("You cannot send messages to this user");
+        // Enforce block in both directions (only for non-support chats)
+        if (!chat.isSupport()) {
+            if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(recipientId, sender.getId())) {
+                throw new RuntimeException("You cannot send messages to this user");
+            }
+            if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(sender.getId(), recipientId)) {
+                throw new RuntimeException("You cannot send messages to this user");
+            }
         }
 
         // Validate message type
@@ -132,18 +139,24 @@ public class ChatService {
         }
 
         // Save message
-        ChatMessage message = ChatMessage.builder()
+        ChatMessage.ChatMessageBuilder messageBuilder = ChatMessage.builder()
                 .chatId(chat.getId())
                 .senderId(sender.getId())
-                .ciphertext(request.getCiphertext())
-                .ephemeralKey(request.getEphemeralKey())
-                .preKeyId(request.getPreKeyId())
                 .type(messageType)
                 .status(ChatMessage.MessageStatus.SENT)
                 .mediaKey(request.getMediaKey())
                 .viewOnce(request.isViewOnce())
-                .expiresAt(expiresAt)
-                .build();
+                .expiresAt(expiresAt);
+
+        if (chat.isSupport()) {
+            messageBuilder.content(request.getContent());
+        } else {
+            messageBuilder.ciphertext(request.getCiphertext())
+                    .ephemeralKey(request.getEphemeralKey())
+                    .preKeyId(request.getPreKeyId());
+        }
+
+        ChatMessage message = messageBuilder.build();
 
         message = chatMessageRepository.save(message);
 
@@ -151,7 +164,7 @@ public class ChatService {
         chat.setLastMessageAt(LocalDateTime.now());
         chatRepository.save(chat);
 
-        MessageResponse response = toMessageResponse(message);
+        MessageResponse response = toMessageResponse(message, sender.getId());
         notificationService.sendNewMessageNotification(
                 recipientId,
                 sender.getFirstName() + " " + sender.getLastName(),
@@ -175,7 +188,7 @@ public class ChatService {
 
         int cappedSize = Math.min(size, 50);
         return chatMessageRepository.findByChatId(chatId, PageRequest.of(page, cappedSize))
-                .map(this::toMessageResponse);
+                .map(m -> toMessageResponse(m, user.getId()));
     }
 
     // ==================== MARK AS READ ====================
@@ -191,7 +204,6 @@ public class ChatService {
 
         if (updated > 0) {
             // Notify the other participant that their messages were read
-            UUID otherUserId = getOtherParticipantId(chat, user.getId());
 
             Map<String, Object> payload = new HashMap<>();
             payload.put("chatId", chatId.toString());
@@ -216,8 +228,6 @@ public class ChatService {
         int updated = chatMessageRepository.markAsDelivered(chatId, user.getId());
 
         if (updated > 0) {
-            UUID otherUserId = getOtherParticipantId(chat, user.getId());
-
             Map<String, Object> payload = new HashMap<>();
             payload.put("chatId", chatId.toString());
             payload.put("deliveredTo", user.getId().toString());
@@ -296,6 +306,47 @@ public class ChatService {
             chat.setIsArchivedByTwo(archive);
         }
         chatRepository.save(chat);
+    }
+
+    // ==================== SUPPORT CHAT ====================
+
+    @Transactional
+    public ChatResponse getOrCreateSupportChat(User user, String supportHandle) {
+        User supportUser = userRepository.findByHandle(supportHandle)
+                .orElseThrow(() -> new RuntimeException("Support account not found"));
+
+        Chat chat = chatRepository.findByParticipants(user.getId(), supportUser.getId())
+                .orElseGet(() -> {
+                    Chat newChat = Chat.builder()
+                            .participantOneId(user.getId())
+                            .participantTwoId(supportUser.getId())
+                            .isSupport(true)
+                            .build();
+                    return chatRepository.save(newChat);
+                });
+
+        return toChatResponse(chat, user.getId());
+    }
+
+    public Page<ChatResponse> listAllSupportChats(int page, int size) {
+        return chatRepository.findAllSupportChats(PageRequest.of(page, size))
+                .map(chat -> toChatResponse(chat, chat.getParticipantTwoId())); // Participant Two is typically the support account
+    }
+
+    @Transactional
+    public MessageResponse sendSupportMessage(User user, UUID chatId, String content) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+        if (!chat.isSupport()) {
+            throw new RuntimeException("This is not a support chat");
+        }
+
+        SendMessageRequest request = new SendMessageRequest();
+        request.setChatId(chatId);
+        request.setContent(content);
+        request.setType("TEXT");
+
+        return sendMessage(user, chat, request);
     }
 
     // ==================== UNREAD COUNT ====================
@@ -382,7 +433,7 @@ public class ChatService {
         message.setMediaKey(null); // wipe the URL — media is consumed
         chatMessageRepository.save(message);
 
-        MessageResponse response = toMessageResponse(message);
+        MessageResponse response = toMessageResponse(message, viewer.getId());
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("messageId", messageId.toString());
@@ -423,7 +474,7 @@ public class ChatService {
         message.setEditedAt(LocalDateTime.now());
         chatMessageRepository.save(message);
 
-        MessageResponse response = toMessageResponse(message);
+        MessageResponse response = toMessageResponse(message, editor.getId());
 
         Chat chat = chatRepository.findById(message.getChatId())
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
@@ -549,7 +600,7 @@ public class ChatService {
         };
     }
 
-    private MessageResponse toMessageResponse(ChatMessage message) {
+    private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId) {
         PaymentRequestResponse paymentRequest = null;
         if (message.getType() == ChatMessage.MessageType.PAYMENT_REQUEST
                 && message.getPaymentRequestId() != null) {
@@ -580,6 +631,7 @@ public class ChatService {
                 .senderId(message.getSenderId().toString())
                 .ciphertext(Boolean.TRUE.equals(message.getIsDeleted())
                         ? null : message.getCiphertext())
+                .content(message.getContent())
                 .ephemeralKey(message.getEphemeralKey())
                 .preKeyId(message.getPreKeyId())
                 .type(message.getType().name())
@@ -594,6 +646,7 @@ public class ChatService {
                 .viewedAt(message.getViewedAt() != null ? message.getViewedAt().toString() : null)
                 .editedAt(message.getEditedAt() != null ? message.getEditedAt().toString() : null)
                 .expiresAt(message.getExpiresAt() != null ? message.getExpiresAt().toString() : null)
+                .isSelf(currentUserId != null ? message.getSenderId().equals(currentUserId) : null)
                 .paymentRequest(paymentRequest)
                 .build();
     }

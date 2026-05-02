@@ -25,13 +25,10 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
-        // No token found, user isn't signed in
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !isKYCVerified ? (
-        // User hasn't completed KYC
-        <Stack.Screen name="KYC" component={KYCWithBoundary} />
+      ) :  !hasPasscode ? (
+        <Stack.Screen name="Setup" component={SetupNavigator} />
       ) : (
-        // User is fully authenticated
         <Stack.Screen name="App" component={AppNavigator} />
       )}
     </Stack.Navigator>

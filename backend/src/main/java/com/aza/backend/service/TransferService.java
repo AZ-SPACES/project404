@@ -59,6 +59,56 @@ public class TransferService {
                 .build();
     }
 
+    public SpendingResponse getSpendingSummary(UUID userId) {
+        LocalDateTime now = LocalDateTime.now(GHANA_TZ);
+        
+        LocalDateTime startOfThisMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+        LocalDateTime startOfNextMonth = startOfThisMonth.plusMonths(1);
+        
+        LocalDateTime startOfLastMonth = startOfThisMonth.minusMonths(1);
+        
+        BigDecimal spentThisMonth = transactionRepository.getTotalSpentBetween(userId, startOfThisMonth, startOfNextMonth);
+        BigDecimal spentLastMonth = transactionRepository.getTotalSpentBetween(userId, startOfLastMonth, startOfThisMonth);
+        
+        return SpendingResponse.builder()
+                .spentThisMonth(spentThisMonth)
+                .spentLastMonth(spentLastMonth)
+                .currency("GHS")
+                .build();
+    }
+
+    public YearlySpendingResponse getYearlySpendingSummary(UUID userId, int year) {
+        String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        java.util.Map<String, YearlySpendingResponse.MonthSpending> monthsMap = new java.util.LinkedHashMap<>();
+        
+        BigDecimal totalSpentYear = BigDecimal.ZERO;
+        int currentMonthValue = LocalDateTime.now(GHANA_TZ).getYear() == year ? LocalDateTime.now(GHANA_TZ).getMonthValue() : 12;
+
+        for (int i = 1; i <= 12; i++) {
+            LocalDateTime startOfMonth = LocalDateTime.of(year, i, 1, 0, 0);
+            LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
+            
+            BigDecimal spentMonth = transactionRepository.getTotalSpentBetween(userId, startOfMonth, endOfMonth);
+            totalSpentYear = totalSpentYear.add(spentMonth);
+            
+            monthsMap.put(monthNames[i - 1], YearlySpendingResponse.MonthSpending.builder()
+                    .spent(spentMonth)
+                    .avg(BigDecimal.ZERO)
+                    .build());
+        }
+        
+        BigDecimal avg = currentMonthValue > 0 ? totalSpentYear.divide(BigDecimal.valueOf(currentMonthValue), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        
+        for (String month : monthNames) {
+            monthsMap.get(month).setAvg(avg);
+        }
+
+        return YearlySpendingResponse.builder()
+                .months(monthsMap)
+                .currency("GHS")
+                .build();
+    }
+
     // INITIATE TRANSFER
 
     @Transactional
@@ -71,7 +121,7 @@ public class TransferService {
                 throw new RuntimeException("Invalid idempotency key");
             }
             User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
-            return buildTransferResponse(t, sender, recipient);
+            return buildTransferResponse(t, sender, recipient, sender.getId());
         }
         rateLimitService.enforceRateLimit("transfer:" + sender.getId(), 20, Duration.ofHours(1));
 
@@ -131,7 +181,7 @@ public class TransferService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
-        return buildTransferResponse(transaction, sender, recipient);
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 
     // ==================== CONFIRM TRANSFER (with PIN) ====================
@@ -153,7 +203,7 @@ public class TransferService {
         }
         if (transaction.getStatus() == Transaction.TransactionStatus.COMPLETED) {
             User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
-            return buildTransferResponse(transaction, sender, recipient);
+            return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
             throw new RuntimeException("Transaction cannot be confirmed - status: " + transaction.getStatus().name());
@@ -208,7 +258,7 @@ public class TransferService {
                 transaction.getAmount().toString(),
                 transaction.getId().toString());
 
-        return buildTransferResponse(transaction, sender, recipient);
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 
     // ==================== CANCEL TRANSFER ====================
@@ -232,7 +282,7 @@ public class TransferService {
         User recipient = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
-        return buildTransferResponse(transaction, sender, recipient);
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 
     // ==================== MONEY REQUESTS ====================
@@ -271,7 +321,7 @@ public class TransferService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
-        return buildTransferResponse(transaction, fromUser, requester);
+        return buildTransferResponse(transaction, fromUser, requester, requester.getId());
     }
 
     @Transactional
@@ -293,7 +343,7 @@ public class TransferService {
         }
         if(transaction.getStatus() == Transaction.TransactionStatus.COMPLETED) {
             User requester = userRepository.findById(transaction.getRecipientId()).orElse(null);
-            return buildTransferResponse(transaction, payer, requester);
+            return buildTransferResponse(transaction, payer, requester, payer.getId());
         }
 
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
@@ -344,7 +394,7 @@ public class TransferService {
                         "note", transaction.getNote() != null ? transaction.getNote() : ""
                 ));
 
-        return buildTransferResponse(transaction, payer, requester);
+        return buildTransferResponse(transaction, payer, requester, payer.getId());
     }
 
     @Transactional
@@ -366,7 +416,7 @@ public class TransferService {
         User requester = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return buildTransferResponse(transaction, payer, requester);
+        return buildTransferResponse(transaction, payer, requester, payer.getId());
     }
 
     // ==================== TRANSACTION HISTORY ====================
@@ -389,7 +439,7 @@ public class TransferService {
                 transactions = transactionRepository.findAllByUserIdAndStatus(
                         userId, Transaction.TransactionStatus.valueOf(status.toUpperCase()), pageRequest);
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid status. Accepted values: PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
+                throw new RuntimeException("Invalid status. Accepted values: DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
             }
         } else {
             transactions = transactionRepository.findAllByUserId(userId, pageRequest);
@@ -398,7 +448,7 @@ public class TransferService {
         return transactions.map(t -> {
             User sender = userRepository.findById(t.getSenderId()).orElse(null);
             User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
-            return buildTransferResponse(t, sender, recipient);
+            return buildTransferResponse(t, sender, recipient, userId);
         });
     }
 
@@ -412,12 +462,14 @@ public class TransferService {
 
         User sender = userRepository.findById(t.getSenderId()).orElse(null);
         User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
-        return buildTransferResponse(t, sender, recipient);
+        return buildTransferResponse(t, sender, recipient, userId);
     }
 
     //  HELPER
 
-    private TransferResponse buildTransferResponse(Transaction t, User sender, User recipient) {
+    private TransferResponse buildTransferResponse(Transaction t, User sender, User recipient, UUID currentUserId) {
+        String direction = t.getRecipientId().equals(currentUserId) ? "INCOMING" : "OUTGOING";
+        
         return TransferResponse.builder()
                 .id(t.getId().toString())
                 .senderId(t.getSenderId().toString())
@@ -429,6 +481,7 @@ public class TransferService {
                 .note(t.getNote())
                 .type(t.getType().name())
                 .status(t.getStatus().name())
+                .direction(direction)
                 .initiatedAt(t.getInitiatedAt() != null ? t.getInitiatedAt().toString() : null)
                 .completedAt(t.getCompletedAt() != null ? t.getCompletedAt().toString() : null)
                 .build();

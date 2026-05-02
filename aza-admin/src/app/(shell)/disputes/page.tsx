@@ -1,0 +1,275 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import {
+  getDisputes,
+  getDisputeStats,
+  resolveDispute,
+  Dispute,
+  DisputeStats,
+  Page,
+} from "@/lib/admin-api";
+import { Scale, AlertCircle, CheckCircle2, XCircle, Clock, Loader2, X } from "lucide-react";
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+function fmtGhs(n: number) {
+  return `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+const STATUS_MAP = {
+  OPEN: { label: "Open", cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  UNDER_REVIEW: { label: "Under Review", cls: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+  RESOLVED_APPROVED: { label: "Approved", cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  RESOLVED_DENIED: { label: "Denied", cls: "text-red-400 bg-red-500/10 border-red-500/20" },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  UNAUTHORIZED: "Unauthorized Transaction",
+  WRONG_AMOUNT: "Wrong Amount",
+  NOT_RECEIVED: "Not Received",
+  DUPLICATE: "Duplicate Charge",
+  SERVICE_ISSUE: "Service Issue",
+  OTHER: "Other",
+};
+
+function StatusBadge({ status }: { status: Dispute["status"] }) {
+  const cfg = STATUS_MAP[status];
+  return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
+}
+
+type FilterStatus = "ALL" | "OPEN" | "UNDER_REVIEW" | "RESOLVED_APPROVED" | "RESOLVED_DENIED";
+
+export default function DisputesPage() {
+  const [data, setData] = useState<Page<Dispute> | null>(null);
+  const [disputeStats, setDisputeStats] = useState<DisputeStats | null>(null);
+  const [filter, setFilter] = useState<FilterStatus>("OPEN");
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<Dispute | null>(null);
+  const [resolution, setResolution] = useState("");
+  const [resolveLoading, setResolveLoading] = useState(false);
+
+  useEffect(() => {
+    getDisputeStats().then(setDisputeStats).catch(() => {});
+  }, []);
+
+  const load = useCallback(async (p: number, f: FilterStatus) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const status = f === "ALL" ? undefined : f;
+      const res = await getDisputes(p, 20, status);
+      setData(res);
+      setPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load disputes");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(0, filter); }, [load, filter]);
+
+  const handleResolve = async (action: "APPROVE" | "DENY") => {
+    if (!resolving) return;
+    setResolveLoading(true);
+    try {
+      const updated = await resolveDispute(resolving.id, action, resolution);
+      setData((prev) => prev
+        ? { ...prev, content: prev.content.map((d) => d.id === updated.id ? updated : d) }
+        : prev
+      );
+      setResolving(null);
+      setResolution("");
+    } catch (e: any) {
+      setError(e.message ?? "Failed to resolve dispute");
+    } finally {
+      setResolveLoading(false);
+    }
+  };
+
+  const tabs: { key: FilterStatus; label: string }[] = [
+    { key: "ALL", label: "All" },
+    { key: "OPEN", label: "Open" },
+    { key: "UNDER_REVIEW", label: "Under Review" },
+    { key: "RESOLVED_APPROVED", label: "Approved" },
+    { key: "RESOLVED_DENIED", label: "Denied" },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-white">Dispute Management</h1>
+        <p className="text-white/40 text-sm mt-0.5">Customer transaction disputes and chargebacks</p>
+      </div>
+
+      {disputeStats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Open", value: disputeStats.open, icon: Clock, color: "text-amber-400" },
+            { label: "Under Review", value: disputeStats.underReview, icon: AlertCircle, color: "text-blue-400" },
+            { label: "Resolved (Month)", value: disputeStats.resolvedThisMonth, icon: CheckCircle2, color: "text-emerald-400" },
+            { label: "Total Value Disputed", value: fmtGhs(disputeStats.totalValueDisputed), icon: Scale, color: "text-white" },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium">{label}</p>
+                <Icon size={14} className="text-white/20" />
+              </div>
+              <p className={`text-xl font-semibold ${color} mt-1`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit flex-wrap">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              filter === tab.key ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="animate-spin text-white/30" size={24} />
+        </div>
+      ) : data?.content.length === 0 ? (
+        <div className="text-center py-20 text-white/25">
+          <Scale size={36} className="mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No disputes found</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {data?.content.map((dispute) => (
+            <div
+              key={dispute.id}
+              className="bg-[#161616] border border-white/5 rounded-xl px-5 py-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <span className="text-xs font-mono text-white/30">{dispute.referenceId}</span>
+                    <StatusBadge status={dispute.status} />
+                    <span className="px-2 py-0.5 rounded text-xs border border-white/8 text-white/40">
+                      {CATEGORY_LABELS[dispute.category] ?? dispute.category}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 mb-2 flex-wrap">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{dispute.userName}</p>
+                      {dispute.userHandle && <p className="text-xs text-white/35">@{dispute.userHandle}</p>}
+                    </div>
+                    <div className="text-right sm:text-left">
+                      <p className="text-sm font-bold text-[#F5A623]">{fmtGhs(dispute.amount)}</p>
+                      <p className="text-xs text-white/35">Disputed amount</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/50 leading-relaxed">{dispute.description}</p>
+                  {dispute.resolution && (
+                    <div className="mt-2 px-3 py-2 bg-white/3 border border-white/6 rounded-lg">
+                      <p className="text-[11px] text-white/30 font-medium uppercase tracking-wider mb-0.5">Resolution</p>
+                      <p className="text-xs text-white/55">{dispute.resolution}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <p className="text-xs text-white/30">{fmtDate(dispute.createdAt)}</p>
+                  {(dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW") && (
+                    <button
+                      onClick={() => { setResolving(dispute); setResolution(""); }}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white/60 hover:text-white transition-all font-medium"
+                    >
+                      Resolve
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data && data.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-3">
+          <button onClick={() => load(page - 1, filter)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
+          <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
+          <button onClick={() => load(page + 1, filter)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+        </div>
+      )}
+
+      {/* Resolve modal */}
+      {resolving && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setResolving(null)} />
+          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-white">Resolve Dispute</h3>
+              <button onClick={() => setResolving(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
+            </div>
+
+            <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">User</span>
+                <span className="text-white font-medium">{resolving.userName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Amount</span>
+                <span className="text-[#F5A623] font-bold">{fmtGhs(resolving.amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/40">Type</span>
+                <span className="text-white/70">{CATEGORY_LABELS[resolving.category]}</span>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Resolution Notes</label>
+              <textarea
+                value={resolution}
+                onChange={(e) => setResolution(e.target.value)}
+                placeholder="Provide resolution details..."
+                rows={3}
+                className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleResolve("APPROVE")}
+                disabled={resolveLoading || !resolution.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 disabled:opacity-50 transition-all"
+              >
+                <CheckCircle2 size={15} />
+                Approve Dispute
+              </button>
+              <button
+                onClick={() => handleResolve("DENY")}
+                disabled={resolveLoading || !resolution.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-semibold hover:bg-red-500/25 disabled:opacity-50 transition-all"
+              >
+                <XCircle size={15} />
+                Deny Dispute
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

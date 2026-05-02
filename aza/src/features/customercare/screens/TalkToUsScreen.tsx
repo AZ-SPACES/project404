@@ -5,17 +5,27 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions } from "react-native";
+  Dimensions,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { useAppTheme, Spacing, Typography, Radius, ThemeColors } from "../../../theme";
+import {
+  useAppTheme,
+  Spacing,
+  Typography,
+  Radius,
+  ThemeColors,
+} from "../../../theme";
 import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { AntDesign } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
+import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
 
 const { height } = Dimensions.get("window");
 
@@ -29,8 +39,35 @@ export default function TalkToUsScreen() {
   const [language, setLanguage] = useState("English");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
+  const [callingSupport, setCallingSupport] = useState(false);
   const bottomSheetAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  const handleCallSupport = async () => {
+    setCallingSupport(true);
+    try {
+      const res = await getAvailableSupportAgents();
+      const agents: any[] = res.data?.data ?? [];
+      if (agents.length === 0) {
+        Alert.alert(
+          "No agents available",
+          "All support agents are currently busy. Try chat instead.",
+          [{ text: "Chat instead", onPress: () => navigation.navigate("ChatWithUs") }, { text: "OK" }]
+        );
+        return;
+      }
+      const agent = agents[0];
+      await initiateCall(agent.userId, "VOICE");
+      navigation.navigate("AudioCall", {
+        name: agent.name ?? "AZA Support",
+        avatar: agent.avatarUrl ?? "",
+      });
+    } catch (err) {
+      Alert.alert("Error", "Could not connect to support. Please try again.");
+    } finally {
+      setCallingSupport(false);
+    }
+  };
 
   const languages = ["English", "Twi", "Ga", "Ewe", "Hausa"];
 
@@ -40,29 +77,36 @@ export default function TalkToUsScreen() {
         Animated.timing(bottomSheetAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true }),
+          useNativeDriver: true,
+        }),
         Animated.timing(backdropAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true }),
+          useNativeDriver: true,
+        }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(bottomSheetAnim, {
           toValue: height,
           duration: 300,
-          useNativeDriver: true }),
+          useNativeDriver: true,
+        }),
         Animated.timing(backdropAnim, {
           toValue: 0,
           duration: 300,
-          useNativeDriver: true }),
+          useNativeDriver: true,
+        }),
       ]).start();
     }
   }, [isBottomSheetVisible, bottomSheetAnim, backdropAnim]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor="transparent"
+      />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -208,14 +252,21 @@ export default function TalkToUsScreen() {
 
           <TouchableOpacity
             style={styles.issueItem}
-            onPress={() => setBottomSheetVisible(true)}
+            onPress={handleCallSupport}
+            disabled={callingSupport}
           >
             <View style={styles.iconContainer}>
-              <Feather name="smartphone" size={20} color={Colors.textPrimary} />
+              {callingSupport ? (
+                <ActivityIndicator size="small" color={Colors.textPrimary} />
+              ) : (
+                <Feather name="smartphone" size={20} color={Colors.textPrimary} />
+              )}
             </View>
             <View style={styles.issueTextContainer}>
               <Text style={styles.issueTitle}>Call us</Text>
-              <Text style={styles.issueSubtitle}>Available</Text>
+              <Text style={styles.issueSubtitle}>
+                {callingSupport ? "Connecting..." : "Available"}
+              </Text>
             </View>
             <Feather
               name="chevron-right"
@@ -227,65 +278,6 @@ export default function TalkToUsScreen() {
         </View>
       </View>
 
-      {/* Bottom Sheet */}
-      <View
-        style={StyleSheet.absoluteFill}
-        pointerEvents={isBottomSheetVisible ? "auto" : "none"}
-      >
-        <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}
-        >
-          <TouchableOpacity
-            style={styles.bottomSheetBackdrop}
-            activeOpacity={1}
-            onPress={() => setBottomSheetVisible(false)}
-          />
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.bottomSheetContainer,
-            {
-              position: "absolute",
-              bottom: 0,
-              width: "100%",
-              transform: [{ translateY: bottomSheetAnim }] },
-          ]}
-        >
-          <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.bottomSheetTitle}>Call us</Text>
-          <Text style={styles.bottomSheetDescription}>
-            Reach us on our mobile or telephone lines.
-          </Text>
-          <View style={styles.bottomSheetDivider} />
-
-          <Button
-            title="+233 55 123 4567"
-            onPress={() => {
-              setBottomSheetVisible(false);
-            }}
-            backgroundColor="#1E5128"
-            textColor="#B7ED7E"
-            borderRadius={24}
-          />
-          <View style={{ height: 16 }} />
-          <Button
-            title="+233 30 212 3456"
-            onPress={() => {
-              setBottomSheetVisible(false);
-            }}
-            backgroundColor="#B7ED7E"
-            textColor="#1E5128"
-            borderRadius={24}
-          />
-        </Animated.View>
-      </View>
     </SafeAreaView>
   );
 }
@@ -293,140 +285,169 @@ export default function TalkToUsScreen() {
 function createStyles(Colors: ThemeColors) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background },
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.lg },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    letterSpacing: -0.5 },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg },
-  section: {
-    marginBottom: Spacing.xl },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm },
-  dropdownButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 12 },
-  dropdownButtonActive: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomColor: "transparent" },
-  dropdownText: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: Colors.textSecondary },
-  dropdownList: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: Radius.md,
-    borderBottomRightRadius: Radius.md,
-    backgroundColor: isDark ? Colors.surface : "#FFFFFF",
-    overflow: "hidden" },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: isDark ? Colors.border : "rgba(22,51,0,0.04)" },
-  dropdownItemText: {
-    fontSize: 16,
-    color: Colors.textSecondary },
-  dropdownItemTextSelected: {
-    color: Colors.textPrimary,
-    fontWeight: "500" },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm },
-  separator: {
-    height: 1,
-    backgroundColor: isDark ? Colors.border : "rgba(22,51,0,0.08)" },
-  issueItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: Spacing.lg },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.md },
-  issueTextContainer: {
-    flex: 1 },
-  issueTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-    marginBottom: 4 },
-  issueSubtitle: {
-    fontSize: 14,
-    fontWeight: "400",
-    color: Colors.textSecondary },
-  bottomSheetBackdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0, 0, 0, 0.5)" },
-  bottomSheetContainer: {
-    backgroundColor: isDark ? Colors.surface : "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 48 },
-  bottomSheetHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    marginBottom: 16 },
-  closeButton: {
-    backgroundColor: isDark ? Colors.white10 : "#F3F4F6",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center" },
-  bottomSheetTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 8,
-    letterSpacing: -0.5 },
-  bottomSheetDescription: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-    lineHeight: 22,
-    marginBottom: 20 },
-  bottomSheetDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginBottom: 24 } });
+    safeArea: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    header: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.md,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      letterSpacing: -0.5,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+    },
+    section: {
+      marginBottom: Spacing.xl,
+    },
+    sectionLabel: {
+      fontSize: 14,
+      fontWeight: "400",
+      color: Colors.textPrimary,
+      marginBottom: Spacing.sm,
+    },
+    dropdownButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 12,
+    },
+    dropdownButtonActive: {
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderBottomColor: "transparent",
+    },
+    dropdownText: {
+      fontSize: 16,
+      fontWeight: "400",
+      color: Colors.textSecondary,
+    },
+    dropdownList: {
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderTopWidth: 0,
+      borderBottomLeftRadius: Radius.md,
+      borderBottomRightRadius: Radius.md,
+      backgroundColor: isDark ? Colors.surface : "#FFFFFF",
+      overflow: "hidden",
+    },
+    dropdownItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      paddingHorizontal: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? Colors.border : "rgba(22,51,0,0.04)",
+    },
+    dropdownItemText: {
+      fontSize: 16,
+      color: Colors.textSecondary,
+    },
+    dropdownItemTextSelected: {
+      color: Colors.textPrimary,
+      fontWeight: "500",
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      marginBottom: Spacing.sm,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: isDark ? Colors.border : "rgba(22,51,0,0.08)",
+    },
+    issueItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: Spacing.lg,
+    },
+    iconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: Spacing.md,
+    },
+    issueTextContainer: {
+      flex: 1,
+    },
+    issueTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: Colors.textPrimary,
+      marginBottom: 4,
+    },
+    issueSubtitle: {
+      fontSize: 14,
+      fontWeight: "400",
+      color: Colors.textSecondary,
+    },
+    bottomSheetBackdrop: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    bottomSheetContainer: {
+      backgroundColor: isDark ? Colors.surface : "#ffffff",
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 48,
+    },
+    bottomSheetHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-start",
+      marginBottom: 16,
+    },
+    closeButton: {
+      backgroundColor: isDark ? Colors.white10 : "#F3F4F6",
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bottomSheetTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      marginBottom: 8,
+      letterSpacing: -0.5,
+    },
+    bottomSheetDescription: {
+      fontSize: 16,
+      color: Colors.textPrimary,
+      lineHeight: 22,
+      marginBottom: 20,
+    },
+    bottomSheetDivider: {
+      height: 1,
+      backgroundColor: Colors.border,
+      marginBottom: 24,
+    },
+  });
 }

@@ -87,8 +87,8 @@ const TotpLoginScreen: React.FC = () => {
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
       login(
         payload.accessToken,
-        payload.hasPasscode ?? true,
-        payload.kycVerified ?? true,
+        payload.user?.passcodeSet ?? false,
+        payload.user?.kycStatus === 'VERIFIED',
       );
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';

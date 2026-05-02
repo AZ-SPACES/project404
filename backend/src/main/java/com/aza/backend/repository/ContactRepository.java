@@ -4,6 +4,7 @@ import com.aza.backend.entity.Contact;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,4 +36,7 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
             @Param("query") String query,
             Pageable pageable);
 
+    @Modifying
+    @Query("DELETE FROM Contact c WHERE c.ownerUserId = :userId")
+    void deleteAllByOwnerUserId(@Param("userId") UUID userId);
 }

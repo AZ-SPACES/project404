@@ -32,6 +32,9 @@ public class Wallet {
     @Builder.Default
     private String currency = "GHS";
 
+    @Builder.Default
+    private Boolean frozen = false;
+
     @UpdateTimestamp
     private LocalDateTime lastUpdatedAt;
 }

@@ -11,6 +11,7 @@ import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,8 @@ public class UserService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_CONTENT_TYPES = List.of("image/jpeg", "image/png");
     private static final Pattern HANDLE_PATTERN = Pattern.compile("^[a-z0-9_]{3,30}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?[0-9]{7,15}$");
 
     // ==================== PROFILE ====================
 
@@ -66,6 +69,15 @@ public class UserService {
                 .isTaxResidentAbroad(user.getIsTaxResidentAbroad())
                 .taxCountry(user.getTaxCountry())
                 .isUSPerson(user.getIsUSPerson())
+                .findMeByPhone(user.getFindMeByPhone())
+                .findMeByEmail(user.getFindMeByEmail())
+                .findMeByHandle(user.getFindMeByHandle())
+                .syncContacts(user.getSyncContacts())
+                .billForwardingEnabled(user.getBillForwardingEnabled())
+                .twoFactorEnabled(user.getTwoFactorEnabled())
+                .forcePasswordReset(user.getForcePasswordReset())
+                .requireSelfieVerification(user.getRequireSelfieVerification())
+                .notificationPreferences(user.getNotificationPreferences())
                 .build();
     }
 
@@ -150,7 +162,7 @@ public class UserService {
         User user = userRepository.findByHandle(handle)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
+        if (user.getStatus() == User.AccountStatus.DEACTIVATED || !Boolean.TRUE.equals(user.getFindMeByHandle())) {
             throw new RuntimeException("User not found");
         }
 
@@ -164,14 +176,55 @@ public class UserService {
     }
 
     public org.springframework.data.domain.Page<PublicProfileResponse> searchUsers(String query, int page, int size) {
-        return userRepository.searchUsers(query, org.springframework.data.domain.PageRequest.of(page, size))
-                .map(user -> PublicProfileResponse.builder()
-                        .id(user.getId().toString())
-                        .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
-                        .handle(user.getHandle())
-                        .profileImageUrl(user.getProfileImageUrl())
-                        .onlineStatus("OFFLINE")
-                        .build());
+        if (query == null || query.isBlank()) return org.springframework.data.domain.Page.empty();
+        
+        String trimmed = query.trim();
+
+        // 1. Try exact phone match if it looks like a phone
+        if (PHONE_PATTERN.matcher(trimmed).matches()) {
+            String normalized = normalizePhone(trimmed);
+            java.util.Optional<User> user = userRepository.findByPhoneAndPrivacy(normalized);
+            if (user.isPresent()) {
+                return new org.springframework.data.domain.PageImpl<>(
+                        List.of(toPublicProfileResponse(user.get())), 
+                        org.springframework.data.domain.PageRequest.of(page, size), 1);
+            }
+        }
+
+        // 2. Try exact email match if it looks like an email
+        if (EMAIL_PATTERN.matcher(trimmed).matches()) {
+            java.util.Optional<User> user = userRepository.findByEmailAndPrivacy(trimmed.toLowerCase());
+            if (user.isPresent()) {
+                return new org.springframework.data.domain.PageImpl<>(
+                        List.of(toPublicProfileResponse(user.get())), 
+                        org.springframework.data.domain.PageRequest.of(page, size), 1);
+            }
+        }
+
+        // 3. Fallback to general handle/name search (which respects findMeByHandle)
+        return userRepository.searchUsers(trimmed, org.springframework.data.domain.PageRequest.of(page, size))
+                .map(this::toPublicProfileResponse);
+    }
+
+    private PublicProfileResponse toPublicProfileResponse(User user) {
+        return PublicProfileResponse.builder()
+                .id(user.getId().toString())
+                .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
+                .handle(user.getHandle())
+                .profileImageUrl(user.getProfileImageUrl())
+                .onlineStatus("OFFLINE")
+                .build();
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) return null;
+        String p = phone.replaceAll("[\\s\\-()]", "");
+        if (p.startsWith("0") && p.length() == 10) {
+            return "+233" + p.substring(1);
+        } else if (!p.startsWith("+")) {
+            return "+" + p;
+        }
+        return p;
     }
 
     // ==================== PRIVACY ====================
@@ -184,6 +237,27 @@ public class UserService {
         if (request.getFindMeByEmail() != null) {
             user.setFindMeByEmail(request.getFindMeByEmail());
         }
+        if (request.getFindMeByHandle() != null) {
+            user.setFindMeByHandle(request.getFindMeByHandle());
+        }
+        if (request.getSyncContacts() != null) {
+            user.setSyncContacts(request.getSyncContacts());
+        }
+        if (request.getBillForwardingEnabled() != null) {
+            user.setBillForwardingEnabled(request.getBillForwardingEnabled());
+        }
+        if (request.getBiometricsEnabled() != null) {
+            user.setBiometricsEnabled(request.getBiometricsEnabled());
+        }
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void removeSelfEverywhere(User user) {
+        user.setFindMeByPhone(false);
+        user.setFindMeByEmail(false);
+        user.setFindMeByHandle(false);
+        user.setSyncContacts(false);
         userRepository.save(user);
     }
 
@@ -245,8 +319,10 @@ public class UserService {
     // ==================== DEVICES ====================
 
     public List<DeviceResponse> getDevices(User user) {
-        List<RefreshToken> tokens = refreshTokenRepository.findAllByUserId(user.getId());
-        return tokens.stream()
+        return refreshTokenRepository.findAllByUserId(user.getId())
+                .stream()
+                .filter(token -> !token.isExpired())
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(token -> DeviceResponse.builder()
                         .id(token.getId().toString())
                         .deviceName(token.getDeviceName())
@@ -260,8 +336,28 @@ public class UserService {
     @Transactional
     public void removeDevice(User user, UUID deviceId) {
         RefreshToken token = refreshTokenRepository.findByIdAndUserId(deviceId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Device not found"));
+                .orElseThrow(() -> new RuntimeException("Device not found or does not belong to this account"));
+
+        // Immediately blacklist the paired access token so the device is logged out right now,
+        // not just when its JWT naturally expires.
+        if (token.getAccessTokenHash() != null && token.getAccessTokenExpiresAt() != null) {
+            Duration remaining = Duration.between(java.time.LocalDateTime.now(), token.getAccessTokenExpiresAt());
+            if (!remaining.isNegative() && !remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + token.getAccessTokenHash(),
+                        "revoked",
+                        remaining);
+            }
+        }
+
         refreshTokenRepository.delete(token);
+    }
+
+    /** Purges expired refresh tokens every hour to keep the devices list clean. */
+    @Scheduled(fixedRate = 3_600_000)
+    @Transactional
+    public void purgeExpiredRefreshTokens() {
+        refreshTokenRepository.deleteByExpiresAtBefore(java.time.LocalDateTime.now());
     }
 
     // ==================== PASSCODE (PIN) ====================

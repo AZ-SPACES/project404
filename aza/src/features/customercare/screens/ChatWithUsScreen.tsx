@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image } from "react-native";
+  Image,
+  Alert,
+  ActivityIndicator
+} from "react-native";
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Spacing, Radius } from "../../../theme";
@@ -18,15 +21,11 @@ import { StatusBar } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSupportChat } from "../../../hooks/useSupportChat";
+import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ChatWithUs">;
 
-interface Message {
-  id: string;
-  text: string;
-  isSender: boolean;
-  imageUri?: string;
-}
 
 export default function ChatWithUsScreen() {
   const { colors: Colors } = useAppTheme();
@@ -37,11 +36,45 @@ export default function ChatWithUsScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    { id: "1", text: "Hi there! How can we help you today?", isSender: false }
-  ]);
+  const { messages, loading, sendMessage, isOtherTyping, sendTypingStatus, loadHistory } = useSupportChat();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [loadHistory])
+  );
+
+  const [callingSupport, setCallingSupport] = useState(false);
+
+  const handleCallSupport = async () => {
+    setCallingSupport(true);
+    try {
+      const res = await getAvailableSupportAgents();
+      const agents: any[] = res.data?.data ?? [];
+      if (agents.length === 0) {
+        Alert.alert(
+          "No agents available",
+          "All support agents are currently busy.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      const agent = agents[0];
+      await initiateCall(agent.userId, "VOICE");
+      navigation.navigate("AudioCall", {
+        name: agent.name ?? "AZA Support",
+        avatar: agent.avatarUrl ?? "",
+      });
+    } catch (err) {
+      Alert.alert("Error", "Could not connect to support. Please try again.");
+    } finally {
+      setCallingSupport(false);
+    }
+  };
 
   const handleAttach = async () => {
+    // Attachment logic remains same but in a real app would upload to backend
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
@@ -59,31 +92,27 @@ export default function ChatWithUsScreen() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim() && !selectedImage) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      ...(selectedImage ? { imageUri: selectedImage } : {}),
-      isSender: true };
+    try {
+      const textToSend = inputText.trim();
+      setInputText("");
+      setSelectedImage(null);
+      
+      await sendMessage(textToSend);
+    } catch (err) {
+      alert("Failed to send message");
+    }
+  };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputText("");
-    setSelectedImage(null);
-
-    // Simulate auto-reply
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          text: selectedImage 
-            ? "We've received your attachment. Let us review it." 
-            : "Thank you for reaching out. One of our agents will be with you shortly.",
-          isSender: false },
-      ]);
-    }, 1500);
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    sendTypingStatus(true);
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 3000);
   };
 
   return (
@@ -94,16 +123,30 @@ export default function ChatWithUsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <MaterialIcons
+                name="chevron-left"
+                size={28}
+                color={Colors.textPrimary}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.callButton}
+              onPress={handleCallSupport}
+              disabled={callingSupport}
+            >
+              {callingSupport ? (
+                <ActivityIndicator size="small" color={Colors.textPrimary} />
+              ) : (
+                <Feather name="phone" size={20} color={Colors.textPrimary} />
+              )}
+            </TouchableOpacity>
+          </View>
           <Text style={styles.title}>Paapa</Text>
           <Text style={styles.subtitle}>Typically replies within a minute.</Text>
         </View>
@@ -113,7 +156,7 @@ export default function ChatWithUsScreen() {
           contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          {messages.map((msg) => (
+          {messages.map((msg: any) => (
             <View 
               key={msg.id} 
               style={[
@@ -136,6 +179,11 @@ export default function ChatWithUsScreen() {
               )}
             </View>
           ))}
+          {isOtherTyping && (
+            <View style={styles.typingIndicator}>
+              <Text style={styles.typingText}>Agent is typing...</Text>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.inputContainer}>
@@ -159,7 +207,7 @@ export default function ChatWithUsScreen() {
               placeholder="Ask me anything..."
               placeholderTextColor={Colors.textSecondary}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={handleInputChange}
               multiline
             />
           </View>
@@ -194,7 +242,18 @@ function createStyles(Colors: any) {
     borderRadius: Radius.full,
     backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "center" },
+  callButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
+    alignItems: "center",
+    justifyContent: "center" },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.md },
   title: {
     fontSize: 32,
@@ -297,5 +356,17 @@ function createStyles(Colors: any) {
     justifyContent: 'center' },
   sendButtonDisabled: {
     backgroundColor: Colors.border,
-    opacity: 0.5 } });
+    opacity: 0.5 },
+  typingIndicator: {
+    alignSelf: 'flex-start',
+    backgroundColor: isDark ? Colors.surface : Colors.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderTopLeftRadius: 4,
+    marginTop: 4 },
+  typingText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontStyle: 'italic' } });
 }

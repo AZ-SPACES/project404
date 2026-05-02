@@ -50,6 +50,17 @@ public class ContactController {
     }
 
     /**
+     * DELETE /api/v1/contacts/sync
+     * Wipe all synced contacts for the user.
+     */
+    @DeleteMapping("/sync")
+    public ResponseEntity<ApiResponse<String>> unsyncContacts(
+            @AuthenticationPrincipal User user) {
+        contactService.deleteAllContacts(user.getId());
+        return ResponseEntity.ok(ApiResponse.success("All contacts unsynced and deleted"));
+    }
+
+    /**
      * GET /api/v1/contacts/search?q=query
      * Search contacts by name, phone, email, or handle
      */

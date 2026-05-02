@@ -28,4 +28,30 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
             "(c.participantOneId = :userB AND c.participantTwoId = :userA)")
     Optional<Chat> findByParticipants(@Param("userA") UUID userA,
                                       @Param("userB") UUID userB);
+
+    @Query("SELECT c FROM Chat c WHERE c.isSupport = true AND " +
+            "(c.participantOneId = :userId OR c.participantTwoId = :userId)")
+    Optional<Chat> findSupportChatByUserId(@Param("userId") UUID userId);
+
+    @Query("SELECT c FROM Chat c WHERE c.isSupport = true ORDER BY c.lastMessageAt DESC NULLS LAST")
+    org.springframework.data.domain.Page<Chat> findAllSupportChats(org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT c FROM Chat c WHERE c.isSupport = true AND c.status = :status ORDER BY c.lastMessageAt DESC NULLS LAST")
+    org.springframework.data.domain.Page<Chat> findAllSupportChatsByStatus(
+            @Param("status") Chat.ChatStatus status,
+            org.springframework.data.domain.Pageable pageable);
+
+    long countByIsSupportTrueAndStatus(Chat.ChatStatus status);
+
+    long countByIsSupportTrue();
+
+    long countByIsSupportTrueAndStatusAndResolvedAtAfter(
+            Chat.ChatStatus status,
+            java.time.LocalDateTime since);
+
+    @Query("SELECT c.category, COUNT(c) FROM Chat c WHERE c.isSupport = true GROUP BY c.category")
+    java.util.List<Object[]> countSupportChatsByCategory();
+
+    @Query("SELECT c.priority, COUNT(c) FROM Chat c WHERE c.isSupport = true GROUP BY c.priority")
+    java.util.List<Object[]> countSupportChatsByPriority();
 }

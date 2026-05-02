@@ -13,13 +13,15 @@ import {
   TextInputKeyPressEventData,
   StatusBar,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
+import { useToast } from "../../../providers/ToastProvider";
+import { verifyOtp } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
@@ -80,8 +82,25 @@ const ResetOTPScreen: React.FC = () => {
     }
   };
 
-  const handleVerify = () => {
-    // TODO: send otp.join('') to backend for verification, then navigate to ResetPassword
+  const route = useRoute<RouteProp<RootStackParamList, "ResetOTP">>();
+  const { email } = route.params;
+  const { showToast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleVerify = async () => {
+    const code = otp.join("");
+    if (code.length < 6) return;
+
+    setIsLoading(true);
+    try {
+      await verifyOtp(email, code, "password_reset");
+      navigation.navigate("ResetNewPassword", { email, code });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Invalid or expired code.";
+      showToast(msg, "error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {

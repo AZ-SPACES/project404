@@ -11,6 +11,8 @@ type ProfileData = {
   email: string | null;
   phone: string | null;
   handle: string | null;
+  syncContacts: boolean;
+  billForwardingEnabled: boolean;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -19,6 +21,8 @@ const INITIAL_PROFILE: ProfileData = {
   email: null,
   phone: null,
   handle: null,
+  syncContacts: true,
+  billForwardingEnabled: false,
 };
 
 type ProfileContextType = ProfileData & {
@@ -27,6 +31,8 @@ type ProfileContextType = ProfileData & {
   setEmail: (email: string | null) => Promise<void>;
   setPhone: (phone: string | null) => Promise<void>;
   setHandle: (handle: string | null) => Promise<void>;
+  setSyncContacts: (enabled: boolean) => Promise<void>;
+  setBillForwardingEnabled: (enabled: boolean) => Promise<void>;
   fetchProfile: () => Promise<void>;
 };
 
@@ -64,9 +70,21 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         email: userData.email,
         phone: userData.phone,
         handle: userData.handle,
+        syncContacts: userData.syncContacts ?? true,
+        billForwardingEnabled: userData.billForwardingEnabled ?? false,
       };
       setProfile(updated);
       await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+
+      // Also sync notification preferences if available
+      if (userData.notificationPreferences) {
+        try {
+          const prefsKey = `@notification_prefs_${userToken}`;
+          await AsyncStorage.setItem(prefsKey, userData.notificationPreferences);
+        } catch (e) {
+          console.warn('Failed to sync notification preferences from profile', e);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch profile', error);
     }
@@ -128,8 +146,27 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [profile]);
 
+  const setSyncContacts = useCallback(async (enabled: boolean) => {
+    const updated = { ...profile, syncContacts: enabled };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save syncContacts setting', e);
+    }
+  }, [profile]);
+  const setBillForwardingEnabled = useCallback(async (enabled: boolean) => {
+    const updated = { ...profile, billForwardingEnabled: enabled };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save billForwardingEnabled setting', e);
+    }
+  }, [profile]);
+
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, fetchProfile }}>
+    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, fetchProfile }}>
       {children}
     </ProfileContext.Provider>
   );

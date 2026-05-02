@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { useToast } from '../../../providers/ToastProvider';
+import { updateNotificationPreferences } from '../../../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -156,6 +157,12 @@ export default function NotificationSettingsScreen() {
           causesEmail, causesPush 
         };
         await AsyncStorage.setItem(prefsKey, JSON.stringify(prefs));
+        
+        try {
+          await updateNotificationPreferences(prefs);
+        } catch (apiError) {
+          console.warn('Failed to sync notification preferences to backend', apiError);
+        }
       } catch (e) {
         showToast('Failed to save preferences. Please try again.', 'error');
       }

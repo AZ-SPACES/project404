@@ -113,8 +113,10 @@ const OTPScreen: React.FC = () => {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.data.refreshToken);
         login(
           data.data.accessToken,
-          data.data.hasPasscode ?? true,
-          data.data.kycVerified ?? true,
+          data.data.user?.passcodeSet ?? false,
+          data.data.user?.kycStatus === 'VERIFIED',
+          data.data.user?.forcePasswordReset ?? false,
+          data.data.user?.requireSelfieVerification ?? false,
         );
       }
     } catch (error: any) {
@@ -177,9 +179,11 @@ const OTPScreen: React.FC = () => {
                   onChangeText={(text) => handleOtpChange(text, index)}
                   onKeyPress={(e) => handleKeyPress(e, index)}
                   keyboardType="number-pad"
-                  maxLength={1}
+                  maxLength={index === 0 ? 6 : 1}
                   autoFocus={index === 0}
                   cursorColor={Colors.primary}
+                  textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
                 />
                 {!digit && <View style={styles.dash} pointerEvents="none" />}
               </View>

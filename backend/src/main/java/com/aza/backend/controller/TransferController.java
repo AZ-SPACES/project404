@@ -30,6 +30,22 @@ public class TransferController {
                 transferService.getBalance(user.getId())));
     }
 
+    @GetMapping("/wallet/spending")
+    public ResponseEntity<ApiResponse<SpendingResponse>> getSpendingSummary(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                transferService.getSpendingSummary(user.getId())));
+    }
+
+    @GetMapping("/wallet/spending/yearly")
+    public ResponseEntity<ApiResponse<YearlySpendingResponse>> getYearlySpendingSummary(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : java.time.Year.now().getValue();
+        return ResponseEntity.ok(ApiResponse.success(
+                transferService.getYearlySpendingSummary(user.getId(), targetYear)));
+    }
+
     // ==================== TRANSFERS ====================
 
     @PostMapping("/transfers")
