@@ -113,8 +113,8 @@ const OTPScreen: React.FC = () => {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.data.refreshToken);
         login(
           data.data.accessToken,
-          data.data.hasPasscode ?? false,
-          data.data.kycVerified ?? false,
+          data.data.hasPasscode ?? true,
+          data.data.kycVerified ?? true,
         );
       }
     } catch (error: any) {
