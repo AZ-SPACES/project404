@@ -2,7 +2,6 @@ package com.aza.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Check;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -11,7 +10,6 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "wallets")
-@Check(constraints = "balance >= 0")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder

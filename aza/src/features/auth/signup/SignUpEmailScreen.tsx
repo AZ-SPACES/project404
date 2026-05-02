@@ -9,7 +9,8 @@ import {
   Keyboard,
   TouchableOpacity,
   StyleSheet,
-  StatusBar
+  StatusBar,
+  Alert
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +21,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
+import { checkEmailAvailability } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmail">;
 
@@ -30,13 +32,30 @@ export default function SignUpEmailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { data, update } = useSignUp();
   const [touched, setTouched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const emailError = touched && data.email.trim().length > 0 && !isValidEmail(data.email)
     ? "Enter a valid email address"
     : null;
 
-  const handleNext = () => {
-    navigation.navigate("SignUpPassword");
+  const handleNext = async () => {
+    if (!isValidEmail(data.email)) return;
+    
+    setLoading(true);
+    try {
+      const response = await checkEmailAvailability(data.email);
+      if (response.data?.success && response.data?.data === true) {
+        navigation.navigate("SignUpPassword");
+      } else {
+        Alert.alert("Already Registered", "This email address is already linked to an account.");
+      }
+    } catch (error) {
+      console.error("Availability check failed", error);
+      // Fallback: let them proceed and handle it at the final signup step if API fails
+      navigation.navigate("SignUpPassword");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,6 +123,7 @@ export default function SignUpEmailScreen() {
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
               disabled={!isValidEmail(data.email)}
+              loading={loading}
             />
           </View>
         </KeyboardAvoidingView>

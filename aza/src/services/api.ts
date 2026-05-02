@@ -94,8 +94,8 @@ export const markNotificationAsRead = (id: string) =>
 export const deleteAllNotifications = () =>
   api.delete("/api/v1/notifications");
 
-export const totpLogin = (preAuthToken: string, code: string) =>
-  api.post("/api/v1/auth/2fa/login", { preAuthToken, code });
+export const totpLogin = (preAuthToken: string, code: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
+  api.post("/api/v1/auth/2fa/login", { preAuthToken, code, deviceName, deviceOs, deviceId });
 
 // --- KYC Endpoints ---
 
@@ -172,6 +172,12 @@ export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
 export const checkHandleAvailability = (handle: string) =>
   api.get(`/api/v1/users/check-handle?handle=${encodeURIComponent(handle)}`);
+
+export const checkEmailAvailability = (email: string) =>
+  api.get(`/api/v1/users/check-email?email=${encodeURIComponent(email)}`);
+
+export const checkPhoneAvailability = (phone: string) =>
+  api.get(`/api/v1/users/check-phone?phone=${encodeURIComponent(phone)}`);
 
 export const suggestHandles = (firstName: string, lastName: string) =>
   api.get(
@@ -261,8 +267,8 @@ export const forgotPassword = (identifier: string) =>
 export const resetPassword = (identifier: string, code: string, newPassword: string) =>
   api.post("/api/v1/auth/reset-password", { identifier, code, newPassword });
 
-export const verifyOtp = (identifier: string, code: string, purpose: string) =>
-  api.post("/api/v1/auth/verify-otp", { identifier, code, purpose });
+export const verifyOtp = (identifier: string, code: string, purpose: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
+  api.post("/api/v1/auth/verify-otp", { identifier, code, purpose, deviceName, deviceOs, deviceId });
 
 export const logoutEverywhere = () =>
   api.post("/api/v1/auth/logout-everywhere");

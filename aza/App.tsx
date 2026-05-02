@@ -29,6 +29,7 @@ import EnableNotificationsScreen from "./src/features/notifications/screens/Enab
 import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiometricsScreen";
 import AppLockScreen from "./src/features/security/screens/AppLockScreen";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 
 const linking = {
@@ -70,8 +71,12 @@ function AppContent() {
           const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
           if (!isBiometricsEnabled && hasHardware && isEnrolled) {
-            setShowBiometricsPrompt(true);
-            return; // Wait for biometrics to finish before checking notifications
+            // Only show if we don't already have a biometric token stored
+            const storedToken = await SecureStore.getItemAsync("aza_biometric_token");
+            if (!storedToken) {
+              setShowBiometricsPrompt(true);
+              return;
+            }
           }
 
           // 2. Check Notifications

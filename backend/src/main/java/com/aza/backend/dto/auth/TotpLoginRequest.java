@@ -13,4 +13,8 @@ public class TotpLoginRequest {
     @NotBlank(message = "Authenticator code is required")
     @Pattern(regexp = "\\d{6}", message = "Authenticator code must be exactly 6 digits")
     private String code;
+
+    private String deviceName;
+    private String deviceOs;
+    private String deviceId;
 }

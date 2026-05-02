@@ -37,7 +37,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final WebSocketPublisher webSocketPublisher;
-    private final PresenceService presenceService;
+
     private final ObjectMapper objectMapper;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
@@ -119,10 +119,8 @@ public class NotificationService {
         webSocketPublisher.publishNotification(
                 userId, WebSocketEventType.NOTIFICATION_NEW, response);
 
-        // Also send FCM push if user is offline — subject to silent hours gating
-        if (!presenceService.isOnline(userId)) {
-            sendFcmPushIfAllowed(userId, title, body, data, paymentAmount, imageUrl);
-        }
+        // Also send FCM push — subject to silent hours gating
+        sendFcmPushIfAllowed(userId, title, body, data, paymentAmount, imageUrl);
     }
 
 

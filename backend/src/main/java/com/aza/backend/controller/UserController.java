@@ -160,6 +160,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.isHandleAvailable(handle)));
     }
 
+    @GetMapping("/check-email")
+    public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam String email) {
+        return ResponseEntity.ok(ApiResponse.success(userService.isEmailAvailable(email)));
+    }
+
+    @GetMapping("/check-phone")
+    public ResponseEntity<ApiResponse<Boolean>> checkPhone(@RequestParam String phone) {
+        return ResponseEntity.ok(ApiResponse.success(userService.isPhoneAvailable(phone)));
+    }
+
     @GetMapping("/suggest-handles")
     public ResponseEntity<ApiResponse<java.util.List<String>>> suggestHandles(
             @RequestParam String firstName,
