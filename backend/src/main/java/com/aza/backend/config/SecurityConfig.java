@@ -1,10 +1,12 @@
 package com.aza.backend.config;
 
 import com.aza.backend.security.JwtAuthenticationFilter;
+import com.aza.backend.security.filter.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -34,6 +36,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Value("${app.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
@@ -60,12 +63,16 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
+                    // App-push 2FA approval must be authenticated — the responding device already has a JWT.
+                    // This rule must precede the /api/v1/auth/** permitAll wildcard.
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/app/respond").authenticated();
                     auth.requestMatchers(
                             "/api/v1/auth/**",
                             "/api/v1/users/check-handle",
                             "/api/v1/users/check-email",
                             "/api/v1/users/check-phone",
                             "/api/v1/users/suggest-handles",
+                            "/api/v1/security/verify-challenge",
                             "/ws/**",
                             "/ws/chat/**"
                     ).permitAll();
@@ -86,7 +93,9 @@ public class SecurityConfig {
                     .accessDeniedHandler((request, response, accessDeniedException) ->
                             response.sendError(403, "Forbidden")))
             .addFilterBefore(jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class);
+                UsernamePasswordAuthenticationFilter.class)
+            // RateLimitFilter runs AFTER JWT auth so it can read SecurityContext for user-level limits
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -96,7 +105,9 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        config.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type", "X-Requested-With",
+                "X-Device-ID", "X-Platform", "X-Bypass-Token"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

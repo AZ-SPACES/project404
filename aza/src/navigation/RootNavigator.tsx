@@ -23,13 +23,23 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !hasPasscode ? (
-        <Stack.Screen name="Setup" component={SetupNavigator} />
-      ) : !isKYCVerified ? (
-        <Stack.Screen name="KYC" component={KYCWithBoundary} />
+        <Stack.Group>
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        </Stack.Group>
       ) : (
-        <Stack.Screen name="App" component={AppNavigator} />
+        <Stack.Group>
+          {!hasPasscode ? (
+            <Stack.Screen name="Setup" component={SetupNavigator} />
+          ) : !isKYCVerified ? (
+            <Stack.Screen name="KYC" component={KYCWithBoundary} />
+          ) : (
+            <Stack.Screen 
+              name="App" 
+              component={AppNavigator} 
+              options={{ gestureEnabled: false }} 
+            />
+          )}
+        </Stack.Group>
       )}
     </Stack.Navigator>
   );

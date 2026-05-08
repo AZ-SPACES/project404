@@ -259,8 +259,11 @@ public class AuthController {
     }
 
     @PostMapping("/2fa/app/respond")
-    public ResponseEntity<ApiResponse<Void>> respondToAppApproval(@RequestParam String requestId, @RequestParam boolean approve) {
-        authService.respondToAppApproval(requestId, approve);
+    public ResponseEntity<ApiResponse<Void>> respondToAppApproval(
+            @AuthenticationPrincipal User user,
+            @RequestParam String requestId,
+            @RequestParam boolean approve) {
+        authService.respondToAppApproval(user.getId(), requestId, approve);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
@@ -284,10 +287,11 @@ public class AuthController {
 
     @PostMapping("/2fa/otp/verify")
     public ResponseEntity<ApiResponse<AuthResponse>> verify2faOtp(
-            @RequestParam String preAuthToken, 
-            @RequestParam String code, 
-            @RequestParam String method) {
-        AuthResponse response = authService.verify2faOtp(preAuthToken, code, method);
+            @RequestParam String preAuthToken,
+            @RequestParam String code,
+            @RequestParam String method,
+            HttpServletRequest httpRequest) {
+        AuthResponse response = authService.verify2faOtp(preAuthToken, code, method, getClientIp(httpRequest));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

@@ -122,14 +122,14 @@ public class AuthService {
 
         User user = userRepository
                 .findByEmailOrPhone(identifier, identifier)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED);
         }
 
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Invalid credentials");
+            throw new com.aza.backend.exception.AppException("ACCOUNT_INACTIVE", "Your account is not active", org.springframework.http.HttpStatus.FORBIDDEN);
         }
 
         sendOtp(identifier, "login");
@@ -142,7 +142,7 @@ public class AuthService {
 
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.aza.backend.exception.AppException("USER_NOT_FOUND", "User not found", org.springframework.http.HttpStatus.NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             String preAuthToken = UUID.randomUUID().toString();
@@ -592,30 +592,44 @@ public class AuthService {
         PreAuthSession session = getPreAuthSession(preAuthToken);
         String[] parts = session.parts();
         String deviceName = parts.length > 1 ? parts[1] : "Unknown Device";
-        String ipAddress  = parts.length > 3 ? parts[3] : "Unknown IP";
+        String ipAddress  = parts.length > 4 ? parts[4] : "Unknown IP";
 
         String requestId = UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set("login_request:" + requestId, "PENDING", Duration.ofMinutes(5));
+        // Store "{userId}:PENDING" so the respond endpoint can verify ownership.
+        redisTemplate.opsForValue().set(
+                "login_request:" + requestId, session.user().getId() + ":PENDING", Duration.ofMinutes(5));
 
         notificationService.sendLoginApprovalRequest(session.user().getId(), deviceName, requestId, ipAddress);
         
         return requestId;
     }
 
-    public void respondToAppApproval(String requestId, boolean approve) {
-        String status = redisTemplate.opsForValue().get("login_request:" + requestId);
-        if (status == null) {
+    public void respondToAppApproval(UUID approvingUserId, String requestId, boolean approve) {
+        String value = redisTemplate.opsForValue().get("login_request:" + requestId);
+        if (value == null) {
             throw new RuntimeException("Request expired or invalid.");
         }
-        redisTemplate.opsForValue().set("login_request:" + requestId, approve ? "APPROVED" : "DENIED", Duration.ofMinutes(5));
+        int colon = value.indexOf(':');
+        String ownerId = colon >= 0 ? value.substring(0, colon) : "";
+        if (!approvingUserId.toString().equals(ownerId)) {
+            throw new com.aza.backend.exception.AppException(
+                    "FORBIDDEN", "Not authorized to respond to this request", org.springframework.http.HttpStatus.FORBIDDEN);
+        }
+        redisTemplate.opsForValue().set(
+                "login_request:" + requestId, ownerId + ":" + (approve ? "APPROVED" : "DENIED"), Duration.ofMinutes(5));
     }
 
     public AuthResponse checkAppApprovalStatus(String preAuthToken, String requestId) {
-        String status = redisTemplate.opsForValue().get("login_request:" + requestId);
-        if (status == null) {
+        String value = redisTemplate.opsForValue().get("login_request:" + requestId);
+        if (value == null) {
             throw new RuntimeException("Request expired or invalid.");
         }
+        // Value format: "{userId}:{STATUS}"
+        int colon = value.indexOf(':');
+        String status = colon >= 0 ? value.substring(colon + 1) : value;
+
         if ("DENIED".equals(status)) {
+            redisTemplate.delete("login_request:" + requestId);
             throw new RuntimeException("Login request was denied.");
         }
         if (!"APPROVED".equals(status)) {
@@ -650,11 +664,17 @@ public class AuthService {
         emailService.sendOtp(user.getEmail(), code);
     }
 
-    public AuthResponse verify2faOtp(String preAuthToken, String code, String method) {
+    public AuthResponse verify2faOtp(String preAuthToken, String code, String method, String ipAddress) {
+        if (!java.util.Set.of("SMS", "EMAIL").contains(method)) {
+            throw new com.aza.backend.exception.AppException(
+                    "INVALID_METHOD", "Invalid 2FA method", org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+        rateLimitService.enforceRateLimit("2fa_otp:" + ipAddress, 10, Duration.ofMinutes(15));
+
         PreAuthSession session = getPreAuthSession(preAuthToken);
         User user = session.user();
         String[] parts = session.parts();
-        
+
         String identifier = "SMS".equals(method) ? user.getPhone() : user.getEmail();
         String storedCode = redisTemplate.opsForValue().get(OTP_PREFIX + identifier + ":2fa");
         
