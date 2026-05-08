@@ -107,39 +107,47 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const checkPermissions = async () => {
-    const Notifications = require('expo-notifications');
-    return await Notifications.getPermissionsAsync();
+    try {
+      const Notifications = require('expo-notifications');
+      return await Notifications.getPermissionsAsync();
+    } catch {
+      return { status: 'undetermined' };
+    }
   };
 
   const requestPermissions = async () => {
-    const Notifications = require('expo-notifications');
-    return await Notifications.requestPermissionsAsync();
+    try {
+      const Notifications = require('expo-notifications');
+      return await Notifications.requestPermissionsAsync();
+    } catch {
+      return { status: 'undetermined' };
+    }
   };
 
   const registerForNotifications = async () => {
-    const Notifications = require('expo-notifications');
-    const { status: existingStatus } = await checkPermissions();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await requestPermissions();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      return false;
-    }
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
-
     try {
+      const Notifications = require('expo-notifications');
+      const { status: existingStatus } = await checkPermissions();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await requestPermissions();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        return false;
+      }
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
         (Constants as any).easConfig?.projectId;
@@ -150,11 +158,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const deviceName = Device.modelName ?? 'Unknown Device';
       const platform = Platform.OS;
       await registerFcmToken(pushToken, deviceId, deviceName, platform);
-    } catch (e) {
-      console.warn('NotificationProvider: Could not register push token', e);
-    }
 
-    return true;
+      return true;
+    } catch (e) {
+      console.warn('NotificationProvider: Could not register for notifications', e);
+      return false;
+    }
   };
 
   const sendLocalNotification = async (title: string, body: string, data?: any) => {
