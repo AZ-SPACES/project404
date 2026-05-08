@@ -4,9 +4,11 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { setForceLogoutHandler } from "../services/api";
 
 type AuthState = {
   userToken: string | null;
@@ -64,22 +66,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading: true,
   });
 
-  const logout = useCallback(() => {
-    setAuthState({
-      userToken: null,
-      isKYCVerified: false,
-      hasPasscode: false,
-      isBiometricsEnabled: false,
-      forcePasswordReset: false,
-      requireSelfieVerification: false,
-      isLoading: false,
-    });
-    Promise.all([
-      SecureStore.deleteItemAsync(AUTH_STATE_KEY),
-      SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
-      SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
-    ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
-  }, []);
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -113,19 +99,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     bootstrapAsync();
+  }, []);
 
-    import("../services/api").then(({ setOnAuthFailure }) => {
-      setOnAuthFailure(logout);
+  // Ref tracks the latest state so async SecureStore writes always
+  // persist the most recent version, avoiding stale-closure overwrites.
+  const stateRef = useRef(authState);
+  stateRef.current = authState;
+
+  const saveState = useCallback(async (newState: Partial<AuthState>) => {
+    setAuthState(prev => {
+      const updated = { ...prev, ...newState };
+      stateRef.current = updated;
+      return updated;
     });
-  }, [logout]);
-
-  const saveState = async (newState: Partial<AuthState>) => {
-    const updatedState = { ...authState, ...newState };
-    setAuthState(updatedState);
+    // Persist using the merged values (ref is updated synchronously above)
+    const toPersist = { ...stateRef.current };
     try {
       await SecureStore.setItemAsync(
         AUTH_STATE_KEY,
-        JSON.stringify(updatedState),
+        JSON.stringify(toPersist),
       );
     } catch (e) {
       console.error("Failed to save auth state", e);
@@ -134,9 +126,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         "We couldn't save your session. Please restart the app if issues persist.",
       );
     }
-  };
+  }, []);
 
-  const login = (
+  const login = useCallback((
     token: string,
     hasPasscodeArg: boolean = false,
     isKYCVerifiedArg: boolean = false,
@@ -152,15 +144,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       requireSelfieVerification: requireSelfieVerificationArg,
       isBiometricsEnabled: isBiometricsEnabledArg,
     });
-  };
+  }, [saveState]);
 
-  const completeKYC = () => {
+  const logout = useCallback(() => {
+    // Reset in-memory state immediately so navigation reacts at once
+    setAuthState({
+      userToken: null,
+      isKYCVerified: false,
+      hasPasscode: false,
+      isBiometricsEnabled: false,
+      forcePasswordReset: false,
+      requireSelfieVerification: false,
+      isLoading: false,
+    });
+    // Clear all persisted secrets in the background
+    Promise.all([
+      SecureStore.deleteItemAsync(AUTH_STATE_KEY),
+      SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
+      SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
+    ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
+  }, []);
+
+  // Register logout with the API interceptor so that 403 responses
+  // (token revoked / invalid) automatically clear the session.
+  useEffect(() => {
+    setForceLogoutHandler(logout);
+  }, [logout]);
+
+  const completeKYC = useCallback(() => {
     saveState({ isKYCVerified: true });
-  };
+  }, [saveState]);
 
-  const setPasscode = () => {
+  const setPasscode = useCallback(() => {
     saveState({ hasPasscode: true });
-  };
+  }, [saveState]);
 
   const getPasscodeValue = useCallback(async (): Promise<string | null> => {
     try {

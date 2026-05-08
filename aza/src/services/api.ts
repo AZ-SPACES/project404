@@ -37,6 +37,15 @@ export const setOnAuthFailure = (cb: () => void) => {
   onAuthFailure = cb;
 };
 
+// Allows AuthProvider to register a callback that fires when the API
+// receives a 403 (token revoked / invalid). The interceptor cannot
+// import AuthProvider directly (circular dependency), so we use this
+// registration pattern instead.
+let _forceLogout: (() => void) | null = null;
+export const setForceLogoutHandler = (handler: () => void) => {
+  _forceLogout = handler;
+};
+
 export const getDeviceId = async (): Promise<string> => {
   const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
@@ -484,6 +493,18 @@ api.interceptors.response.use(
         return Promise.reject(err);
       } finally {
         isRefreshing = false;
+      }
+    }
+
+    // Handle 403 (Forbidden) — token is revoked or session is invalid.
+    // Clear stored tokens and trigger logout so the user is sent back
+    // to the login screen instead of being stuck on a broken screen.
+    if (error.response?.status === 403) {
+      // Don't intercept 403s on auth endpoints
+      if (!originalRequest.url?.includes('/auth/')) {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        _forceLogout?.();
       }
     }
 

@@ -18,7 +18,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
-import { useSignUp } from "../../../providers/SignUpProvider";
+import { useSignupData, useSignupActions, useSignupLoading } from "../../../providers/SignUpProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
@@ -31,7 +31,9 @@ const PRIVACY_URL = ""; // TODO: add production URL
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
   const { userToken, login, savePasscodeValue, setPasscode } = useAuth();
-  const { data, reset, submitSignup, isLoading } = useSignUp();
+  const data = useSignupData();
+  const { reset, submitSignup } = useSignupActions();
+  const isLoading = useSignupLoading();
   const { setDisplayName, setEmail, setPhone } = useProfile();
   const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
