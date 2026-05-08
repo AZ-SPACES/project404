@@ -4,6 +4,7 @@ import { RootStackParamList } from './types';
 import { KYCProvider } from '../providers/KYCProvider';
 import { useAuth } from '../providers/AuthProvider';
 import { getKycStatus } from '../services/api';
+import { navigate } from './navigationRef';
 import {
   VerifyIdentityScreen,
   SourceofFundsScreen,
@@ -33,8 +34,11 @@ function KYCStatusGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     getKycStatus()
       .then((res) => {
-        if (res.data?.status === 'VERIFIED') {
+        const status = res.data?.status;
+        if (status === 'VERIFIED') {
           completeKYC();
+        } else if (status === 'UNDER_REVIEW') {
+          navigate('PEPUnderReview');
         }
       })
       .catch(() => {});

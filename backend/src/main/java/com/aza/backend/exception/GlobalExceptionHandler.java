@@ -76,7 +76,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .header("X-Challenge-Available", "true")
                 .body(ApiResponse.error("RATE_LIMIT_EXCEEDED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SuspiciousActivityException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSuspiciousActivity(SuspiciousActivityException ex) {
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .header("X-Challenge-Token", ex.getChallengeToken())
+                .header("X-Challenge-Available", "true")
+                .body(ApiResponse.error("CHALLENGE_REQUIRED",
+                        "Suspicious activity detected. Complete the CAPTCHA challenge to continue."));
+    }
+
+    @ExceptionHandler(java.util.concurrent.RejectedExecutionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRejectedExecution(java.util.concurrent.RejectedExecutionException ex) {
+        log.warn("Async task queue full — returning 503: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "5")
+                .body(ApiResponse.error("SERVICE_BUSY", "The server is busy. Please retry in a moment."));
     }
 
     @ExceptionHandler(Exception.class)

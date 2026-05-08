@@ -65,4 +65,16 @@ public class RateLimitService {
             throw new RateLimitExceededException("Too many requests. Please try again later.", retryAfterSeconds);
         }
     }
+
+    /**
+     * Non-throwing check: returns the number of remaining slots in the current window.
+     * Does NOT consume a slot — use enforceRateLimit() for actual limiting.
+     */
+    public long getRemainingCount(String key, int limit, Duration window) {
+        long now = System.currentTimeMillis();
+        String redisKey = "ratelimit:" + key;
+        redisTemplate.opsForZSet().removeRangeByScore(redisKey, 0, now - window.toMillis());
+        Long used = redisTemplate.opsForZSet().zCard(redisKey);
+        return Math.max(0, limit - (used != null ? used : 0));
+    }
 }

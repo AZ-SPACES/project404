@@ -11,7 +11,6 @@ import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.CannedResponseRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.SupportNoteRepository;
-import com.aza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

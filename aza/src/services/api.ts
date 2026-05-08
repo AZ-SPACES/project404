@@ -30,6 +30,7 @@ export const TOKEN_KEY = "aza_access_token";
 export const REFRESH_TOKEN_KEY = "aza_refresh_token";
 export const BIOMETRIC_TOKEN_KEY = "aza_biometric_token";
 export const DEVICE_ID_KEY = "aza_device_id";
+export const BYPASS_TOKEN_KEY = "aza_bypass_token";
 
 let onAuthFailure: (() => void) | null = null;
 export const setOnAuthFailure = (cb: () => void) => {
@@ -341,6 +342,20 @@ export const requestEmail2fa = (preAuthToken: string) =>
 export const verify2faOtp = (preAuthToken: string, code: string, method: string) =>
   api.post(`/api/v1/auth/2fa/otp/verify?preAuthToken=${preAuthToken}&code=${code}&method=${method}`);
 
+// --- Rate limit challenge ---
+
+export const verifyChallenge = (challengeToken: string, captchaResponse: string) =>
+  api.post("/api/v1/security/verify-challenge", { challengeToken, captchaResponse });
+
+/** Saves a bypass token so all future requests include X-Bypass-Token automatically. */
+export const saveBypassToken = async (token: string): Promise<void> => {
+  await SecureStore.setItemAsync(BYPASS_TOKEN_KEY, token);
+};
+
+export const clearBypassToken = async (): Promise<void> => {
+  await SecureStore.deleteItemAsync(BYPASS_TOKEN_KEY);
+};
+
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;
@@ -360,23 +375,49 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request Interceptor: Attach access token
+// Request Interceptor: Attach access token + device fingerprint headers
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const [token, deviceId, bypassToken] = await Promise.all([
+      SecureStore.getItemAsync(TOKEN_KEY),
+      getDeviceId(),
+      SecureStore.getItemAsync(BYPASS_TOKEN_KEY),
+    ]);
+    if (config.headers) {
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      // These headers drive per-device rate limiting on the backend
+      config.headers["X-Device-ID"] = deviceId;
+      config.headers["X-Platform"] = Platform.OS; // "ios" | "android"
+      if (bypassToken) config.headers["X-Bypass-Token"] = bypassToken;
     }
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Response Interceptor: Handle 401s and refresh token
+// Response Interceptor: Handle 401s, 429s, 503s
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // 429 — rate limited. Attach metadata so callers can show a countdown or CAPTCHA prompt.
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers["retry-after"];
+      const challengeAvailable =
+        error.response.headers["x-challenge-available"] === "true";
+      error.isRateLimited = true;
+      error.retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+      error.challengeAvailable = challengeAvailable;
+      return Promise.reject(error);
+    }
+
+    // 503 — server queue full (async backpressure). Callers should retry after a short delay.
+    if (error.response?.status === 503) {
+      error.isServiceBusy = true;
+      error.retryAfterSeconds = 5;
+      return Promise.reject(error);
+    }
 
     // If 401 and we haven't already retried this exact request
     if (error.response?.status === 401 && !originalRequest._retry) {
