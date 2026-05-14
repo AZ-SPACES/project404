@@ -65,7 +65,13 @@ import {
   ChangeEmailScreen,
   ChangePhoneScreen
 } from '../features/profile';
-import { ReasonScreen, RefundScreen, StatementScreen } from '../features/auth';
+import { 
+  ReasonScreen, 
+  RefundScreen, 
+  StatementScreen,
+  TermsOfServiceScreen,
+  PrivacyPolicyScreen,
+} from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
 
@@ -137,12 +143,14 @@ export default function AppNavigator() {
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
-      <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen} options={{ presentation: 'modal' }}/>
+      <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="ChatCamera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="MediaPreview" component={MediaPreviewScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />

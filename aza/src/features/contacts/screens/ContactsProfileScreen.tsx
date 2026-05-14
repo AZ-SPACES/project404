@@ -196,11 +196,11 @@ export default function ContactsProfileScreen() {
           </View>
         )}
 
-        {/* Aza Tag */}
+        {/* Username */}
         {contact?.handle && (
           <View style={[styles.detailsCard, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
             <Text style={[styles.cardTitle, { color: Colors.textSecondary }]}>Aza info</Text>
-            <DetailRow label="Tag" value={`@${contact.handle}`} Colors={Colors} />
+            <DetailRow label="Username" value={`@${contact.handle}`} Colors={Colors} />
             <View style={[styles.azaBadgeRow]}>
               <View style={[styles.azaPill, { backgroundColor: Colors.primary }]}>
                 <Text style={[styles.azaPillText, { color: Colors.secondary }]}>On Aza</Text>

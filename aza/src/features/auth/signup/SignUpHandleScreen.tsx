@@ -65,13 +65,13 @@ export default function SignUpHandleScreen() {
         const response = await checkHandleAvailability(text);
         setIsAvailable(response.data.data);
         if (!response.data.data) {
-          setError("This handle is already taken");
+          setError("This username is already taken");
           fetchSuggestions();
         } else {
           setError(null);
         }
       } catch (err) {
-        console.error("Error checking handle:", err);
+        console.error("Error checking username:", err);
       } finally {
         setIsValidating(false);
       }
@@ -150,7 +150,7 @@ export default function SignUpHandleScreen() {
               style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
             >
               <Text style={styles.headerTitle} numberOfLines={1}>
-                Pick a handle
+                Pick a username
               </Text>
             </Animated.View>
           </Animated.View>
@@ -166,12 +166,12 @@ export default function SignUpHandleScreen() {
             )}
             scrollEventThrottle={16}
           >
-            <Text style={styles.title}>Pick a handle</Text>
+            <Text style={styles.title}>Pick a username</Text>
             <Text style={styles.subtitle}>
-              Your handle is your unique @username on AZA. You can change it later.
+              Your username is your unique @username on AZA. You can change it later.
             </Text>
 
-            <Text style={styles.label}>Handle</Text>
+            <Text style={styles.label}>Username</Text>
             <View style={[
               styles.inputContainer,
               isAvailable === true && styles.inputSuccess,
@@ -203,7 +203,7 @@ export default function SignUpHandleScreen() {
 
             {suggestions.length > 0 && isAvailable === false && (
               <View style={styles.suggestionsContainer}>
-                <Text style={styles.suggestionsLabel}>Suggested handles:</Text>
+                <Text style={styles.suggestionsLabel}>Suggested usernames:</Text>
                 <View style={styles.suggestionsList}>
                   {suggestions.map((s) => (
                     <TouchableOpacity

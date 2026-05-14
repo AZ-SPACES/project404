@@ -25,8 +25,6 @@ import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
-const TERMS_URL = ""; // TODO: add production URL
-const PRIVACY_URL = ""; // TODO: add production URL
 
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
@@ -53,19 +51,11 @@ export default function ConsentScreen() {
   const isValid = agreedToTerms && agreedToPrivacy;
 
   const handleOpenTerms = () => {
-    if (TERMS_URL) {
-      Linking.openURL(TERMS_URL).catch(() => {});
-    } else {
-      Alert.alert("Coming Soon", "Our Terms of Service will be available shortly.");
-    }
+    navigation.navigate("TermsOfService");
   };
 
   const handleOpenPrivacy = () => {
-    if (PRIVACY_URL) {
-      Linking.openURL(PRIVACY_URL).catch(() => {});
-    } else {
-      Alert.alert("Coming Soon", "Our Privacy Policy will be available shortly.");
-    }
+    navigation.navigate("PrivacyPolicy");
   };
 
   const handleContinue = async () => {
