@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
-  ScrollView } from "react-native";
+  ScrollView,
+  ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +20,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
+import { checkHandleAvailability, suggestHandles } from "../../../services/api";
+import { debounce } from "lodash";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -62,7 +65,6 @@ export function PersonalInformationScreen() {
 
   const navigation = useNavigation<NavigationProp>();
   const { 
-    displayName, 
     firstName, 
     lastName, 
     dateOfBirth, 
@@ -70,11 +72,19 @@ export function PersonalInformationScreen() {
     homeAddress, 
     city, 
     nationality,
-    setDisplayName 
+    handle,
+    setHandle 
   } = useProfile();
   const { showToast } = useToast();
-  const [preferredName, setPreferredName] = useState(displayName ?? "");
+  const [username, setUsername] = useState(handle ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  const [isValidating, setIsValidating] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   // Parse date of birth
@@ -83,10 +93,75 @@ export function PersonalInformationScreen() {
   const dobMonth = dob ? dob.toLocaleString('default', { month: 'long' }) : "—";
   const dobYear = dob ? dob.getFullYear().toString() : "—";
 
-  // Sync if displayName loads after mount
+  // Sync if handle loads after mount
   useEffect(() => {
-    if (displayName) setPreferredName(displayName);
-  }, [displayName]);
+    if (handle && username === "") setUsername(handle);
+  }, [handle]);
+
+  const validateHandle = useCallback(
+    debounce(async (text: string) => {
+      if (text.length < 3) {
+        setIsAvailable(null);
+        setIsValidating(false);
+        return;
+      }
+      if (text === handle) {
+        setIsAvailable(null);
+        setError(null);
+        setSuggestions([]);
+        setIsValidating(false);
+        return;
+      }
+
+      try {
+        const response = await checkHandleAvailability(text);
+        setIsAvailable(response.data.data);
+        if (!response.data.data) {
+          setError("This username is already taken");
+          fetchSuggestions();
+        } else {
+          setError(null);
+        }
+      } catch (err) {
+        console.error("Error checking username:", err);
+      } finally {
+        setIsValidating(false);
+      }
+    }, 500),
+    [handle]
+  );
+
+  const fetchSuggestions = async () => {
+    try {
+      const response = await suggestHandles(firstName ?? "", lastName ?? "");
+      setSuggestions(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching suggestions:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (username !== handle && username.length >= 3) {
+      setIsValidating(true);
+      validateHandle(username);
+    } else {
+      setIsAvailable(null);
+      setError(null);
+      setSuggestions([]);
+    }
+  }, [username, handle, validateHandle]);
+
+  const onUsernameChange = (text: string) => {
+    const cleaned = text.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    setUsername(cleaned);
+  };
+
+  const selectSuggestion = (s: string) => {
+    setUsername(s);
+    setSuggestions([]);
+  };
+
+  const isFormValid = username.length >= 3 && (username === handle || (isAvailable === true && !isValidating));
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -99,9 +174,11 @@ export function PersonalInformationScreen() {
     extrapolate: "clamp" });
 
   const handleSave = async () => {
+    if (!isFormValid) return;
     setIsSaving(true);
     try {
-      await setDisplayName(preferredName.trim());
+      const sanitizedHandle = username.trim().toLowerCase().replace(/^@/, "");
+      await setHandle(sanitizedHandle);
       showToast('Changes saved', 'success');
       navigation.goBack();
     } catch {
@@ -171,9 +248,7 @@ export function PersonalInformationScreen() {
             </View>
           </View>
 
-          <View style={styles.inputSection}>
             <View style={styles.divider} />
-          </View>
           <Text style={styles.sectionHeading}>Personal details</Text>
 
           <ReadOnlyInput label="Full legal first and middle name(s)" value={firstName ?? "—"} placeholder="Provided after verification" />
@@ -181,18 +256,58 @@ export function PersonalInformationScreen() {
 
           <View style={styles.inputSection}>
             <View style={styles.labelWithIcon}>
-              <Text style={styles.label}>Preferred name (optional)</Text>
-              <Feather name="help-circle" size={16} color={Colors.textSecondary} style={{ marginLeft: 4 }} />
+              <Text style={styles.label}>Username</Text>
+              <TouchableOpacity onPress={() => setShowTooltip(!showTooltip)} activeOpacity={0.7} accessibilityLabel="What is a username?">
+                <Feather name="help-circle" size={16} color={Colors.textSecondary} style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.inputContainer}>
+            {showTooltip && (
+              <View style={styles.tooltipContainer}>
+                <Text style={styles.tooltipText}>
+                  Your username is your unique @username on AZA.
+                </Text>
+              </View>
+            )}
+            <View style={[
+              styles.inputContainer,
+              isAvailable === true && styles.inputSuccess,
+              isAvailable === false && styles.inputError
+            ]}>
+              <Text style={{ ...Typography.bodyLg, color: Colors.textPrimary, marginRight: 2 }}>@</Text>
               <TextInput
                 style={styles.input}
-                value={preferredName}
-                onChangeText={setPreferredName}
-                placeholder="How should we call you?"
+                value={username}
+                onChangeText={onUsernameChange}
+                placeholder="username"
                 placeholderTextColor={Colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
               />
+              {isValidating && <ActivityIndicator size="small" color={Colors.primary} />}
+              {!isValidating && isAvailable === true && (
+                <Feather name="check-circle" size={20} color={Colors.success} />
+              )}
+              {!isValidating && isAvailable === false && (
+                <Feather name="alert-circle" size={20} color={Colors.error} />
+              )}
             </View>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {suggestions.length > 0 && isAvailable === false && (
+              <View style={styles.suggestionsContainer}>
+                <Text style={styles.suggestionsLabel}>Suggested usernames:</Text>
+                <View style={styles.suggestionsList}>
+                  {suggestions.map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      style={styles.suggestionBadge}
+                      onPress={() => selectSuggestion(s)}
+                    >
+                      <Text style={styles.suggestionText}>@{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.inputSection}>
@@ -217,9 +332,6 @@ export function PersonalInformationScreen() {
 
           <ReadOnlyInput label="Phone number" value={phone ?? 'Not set'} />
 
-          <TouchableOpacity onPress={() => navigation.navigate("ChangePhone")}>
-            <Text style={styles.linkText}>Change phone number</Text>
-          </TouchableOpacity>
 
           <View style={styles.inputSection}>
             <View style={styles.divider} />
@@ -244,7 +356,7 @@ export function PersonalInformationScreen() {
             textColor={Colors.secondary}
             borderRadius={Radius.full}
             loading={isSaving}
-            disabled={isSaving}
+            disabled={isSaving || !isFormValid}
           />
         </View>
       </KeyboardAvoidingView>
@@ -269,11 +381,12 @@ function createStyles(Colors: ThemeColors) {
   closeButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.surface,
-    justifyContent: "center",
+    backgroundColor: isDark ? Colors.white10 : "rgba(22,51,0,0.04)",
     alignItems: "center",
-    zIndex: 1 },
+    justifyContent: "center",
+    zIndex: 1,
+    borderRadius: 22,
+  },
   headerTitleContainer: {
     flex: 1,
     alignItems: "center" },
@@ -309,6 +422,19 @@ function createStyles(Colors: ThemeColors) {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4 },
+  tooltipContainer: {
+    backgroundColor: isDark ? Colors.surface : Colors.background,
+    padding: Spacing.sm,
+    borderRadius: Radius.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tooltipText: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
   inputContainer: {
     height: 52,
     borderWidth: 1,
@@ -320,6 +446,44 @@ function createStyles(Colors: ThemeColors) {
     marginBottom: Spacing.md },
   readOnlyContainer: {
     backgroundColor: Colors.surface + "50" },
+  inputSuccess: {
+    borderColor: Colors.success,
+  },
+  inputError: {
+    borderColor: Colors.error,
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.error,
+    marginTop: 4,
+    marginBottom: Spacing.sm,
+  },
+  suggestionsContainer: {
+    marginTop: Spacing.sm,
+  },
+  suggestionsLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  suggestionsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  suggestionBadge: {
+    backgroundColor: isDark ? Colors.white10 : "rgba(0,0,0,0.05)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: "500",
+  },
   input: {
     flex: 1,
     ...Typography.bodyLg,

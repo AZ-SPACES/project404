@@ -29,7 +29,8 @@ import {
   CreatePasscodeScreen,
   ConfirmPasscodeScreen,
   ConsentScreen,
-
+  TermsOfServiceScreen,
+  PrivacyPolicyScreen,
 } from '../features/auth';
 
 import { createNativeStackNavigator as createStack } from '@react-navigation/native-stack';
@@ -70,6 +71,8 @@ export default function AuthNavigator() {
       <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
       <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
       <Stack.Screen name="Consent" component={ConsentScreen} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
     </SignUpProvider>
   );

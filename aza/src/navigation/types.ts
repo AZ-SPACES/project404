@@ -26,6 +26,8 @@ export type RootStackParamList = {
   CreatePasscode: undefined;
   ConfirmPasscode: { firstPasscode: string };
   Consent: undefined;
+  TermsOfService: undefined;
+  PrivacyPolicy: undefined;
   FeesAndLimits: undefined;
   VerifyIdentity: { isPEP?: boolean };
   SourceofFund: { isPEP?: boolean };

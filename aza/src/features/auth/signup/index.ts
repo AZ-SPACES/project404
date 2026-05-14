@@ -11,3 +11,5 @@ export { default as CreatePasscodeScreen } from './CreatePasscodeScreen';
 export { default as ConfirmPasscodeScreen } from './ConfirmPasscodeScreen';
 export { default as TaxResidencyScreen } from './TaxResidencyScreen';
 export { default as ConsentScreen } from './ConsentScreen';
+export { default as TermsOfServiceScreen } from './TermsOfServiceScreen';
+export { default as PrivacyPolicyScreen } from './PrivacyPolicyScreen';

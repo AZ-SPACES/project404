@@ -309,7 +309,8 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
-          <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" />
+          <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" onPress={() => navigation.navigate("TermsOfService")}/>
+          <SectionItem iconFamily="Feather" iconName="lock" title="Privacy Policy" onPress={() => navigation.navigate("PrivacyPolicy")}/>
           <SectionItem 
             iconFamily="Feather" 
             iconName="star" 

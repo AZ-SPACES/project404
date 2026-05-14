@@ -5,6 +5,8 @@ import {
   CreatePasscodeScreen,
   ConfirmPasscodeScreen,
   ConsentScreen,
+  TermsOfServiceScreen,
+  PrivacyPolicyScreen,
 } from '../features/auth';
 import { 
 } from '../features/onboarding';
@@ -20,6 +22,8 @@ export default function SetupNavigator() {
       <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
       <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
       <Stack.Screen name="Consent" component={ConsentScreen} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
   );
 }
