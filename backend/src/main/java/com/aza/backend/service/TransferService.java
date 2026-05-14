@@ -8,6 +8,8 @@ import com.aza.backend.entity.Wallet;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
+import com.aza.backend.exception.AppException;
+import org.springframework.http.HttpStatus;
 import com.aza.backend.util.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -97,7 +99,7 @@ public class TransferService {
                     .build());
         }
         
-        BigDecimal avg = currentMonthValue > 0 ? totalSpentYear.divide(BigDecimal.valueOf(currentMonthValue), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        BigDecimal avg = totalSpentYear.divide(BigDecimal.valueOf(currentMonthValue), 2, java.math.RoundingMode.HALF_UP);
         
         for (String month : monthNames) {
             monthsMap.get(month).setAvg(avg);
@@ -149,7 +151,7 @@ public class TransferService {
 
         // 2. Find recipient
         User recipient = userRepository
-                .findByEmailOrPhone(request.getRecipientIdentifier(), request.getRecipientIdentifier())
+                .findByEmailOrPhoneNumber(request.getRecipientIdentifier(), request.getRecipientIdentifier())
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
         if (recipient.getId().equals(sender.getId())) {
@@ -164,11 +166,9 @@ public class TransferService {
         Wallet senderWallet = walletRepository.findByUserId(sender.getId())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
-        if (senderWallet.getBalance().compareTo(request.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
+        validateBalance(senderWallet, request.getAmount());
 
-        // 4. Create pending transaction
+        // 4. Create a pending transaction
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipient.getId())
@@ -232,17 +232,25 @@ public class TransferService {
         // Debit sender, credit recipient
         senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
         recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
-
+ 
         walletRepository.save(senderWallet);
         walletRepository.save(recipientWallet);
 
-        // Mark transaction complete
-        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
-        transaction.setCompletedAt(LocalDateTime.now());
-        transactionRepository.save(transaction);
-
+        // Update a cached balance in a user table for redundancy/quick lookup
         User recipient = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
+        
+        sender.setBalance(senderWallet.getBalance());
+        recipient.setBalance(recipientWallet.getBalance());
+        userRepository.save(sender);
+        userRepository.save(recipient);
+
+        // Mark transaction complete
+        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
+        LocalDateTime completedAt = LocalDateTime.now();
+        transaction.setCompletedAt(completedAt);
+        transactionRepository.save(transaction);
+
 
         webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
                 Map.of(
@@ -302,7 +310,7 @@ public class TransferService {
         }
 
         User fromUser = userRepository
-                .findByEmailOrPhone(request.getFromIdentifier(), request.getFromIdentifier())
+                .findByEmailOrPhoneNumber(request.getFromIdentifier(), request.getFromIdentifier())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if(fromUser.getId().equals(requester.getId())) {
@@ -368,23 +376,28 @@ public class TransferService {
         Wallet requesterWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
-        if (payerWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
+        validateBalance(payerWallet, transaction.getAmount());
 
         payerWallet.setBalance(payerWallet.getBalance().subtract(transaction.getAmount()));
         requesterWallet.setBalance(requesterWallet.getBalance().add(transaction.getAmount()));
-
+ 
         walletRepository.save(payerWallet);
         walletRepository.save(requesterWallet);
+
+        // Update cached balance in a user table
+        User requester = userRepository.findById(transaction.getRecipientId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        payer.setBalance(payerWallet.getBalance());
+        requester.setBalance(requesterWallet.getBalance());
+        userRepository.save(payer);
+        userRepository.save(requester);
 
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         transaction.setAcceptedAt(LocalDateTime.now());
         transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
-        User requester = userRepository.findById(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
         webSocketPublisher.publishNotification(requester.getId(), WebSocketEventType.TRANSFER_UPDATE,
                 Map.of(
@@ -485,5 +498,11 @@ public class TransferService {
                 .initiatedAt(t.getInitiatedAt() != null ? t.getInitiatedAt().toString() : null)
                 .completedAt(t.getCompletedAt() != null ? t.getCompletedAt().toString() : null)
                 .build();
+    }
+
+    private void validateBalance(Wallet wallet, BigDecimal amount) {
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
+        }
     }
 }

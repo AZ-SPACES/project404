@@ -27,8 +27,12 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(unique = true, nullable = false)
-    private String phone;
+    @Column(name = "phone_number", unique = true, nullable = false)
+    private String phoneNumber;
+
+    @Column(precision = 15, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal balance = java.math.BigDecimal.ZERO;
 
     @Column(unique = true)
     private String handle;

@@ -70,12 +70,12 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new com.aza.backend.exception.AppException("EMAIL_ALREADY_EXISTS", "This email address is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
-        if (userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhoneNumber(request.getPhone())) {
             throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
 
         User user = User.builder()
-                .phone(request.getPhone())
+                .phoneNumber(request.getPhone())
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .passcodeHash(request.getPasscode() != null && !request.getPasscode().isEmpty() 
@@ -119,7 +119,7 @@ public class AuthService {
         }
 
         User user = userRepository
-                .findByEmailOrPhone(identifier, identifier)
+                .findByEmailOrPhoneNumber(identifier, identifier)
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -139,7 +139,7 @@ public class AuthService {
         otpService.verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository
-                .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
+                .findByEmailOrPhoneNumber(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("USER_NOT_FOUND", "User not found", org.springframework.http.HttpStatus.NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
@@ -309,7 +309,7 @@ public class AuthService {
         rateLimitService.enforceRateLimit(
                 "forgot_pwd:" + request.getIdentifier(), 3, Duration.ofMinutes(10));
 
-        userRepository.findByEmailOrPhone(
+        userRepository.findByEmailOrPhoneNumber(
                         request.getIdentifier(), request.getIdentifier())
                 .ifPresent(user -> otpService.sendOtp(request.getIdentifier(), "password_reset"));
     }
@@ -319,7 +319,7 @@ public class AuthService {
         otpService.verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
 
         User user = userRepository
-                .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
+                .findByEmailOrPhoneNumber(request.getIdentifier(), request.getIdentifier())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -484,15 +484,15 @@ public class AuthService {
     // ==================== SMS / EMAIL 2FA ====================
 
     public void initiateSms2faSetup(User user) {
-        if (user.getPhone() == null || user.getPhone().isBlank()) {
+        if (user.getPhoneNumber() == null || user.getPhoneNumber().isBlank()) {
             throw new RuntimeException("No phone number linked to account");
         }
-        otpService.sendOtp(user.getPhone(), "sms_2fa_setup");
+        otpService.sendOtp(user.getPhoneNumber(), "sms_2fa_setup");
     }
 
     @Transactional
     public RecoveryCodesResponse confirmSms2faSetup(User user, String code) {
-        otpService.verifyOtp(user.getPhone(), code, "sms_2fa_setup");
+        otpService.verifyOtp(user.getPhoneNumber(), code, "sms_2fa_setup");
         
         user.setSmsTwoFactorEnabled(true);
         user.setTwoFactorEnabled(true);
@@ -605,8 +605,8 @@ public class AuthService {
 
     public void requestSms2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
-        if (user.getPhone() == null) throw new RuntimeException("No phone number registered");
-        otpService.sendOtp(user.getPhone(), "2fa");
+        if (user.getPhoneNumber() == null) throw new RuntimeException("No phone number registered");
+        otpService.sendOtp(user.getPhoneNumber(), "2fa");
     }
 
     public void requestEmail2fa(String preAuthToken) {
@@ -626,7 +626,7 @@ public class AuthService {
         User user = session.user();
         String[] parts = session.parts();
 
-        String identifier = "SMS".equals(method) ? user.getPhone() : user.getEmail();
+        String identifier = "SMS".equals(method) ? user.getPhoneNumber() : user.getEmail();
         otpService.verifyOtp(identifier, code, "2fa");
         
         String storedIp = parts.length > 4 ? parts[4] : null;

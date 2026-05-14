@@ -58,7 +58,7 @@ public class ContactService {
             String phone = normalizePhone(deviceContact.getPhoneNumber());
 
             // Skip the owner's own phone number
-            if (phone.equals(owner.getPhone())) {
+            if (phone.equals(owner.getPhoneNumber())) {
                 continue;
             }
 
@@ -83,7 +83,7 @@ public class ContactService {
             }
 
             // Check if this phone belongs to an Aza user (respecting privacy)
-            Optional<User> azaUser = userRepository.findByPhone(phone);
+            Optional<User> azaUser = userRepository.findByPhoneNumber(phone);
             if (azaUser.isPresent() && Boolean.TRUE.equals(azaUser.get().getFindMeByPhone())) {
                 User matchedUser = azaUser.get();
                 contact.setContactUserId(matchedUser.getId());
@@ -159,7 +159,7 @@ public class ContactService {
                 .ownerUserId(owner.getId())
                 .contactUserId(targetUserId)
                 .displayName(targetUser.getFirstName() + " " + targetUser.getLastName())
-                .phoneNumber(targetUser.getPhone())
+                .phoneNumber(targetUser.getPhoneNumber())
                 .email(targetUser.getEmail())
                 .isAzaUser(true)
                 .isFavorite(false)

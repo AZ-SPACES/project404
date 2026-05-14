@@ -299,6 +299,13 @@ public class AdminService {
                 .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Sender wallet not found", HttpStatus.NOT_FOUND));
         senderWallet.setBalance(senderWallet.getBalance().add(tx.getAmount()));
         walletRepository.save(senderWallet);
+ 
+        // Update sender balance in user table
+        User senderUser = userRepository.findById(tx.getSenderId()).orElse(null);
+        if (senderUser != null) {
+            senderUser.setBalance(senderWallet.getBalance());
+            userRepository.save(senderUser);
+        }
 
         // Deduct from recipient (check they have enough)
         Wallet recipientWallet = walletRepository.findByUserId(tx.getRecipientId())
@@ -308,6 +315,13 @@ public class AdminService {
         }
         recipientWallet.setBalance(recipientWallet.getBalance().subtract(tx.getAmount()));
         walletRepository.save(recipientWallet);
+ 
+        // Update recipient balance in user table
+        User recipientUser = userRepository.findById(tx.getRecipientId()).orElse(null);
+        if (recipientUser != null) {
+            recipientUser.setBalance(recipientWallet.getBalance());
+            userRepository.save(recipientUser);
+        }
 
         tx.setStatus(Transaction.TransactionStatus.REVERSED);
         tx.setCancelledAt(LocalDateTime.now());
@@ -344,7 +358,7 @@ public class AdminService {
         return AdminUserResponse.builder()
                 .id(user.getId().toString())
                 .email(user.getEmail())
-                .phone(user.getPhone())
+                .phone(user.getPhoneNumber())
                 .handle(user.getHandle())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
