@@ -311,9 +311,13 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...prev,
         notificationPreferences: prefs
       }));
-      // Also persist to AsyncStorage
-      const updated = { ...profile, notificationPreferences: prefs };
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      // Safely persist to AsyncStorage by reading the current value first
+      const raw = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
+      if (raw) {
+        const currentProfile = JSON.parse(raw);
+        currentProfile.notificationPreferences = prefs;
+        await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(currentProfile));
+      }
       
       // Update the specific notification prefs key for other parts of the app
       if (userToken) {
@@ -323,7 +327,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Failed to update notification preferences', e);
       throw e;
     }
-  }, [profile, userToken]);
+  }, [userToken]);
 
   const toggleApp2fa = useCallback(async (enabled: boolean) => {
     const updated = { ...profile, appTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
