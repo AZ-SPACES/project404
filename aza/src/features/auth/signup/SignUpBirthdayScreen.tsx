@@ -16,12 +16,9 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing , Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
-import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
-import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
-import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -30,11 +27,7 @@ export default function SignUpBirthdayScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { login } = useAuth();
-  const { data, update, reset, submitSignup, isLoading } = useSignUp();
-  const { setDisplayName, setEmail, setPhone } = useProfile();
-  const { showToast } = useToast();
-
+  const { data, update,  isLoading } = useSignUp();
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
 

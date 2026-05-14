@@ -14,7 +14,6 @@ import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
-import com.aza.backend.util.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;

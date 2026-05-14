@@ -6,6 +6,10 @@ import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { Calendar } from "react-native-calendars";
 import Button from "../../../components/ui/Button";
+import { getTransactionsStatement, sendTransactionsStatementEmail } from "../../../services/api";
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { Alert, ActivityIndicator } from "react-native";
 
 const DURATIONS = [
   { id: '1m', label: 'Last 30 Days' },
@@ -21,6 +25,103 @@ export function StatementDownloadScreen() {
   const [selectedDuration, setSelectedDuration] = useState('1m');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const getDateParams = (): { start: string, end: string } | null => {
+    const end = new Date();
+    let start = new Date();
+
+    if (selectedDuration === 'custom') {
+      if (!startDate || !endDate) return null;
+      return { start: startDate, end: endDate };
+    }
+
+    switch (selectedDuration) {
+      case '1m':
+        start.setDate(end.getDate() - 30);
+        break;
+      case '3m':
+        start.setMonth(end.getMonth() - 3);
+        break;
+      case '6m':
+        start.setMonth(end.getMonth() - 6);
+        break;
+      case 'all':
+        start = new Date('2024-01-01'); // Project launch date approx
+        break;
+    }
+
+    return {
+      start: start.toISOString().split('T')[0] || '',
+      end: end.toISOString().split('T')[0] || '',
+    };
+  };
+
+  const handleDownload = async () => {
+    const params = getDateParams();
+    if (!params) {
+      Alert.alert("Date Required", "Please select a custom date range first.");
+      return;
+    }
+
+    const { start, end } = params;
+    setIsLoading(true);
+    try {
+      const response = await getTransactionsStatement(start, end);
+      
+      // Convert blob to base64 for FileSystem
+      const reader = new FileReader();
+      reader.readAsDataURL(response.data);
+      reader.onloadend = async () => {
+        const result = reader.result;
+        if (typeof result !== 'string') return;
+        
+        const base64data = result.split(',')[1];
+        if (!base64data) throw new Error("Failed to process PDF data");
+
+        const fileName = `aza_statement_${start}_to_${end}.pdf`;
+        const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+        if (!baseDir) throw new Error("No available storage directory");
+        
+        const fileUri = baseDir + fileName;
+
+        await FileSystem.writeAsStringAsync(fileUri, base64data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri);
+        } else {
+          Alert.alert("Success", "Statement saved to your device cache.");
+        }
+      };
+    } catch (error: any) {
+      console.error("Statement download error:", error);
+      Alert.alert("Download Failed", error.response?.data?.message || "An unexpected error occurred while generating your statement.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmail = async () => {
+    const params = getDateParams();
+    if (!params) {
+      Alert.alert("Date Required", "Please select a custom date range first.");
+      return;
+    }
+
+    const { start, end } = params;
+    setIsLoading(true);
+    try {
+      await sendTransactionsStatementEmail(start, end);
+      Alert.alert("Email Sent", "Your statement has been sent to your registered email address.");
+    } catch (error: any) {
+      console.error("Statement email error:", error);
+      Alert.alert("Email Failed", error.response?.data?.message || "Failed to send statement via email.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onDayPress = (day: any) => {
     if (!startDate || (startDate && endDate)) {
@@ -126,20 +227,22 @@ export function StatementDownloadScreen() {
 
         <View style={styles.actionButtons}>
           <Button
-            title="Download PDF"
-            onPress={() => {}}
+            title={isLoading ? "Generating..." : "Download PDF"}
+            onPress={handleDownload}
             backgroundColor={Colors.primary}
             textColor={Colors.white}
-            leftIcon={<Feather name="download" size={20} color={Colors.white} />}
+            disabled={isLoading}
+            leftIcon={isLoading ? <ActivityIndicator size="small" color="white" /> : <Feather name="download" size={20} color={Colors.white} />}
           />
 
           <Button
-            title="Send via Email"
-            onPress={() => {}}
+            title={isLoading ? "Sending..." : "Send via Email"}
+            onPress={handleEmail}
             backgroundColor={isDark ? Colors.surface : Colors.white}
             textColor={Colors.textPrimary}
+            disabled={isLoading}
             style={{ borderWidth: 1, borderColor: Colors.border }}
-            leftIcon={<Feather name="mail" size={20} color={Colors.textPrimary} />}
+            leftIcon={isLoading ? <ActivityIndicator size="small" color={Colors.textPrimary} /> : <Feather name="mail" size={20} color={Colors.textPrimary} />}
           />
         </View>
       </ScrollView>

@@ -20,6 +20,8 @@ import java.util.UUID;
 public class TransferController {
 
     private final TransferService transferService;
+    private final com.aza.backend.service.StatementService statementService;
+    private final com.aza.backend.util.EmailService emailService;
 
     // ==================== WALLET ====================
 
@@ -91,6 +93,38 @@ public class TransferController {
             @PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(
                 transferService.getTransaction(id, user.getId())));
+    }
+
+    @GetMapping("/transfers/statement")
+    public ResponseEntity<byte[]> downloadStatement(
+            @AuthenticationPrincipal User user,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
+        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+
+        byte[] pdf = statementService.generateStatementPdf(user, start, end);
+
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=statement.pdf")
+                .body(pdf);
+    }
+
+    @PostMapping("/transfers/statement/email")
+    public ResponseEntity<ApiResponse<String>> sendStatementEmail(
+            @AuthenticationPrincipal User user,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
+        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+
+        byte[] pdf = statementService.generateStatementPdf(user, start, end);
+        String period = startDate + " to " + endDate;
+
+        emailService.sendStatement(user.getEmail(), user.getFirstName(), pdf, period);
+
+        return ResponseEntity.ok(ApiResponse.success("Statement sent to your email: " + user.getEmail()));
     }
 
     // ==================== MONEY REQUESTS ====================

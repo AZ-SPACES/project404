@@ -283,6 +283,38 @@ public class EmailService {
     }
 
     /**
+     * Send account statement via email with PDF attachment
+     */
+    public void sendStatement(String email, String name, byte[] pdfContent, String period) {
+        CompletableFuture.runAsync(() -> {
+            String subject = "Your AZA Account Statement - " + period;
+            try {
+                log.info("Preparing Statement email for {}...", email);
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setFrom("AZA Reports <" + fromEmail + ">");
+                helper.setTo(email);
+                helper.setSubject(subject);
+
+                String htmlContent = "<h3>Hello " + name + ",</h3>" +
+                        "<p>Please find attached your account statement for the period <b>" + period + "</b>.</p>" +
+                        "<p>If you have any questions regarding your transactions, please contact our support team.</p>" +
+                        "<br><p>Best regards,<br>The AZA Team</p>";
+                helper.setText(htmlContent, true);
+
+                helper.addAttachment("aza_statement_" + period.replace(" ", "_") + ".pdf", 
+                        new org.springframework.core.io.ByteArrayResource(pdfContent));
+
+                mailSender.send(message);
+                log.info("Statement email sent successfully to {}", email);
+            } catch (Exception e) {
+                log.error("Failed to send statement email to {}: {}", email, e.getMessage());
+            }
+        });
+    }
+
+    /**
      * Fetch detailed location from IP address
      */
     private LocationInfo fetchLocationDetails(String ip) {
