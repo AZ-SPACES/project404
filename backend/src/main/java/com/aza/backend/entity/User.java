@@ -20,44 +20,23 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true, nullable = false)
-    private String phone;
+    // --- Identity & Access ---
+    private String firstName;
+    private String lastName;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String passwordHash;
-
-    private String firstName;
-    private String lastName;
-    private String displayName;
+    @Column(unique = true, nullable = false)
+    private String phone;
 
     @Column(unique = true)
     private String handle;
 
-    private String pronouns;
-    private LocalDate dateOfBirth;
-    private String profileImageUrl;
-
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
+    private UserRole role = UserRole.USER;
 
-    // --- Address ---
-    private String homeAddress;
-    private String city;
-    private String nationality;
-    private String otherNationality;
-    private Boolean isTaxResidentAbroad;
-    private String taxCountry;
-    private Boolean isUSPerson;
-
-    // --- Employment ---
-    @Enumerated(EnumType.STRING)
-    private EmploymentStatus employmentStatus;
-
-    // --- Account Status ---
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
@@ -70,12 +49,32 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private UserRole role = UserRole.USER;
+    private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
 
-    @Column(columnDefinition = "TEXT")
-    private String notificationPreferences;
+    // --- Profile Information ---
+    private String displayName;
+    private String pronouns;
+    private LocalDate dateOfBirth;
+    private String profileImageUrl;
 
-    // --- Security ---
+    // --- Address & Compliance ---
+    private String homeAddress;
+    private String city;
+    private String nationality;
+    private String otherNationality;
+    private Boolean isTaxResidentAbroad;
+    private String taxCountry;
+    private Boolean isUSPerson;
+
+    @Enumerated(EnumType.STRING)
+    private EmploymentStatus employmentStatus;
+
+    // --- Security & Authentication ---
+    @Column(nullable = false)
+    private String passwordHash;
+
+    private String passcodeHash; // 5-digit PIN hash
+
     @Builder.Default
     private Boolean biometricsEnabled = false;
 
@@ -99,8 +98,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private TwoFactorMethod defaultTwoFactorMethod;
 
-    private String passcodeHash; // 5-digit PIN hash
+    @Builder.Default
+    private Boolean forcePasswordReset = false;
 
+    @Builder.Default
+    private Boolean requireSelfieVerification = false;
+
+    // --- Privacy & Preferences ---
     @Builder.Default
     private Boolean findMeByPhone = true;
 
@@ -116,11 +120,8 @@ public class User {
     @Builder.Default
     private Boolean billForwardingEnabled = false;
 
-    @Builder.Default
-    private Boolean forcePasswordReset = false;
-
-    @Builder.Default
-    private Boolean requireSelfieVerification = false;
+    @Column(columnDefinition = "TEXT")
+    private String notificationPreferences;
 
     // --- Silent Hours ---
     @Builder.Default
@@ -152,7 +153,7 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String oneTimePreKeysJson;
 
-    // --- Timestamps ---
+    // --- Metadata ---
     @CreationTimestamp
     private LocalDateTime createdAt;
 

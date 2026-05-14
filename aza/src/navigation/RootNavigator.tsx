@@ -30,8 +30,6 @@ export default function RootNavigator() {
         <Stack.Group>
           {!hasPasscode ? (
             <Stack.Screen name="Setup" component={SetupNavigator} />
-          ) : !isKYCVerified ? (
-            <Stack.Screen name="KYC" component={KYCWithBoundary} />
           ) : (
             <Stack.Screen 
               name="App" 
