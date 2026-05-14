@@ -16,13 +16,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByPhone(String phone);
-
-    Optional<User> findByEmailOrPhone(String email, String phone);
-
+    Optional<User> findByPhoneNumber(String phoneNumber);
+ 
+    Optional<User> findByEmailOrPhoneNumber(String email, String phoneNumber);
+ 
     boolean existsByEmail(String email);
-
-    boolean existsByPhone(String phone);
+ 
+    boolean existsByPhoneNumber(String phoneNumber);
 
     Optional<User> findByHandle(String handle);
 
@@ -38,8 +38,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             "u.status = 'ACTIVE' AND u.findMeByHandle = true")
     Page<User> searchUsers(@Param("query") String query, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE u.phone = :phone AND u.status = 'ACTIVE' AND u.findMeByPhone = true")
-    Optional<User> findByPhoneAndPrivacy(@Param("phone") String phone);
+    @Query("SELECT u FROM User u WHERE u.phoneNumber = :phoneNumber AND u.status = 'ACTIVE' AND u.findMeByPhone = true")
+    Optional<User> findByPhoneNumberAndPrivacy(@Param("phoneNumber") String phoneNumber);
 
     @Query("SELECT u FROM User u WHERE u.email = :email AND u.status = 'ACTIVE' AND u.findMeByEmail = true")
     Optional<User> findByEmailAndPrivacy(@Param("email") String email);
@@ -51,7 +51,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "u.phone LIKE CONCAT('%', :query, '%')")
+            "u.phoneNumber LIKE CONCAT('%', :query, '%')")
     Page<User> adminSearchUsers(@Param("query") String query, Pageable pageable);
 
     Page<User> findAllByStatus(User.AccountStatus status, Pageable pageable);

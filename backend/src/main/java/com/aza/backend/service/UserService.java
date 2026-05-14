@@ -55,7 +55,7 @@ public class UserService {
         return AuthResponse.UserInfo.builder()
                 .id(user.getId().toString())
                 .email(user.getEmail())
-                .phone(user.getPhone())
+                .phone(user.getPhoneNumber())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .displayName(user.getDisplayName())
@@ -105,11 +105,11 @@ public class UserService {
             user.setEmail(request.getEmail());
         }
 
-        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
-            if (userRepository.existsByPhone(request.getPhone())) {
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhoneNumber())) {
+            if (userRepository.existsByPhoneNumber(request.getPhone())) {
                 throw new RuntimeException("Phone number is already registered");
             }
-            user.setPhone(request.getPhone());
+            user.setPhoneNumber(request.getPhone());
         }
 
         if (request.getDisplayName() != null) user.setDisplayName(request.getDisplayName());
@@ -167,7 +167,7 @@ public class UserService {
     }
 
     public void requestPhoneChange(User user, String newPhone) {
-        if (userRepository.existsByPhone(newPhone.trim())) {
+        if (userRepository.existsByPhoneNumber(newPhone.trim())) {
             throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already registered with another account", org.springframework.http.HttpStatus.CONFLICT);
         }
         // Send OTP to the NEW phone
@@ -181,7 +181,7 @@ public class UserService {
     @Transactional
     public AuthResponse.UserInfo verifyPhoneChange(User user, String newPhone, String code) {
         otpService.verifyOtp(newPhone.trim(), code, "change_phone");
-        user.setPhone(newPhone.trim());
+        user.setPhoneNumber(newPhone.trim());
         userRepository.save(user);
         return getProfile(user);
     }
@@ -257,7 +257,7 @@ public class UserService {
         // 1. Try exact phone match if it looks like a phone
         if (PHONE_PATTERN.matcher(trimmed).matches()) {
             String normalized = normalizePhone(trimmed);
-            java.util.Optional<User> user = userRepository.findByPhoneAndPrivacy(normalized);
+            java.util.Optional<User> user = userRepository.findByPhoneNumberAndPrivacy(normalized);
             if (user.isPresent()) {
                 return new org.springframework.data.domain.PageImpl<>(
                         List.of(toPublicProfileResponse(user.get())), 
@@ -505,7 +505,7 @@ public class UserService {
         if (normalized == null || !PHONE_PATTERN.matcher(normalized).matches()) {
             return false;
         }
-        return !userRepository.existsByPhone(normalized);
+        return !userRepository.existsByPhoneNumber(normalized);
     }
 
     public List<String> suggestHandles(String firstName, String lastName) {
