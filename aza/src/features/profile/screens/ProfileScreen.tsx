@@ -9,13 +9,16 @@ import {
   StatusBar,
   Animated,
   Dimensions,
-  Alert } from "react-native";
+  Alert,
+  Platform,
+  Linking } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as StoreReview from "expo-store-review";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
@@ -209,6 +212,32 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleRateUs = async () => {
+    try {
+      const isAvailable = await StoreReview.isAvailableAsync();
+      if (isAvailable) {
+        await StoreReview.requestReview();
+      } else {
+        const androidPackageName = 'com.semekor.k.aza';
+        const itunesItemId = 'YOUR_APP_ID'; // Replace with actual App Store ID when known
+        const storeUrl = Platform.OS === 'ios'
+          ? `https://apps.apple.com/app/apple-store/id${itunesItemId}?mt=8`
+          : `market://details?id=${androidPackageName}`;
+
+        const canOpen = await Linking.canOpenURL(storeUrl);
+        if (canOpen) {
+          await Linking.openURL(storeUrl);
+        } else if (Platform.OS === 'android') {
+          await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackageName}`);
+        } else {
+          showToast('Store could not be opened.', 'error');
+        }
+      }
+    } catch {
+      showToast('Could not open store. Please try again later.', 'error');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
@@ -281,7 +310,13 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
           <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" />
-          <SectionItem iconFamily="Feather" iconName="star" title="Rate us" subtitle="Tell us what you think" />
+          <SectionItem 
+            iconFamily="Feather" 
+            iconName="star" 
+            title="Rate us" 
+            subtitle="Tell us what you think" 
+            onPress={handleRateUs}
+          />
           <SectionItem
             iconFamily="Feather"
             iconName="log-out"
