@@ -84,13 +84,6 @@ export default function HelpAndSupportScreen() {
         <Ionicons name="folder-outline" size={20} color={Colors.textPrimary} />
       ) },
     {
-      id: "card",
-      title: "Aza card",
-      description: "Ordering, activating, spending, and troubleshooting.",
-      icon: (
-        <Ionicons name="card-outline" size={20} color={Colors.textPrimary} />
-      ) },
-    {
       id: "receiving",
       title: "Receiving money",
       description: "Using your account details to receive money.",
@@ -98,7 +91,7 @@ export default function HelpAndSupportScreen() {
     {
       id: "business",
       title: "Aza Business",
-      description: "Multi-user access, accounting and using our API.",
+      description: "Business accounts, team cards, bulk payments, and more.",
       icon: (
         <Ionicons
           name="briefcase-outline"
@@ -162,7 +155,12 @@ export default function HelpAndSupportScreen() {
               icon={topic.icon}
               title={topic.title}
               description={topic.description}
-              onPress={() => {}}
+              onPress={() =>
+                navigation.navigate("HelpTopic", {
+                  topicId: topic.id,
+                  title: topic.title,
+                })
+              }
               colors={Colors}
               styles={styles}
             />

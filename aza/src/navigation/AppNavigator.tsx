@@ -8,7 +8,8 @@ import {
   TalkToUsScreen,
   EmailUsScreen,
   ChatWithUsScreen,
-  HelpAndSupportScreen
+  HelpAndSupportScreen,
+  HelpTopicScreen,
 } from '../features/customercare';
 import { 
   ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, 
@@ -120,6 +121,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Transactions" component={TransactionsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
+      <Stack.Screen name="HelpTopic" component={HelpTopicScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="SecurityAndPrivacy" component={SecurityAndPrivacyScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
