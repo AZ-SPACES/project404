@@ -55,6 +55,7 @@ export type RootStackParamList = {
   Appearance: undefined;
   Receive: undefined;
   HelpAndSupport: undefined;
+  HelpTopic: { topicId: string; title: string };
   Inbox: undefined;
   NotificationSettings: undefined;
   SendAmount: { id?: string; name: string; username: string; avatar: string };
