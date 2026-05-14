@@ -23,12 +23,13 @@ async function test() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: userEmail, password: "Password1!", firstName: "Dummy", lastName: "User", phone: "123" + Date.now().toString().slice(-7) })
   });
-  const regData = await registerRes.json();
-  if (!regData.success) {
-      console.log("Register failed:", regData);
-      return;
+  const registerData = await registerRes.json();
+  if (!registerRes.ok) {
+    console.error("Signup failed:", registerData);
+    return;
   }
-  const userId = regData.data.user.id;
+  console.log("Signup success:", registerData);
+  const userId = registerData.data.user.id;
   console.log("Registered dummy user:", userId);
 
   // Admin calls User

@@ -292,6 +292,14 @@ export const getYearlySpendingSummary = (year?: number) =>
 export const getTransactions = (page = 0, size = 20, type?: string, status?: string) =>
   api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`);
 
+export const getTransactionsStatement = (startDate: string, endDate: string) =>
+  api.get(`/api/v1/transfers/statement?startDate=${startDate}&endDate=${endDate}`, {
+    responseType: "blob",
+  });
+
+export const sendTransactionsStatementEmail = (startDate: string, endDate: string) =>
+  api.post(`/api/v1/transfers/statement/email?startDate=${startDate}&endDate=${endDate}`);
+
 // --- Security & Privacy Endpoints ---
 
 export const changePassword = (currentPassword: string, newPassword: string) =>

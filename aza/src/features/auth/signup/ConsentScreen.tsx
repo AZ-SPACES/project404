@@ -19,7 +19,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignupData, useSignupActions, useSignupLoading } from "../../../providers/SignUpProvider";
-import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
@@ -32,7 +31,6 @@ export default function ConsentScreen() {
   const data = useSignupData();
   const { reset, submitSignup } = useSignupActions();
   const isLoading = useSignupLoading();
-  const { setDisplayName, setEmail, setPhone } = useProfile();
   const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
@@ -72,10 +70,7 @@ export default function ConsentScreen() {
       const { accessToken, refreshToken } = authPayload;
 
       const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-      if (fullName) await setDisplayName(fullName);
-      if (data.email) await setEmail(data.email);
-      if (data.phoneNumber) await setPhone(data.phoneNumber);
-
+      
       // Save passcode locally for biometrics/verification
       if (data.passcode) {
         await savePasscodeValue(data.passcode);
