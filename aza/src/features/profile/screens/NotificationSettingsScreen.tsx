@@ -186,9 +186,10 @@ export default function NotificationSettingsScreen() {
           await updateNotificationPreferences(prefs);
         } catch (apiError) {
           console.warn('Failed to sync notification preferences to backend', apiError);
+          showToast('Failed to sync preferences to the server. Will retry later.', 'error');
         }
       } catch (e) {
-        showToast('Failed to save preferences. Please try again.', 'error');
+        showToast('Failed to save preferences locally. Please try again.', 'error');
       }
     };
 

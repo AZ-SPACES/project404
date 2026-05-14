@@ -92,7 +92,6 @@ export default function HomeScreen() {
   const firstName = displayName?.trim().split(" ")[0];
   const greeting = getGreeting();
   
-  // Use recentTransactions from useWallet
 
   return (
     <View style={styles.container}>
