@@ -111,22 +111,28 @@ export default function ConfirmPasscodeScreen() {
         try {
           await api.post('/api/v1/auth/passcode/set', { passcode });
           await savePasscodeValue(passcode);
+          
+          update({ passcode });
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Consent" }],
+          });
         } catch (e: any) {
           console.error("Passcode sync error:", e);
+          setServerError("Failed to sync passcode. Please try again.");
+          isNavigatingRef.current = false;
+          setErrorStatus(true);
+          startShake();
+          setPasscode("");
         }
       } else {
         // Signup case: Not logged in yet, store in signup data.
-        // update() is a stable Zustand action — it does NOT cause a re-render
-        // in this component because we used useSignupActions() (no data subscription).
         update({ passcode });
-        navigation.navigate("Consent");
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Consent" }],
+        });
       }
-
-      update({ passcode });
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Consent" }],
-      });
     } else {
       const newCount = attemptCount + 1;
       setAttemptCount(newCount);

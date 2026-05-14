@@ -281,6 +281,18 @@ public class NotificationService {
                 data);
     }
 
+    public void sendGenericSecurityAlert(UUID userId, String title, String body) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", "SECURITY_ALERT");
+
+        sendNotification(
+                userId,
+                Notification.NotificationType.SECURITY_ALERT,
+                title,
+                body,
+                data);
+    }
+
     public void sendLoginApprovalRequest(UUID userId, String deviceName, String requestId, String ipAddress) {
         Map<String, Object> data = new HashMap<>();
         data.put("type", "LOGIN_APPROVAL");

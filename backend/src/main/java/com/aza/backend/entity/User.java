@@ -73,7 +73,7 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    private String passcodeHash; // 5-digit PIN hash
+    private String passcodeHash; // 4-digit PIN hash
 
     @Builder.Default
     private Boolean biometricsEnabled = false;

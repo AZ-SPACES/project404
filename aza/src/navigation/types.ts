@@ -76,6 +76,7 @@ export type RootStackParamList = {
   BillForwardingDetails: undefined;
   PersonalDetails: undefined;
   PersonalInformation: undefined;
+  VerifyPasscode: { onSuccessScreen: keyof RootStackParamList; onSuccessParams?: any };
   ChangeEmail: undefined;
   ChangePhone: undefined;
   ChatScreen: { id: string; name: string; avatar: string; online: boolean; sentMedia?: any[] | undefined; forwardedMessage?: any };

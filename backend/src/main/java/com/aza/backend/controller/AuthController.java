@@ -5,6 +5,7 @@ import com.aza.backend.dto.auth.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AuthService;
 import com.aza.backend.service.UserService;
+import com.aza.backend.service.OtpService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final OtpService otpService;
 
     @Value("${app.trusted-proxy-ips:}")
     private String trustedProxyIps;
@@ -98,7 +100,7 @@ public class AuthController {
             return ResponseEntity.ok(ApiResponse.success(response));
         }
 
-        authService.verifyOtp(request.getIdentifier(), request.getCode(), purpose);
+        otpService.verifyOtp(request.getIdentifier(), request.getCode(), purpose);
         return ResponseEntity.ok(ApiResponse.success("OTP verified successfully"));
     }
 
