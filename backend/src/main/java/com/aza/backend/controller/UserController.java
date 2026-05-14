@@ -153,6 +153,38 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Device removed"));
     }
 
+    // ==================== EMAIL & PHONE CHANGE ====================
+
+    @PostMapping("/me/email/request")
+    public ResponseEntity<ApiResponse<Object>> requestEmailChange(
+            @AuthenticationPrincipal User user,
+            @RequestParam String email) {
+        userService.requestEmailChange(user, email);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your new email"));
+    }
+
+    @PostMapping("/me/email/verify")
+    public ResponseEntity<ApiResponse<Object>> verifyEmailChange(
+            @AuthenticationPrincipal User user,
+            @RequestBody com.aza.backend.dto.auth.OtpVerifyRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(userService.verifyEmailChange(user, request.getIdentifier(), request.getCode())));
+    }
+
+    @PostMapping("/me/phone/request")
+    public ResponseEntity<ApiResponse<Object>> requestPhoneChange(
+            @AuthenticationPrincipal User user,
+            @RequestParam String phone) {
+        userService.requestPhoneChange(user, phone);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your new phone number"));
+    }
+
+    @PostMapping("/me/phone/verify")
+    public ResponseEntity<ApiResponse<Object>> verifyPhoneChange(
+            @AuthenticationPrincipal User user,
+            @RequestBody com.aza.backend.dto.auth.OtpVerifyRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(userService.verifyPhoneChange(user, request.getIdentifier(), request.getCode())));
+    }
+
     // ==================== HANDLES (PUBLIC) ====================
 
     @GetMapping("/check-handle")

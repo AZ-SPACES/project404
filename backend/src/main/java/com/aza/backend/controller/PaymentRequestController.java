@@ -37,7 +37,7 @@ public class PaymentRequestController {
 
     /**
      * POST /api/v1/payment-requests/{id}/approve
-     * Payer approves a pending payment request — requires 5-digit passcode.
+     * Payer approves a pending payment request — requires 4-digit passcode.
      */
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<PaymentRequestResponse>> approvePaymentRequest(
@@ -75,6 +75,7 @@ public class PaymentRequestController {
     @Data
     public static class ApproveRequest {
         @NotBlank(message = "Passcode is required")
+        @jakarta.validation.constraints.Size(min = 4, max = 4, message = "Passcode must be exactly 4 digits")
         private String passcode;
     }
 }

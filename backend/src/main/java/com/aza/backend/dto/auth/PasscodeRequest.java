@@ -8,6 +8,6 @@ import lombok.Data;
 public class PasscodeRequest {
 
     @NotBlank(message = "Passcode is required")
-    @Size(min = 5, max = 5, message = "Passcode must be exactly 5 digits")
+    @Size(min = 4, max = 4, message = "Passcode must be exactly 4 digits")
     private String passcode;
 }

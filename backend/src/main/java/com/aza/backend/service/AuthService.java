@@ -45,10 +45,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
-    private final SmsService smsService;
     private final EmailService emailService;
     private final RateLimitService rateLimitService;
     private final UserService userService;
+    private final OtpService otpService;
     private final BiometricService biometricService;
     private final TotpService totpService;
     private final TotpEncryptionService totpEncryptionService;
@@ -57,7 +57,6 @@ public class AuthService {
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
-    private static final String OTP_PREFIX = "otp:";
     private static final String TOTP_PREAUTH_PREFIX = "totp:preauth:";
     private static final String TOTP_SETUP_PREFIX = "totp:setup:";
     private static final String TOTP_USED_PREFIX = "totp:used:";
@@ -132,13 +131,13 @@ public class AuthService {
             throw new com.aza.backend.exception.AppException("ACCOUNT_INACTIVE", "Your account is not active", org.springframework.http.HttpStatus.FORBIDDEN);
         }
 
-        sendOtp(identifier, "login");
+        otpService.sendOtp(identifier, "login");
     }
 
     @Transactional
     public Object loginWithOtp(OtpVerifyRequest request, String ipAddress) {
         rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 100, Duration.ofMinutes(15));
-        verifyOtp(request.getIdentifier(), request.getCode(), "login");
+        otpService.verifyOtp(request.getIdentifier(), request.getCode(), "login");
 
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
@@ -304,49 +303,6 @@ public class AuthService {
 
     // ==================== OTP ====================
 
-    public void sendOtp(String identifier, String purpose) {
-        rateLimitService.enforceRateLimit("otp:" + identifier, 3, Duration.ofMinutes(10));
-
-        String otp = String.format("%06d",
-                new java.security.SecureRandom().nextInt(1_000_000));
-        String key = OTP_PREFIX + purpose + ":" + identifier;
-        redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
-
-        if (identifier.contains("@")) {
-            boolean sent = emailService.sendOtp(identifier, otp);
-            if (!sent) log.warn("Email OTP delivery failed for {}", identifier);
-        } else {
-            boolean sent = smsService.sendOtp(identifier, otp);
-            if (!sent) log.warn("SMS OTP delivery failed for {}", identifier);
-        }
-    }
-
-    public void verifyOtp(String identifier, String code, String purpose) {
-        String attemptKey = "otp:attempts:" + purpose + ":" + identifier;
-        String attemptsStr = redisTemplate.opsForValue().get(attemptKey);
-        int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
-
-        if (attempts >= 5) {
-            redisTemplate.delete(OTP_PREFIX + purpose + ":" + identifier);
-            redisTemplate.delete(attemptKey);
-            throw new RuntimeException("Too many failed OTP attempts. Request a new code.");
-        }
-
-        String key = OTP_PREFIX + purpose + ":" + identifier;
-        String storedOtp = redisTemplate.opsForValue().get(key);
-
-        if (storedOtp == null) {
-            throw new RuntimeException("OTP expired or not found");
-        }
-        if (!storedOtp.equals(code)) {
-            redisTemplate.opsForValue().set(attemptKey,
-                    String.valueOf(attempts + 1), Duration.ofMinutes(5));
-            throw new RuntimeException("Invalid OTP code.");
-        }
-
-        redisTemplate.delete(key);
-        redisTemplate.delete(attemptKey);
-    }
 
     // ==================== FORGOT / RESET PASSWORD ====================
 
@@ -356,12 +312,12 @@ public class AuthService {
 
         userRepository.findByEmailOrPhone(
                         request.getIdentifier(), request.getIdentifier())
-                .ifPresent(user -> sendOtp(request.getIdentifier(), "password_reset"));
+                .ifPresent(user -> otpService.sendOtp(request.getIdentifier(), "password_reset"));
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request, String ipAddress) {
-        verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
+        otpService.verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
 
         User user = userRepository
                 .findByEmailOrPhone(request.getIdentifier(), request.getIdentifier())
@@ -532,12 +488,12 @@ public class AuthService {
         if (user.getPhone() == null || user.getPhone().isBlank()) {
             throw new RuntimeException("No phone number linked to account");
         }
-        sendOtp(user.getPhone(), "sms_2fa_setup");
+        otpService.sendOtp(user.getPhone(), "sms_2fa_setup");
     }
 
     @Transactional
     public RecoveryCodesResponse confirmSms2faSetup(User user, String code) {
-        verifyOtp(user.getPhone(), code, "sms_2fa_setup");
+        otpService.verifyOtp(user.getPhone(), code, "sms_2fa_setup");
         
         user.setSmsTwoFactorEnabled(true);
         user.setTwoFactorEnabled(true);
@@ -555,12 +511,12 @@ public class AuthService {
     }
 
     public void initiateEmail2faSetup(User user) {
-        sendOtp(user.getEmail(), "email_2fa_setup");
+        otpService.sendOtp(user.getEmail(), "email_2fa_setup");
     }
 
     @Transactional
     public RecoveryCodesResponse confirmEmail2faSetup(User user, String code) {
-        verifyOtp(user.getEmail(), code, "email_2fa_setup");
+        otpService.verifyOtp(user.getEmail(), code, "email_2fa_setup");
         
         user.setEmailTwoFactorEnabled(true);
         user.setTwoFactorEnabled(true);
@@ -651,17 +607,13 @@ public class AuthService {
     public void requestSms2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
         if (user.getPhone() == null) throw new RuntimeException("No phone number registered");
-        String code = generate2faOtp();
-        redisTemplate.opsForValue().set(OTP_PREFIX + user.getPhone() + ":2fa", code, Duration.ofMinutes(5));
-        smsService.sendOtp(user.getPhone(), code);
+        otpService.sendOtp(user.getPhone(), "2fa");
     }
 
     public void requestEmail2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
         if (user.getEmail() == null) throw new RuntimeException("No email registered");
-        String code = generate2faOtp();
-        redisTemplate.opsForValue().set(OTP_PREFIX + user.getEmail() + ":2fa", code, Duration.ofMinutes(5));
-        emailService.sendOtp(user.getEmail(), code);
+        otpService.sendOtp(user.getEmail(), "2fa");
     }
 
     public AuthResponse verify2faOtp(String preAuthToken, String code, String method, String ipAddress) {
@@ -676,15 +628,10 @@ public class AuthService {
         String[] parts = session.parts();
 
         String identifier = "SMS".equals(method) ? user.getPhone() : user.getEmail();
-        String storedCode = redisTemplate.opsForValue().get(OTP_PREFIX + identifier + ":2fa");
-        
-        if (storedCode == null || !storedCode.equals(code)) {
-            throw new RuntimeException("Invalid or expired code");
-        }
+        otpService.verifyOtp(identifier, code, "2fa");
         
         String storedIp = parts.length > 4 ? parts[4] : null;
         
-        redisTemplate.delete(OTP_PREFIX + identifier + ":2fa");
         redisTemplate.delete(TOTP_PREAUTH_PREFIX + preAuthToken);
         
         return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
@@ -765,9 +712,6 @@ public class AuthService {
         return new PreAuthSession(user, parts);
     }
 
-    private String generate2faOtp() {
-        return String.format("%06d", new java.security.SecureRandom().nextInt(1_000_000));
-    }
 
     private AuthResponse buildAuthResponse(User user, String accessToken, String refreshToken) {
         return AuthResponse.builder()

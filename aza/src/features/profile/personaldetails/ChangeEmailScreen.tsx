@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
+  TextInput,
   KeyboardAvoidingView,
   Platform,
   Animated,
@@ -16,6 +17,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
+import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
+import { isValidEmail } from "../../../utils/validation";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -24,44 +28,80 @@ type NavigationProp = NativeStackNavigationProp<
 
 export function ChangeEmailScreen() {
   const { colors: Colors } = useAppTheme();
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { email, requestEmailChange, verifyEmailChange } = useProfile();
+  const { showToast } = useToast();
+  
+  const [newEmail, setNewEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"input" | "verify">("input");
+  const [isSaving, setIsSaving] = useState(false);
+  const [touched, setTouched] = useState(false);
+
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [40, 70],
-    outputRange: [0, 1],
-    extrapolate: "clamp" });
+  const emailError = touched && newEmail.length > 0 && !isValidEmail(newEmail)
+    ? "Enter a valid email address"
+    : null;
+  
+  const isInputValid = isValidEmail(newEmail) && newEmail !== email;
+  const isOtpValid = otp.length === 6;
 
-  const headerBorderOpacity = scrollY.interpolate({
-    inputRange: [40, 70],
-    outputRange: [0, 1],
-    extrapolate: "clamp" });
+  const handleNext = async () => {
+    setIsSaving(true);
+    try {
+      if (step === "input") {
+        await requestEmailChange(newEmail.trim());
+        setStep("verify");
+        showToast('Verification code sent to ' + newEmail, 'success');
+      } else {
+        await verifyEmailChange(newEmail.trim(), otp);
+        showToast('Email address updated successfully', 'success');
+        navigation.goBack();
+      }
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.message || 'Something went wrong. Please try again.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
 
       <Animated.View
         style={[
           styles.header,
           {
-            borderBottomColor: headerBorderOpacity.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border] }) },
+            borderBottomColor: scrollY.interpolate({
+              inputRange: [40, 70],
+              outputRange: ["transparent", Colors.border],
+              extrapolate: "clamp"
+            })
+          },
         ]}
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => step === "verify" ? setStep("input") : navigation.goBack()}
         >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+          <Feather name={step === "verify" ? "arrow-left" : "chevron-left"} size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Animated.View
-          style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+          style={[styles.headerTitleContainer, { 
+            opacity: scrollY.interpolate({
+              inputRange: [40, 70],
+              outputRange: [0, 1],
+              extrapolate: "clamp"
+            })
+          }]}
         >
           <Text style={[Typography.h3, styles.headerTitle]}>
-            Change email address
+            {step === "input" ? "Change email" : "Verify email"}
           </Text>
         </Animated.View>
         <View style={{ width: 40 }} />
@@ -82,47 +122,84 @@ export function ChangeEmailScreen() {
         >
           <View style={styles.titleSection}>
             <Text style={[Typography.h1, styles.mainTitle]}>
-              Change email address
+              {step === "input" ? "Change email" : "Enter code"}
             </Text>
           </View>
 
-          <Text style={styles.subtitle}>
-            Enter the email address you'd like to use with your account. Please
-            ensure that only you have access to this email to keep your account
-            secure.
-          </Text>
+          {step === "input" ? (
+            <>
+              <Text style={styles.subtitle}>
+                Enter the email address you'd like to use with your account. We'll send a verification code to ensure it belongs to you.
+              </Text>
 
-          <View style={styles.noticeBox}>
-            <MaterialIcons name="info-outline" size={20} color={Colors.textSecondary} style={{ marginTop: 2 }} />
-            <Text style={styles.noticeText}>
-              For your security, email address changes require identity verification and must be processed by our support team.
-            </Text>
-          </View>
+              <View style={styles.inputSection}>
+                <Text style={styles.label}>New email address</Text>
+                <View style={[styles.inputContainer, emailError ? { borderColor: '#D1222E' } : null]}>
+                  <TextInput
+                    style={styles.input}
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    onBlur={() => setTouched(true)}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="email@example.com"
+                    placeholderTextColor={Colors.textSecondary + "80"}
+                    autoFocus
+                  />
+                </View>
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+              </View>
 
-          <View
-            style={[
-              styles.inputContainer,
-              styles.readOnlyContainer,
-              { marginHorizontal: Spacing.lg },
-            ]}
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={Colors.border}
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.readOnlyText}>Account email (verified)</Text>
-          </View>
+              <View style={styles.noticeBox}>
+                <MaterialIcons name="info-outline" size={20} color={Colors.textSecondary} style={{ marginTop: 2 }} />
+                <Text style={styles.noticeText}>
+                  Your current email: <Text style={{ fontWeight: '600' }}>{email}</Text>
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>
+                We've sent a 6-digit verification code to <Text style={{ color: Colors.textPrimary, fontWeight: '600' }}>{newEmail}</Text>.
+              </Text>
+
+              <View style={styles.inputSection}>
+                <Text style={styles.label}>Verification code</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={[styles.input, { letterSpacing: 8, fontSize: 24, textAlign: 'center', fontWeight: '700' }]}
+                    value={otp}
+                    onChangeText={(val) => setOtp(val.replace(/[^0-9]/g, "").slice(0, 6))}
+                    keyboardType="number-pad"
+                    placeholder="000000"
+                    placeholderTextColor={Colors.textSecondary + "40"}
+                    autoFocus
+                    maxLength={6}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.sm }}
+                onPress={() => requestEmailChange(newEmail.trim())}
+              >
+                <Text style={[Typography.body, { color: Colors.primary, fontWeight: '600' }]}>
+                  Resend code
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.ScrollView>
 
         <View style={styles.footer}>
           <Button
-            title="Contact us"
-            onPress={() => navigation.navigate("TalkToUs")}
-            backgroundColor={Colors.primary}
-            textColor={Colors.secondary}
+            title={step === "input" ? "Continue" : "Verify and change"}
+            onPress={handleNext}
+            backgroundColor={(step === "input" ? isInputValid : isOtpValid) ? Colors.primary : Colors.surface}
+            textColor={(step === "input" ? isInputValid : isOtpValid) ? Colors.secondary : Colors.textSecondary}
             borderRadius={Radius.full}
+            disabled={!(step === "input" ? isInputValid : isOtpValid) || isSaving}
+            loading={isSaving}
           />
         </View>
       </KeyboardAvoidingView>
@@ -192,6 +269,14 @@ function createStyles(Colors: ThemeColors) {
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  inputSection: {
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg },
+  label: {
+    ...Typography.caption,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+    marginBottom: 8 },
   inputContainer: {
     height: 52,
     borderWidth: 1,
@@ -200,6 +285,14 @@ function createStyles(Colors: ThemeColors) {
     paddingHorizontal: Spacing.md,
     flexDirection: "row",
     alignItems: "center" },
+  input: {
+    flex: 1,
+    ...Typography.bodyLg,
+    color: Colors.textPrimary },
+  errorText: {
+    fontSize: 12,
+    color: '#D1222E',
+    marginTop: 4 },
   readOnlyContainer: {
     backgroundColor: Colors.surface + "30",
     borderColor: Colors.border + "50" },

@@ -68,6 +68,8 @@ import { ReasonScreen, RefundScreen, StatementScreen } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
 
+import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
@@ -133,6 +135,7 @@ export default function AppNavigator() {
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen} options={{ presentation: 'modal' }}/>
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />

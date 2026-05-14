@@ -38,6 +38,8 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final OtpService otpService;
+    private final NotificationService notificationService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -53,11 +55,13 @@ public class UserService {
         return AuthResponse.UserInfo.builder()
                 .id(user.getId().toString())
                 .email(user.getEmail())
+                .phone(user.getPhone())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .displayName(user.getDisplayName())
                 .handle(user.getHandle())
                 .pronouns(user.getPronouns())
+                .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth().toString() : null)
                 .profileImageUrl(user.getProfileImageUrl())
                 .kycStatus(user.getKycStatus().name())
                 .role(user.getRole() != null ? user.getRole().name() : "USER")
@@ -89,6 +93,21 @@ public class UserService {
     public AuthResponse.UserInfo updateProfile(User user, UpdateProfileRequest request) {
         if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
         if (request.getLastName() != null) user.setLastName(request.getLastName());
+        
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email is already registered");
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            if (userRepository.existsByPhone(request.getPhone())) {
+                throw new RuntimeException("Phone number is already registered");
+            }
+            user.setPhone(request.getPhone());
+        }
+
         if (request.getDisplayName() != null) user.setDisplayName(request.getDisplayName());
         if (request.getPronouns() != null) user.setPronouns(request.getPronouns());
         if (request.getHomeAddress() != null) user.setHomeAddress(request.getHomeAddress());
@@ -113,6 +132,48 @@ public class UserService {
         applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
         user = userRepository.save(user);
+        return getProfile(user);
+    }
+
+    // ==================== EMAIL & PHONE CHANGE ====================
+
+    public void requestEmailChange(User user, String newEmail) {
+        if (userRepository.existsByEmail(newEmail.toLowerCase().trim())) {
+            throw new RuntimeException("Email is already registered");
+        }
+        // Send OTP to the NEW email
+        otpService.sendOtp(newEmail.toLowerCase().trim(), "change_email");
+        
+        // Notify the OLD email (security alert)
+        notificationService.sendGenericSecurityAlert(user.getId(), "Account Security", 
+            "A request to change your email address to " + newEmail + " was initiated. If this wasn't you, secure your account immediately.");
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo verifyEmailChange(User user, String newEmail, String code) {
+        otpService.verifyOtp(newEmail.toLowerCase().trim(), code, "change_email");
+        user.setEmail(newEmail.toLowerCase().trim());
+        userRepository.save(user);
+        return getProfile(user);
+    }
+
+    public void requestPhoneChange(User user, String newPhone) {
+        if (userRepository.existsByPhone(newPhone.trim())) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+        // Send OTP to the NEW phone
+        otpService.sendOtp(newPhone.trim(), "change_phone");
+        
+        // Notify current user (security alert)
+        notificationService.sendGenericSecurityAlert(user.getId(), "Account Security", 
+            "A request to change your phone number to " + newPhone + " was initiated.");
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo verifyPhoneChange(User user, String newPhone, String code) {
+        otpService.verifyOtp(newPhone.trim(), code, "change_phone");
+        user.setPhone(newPhone.trim());
+        userRepository.save(user);
         return getProfile(user);
     }
 

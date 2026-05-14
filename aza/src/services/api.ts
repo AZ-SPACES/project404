@@ -208,6 +208,18 @@ export const suggestHandles = (firstName: string, lastName: string) =>
     `/api/v1/users/suggest-handles?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}`,
   );
 
+export const requestEmailChange = (email: string) =>
+  api.post(`/api/v1/users/me/email/request?email=${encodeURIComponent(email)}`);
+
+export const verifyEmailChange = (email: string, code: string) =>
+  api.post("/api/v1/users/me/email/verify", { identifier: email, code, purpose: "change_email" });
+
+export const requestPhoneChange = (phone: string) =>
+  api.post(`/api/v1/users/me/phone/request?phone=${encodeURIComponent(phone)}`);
+
+export const verifyPhoneChange = (phone: string, code: string) =>
+  api.post("/api/v1/users/me/phone/verify", { identifier: phone, code, purpose: "change_phone" });
+
 // --- Support Endpoints ---
 
 export const getOrCreateSupportChat = () => api.post("/api/v1/support/chat");

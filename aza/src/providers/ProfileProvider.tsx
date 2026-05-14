@@ -1,16 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
-import { getMe, updateMe, uploadProfileImage, api } from '../services/api';
+import { getMe, updateMe, uploadProfileImage, api,requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, } from "../services/api";
 
 const PROFILE_STORAGE_KEY = 'aza_profile';
 
 type ProfileData = {
   displayName: string;
+  firstName: string | null;
+  lastName: string | null;
+  dateOfBirth: string | null;
+  homeAddress: string | null;
+  city: string | null;
+  nationality: string | null;
+  kycStatus: string | null;
   profileImageUri: string | null;
   email: string | null;
   phone: string | null;
   handle: string | null;
+  pronouns: string | null;
   syncContacts: boolean;
   billForwardingEnabled: boolean;
   twoFactorEnabled: boolean;
@@ -27,10 +35,18 @@ type ProfileData = {
 
 const INITIAL_PROFILE: ProfileData = {
   displayName: '',
+  firstName: null,
+  lastName: null,
+  dateOfBirth: null,
+  homeAddress: null,
+  city: null,
+  nationality: null,
+  kycStatus: null,
   profileImageUri: null,
   email: null,
   phone: null,
   handle: null,
+  pronouns: null,
   syncContacts: true,
   billForwardingEnabled: false,
   twoFactorEnabled: false,
@@ -48,8 +64,10 @@ const INITIAL_PROFILE: ProfileData = {
 type ProfileContextType = ProfileData & {
   setDisplayName: (name: string) => Promise<void>;
   setProfileImage: (uri: string | null) => Promise<void>;
-  setEmail: (email: string | null) => Promise<void>;
-  setPhone: (phone: string | null) => Promise<void>;
+  requestEmailChange: (email: string) => Promise<void>;
+  verifyEmailChange: (email: string, code: string) => Promise<void>;
+  requestPhoneChange: (phone: string) => Promise<void>;
+  verifyPhoneChange: (phone: string, code: string) => Promise<void>;
   setHandle: (handle: string | null) => Promise<void>;
   setSyncContacts: (enabled: boolean) => Promise<void>;
   setBillForwardingEnabled: (enabled: boolean) => Promise<void>;
@@ -89,10 +107,18 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const userData = data.data;
       const updated: ProfileData = {
         displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        dateOfBirth: userData.dateOfBirth,
+        homeAddress: userData.homeAddress,
+        city: userData.city,
+        nationality: userData.nationality,
+        kycStatus: userData.kycStatus,
         profileImageUri: userData.profileImageUrl,
         email: userData.email,
         phone: userData.phone,
         handle: userData.handle,
+        pronouns: userData.pronouns,
         syncContacts: userData.syncContacts ?? true,
         billForwardingEnabled: userData.billForwardingEnabled ?? false,
         twoFactorEnabled: userData.twoFactorEnabled ?? false,
@@ -165,22 +191,40 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [fetchProfile]);
 
-  const setEmail = useCallback(async (email: string | null) => {
+  const requestEmailChangeAction = useCallback(async (email: string) => {
     try {
-      await updateMe({ email });
+      await apiRequestEmailChange(email);
+    } catch (e) {
+      console.error('Failed to request email change', e);
+      throw e;
+    }
+  }, []);
+
+  const verifyEmailChangeAction = useCallback(async (email: string, code: string) => {
+    try {
+      await apiVerifyEmailChange(email, code);
       await fetchProfile();
     } catch (e) {
-      console.error('Failed to save email', e);
+      console.error('Failed to verify email change', e);
       throw e;
     }
   }, [fetchProfile]);
 
-  const setPhone = useCallback(async (phone: string | null) => {
+  const requestPhoneChangeAction = useCallback(async (phone: string) => {
     try {
-      await updateMe({ phone });
+      await apiRequestPhoneChange(phone);
+    } catch (e) {
+      console.error('Failed to request phone change', e);
+      throw e;
+    }
+  }, []);
+
+  const verifyPhoneChangeAction = useCallback(async (phone: string, code: string) => {
+    try {
+      await apiVerifyPhoneChange(phone, code);
       await fetchProfile();
     } catch (e) {
-      console.error('Failed to save phone', e);
+      console.error('Failed to verify phone change', e);
       throw e;
     }
   }, [fetchProfile]);
@@ -281,7 +325,22 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [profile]);
 
   return (
-    <ProfileContext.Provider value={{ ...profile, setDisplayName, setProfileImage, setEmail, setPhone, setHandle, setSyncContacts, setBillForwardingEnabled, toggleApp2fa, updateProfile, updateNotificationPreferences: updateNotificationPreferencesInProvider, fetchProfile }}>
+    <ProfileContext.Provider value={{
+      ...profile,
+      setDisplayName,
+      setProfileImage,
+      requestEmailChange: requestEmailChangeAction,
+      verifyEmailChange: verifyEmailChangeAction,
+      requestPhoneChange: requestPhoneChangeAction,
+      verifyPhoneChange: verifyPhoneChangeAction,
+      setHandle,
+      setSyncContacts,
+      setBillForwardingEnabled,
+      toggleApp2fa,
+      updateProfile,
+      updateNotificationPreferences: updateNotificationPreferencesInProvider,
+      fetchProfile
+    }}>
       {children}
     </ProfileContext.Provider>
   );

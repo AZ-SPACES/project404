@@ -19,11 +19,13 @@ public class AuthResponse {
     public static class UserInfo {
         private String id;
         private String email;
+        private String phone;
         private String firstName;
         private String lastName;
         private String displayName;
         private String handle;
         private String pronouns;
+        private String dateOfBirth;
         private String profileImageUrl;
         private String kycStatus;
         private String role;

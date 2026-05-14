@@ -61,11 +61,27 @@ export function PersonalInformationScreen() {
   );
 
   const navigation = useNavigation<NavigationProp>();
-  const { displayName, phone, setDisplayName } = useProfile();
+  const { 
+    displayName, 
+    firstName, 
+    lastName, 
+    dateOfBirth, 
+    phone, 
+    homeAddress, 
+    city, 
+    nationality,
+    setDisplayName 
+  } = useProfile();
   const { showToast } = useToast();
   const [preferredName, setPreferredName] = useState(displayName ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const scrollY = React.useRef(new Animated.Value(0)).current;
+
+  // Parse date of birth
+  const dob = dateOfBirth ? new Date(dateOfBirth) : null;
+  const dobDay = dob ? dob.getDate().toString() : "—";
+  const dobMonth = dob ? dob.toLocaleString('default', { month: 'long' }) : "—";
+  const dobYear = dob ? dob.getFullYear().toString() : "—";
 
   // Sync if displayName loads after mount
   useEffect(() => {
@@ -146,7 +162,7 @@ export function PersonalInformationScreen() {
           <Text style={styles.sectionHeading}>Country of residence</Text>
           <View style={styles.inputSection}>
             <View style={styles.inputContainer}>
-              <TextInput style={styles.input} value="Ghana" editable={false} />
+              <TextInput style={styles.input} value={nationality ?? "N/A"} editable={false} />
               <Feather
                 name="chevron-down"
                 size={20}
@@ -160,8 +176,8 @@ export function PersonalInformationScreen() {
           </View>
           <Text style={styles.sectionHeading}>Personal details</Text>
 
-          <ReadOnlyInput label="Full legal first and middle name(s)" value="—" placeholder="Provided after verification" />
-          <ReadOnlyInput label="Full legal last name(s)" value="—" placeholder="Provided after verification" />
+          <ReadOnlyInput label="Full legal first and middle name(s)" value={firstName ?? "—"} placeholder="Provided after verification" />
+          <ReadOnlyInput label="Full legal last name(s)" value={lastName ?? "—"} placeholder="Provided after verification" />
 
           <View style={styles.inputSection}>
             <View style={styles.labelWithIcon}>
@@ -184,17 +200,17 @@ export function PersonalInformationScreen() {
             <View style={styles.row}>
               <View style={[styles.dateInput, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Day</Text>
-                <Text style={styles.dateValue}>—</Text>
+                <Text style={styles.dateValue}>{dobDay}</Text>
               </View>
               <View style={[styles.dateInputLarge, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Month</Text>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.dateValue}>—</Text>
+                  <Text style={styles.dateValue}>{dobMonth}</Text>
                 </View>
               </View>
               <View style={[styles.dateInput, styles.readOnlyContainer]}>
                 <Text style={styles.dateLabel}>Year</Text>
-                <Text style={styles.dateValue}>—</Text>
+                <Text style={styles.dateValue}>{dobYear}</Text>
               </View>
             </View>
           </View>
@@ -210,8 +226,8 @@ export function PersonalInformationScreen() {
           </View>
           <Text style={styles.sectionHeading}>Address</Text>
 
-          <ReadOnlyInput label="Home address" value="—" placeholder="Provided after verification" />
-          <ReadOnlyInput label="City" value="—" placeholder="Provided after verification" />
+          <ReadOnlyInput label="Home address" value={homeAddress ?? "—"} placeholder="Provided after verification" />
+          <ReadOnlyInput label="City" value={city ?? "—"} placeholder="Provided after verification" />
 
           <Text style={styles.confirmationText}>
             By continuing, you confirm this address is correct.
