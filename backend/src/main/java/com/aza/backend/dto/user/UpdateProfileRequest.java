@@ -12,7 +12,7 @@ public class UpdateProfileRequest {
     private String displayName;
     private String handle;
     private String pronouns;
-    private String dateOfBirth;       // "YYYY-MM-DD"
+    private String dateOfBirth;
     private String homeAddress;
     private String city;
     private String nationality;
@@ -21,4 +21,8 @@ public class UpdateProfileRequest {
     private String taxCountry;
     private Boolean isUSPerson;
     private String employmentStatus;
+    private String language;
+    private String theme;
+    private String homeBackground;
+    private String hubBackground;
 }

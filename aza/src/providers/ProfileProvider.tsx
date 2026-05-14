@@ -31,6 +31,10 @@ type ProfileData = {
   findMeByEmail: boolean;
   findMeByHandle: boolean;
   biometricData: boolean;
+  language: string;
+  theme: string;
+  homeBackground: string | null;
+  hubBackground: string | null;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -59,6 +63,10 @@ const INITIAL_PROFILE: ProfileData = {
   findMeByEmail: true,
   findMeByHandle: true,
   biometricData: true,
+  language: 'English (US)',
+  theme: 'System Default',
+  homeBackground: null,
+  hubBackground: null,
 };
 
 type ProfileContextType = ProfileData & {
@@ -131,6 +139,10 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         findMeByEmail: userData.findMeByEmail ?? true,
         findMeByHandle: userData.findMeByHandle ?? true,
         biometricData: userData.biometricData ?? true,
+        language: userData.language ?? 'English (US)',
+        theme: userData.theme ?? 'System Default',
+        homeBackground: userData.homeBackground,
+        hubBackground: userData.hubBackground,
       };
       setProfile(updated);
       await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));

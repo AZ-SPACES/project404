@@ -87,6 +87,10 @@ public class UserService {
                 .forcePasswordReset(user.getForcePasswordReset())
                 .requireSelfieVerification(user.getRequireSelfieVerification())
                 .notificationPreferences(user.getNotificationPreferences())
+                .language(user.getLanguage())
+                .theme(user.getTheme())
+                .homeBackground(user.getHomeBackground())
+                .hubBackground(user.getHubBackground())
                 .build();
     }
 
@@ -128,6 +132,11 @@ public class UserService {
             }
             user.setHandle(newHandle);
         }
+        
+        if (request.getLanguage() != null) user.setLanguage(request.getLanguage());
+        if (request.getTheme() != null) user.setTheme(request.getTheme());
+        if (request.getHomeBackground() != null) user.setHomeBackground(request.getHomeBackground());
+        if (request.getHubBackground() != null) user.setHubBackground(request.getHubBackground());
 
         applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
@@ -139,7 +148,7 @@ public class UserService {
 
     public void requestEmailChange(User user, String newEmail) {
         if (userRepository.existsByEmail(newEmail.toLowerCase().trim())) {
-            throw new RuntimeException("Email is already registered");
+            throw new com.aza.backend.exception.AppException("EMAIL_ALREADY_EXISTS", "This email address is already registered with another account", org.springframework.http.HttpStatus.CONFLICT);
         }
         // Send OTP to the NEW email
         otpService.sendOtp(newEmail.toLowerCase().trim(), "change_email");
@@ -159,7 +168,7 @@ public class UserService {
 
     public void requestPhoneChange(User user, String newPhone) {
         if (userRepository.existsByPhone(newPhone.trim())) {
-            throw new RuntimeException("Phone number is already registered");
+            throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already registered with another account", org.springframework.http.HttpStatus.CONFLICT);
         }
         // Send OTP to the NEW phone
         otpService.sendOtp(newPhone.trim(), "change_phone");

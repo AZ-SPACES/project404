@@ -53,5 +53,9 @@ public class AuthResponse {
         private Boolean forcePasswordReset;
         private Boolean requireSelfieVerification;
         private String notificationPreferences;
+        private String language;
+        private String theme;
+        private String homeBackground;
+        private String hubBackground;
     }
 }

@@ -123,6 +123,16 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String notificationPreferences;
 
+    // --- Display & Appearance ---
+    @Builder.Default
+    private String language = "English (US)";
+
+    @Builder.Default
+    private String theme = "System Default";
+
+    private String homeBackground;
+    private String hubBackground;
+
     // --- Silent Hours ---
     @Builder.Default
     private Boolean silentHoursEnabled = false;
