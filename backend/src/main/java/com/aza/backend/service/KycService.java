@@ -306,7 +306,7 @@ public class KycService {
                     User user = userRepository.findById(record.getUserId()).orElse(null);
                     KycStatusResponse status = getStatusForRecord(record);
                     if (user != null) {
-                        status.setDisplayName(user.getDisplayName());
+                        status.setDisplayName(user.getFirstName() + " " + user.getLastName());
                         status.setEmail(user.getEmail());
                         status.setUserId(user.getId().toString());
                     }
@@ -321,7 +321,7 @@ public class KycService {
         User user = userRepository.findById(userId).orElse(null);
         KycStatusResponse status = getStatusForRecord(record);
         if (user != null) {
-            status.setDisplayName(user.getDisplayName());
+            status.setDisplayName(user.getFirstName() + " " + user.getLastName());
             status.setEmail(user.getEmail());
             status.setUserId(user.getId().toString());
         }
@@ -359,7 +359,7 @@ public class KycService {
         kycRecordRepository.save(record);
 
         // Send notification email
-        String name = user.getFirstName() != null ? user.getFirstName() : user.getDisplayName();
+        String name = user.getFirstName() != null ? user.getFirstName() : "User";
         emailService.sendKycStatusEmail(user.getEmail(), name, approve, rejectionReason);
 
         return getStatus(user);

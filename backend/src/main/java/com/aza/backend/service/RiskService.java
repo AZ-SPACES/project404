@@ -87,7 +87,7 @@ public class RiskService {
                 .id(alert.getId().toString())
                 .userId(alert.getUserId().toString())
                 .userName(user != null ? user.getFirstName() + " " + user.getLastName() : "Unknown")
-                .userHandle(user != null ? user.getHandle() : null)
+                .userHandle(user != null ? user.getUsername() : null)
                 .alertType(alert.getAlertType().name())
                 .severity(alert.getSeverity().name())
                 .description(alert.getDescription())

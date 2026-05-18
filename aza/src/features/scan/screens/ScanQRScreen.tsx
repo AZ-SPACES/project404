@@ -4,7 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Radius } from '../../../theme';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +24,14 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const scanAnim = useRef(new Animated.Value(0)).current;
   const isProcessing = useRef(false);
   const { findUserByHandle } = useContactStore();
+
+  // Reset scanner state when screen comes back into focus (e.g. after returning from ContactsProfile)
+  useFocusEffect(
+    React.useCallback(() => {
+      setScanned(false);
+      isProcessing.current = false;
+    }, [])
+  );
 
   useEffect(() => {
     if (!permission) requestPermission();
@@ -81,7 +89,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       try {
         const user = await findUserByHandle(handle);
         if (user) {
-          navigation.navigate('SendAmount', {
+          navigation.navigate('ContactsProfile', {
             id: user.id,
             name: user.displayName,
             username: `@${user.handle}`,

@@ -53,6 +53,8 @@ export type Recipient = {
   isFavorite?: boolean;
   phoneNumber?: string | undefined;
   email?: string | undefined;
+  isRequest?: boolean;
+  userId?: string;
 };
 
 // Mock data is no longer needed but kept for reference if needed
@@ -73,12 +75,20 @@ export default function ContactsScreen() {
     toggleFavorite,
     addContactByUserId,
     findUserByHandle,
-    searchGlobal
+    searchGlobal,
+    blockedUsers,
+    fetchBlockedUsers,
+    unblockUser,
+    contactRequests,
+    fetchContactRequests,
+    approveContactRequest,
+    rejectContactRequest
   } = useContactStore();
   const { syncContacts: isSyncAllowed } = useProfile();
 
   useEffect(() => {
     fetchContacts();
+    fetchContactRequests();
   }, []);
 
   useEffect(() => {
@@ -144,6 +154,15 @@ export default function ContactsScreen() {
   );
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  useEffect(() => {
+    if (showBlockedModal) {
+      fetchBlockedUsers();
+    }
+  }, [showBlockedModal]);
 
   // Simple filter logic
   const filteredRecipients = contactsList.filter(
@@ -158,14 +177,24 @@ export default function ContactsScreen() {
   const azaUsers = filteredRecipients.filter((r) => r.isOnAza);
   const otherContacts = filteredRecipients.filter((r) => !r.isOnAza);
 
+  const requestRecipients: Recipient[] = (contactRequests || []).map(r => ({
+    id: r.id, // the requestId
+    userId: r.senderUserId,
+    name: r.senderDisplayName,
+    username: `@${r.senderUsername}`,
+    avatar: r.senderProfileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.senderDisplayName)}&background=random`,
+    isRequest: true,
+  }));
 
   const sections = [
+    ...(requestRecipients.length > 0 && !searchQuery ? [{ title: "Pending Requests", data: requestRecipients }] : []),
     { title: "On Aza", data: azaUsers },
     { title: "Others", data: otherContacts },
   ].filter((section) => section.data.length > 0);
 
   const handleRefresh = async () => {
     await fetchContacts();
+    await fetchContactRequests();
   };
 
   const openSheet = (recipient: Recipient) => {
@@ -200,34 +229,77 @@ export default function ContactsScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: Recipient }) => (
-    <TouchableOpacity
-      style={styles.row}
-      activeOpacity={0.7}
-      onPress={() => openSheet(item)}
-    >
-      <View style={styles.avatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        {item.isOnAza && (
-          <View style={styles.azaBadge}>
-            <Image
-              source={AZA_ICON}
-              style={{ width: 10, height: 10, tintColor: "#FFFFFF" }}
-              resizeMode="contain"
-            />
+  const renderItem = ({ item }: { item: Recipient }) => {
+    if (item.isRequest) {
+      return (
+        <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            onPress={() => {
+              if (item.userId) {
+                navigation.navigate("ContactsProfile", {
+                  id: item.userId,
+                  name: item.name,
+                  username: item.username,
+                  avatar: item.avatar,
+                });
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+            <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
+              <Text style={[Typography.bodyLg, styles.rowName]}>{item.name}</Text>
+              <Text style={[Typography.body, styles.rowUsername]}>{item.username}</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity 
+              style={{ backgroundColor: Colors.surface, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              onPress={() => rejectContactRequest(item.id)}
+            >
+              <Text style={[Typography.body, { color: Colors.textPrimary, fontWeight: '600' }]}>Decline</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              onPress={() => approveContactRequest(item.id)}
+            >
+              <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Accept</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </View>
-      <View style={styles.rowInfo}>
-        <View style={styles.nameRow}>
-          <Text style={[Typography.bodyLg, styles.rowName]}>{item.name}</Text>
         </View>
-        <Text style={[Typography.body, styles.rowUsername]}>
-          {item.username}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={styles.row}
+        activeOpacity={0.7}
+        onPress={() => openSheet(item)}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          {item.isOnAza && (
+            <View style={styles.azaBadge}>
+              <Image
+                source={AZA_ICON}
+                style={{ width: 10, height: 10, tintColor: "#FFFFFF" }}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+        </View>
+        <View style={styles.rowInfo}>
+          <View style={styles.nameRow}>
+            <Text style={[Typography.bodyLg, styles.rowName]}>{item.name}</Text>
+          </View>
+          <Text style={[Typography.body, styles.rowUsername]}>
+            {item.username}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderFavorite = ({ item }: { item: Recipient }) => (
     <TouchableOpacity
@@ -262,18 +334,27 @@ export default function ContactsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[Typography.h1, styles.title]}>Contacts</Text>
-          <TouchableOpacity
-            style={styles.inviteButton}
-            activeOpacity={0.8}
-            onPress={() => setShowInviteModal(true)}
-          >
-            <MaterialCommunityIcons
-              name="party-popper"
-              size={20}
-              color={Colors.secondary}
-            />
-            <Text style={styles.inviteButtonText}>Invite</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              activeOpacity={0.8}
+              onPress={() => setShowBlockedModal(true)}
+            >
+              <Feather name="slash" size={20} color={Colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.inviteButton}
+              activeOpacity={0.8}
+              onPress={() => setShowInviteModal(true)}
+            >
+              <MaterialCommunityIcons
+                name="party-popper"
+                size={20}
+                color={Colors.secondary}
+              />
+              <Text style={styles.inviteButtonText}>Invite</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search Bar Row */}
@@ -613,88 +694,148 @@ export default function ContactsScreen() {
                 />
               </View>
 
-              {addUserQuery.length >= 2 && (
-                <View style={styles.globalSearchResults}>
-                  <TouchableOpacity
-                    style={styles.globalSearchButton}
-                    onPress={async () => {
-                      const query = addUserQuery.trim().replace(/^@/, '');
-                      try {
-                        const results = await searchGlobal(query);
-                        if (results.length > 0) {
-                          // For simplicity, just show the first one or we could render a list
-                          const user = results[0];
-                          if (user) {
-                            Alert.alert(
-                              "User Found",
-                              `Add ${user.displayName} (@${user.handle}) to contacts?`,
-                              [
-                                { text: "Cancel", style: "cancel" },
-                                { 
-                                  text: "Add", 
-                                  onPress: async () => {
-                                    await addContactByUserId(user.id);
-                                    setShowAddUserModal(false);
-                                    setAddUserQuery("");
-                                  } 
-                                }
-                              ]
-                            );
+              {globalSearchResults.length > 0 ? (
+                <FlatList
+                  data={globalSearchResults}
+                  keyExtractor={(item) => item.id}
+                  style={{ maxHeight: 250, marginVertical: Spacing.md }}
+                  renderItem={({ item }) => (
+                    <View style={[styles.row, { paddingVertical: Spacing.sm }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Image 
+                          source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }} 
+                          style={styles.avatar} 
+                        />
+                        <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
+                          <Text style={[Typography.bodyLg, styles.rowName]}>{item.displayName}</Text>
+                          <Text style={[Typography.body, styles.rowUsername]}>@{item.handle}</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity 
+                        style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                        onPress={async () => {
+                          try {
+                            await useContactStore.getState().requestContact(item.id);
+                            Alert.alert("Success", `Contact request sent to ${item.displayName}`);
+                            setShowAddUserModal(false);
+                            setAddUserQuery("");
+                            setGlobalSearchResults([]);
+                          } catch (e: any) {
+                            Alert.alert("Error", e.message || "Failed to send request");
                           }
-                        } else {
-                          Alert.alert("Not Found", "No users matched your search.");
-                        }
-                      } catch (error) {
-                        Alert.alert("Error", "Search failed.");
-                      }
-                    }}
-                  >
-                    <Feather name="search" size={18} color={Colors.secondary} />
-                    <Text style={styles.globalSearchButtonText}>Search globally for "{addUserQuery}"</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+                        }}
+                      >
+                        <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              ) : null}
 
               <Button
-                title="Search and Add"
+                title="Search Users"
                 onPress={async () => {
                   const query = addUserQuery.trim().replace(/^@/, '');
                   if (query) {
                     try {
-                      // First find the user by exact handle if possible
-                      const user = await findUserByHandle(query);
-                      if (user) {
-                        await addContactByUserId(user.id);
-                        Alert.alert("Success", `@${query} added to contacts`);
-                        setShowAddUserModal(false);
-                        setAddUserQuery("");
-                      } else {
-                        // Try broader search
-                        const results = await searchGlobal(query);
-                        if (results.length > 0) {
-                          const topUser = results[0];
-                          if (topUser) {
-                             await addContactByUserId(topUser.id);
-                             Alert.alert("Success", `${topUser.displayName} added to contacts`);
-                             setShowAddUserModal(false);
-                             setAddUserQuery("");
-                          }
-                        } else {
-                          Alert.alert("Not Found", `No user found matching "${query}"`);
-                        }
+                      setIsSearchingGlobal(true);
+                      setGlobalSearchResults([]);
+                      const results = await searchGlobal(query);
+                      
+                      // Also try to find by exact handle to ensure it's at the top
+                      const exactMatch = await findUserByHandle(query);
+                      
+                      let finalResults = [...results];
+                      if (exactMatch && !finalResults.find(r => r.id === exactMatch.id)) {
+                        finalResults.unshift(exactMatch);
+                      }
+                      
+                      setGlobalSearchResults(finalResults);
+                      
+                      if (finalResults.length === 0) {
+                        Alert.alert("Not Found", `No user found matching "${query}"`);
                       }
                     } catch (error) {
-                      Alert.alert("Error", "Failed to add user. They might already be in your contacts.");
+                      Alert.alert("Error", "Search failed.");
+                    } finally {
+                      setIsSearchingGlobal(false);
                     }
                   }
                 }}
                 paddingVertical={14}
                 borderRadius={10}
-                disabled={!addUserQuery.trim() || isLoading}
-                loading={isLoading}
+                disabled={!addUserQuery.trim() || isSearchingGlobal}
+                loading={isSearchingGlobal}
               />
             </View>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+      {/* Blocked Users Modal */}
+      <Modal
+        visible={showBlockedModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBlockedModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setShowBlockedModal(false)}>
+            <View style={styles.bottomSheetBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl }]}>
+            <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
+              <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
+                <AntDesign name="close" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {isLoading && blockedUsers.length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+              </View>
+            ) : blockedUsers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Feather name="shield" size={48} color={Colors.textSecondary} />
+                <Text style={[Typography.bodyLg, styles.emptyTitle, { marginTop: 16 }]}>No blocked users</Text>
+                <Text style={[Typography.body, styles.emptySubtitle, { textAlign: 'center' }]}>
+                  When you block someone, they will appear here.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={blockedUsers}
+                keyExtractor={(item) => item.blockedUserId}
+                renderItem={({ item }) => (
+                  <View style={styles.blockedUserRow}>
+                    <View style={styles.blockedUserInfo}>
+                      <Image 
+                        source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }} 
+                        style={styles.blockedAvatar} 
+                      />
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={[Typography.bodyLg, { fontWeight: '600', color: Colors.textPrimary }]}>{item.displayName}</Text>
+                        {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
+                      </View>
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.unblockButton}
+                      onPress={() => {
+                        Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
+                        ]);
+                      }}
+                    >
+                      <Text style={styles.unblockButtonText}>Unblock</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                contentContainerStyle={{ padding: Spacing.lg }}
+              />
+            )}
+          </View>
         </View>
       </Modal>
     </>
@@ -720,6 +861,13 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textPrimary,
       fontWeight: "700",
       fontSize: 28,
+    },
+    headerIconButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: Spacing.xs,
     },
     inviteButton: {
       flexDirection: "row",
@@ -1105,6 +1253,35 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
       textAlign: "center",
       lineHeight: 20,
+    },
+    blockedUserRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    blockedUserInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    blockedAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+    },
+    unblockButton: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      backgroundColor: isDark ? Colors.surface : "#f3f4f6",
+      borderRadius: Radius.full,
+    },
+    unblockButtonText: {
+      ...Typography.caption,
+      fontWeight: "600",
+      color: Colors.textPrimary,
     },
   });
 }

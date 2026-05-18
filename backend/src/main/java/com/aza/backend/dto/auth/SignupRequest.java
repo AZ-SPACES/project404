@@ -23,7 +23,6 @@ public class SignupRequest {
 
     private String firstName;
     private String lastName;
-    private String displayName;
     private String handle;
     private String pronouns;
     private String dateOfBirth;       // "YYYY-MM-DD"

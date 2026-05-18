@@ -10,12 +10,16 @@ import {
   getBlockedUsers,
   addContact,
   getUserByHandle,
-  searchUsersGlobal
+  searchUsersGlobal,
+  requestContact as requestContactApi,
+  approveContactRequest as approveContactRequestApi,
+  rejectContactRequest as rejectContactRequestApi
 } from '../services/api';
-import { Contact, BlockedUser, PublicProfile } from '../features/contacts/types';
+import { Contact, BlockedUser, PublicProfile, ContactRequest } from '../features/contacts/types';
 
 interface ContactState {
   contacts: Contact[];
+  contactRequests: ContactRequest[];
   blockedUsers: BlockedUser[];
   isLoading: boolean;
   isSyncing: boolean;
@@ -32,10 +36,15 @@ interface ContactState {
   addContactByUserId: (userId: string) => Promise<void>;
   findUserByHandle: (handle: string) => Promise<PublicProfile | null>;
   searchGlobal: (query: string) => Promise<PublicProfile[]>;
+  requestContact: (userId: string) => Promise<void>;
+  fetchContactRequests: () => Promise<void>;
+  approveContactRequest: (requestId: string) => Promise<void>;
+  rejectContactRequest: (requestId: string) => Promise<void>;
 }
 
 export const useContactStore = create<ContactState>((set, get) => ({
   contacts: [],
+  contactRequests: [],
   blockedUsers: [],
   isLoading: false,
   isSyncing: false,
@@ -164,6 +173,58 @@ export const useContactStore = create<ContactState>((set, get) => ({
     } catch (error) {
       console.error('Global search failed', error);
       return [];
+    }
+  },
+
+  requestContact: async (userId: string) => {
+    try {
+      set({ isLoading: true });
+      await requestContactApi(userId);
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to send contact request';
+      set({ error: msg });
+      throw new Error(msg);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  approveContactRequest: async (requestId: string) => {
+    try {
+      set({ isLoading: true });
+      await approveContactRequestApi(requestId);
+      await get().fetchContacts();
+      await get().fetchContactRequests();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to approve request';
+      set({ error: msg });
+      throw new Error(msg);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  rejectContactRequest: async (requestId: string) => {
+    try {
+      set({ isLoading: true });
+      await rejectContactRequestApi(requestId);
+      await get().fetchContactRequests();
+    } catch (error: any) {
+      const msg = error.response?.data?.message || error.message || 'Failed to reject request';
+      set({ error: msg });
+      throw new Error(msg);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchContactRequests: async () => {
+    try {
+      const { getContactRequests } = require('../services/api');
+      const { data } = await getContactRequests();
+      set({ contactRequests: data.data || [] });
+    } catch (error) {
+      console.error('Failed to fetch contact requests', error);
     }
   }
 }));

@@ -88,7 +88,7 @@ public class ComplianceService {
                 .transactionId(ft.getTransactionId().toString())
                 .userId(ft.getUserId().toString())
                 .userName(user != null ? user.getFirstName() + " " + user.getLastName() : "Unknown")
-                .userHandle(user != null ? user.getHandle() : null)
+                .userHandle(user != null ? user.getUsername() : null)
                 .amount(ft.getAmount())
                 .currency(ft.getCurrency())
                 .flagReason(ft.getFlagReason())

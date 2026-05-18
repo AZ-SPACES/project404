@@ -272,6 +272,18 @@ export const getBlockedUsers = () => api.get("/api/v1/contacts/blocked");
 export const addContact = (userId: string) =>
   api.post(`/api/v1/contacts/add/${userId}`);
 
+export const requestContact = (userId: string) =>
+  api.post(`/api/v1/contacts/request/${userId}`);
+
+export const getContactRequests = () =>
+  api.get("/api/v1/contacts/requests");
+
+export const approveContactRequest = (requestId: string) =>
+  api.post(`/api/v1/contacts/requests/${requestId}/approve`);
+
+export const rejectContactRequest = (requestId: string) =>
+  api.post(`/api/v1/contacts/requests/${requestId}/reject`);
+
 export const getUserByHandle = (handle: string) =>
   api.get(`/api/v1/users/by-handle/${handle}`);
 

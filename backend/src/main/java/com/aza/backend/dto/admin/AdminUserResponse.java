@@ -13,10 +13,9 @@ public class AdminUserResponse {
     private String id;
     private String email;
     private String phone;
-    private String handle;
+    private String username;
     private String firstName;
     private String lastName;
-    private String displayName;
     private String profileImageUrl;
     private LocalDate dateOfBirth;
     private String nationality;

@@ -58,8 +58,7 @@ public class UserService {
                 .phone(user.getPhoneNumber())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .displayName(user.getDisplayName())
-                .handle(user.getHandle())
+                .handle(user.getUsername())
                 .pronouns(user.getPronouns())
                 .dateOfBirth(user.getDateOfBirth() != null ? user.getDateOfBirth().toString() : null)
                 .profileImageUrl(user.getProfileImageUrl())
@@ -112,7 +111,6 @@ public class UserService {
             user.setPhoneNumber(request.getPhone());
         }
 
-        if (request.getDisplayName() != null) user.setDisplayName(request.getDisplayName());
         if (request.getPronouns() != null) user.setPronouns(request.getPronouns());
         if (request.getHomeAddress() != null) user.setHomeAddress(request.getHomeAddress());
         if (request.getCity() != null) user.setCity(request.getCity());
@@ -127,10 +125,10 @@ public class UserService {
             if (!HANDLE_PATTERN.matcher(newHandle).matches()) {
                 throw new RuntimeException("Handle must be 3-30 characters and contain only lowercase letters, numbers, and underscores");
             }
-            if (!newHandle.equals(user.getHandle()) && userRepository.existsByHandle(newHandle)) {
+            if (!newHandle.equals(user.getUsername()) && userRepository.existsByUsername(newHandle)) {
                 throw new RuntimeException("Handle is already taken");
             }
-            user.setHandle(newHandle);
+            user.setUsername(newHandle);
         }
         
         if (request.getLanguage() != null) user.setLanguage(request.getLanguage());
@@ -227,14 +225,14 @@ public class UserService {
 
         return PublicProfileResponse.builder()
                 .id(user.getId().toString())
-                .displayName(user.getDisplayName())
+                .displayName(user.getFirstName() + " " + user.getLastName())
                 .profileImageUrl(user.getProfileImageUrl())
                 .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until contacts system is built
                 .build();
     }
 
-    public PublicProfileResponse getPublicProfileByHandle(String handle) {
-        User user = userRepository.findByHandle(handle)
+    public PublicProfileResponse getPublicProfileByUsername(String username) {
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new RuntimeException("User not found");
@@ -242,8 +240,8 @@ public class UserService {
 
         return PublicProfileResponse.builder()
                 .id(user.getId().toString())
-                .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
-                .handle(user.getHandle())
+                .displayName(user.getFirstName() + " " + user.getLastName())
+                .username(user.getUsername())
                 .profileImageUrl(user.getProfileImageUrl())
                 .onlineStatus("OFFLINE")
                 .build();
@@ -283,8 +281,8 @@ public class UserService {
     private PublicProfileResponse toPublicProfileResponse(User user) {
         return PublicProfileResponse.builder()
                 .id(user.getId().toString())
-                .displayName(user.getDisplayName() != null ? user.getDisplayName() : user.getFirstName() + " " + user.getLastName())
-                .handle(user.getHandle())
+                .displayName(user.getFirstName() + " " + user.getLastName())
+                .username(user.getUsername())
                 .profileImageUrl(user.getProfileImageUrl())
                 .onlineStatus("OFFLINE")
                 .build();
@@ -481,13 +479,13 @@ public class UserService {
         }
     }
     
-    public boolean isHandleAvailable(String handle) {
-        if (handle == null || handle.isBlank()) return false;
-        String normalized = handle.toLowerCase().trim();
+    public boolean isUsernameAvailable(String username) {
+        if (username == null || username.isBlank()) return false;
+        String normalized = username.toLowerCase().trim();
         if (!HANDLE_PATTERN.matcher(normalized).matches()) {
             return false;
         }
-        return !userRepository.existsByHandle(normalized);
+        return !userRepository.existsByUsername(normalized);
     }
 
     public boolean isEmailAvailable(String email) {
@@ -508,7 +506,7 @@ public class UserService {
         return !userRepository.existsByPhoneNumber(normalized);
     }
 
-    public List<String> suggestHandles(String firstName, String lastName) {
+    public List<String> suggestUsernames(String firstName, String lastName) {
         String base = (firstName + lastName).replaceAll("[^a-z0-9]", "").toLowerCase();
         if (base.isEmpty()) base = "user";
         
@@ -516,7 +514,7 @@ public class UserService {
         int suffix = 1;
         while (suggestions.size() < 3 && suffix < 1000) {
             String candidate = base + suffix;
-            if (candidate.length() >= 3 && !userRepository.existsByHandle(candidate)) {
+            if (candidate.length() >= 3 && !userRepository.existsByUsername(candidate)) {
                 suggestions.add(candidate);
             }
             suffix++;
@@ -525,7 +523,7 @@ public class UserService {
         // Add some more variations if we need 3
         if (suggestions.size() < 3 && !firstName.isEmpty() && !lastName.isEmpty()) {
             String altBase = firstName.toLowerCase().replaceAll("[^a-z0-9]", "") + "_" + lastName.toLowerCase().replaceAll("[^a-z0-9]", "");
-            if (altBase.length() >= 3 && altBase.length() <= 30 && !userRepository.existsByHandle(altBase)) {
+            if (altBase.length() >= 3 && altBase.length() <= 30 && !userRepository.existsByUsername(altBase)) {
                 suggestions.add(altBase);
             }
         }

@@ -31,3 +31,14 @@ export interface PublicProfile {
   profileImageUrl?: string;
   onlineStatus?: string;
 }
+
+export interface ContactRequest {
+  id: string;
+  senderUserId: string;
+  receiverUserId: string;
+  status: string;
+  senderDisplayName: string;
+  senderUsername: string;
+  senderProfileImageUrl?: string;
+  createdAt: string;
+}

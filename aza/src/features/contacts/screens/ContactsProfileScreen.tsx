@@ -181,11 +181,30 @@ export default function ContactsProfileScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actionRow}>
-          <ActionItem icon="arrow-up" label="Send" onPress={handleSend} Colors={Colors} />
-          <ActionItem icon="arrow-down" label="Request" onPress={handleRequest} Colors={Colors} />
-          <ActionItem icon="message-circle" label="Chat" onPress={handleChat} Colors={Colors} />
-        </View>
+        {contact ? (
+          <View style={styles.actionRow}>
+            <ActionItem icon="arrow-up" label="Send" onPress={handleSend} Colors={Colors} />
+            <ActionItem icon="arrow-down" label="Request" onPress={handleRequest} Colors={Colors} />
+            <ActionItem icon="message-circle" label="Chat" onPress={handleChat} Colors={Colors} />
+          </View>
+        ) : (
+          targetUserId && (
+            <TouchableOpacity 
+              style={[styles.addContactButton, { backgroundColor: Colors.primary }]} 
+              onPress={async () => {
+                try {
+                  await useContactStore.getState().requestContact(targetUserId);
+                  Alert.alert("Success", "Contact request sent.");
+                } catch (error: any) {
+                  Alert.alert("Error", error.message || "Failed to send contact request.");
+                }
+              }}
+            >
+              <Feather name="user-plus" size={20} color={Colors.secondary} />
+              <Text style={[styles.addContactText, { color: Colors.secondary }]}>Request to add to contacts</Text>
+            </TouchableOpacity>
+          )
+        )}
 
         {/* Contact Details */}
         {(contact?.email || contact?.phoneNumber) && (
@@ -324,4 +343,18 @@ const styles = StyleSheet.create({
     borderTopColor: "#FEE2E2",
   },
   blockText: { ...Typography.bodyLg, fontWeight: "600" },
+  addContactButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+  },
+  addContactText: {
+    ...Typography.bodyLg,
+    fontWeight: "700",
+    marginLeft: Spacing.sm,
+  },
 });

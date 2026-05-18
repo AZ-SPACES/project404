@@ -84,7 +84,7 @@ public class DisputeService {
                 .transactionId(d.getTransactionId().toString())
                 .userId(d.getUserId().toString())
                 .userName(user != null ? user.getFirstName() + " " + user.getLastName() : "Unknown")
-                .userHandle(user != null ? user.getHandle() : null)
+                .userHandle(user != null ? user.getUsername() : null)
                 .amount(d.getAmount())
                 .currency(d.getCurrency())
                 .category(d.getCategory().name())

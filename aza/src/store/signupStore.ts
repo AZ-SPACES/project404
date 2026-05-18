@@ -100,7 +100,6 @@ export const useSignupStore = create<SignupState>((set, get) => ({
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        displayName: `${data.firstName} ${data.lastName}`.trim(),
         pronouns: data.pronoun === 'custom' ? data.customPronoun : data.pronoun,
         homeAddress: data.homeAddress,
         city: data.city,
