@@ -9,6 +9,8 @@ services:
     profiles: ["disabled"]
 
   nginx:
+    depends_on:
+      - backend
     volumes:
       - ./nginx/backend-only/conf.d:/etc/nginx/conf.d:ro
       - certbot_webroot:/var/www/certbot:ro
