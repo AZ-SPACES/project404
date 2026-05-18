@@ -1,0 +1,139 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: aza-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-aza_db}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - aza-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME:-aza_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: aza-redis
+    restart: unless-stopped
+    command: >
+      sh -c "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-server --requirepass $$REDIS_PASSWORD; else redis-server; fi"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    networks:
+      - aza-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: aza-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-aza_db}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY}
+      ARKESEL_API_KEY: ${ARKESEL_API_KEY}
+      ARKESEL_SENDER_ID: ${ARKESEL_SENDER_ID}
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      TURN_SECRET: ${TURN_SECRET}
+      TURN_HOST: ${TURN_HOST:-turn.aza.systems}
+      APP_BASE_URL: https://aza.systems
+      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems
+      TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
+      SWAGGER_ENABLED: false
+      HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
+      CHALLENGE_HMAC_SECRET: ${CHALLENGE_HMAC_SECRET}
+      PASSKIT_API_KEY: ${PASSKIT_API_KEY:-}
+      PASSKIT_API_SECRET: ${PASSKIT_API_SECRET:-}
+      PASSKIT_TEMPLATE_ID: ${PASSKIT_TEMPLATE_ID:-}
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      FIREBASE_CREDENTIALS_PATH: /etc/aza/firebase-service-account.json
+    volumes:
+      - ./backend/src/main/resources/firebase-service-account.json:/etc/aza/firebase-service-account.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aza-network
+
+  aza-web:
+    build:
+      context: ./aza-web
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
+  aza-admin:
+    build:
+      context: ./aza-admin
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: aza-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - aza-web
+      - aza-admin
+    networks:
+      - aza-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: aza-certbot
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'"
+
+networks:
+  aza-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  certbot_webroot:
+  certbot_certs:
