@@ -5,7 +5,7 @@
 set -euo pipefail
 
 DOMAIN="aza.systems"
-EMAIL="csdussey@st.knust.edu.gh"
+EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Starting services with HTTP-only nginx config..."

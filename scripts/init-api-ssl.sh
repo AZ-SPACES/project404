@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-EMAIL="csdussey@st.knust.edu.gh"
+EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_CMD="docker compose -f $COMPOSE_DIR/docker-compose.yml -f $COMPOSE_DIR/docker-compose.backend.yml"
 
