@@ -264,7 +264,6 @@ public class BiometricService {
                         .email(user.getEmail())
                         .firstName(user.getFirstName())
                         .lastName(user.getLastName())
-                        .displayName(user.getDisplayName())
                         .profileImageUrl(user.getProfileImageUrl())
                         .kycStatus(user.getKycStatus().name())
                         .passcodeSet(user.getPasscodeHash() != null)

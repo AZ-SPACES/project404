@@ -22,7 +22,6 @@ public class AuthResponse {
         private String phone;
         private String firstName;
         private String lastName;
-        private String displayName;
         private String handle;
         private String pronouns;
         private String dateOfBirth;

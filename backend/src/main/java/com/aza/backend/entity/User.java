@@ -34,8 +34,8 @@ public class User {
     @Builder.Default
     private java.math.BigDecimal balance = java.math.BigDecimal.ZERO;
 
-    @Column(unique = true)
-    private String handle;
+    @Column(name = "username", unique = true)
+    private String username;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -56,7 +56,6 @@ public class User {
     private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
 
     // --- Profile Information ---
-    private String displayName;
     private String pronouns;
     private LocalDate dateOfBirth;
     private String profileImageUrl;

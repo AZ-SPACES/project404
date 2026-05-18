@@ -10,7 +10,7 @@ import lombok.Data;
 public class BlockedUserResponse {
     private String blockedUserId;
     private String displayName;
-    private String handle;
+    private String username;
     private String profileImageUrl;
     private String blockedAt;
 }

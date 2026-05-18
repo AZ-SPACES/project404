@@ -82,7 +82,7 @@ export function FindMeByScreen() {
 
   const navigation = useNavigation<NavigationProp>();
   const { 
-    displayName, email, phone, 
+    handle, email, phone, 
     findMeByHandle, findMeByEmail, findMeByPhone,
     updateProfile, fetchProfile 
   } = useProfile();
@@ -149,7 +149,7 @@ export function FindMeByScreen() {
           <SettingRow
             iconType="Custom"
             title="Aza tag"
-            subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'}
+            subtitle={handle ? `@${handle}` : '@—'}
             switchValue={findMeByHandle ?? true}
             onSwitchChange={handleWiseTagChange}
           />

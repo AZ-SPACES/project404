@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class PublicProfileResponse {
     private String id;
     private String displayName;
-    private String handle;
+    private String username;
     private String profileImageUrl;
     private String onlineStatus;
 }

@@ -312,7 +312,7 @@ public class ChatService {
 
     @Transactional
     public ChatResponse getOrCreateSupportChat(User user, String supportHandle) {
-        User supportUser = userRepository.findByHandle(supportHandle)
+        User supportUser = userRepository.findByUsername(supportHandle)
                 .orElseThrow(() -> new RuntimeException("Support account not found"));
 
         Chat chat = chatRepository.findByParticipants(user.getId(), supportUser.getId())
@@ -537,7 +537,7 @@ public class ChatService {
                 .otherUserId(otherUserId.toString())
                 .otherUserName(otherUser != null
                         ? otherUser.getFirstName() + " " + otherUser.getLastName() : "Unknown")
-                .otherUserHandle(otherUser != null ? otherUser.getHandle() : null)
+                .otherUserHandle(otherUser != null ? otherUser.getUsername() : null)
                 .otherUserAvatar(otherUser != null ? otherUser.getProfileImageUrl() : null)
                 .otherUserStatus(otherUser != null
                         ? presenceService.getStatus(otherUser.getId()) : "OFFLINE")

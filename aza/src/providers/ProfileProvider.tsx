@@ -70,7 +70,7 @@ const INITIAL_PROFILE: ProfileData = {
 };
 
 type ProfileContextType = ProfileData & {
-  setDisplayName: (name: string) => Promise<void>;
+  setUsername: (username: string) => Promise<void>;
   setProfileImage: (uri: string | null) => Promise<void>;
   requestEmailChange: (email: string) => Promise<void>;
   verifyEmailChange: (email: string, code: string) => Promise<void>;
@@ -114,7 +114,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const { data } = await getMe();
       const userData = data.data;
       const updated: ProfileData = {
-        displayName: userData.displayName || `${userData.firstName} ${userData.lastName}`,
+        displayName: `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || '',
         firstName: userData.firstName,
         lastName: userData.lastName,
         dateOfBirth: userData.dateOfBirth,
@@ -167,12 +167,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [userToken, fetchProfile]);
 
-  const setDisplayName = useCallback(async (name: string) => {
+  const setUsername = useCallback(async (username: string) => {
     try {
-      await updateMe({ displayName: name });
+      await updateMe({ handle: username });
       await fetchProfile();
     } catch (e) {
-      console.error('Failed to save display name', e);
+      console.error('Failed to save username', e);
       throw e;
     }
   }, [fetchProfile]);
@@ -343,7 +343,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return (
     <ProfileContext.Provider value={{
       ...profile,
-      setDisplayName,
+      setUsername,
       setProfileImage,
       requestEmailChange: requestEmailChangeAction,
       verifyEmailChange: verifyEmailChangeAction,

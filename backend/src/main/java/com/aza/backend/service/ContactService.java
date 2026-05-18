@@ -3,9 +3,11 @@ package com.aza.backend.service;
 import com.aza.backend.dto.contact.*;
 import com.aza.backend.entity.BlockedUser;
 import com.aza.backend.entity.Contact;
+import com.aza.backend.entity.ContactRequest;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.BlockedUserRepository;
 import com.aza.backend.repository.ContactRepository;
+import com.aza.backend.repository.ContactRequestRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.RateLimitService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class ContactService {
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
     private final BlockedUserRepository blockedUserRepository;
+    private final ContactRequestRepository contactRequestRepository;
     private final RateLimitService rateLimitService;
 
     //LIST CONTACTS
@@ -147,16 +150,104 @@ public class ContactService {
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        Contact contact = findOrCreateContact(owner.getId(), targetUserId, targetUser);
+        return toContactResponse(contact);
+    }
+
+    @Transactional
+    public void requestContact(User sender, UUID targetUserId) {
+        if (sender.getId().equals(targetUserId)) {
+            throw new RuntimeException("You cannot request yourself as a contact");
+        }
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         // Check if already a contact
-        Optional<Contact> existing = contactRepository.findByOwnerUserIdAndContactUserId(
-                owner.getId(), targetUserId);
+        if (contactRepository.findByOwnerUserIdAndContactUserId(sender.getId(), targetUserId).isPresent()) {
+            throw new RuntimeException("User is already a contact");
+        }
+
+        Optional<ContactRequest> existing = contactRequestRepository.findBySenderUserIdAndReceiverUserId(sender.getId(), targetUserId);
+        if (existing.isPresent() && existing.get().getStatus() == ContactRequest.RequestStatus.PENDING) {
+            throw new RuntimeException("Contact request already sent");
+        }
+
+        ContactRequest request = ContactRequest.builder()
+                .senderUserId(sender.getId())
+                .receiverUserId(targetUserId)
+                .status(ContactRequest.RequestStatus.PENDING)
+                .build();
+        contactRequestRepository.save(request);
+    }
+
+    public List<ContactRequestResponse> getPendingRequests(UUID receiverId) {
+        return contactRequestRepository.findAllByReceiverUserIdAndStatus(receiverId, ContactRequest.RequestStatus.PENDING)
+                .stream()
+                .map(req -> {
+                    User sender = userRepository.findById(req.getSenderUserId()).orElse(null);
+                    return ContactRequestResponse.builder()
+                            .id(req.getId().toString())
+                            .senderUserId(req.getSenderUserId().toString())
+                            .receiverUserId(req.getReceiverUserId().toString())
+                            .status(req.getStatus().name())
+                            .senderDisplayName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                            .senderUsername(sender != null ? sender.getUsername() : null)
+                            .senderProfileImageUrl(sender != null ? sender.getProfileImageUrl() : null)
+                            .createdAt(req.getCreatedAt() != null ? req.getCreatedAt().toString() : null)
+                            .build();
+                }).toList();
+    }
+
+    @Transactional
+    public ContactResponse approveContactRequest(User receiver, UUID requestId) {
+        ContactRequest request = contactRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (!request.getReceiverUserId().equals(receiver.getId())) {
+            throw new RuntimeException("Not authorized");
+        }
+        if (request.getStatus() != ContactRequest.RequestStatus.PENDING) {
+            throw new RuntimeException("Request already processed");
+        }
         
+        request.setStatus(ContactRequest.RequestStatus.APPROVED);
+        contactRequestRepository.save(request);
+        
+        // Add each other as contacts
+        addMutualContact(request.getSenderUserId(), request.getReceiverUserId());
+        return toContactResponse(addMutualContact(request.getReceiverUserId(), request.getSenderUserId()));
+    }
+
+    @Transactional
+    public void rejectContactRequest(User receiver, UUID requestId) {
+        ContactRequest request = contactRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (!request.getReceiverUserId().equals(receiver.getId())) {
+            throw new RuntimeException("Not authorized");
+        }
+        
+        request.setStatus(ContactRequest.RequestStatus.REJECTED);
+        contactRequestRepository.save(request);
+    }
+
+    private Contact findOrCreateContact(UUID ownerId, UUID targetUserId, User targetUser) {
+        Optional<Contact> existing = contactRepository.findByOwnerUserIdAndContactUserId(ownerId, targetUserId);
         if (existing.isPresent()) {
-            return toContactResponse(existing.get());
+            return existing.get();
+        }
+
+        if (targetUser.getPhoneNumber() != null) {
+            Optional<Contact> existingByPhone = contactRepository.findByOwnerUserIdAndPhoneNumber(ownerId, targetUser.getPhoneNumber());
+            if (existingByPhone.isPresent()) {
+                Contact contact = existingByPhone.get();
+                contact.setContactUserId(targetUserId);
+                contact.setIsAzaUser(true);
+                return contactRepository.save(contact);
+            }
         }
 
         Contact contact = Contact.builder()
-                .ownerUserId(owner.getId())
+                .ownerUserId(ownerId)
                 .contactUserId(targetUserId)
                 .displayName(targetUser.getFirstName() + " " + targetUser.getLastName())
                 .phoneNumber(targetUser.getPhoneNumber())
@@ -164,9 +255,12 @@ public class ContactService {
                 .isAzaUser(true)
                 .isFavorite(false)
                 .build();
+        return contactRepository.save(contact);
+    }
 
-        contact = contactRepository.save(contact);
-        return toContactResponse(contact);
+    private Contact addMutualContact(UUID ownerId, UUID contactId) {
+        User targetUser = userRepository.findById(contactId).get();
+        return findOrCreateContact(ownerId, contactId, targetUser);
     }
 
     public ContactResponse getContact(UUID userId, UUID contactId) {
@@ -234,7 +328,7 @@ public class ContactService {
                             .blockedUserId(block.getBlockedUserId().toString())
                             .displayName(target != null
                                     ? target.getFirstName() + " " + target.getLastName() : "Unknown")
-                            .handle(target != null ? target.getHandle() : null)
+                            .username(target != null ? target.getUsername() : null)
                             .profileImageUrl(target != null ? target.getProfileImageUrl() : null)
                             .blockedAt(block.getCreatedAt() != null
                                     ? block.getCreatedAt().toString() : null)
@@ -270,7 +364,7 @@ public class ContactService {
      */
     private ContactResponse toContactResponse(Contact contact) {
         String profileImageUrl = null;
-        String handle = null;
+        String username = null;
         String responsePhone = contact.getPhoneNumber();
         String responseEmail = contact.getEmail();
 
@@ -282,7 +376,7 @@ public class ContactService {
                 // Only surface Aza identity if the user still allows discovery
                 if (Boolean.TRUE.equals(user.getFindMeByPhone())) {
                     profileImageUrl = user.getProfileImageUrl();
-                    handle = user.getHandle();
+                    username = user.getUsername();
                 } else {
                     // User revoked discoverability — hide all identifying Aza fields
                     responsePhone = null;
@@ -303,7 +397,7 @@ public class ContactService {
                 .isAzaUser(Boolean.TRUE.equals(contact.getIsAzaUser()))
                 .isFavorite(Boolean.TRUE.equals(contact.getIsFavorite()))
                 .profileImageUrl(profileImageUrl)
-                .handle(handle)
+                .handle(username)
                 .build();
     }
 }

@@ -63,7 +63,7 @@ public class UserController {
 
     @GetMapping("/by-handle/{handle}")
     public ResponseEntity<ApiResponse<Object>> getByHandle(@PathVariable String handle) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfileByHandle(handle)));
+        return ResponseEntity.ok(ApiResponse.success(userService.getPublicProfileByUsername(handle)));
     }
 
     @GetMapping("/search")
@@ -189,7 +189,7 @@ public class UserController {
 
     @GetMapping("/check-handle")
     public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
-        return ResponseEntity.ok(ApiResponse.success(userService.isHandleAvailable(handle)));
+        return ResponseEntity.ok(ApiResponse.success(userService.isUsernameAvailable(handle)));
     }
 
     @GetMapping("/check-email")
@@ -203,9 +203,9 @@ public class UserController {
     }
 
     @GetMapping("/suggest-handles")
-    public ResponseEntity<ApiResponse<java.util.List<String>>> suggestHandles(
+    public ResponseEntity<ApiResponse<java.util.List<String>>> suggestUsernames(
             @RequestParam String firstName,
             @RequestParam String lastName) {
-        return ResponseEntity.ok(ApiResponse.success(userService.suggestHandles(firstName, lastName)));
+        return ResponseEntity.ok(ApiResponse.success(userService.suggestUsernames(firstName, lastName)));
     }
 }

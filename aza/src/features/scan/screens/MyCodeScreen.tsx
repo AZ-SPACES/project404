@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import { api } from '../../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +19,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { displayName, profileImageUri, handle } = useProfile();
   const { showToast } = useToast();
-  const userHandle = handle || "username";
+  const userHandle = handle || "username";      
   const profileLink = `http://localhost:8080/${userHandle}`;
 
   const handleShare = async () => {
@@ -33,11 +34,17 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
 
   const handleAddToAppleWallet = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // TODO: Replace with endpoint returning a .pkpass file
-    // const passUrl = `https://api.aza.me/wallet/apple/${userHandle}`;
-    // await Linking.openURL(passUrl).catch(() => {
-    //   showToast('Unable to open Apple Wallet.', 'error');
-    // });
+    try {
+      const res = await api.get(`/api/v1/wallet/apple/${userHandle}`);
+      const passUrl: string | undefined = res.data?.data?.url;
+      if (passUrl) {
+        await Linking.openURL(passUrl);
+      } else {
+        showToast('Unable to generate Apple Wallet pass.', 'error');
+      }
+    } catch {
+      showToast('Unable to generate Apple Wallet pass.', 'error');
+    }
   };
 
   const handleAddToGoogleWallet = async () => {

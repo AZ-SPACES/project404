@@ -9,7 +9,6 @@ public class UpdateProfileRequest {
     private String lastName;
     private String email;
     private String phone;
-    private String displayName;
     private String handle;
     private String pronouns;
     private String dateOfBirth;

@@ -48,7 +48,7 @@ public class BillForwardingService {
     public void processIncomingBill(String handle, String billSubject, BigDecimal amount, String merchantName) {
         log.info("Processing incoming bill for handle: {} from merchant: {}", handle, merchantName);
 
-        Optional<User> userOpt = userRepository.findByHandle(handle.toLowerCase());
+        Optional<User> userOpt = userRepository.findByUsername(handle.toLowerCase());
         if (userOpt.isEmpty()) {
             log.warn("User with handle {} not found. Ignoring bill.", handle);
             return;
@@ -60,7 +60,7 @@ public class BillForwardingService {
 
     private void processBillForUser(User user, String billSubject, BigDecimal amount, String merchantName) {
         if (!Boolean.TRUE.equals(user.getBillForwardingEnabled())) {
-            log.warn("Bill forwarding is disabled for user {}. Ignoring bill.", user.getHandle());
+            log.warn("Bill forwarding is disabled for user {}. Ignoring bill.", user.getUsername());
             return;
         }
 

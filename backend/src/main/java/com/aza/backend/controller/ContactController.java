@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.contact.BlockedUserResponse;
 import com.aza.backend.dto.contact.ContactResponse;
+import com.aza.backend.dto.contact.ContactRequestResponse;
 import com.aza.backend.dto.contact.ContactSyncRequest;
 import com.aza.backend.dto.contact.ContactSyncResponse;
 import com.aza.backend.entity.User;
@@ -134,6 +135,53 @@ public class ContactController {
             @PathVariable UUID targetUserId) {
         return ResponseEntity.ok(ApiResponse.success(
                 contactService.addContact(user, targetUserId)));
+    }
+
+    /**
+     * POST /api/v1/contacts/request/{targetUserId}
+     * Send a contact request to an Aza user.
+     */
+    @PostMapping("/request/{targetUserId}")
+    public ResponseEntity<ApiResponse<String>> requestContact(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID targetUserId) {
+        contactService.requestContact(user, targetUserId);
+        return ResponseEntity.ok(ApiResponse.success("Contact request sent"));
+    }
+
+    /**
+     * GET /api/v1/contacts/requests
+     * Get pending contact requests for the current user.
+     */
+    @GetMapping("/requests")
+    public ResponseEntity<ApiResponse<List<ContactRequestResponse>>> getContactRequests(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                contactService.getPendingRequests(user.getId())));
+    }
+
+    /**
+     * POST /api/v1/contacts/requests/{requestId}/approve
+     * Approve a contact request.
+     */
+    @PostMapping("/requests/{requestId}/approve")
+    public ResponseEntity<ApiResponse<ContactResponse>> approveContactRequest(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID requestId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                contactService.approveContactRequest(user, requestId)));
+    }
+
+    /**
+     * POST /api/v1/contacts/requests/{requestId}/reject
+     * Reject a contact request.
+     */
+    @PostMapping("/requests/{requestId}/reject")
+    public ResponseEntity<ApiResponse<String>> rejectContactRequest(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID requestId) {
+        contactService.rejectContactRequest(user, requestId);
+        return ResponseEntity.ok(ApiResponse.success("Contact request rejected"));
     }
 
     /**

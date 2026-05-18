@@ -46,7 +46,7 @@ export default function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { homeBackground } = useDisplayContext();
-  const { displayName, profileImageUri } = useProfile();
+  const { handle, profileImageUri } = useProfile();
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(true);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
@@ -89,7 +89,6 @@ export default function HomeScreen() {
     refresh();
   }, [refresh]);
 
-  const firstName = displayName?.trim().split(" ")[0];
   const greeting = getGreeting();
   
 
@@ -112,7 +111,7 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
-              {`${greeting}${firstName ? `, ${firstName}` : ""}`}
+              {`${greeting}${handle ? `, ${handle}` : ""}`}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity
