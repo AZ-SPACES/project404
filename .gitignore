@@ -7,7 +7,7 @@
 **/target/
 **/*.env
 !**/.env.example
-backend/src/main/resources/ firebase-service-account.json
+backend/src/main/resources/firebase-service-account.json
 *.pdf
 backend/_env.bin
 aza-admin/.env.local
