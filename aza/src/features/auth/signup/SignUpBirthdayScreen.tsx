@@ -13,12 +13,12 @@ import { useNavigation } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import {  useAppTheme, ThemeColors, Typography, Spacing  } from "../../../theme";
+import {  useAppTheme, ThemeColors, Typography, Spacing , Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
-import { useProfile } from "../../../providers/ProfileProvider";
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -27,10 +27,7 @@ export default function SignUpBirthdayScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { login } = useAuth();
-  const { data, update, reset } = useSignUp();
-  const { setDisplayName, setEmail, setPhone } = useProfile();
-
+  const { data, update,  isLoading } = useSignUp();
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -56,14 +53,9 @@ export default function SignUpBirthdayScreen() {
     setCurrentMonth(dateString);
   }, []);
 
-  const handleNext = useCallback(async () => {
-    const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-    if (fullName) await setDisplayName(fullName);
-    if (data.email) await setEmail(data.email);
-    if (data.phoneNumber) await setPhone(data.phoneNumber);
-    login("signup-token-placeholder", false, false);
-    reset();
-  }, [login, reset, data.firstName, data.lastName, data.email, data.phoneNumber, setDisplayName, setEmail, setPhone]);
+  const handleNext = useCallback(() => {
+    navigation.navigate("CreatePasscode");
+  }, [navigation]);
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -135,11 +127,12 @@ export default function SignUpBirthdayScreen() {
             onPress={handleNext}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
-            borderRadius={30}
+            borderRadius={Radius.sm}
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={isDisabled}
+            disabled={isDisabled || isLoading}
+            loading={isLoading}
           />
         </View>
       </View>

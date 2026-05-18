@@ -19,16 +19,20 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { useKYC } from '../../../providers/KYCProvider';
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPDetails">;
 
-export default function PEPDetailsScreen() {
+export function PEPDetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [role, setRole] = useState("");
-  const [wealthSource, setWealthSource] = useState("");
+  const { data, update, submitPepStatus, isSubmitting } = useKYC();
+  const { showToast } = useToast();
+  const [role, setRole] = useState(data.pepRole);
+  const [wealthSource, setWealthSource] = useState(data.pepWealthSource);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -43,9 +47,21 @@ export default function PEPDetailsScreen() {
 
   const isFormValid = role.trim().length > 0 && wealthSource.trim().length > 0;
 
-  const handleNext = () => {
-    // Proceed to next KYC EDD step
-    navigation.navigate("PEPAccountPurpose");
+  const handleNext = async () => {
+    try {
+      if (data.pepStatus) {
+        // First update local state for wealthSource
+        update({ pepRole: role.trim(), pepWealthSource: wealthSource.trim() });
+        
+        // Then submit the role update to the backend
+        await submitPepStatus(true, data.pepStatus, role.trim());
+        
+        navigation.navigate("PEPAccountPurpose");
+      }
+    } catch (error) {
+      console.error('Failed to submit PEP details:', error);
+      showToast('Submission failed. Please try again.', 'error');
+    }
   };
 
   return (
@@ -145,7 +161,8 @@ export default function PEPDetailsScreen() {
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
-              disabled={!isFormValid}
+              loading={isSubmitting}
+              disabled={!isFormValid || isSubmitting}
             />
           </View>
         </KeyboardAvoidingView>

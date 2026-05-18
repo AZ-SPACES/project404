@@ -1,90 +1,52 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React from 'react';
+import { useSignupStore, SignupData, PronounOption, EmploymentOption, YesNo } from '../store/signupStore';
+import { useShallow } from 'zustand/react/shallow';
 
-// ─── Shared types ─────────────────────────────────────────────────────────────
+// ─── Shared types (re-exported for backward compatibility) ────
+export type { PronounOption, EmploymentOption, YesNo };
+export type SignUpData = SignupData;
 
-export type PronounOption = 'he/his' | 'she/her' | 'they/them' | 'custom' | null;
-export type EmploymentOption =
-  | 'Student'
-  | 'Part-Time'
-  | 'Full-Time'
-  | 'Self-employed'
-  | 'Retired'
-  | 'Unemployed'
-  | null;
-export type YesNo = 'Yes' | 'No' | null;
-
-export type SignUpData = {
-  phoneNumber: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  homeAddress: string;
-  city: string;
-  nationality: string | null;
-  otherNationality: string;
-  isTaxResidentAbroad: YesNo;
-  taxCountry: string;
-  isUSPerson: YesNo;
-  pronoun: PronounOption;
-  customPronoun: string;
-  employmentStatus: EmploymentOption;
-  dateOfBirth: string;
-};
-
-const INITIAL_DATA: SignUpData = {
-  phoneNumber: '',
-  email: '',
-  password: '',
-  firstName: '',
-  lastName: '',
-  homeAddress: '',
-  city: '',
-  nationality: null,
-  otherNationality: '',
-  isTaxResidentAbroad: null,
-  taxCountry: '',
-  isUSPerson: null,
-  pronoun: null,
-  customPronoun: '',
-  employmentStatus: null,
-  dateOfBirth: '',
-};
-
-// ─── Context ──────────────────────────────────────────────────────────────────
-
-type SignUpContextType = {
-  data: SignUpData;
-  update: (fields: Partial<SignUpData>) => void;
-  reset: () => void;
-};
-
-const SignUpContext = createContext<SignUpContextType | undefined>(undefined);
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
+// ─── Provider (No-op now, just passing children) ──────────────
 export const SignUpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<SignUpData>(INITIAL_DATA);
-
-  const update = useCallback((fields: Partial<SignUpData>) => {
-    setData((prev) => ({ ...prev, ...fields }));
-  }, []);
-
-  const reset = useCallback(() => {
-    setData(INITIAL_DATA);
-  }, []);
-
-  return (
-    <SignUpContext.Provider value={{ data, update, reset }}>
-      {children}
-    </SignUpContext.Provider>
-  );
+  return <>{children}</>;
 };
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Selector-based hooks ─────────────────────────────────────
+// These use Zustand selectors so components only re-render when
+// the specific slice they read actually changes.
 
-export function useSignUp(): SignUpContextType {
-  const ctx = useContext(SignUpContext);
-  if (!ctx) throw new Error('useSignUp must be used within a SignUpProvider');
-  return ctx;
+/** Subscribe to signup form data only. */
+export function useSignupData() {
+  return useSignupStore((s) => s.data);
+}
+
+/**
+ * Returns stable action references — never triggers a re-render
+ * because the selector output is shallow-compared and actions are
+ * referentially stable in Zustand.
+ */
+export function useSignupActions() {
+  return useSignupStore(
+    useShallow((s) => ({
+      update: s.updateData,
+      reset: s.reset,
+      submitSignup: s.submitSignup,
+    }))
+  );
+}
+
+/** Subscribe to isLoading only. */
+export function useSignupLoading() {
+  return useSignupStore((s) => s.isLoading);
+}
+
+// ─── Legacy hook (backward compat) ────────────────────────────
+// Components that haven't been migrated can still call useSignUp().
+// It subscribes to everything — prefer the granular hooks above.
+export function useSignUp() {
+  const data = useSignupData();
+  const { update, reset, submitSignup } = useSignupActions();
+  const isLoading = useSignupLoading();
+
+  return { data, update, reset, submitSignup, isLoading };
 }

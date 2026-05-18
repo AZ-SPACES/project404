@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, DimensionValue, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, DimensionValue, ActivityIndicator, View } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -16,6 +16,7 @@ interface ButtonProps {
   width?: DimensionValue;
   disabled?: boolean;
   loading?: boolean;
+  leftIcon?: React.ReactNode;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -33,6 +34,7 @@ const Button: React.FC<ButtonProps> = ({
   width = '100%',
   disabled = false,
   loading = false,
+  leftIcon,
   ...props
 }) => {
   const isDisabled = disabled || loading;
@@ -58,19 +60,23 @@ const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator size="small" color={backgroundColor} />
       ) : (
-        <Text
-          style={[
-            styles.buttonText,
-            {
-              color: isDisabled ? backgroundColor : textColor,
-              fontSize,
-              fontWeight,
-            },
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <View style={styles.contentContainer}>
+          {leftIcon}
+          <Text
+            style={[
+              styles.buttonText,
+              {
+                color: isDisabled ? backgroundColor : textColor,
+                fontSize,
+                fontWeight,
+                marginLeft: leftIcon ? 8 : 0,
+              },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -78,6 +84,11 @@ const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },

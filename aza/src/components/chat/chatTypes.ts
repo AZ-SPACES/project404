@@ -1,7 +1,15 @@
+import * as FileSystem from 'expo-file-system';
+
 // ----------------------------------------------------------------------------
 // Shared types
 // ----------------------------------------------------------------------------
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
+
+export type ReplyInfo = {
+  id: string;
+  text: string;
+  sender: 'me' | 'other';
+};
 
 export interface Message {
   id: string;
@@ -11,12 +19,28 @@ export interface Message {
   timestamp: number;
   status?: MessageStatus;
   replyTo?: string;
-  type?: 'text' | 'image' | 'document';
+  replyToMessage?: ReplyInfo;
+  type?: 'text' | 'image' | 'document' | 'audio' | 'video';
   uri?: string;
   mimeType?: string;
   fileSize?: number;
   fileName?: string;
+  caption?: string;
+  duration?: number; // For audio messages
+  isStarred?: boolean;
+  resolvedSize?: number;
 }
+
+export type CategoryStats = { size: number; messages: Message[] };
+
+export type StorageDetails = {
+  photos: CategoryStats;
+  videos: CategoryStats;
+  docs: CategoryStats;
+  audio: CategoryStats;
+  totalSize: number;
+};
+
 
 export type MoreAction = { icon: string; label: string; color?: string; onPress: () => void };
 
@@ -43,11 +67,7 @@ export const ATTACHMENT_TILES = [
 
 export const MENU_WIDTH = 260;
 
-export const INITIAL_MESSAGES: Message[] = [
-  { id: '1', text: "I'm supposed to send your money. I will send it tomorrow, 7pm.", sender: 'other', time: '9:30 AM', timestamp: Date.now() - 3600000, type: 'text' },
-  { id: '2', text: 'Will be waiting.', sender: 'me', time: '9:35 AM', timestamp: Date.now() - 3000000, status: 'read', type: 'text' },
-  { id: '3', text: 'Thanks.', sender: 'other', time: '9:40 AM', timestamp: Date.now() - 2400000, type: 'text' },
-];
+export const INITIAL_MESSAGES: Message[] = [];
 
 // ----------------------------------------------------------------------------
 // Date helpers
@@ -93,9 +113,142 @@ export const getDocIcon = (mime?: string): { name: string; color: string } => {
   return { name: 'file', color: '#6B7280' };
 };
 
+// ----------------------------------------------------------------------------
+// Contacts Data
+// ----------------------------------------------------------------------------
+export interface Contact {
+  id: string;
+  name: string;
+  lastMessage: string;
+  time: string;
+  unread: number;
+  online: boolean;
+  avatar: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
+}
+
+export const CONTACTS: Contact[] = [
+  {
+    id: "1",
+    name: "Michael Owusu Addo",
+    lastMessage: "Thanks.",
+    time: "2mins",
+    unread: 0,
+    online: true,
+    avatar: "https://i.pravatar.cc/150?u=michael",
+    isFavorite: true,
+  },
+  {
+    id: "2",
+    name: "Serwaa Amihere",
+    lastMessage: "Did you receive the package?",
+    time: "",
+    unread: 1,
+    online: true,
+    avatar: "https://i.pravatar.cc/150?u=serwaa",
+  },
+  {
+    id: "3",
+    name: "Joselyn Dumas",
+    lastMessage: "Okay, great!",
+    time: "",
+    unread: 2,
+    online: true,
+    avatar: "https://i.pravatar.cc/150?u=joselyn",
+    isFavorite: true,
+  },
+  {
+    id: "4",
+    name: "Kwame Nkrumah",
+    lastMessage: "I'm still waiting for the payment.",
+    time: "30sec",
+    unread: 0,
+    online: false,
+    avatar: "https://i.pravatar.cc/150?u=kwame",
+  },
+  {
+    id: "5",
+    name: "John Dumelo",
+    lastMessage: "The funds should be ...",
+    time: "1min",
+    unread: 0,
+    online: false,
+    avatar: "https://i.pravatar.cc/150?u=john",
+  },
+  {
+    id: "6",
+    name: "Samuel Nartey George",
+    lastMessage: "Sure hahaha",
+    time: "45sec",
+    unread: 0,
+    online: false,
+    avatar: "https://i.pravatar.cc/150?u=samuel",
+    isArchived: true,
+  },
+];
+
 export const formatBytes = (bytes?: number): string => {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(1)} MB`;
+};
+
+// ----------------------------------------------------------------------------
+// Storage helpers
+// ----------------------------------------------------------------------------
+export const calculateStorageAsync = async (messages: Message[]): Promise<StorageDetails> => {
+  const details: StorageDetails = {
+    photos: { size: 0, messages: [] },
+    videos: { size: 0, messages: [] },
+    docs: { size: 0, messages: [] },
+    audio: { size: 0, messages: [] },
+    totalSize: 0,
+  };
+
+  const promises = messages.map(async (m) => {
+    let size = m.fileSize || 0;
+    
+    // If no explicit fileSize, try to fetch it if there is a local URI
+    if (!size && m.uri && !m.uri.startsWith('http')) {
+      try {
+        const info = await FileSystem.getInfoAsync(m.uri);
+        if (info.exists && !info.isDirectory) {
+          size = info.size;
+        }
+      } catch (err) {
+        // Fallback
+      }
+    } 
+    
+    // Final fallback estimation for mock items
+    if (!size) {
+      if (m.type === 'image') size = 2.5 * 1024 * 1024;
+      else if (m.type === 'video') size = 15 * 1024 * 1024;
+      else if (m.type === 'audio') size = Math.max(1, m.duration || 5) * 10 * 1024;
+    }
+
+    if (size > 0) {
+      const updatedMsg = { ...m, resolvedSize: size };
+      details.totalSize += size;
+      if (m.type === 'image') {
+        details.photos.size += size;
+        details.photos.messages.push(updatedMsg);
+      } else if (m.type === 'video') {
+        details.videos.size += size;
+        details.videos.messages.push(updatedMsg);
+      } else if (m.type === 'document') {
+        details.docs.size += size;
+        details.docs.messages.push(updatedMsg);
+      } else if (m.type === 'audio') {
+        details.audio.size += size;
+        details.audio.messages.push(updatedMsg);
+      }
+    }
+  });
+
+  await Promise.all(promises);
+
+  return details;
 };

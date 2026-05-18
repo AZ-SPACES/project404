@@ -1,4 +1,5 @@
-export { default as HelpAndSupportScreen } from './HelpAndSupportScreen';
-export { default as ChatWithUsScreen } from './ChatWithUsScreen';
-export { default as EmailUsScreen } from './EmailUsScreen';
-export { default as TalkToUsScreen } from './TalkToUsScreen';
+export { default as ChatWithUsScreen } from './screens/ChatWithUsScreen';
+export { default as EmailUsScreen } from './screens/EmailUsScreen';
+export { default as HelpAndSupportScreen } from './screens/HelpAndSupportScreen';
+export { default as HelpTopicScreen } from './screens/HelpTopicScreen';
+export { default as TalkToUsScreen } from './screens/TalkToUsScreen';

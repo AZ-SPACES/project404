@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Animated,
   StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +13,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC, PEPStatus } from '../../../providers/KYCProvider';
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPStatus">;
 
@@ -25,11 +26,13 @@ const PEP_OPTIONS: PEPOptions[] = [
   "Yes, I am a family member or close associate of a PEP"
 ];
 
-export default function PEPStatusScreen() {
+export function PEPStatusScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { submitPepStatus, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [selectedOption, setSelectedOption] = useState<PEPOptions | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -43,11 +46,22 @@ export default function PEPStatusScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    if (selectedOption === "No, I am not") {
-      navigation.navigate("VerifyIdentity", { isPEP: false });
-    } else {
-      navigation.navigate("PEPDetails");
+  const handleNext = async () => {
+    try {
+      if (selectedOption === "No, I am not") {
+        await submitPepStatus(false);
+        navigation.navigate("VerifyIdentity", { isPEP: false });
+      } else {
+        const pepStatus: PEPStatus = selectedOption === 'Yes, I am a Politically Exposed Person'
+          ? 'self'
+          : 'family_associate';
+        // We'll update the role in the next screen (PEPDetails)
+        await submitPepStatus(true, pepStatus);
+        navigation.navigate("PEPDetails");
+      }
+    } catch (error) {
+      console.error('Failed to submit PEP status:', error);
+      showToast('Submission failed. Please try again.', 'error');
     }
   };
 
@@ -60,6 +74,9 @@ export default function PEPStatusScreen() {
       ]}
       onPress={() => setSelectedOption(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: selectedOption === label }}
     >
       <Text
         style={[
@@ -86,16 +103,20 @@ export default function PEPStatusScreen() {
                 outputRange: ["transparent", Colors.border] }) },
           ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <MaterialIcons
+                name="chevron-left"
+                size={28}
+                color={Colors.textPrimary}
+              />
+            </TouchableOpacity>
+          )}
           <Animated.View
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >
@@ -137,7 +158,8 @@ export default function PEPStatusScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={selectedOption === null}
+            loading={isSubmitting}
+            disabled={selectedOption === null || isSubmitting}
           />
         </View>
       </View>

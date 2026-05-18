@@ -25,6 +25,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const isMe = message.sender === 'me';
   const isImageType = message.type === 'image';
   const docIcon = getDocIcon(message.mimeType);
+  const replyInfo = message.replyToMessage;
 
   const statusIcon = useMemo(() => {
     if (!isMe || !message.status) return null;
@@ -35,14 +36,40 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     return null;
   }, [isMe, message.status, styles.statusIcon]);
 
+  const hasCaption = !!message.caption;
+  const overlayMeta = isImageType && !hasCaption;
+
   const metaRow = (
-    <View style={[styles.metaContainer, isImageType && styles.metaContainerOverlay]}>
-      <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, isImageType && styles.timeTextOverlay]}>
+    <View style={[styles.metaContainer, overlayMeta && styles.metaContainerOverlay]}>
+      {message.isStarred && (
+        <Feather name="star" size={10} color={isMe ? 'rgba(255,255,255,0.8)' : '#F59E0B'} style={{ marginRight: 4 }} />
+      )}
+      <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
         {message.time}
       </Text>
       {statusIcon}
     </View>
   );
+
+  const replyPreview = replyInfo ? (
+    <View style={[styles.replyPreview, isMe ? styles.replyPreviewMe : styles.replyPreviewOther]}>
+      <View style={[styles.replyBar, { backgroundColor: isMe ? 'rgba(255,255,255,0.5)' : Colors.primary }]} />
+      <View style={styles.replyContent}>
+        <Text style={[styles.replySender, isMe ? styles.replySenderMe : styles.replySenderOther]} numberOfLines={1}>
+          {replyInfo.sender === 'me' ? 'You' : 'Them'}
+        </Text>
+        <Text style={[styles.replyText, isMe ? styles.replyTextMe : styles.replyTextOther]} numberOfLines={2}>
+          {replyInfo.text}
+        </Text>
+      </View>
+    </View>
+  ) : null;
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <TouchableOpacity
@@ -52,12 +79,26 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
     >
       {isImageType && message.uri ? (
-        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-          <Image source={{ uri: message.uri }} style={styles.imageContent} resizeMode="cover" accessibilityLabel="Sent image" />
-          <View style={styles.imageOverlay}>{metaRow}</View>
+        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther, hasCaption && { padding: 4 }]}>
+          {replyPreview}
+          <Image 
+            source={{ uri: message.uri }} 
+            style={[styles.imageContent, hasCaption && { borderRadius: 12 }]} 
+            resizeMode="cover" 
+            accessibilityLabel="Sent image" 
+          />
+          {hasCaption ? (
+            <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingBottom: 6 }}>
+              <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.caption}</Text>
+              {metaRow}
+            </View>
+          ) : (
+            <View style={styles.imageOverlay}>{metaRow}</View>
+          )}
         </View>
       ) : message.type === 'document' ? (
         <View style={[styles.bubble, styles.docBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
           <View style={styles.docCard}>
             <View style={[styles.docIconBox, { backgroundColor: docIcon.color + '22' }]}>
               <Feather name={docIcon.name as any} size={22} color={docIcon.color} />
@@ -75,8 +116,27 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           </View>
           {metaRow}
         </View>
+      ) : message.type === 'audio' ? (
+        <View style={[styles.bubble, styles.audioBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
+          <View style={styles.audioRow}>
+            <TouchableOpacity style={[styles.audioPlayBtn, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : Colors.primary + '15' }]}>
+              <Feather name="play" size={16} color={isMe ? '#FFF' : Colors.primary} style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
+            <View style={styles.audioWaveform}>
+              <View style={[styles.audioWaveLine, { backgroundColor: isMe ? 'rgba(255,255,255,0.4)' : Colors.border }]} />
+              <View style={[styles.audioWaveProgress, { width: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+              <View style={[styles.audioWaveDot, { left: '0%', backgroundColor: isMe ? '#FFF' : Colors.primary }]} />
+            </View>
+            <Text style={[styles.audioTime, isMe ? styles.textMe : styles.textOther]}>
+              {formatDuration(message.duration ?? 0)}
+            </Text>
+          </View>
+          {metaRow}
+        </View>
       ) : (
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+          {replyPreview}
           <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.text}</Text>
           {metaRow}
         </View>
@@ -84,6 +144,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     </TouchableOpacity>
   );
 });
+
 
 // ----------------------------------------------------------------------------
 // Typing indicator — placed here as it uses the same style factory
@@ -163,4 +224,83 @@ const createStyles = (Colors: ThemeColors) =>
     timeTextMe: { color: 'rgba(255,255,255,0.7)' },
     timeTextOther: { color: Colors.textSecondary },
     statusIcon: { marginLeft: 4 },
+    // Audio bubble
+    audioBubble: { minWidth: 200, maxWidth: '80%' },
+    audioRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    audioPlayBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    audioWaveform: {
+      flex: 1,
+      height: 20,
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    audioWaveLine: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 3,
+      borderRadius: 2,
+    },
+    audioWaveProgress: {
+      position: 'absolute',
+      left: 0,
+      height: 3,
+      borderRadius: 2,
+      zIndex: 1,
+    },
+    audioWaveDot: {
+      position: 'absolute',
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginTop: -3.5,
+      zIndex: 2,
+    },
+    audioTime: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontVariant: ['tabular-nums'],
+    },
+    // Reply preview inside bubble
+    replyPreview: {
+      flexDirection: 'row',
+      borderRadius: 6,
+      marginBottom: 6,
+      overflow: 'hidden',
+    },
+    replyPreviewMe: {
+      backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    replyPreviewOther: {
+      backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    replyBar: {
+      width: 3,
+    },
+    replyContent: {
+      flex: 1,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    replySender: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontWeight: '700',
+      marginBottom: 1,
+    },
+    replySenderMe: { color: 'rgba(255,255,255,0.85)' },
+    replySenderOther: { color: Colors.primary },
+    replyText: {
+      ...Typography.caption,
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    replyTextMe: { color: 'rgba(255,255,255,0.65)' },
+    replyTextOther: { color: Colors.textSecondary },
   });

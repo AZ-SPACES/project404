@@ -1,0 +1,48 @@
+appId: com.semekor.k.aza
+name: Login - Phone Number Flow
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# Login screen title
+- assertVisible: "Login"
+
+# Default input mode is phone number
+- assertVisible: "Your Phone Number"
+
+# Password label
+- assertVisible: "Password"
+
+
+# Enter phone number (accessibilityLabel: "Phone number")
+- tapOn:
+    label: "Phone number"
+- inputText: ${TEST_PHONE}
+
+# Enter password (accessibilityLabel: "Password")
+- tapOn:
+    label: "Password"
+- inputText: ${TEST_PASSWORD}
+
+# Tap Login button
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# OTP screen should appear (title: "Enter Code")
+- assertVisible: "Enter Code"
+- assertVisible: "Verify"
+
+# Enter OTP digits
+- inputText: ${TEST_OTP}
+- waitForAnimationToEnd
+
+# Should navigate to home or setup screen after successful OTP
+- waitForAnimationToEnd:
+    timeout: 5000

@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
+import { useKYC, PEPProofDocType } from '../../../providers/KYCProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPProofOfWealth">;
 
@@ -29,14 +30,17 @@ const DOC_TYPES: DocumentType[] = [
   "Tax Return"
 ];
 
-export default function PEPProofOfWealthScreen() {
+export function PEPProofOfWealthScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { submitProofOfWealth, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [docType, setDocType] = useState<DocumentType | null>(null);
   const [fileUploaded, setFileUploaded] = useState<boolean>(false);
   const [fileDetails, setFileDetails] = useState<{ name: string; size: string } | null>(null);
+  const [fileUri, setFileUri] = useState<string | null>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -49,9 +53,16 @@ export default function PEPProofOfWealthScreen() {
     outputRange: [0, 1],
     extrapolate: "clamp" });
 
-  const handleNext = () => {
-    // Proceed to standard KYC part of the EDD flow
-    navigation.navigate("VerifyIdentity", { isPEP: true });
+  const handleNext = async () => {
+    try {
+      if (fileUri) {
+        await submitProofOfWealth(fileUri, fileDetails?.name);
+        navigation.navigate("VerifyIdentity", { isPEP: true });
+      }
+    } catch (error) {
+      console.error('Failed to submit proof of wealth:', error);
+      showToast('Submission failed. Please try again.', 'error');
+    }
   };
 
   const handleSelectDocument = async () => {
@@ -67,6 +78,7 @@ export default function PEPProofOfWealthScreen() {
         const sizeInMb = file.size ? (file.size / (1024 * 1024)).toFixed(2) + " MB" : "Size unknown";
         setFileDetails({ name: file.name, size: sizeInMb });
         setFileUploaded(true);
+        setFileUri(file.uri);
       }
     } catch (err) {
       console.error("DocumentPicker Error: ", err);
@@ -87,6 +99,9 @@ export default function PEPProofOfWealthScreen() {
       ]}
       onPress={() => setDocType(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: docType === label }}
     >
       <Text
         style={[
@@ -116,6 +131,8 @@ export default function PEPProofOfWealthScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"
@@ -201,7 +218,8 @@ export default function PEPProofOfWealthScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!docType || !fileUploaded}
+            loading={isSubmitting}
+            disabled={!docType || !fileUploaded || isSubmitting}
           />
         </View>
       </View>

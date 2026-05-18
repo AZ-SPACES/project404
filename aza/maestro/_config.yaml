@@ -1,0 +1,8 @@
+env:
+  APP_ID: com.semekor.k.aza
+  TEST_PHONE: "0201234567"
+  TEST_EMAIL: "testuser@aza.me"
+  TEST_PASSWORD: "Test@1234"
+  TEST_PIN: "1234"
+  TEST_OTP: "123456"
+  TEST_NAME: "Test User"

@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { removeSelfEverywhere as removeSelfEverywhereApi } from "../../../services/api";
 
 const { height } = Dimensions.get("window");
 
@@ -80,11 +81,15 @@ export function FindMeByScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const navigation = useNavigation<NavigationProp>();
-  const { displayName, email, phone } = useProfile();
+  const { 
+    handle, email, phone, 
+    findMeByHandle, findMeByEmail, findMeByPhone,
+    updateProfile, fetchProfile 
+  } = useProfile();
 
-  const [wiseTagEnabled, setWiseTagEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(true);
-  const [phoneEnabled, setPhoneEnabled] = useState(true);
+  const handleWiseTagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
+  const handleEmailChange = (v: boolean) => { updateProfile({ findMeByEmail: v }); };
+  const handlePhoneChange = (v: boolean) => { updateProfile({ findMeByPhone: v }); };
 
   const [isModalVisible, setModalVisible] = useState(false);
   const modalAnim = useRef(new Animated.Value(height)).current;
@@ -136,17 +141,17 @@ export function FindMeByScreen() {
         <View style={styles.titleSection}>
           <Text style={[Typography.h1, styles.mainTitle]}>Find me by</Text>
           <Text style={[Typography.body, styles.description]}>
-            Set how people on Wise can find you to send and request money.
+            Set how people on Aza can find you to send and request money.
           </Text>
         </View>
 
         <View style={styles.section}>
           <SettingRow
             iconType="Custom"
-            title="Wisetag"
-            subtitle={displayName ? `@${displayName.toLowerCase().replace(/\s+/g, '')}` : '@—'} // handle from backend
-            switchValue={wiseTagEnabled}
-            onSwitchChange={setWiseTagEnabled}
+            title="Aza tag"
+            subtitle={handle ? `@${handle}` : '@—'}
+            switchValue={findMeByHandle ?? true}
+            onSwitchChange={handleWiseTagChange}
           />
 
           <SettingRow
@@ -154,8 +159,8 @@ export function FindMeByScreen() {
             iconName="mail"
             title="Email address"
             subtitle={email ?? 'Not set'}
-            switchValue={emailEnabled}
-            onSwitchChange={setEmailEnabled}
+            switchValue={findMeByEmail ?? true}
+            onSwitchChange={handleEmailChange}
           />
 
           <SettingRow
@@ -163,8 +168,8 @@ export function FindMeByScreen() {
             iconName="phone"
             title="Phone number"
             subtitle={phone ?? 'Not set'}
-            switchValue={phoneEnabled}
-            onSwitchChange={setPhoneEnabled}
+            switchValue={findMeByPhone ?? true}
+            onSwitchChange={handlePhoneChange}
           />
         </View>
 
@@ -231,14 +236,24 @@ export function FindMeByScreen() {
           </View>
 
           <Text style={[Typography.bodyLg, styles.modalDescription]}>
-            If you have already been found by people on Wise, you can remove
+            If you have already been found by people on Aza, you can remove
             yourself - and become hidden in the future.
           </Text>
 
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={styles.destructiveButton}
-              onPress={() => setModalVisible(false)}
+              onPress={async () => {
+                try {
+                  await removeSelfEverywhereApi();
+                  await fetchProfile();
+                  setModalVisible(false);
+                  navigation.goBack();
+                } catch (e) {
+                  // Handle error if needed
+                  setModalVisible(false);
+                }
+              }}
             >
               <Text style={styles.destructiveButtonText}>Remove yourself</Text>
             </TouchableOpacity>

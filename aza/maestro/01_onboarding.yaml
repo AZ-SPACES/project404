@@ -1,0 +1,73 @@
+appId: com.semekor.k.aza
+name: Onboarding - Carousel and Entry Buttons
+---
+# Launch fresh install state
+- launchApp:
+    clearState: true
+
+# Slide 1 should be visible on first launch
+- assertVisible: "INSTANT, SAFE & PROTECTED"
+- waitForAnimationToEnd
+
+# Wait for auto-scroll to slide 2
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertVisible: "100% FEE-FREE TRANSFERS"
+
+# Wait for auto-scroll to slide 3
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertVisible: "ALL IN ONE PLATFORM"
+
+# Wait for auto-scroll to slide 4
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertVisible: "PAY, CHAT & CALL IN ONE APP"
+
+# Restart and manually tap through slides
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Tap right half to go to next slide
+- tapOn:
+    point: "75%,50%"
+- assertVisible: "100% FEE-FREE TRANSFERS"
+
+- tapOn:
+    point: "75%,50%"
+- assertVisible: "ALL IN ONE PLATFORM"
+
+- tapOn:
+    point: "75%,50%"
+- assertVisible: "PAY, CHAT & CALL IN ONE APP"
+
+# Tap left half to go back
+- tapOn:
+    point: "25%,50%"
+- assertVisible: "ALL IN ONE PLATFORM"
+
+# Go back to slide 4
+- tapOn:
+    point: "75%,50%"
+- assertVisible: "PAY, CHAT & CALL IN ONE APP"
+
+# "Get Started" opens bottom sheet with Login / Create Account
+- tapOn: "Get Started"
+- waitForAnimationToEnd
+
+# Verify bottom sheet entry buttons are present
+- assertVisible: "Login"
+- assertVisible: "Create Account"
+
+# Dismiss bottom sheet
+- tapOn:
+    point: "50%,10%"
+- waitForAnimationToEnd
+
+# Tap Get Started again and navigate to Login
+- tapOn: "Get Started"
+- waitForAnimationToEnd
+- tapOn: "Login"
+- waitForAnimationToEnd
+- assertVisible: "Login"

@@ -1,17 +1,5 @@
-export * from './ProfileScreen';
-export * from './AppearanceScreen';
-export * from './NotificationSettingsScreen';
-export * from './securityandprivacy/SecurityAndPrivacyScreen';
-export * from './securityandprivacy/SecureAccountScreen';
-export * from './securityandprivacy/LogoutEverywhereScreen';
-export * from './securityandprivacy/DevicesScreen';
-export * from './securityandprivacy/TwoStepVerificationScreen';
-export * from './securityandprivacy/ChangePasswordScreen';
-export * from './securityandprivacy/FindMeByScreen';
-export * from './securityandprivacy/BillForwardingIntroScreen';
-export * from './securityandprivacy/BillForwardingDetailsScreen';
-export * from './personaldetails/PersonalDetailsScreen';
-export * from './personaldetails/PersonalInformationScreen';
-export * from './personaldetails/ChangeEmailScreen';
-export * from './personaldetails/ChangePhoneScreen';
-
+export { default as ProfileScreen } from './screens/ProfileScreen';
+export { default as AppearanceScreen } from './screens/AppearanceScreen';
+export { default as NotificationSettingsScreen } from './screens/NotificationSettingsScreen';
+export * from './personaldetails';
+export * from './securityandprivacy';

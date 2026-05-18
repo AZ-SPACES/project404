@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -7,15 +7,29 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import Button from '../../../components/ui/Button';
+import { useAuth } from '../../../providers/AuthProvider';
+import { useToast } from '../../../providers/ToastProvider';
+import { secureAccount as secureAccountApi } from '../../../services/api';
 
 export function SecureAccountScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'SecureAccount'>>();
+  const { logout } = useAuth();
+  const { showToast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSecureAccount = () => {
-    // Logic to secure account
-    navigation.goBack();
+  const handleSecureAccount = async () => {
+    setIsLoading(true);
+    try {
+      await secureAccountApi();
+    } catch {
+      // Best-effort — revoke locally even if API call fails
+    } finally {
+      setIsLoading(false);
+    }
+    showToast('Account secured. Please log in again.', 'success');
+    logout();
   };
 
   return (
@@ -82,6 +96,8 @@ export function SecureAccountScreen() {
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           borderRadius={24}
+          loading={isLoading}
+          disabled={isLoading}
         />
       </View>
     </SafeAreaView>

@@ -56,7 +56,7 @@ export default function SignUpNameScreen() {
 
   const handleNext = () => {
     // Navigate to the next screen in the signup flow
-    navigation.navigate("SignUpAddress");
+    navigation.navigate("SignUpHandle");
   };
 
   const isFormValid = isValidName(data.firstName) && isValidName(data.lastName);
@@ -168,7 +168,7 @@ export default function SignUpNameScreen() {
               onPress={handleNext}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
-              borderRadius={30}
+              borderRadius={Radius.sm}
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}

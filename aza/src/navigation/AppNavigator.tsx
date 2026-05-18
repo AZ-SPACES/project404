@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuth } from '../providers/AuthProvider';
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
@@ -7,9 +8,16 @@ import {
   TalkToUsScreen,
   EmailUsScreen,
   ChatWithUsScreen,
-  HelpAndSupportScreen
+  HelpAndSupportScreen,
+  HelpTopicScreen,
 } from '../features/customercare';
-import { ChatScreen } from '../features/chat';
+import { 
+  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, 
+  AudioCallScreen, VideoCallScreen, StarredMessagesScreen, 
+  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen 
+} from '../features/chat';
+import { ContactsProfileScreen } from '../features/contacts';
+import { MiniAppPlayerScreen } from '../features/hub';
 import {
   SendContactScreen,
   SendAmountScreen,
@@ -17,8 +25,15 @@ import {
   SendPinScreen,
   SendSuccessScreen,
   RequestContactScreen,
-  RequestAmountScreen
+  RequestAmountScreen,
+  DetailsScreen,
+  SpendingScreen
 } from '../features/transfer';
+import { 
+  WithdrawScreen, 
+  StatementDownloadScreen, 
+  TransactionsScreen 
+} from '../features/home';
 
 // Wrap the entire transfer flow so a crash in any send/receive screen
 // shows the error boundary instead of taking down the whole app.
@@ -38,6 +53,9 @@ import {
   LogoutEverywhereScreen,
   DevicesScreen,
   TwoStepVerificationScreen,
+  TotpSetupScreen,
+  DisableTotpScreen,
+  RecoveryCodesScreen,
   ChangePasswordScreen,
   FindMeByScreen,
   BillForwardingIntroScreen,
@@ -47,14 +65,31 @@ import {
   ChangeEmailScreen,
   ChangePhoneScreen
 } from '../features/profile';
-import { ReasonScreen, RefundScreen, StatementScreen } from '../features/auth';
+import { 
+  ReasonScreen, 
+  RefundScreen, 
+  StatementScreen,
+  TermsOfServiceScreen,
+  PrivacyPolicyScreen,
+} from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
-// Exclude overlapping params from types since they are now separated
-// For AppNavigator, we only need the param list for the app stack.
+
+import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+  const { forcePasswordReset } = useAuth();
+
+  if (forcePasswordReset) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
     <Stack.Navigator
       initialRouteName="MainTabs"
@@ -73,8 +108,26 @@ export default function AppNavigator() {
       <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
       <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
       <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
+      <Stack.Screen 
+        name="Details" 
+        component={DetailsScreen} 
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen name="Spending" component={SpendingScreen} />
+      <Stack.Screen 
+        name="Withdraw" 
+        component={WithdrawScreen} 
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen 
+        name="StatementDownload" 
+        component={StatementDownloadScreen} 
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen name="Transactions" component={TransactionsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
+      <Stack.Screen name="HelpTopic" component={HelpTopicScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="SecurityAndPrivacy" component={SecurityAndPrivacyScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
@@ -82,17 +135,38 @@ export default function AppNavigator() {
       <Stack.Screen name="LogoutEverywhere" component={LogoutEverywhereScreen} />
       <Stack.Screen name="Devices" component={DevicesScreen} />
       <Stack.Screen name="TwoStepVerification" component={TwoStepVerificationScreen} />
+      <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
+      <Stack.Screen name="DisableTotp" component={DisableTotpScreen} />
+      <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
       <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
       <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
+      <Stack.Screen name="ChatCamera" component={CameraScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="MediaPreview" component={MediaPreviewScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+      <Stack.Screen name="ContactsProfile" component={ContactsProfileScreen} />
+      <Stack.Screen name="ChatInfoScreen" component={ChatInfoScreen} />
+      <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
+      <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
+      <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
+      <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
+      <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen
+        name="MiniApp"
+        component={MiniAppPlayerScreen}
+        options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
+      />
     </Stack.Navigator>
   );
 }

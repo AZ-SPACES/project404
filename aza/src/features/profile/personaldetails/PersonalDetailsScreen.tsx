@@ -55,7 +55,7 @@ export function PersonalDetailsScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { email, phone } = useProfile();
+  const { email, phone, displayName } = useProfile();
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
@@ -116,20 +116,20 @@ export function PersonalDetailsScreen() {
         <DetailItem
           iconName="user"
           title="Personal information"
-          subtitle="Manage your personal information"
+          subtitle={displayName || "Manage your personal information"}
           onPress={() => navigation.navigate("PersonalInformation")}
         />
         <DetailItem
           iconName="mail"
           title="Email address"
           subtitle={email ?? 'Not set'}
-          onPress={() => navigation.navigate("ChangeEmail")}
+          onPress={() => navigation.navigate("VerifyPasscode", { onSuccessScreen: "ChangeEmail" })}
         />
         <DetailItem
           iconName="smartphone"
           title="Mobile number"
           subtitle={phone ?? 'Not set'}
-          onPress={() => navigation.navigate("ChangePhone")}
+          onPress={() => navigation.navigate("VerifyPasscode", { onSuccessScreen: "ChangePhone" })}
         />
       </Animated.ScrollView>
     </SafeAreaView>

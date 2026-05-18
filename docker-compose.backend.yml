@@ -1,0 +1,15 @@
+# Use this on DigitalOcean when aza-web and aza-admin are deployed on Vercel.
+# Command: docker compose -f docker-compose.yml -f docker-compose.backend.yml up -d
+
+services:
+  aza-web:
+    profiles: ["disabled"]
+
+  aza-admin:
+    profiles: ["disabled"]
+
+  nginx:
+    volumes:
+      - ./nginx/backend-only/conf.d:/etc/nginx/conf.d:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
