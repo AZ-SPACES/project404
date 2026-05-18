@@ -1,3 +1,3 @@
-export { default as ScanScreen } from './ScanScreen';
-export { default as ScanQRScreen } from './ScanQRScreen';
-export { default as MyCodeScreen } from './MyCodeScreen';
+export { default as ScanScreen } from './screens/ScanScreen';
+export { default as ScanQRScreen } from './screens/ScanQRScreen';
+export { default as MyCodeScreen } from './screens/MyCodeScreen';

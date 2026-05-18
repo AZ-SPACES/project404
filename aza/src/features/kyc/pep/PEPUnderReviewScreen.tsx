@@ -9,15 +9,32 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useToast } from '../../../providers/ToastProvider';
+import { useKYC } from "../../../providers/KYCProvider";
+import { useEffect } from "react";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPUnderReview">;
 
-export default function PEPUnderReviewScreen() {
+export function PEPUnderReviewScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
+  const { submit, isSubmitting } = useKYC();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    // Finalize the KYC submission when this screen mounts
+    // We only call it once
+    const finalize = async () => {
+      try {
+        await submit();
+      } catch (err) {
+        console.error('Final KYC submission failed:', err);
+        showToast('Final submission failed. Please contact support.', 'error');
+      }
+    };
+    finalize();
+  }, []);
 
   const handleFinish = () => {
     // Navigate back to home/dashboard or onboarding since the account is locked in review state
@@ -38,13 +55,19 @@ export default function PEPUnderReviewScreen() {
         </Text>
         
         <View style={styles.infoCard}>
-          <Text style={styles.bodyText}>
-            As part of our commitment to financial security and in accordance with Bank of Ghana regulations for Politically Exposed Persons (PEPs), your profile requires standard senior management review.
-          </Text>
-          <View style={styles.spacer} />
-          <Text style={styles.bodyText}>
-            This review process typically takes 1-2 business days. We will notify you via email and push notification once your account has been fully activated and limitations are lifted.
-          </Text>
+          {isSubmitting ? (
+            <Text style={styles.bodyText}>Submitting your final verification details...</Text>
+          ) : (
+            <>
+              <Text style={styles.bodyText}>
+                As part of our commitment to financial security and in accordance with Bank of Ghana regulations for Politically Exposed Persons (PEPs), your profile requires standard senior management review.
+              </Text>
+              <View style={styles.spacer} />
+              <Text style={styles.bodyText}>
+                This review process typically takes 1-2 business days. We will notify you via email and push notification once your account has been fully activated and limitations are lifted.
+              </Text>
+            </>
+          )}
         </View>
       </View>
 

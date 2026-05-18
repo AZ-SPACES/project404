@@ -1,0 +1,41 @@
+appId: com.semekor.k.aza
+name: Scan QR - My Code and Scan Tabs
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Tap the center QR tab button (floating circle, center of bottom nav)
+- tapOn:
+    point: "50%,95%"
+- waitForAnimationToEnd
+
+# Should land on ScanQRScreen by default ("Scan" active, "My code" inactive)
+- assertVisible: "Scan code to pay"
+- assertVisible: "Scan"
+- assertVisible: "My code"
+
+# Toggle to My Code
+- tapOn: "My code"
+- waitForAnimationToEnd
+
+# --- MyCodeScreen ---
+- assertVisible: "Scan"
+- assertVisible: "My code"
+
+# Tap Share button (share icon in MyCodeScreen)
+- tapOn:
+    point: "90%,25%"
+- waitForAnimationToEnd
+# Dismiss share sheet
+- back
+- waitForAnimationToEnd
+
+# Toggle back to Scan mode
+- tapOn: "Scan"
+- waitForAnimationToEnd
+- assertVisible: "Scan code to pay"
+
+# Torch/flash toggle button
+# - tapOn:
+#     point: "10%,85%"
+# - waitForAnimationToEnd

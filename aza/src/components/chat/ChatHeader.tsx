@@ -12,8 +12,11 @@ type ChatHeaderProps = {
   avatar: string;
   online: boolean;
   onBack: () => void;
+  onProfilePress?: () => void;
   isMenuOpen: boolean;
   onMorePress: (anchor: MenuAnchor) => void;
+  isCallMenuOpen?: boolean;
+  onCallPress?: (anchor: MenuAnchor) => void;
 };
 
 // ----------------------------------------------------------------------------
@@ -24,8 +27,11 @@ export const ChatHeader = memo(function ChatHeader({
   avatar,
   online,
   onBack,
+  onProfilePress,
   isMenuOpen,
   onMorePress,
+  isCallMenuOpen,
+  onCallPress,
 }: ChatHeaderProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
@@ -41,23 +47,52 @@ export const ChatHeader = memo(function ChatHeader({
     );
   }, [onMorePress]);
 
+  const callButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  
+  const handleCallPress = useCallback(() => {
+    callButtonRef.current?.measure(
+      (_x: number, _y: number, width: number, height: number, pageX: number, pageY: number) => {
+        const screenWidth = Dimensions.get('window').width;
+        if (onCallPress) {
+          onCallPress({ top: pageY + height + 6, right: screenWidth - pageX - width });
+        }
+      },
+    );
+  }, [onCallPress]);
+
   return (
     <View style={styles.header}>
       <TouchableOpacity style={styles.iconButton} onPress={onBack} activeOpacity={0.8}>
         <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
       </TouchableOpacity>
 
-      <View style={styles.profileInfo}>
-        <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
+      <TouchableOpacity
+        style={styles.profileInfo}
+        activeOpacity={0.7}
+        onPress={onProfilePress}
+        disabled={!onProfilePress}
+      >
+        {avatar ? (
+          <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel={name} />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: isDark ? Colors.surface : '#e2e8f0', alignItems: 'center', justifyContent: 'center' }]}>
+            <Feather name="user" size={24} color={Colors.textSecondary} />
+          </View>
+        )}
         <View style={styles.nameContainer}>
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
           {online && <Text style={styles.onlineText}>online</Text>}
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.rightActions}>
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-          <Feather name="video" size={20} color={Colors.textPrimary} />
+        <TouchableOpacity
+          ref={callButtonRef}
+          style={[styles.iconButton, isCallMenuOpen && styles.iconButtonActive]}
+          activeOpacity={0.8}
+          onPress={handleCallPress}
+        >
+          <Feather name="phone" size={20} color={isCallMenuOpen ? Colors.primary : Colors.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity
           ref={moreButtonRef}

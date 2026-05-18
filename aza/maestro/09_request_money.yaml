@@ -1,0 +1,54 @@
+appId: com.semekor.k.aza
+name: Request Money - Request Flow
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Request from Home
+- tapOn: "Request"
+- waitForAnimationToEnd
+
+# --- RequestContactScreen ---
+- assertVisible: "Who are you requesting from?"
+- assertVisible: "Recents"
+
+# Select a contact
+- scrollUntilVisible:
+    text: "All contacts"
+    direction: DOWN
+- tapOn:
+    index: 0
+    text: "All contacts"
+- waitForAnimationToEnd
+
+# --- RequestAmountScreen ---
+- assertVisible: "Request Money"
+- assertVisible: "Enter amount"
+- assertVisible: "GH¢"
+- assertVisible: "No fees on requests"
+- assertVisible: "Available balance"
+
+# Request button disabled with no amount
+- assertNotVisible:
+    text: "Request"
+    enabled: true
+
+# Enter amount (tap the amount row to focus)
+- tapOn: "Enter amount"
+- inputText: "25"
+- waitForAnimationToEnd
+
+# Request button shows amount
+- assertVisible: "Request GH¢ 25.00"
+
+# Add note
+- tapOn: "Add a note"
+- inputText: "For groceries"
+
+# Dismiss keyboard
+- tapOn:
+    point: "50%,30%"
+
+# Submit request
+- tapOn: "Request GH¢ 25.00"
+- waitForAnimationToEnd

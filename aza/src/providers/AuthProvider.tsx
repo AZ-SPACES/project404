@@ -1,12 +1,22 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { setForceLogoutHandler } from "../services/api";
 
 type AuthState = {
   userToken: string | null;
   isKYCVerified: boolean;
   hasPasscode: boolean;
   isBiometricsEnabled: boolean;
+  forcePasswordReset: boolean;
+  requireSelfieVerification: boolean;
   isLoading: boolean;
 };
 
@@ -17,12 +27,16 @@ type AuthContextType = AuthState & {
     token: string,
     hasPasscodeArg?: boolean,
     isKYCVerifiedArg?: boolean,
+    forcePasswordReset?: boolean,
+    requireSelfieVerification?: boolean,
+    isBiometricsEnabled?: boolean,
   ) => void;
   logout: () => void;
   completeKYC: () => void;
   setPasscode: () => void;
   toggleBiometrics: (enabled: boolean) => void;
   savePasscodeValue: (code: string) => Promise<void>;
+  getPasscodeValue: () => Promise<string | null>;
   verifyPasscode: (code: string) => Promise<boolean>;
   checkPinLockout: () => Promise<PinLockoutResult>;
   recordPinFailure: () => Promise<PinLockoutResult>;
@@ -32,7 +46,7 @@ type AuthContextType = AuthState & {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STATE_KEY = "aza_auth_state";
-const PASSCODE_VALUE_KEY = "aza_passcode";
+export const PASSCODE_VALUE_KEY = "aza_passcode";
 const PIN_ATTEMPTS_KEY = "aza_pin_attempts";
 const MAX_PIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -47,8 +61,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isKYCVerified: false,
     hasPasscode: false,
     isBiometricsEnabled: false,
+    forcePasswordReset: false,
+    requireSelfieVerification: false,
     isLoading: true,
   });
+
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -59,15 +76,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           stateFromStorage = JSON.parse(storedState);
         }
       } catch (e) {
-        // Restoring state failed
         console.error("Failed to load auth state", e);
+      }
+
+      let hasPasscodeResolved = stateFromStorage?.hasPasscode || false;
+      if (!hasPasscodeResolved && stateFromStorage?.userToken) {
+        try {
+          const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
+          hasPasscodeResolved = stored !== null;
+        } catch (_) {}
       }
 
       setAuthState({
         userToken: stateFromStorage?.userToken || null,
         isKYCVerified: stateFromStorage?.isKYCVerified || false,
-        hasPasscode: stateFromStorage?.hasPasscode || false,
+        hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
+        forcePasswordReset: stateFromStorage?.forcePasswordReset || false,
+        requireSelfieVerification: stateFromStorage?.requireSelfieVerification || false,
         isLoading: false,
       });
     };
@@ -75,36 +101,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     bootstrapAsync();
   }, []);
 
-  const saveState = async (newState: Partial<AuthState>) => {
-    const updatedState = { ...authState, ...newState };
-    setAuthState(updatedState);
+  // Ref tracks the latest state so async SecureStore writes always
+  // persist the most recent version, avoiding stale-closure overwrites.
+  const stateRef = useRef(authState);
+  stateRef.current = authState;
+
+  const saveState = useCallback(async (newState: Partial<AuthState>) => {
+    setAuthState(prev => {
+      const updated = { ...prev, ...newState };
+      stateRef.current = updated;
+      return updated;
+    });
+    // Persist using the merged values (ref is updated synchronously above)
+    const toPersist = { ...stateRef.current };
     try {
-      await SecureStore.setItemAsync(AUTH_STATE_KEY, JSON.stringify(updatedState));
+      await SecureStore.setItemAsync(
+        AUTH_STATE_KEY,
+        JSON.stringify(toPersist),
+      );
     } catch (e) {
       console.error("Failed to save auth state", e);
-      Alert.alert("Session Error", "We couldn't save your session. Please restart the app if issues persist.");
+      Alert.alert(
+        "Session Error",
+        "We couldn't save your session. Please restart the app if issues persist.",
+      );
     }
-  };
+  }, []);
 
-  const login = (
+  const login = useCallback((
     token: string,
     hasPasscodeArg: boolean = false,
     isKYCVerifiedArg: boolean = false,
+    forcePasswordResetArg: boolean = false,
+    requireSelfieVerificationArg: boolean = false,
+    isBiometricsEnabledArg: boolean = false,
   ) => {
     saveState({
       userToken: token,
       hasPasscode: hasPasscodeArg,
       isKYCVerified: isKYCVerifiedArg,
+      forcePasswordReset: forcePasswordResetArg,
+      requireSelfieVerification: requireSelfieVerificationArg,
+      isBiometricsEnabled: isBiometricsEnabledArg,
     });
-  };
+  }, [saveState]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     // Reset in-memory state immediately so navigation reacts at once
     setAuthState({
       userToken: null,
       isKYCVerified: false,
       hasPasscode: false,
       isBiometricsEnabled: false,
+      forcePasswordReset: false,
+      requireSelfieVerification: false,
       isLoading: false,
     });
     // Clear all persisted secrets in the background
@@ -113,23 +163,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
       SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
     ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
-  };
+  }, []);
 
-  const completeKYC = () => {
+  // Register logout with the API interceptor so that 403 responses
+  // (token revoked / invalid) automatically clear the session.
+  useEffect(() => {
+    setForceLogoutHandler(logout);
+  }, [logout]);
+
+  const completeKYC = useCallback(() => {
     saveState({ isKYCVerified: true });
-  };
+  }, [saveState]);
 
-  const setPasscode = () => {
+  const setPasscode = useCallback(() => {
     saveState({ hasPasscode: true });
-  };
+  }, [saveState]);
+
+  const getPasscodeValue = useCallback(async (): Promise<string | null> => {
+    try {
+      return await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
+    } catch (e) {
+      console.error("Failed to read passcode value", e);
+      return null;
+    }
+  }, []);
 
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-      saveState({ hasPasscode: true });
     } catch (e) {
       console.error("Failed to save passcode value", e);
-      Alert.alert("Passcode Error", "We couldn't save your passcode. Please try again.");
+      Alert.alert(
+        "Passcode Error",
+        "We couldn't save your passcode. Please try again.",
+      );
     }
   }, []);
 
@@ -163,12 +230,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const recordPinFailure = useCallback(async (): Promise<PinLockoutResult> => {
     try {
       const raw = await SecureStore.getItemAsync(PIN_ATTEMPTS_KEY);
-      const current: PinAttemptState = raw ? JSON.parse(raw) : { count: 0, lockedUntil: null };
+      const current: PinAttemptState = raw
+        ? JSON.parse(raw)
+        : { count: 0, lockedUntil: null };
       const newCount = current.count + 1;
-      const lockedUntil = newCount >= MAX_PIN_ATTEMPTS ? Date.now() + LOCKOUT_DURATION_MS : null;
-      await SecureStore.setItemAsync(PIN_ATTEMPTS_KEY, JSON.stringify({ count: newCount, lockedUntil }));
+      const lockedUntil =
+        newCount >= MAX_PIN_ATTEMPTS ? Date.now() + LOCKOUT_DURATION_MS : null;
+      await SecureStore.setItemAsync(
+        PIN_ATTEMPTS_KEY,
+        JSON.stringify({ count: newCount, lockedUntil }),
+      );
       if (lockedUntil) {
-        return { isLocked: true, secondsRemaining: Math.ceil(LOCKOUT_DURATION_MS / 1000) };
+        return {
+          isLocked: true,
+          secondsRemaining: Math.ceil(LOCKOUT_DURATION_MS / 1000),
+        };
       }
       return { isLocked: false, secondsRemaining: 0 };
     } catch {
@@ -184,8 +260,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const toggleBiometrics = (enabled: boolean) => {
+  const toggleBiometrics = async (enabled: boolean) => {
     saveState({ isBiometricsEnabled: enabled });
+    try {
+      const { updatePrivacySettings } = await import("../services/api");
+      await updatePrivacySettings({ biometricsEnabled: enabled });
+    } catch (e) {
+      console.error("Failed to sync biometrics setting to backend", e);
+    }
   };
 
   return (
@@ -198,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setPasscode,
         toggleBiometrics,
         savePasscodeValue,
+        getPasscodeValue,
         verifyPasscode,
         checkPinLockout,
         recordPinFailure,

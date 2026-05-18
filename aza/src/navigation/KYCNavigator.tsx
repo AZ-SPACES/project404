@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
-import { 
+import { KYCProvider } from '../providers/KYCProvider';
+import { useAuth } from '../providers/AuthProvider';
+import { getKycStatus } from '../services/api';
+import { navigate } from './navigationRef';
+import {
   VerifyIdentityScreen,
   SourceofFundsScreen,
   IdtypeScreen,
@@ -16,7 +20,7 @@ import {
   PEPUnderReviewScreen,
   KYCSuccessScreen,
 } from '../features/kyc';
-import { 
+import {
   CreatingAccountScreen,
   AccountReadyScreen,
   FeesAndLimitsScreen,
@@ -24,28 +28,51 @@ import {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+function KYCStatusGate({ children }: { children: React.ReactNode }) {
+  const { completeKYC } = useAuth();
+
+  useEffect(() => {
+    getKycStatus()
+      .then((res) => {
+        const status = res.data?.status;
+        if (status === 'VERIFIED') {
+          completeKYC();
+        } else if (status === 'UNDER_REVIEW') {
+          navigate('PEPUnderReview');
+        }
+      })
+      .catch(() => {});
+  }, [completeKYC]);
+
+  return <>{children}</>;
+}
+
 export default function KYCNavigator() {
   return (
-    <Stack.Navigator
-      initialRouteName="PEPStatus"
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
-      <Stack.Screen name="SourceofFund" component={SourceofFundsScreen} />
-      <Stack.Screen name='Idtype' component={IdtypeScreen} />
-      <Stack.Screen name="VerifyFaceId" component={VerifyFaceIdScreen} />
-      <Stack.Screen name="ScanId" component={ScanIdScreen} />
-      <Stack.Screen name="ScanIdBack" component={ScanIdBackScreen} />
-      <Stack.Screen name="SelfieScan" component={SelfieScanScreen} />
-      <Stack.Screen name="PEPStatus" component={PEPStatusScreen} />
-      <Stack.Screen name="PEPDetails" component={PEPDetailsScreen} />
-      <Stack.Screen name="PEPAccountPurpose" component={PEPAccountPurposeScreen} />
-      <Stack.Screen name="PEPProofOfWealth" component={PEPProofOfWealthScreen} />
-      <Stack.Screen name="PEPUnderReview" component={PEPUnderReviewScreen} />
-      <Stack.Screen name="KYCSuccess" component={KYCSuccessScreen} />
-      <Stack.Screen name="CreatingAccount" component={CreatingAccountScreen} />
-      <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
-      <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
-    </Stack.Navigator>
+    <KYCProvider>
+      <KYCStatusGate>
+      <Stack.Navigator
+        initialRouteName="PEPStatus"
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} />
+        <Stack.Screen name="SourceofFund" component={SourceofFundsScreen} />
+        <Stack.Screen name='Idtype' component={IdtypeScreen} />
+        <Stack.Screen name="VerifyFaceId" component={VerifyFaceIdScreen} />
+        <Stack.Screen name="ScanId" component={ScanIdScreen} />
+        <Stack.Screen name="ScanIdBack" component={ScanIdBackScreen} />
+        <Stack.Screen name="SelfieScan" component={SelfieScanScreen} />
+        <Stack.Screen name="PEPStatus" component={PEPStatusScreen} />
+        <Stack.Screen name="PEPDetails" component={PEPDetailsScreen} />
+        <Stack.Screen name="PEPAccountPurpose" component={PEPAccountPurposeScreen} />
+        <Stack.Screen name="PEPProofOfWealth" component={PEPProofOfWealthScreen} />
+        <Stack.Screen name="PEPUnderReview" component={PEPUnderReviewScreen} />
+        <Stack.Screen name="KYCSuccess" component={KYCSuccessScreen} />
+        <Stack.Screen name="CreatingAccount" component={CreatingAccountScreen} />
+        <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
+        <Stack.Screen name="AccountReady" component={AccountReadyScreen} />
+      </Stack.Navigator>
+      </KYCStatusGate>
+    </KYCProvider>
   );
 }

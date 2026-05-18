@@ -1,0 +1,57 @@
+appId: com.semekor.k.aza
+name: KYC - Identity Verification Flow
+---
+# This test assumes a freshly logged-in state that has not completed KYC
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd
+
+# --- VerifyIdentityScreen (KYC Step 1) ---
+- assertVisible: "Let's verify your identity"
+- assertVisible: "AML Act 1044"
+- assertVisible: "Your identity is safe with us."
+
+# Continue disabled until consent checkbox is checked
+- assertNotVisible:
+    text: "Continue"
+    enabled: true
+
+# Check consent checkbox (accessibilityRole: "checkbox", no testID — tap by role)
+- tapOn:
+    point: "10%,75%"
+- waitForAnimationToEnd
+
+# Continue should now be enabled
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- SourceofFundsScreen (KYC Step 2) ---
+- assertVisible: "Source of funds"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- IdtypeScreen (KYC Step 3) ---
+- assertVisible: "Identity document"
+# Select ID type
+- tapOn: "National ID"
+- waitForAnimationToEnd
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- VerifyFaceIdScreen ---
+- assertVisible: "Face ID"
+- tapOn: "Continue"
+- waitForAnimationToEnd
+
+# --- ScanIdScreen (Front) ---
+- assertVisible: "Front"
+# Camera view should appear (requires camera permission)
+- waitForAnimationToEnd
+
+# --- PEP Status Check ---
+# If reached:
+# - tapOn: "No, I am not a PEP"
+# - tapOn: "Continue"
+
+# Note: Camera-dependent steps cannot be fully automated without a physical device
+# These assertions validate screen navigation up to camera steps

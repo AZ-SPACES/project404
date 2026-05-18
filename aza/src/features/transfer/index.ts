@@ -5,3 +5,5 @@ export { default as SendPinScreen } from './send/SendPinScreen';
 export { default as SendSuccessScreen } from './send/SendSuccessScreen';
 export { default as RequestContactScreen } from './request/RequestContactScreen';
 export { default as RequestAmountScreen } from './request/RequestAmountScreen';
+export { default as DetailsScreen } from './details/DetailsScreen';
+export { default as SpendingScreen } from './details/SpendingScreen';

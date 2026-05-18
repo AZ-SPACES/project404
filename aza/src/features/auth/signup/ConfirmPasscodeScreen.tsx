@@ -13,21 +13,25 @@ import {
   StatusBar,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useAppTheme, ThemeColors, Spacing } from "../../../theme";
+import { useAppTheme, ThemeColors, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
+import { useSignupActions } from "../../../providers/SignUpProvider";
+import { api } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ConfirmPasscode"
 >;
 type ConfirmPageRouteProp = RouteProp<RootStackParamList, "ConfirmPasscode">;
+
+const MAX_ATTEMPTS = 5;
 
 export default function ConfirmPasscodeScreen() {
   usePreventScreenCapture();
@@ -37,15 +41,19 @@ export default function ConfirmPasscodeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ConfirmPageRouteProp>();
   const { firstPasscode } = route.params;
-  const { savePasscodeValue } = useAuth();
+  const { userToken, savePasscodeValue } = useAuth();
+
+  // useSignupActions() returns stable references — calling update()
+  // will NOT cause this component to re-render.
+  const { update } = useSignupActions();
 
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const isNavigatingRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
-
-  const MAX_ATTEMPTS = 5;
 
   const scaleAnims = useRef([
     new Animated.Value(1),
@@ -55,6 +63,15 @@ export default function ConfirmPasscodeScreen() {
   ]).current;
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset navigation guard and clear passcode when screen regains focus
+  // (e.g. user pressed back from Consent)
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+      setPasscode("");
+    }, [])
+  );
 
   const startShake = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -83,23 +100,55 @@ export default function ConfirmPasscodeScreen() {
   }, [shakeAnim]);
 
   const handleContinue = useCallback(async () => {
-    if (passcode.length === 4 && !isLocked) {
-      if (passcode === firstPasscode) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await savePasscodeValue(passcode);
-        navigation.navigate("Consent");
-      } else {
-        const newCount = attemptCount + 1;
-        setAttemptCount(newCount);
-        if (newCount >= MAX_ATTEMPTS) {
-          setIsLocked(true);
+    if (isNavigatingRef.current || passcode.length !== 4 || isLocked) return;
+
+    if (String(passcode).trim() === String(firstPasscode).trim()) {
+      isNavigatingRef.current = true;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      isNavigatingRef.current = true;
+
+      if (userToken) {
+        try {
+          await api.post('/api/v1/auth/passcode/set', { passcode });
+          await savePasscodeValue(passcode);
+          
+          update({ passcode });
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Consent" }],
+          });
+        } catch (e: any) {
+          console.error("Passcode sync error:", e);
+          setServerError("Failed to sync passcode. Please try again.");
+          isNavigatingRef.current = false;
+          setErrorStatus(true);
+          startShake();
+          setPasscode("");
         }
-        setErrorStatus(true);
-        startShake();
-        setPasscode("");
+      } else {
+        // Signup case: Not logged in yet, store in signup data.
+        update({ passcode });
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Consent" }],
+        });
       }
+    } else {
+      const newCount = attemptCount + 1;
+      setAttemptCount(newCount);
+      if (newCount >= MAX_ATTEMPTS) {
+        setIsLocked(true);
+      }
+      setErrorStatus(true);
+      startShake();
+      setPasscode("");
     }
-  }, [passcode, firstPasscode, navigation, startShake, savePasscodeValue, attemptCount, isLocked]);
+  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked, userToken, savePasscodeValue]);
+
+  // Keep a ref to the latest handleContinue so the auto-trigger effect
+  // doesn't re-fire when handleContinue's identity changes.
+  const handleContinueRef = useRef(handleContinue);
+  handleContinueRef.current = handleContinue;
 
   useEffect(() => {
     if (isLocked) return;
@@ -107,34 +156,29 @@ export default function ConfirmPasscodeScreen() {
     return () => clearTimeout(timer);
   }, [isLocked]);
 
-  // Automatic verification when 4 digits are entered
+  // Automatic verification when 4 digits are entered.
+  // Only depends on `passcode` — uses a ref for the callback to avoid
+  // re-triggering when handleContinue's identity changes.
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (passcode.length === 4) {
-      // Small delay for visual confirmation of the last digit
-      timer = setTimeout(() => {
-        handleContinue();
-      }, 300);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [passcode, handleContinue]);
+    if (passcode.length !== 4) return;
+
+    const timer = setTimeout(() => {
+      handleContinueRef.current();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [passcode]);
 
   const handleTextChange = (text: string) => {
     if (isLocked) return;
-    if (errorStatus) {
-      setErrorStatus(false);
-    }
+    if (errorStatus) setErrorStatus(false);
+    if (serverError) setServerError(null);
 
-    // Only allow numbers and max length of 4
     const cleaned = text.replace(/[^0-9]/g, "").slice(0, 4);
 
     // Animate box if a new digit was added
     if (cleaned.length > passcode.length) {
       const index = cleaned.length - 1;
-
-      // Haptic feedback for each tap
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       Animated.sequence([
@@ -228,6 +272,8 @@ export default function ConfirmPasscodeScreen() {
                 <Text style={styles.errorText}>
                   Too many failed attempts. Please go back and start over.
                 </Text>
+              ) : serverError ? (
+                <Text style={styles.errorText}>{serverError}</Text>
               ) : errorStatus ? (
                 <Text style={styles.errorText}>
                   Passcodes do not match. {MAX_ATTEMPTS - attemptCount} attempt{MAX_ATTEMPTS - attemptCount === 1 ? "" : "s"} remaining.
@@ -254,7 +300,7 @@ export default function ConfirmPasscodeScreen() {
                       : "#9CA3AF"
                 }
                 disabled={passcode.length !== 4 || isLocked}
-                borderRadius={30}
+                borderRadius={Radius.sm}
                 paddingVertical={16}
               />
             </View>

@@ -30,28 +30,45 @@ export function ChangePhoneScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { phone } = useProfile();
+  const { phone, requestPhoneChange, verifyPhoneChange } = useProfile();
   const { showToast } = useToast();
-  const [phoneNumber, setPhoneNumber] = useState(phone ?? "");
+  
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [countryCode, setCountryCode] = useState("+233");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"input" | "verify">("input");
   const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const phoneError = touched && phoneNumber.length > 0 && !isValidPhone(phoneNumber)
     ? "Enter a valid phone number"
     : null;
-  const isChanged = isValidPhone(phoneNumber);
+  
+  const isInputValid = isValidPhone(phoneNumber);
+  const isOtpValid = otp.length === 6;
 
-  const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [40, 70],
-    outputRange: [0, 1],
-    extrapolate: "clamp" });
-
-  const headerBorderOpacity = scrollY.interpolate({
-    inputRange: [40, 70],
-    outputRange: [0, 1],
-    extrapolate: "clamp" });
+  const handleNext = async () => {
+    setIsLoading(true);
+    try {
+      const fullPhone = `${countryCode}${phoneNumber}`;
+      if (step === "input") {
+        await requestPhoneChange(fullPhone);
+        setStep("verify");
+        showToast('Verification code sent to ' + fullPhone, 'success');
+      } else {
+        await verifyPhoneChange(fullPhone, otp);
+        showToast('Phone number updated successfully', 'success');
+        navigation.goBack();
+      }
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.message || 'Something went wrong. Please try again.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -61,22 +78,31 @@ export function ChangePhoneScreen() {
         style={[
           styles.header,
           {
-            borderBottomColor: headerBorderOpacity.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["transparent", Colors.border] }) },
+            borderBottomColor: scrollY.interpolate({
+              inputRange: [40, 70],
+              outputRange: ["transparent", Colors.border],
+              extrapolate: "clamp"
+            })
+          },
         ]}
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => step === "verify" ? setStep("input") : navigation.goBack()}
         >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+          <Feather name={step === "verify" ? "arrow-left" : "chevron-left"} size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Animated.View
-          style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+          style={[styles.headerTitleContainer, { 
+            opacity: scrollY.interpolate({
+              inputRange: [40, 70],
+              outputRange: [0, 1],
+              extrapolate: "clamp"
+            })
+          }]}
         >
           <Text style={[Typography.h3, styles.headerTitle]}>
-            Change phone number
+            {step === "input" ? "Change phone" : "Verify phone"}
           </Text>
         </Animated.View>
         <View style={{ width: 40 }} />
@@ -97,61 +123,85 @@ export function ChangePhoneScreen() {
         >
           <View style={styles.titleSection}>
             <Text style={[Typography.h1, styles.mainTitle]}>
-              Change phone number
+              {step === "input" ? "Change phone" : "Enter code"}
             </Text>
           </View>
 
-          <Text style={styles.subtitle}>
-            We'll text another verification code to your new number to confirm
-            it.
-          </Text>
+          {step === "input" ? (
+            <>
+              <Text style={styles.subtitle}>
+                We'll text a verification code to your new number to confirm it.
+              </Text>
 
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Phone number</Text>
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.countryPicker}>
-                <Text style={styles.countryCode}>{countryCode}</Text>
-                <Feather
-                  name="chevron-down"
-                  size={16}
-                  color={Colors.textPrimary}
-                />
-              </TouchableOpacity>
-              <View style={styles.phoneInputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  onBlur={() => setTouched(true)}
-                  keyboardType="phone-pad"
-                  placeholder="XXXXXXXXX"
-                  placeholderTextColor={Colors.textSecondary + "80"}
-                />
+              <View style={styles.inputSection}>
+                <Text style={styles.label}>New phone number</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity style={styles.countryPicker}>
+                    <Text style={styles.countryCode}>{countryCode}</Text>
+                    <Feather
+                      name="chevron-down"
+                      size={16}
+                      color={Colors.textPrimary}
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.phoneInputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      onBlur={() => setTouched(true)}
+                      keyboardType="phone-pad"
+                      placeholder="XXXXXXXXX"
+                      placeholderTextColor={Colors.textSecondary + "80"}
+                      autoFocus
+                    />
+                  </View>
+                </View>
+                {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
               </View>
-            </View>
-          </View>
-          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+            </>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>
+                We've sent a 6-digit verification code to <Text style={{ color: Colors.textPrimary, fontWeight: '600' }}>{countryCode}{phoneNumber}</Text>.
+              </Text>
+
+              <View style={styles.inputSection}>
+                <Text style={styles.label}>Verification code</Text>
+                <View style={styles.phoneInputContainer}>
+                  <TextInput
+                    style={[styles.input, { letterSpacing: 8, fontSize: 24, textAlign: 'center', fontWeight: '700' }]}
+                    value={otp}
+                    onChangeText={(val) => setOtp(val.replace(/[^0-9]/g, "").slice(0, 6))}
+                    keyboardType="number-pad"
+                    placeholder="000000"
+                    placeholderTextColor={Colors.textSecondary + "40"}
+                    autoFocus
+                    maxLength={6}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.sm }}
+                onPress={() => requestPhoneChange(`${countryCode}${phoneNumber}`)}
+              >
+                <Text style={[Typography.body, { color: Colors.primary, fontWeight: '600' }]}>
+                  Resend code
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.ScrollView>
 
         <View style={styles.footer}>
           <Button
-            title="Continue"
-            onPress={async () => {
-              setIsLoading(true);
-              try {
-                // TODO: call change-phone API, verify with OTP, then persist
-                // await setPhone(`${countryCode}${phoneNumber}`);
-                navigation.goBack();
-              } catch {
-                showToast('Failed to update phone number. Please try again.', 'error');
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            backgroundColor={isChanged ? Colors.primary : Colors.surface}
-            textColor={isChanged ? Colors.secondary : Colors.textSecondary}
+            title={step === "input" ? "Continue" : "Verify and change"}
+            onPress={handleNext}
+            backgroundColor={(step === "input" ? isInputValid : isOtpValid) ? Colors.primary : Colors.surface}
+            textColor={(step === "input" ? isInputValid : isOtpValid) ? Colors.secondary : Colors.textSecondary}
             borderRadius={Radius.full}
-            disabled={!isChanged || isLoading}
+            disabled={!(step === "input" ? isInputValid : isOtpValid) || isLoading}
             loading={isLoading}
           />
         </View>

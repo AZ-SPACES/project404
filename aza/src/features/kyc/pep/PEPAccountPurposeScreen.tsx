@@ -14,6 +14,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useKYC, PEPAccountPurpose, PEPMonthlyVolume } from '../../../providers/KYCProvider';
+import { useToast } from "../../../providers/ToastProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "PEPAccountPurpose">;
 
@@ -43,13 +45,15 @@ const VOLUME_OPTIONS: VolumeOption[] = [
   "More than GH₵ 100,000"
 ];
 
-export default function PEPAccountPurposeScreen() {
+export function PEPAccountPurposeScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const [purpose, setPurpose] = useState<PurposeOption | null>(null);
-  const [volume, setVolume] = useState<VolumeOption | null>(null);
+  const { data, submitPepDetails, isSubmitting } = useKYC();
+  const { showToast } = useToast();
+  const [purpose, setPurpose] = useState<PurposeOption | null>(data.pepAccountPurpose as PurposeOption ?? null);
+  const [volume, setVolume] = useState<VolumeOption | null>(data.pepMonthlyVolume as VolumeOption ?? null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTitleOpacity = scrollY.interpolate({
@@ -64,9 +68,19 @@ export default function PEPAccountPurposeScreen() {
 
   const isFormValid = purpose !== null && volume !== null;
 
-  const handleNext = () => {
-    // Proceed to Document Upload for PEP EDD
-    navigation.navigate("PEPProofOfWealth");
+  const handleNext = async () => {
+    try {
+      if (purpose && volume) {
+        await submitPepDetails(
+          purpose as PEPAccountPurpose, 
+          volume as PEPMonthlyVolume
+        );
+        navigation.navigate("PEPProofOfWealth");
+      }
+    } catch (error) {
+      console.error('Failed to submit PEP details:', error);
+      showToast('Submission failed. Please try again.', 'error');
+    }
   };
 
   const renderPurposeOption = (label: PurposeOption) => (
@@ -78,6 +92,9 @@ export default function PEPAccountPurposeScreen() {
       ]}
       onPress={() => setPurpose(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: purpose === label }}
     >
       <Text
         style={[
@@ -99,6 +116,9 @@ export default function PEPAccountPurposeScreen() {
       ]}
       onPress={() => setVolume(label)}
       activeOpacity={0.7}
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: volume === label }}
     >
       <Text
         style={[
@@ -128,6 +148,8 @@ export default function PEPAccountPurposeScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
             <MaterialIcons
               name="chevron-left"
@@ -186,7 +208,8 @@ export default function PEPAccountPurposeScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!isFormValid}
+            loading={isSubmitting}
+            disabled={!isFormValid || isSubmitting}
           />
         </View>
       </View>

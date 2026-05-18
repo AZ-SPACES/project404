@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, useRef, useEffect } from 'react';
+import React, { ComponentProps, useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
@@ -6,7 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { unsyncContacts } from '../../../services/api';
 
 const { height } = Dimensions.get('window');
 
@@ -71,14 +73,19 @@ export function SecurityAndPrivacyScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
+  const profile = useProfile();
+  const { syncContacts, setSyncContacts: setSyncContactsInProvider } = profile;
 
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  // State for toggles
-  const [syncContacts, setSyncContacts] = useState(true);
-  const [biometricData, setBiometricData] = useState(true);
-  
+  const handleSyncContactsChange = useCallback((v: boolean) => {
+    setSyncContactsInProvider(v);
+    if (v === false) {
+       unsyncContacts().catch(() => {});
+    }
+  }, [setSyncContactsInProvider]);
+
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
   const bottomSheetAnim = useRef(new Animated.Value(height)).current;
@@ -172,7 +179,7 @@ export function SecurityAndPrivacyScreen() {
             iconType="MaterialCommunityIcons" 
             iconName="fingerprint" 
             title="2-step verification" 
-            subtitle="Status: On"
+            subtitle={profile.twoFactorEnabled ? "Status: On" : "Status: Off"}
             onPress={() => navigation.navigate("TwoStepVerification")}
           />
           
@@ -234,10 +241,10 @@ export function SecurityAndPrivacyScreen() {
             iconType="Feather" 
             iconName="users" 
             title="Sync your phone contacts" 
-            subtitle="Send and request from your contacts who have a Aza account"
+            subtitle="Send and request from your contacts who have an Aza account"
             showSwitch
             switchValue={syncContacts}
-            onSwitchChange={setSyncContacts}
+            onSwitchChange={handleSyncContactsChange}
           />
           
           <SettingRow 
@@ -246,8 +253,8 @@ export function SecurityAndPrivacyScreen() {
             title="Biometric data" 
             subtitle="Allow Aza to store and use your selfie and ID for automated verification"
             showSwitch
-            switchValue={biometricData}
-            onSwitchChange={setBiometricData}
+            switchValue={profile.biometricData}
+            onSwitchChange={(v) => profile.updateProfile({ biometricData: v })}
           />
           
           <SettingRow 

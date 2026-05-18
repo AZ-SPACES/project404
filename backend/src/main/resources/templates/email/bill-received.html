@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Bill Received</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+        .header { padding: 32px; text-align: center; background-color: #111827; }
+        .logo { width: 48px; height: 48px; }
+        .content { padding: 32px; }
+        .footer { padding: 24px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #f3f4f6; }
+        h1 { font-size: 24px; font-weight: 700; margin-top: 0; color: #111827; }
+        p { margin-bottom: 16px; font-size: 16px; }
+        .bill-card { background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #e5e7eb; }
+        .bill-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .bill-label { color: #6b7280; font-size: 14px; }
+        .bill-value { font-weight: 600; color: #111827; }
+        .amount { font-size: 32px; font-weight: 800; color: #111827; margin: 16px 0; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #111827; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+        .disclaimer { font-size: 12px; color: #9ca3af; margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="cid:paperplane" alt="AZA Logo" class="logo">
+        </div>
+        <div class="content">
+            <h1>New Bill Received</h1>
+            <p>Hi <span th:text="${name}">User</span>,</p>
+            <p>We've received a bill forwarded to your account and have prepared a draft payment for you to review.</p>
+            
+            <div class="bill-card">
+                <div class="bill-row">
+                    <span class="bill-label">Merchant</span>
+                    <span class="bill-value" th:text="${merchantName}">Merchant Name</span>
+                </div>
+                <div class="bill-row">
+                    <span class="bill-label">Received on</span>
+                    <span class="bill-value" th:text="${date}">May 02, 2026</span>
+                </div>
+                <div class="amount">GHS <span th:text="${#numbers.formatDecimal(amount, 1, 2)}">0.00</span></div>
+            </div>
+
+            <p>To pay this bill, open the AZA app and head to your transactions list to review the draft.</p>
+            
+            <a href="aza://transactions" class="btn">Review in AZA</a>
+
+            <div class="disclaimer">
+                <p>You are responsible for checking that received invoices are valid and should be paid. This service uses AI, which can make mistakes. Please check details before paying.</p>
+            </div>
+        </div>
+        <div class="footer">
+            &copy; 2026 AZA. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+package com.aza.backend.util;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+@Slf4j
+public class SmsService {
+
+    @Value("${arkesel.api-key}")
+    private String apiKey;
+
+    @Value("${arkesel.sender-id:AZA}")
+    private String senderId;
+
+    private static final String ARKESEL_URL = "https://sms.arkesel.com/api/v2/sms/send";
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    /**
+     * Send an SMS via Arkesel API
+     */
+    public boolean sendSms(String phoneNumber, String message) {
+        String formattedNumber = formatPhoneNumber(phoneNumber);
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("sender", senderId);
+            body.put("message", message);
+            body.put("recipients", List.of(formattedNumber));
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+            log.info("Sending SMS to {} via Arkesel...", formattedNumber);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    ARKESEL_URL, HttpMethod.POST, request, String.class);
+
+            log.info("Arkesel SMS response status: {}", response.getStatusCode());
+            log.info("Arkesel SMS response body: {}", response.getBody());
+            return response.getStatusCode().is2xxSuccessful();
+
+        } catch (Exception e) {
+            log.error("Failed to send SMS to {}: {}", formattedNumber, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send OTP via SMS
+     */
+    public boolean sendOtp(String phoneNumber, String otp) {
+        String message = "Your AZA verification code is: " + otp + ". Valid for 5 minutes. Do not share this code.";
+        return sendSms(phoneNumber, message);
+    }
+
+    private String formatPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) return "";
+        // Remove all non-digits
+        String digits = phoneNumber.replaceAll("\\D", "");
+        
+        // If it starts with 0, replace with 233
+        if (digits.startsWith("0") && digits.length() == 10) {
+            return "233" + digits.substring(1);
+        }
+        
+        // If it starts with +, it was handled by \\D (removed)
+        // If it already starts with 233 and is 12 digits, return as is
+        if (digits.startsWith("233") && digits.length() == 12) {
+            return digits;
+        }
+        
+        return digits;
+    }
+}

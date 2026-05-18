@@ -17,14 +17,21 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useAuth } from "../../../providers/AuthProvider";
+import { useSignupData, useSignupActions, useSignupLoading } from "../../../providers/SignUpProvider";
+import { useToast } from "../../../providers/ToastProvider";
+import * as SecureStore from "expo-secure-store";
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
-const TERMS_URL = ""; // TODO: add production URL
-const PRIVACY_URL = ""; // TODO: add production URL
-
 export default function ConsentScreen() {
   const { colors: Colors } = useAppTheme();
+  const { userToken, login, savePasscodeValue, setPasscode } = useAuth();
+  const data = useSignupData();
+  const { reset, submitSignup } = useSignupActions();
+  const isLoading = useSignupLoading();
+  const { showToast } = useToast();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const isDark = Colors.isDark;
@@ -42,23 +49,43 @@ export default function ConsentScreen() {
   const isValid = agreedToTerms && agreedToPrivacy;
 
   const handleOpenTerms = () => {
-    if (TERMS_URL) {
-      Linking.openURL(TERMS_URL).catch(() => {});
-    } else {
-      Alert.alert("Coming Soon", "Our Terms of Service will be available shortly.");
-    }
+    navigation.navigate("TermsOfService");
   };
 
   const handleOpenPrivacy = () => {
-    if (PRIVACY_URL) {
-      Linking.openURL(PRIVACY_URL).catch(() => {});
-    } else {
-      Alert.alert("Coming Soon", "Our Privacy Policy will be available shortly.");
-    }
+    navigation.navigate("PrivacyPolicy");
   };
 
-  const handleContinue = () => {
-    navigation.navigate("EnableNotification");
+  const handleContinue = async () => {
+    if (userToken) {
+      // Standalone case: User is already logged in, just finishing setup
+      setPasscode();
+      return;
+    }
+
+    // Signup case: Not logged in yet
+    try {
+      const response = await submitSignup();
+      const authPayload = response?.data ?? response;
+      const { accessToken, refreshToken } = authPayload;
+
+      const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+      
+      // Save passcode locally for biometrics/verification
+      if (data.passcode) {
+        await savePasscodeValue(data.passcode);
+      }
+
+      reset();
+
+      await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+      
+      // hasPasscode=true because we just set it during signup
+      login(accessToken, true, false);
+    } catch (error: any) {
+      showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
+    }
   };
 
   return (
@@ -172,11 +199,12 @@ export default function ConsentScreen() {
             onPress={handleContinue}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
-            borderRadius={30}
+            borderRadius={Radius.sm}
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={!isValid}
+            disabled={!isValid || isLoading}
+            loading={isLoading}
           />
         </View>
       </View>

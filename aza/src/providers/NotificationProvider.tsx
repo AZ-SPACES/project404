@@ -1,23 +1,30 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { useAuth } from './AuthProvider';
-
-import type { Notification, NotificationPermissionsStatus } from 'expo-notifications';
+import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount, getNotifications } from '../services/api';
+import { navigate } from '../navigation/navigationRef';
 
 type NotificationContextType = {
-  checkPermissions: () => Promise<NotificationPermissionsStatus>;
-  requestPermissions: () => Promise<NotificationPermissionsStatus>;
+  checkPermissions: () => Promise<any>;
+  requestPermissions: () => Promise<any>;
   registerForNotifications: () => Promise<boolean>;
   sendLocalNotification: (title: string, body: string, data?: any) => Promise<string | undefined>;
+  unreadCount: number;
+  fetchUnreadCount: () => Promise<void>;
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userToken } = useAuth();
+  const prevTokenRef = useRef<string | null>(null);
+  const [unreadCount, setUnreadCount] = React.useState(0);
 
   useEffect(() => {
-    // Dynamically require to avoid boot-time side-effects in Expo Go Android
+    let subscription: any;
+    let responseSubscription: any;
     try {
       const Notifications = require('expo-notifications');
       Notifications.setNotificationHandler({
@@ -28,14 +35,49 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           shouldSetBadge: false,
         }),
       });
+
+      subscription = Notifications.addNotificationReceivedListener((notification: any) => {
+        if (userToken !== null) {
+          fetchUnreadCount();
+        }
+
+        const data = notification.request.content.data;
+        // Handle both standard and nested data (some FCM versions)
+        const type = data?.type || data?.notification?.type;
+        const requestId = data?.requestId || data?.notification?.requestId;
+        
+       
+      });
+
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
+        const data = response.notification.request.content.data;
+        
+        // Handle navigation based on notification type from backend
+        // If the app was completely closed, this action is queued and processed on ready
+        if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
+          // Or navigate directly to transaction details if we pass it
+          // navigate('App', { screen: 'Transactions' });
+        } else if (data?.type?.includes('PAYMENT_REQUEST')) {
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+        } else {
+          // Default fallback is inbox for all general alerts (SYSTEM_BROADCAST, SECURITY_ALERT, etc)
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+        }
+      });
     } catch (e) {
       console.warn('NotificationProvider: Could not initialize notifications', e);
     }
-  }, []);
+    
+    return () => {
+      if (subscription) subscription.remove();
+      if (responseSubscription) responseSubscription.remove();
+    };
+  }, [userToken]);
 
-  // Cancel all pending local notifications on logout
+  // Cancel local notifications and unregister FCM token on logout
   useEffect(() => {
-    if (userToken === null) {
+    if (userToken === null && prevTokenRef.current !== null) {
       try {
         const Notifications = require('expo-notifications');
         Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
@@ -43,43 +85,85 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       } catch (e) {
         // Notifications not available on this platform
       }
+      getDeviceId().then((deviceId) => unregisterFcmToken(deviceId)).catch(() => {});
+      setUnreadCount(0);
+    } else if (userToken !== null) {
+      fetchUnreadCount();
     }
+    prevTokenRef.current = userToken;
   }, [userToken]);
 
+  
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await getUnreadNotificationCount();
+      if (response.data?.data?.unreadCount !== undefined) {
+        setUnreadCount(response.data.data.unreadCount);
+      }
+    } catch (e) {
+      console.warn('NotificationProvider: Could not fetch unread count', e);
+    }
+  };
+
   const checkPermissions = async () => {
-    const Notifications = require('expo-notifications');
-    return await Notifications.getPermissionsAsync();
+    try {
+      const Notifications = require('expo-notifications');
+      return await Notifications.getPermissionsAsync();
+    } catch {
+      return { status: 'undetermined' };
+    }
   };
 
   const requestPermissions = async () => {
-    const Notifications = require('expo-notifications');
-    return await Notifications.requestPermissionsAsync();
+    try {
+      const Notifications = require('expo-notifications');
+      return await Notifications.requestPermissionsAsync();
+    } catch {
+      return { status: 'undetermined' };
+    }
   };
 
   const registerForNotifications = async () => {
-    const Notifications = require('expo-notifications');
-    const { status: existingStatus } = await checkPermissions();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await requestPermissions();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
+    try {
+      const Notifications = require('expo-notifications');
+      const { status: existingStatus } = await checkPermissions();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await requestPermissions();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        return false;
+      }
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        (Constants as any).easConfig?.projectId;
+      const { data: pushToken } = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined,
+      );
+      const deviceId = await getDeviceId();
+      const deviceName = Device.modelName ?? 'Unknown Device';
+      const platform = Platform.OS;
+      await registerFcmToken(pushToken, deviceId, deviceName, platform);
+
+      return true;
+    } catch (e) {
+      console.warn('NotificationProvider: Could not register for notifications', e);
       return false;
     }
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
-
-    return true;
   };
 
   const sendLocalNotification = async (title: string, body: string, data?: any) => {
@@ -105,7 +189,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       checkPermissions, 
       requestPermissions, 
       registerForNotifications, 
-      sendLocalNotification 
+      sendLocalNotification,
+      unreadCount,
+      fetchUnreadCount
     }}>
       {children}
     </NotificationContext.Provider>

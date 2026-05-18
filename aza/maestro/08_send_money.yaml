@@ -1,0 +1,98 @@
+appId: com.semekor.k.aza
+name: Send Money - Full Transfer Flow
+---
+- launchApp
+- waitForAnimationToEnd
+
+# Navigate to Send from Home
+- tapOn: "Send"
+- waitForAnimationToEnd
+
+# --- SendContactScreen ---
+- assertVisible: "Who are you sending to?"
+- assertVisible: "Recents"
+
+# Recent contacts horizontal list should be visible
+- scrollUntilVisible:
+    text: "All contacts"
+    direction: DOWN
+
+# Search contacts
+- tapOn:
+    id: "search-toggle"
+- waitForAnimationToEnd
+- inputText: "John"
+- waitForAnimationToEnd
+
+# Clear search
+- clearText
+- waitForAnimationToEnd
+
+# Select first contact from list
+- tapOn:
+    index: 0
+    text: "All contacts"
+- waitForAnimationToEnd
+
+# Alternatively: tap a known contact name
+# - tapOn: "Alice Johnson"
+
+# --- SendAmountScreen ---
+- assertVisible: "Send Money"
+- assertVisible: "Enter amount"
+- assertVisible: "GH¢"
+- assertVisible: "No transfer fees"
+- assertVisible: "Available balance"
+
+# Send button disabled with no amount
+- assertNotVisible:
+    text: "Send"
+    enabled: true
+
+# Enter an amount (accessibilityLabel: "Enter amount in cedis")
+- tapOn:
+    label: "Enter amount in cedis"
+- inputText: "10"
+- waitForAnimationToEnd
+
+# Send button should now show "Send GH¢ 10.00"
+- assertVisible: "Send GH¢ 10.00"
+
+# Add a note (accessibilityLabel: "Add a note")
+- tapOn:
+    label: "Add a note"
+- inputText: "Lunch money"
+
+# Dismiss keyboard
+- tapOn:
+    point: "50%,30%"
+
+# Tap Send
+- tapOn: "Send GH¢ 10.00"
+- waitForAnimationToEnd
+
+# --- SendConfirmScreen ---
+- assertVisible: "Review transfer"
+- assertVisible: "Do you know and trust the payee?"
+- assertVisible: "GH¢ 10.00"
+- assertVisible: "Lunch money"
+
+# Verify scam warning card is shown
+- assertVisible: "scam"
+
+# Confirm and proceed to PIN
+- tapOn: "Send"
+- waitForAnimationToEnd
+
+# --- SendPinScreen (4-digit PIN) ---
+- assertVisible: "Enter your PIN"
+- inputText: ${TEST_PIN}
+- waitForAnimationToEnd
+
+# --- SendSuccessScreen ---
+- assertVisible: "Sent"
+
+# Done - return home
+- tapOn: "Done"
+- waitForAnimationToEnd
+- assertVisible: "GH₵"

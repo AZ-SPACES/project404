@@ -1,0 +1,43 @@
+appId: com.semekor.k.aza
+name: OTP Screen - Input Handling and Verify
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Navigate to login via Get Started bottom sheet
+- tapOn: "Get Started"
+- waitForAnimationToEnd
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# Enter credentials to reach OTP screen
+- tapOn:
+    label: "Phone number"
+- inputText: ${TEST_PHONE}
+- tapOn:
+    label: "Password"
+- inputText: ${TEST_PASSWORD}
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# OTP screen title and button
+- assertVisible: "Enter Code"
+- assertVisible: "Verify"
+
+
+# Type all 6 OTP digits (focus auto-advances between fields)
+- inputText: "1"
+- inputText: "2"
+- inputText: "3"
+- inputText: "4"
+- inputText: "5"
+- inputText: "6"
+
+# All 6 digits entered - Verify button visible
+- assertVisible: "Verify"
+
+# Submit OTP
+- tapOn: "Verify"
+- waitForAnimationToEnd:
+    timeout: 5000
