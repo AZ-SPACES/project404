@@ -74,7 +74,9 @@ public class SecurityConfig {
                             "/api/v1/users/suggest-handles",
                             "/api/v1/security/verify-challenge",
                             "/ws/**",
-                            "/ws/chat/**"
+                            "/ws/chat/**",
+                            "/actuator/health",
+                            "/actuator/info"
                     ).permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
