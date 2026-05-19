@@ -8,6 +8,10 @@ services:
   aza-admin:
     profiles: ["disabled"]
 
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
   nginx:
     depends_on:
       - backend
