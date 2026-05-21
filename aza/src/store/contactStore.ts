@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { 
-  getContacts, 
-  syncContacts, 
-  searchContacts, 
-  markContactFavorite, 
+import {
+  getContacts,
+  syncContacts,
+  searchContacts,
+  markContactFavorite,
   unmarkContactFavorite,
   blockUser as blockUserApi,
   unblockUser as unblockUserApi,
@@ -13,13 +13,15 @@ import {
   searchUsersGlobal,
   requestContact as requestContactApi,
   approveContactRequest as approveContactRequestApi,
-  rejectContactRequest as rejectContactRequestApi
+  rejectContactRequest as rejectContactRequestApi,
+  getSentContactRequests,
 } from '../services/api';
-import { Contact, BlockedUser, PublicProfile, ContactRequest } from '../features/contacts/types';
+import { Contact, BlockedUser, PublicProfile, ContactRequest, SentContactRequest } from '../features/contacts/types';
 
 interface ContactState {
   contacts: Contact[];
   contactRequests: ContactRequest[];
+  sentContactRequests: SentContactRequest[];
   blockedUsers: BlockedUser[];
   isLoading: boolean;
   isSyncing: boolean;
@@ -38,6 +40,7 @@ interface ContactState {
   searchGlobal: (query: string) => Promise<PublicProfile[]>;
   requestContact: (userId: string) => Promise<void>;
   fetchContactRequests: () => Promise<void>;
+  fetchSentContactRequests: () => Promise<void>;
   approveContactRequest: (requestId: string) => Promise<void>;
   rejectContactRequest: (requestId: string) => Promise<void>;
 }
@@ -45,6 +48,7 @@ interface ContactState {
 export const useContactStore = create<ContactState>((set, get) => ({
   contacts: [],
   contactRequests: [],
+  sentContactRequests: [],
   blockedUsers: [],
   isLoading: false,
   isSyncing: false,
@@ -226,5 +230,14 @@ export const useContactStore = create<ContactState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch contact requests', error);
     }
-  }
+  },
+
+  fetchSentContactRequests: async () => {
+    try {
+      const { data } = await getSentContactRequests();
+      set({ sentContactRequests: data.data || [] });
+    } catch (error) {
+      console.error('Failed to fetch sent contact requests', error);
+    }
+  },
 }));
