@@ -269,6 +269,9 @@ export const requestContact = (userId: string) =>
 export const getContactRequests = () =>
   api.get("/api/v1/contacts/requests");
 
+export const getSentContactRequests = () =>
+  api.get("/api/v1/contacts/requests/sent");
+
 export const approveContactRequest = (requestId: string) =>
   api.post(`/api/v1/contacts/requests/${requestId}/approve`);
 

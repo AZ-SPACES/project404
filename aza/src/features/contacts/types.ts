@@ -42,3 +42,13 @@ export interface ContactRequest {
   senderProfileImageUrl?: string;
   createdAt: string;
 }
+
+export interface SentContactRequest {
+  id: string;
+  receiverUserId: string;
+  receiverDisplayName: string;
+  receiverUsername: string;
+  receiverProfileImageUrl?: string;
+  status: string;
+  createdAt: string;
+}
