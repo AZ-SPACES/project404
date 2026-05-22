@@ -18,7 +18,7 @@ type NotificationContextType = {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userToken } = useAuth();
+  const { userToken, completeKYC } = useAuth();
   const prevTokenRef = useRef<string | null>(null);
   const [unreadCount, setUnreadCount] = React.useState(0);
 
@@ -45,8 +45,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Handle both standard and nested data (some FCM versions)
         const type = data?.type || data?.notification?.type;
         const requestId = data?.requestId || data?.notification?.requestId;
-        
-       
+
+        if (type === 'KYC_APPROVED') {
+          completeKYC();
+        }
       });
 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
@@ -54,14 +56,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         // Handle navigation based on notification type from backend
         // If the app was completely closed, this action is queued and processed on ready
-        if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
+        if (data?.type === 'KYC_APPROVED') {
+          completeKYC();
+        } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
-          // Or navigate directly to transaction details if we pass it
-          // navigate('App', { screen: 'Transactions' });
         } else if (data?.type?.includes('PAYMENT_REQUEST')) {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
         } else {
-          // Default fallback is inbox for all general alerts (SYSTEM_BROADCAST, SECURITY_ALERT, etc)
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
         }
       });

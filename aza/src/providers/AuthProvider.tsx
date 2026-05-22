@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { setForceLogoutHandler } from "../services/api";
+import { setForceLogoutHandler, getKycStatus } from "../services/api";
 
 type AuthState = {
   userToken: string | null;
@@ -87,9 +87,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         } catch (_) {}
       }
 
+      // If the user has a token but isKYCVerified is false locally, check the
+      // backend before rendering — this prevents routing to KYC when the admin
+      // approved while the app was closed or the push was missed.
+      let isKYCVerifiedResolved = stateFromStorage?.isKYCVerified || false;
+      if (stateFromStorage?.userToken && !isKYCVerifiedResolved) {
+        try {
+          const res = await getKycStatus();
+          if (res.data?.data?.status === 'VERIFIED') {
+            isKYCVerifiedResolved = true;
+            await SecureStore.setItemAsync(
+              AUTH_STATE_KEY,
+              JSON.stringify({ ...stateFromStorage, isKYCVerified: true }),
+            );
+          }
+        } catch (_) {}
+      }
+
       setAuthState({
         userToken: stateFromStorage?.userToken || null,
-        isKYCVerified: stateFromStorage?.isKYCVerified || false,
+        isKYCVerified: isKYCVerifiedResolved,
         hasPasscode: hasPasscodeResolved,
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
         forcePasswordReset: stateFromStorage?.forcePasswordReset || false,

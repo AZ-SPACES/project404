@@ -185,6 +185,26 @@ export const uploadProfileImage = (file: any) => {
   });
 };
 
+export const uploadHomeBackground = (file: any) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.put("/api/v1/users/me/home-background", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const uploadHubBackground = (file: any) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.put("/api/v1/users/me/hub-background", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 export const checkHandleAvailability = (handle: string) =>
   api.get(`/api/v1/users/check-handle?handle=${encodeURIComponent(handle)}`);
 

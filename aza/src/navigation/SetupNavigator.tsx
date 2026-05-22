@@ -8,8 +8,6 @@ import {
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
 } from '../features/auth';
-import { 
-} from '../features/onboarding';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

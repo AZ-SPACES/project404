@@ -78,6 +78,16 @@ public class EmailService {
         });
     }
 
+    public void sendBirthdayEmail(String email, String name) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            String html = inlineImages(templateEngine.process("email/birthday-notification", ctx));
+            sendViaBrevo("AZA", senderEmail, email, "Happy Birthday from AZA! 🎂", html, null, null);
+        });
+    }
+
+
     public void sendLoginNotification(String email, String name, String deviceName,
                                       String deviceOs, String ipAddress) {
         CompletableFuture.runAsync(() -> {
