@@ -124,11 +124,11 @@ export function Header() {
             </button>
 
             <a
-              href="#download"
+              href="#waitlist"
               className="hidden md:inline-flex items-center text-[0.85rem] font-bold px-[18px] py-2 rounded-lg transition-opacity hover:opacity-90 ml-1"
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
-              Get the app
+              Join waitlist
             </a>
 
             <button
@@ -176,12 +176,12 @@ export function Header() {
 
             <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
             <a
-              href="#download"
+              href="#waitlist"
               onClick={() => setOpen(false)}
               className="flex items-center justify-center text-[0.9rem] font-bold px-4 py-[10px] rounded-2xl"
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
-              Get the app
+              Join waitlist
             </a>
           </div>
         )}

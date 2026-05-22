@@ -68,6 +68,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/app/respond").authenticated();
                     auth.requestMatchers(
                             "/api/v1/auth/**",
+                            "/api/v1/waitlist",
                             "/api/v1/users/check-handle",
                             "/api/v1/users/check-email",
                             "/api/v1/users/check-phone",

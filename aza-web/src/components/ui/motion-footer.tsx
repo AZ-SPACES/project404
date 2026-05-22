@@ -300,14 +300,14 @@ export function CinematicFooter() {
 
               {/* Secondary Text Links */}
               <div className="flex flex-wrap justify-center gap-3 md:gap-6 w-full mt-2">
-                <MagneticButton as="a" href="#" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                <MagneticButton as="a" href="/privacy-policy" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Privacy Policy
                 </MagneticButton>
-                <MagneticButton as="a" href="#" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                <MagneticButton as="a" href="/terms-of-service" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Terms of Service
                 </MagneticButton>
-                <MagneticButton as="a" href="#" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
-                  Support
+                <MagneticButton as="a" href="mailto:support@aza.systems" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Contact Support
                 </MagneticButton>
               </div>
             </div>
@@ -318,11 +318,11 @@ export function CinematicFooter() {
             
             {/* Copyright */}
             <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 md:order-1">
-              © 2026 Aza. All rights reserved.
+              © 2026 JumpSpaces, Inc. All rights reserved.
             </div>
 
             <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 md:order-1">
-              Built by JumpsSpaces
+              Soon available worldwide
             </div>
 
 

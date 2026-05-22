@@ -426,8 +426,8 @@
 
 /* Tablet */
 @media (max-width: 1024px) {
-  .footer-grid { grid-template-columns: 1fr 1fr 1fr !important; }
-  .footer-brand-col { grid-column: span 3 !important; }
+  .footer-grid { grid-template-columns: 1fr 1fr !important; }
+  .footer-brand-col { grid-column: span 2 !important; }
 }
 
 /* Large mobile / small tablet */

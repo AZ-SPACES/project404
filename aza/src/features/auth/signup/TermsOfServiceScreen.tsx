@@ -6,7 +6,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://aza.systems';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://www.aza.systems/terms-of-service';
 
 export default function TermsOfServiceScreen() {
   const { colors: Colors } = useAppTheme();

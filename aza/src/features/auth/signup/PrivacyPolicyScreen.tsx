@@ -6,7 +6,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://aza.systems';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://aza.systems/privacy-policy';
 
 export default function PrivacyPolicyScreen() {
   const { colors: Colors } = useAppTheme();
