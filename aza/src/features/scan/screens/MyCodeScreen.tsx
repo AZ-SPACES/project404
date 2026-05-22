@@ -20,7 +20,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { displayName, profileImageUri, handle } = useProfile();
   const { showToast } = useToast();
   const userHandle = handle || "username";      
-  const profileLink = `http://localhost:8080/${userHandle}`;
+  const profileLink = `https://api.aza.systems/${userHandle}`;
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -50,7 +50,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const handleAddToGoogleWallet = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // TODO: Replace with endpoint containing the JWT link for Google Wallet
-    // const googlePassUrl = `https://api.aza.me/wallet/google/${userHandle}`;
+    // const googlePassUrl = `https://api.aza.systems/wallet/google/${userHandle}`;
     // await Linking.openURL(googlePassUrl).catch(() => {
     //   showToast('Unable to open Google Wallet.', 'error');
     // });
