@@ -2,6 +2,7 @@ package com.aza.backend.service;
 
 import com.aza.backend.dto.kyc.*;
 import com.aza.backend.entity.KycRecord;
+import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.KycRecordRepository;
@@ -31,6 +32,7 @@ public class KycService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
@@ -358,9 +360,24 @@ public class KycService {
 
         kycRecordRepository.save(record);
 
-        // Send notification email
         String name = user.getFirstName() != null ? user.getFirstName() : "User";
         emailService.sendKycStatusEmail(user.getEmail(), name, approve, rejectionReason);
+
+        if (approve) {
+            notificationService.sendNotification(
+                    user.getId(),
+                    Notification.NotificationType.KYC_APPROVED,
+                    "Identity Verified",
+                    "Your identity has been verified. You can now access all features.",
+                    java.util.Map.of("type", "KYC_APPROVED"));
+        } else {
+            notificationService.sendNotification(
+                    user.getId(),
+                    Notification.NotificationType.KYC_REJECTED,
+                    "Verification Update Required",
+                    rejectionReason != null ? rejectionReason : "Your verification was not successful. Please resubmit.",
+                    java.util.Map.of("type", "KYC_REJECTED"));
+        }
 
         return getStatus(user);
     }

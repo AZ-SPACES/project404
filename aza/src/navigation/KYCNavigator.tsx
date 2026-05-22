@@ -28,20 +28,35 @@ import {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const POLL_INTERVAL_MS = 30_000;
+
 function KYCStatusGate({ children }: { children: React.ReactNode }) {
   const { completeKYC } = useAuth();
 
   useEffect(() => {
-    getKycStatus()
-      .then((res) => {
-        const status = res.data?.status;
-        if (status === 'VERIFIED') {
-          completeKYC();
-        } else if (status === 'UNDER_REVIEW') {
-          navigate('PEPUnderReview');
-        }
-      })
-      .catch(() => {});
+    let cancelled = false;
+
+    const check = (isInitial: boolean) => {
+      getKycStatus()
+        .then((res) => {
+          if (cancelled) return;
+          const status = res.data?.status;
+          if (status === 'VERIFIED') {
+            completeKYC();
+          } else if (status === 'UNDER_REVIEW' && isInitial) {
+            navigate('PEPUnderReview');
+          }
+        })
+        .catch(() => {});
+    };
+
+    check(true);
+    const timer = setInterval(() => check(false), POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, [completeKYC]);
 
   return <>{children}</>;

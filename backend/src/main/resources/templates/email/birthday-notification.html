@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #0E0F0C; margin: 0; padding: 0; background-color: #E6ECE1;">
+    <div style="max-width: 560px; margin: 48px auto; background-color: #FFFFFF; border: 1px solid #DADCE0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+        
+        <!-- Header -->
+        <div style="padding: 32px 40px; border-bottom: 1px solid #F0F2F5;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td>
+                        <span style="font-size: 20px; font-weight: 700; color: #174717; letter-spacing: -0.01em;">AZA</span>
+                    </td>
+                    <td align="right">
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="padding: 40px;">
+            <h1 style="font-size: 24px; font-weight: 600; color: #0E0F0C; margin: 0 0 12px 0; letter-spacing: -0.01em;">Happy Birthday, <span th:text="${name}">User</span>! 🎂</h1>
+            <p style="font-size: 16px; color: #5F6368; margin: 0 0 24px 0;">The entire team at AZA wishes you a fantastic birthday filled with joy, peace, and prosperity.</p>
+            <p style="font-size: 16px; color: #5F6368; margin: 0 0 32px 0;">We are so glad to have you as part of our community. Thank you for trusting us with your payments and financial journey.</p>
+            
+            <div style="background-color: #F8F9FA; border: 1px solid #DADCE0; border-radius: 8px; padding: 24px; margin-bottom: 32px; text-align: center;">
+                <p style="font-size: 15px; font-weight: 600; color: #174717; margin: 0 0 8px 0;">Here's to a great year ahead!</p>
+                <p style="font-size: 14px; color: #5F6368; margin: 0;">May this new age bring you closer to all your aspirations and goals.</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #5F6368; margin: 0; line-height: 1.5;">
+                Best regards,<br>
+                <strong>The AZA Team</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 32px 40px; background-color: #F8F9FA; border-top: 1px solid #DADCE0;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td>
+                        <p style="margin: 0; font-size: 13px; color: #5F6368; font-weight: 500;">&copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Aza Inc.</p>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #5F6368; opacity: 0.8;">Secure payments for everyone, everywhere.</p>
+                    </td>
+                    <td align="right" style="vertical-align: bottom;">
+                        <img src="cid:paperplane" alt="" width="20" height="20" style="display: block; border: 0; opacity: 0.4;" />
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

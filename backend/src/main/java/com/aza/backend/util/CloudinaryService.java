@@ -65,6 +65,26 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload raw bytes to Cloudinary
+     */
+    public String uploadBytes(byte[] bytes, String folder) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("folder", folder);
+            params.put("resource_type", "auto");
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().upload(bytes, params);
+            String url = (String) result.get("secure_url");
+            log.info("Cloudinary uploadBytes success: folder={}", folder);
+            return url;
+        } catch (IOException e) {
+            log.error("Cloudinary uploadBytes failed: {}", e.getMessage());
+            throw new RuntimeException("Failed to upload file");
+        }
+    }
+
+    /**
      * Core upload method used by all upload types
      */
     private String upload(MultipartFile file, String folder, String transformation) {
