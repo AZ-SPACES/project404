@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-EMAIL="csdussey@st.knust.edu.gh"
+EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_CMD="docker compose -f $COMPOSE_DIR/docker-compose.yml -f $COMPOSE_DIR/docker-compose.backend.yml"
 
@@ -15,8 +15,8 @@ echo "==> Waiting for nginx..."
 sleep 5
 
 echo "==> Requesting SSL certificate for api.aza.systems..."
-$COMPOSE_CMD run --rm certbot certonly \
-  --webroot -w /var/www/certbot \
+$COMPOSE_CMD run --rm --entrypoint certbot certbot \
+  certonly --webroot -w /var/www/certbot \
   -d api.aza.systems \
   --email "$EMAIL" \
   --agree-tos --no-eff-email

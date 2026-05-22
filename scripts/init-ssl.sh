@@ -5,7 +5,7 @@
 set -euo pipefail
 
 DOMAIN="aza.systems"
-EMAIL="csdussey@st.knust.edu.gh"
+EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Starting services with HTTP-only nginx config..."
@@ -15,8 +15,8 @@ echo "==> Waiting for nginx to be ready..."
 sleep 5
 
 echo "==> Requesting SSL certificate for all domains..."
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" run --rm certbot certonly \
-  --webroot -w /var/www/certbot \
+docker compose -f "$COMPOSE_DIR/docker-compose.yml" run --rm --entrypoint certbot certbot \
+  certonly --webroot -w /var/www/certbot \
   -d "$DOMAIN" -d "www.$DOMAIN" \
   -d "api.$DOMAIN" -d "admin.$DOMAIN" \
   --email "$EMAIL" \

@@ -78,12 +78,12 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Parse the data. Format expected: aza.me/handle or just handle
+      // Parse the data. Format expected: aza.systems/handle or just handle
       let handle = data.trim();
-      if (handle.includes('aza.me/')) {
+      if (handle.includes('aza.systems/')) {
+        handle = handle.split('aza.systems/')[1] || '';
+      } else if (handle.includes('aza.me/')) {
         handle = handle.split('aza.me/')[1] || '';
-      } else if (handle.includes('localhost:8080/')) {
-        handle = handle.split('localhost:8080/')[1] || '';
       }
       
       try {
