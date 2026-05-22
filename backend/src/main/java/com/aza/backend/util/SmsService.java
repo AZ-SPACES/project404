@@ -63,6 +63,15 @@ public class SmsService {
         return sendSms(phoneNumber, message);
     }
 
+    /**
+     * Send Birthday SMS
+     */
+    public boolean sendBirthdaySms(String phoneNumber, String name) {
+        String message = "Happy Birthday, " + name + "! 🎂 Wishing you a wonderful day from all of us at AZA.";
+        return sendSms(phoneNumber, message);
+    }
+
+
     private String formatPhoneNumber(String phoneNumber) {
         if (phoneNumber == null) return "";
         // Remove all non-digits

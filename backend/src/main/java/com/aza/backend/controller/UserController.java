@@ -54,6 +54,20 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.uploadProfileImage(user, file)));
     }
 
+    @PutMapping("/me/home-background")
+    public ResponseEntity<ApiResponse<Object>> uploadHomeBackground(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(ApiResponse.success(userService.uploadHomeBackground(user, file)));
+    }
+
+    @PutMapping("/me/hub-background")
+    public ResponseEntity<ApiResponse<Object>> uploadHubBackground(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(ApiResponse.success(userService.uploadHubBackground(user, file)));
+    }
+
     // ==================== PUBLIC PROFILES ====================
 
     @GetMapping("/{id}")
