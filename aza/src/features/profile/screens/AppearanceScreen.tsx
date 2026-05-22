@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  StatusBar } from "react-native";
+  StatusBar,
+  Modal,
+  TextInput
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -14,7 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
-import { useDisplayContext,BACKGROUND_IMAGES,ThemeOption,THEMES,LANGUAGES } from "../../../providers/DisplayProvider";
+import { useDisplayContext,BACKGROUND_IMAGES,ThemeOption,THEMES } from "../../../providers/DisplayProvider";
 import { Dimensions } from "react-native";
 
 const { width, height } = Dimensions.get('window');
@@ -132,14 +135,35 @@ export default function AppearanceScreen() {
   const {
     theme: selectedTheme,
     setTheme,
-    language: selectedLanguage,
-    setLanguage,
     homeBackground,
     setHomeBackground,
     hubBackground,
     setHubBackground,
     customBackgrounds,
     addCustomBackground } = useDisplayContext();
+
+  const [linkPromptVisible, setLinkPromptVisible] = React.useState(false);
+  const [linkInput, setLinkInput] = React.useState("");
+  const [linkTarget, setLinkTarget] = React.useState<"home" | "hub" | null>(null);
+
+  const handleOpenLinkPrompt = (target: "home" | "hub") => {
+    setLinkTarget(target);
+    setLinkInput("");
+    setLinkPromptVisible(true);
+  };
+
+  const handleLinkSubmit = () => {
+    if (linkInput.trim()) {
+      const uri = linkInput.trim();
+      if (linkTarget === "home") {
+        setHomeBackground(uri);
+      } else if (linkTarget === "hub") {
+        setHubBackground(uri);
+      }
+      addCustomBackground(uri);
+    }
+    setLinkPromptVisible(false);
+  };
 
   const handlePickHomeImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -168,20 +192,7 @@ export default function AppearanceScreen() {
     }
   };
 
-  const renderOptionRow = (
-    label: string,
-    isSelected: boolean,
-    onSelect: () => void,
-  ) => (
-    <TouchableOpacity
-      style={styles.optionRow}
-      onPress={onSelect}
-      activeOpacity={0.7}
-    >
-      <Text style={[Typography.body, styles.optionText]}>{label}</Text>
-      {isSelected && <Feather name="check" size={20} color={Colors.primary} />}
-    </TouchableOpacity>
-  );
+
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -215,21 +226,7 @@ export default function AppearanceScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[Typography.h3, styles.sectionTitle]}>Language</Text>
-          <View style={styles.sectionCard}>
-            {LANGUAGES.map((lang, index) => (
-              <View key={lang}>
-                {renderOptionRow(lang, selectedLanguage === lang, () =>
-                  setLanguage(lang),
-                )}
-                {index < LANGUAGES.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
+
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>
@@ -249,6 +246,18 @@ export default function AppearanceScreen() {
               <Feather name="plus" size={24} color={Colors.textSecondary} />
               <Text style={[Typography.caption, styles.uploadText]}>
                 Upload
+              </Text>
+            </TouchableOpacity>
+
+            {/* Paste Link Button */}
+            <TouchableOpacity
+              style={styles.bgUploadButton}
+              onPress={() => handleOpenLinkPrompt("home")}
+              activeOpacity={0.7}
+            >
+              <Feather name="link" size={24} color={Colors.textSecondary} />
+              <Text style={[Typography.caption, styles.uploadText]}>
+                Link
               </Text>
             </TouchableOpacity>
 
@@ -326,6 +335,18 @@ export default function AppearanceScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Paste Link Button */}
+            <TouchableOpacity
+              style={styles.bgUploadButton}
+              onPress={() => handleOpenLinkPrompt("hub")}
+              activeOpacity={0.7}
+            >
+              <Feather name="link" size={24} color={Colors.textSecondary} />
+              <Text style={[Typography.caption, styles.uploadText]}>
+                Link
+              </Text>
+            </TouchableOpacity>
+
             {/* History of custom backgrounds */}
             {customBackgrounds.map((bgUri) => {
               const isSelected = hubBackground === bgUri;
@@ -379,6 +400,53 @@ export default function AppearanceScreen() {
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* Link Prompt Modal */}
+      <Modal
+        visible={linkPromptVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLinkPromptVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setLinkPromptVisible(false)} />
+          <View style={styles.modalDialog}>
+            <Text style={styles.modalTitle}>Enter Image URL</Text>
+            <Text style={styles.modalDesc}>
+              Paste a direct link to an image (e.g., from Pexels, Unsplash, etc.)
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={linkInput}
+              onChangeText={setLinkInput}
+              placeholder="https://..."
+              placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.btnCancel}
+                onPress={() => setLinkPromptVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.btnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnPrimary, !linkInput.trim() && styles.btnDisabled]}
+                onPress={handleLinkSubmit}
+                disabled={!linkInput.trim()}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.btnPrimaryText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -547,5 +615,61 @@ function createStyles(Colors: ThemeColors) {
     alignItems: "center" },
   uploadText: {
     color: Colors.textSecondary,
-    marginTop: Spacing.xs } });
+    marginTop: Spacing.xs },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl },
+  modalDialog: {
+    backgroundColor: mainBg,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    width: "100%",
+    maxWidth: 400 },
+  modalTitle: {
+    ...Typography.h2,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+    textAlign: "center" },
+  modalDesc: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginBottom: Spacing.lg },
+  modalInput: {
+    ...Typography.body,
+    backgroundColor: isDark ? Colors.surface : "#F9FAFB",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xl },
+  modalActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    width: "100%" },
+  btnCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: Radius.md,
+    backgroundColor: isDark ? Colors.surface : "#F3F4F6",
+    alignItems: "center" },
+  btnCancelText: {
+    ...Typography.button,
+    color: Colors.textPrimary },
+  btnPrimary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    alignItems: "center" },
+  btnDisabled: {
+    opacity: 0.5 },
+  btnPrimaryText: {
+    ...Typography.button,
+    color: Colors.white,
+    fontWeight: "600" } });
 }

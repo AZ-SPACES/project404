@@ -40,6 +40,7 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final OtpService otpService;
     private final NotificationService notificationService;
+    private final ImageService imageService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -133,8 +134,8 @@ public class UserService {
         
         if (request.getLanguage() != null) user.setLanguage(request.getLanguage());
         if (request.getTheme() != null) user.setTheme(request.getTheme());
-        if (request.getHomeBackground() != null) user.setHomeBackground(request.getHomeBackground());
-        if (request.getHubBackground() != null) user.setHubBackground(request.getHubBackground());
+        if (request.getHomeBackground() != null) updateHomeBackground(user, request.getHomeBackground());
+        if (request.getHubBackground() != null) updateHubBackground(user, request.getHubBackground());
 
         applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
@@ -211,6 +212,96 @@ public class UserService {
         user.setProfileImageUrl(imageUrl);
         user = userRepository.save(user);
         return getProfile(user);
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo uploadHomeBackground(User user, MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("File size exceeds 5MB limit");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new RuntimeException("Only JPEG and PNG images are accepted");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read file content");
+        }
+
+        // Decrement reference count of previous background
+        imageService.decrementReferenceCount(user.getHomeBackground());
+
+        String newUrl = imageService.processAndDeduplicateImage(bytes, "aza/backgrounds/home");
+        user.setHomeBackground(newUrl);
+        user = userRepository.save(user);
+        return getProfile(user);
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo uploadHubBackground(User user, MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new RuntimeException("File is empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new RuntimeException("File size exceeds 5MB limit");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new RuntimeException("Only JPEG and PNG images are accepted");
+        }
+
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read file content");
+        }
+
+        // Decrement reference count of previous background
+        imageService.decrementReferenceCount(user.getHubBackground());
+
+        String newUrl = imageService.processAndDeduplicateImage(bytes, "aza/backgrounds/hub");
+        user.setHubBackground(newUrl);
+        user = userRepository.save(user);
+        return getProfile(user);
+    }
+
+    private boolean isExternalUrl(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase();
+        return (lower.startsWith("http://") || lower.startsWith("https://")) && !lower.contains("res.cloudinary.com");
+    }
+
+    private void updateHomeBackground(User user, String newUrl) {
+        String oldUrl = user.getHomeBackground();
+        if (newUrl == null || !newUrl.equals(oldUrl)) {
+            imageService.decrementReferenceCount(oldUrl);
+            if (isExternalUrl(newUrl)) {
+                String processedUrl = imageService.processExternalUrl(newUrl, "aza/backgrounds/home");
+                user.setHomeBackground(processedUrl);
+            } else {
+                user.setHomeBackground(newUrl);
+            }
+        }
+    }
+
+    private void updateHubBackground(User user, String newUrl) {
+        String oldUrl = user.getHubBackground();
+        if (newUrl == null || !newUrl.equals(oldUrl)) {
+            imageService.decrementReferenceCount(oldUrl);
+            if (isExternalUrl(newUrl)) {
+                String processedUrl = imageService.processExternalUrl(newUrl, "aza/backgrounds/hub");
+                user.setHubBackground(processedUrl);
+            } else {
+                user.setHubBackground(newUrl);
+            }
+        }
     }
 
     // ==================== PUBLIC PROFILE ====================

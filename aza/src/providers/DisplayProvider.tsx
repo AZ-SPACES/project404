@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from "react-native";
 import { useProfile } from "./ProfileProvider";
 import { useAuth } from "./AuthProvider";
+import { uploadHomeBackground, uploadHubBackground } from "../services/api";
 
 export type ThemeOption = "Light" | "Dark" | "System Default";
 export type LanguageOption = "English (US)" | "French" | "Spanish";
@@ -143,23 +144,45 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setHomeBackground = (uri: string) => {
+  const setHomeBackground = async (uri: string) => {
     setHomeBackgroundState(uri);
     AsyncStorage.setItem('AppHomeBackground', uri).catch(() => {});
     if (userToken) {
-      profile.updateProfile({ homeBackground: uri }).catch(err => {
+      try {
+        if (uri.startsWith('file://') || uri.startsWith('content://')) {
+          const filename = uri.split('/').pop() || 'background.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+          const photo = { uri, name: filename, type } as any;
+          await uploadHomeBackground(photo);
+          await profile.fetchProfile();
+        } else {
+          await profile.updateProfile({ homeBackground: uri });
+        }
+      } catch (err) {
         console.error("Failed to sync home background to backend", err);
-      });
+      }
     }
   };
 
-  const setHubBackground = (uri: string) => {
+  const setHubBackground = async (uri: string) => {
     setHubBackgroundState(uri);
     AsyncStorage.setItem('AppHubBackground', uri).catch(() => {});
     if (userToken) {
-      profile.updateProfile({ hubBackground: uri }).catch(err => {
+      try {
+        if (uri.startsWith('file://') || uri.startsWith('content://')) {
+          const filename = uri.split('/').pop() || 'background.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+          const photo = { uri, name: filename, type } as any;
+          await uploadHubBackground(photo);
+          await profile.fetchProfile();
+        } else {
+          await profile.updateProfile({ hubBackground: uri });
+        }
+      } catch (err) {
         console.error("Failed to sync hub background to backend", err);
-      });
+      }
     }
   };
 
