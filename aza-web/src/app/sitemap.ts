@@ -1,0 +1,13 @@
+import { MetadataRoute } from "next";
+
+const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aza.systems";
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
+    { url: base,                              lastModified: new Date(), changeFrequency: "weekly",  priority: 1   },
+    { url: `${base}/privacy-policy`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/terms-of-service`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/cookie-policy`,           lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
+    { url: `${base}/compliance`,              lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
+  ];
+}

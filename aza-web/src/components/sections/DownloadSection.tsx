@@ -21,6 +21,27 @@ export function DownloadSection() {
           style={{ background: "#174717", gridTemplateColumns: "1fr auto" }}
         >
           <div className="relative z-10">
+            <div
+              className="inline-flex items-center gap-2 px-[14px] py-[6px] rounded-md text-[0.8rem] font-semibold mb-6"
+              style={{
+                background: "rgba(183,238,122,0.15)",
+                border: "1px solid rgba(183,238,122,0.3)",
+                color: "#B7EE7A",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 7,
+                  height: 7,
+                  background: "#B7EE7A",
+                  borderRadius: 999,
+                  animation: "badgePulse 2s infinite",
+                  flexShrink: 0,
+                }}
+              />
+              Soon available worldwide
+            </div>
             <h2
               className="text-[clamp(1.8rem,3.5vw,2.5rem)] font-bold tracking-[-0.02em] mb-4 text-white"
             >
@@ -30,8 +51,8 @@ export function DownloadSection() {
               className="text-[1.05rem] leading-[1.7] mb-8 max-w-[480px]"
               style={{ color: "rgba(255,255,255,0.75)" }}
             >
-              Join millions of people who use Aza to send money, chat, and manage
-              their finances — effortlessly.
+              Be among the first to send money, chat with friends, and manage
+              your finances — effortlessly, all in one place.
             </p>
             <div className="flex gap-4 flex-wrap">
               <StoreButton label="Download on the App Store">
