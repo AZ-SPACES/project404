@@ -6,7 +6,7 @@ set -euo pipefail
 
 EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_CMD="docker compose -f $COMPOSE_DIR/docker-compose.yml -f $COMPOSE_DIR/docker-compose.backend.yml"
+COMPOSE_CMD="docker compose --env-file $COMPOSE_DIR/backend/.env -f $COMPOSE_DIR/docker-compose.yml -f $COMPOSE_DIR/docker-compose.backend.yml"
 
 echo "==> Starting nginx (HTTP only) and certbot..."
 $COMPOSE_CMD up -d nginx certbot
