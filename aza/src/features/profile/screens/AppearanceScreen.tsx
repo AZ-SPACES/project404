@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   ScrollView,
   Image,
   StatusBar,
-  Modal,
-  TextInput
+  TextInput,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -18,9 +21,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useDisplayContext,BACKGROUND_IMAGES,ThemeOption,THEMES } from "../../../providers/DisplayProvider";
-import { Dimensions } from "react-native";
 
-const { width, height } = Dimensions.get('window');
+const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type ThemeCardProps = {
   theme: ThemeOption;
@@ -145,6 +147,23 @@ export default function AppearanceScreen() {
   const [linkPromptVisible, setLinkPromptVisible] = React.useState(false);
   const [linkInput, setLinkInput] = React.useState("");
   const [linkTarget, setLinkTarget] = React.useState<"home" | "hub" | null>(null);
+
+  const sheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (linkPromptVisible) {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [linkPromptVisible, sheetAnim, backdropAnim]);
 
   const handleOpenLinkPrompt = (target: "home" | "hub") => {
     setLinkTarget(target);
@@ -401,16 +420,18 @@ export default function AppearanceScreen() {
         </View>
       </ScrollView>
 
-      {/* Link Prompt Modal */}
-      <Modal
-        visible={linkPromptVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLinkPromptVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setLinkPromptVisible(false)} />
-          <View style={styles.modalDialog}>
+      {/* Link Prompt Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={linkPromptVisible ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setLinkPromptVisible(false)} />
+        </Animated.View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.sheetOverlay}
+          pointerEvents="box-none"
+        >
+          <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}>
+            <View style={styles.sheetHandle} />
             <Text style={styles.modalTitle}>Enter Image URL</Text>
             <Text style={styles.modalDesc}>
               Paste a direct link to an image (e.g., from Pexels, Unsplash, etc.)
@@ -424,7 +445,7 @@ export default function AppearanceScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
-              autoFocus
+              autoFocus={linkPromptVisible}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -443,9 +464,9 @@ export default function AppearanceScreen() {
                 <Text style={styles.btnPrimaryText}>Save</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </View>
 
     </SafeAreaView>
   );
@@ -616,18 +637,26 @@ function createStyles(Colors: ThemeColors) {
   uploadText: {
     color: Colors.textSecondary,
     marginTop: Spacing.xs },
-  modalOverlay: {
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)" },
+  sheetOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.xl },
-  modalDialog: {
+    justifyContent: "flex-end" },
+  sheet: {
     backgroundColor: mainBg,
-    borderRadius: Radius.lg,
-    padding: Spacing.xl,
-    width: "100%",
-    maxWidth: 400 },
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    paddingBottom: 48 },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    alignSelf: "center",
+    marginBottom: Spacing.lg },
   modalTitle: {
     ...Typography.h2,
     color: Colors.textPrimary,

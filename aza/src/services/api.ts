@@ -532,6 +532,7 @@ api.interceptors.response.use(
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
         if (onAuthFailure) onAuthFailure();
+        _forceLogout?.();
 
         return Promise.reject(err);
       } finally {

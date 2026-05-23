@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Modal,
   Animated,
   StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,6 +49,22 @@ export default function ScanIdScreen() {
   const insets = useSafeAreaInsets();
 
   const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const sheetAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isModalVisible) {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isModalVisible, sheetAnim, backdropAnim]);
 
   // Camera permissions
   useEffect(() => {
@@ -256,10 +271,10 @@ export default function ScanIdScreen() {
         )}
       </View>
 
-      {/* Confirmation Modal */}
-      <Modal visible={isModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          {/* Preview thumbnail */}
+      {/* Confirmation Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={isModalVisible ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: backdropAnim }]} />
+        <Animated.View style={[{ position: 'absolute', bottom: 0, width: '100%' }, { transform: [{ translateY: sheetAnim }] }]}>
           {capturedImage && capturedImage !== "placeholder" && (
             <View style={styles.previewContainer}>
               <Image
@@ -303,8 +318,8 @@ export default function ScanIdScreen() {
               />
             </View>
           </View>
-        </View>
-      </Modal>
+        </Animated.View>
+      </View>
     </View>
   );
 }

@@ -8,8 +8,7 @@ import {
   Dimensions,
   StatusBar,
   ActivityIndicator,
-  Modal,
-  Pressable,
+  Animated,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import {
@@ -52,6 +51,22 @@ export default function HomeScreen() {
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
   const { unreadCount } = useNotifications();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
+  const moreSheetAnim = React.useRef(new Animated.Value(height)).current;
+  const moreBackdropAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (isMoreModalVisible) {
+      Animated.parallel([
+        Animated.timing(moreSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(moreBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(moreSheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+        Animated.timing(moreBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim]);
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   const [updateText, setUpdateText] = React.useState("Updated just now");
 
@@ -269,20 +284,14 @@ export default function HomeScreen() {
       </View>
 
       {/* More Options Bottom Sheet */}
-      <Modal
-        visible={isMoreModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsMoreModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setIsMoreModalVisible(false)}
-        />
-        <View style={styles.bottomSheet}>
+      <View style={StyleSheet.absoluteFill} pointerEvents={isMoreModalVisible ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: moreBackdropAnim }]}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMoreModalVisible(false)} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: moreSheetAnim }] }]}>
           <View style={styles.bottomSheetHandle} />
           <Text style={[Typography.h3, styles.bottomSheetTitle]}>More Options</Text>
-          
+
           <TouchableOpacity
             style={styles.bottomSheetItem}
             onPress={() => {
@@ -308,8 +317,8 @@ export default function HomeScreen() {
             </View>
             <Text style={[Typography.body, styles.bottomSheetItemText]}>Account Statement</Text>
           </TouchableOpacity>
-        </View>
-      </Modal>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -454,7 +463,7 @@ function createStyles(Colors: ThemeColors) {
       marginTop: Spacing.sm,
     },
     modalOverlay: {
-      flex: 1,
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.5)",
     },
     bottomSheet: {

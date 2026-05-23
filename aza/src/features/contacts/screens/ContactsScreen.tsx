@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,17 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
-  Modal,
-  TouchableWithoutFeedback,
   Share,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Animated,
+  Dimensions,
 } from "react-native";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import {
   Feather,
   MaterialCommunityIcons,
@@ -157,6 +159,27 @@ export default function ContactsScreen() {
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  const recipientSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const recipientBackdropAnim = useRef(new Animated.Value(0)).current;
+  const inviteSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const inviteBackdropAnim = useRef(new Animated.Value(0)).current;
+  const addUserSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const addUserBackdropAnim = useRef(new Animated.Value(0)).current;
+  const blockedSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const blockedBackdropAnim = useRef(new Animated.Value(0)).current;
+
+  const animateSheet = (sheetAnim: Animated.Value, backdropAnim: Animated.Value, open: boolean) => {
+    Animated.parallel([
+      Animated.timing(sheetAnim, { toValue: open ? 0 : SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: open ? 1 : 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+  };
+
+  useEffect(() => { animateSheet(recipientSheetAnim, recipientBackdropAnim, !!selectedRecipient); }, [selectedRecipient]);
+  useEffect(() => { animateSheet(inviteSheetAnim, inviteBackdropAnim, showInviteModal); }, [showInviteModal]);
+  useEffect(() => { animateSheet(addUserSheetAnim, addUserBackdropAnim, showAddUserModal); }, [showAddUserModal]);
+  useEffect(() => { animateSheet(blockedSheetAnim, blockedBackdropAnim, showBlockedModal); }, [showBlockedModal]);
 
   useEffect(() => {
     if (showBlockedModal) {
@@ -445,399 +468,286 @@ export default function ContactsScreen() {
         )}
       </SafeAreaView>
 
-      {/* Detail Bottom Sheet Modal manually managed via native Modal component */}
-      <Modal
-        visible={!!selectedRecipient}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={closeSheet}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={closeSheet}>
-            <View style={styles.bottomSheetBackdrop} />
-          </TouchableWithoutFeedback>
+      {/* Contact Detail Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={selectedRecipient ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: recipientBackdropAnim }]}>
+          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={closeSheet} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheetContainer, { transform: [{ translateY: recipientSheetAnim }] }]}>
+          <View style={styles.bottomSheetHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={closeSheet}>
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          {selectedRecipient && (
+            <View style={styles.sheetContent}>
+              <Image source={{ uri: selectedRecipient.avatar }} style={styles.sheetAvatar} />
+              <Text style={[Typography.h3, styles.sheetName]}>{selectedRecipient.name}</Text>
+              <Text style={[Typography.body, styles.sheetUsername]}>{selectedRecipient.username}</Text>
+              <View style={styles.bottomSheetDivider} />
+              <View style={styles.sheetActions}>
+                <View style={styles.actionItem}>
+                  <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8} onPress={handleSend}>
+                    <Feather name="arrow-up" size={24} color={Colors.secondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.actionLabel}>Send</Text>
+                </View>
+                <View style={styles.actionItem}>
+                  <TouchableOpacity style={styles.actionCircleButton} activeOpacity={0.8} onPress={handleRequest}>
+                    <Feather name="arrow-down" size={24} color={Colors.secondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.actionLabel}>Request</Text>
+                </View>
+                <View style={styles.actionItem}>
+                  <TouchableOpacity
+                    style={styles.actionCircleButton}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (selectedRecipient) {
+                        closeSheet();
+                        navigation.navigate("ContactsProfile", {
+                          id: selectedRecipient.id,
+                          name: selectedRecipient.name,
+                          username: selectedRecipient.username,
+                          avatar: selectedRecipient.avatar,
+                        });
+                      }
+                    }}
+                  >
+                    <Feather name="user" size={24} color={Colors.secondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.actionLabel}>View</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </Animated.View>
+      </View>
 
-          <View style={styles.bottomSheetContainer}>
-            <View style={styles.bottomSheetHeader}>
-              <TouchableOpacity style={styles.closeButton} onPress={closeSheet}>
+      {/* Invite Friends Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={showInviteModal ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: inviteBackdropAnim }]}>
+          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={() => setShowInviteModal(false)} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheetContainer, styles.inviteSheetContainer, { transform: [{ translateY: inviteSheetAnim }] }]}>
+          <View style={styles.bottomSheetHeader}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowInviteModal(false)}>
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inviteContent}>
+            <View style={styles.stackedAvatars}>
+              <Image source={{ uri: INITIAL_RECIPIENTS[0]?.avatar }} style={[styles.stackedAvatar, { zIndex: 3 }]} />
+              <Image source={{ uri: INITIAL_RECIPIENTS[1]?.avatar }} style={[styles.stackedAvatar, { zIndex: 2, marginLeft: -12 }]} />
+              <Image source={{ uri: INITIAL_RECIPIENTS[2]?.avatar }} style={[styles.stackedAvatar, { zIndex: 1, marginLeft: -12 }]} />
+            </View>
+            <Text style={[Typography.h1, styles.inviteTitle]}>Invite friends</Text>
+            <Text style={[Typography.body, styles.inviteDescription]}>
+              Let's grow our community together! Every friend you invite helps make Aza better.
+            </Text>
+            <View style={styles.inviteInputRow}>
+              <TextInput
+                style={styles.inviteInput}
+                placeholder="Email or Username"
+                placeholderTextColor={Colors.textSecondary}
+                value={inviteQuery}
+                onChangeText={setInviteQuery}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.sendInviteButton}
+                onPress={() => {
+                  Alert.alert("Invite Sent", `We've sent an invitation to ${inviteQuery}`);
+                  setInviteQuery("");
+                }}
+              >
+                <Text style={styles.sendInviteText}>Send invite</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inviteActionsRow}>
+              <Button
+                title="Copy link"
+                onPress={() => { Alert.alert("Link Copied", "Referral link copied to clipboard"); }}
+                leftIcon={<Feather name="link" size={18} color={Colors.white} />}
+                width="48%"
+                paddingVertical={12}
+                borderRadius={10}
+              />
+              <Button
+                title="Share"
+                onPress={async () => {
+                  try {
+                    await Share.share({ message: "Join me on Aza ! https://aza.app/invite/user123" });
+                  } catch (e) { console.log(e); }
+                }}
+                width="48%"
+                paddingVertical={12}
+                borderRadius={10}
+                backgroundColor={Colors.secondary}
+              />
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* Add User Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={showAddUserModal ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: addUserBackdropAnim }]}>
+          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={() => setShowAddUserModal(false)} />
+        </Animated.View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.sheetKbWrapper}
+          pointerEvents="box-none"
+        >
+          <Animated.View style={[styles.bottomSheetContainer, { transform: [{ translateY: addUserSheetAnim }] }]}>
+            <View style={styles.addUserHeader}>
+              <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Add Aza User</Text>
+              <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
                 <AntDesign name="close" size={20} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
-
-            {selectedRecipient && (
-              <View style={styles.sheetContent}>
-                <Image
-                  source={{ uri: selectedRecipient.avatar }}
-                  style={styles.sheetAvatar}
-                />
-                <Text style={[Typography.h3, styles.sheetName]}>
-                  {selectedRecipient.name}
-                </Text>
-                <Text style={[Typography.body, styles.sheetUsername]}>
-                  {selectedRecipient.username}
-                </Text>
-
-                <View style={styles.bottomSheetDivider} />
-
-                <View style={styles.sheetActions}>
-                  <View style={styles.actionItem}>
-                    <TouchableOpacity
-                      style={styles.actionCircleButton}
-                      activeOpacity={0.8}
-                      onPress={handleSend}
-                    >
-                      <Feather
-                        name="arrow-up"
-                        size={24}
-                        color={Colors.secondary}
+            <Text style={[Typography.body, styles.addUserSubtitle]}>
+              Search for friends by their @username or name to add them to your contacts.
+            </Text>
+            <View style={styles.addUserInputContainer}>
+              <TextInput
+                style={styles.addUserInput}
+                placeholder="@username or name"
+                placeholderTextColor={Colors.textSecondary}
+                value={addUserQuery}
+                onChangeText={setAddUserQuery}
+                autoCapitalize="none"
+              />
+            </View>
+            {globalSearchResults.length > 0 ? (
+              <FlatList
+                data={globalSearchResults}
+                keyExtractor={(item) => item.id}
+                style={{ maxHeight: 250, marginVertical: Spacing.md }}
+                renderItem={({ item }) => (
+                  <View style={[styles.row, { paddingVertical: Spacing.sm }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <Image
+                        source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }}
+                        style={styles.avatar}
                       />
-                    </TouchableOpacity>
-                    <Text style={styles.actionLabel}>Send</Text>
-                  </View>
-
-                  <View style={styles.actionItem}>
+                      <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
+                        <Text style={[Typography.bodyLg, styles.rowName]}>{item.displayName}</Text>
+                        <Text style={[Typography.body, styles.rowUsername]}>@{item.handle}</Text>
+                      </View>
+                    </View>
                     <TouchableOpacity
-                      style={styles.actionCircleButton}
-                      activeOpacity={0.8}
-                      onPress={handleRequest}
-                    >
-                      <Feather
-                        name="arrow-down"
-                        size={24}
-                        color={Colors.secondary}
-                      />
-                    </TouchableOpacity>
-                    <Text style={styles.actionLabel}>Request</Text>
-                  </View>
-
-                  <View style={styles.actionItem}>
-                    <TouchableOpacity
-                      style={styles.actionCircleButton}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        if (selectedRecipient) {
-                          closeSheet();
-                          navigation.navigate("ContactsProfile", {
-                            id: selectedRecipient.id,
-                            name: selectedRecipient.name,
-                            username: selectedRecipient.username,
-                            avatar: selectedRecipient.avatar,
-                          });
+                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                      onPress={async () => {
+                        try {
+                          await useContactStore.getState().requestContact(item.id);
+                          Alert.alert("Success", `Contact request sent to ${item.displayName}`);
+                          setShowAddUserModal(false);
+                          setAddUserQuery("");
+                          setGlobalSearchResults([]);
+                        } catch (e: any) {
+                          Alert.alert("Error", e.message || "Failed to send request");
                         }
                       }}
                     >
-                      <Feather name="user" size={24} color={Colors.secondary} />
-                    </TouchableOpacity>
-                    <Text style={styles.actionLabel}>View</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Invite Friends Modal */}
-      <Modal
-        visible={showInviteModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowInviteModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={() => setShowInviteModal(false)}>
-            <View style={styles.bottomSheetBackdrop} />
-          </TouchableWithoutFeedback>
-
-          <View
-            style={[styles.bottomSheetContainer, styles.inviteSheetContainer]}
-          >
-            <View style={styles.bottomSheetHeader}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowInviteModal(false)}
-              >
-                <AntDesign name="close" size={20} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inviteContent}>
-              <View style={styles.stackedAvatars}>
-                <Image
-                  source={{ uri: INITIAL_RECIPIENTS[0]?.avatar }}
-                  style={[styles.stackedAvatar, { zIndex: 3 }]}
-                />
-                <Image
-                  source={{ uri: INITIAL_RECIPIENTS[1]?.avatar }}
-                  style={[styles.stackedAvatar, { zIndex: 2, marginLeft: -12 }]}
-                />
-                <Image
-                  source={{ uri: INITIAL_RECIPIENTS[2]?.avatar }}
-                  style={[styles.stackedAvatar, { zIndex: 1, marginLeft: -12 }]}
-                />
-              </View>
-
-              <Text style={[Typography.h1, styles.inviteTitle]}>
-                Invite friends
-              </Text>
-              <Text style={[Typography.body, styles.inviteDescription]}>
-                Let's grow our community together! Every friend you invite helps
-                make Aza better.
-              </Text>
-
-              <View style={styles.inviteInputRow}>
-                <TextInput
-                  style={styles.inviteInput}
-                  placeholder="Email or Username"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={inviteQuery}
-                  onChangeText={setInviteQuery}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity
-                  style={styles.sendInviteButton}
-                  onPress={() => {
-                    Alert.alert(
-                      "Invite Sent",
-                      `We've sent an invitation to ${inviteQuery}`,
-                    );
-                    setInviteQuery("");
-                  }}
-                >
-                  <Text style={styles.sendInviteText}>Send invite</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inviteActionsRow}>
-                <Button
-                  title="Copy link"
-                  onPress={() => {
-                    Alert.alert(
-                      "Link Copied",
-                      "Referral link copied to clipboard",
-                    );
-                  }}
-                  leftIcon={
-                    <Feather name="link" size={18} color={Colors.white} />
-                  }
-                  width="48%"
-                  paddingVertical={12}
-                  borderRadius={10}
-                />
-                <Button
-                  title="Share"
-                  onPress={async () => {
-                    try {
-                      await Share.share({
-                        message:
-                          "Join me on Aza ! https://aza.app/invite/user123",
-                      });
-                    } catch (e) {
-                      console.log(e);
-                    }
-                  }}
-                  width="48%"
-                  paddingVertical={12}
-                  borderRadius={10}
-                  backgroundColor={Colors.secondary}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Add User Modal */}
-      <Modal
-        visible={showAddUserModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowAddUserModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={() => setShowAddUserModal(false)}>
-            <View style={styles.bottomSheetBackdrop} />
-          </TouchableWithoutFeedback>
-
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.addUserModalContainer}
-          >
-            <View style={styles.addUserContent}>
-              <View style={styles.addUserHeader}>
-                <Text style={[Typography.h3, { color: Colors.textPrimary }]}>
-                  Add Aza User
-                </Text>
-                <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
-                  <AntDesign
-                    name="close"
-                    size={20}
-                    color={Colors.textPrimary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={[Typography.body, styles.addUserSubtitle]}>
-                Search for friends by their @username or name to add them to
-                your contacts.
-              </Text>
-
-              <View style={styles.addUserInputContainer}>
-                <TextInput
-                  style={styles.addUserInput}
-                  placeholder="@username or name"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={addUserQuery}
-                  onChangeText={setAddUserQuery}
-                  autoFocus
-                  autoCapitalize="none"
-                />
-              </View>
-
-              {globalSearchResults.length > 0 ? (
-                <FlatList
-                  data={globalSearchResults}
-                  keyExtractor={(item) => item.id}
-                  style={{ maxHeight: 250, marginVertical: Spacing.md }}
-                  renderItem={({ item }) => (
-                    <View style={[styles.row, { paddingVertical: Spacing.sm }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <Image 
-                          source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }} 
-                          style={styles.avatar} 
-                        />
-                        <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
-                          <Text style={[Typography.bodyLg, styles.rowName]}>{item.displayName}</Text>
-                          <Text style={[Typography.body, styles.rowUsername]}>@{item.handle}</Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity 
-                        style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
-                        onPress={async () => {
-                          try {
-                            await useContactStore.getState().requestContact(item.id);
-                            Alert.alert("Success", `Contact request sent to ${item.displayName}`);
-                            setShowAddUserModal(false);
-                            setAddUserQuery("");
-                            setGlobalSearchResults([]);
-                          } catch (e: any) {
-                            Alert.alert("Error", e.message || "Failed to send request");
-                          }
-                        }}
-                      >
-                        <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                />
-              ) : null}
-
-              <Button
-                title="Search Users"
-                onPress={async () => {
-                  const query = addUserQuery.trim().replace(/^@/, '');
-                  if (query) {
-                    try {
-                      setIsSearchingGlobal(true);
-                      setGlobalSearchResults([]);
-                      const results = await searchGlobal(query);
-                      
-                      // Also try to find by exact handle to ensure it's at the top
-                      const exactMatch = await findUserByHandle(query);
-                      
-                      let finalResults = [...results];
-                      if (exactMatch && !finalResults.find(r => r.id === exactMatch.id)) {
-                        finalResults.unshift(exactMatch);
-                      }
-                      
-                      setGlobalSearchResults(finalResults);
-                      
-                      if (finalResults.length === 0) {
-                        Alert.alert("Not Found", `No user found matching "${query}"`);
-                      }
-                    } catch (error) {
-                      Alert.alert("Error", "Search failed.");
-                    } finally {
-                      setIsSearchingGlobal(false);
-                    }
-                  }
-                }}
-                paddingVertical={14}
-                borderRadius={10}
-                disabled={!addUserQuery.trim() || isSearchingGlobal}
-                loading={isSearchingGlobal}
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
-      {/* Blocked Users Modal */}
-      <Modal
-        visible={showBlockedModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowBlockedModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={() => setShowBlockedModal(false)}>
-            <View style={styles.bottomSheetBackdrop} />
-          </TouchableWithoutFeedback>
-
-          <View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl }]}>
-            <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
-              <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
-                <AntDesign name="close" size={20} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            {isLoading && blockedUsers.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-              </View>
-            ) : blockedUsers.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Feather name="shield" size={48} color={Colors.textSecondary} />
-                <Text style={[Typography.bodyLg, styles.emptyTitle, { marginTop: 16 }]}>No blocked users</Text>
-                <Text style={[Typography.body, styles.emptySubtitle, { textAlign: 'center' }]}>
-                  When you block someone, they will appear here.
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={blockedUsers}
-                keyExtractor={(item) => item.blockedUserId}
-                renderItem={({ item }) => (
-                  <View style={styles.blockedUserRow}>
-                    <View style={styles.blockedUserInfo}>
-                      <Image 
-                        source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }} 
-                        style={styles.blockedAvatar} 
-                      />
-                      <View style={{ marginLeft: 12 }}>
-                        <Text style={[Typography.bodyLg, { fontWeight: '600', color: Colors.textPrimary }]}>{item.displayName}</Text>
-                        {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
-                      </View>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.unblockButton}
-                      onPress={() => {
-                        Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
-                          { text: "Cancel", style: "cancel" },
-                          { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
-                        ]);
-                      }}
-                    >
-                      <Text style={styles.unblockButtonText}>Unblock</Text>
+                      <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Add</Text>
                     </TouchableOpacity>
                   </View>
                 )}
-                contentContainerStyle={{ padding: Spacing.lg }}
               />
-            )}
+            ) : null}
+            <Button
+              title="Search Users"
+              onPress={async () => {
+                const query = addUserQuery.trim().replace(/^@/, '');
+                if (query) {
+                  try {
+                    setIsSearchingGlobal(true);
+                    setGlobalSearchResults([]);
+                    const results = await searchGlobal(query);
+                    const exactMatch = await findUserByHandle(query);
+                    let finalResults = [...results];
+                    if (exactMatch && !finalResults.find(r => r.id === exactMatch.id)) {
+                      finalResults.unshift(exactMatch);
+                    }
+                    setGlobalSearchResults(finalResults);
+                    if (finalResults.length === 0) {
+                      Alert.alert("Not Found", `No user found matching "${query}"`);
+                    }
+                  } catch (error) {
+                    Alert.alert("Error", "Search failed.");
+                  } finally {
+                    setIsSearchingGlobal(false);
+                  }
+                }
+              }}
+              paddingVertical={14}
+              borderRadius={10}
+              disabled={!addUserQuery.trim() || isSearchingGlobal}
+              loading={isSearchingGlobal}
+            />
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </View>
+      {/* Blocked Users Bottom Sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={showBlockedModal ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: blockedBackdropAnim }]}>
+          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={() => setShowBlockedModal(false)} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl, transform: [{ translateY: blockedSheetAnim }] }]}>
+          <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
+            <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+          {isLoading && blockedUsers.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : blockedUsers.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Feather name="shield" size={48} color={Colors.textSecondary} />
+              <Text style={[Typography.bodyLg, styles.emptyTitle, { marginTop: 16 }]}>No blocked users</Text>
+              <Text style={[Typography.body, styles.emptySubtitle, { textAlign: 'center' }]}>
+                When you block someone, they will appear here.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={blockedUsers}
+              keyExtractor={(item) => item.blockedUserId}
+              renderItem={({ item }) => (
+                <View style={styles.blockedUserRow}>
+                  <View style={styles.blockedUserInfo}>
+                    <Image
+                      source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }}
+                      style={styles.blockedAvatar}
+                    />
+                    <View style={{ marginLeft: 12 }}>
+                      <Text style={[Typography.bodyLg, { fontWeight: '600', color: Colors.textPrimary }]}>{item.displayName}</Text>
+                      {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.unblockButton}
+                    onPress={() => {
+                      Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
+                      ]);
+                    }}
+                  >
+                    <Text style={styles.unblockButtonText}>Unblock</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              contentContainerStyle={{ padding: Spacing.lg }}
+            />
+          )}
+        </Animated.View>
+      </View>
     </>
   );
 }
@@ -946,15 +856,18 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.primary,
       fontWeight: "500",
     },
-    modalOverlay: {
+    bottomSheetBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: Colors.black70,
+    },
+    sheetKbWrapper: {
       flex: 1,
       justifyContent: "flex-end",
     },
-    bottomSheetBackdrop: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: Colors.black70,
-    },
     bottomSheetContainer: {
+      position: "absolute",
+      bottom: 0,
+      width: "100%",
       backgroundColor: Colors.background,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
@@ -1170,21 +1083,6 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
       textTransform: "uppercase",
       letterSpacing: 1,
-    },
-    addUserModalContainer: {
-      width: "100%",
-      paddingHorizontal: Spacing.lg,
-      marginBottom: 40,
-    },
-    addUserContent: {
-      backgroundColor: Colors.background,
-      borderRadius: 16,
-      padding: Spacing.lg,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 5,
     },
     addUserHeader: {
       flexDirection: "row",
