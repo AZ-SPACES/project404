@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
-
 const nextConfig: NextConfig = {
   output: "standalone",
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "res.cloudinary.com" },
@@ -9,5 +9,4 @@ const nextConfig: NextConfig = {
     ],
   },
 };
-
 export default nextConfig;
