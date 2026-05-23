@@ -154,7 +154,7 @@ export default function UserDetailPage() {
   );
   if (!user) return null;
 
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.displayName || "—";
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "—";
   const isAdmin = user.role === "ADMIN";
 
   return (
@@ -197,7 +197,7 @@ export default function UserDetailPage() {
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Profile</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <InfoRow label="Handle" value={user.handle ? `@${user.handle}` : null} />
+          <InfoRow label="Handle" value={user.username ? `@${user.username}` : null} />
           <InfoRow label="Phone" value={user.phone} />
           <InfoRow label="Email" value={user.email} />
           <InfoRow label="Date of Birth" value={user.dateOfBirth} />

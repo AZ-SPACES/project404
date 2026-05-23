@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
 import { useAuth } from './AuthProvider';
-import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount, getNotifications } from '../services/api';
+import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount } from '../services/api';
 import { navigate } from '../navigation/navigationRef';
 
 type NotificationContextType = {
@@ -22,11 +23,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const prevTokenRef = useRef<string | null>(null);
   const [unreadCount, setUnreadCount] = React.useState(0);
 
-  useEffect(() => {
-    let subscription: any;
-    let responseSubscription: any;
+  const fetchUnreadCount = useCallback(async () => {
     try {
-      const Notifications = require('expo-notifications');
+      const response = await getUnreadNotificationCount();
+      if (response.data?.data?.unreadCount !== undefined) {
+        setUnreadCount(response.data.data.unreadCount);
+      }
+    } catch (e) {
+      console.warn('NotificationProvider: Could not fetch unread count', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let subscription: Notifications.Subscription | undefined;
+    let responseSubscription: Notifications.Subscription | undefined;
+    
+    try {
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowBanner: true,
@@ -38,13 +50,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       subscription = Notifications.addNotificationReceivedListener((notification: any) => {
         if (userToken !== null) {
-          fetchUnreadCount();
+          void fetchUnreadCount();
         }
 
         const data = notification.request.content.data;
-        // Handle both standard and nested data (some FCM versions)
         const type = data?.type || data?.notification?.type;
-        const requestId = data?.requestId || data?.notification?.requestId;
 
         if (type === 'KYC_APPROVED') {
           completeKYC();
@@ -54,8 +64,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
         const data = response.notification.request.content.data;
         
-        // Handle navigation based on notification type from backend
-        // If the app was completely closed, this action is queued and processed on ready
         if (data?.type === 'KYC_APPROVED') {
           completeKYC();
         } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
@@ -74,42 +82,35 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (subscription) subscription.remove();
       if (responseSubscription) responseSubscription.remove();
     };
-  }, [userToken]);
+  }, [userToken, completeKYC, fetchUnreadCount]);
 
-  // Cancel local notifications and unregister FCM token on logout
   useEffect(() => {
     if (userToken === null && prevTokenRef.current !== null) {
       try {
-        const Notifications = require('expo-notifications');
-        Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
-        Notifications.dismissAllNotificationsAsync().catch(() => {});
+        void Notifications.cancelAllScheduledNotificationsAsync();
+        void Notifications.dismissAllNotificationsAsync();
       } catch (e) {
         // Notifications not available on this platform
       }
-      getDeviceId().then((deviceId) => unregisterFcmToken(deviceId)).catch(() => {});
+      
+      const unregister = async () => {
+        try {
+          const deviceId = await getDeviceId();
+          await unregisterFcmToken(deviceId);
+        } catch (e) {
+          // ignore
+        }
+      };
+      void unregister();
       setUnreadCount(0);
     } else if (userToken !== null) {
-      fetchUnreadCount();
+      void fetchUnreadCount();
     }
     prevTokenRef.current = userToken;
-  }, [userToken]);
-
-  
-
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await getUnreadNotificationCount();
-      if (response.data?.data?.unreadCount !== undefined) {
-        setUnreadCount(response.data.data.unreadCount);
-      }
-    } catch (e) {
-      console.warn('NotificationProvider: Could not fetch unread count', e);
-    }
-  };
+  }, [userToken, fetchUnreadCount]);
 
   const checkPermissions = async () => {
     try {
-      const Notifications = require('expo-notifications');
       return await Notifications.getPermissionsAsync();
     } catch {
       return { status: 'undetermined' };
@@ -118,7 +119,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const requestPermissions = async () => {
     try {
-      const Notifications = require('expo-notifications');
       return await Notifications.requestPermissionsAsync();
     } catch {
       return { status: 'undetermined' };
@@ -127,7 +127,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const registerForNotifications = async () => {
     try {
-      const Notifications = require('expo-notifications');
       const { status: existingStatus } = await checkPermissions();
       let finalStatus = existingStatus;
 
@@ -169,7 +168,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const sendLocalNotification = async (title: string, body: string, data?: any) => {
     try {
-      const Notifications = require('expo-notifications');
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title,

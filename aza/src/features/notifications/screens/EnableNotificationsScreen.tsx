@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   Image,
   TouchableOpacity,
-  StatusBar } from 'react-native';
+  StatusBar 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -24,13 +25,13 @@ type EnableNotificationsProps = {
 export default function EnableNotificationsScreen({ onComplete }: EnableNotificationsProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { checkPermissions, registerForNotifications, sendLocalNotification } = useNotifications();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [isChecking, setIsChecking] = React.useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
-  const handleFinish = React.useCallback(() => {
+  const handleFinish = useCallback(() => {
     if (onComplete) {
       onComplete();
     } else if (navigation.canGoBack()) {
@@ -38,11 +39,11 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
     }
   }, [navigation, onComplete]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
     const checkInitialStatus = async () => {
       try {
-        const { status } = await checkPermissions();
+        const { status } = await checkPermissions() as any;
         if (status === 'granted' && isMounted) {
           handleFinish();
         }
@@ -55,7 +56,7 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
       }
     };
 
-    checkInitialStatus();
+    void checkInitialStatus();
     return () => { isMounted = false; };
   }, [checkPermissions, handleFinish]);
 
@@ -71,7 +72,7 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
       if (granted) {
         await sendLocalNotification(
           "Welcome to Aza!",
-          "You'll now receive updates about your spending and security.",
+          "You'll now receive updates about your spending and security."
         );
       }
     } catch (error) {
@@ -82,7 +83,7 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
     }
   };
 
-  const handleNotNow = async () => {
+  const handleNotNow = () => {
     handleFinish();
   };
 
@@ -128,7 +129,7 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
         
         <Button
           title="Enable push notifications"
-          onPress={handleEnable}
+          onPress={() => void handleEnable()}
           backgroundColor={Colors.primary}
           textColor={Colors.secondary}
           style={styles.button}
@@ -141,9 +142,9 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
         <Button
           title="Not now"
           onPress={handleNotNow}
-          backgroundColor={Colors.secondary}
-          textColor={Colors.primary}
-          style={styles.button}
+          backgroundColor={Colors.surface}
+          textColor={Colors.textPrimary}
+          style={styles.buttonOutline}
         />
       </View>
     </SafeAreaView>
@@ -153,53 +154,73 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
 function createStyles(Colors: ThemeColors) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center' },
-  header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: isDark ? Colors.white10 : 'rgba(22, 51, 0, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center' },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md },
-  title: {
-    ...Typography.h1,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md },
-  description: {
-    ...Typography.bodyLg,
-    color: Colors.textSecondary,
-    lineHeight: 24 },
-  imageContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center' },
-  image: {
-    width: '80%',
-    height: '60%' },
-  footer: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg },
-  footerInfo: {
-    ...Typography.body,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: Spacing.lg },
-  button: {
-    borderRadius: Radius.md },
-  spacer: {
-    height: Spacing.md } });
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background 
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center' 
+    },
+    header: {
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm 
+    },
+    closeButton: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.md,
+      backgroundColor: Colors.surface,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      alignItems: 'center',
+      justifyContent: 'center' 
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md 
+    },
+    title: {
+      ...Typography.h1,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.md 
+    },
+    description: {
+      ...Typography.bodyLg,
+      color: Colors.textSecondary,
+      lineHeight: 24 
+    },
+    imageContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center' 
+    },
+    image: {
+      width: '80%',
+      height: '60%' 
+    },
+    footer: {
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.lg 
+    },
+    footerInfo: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: Spacing.lg 
+    },
+    button: {
+      borderRadius: Radius.md 
+    },
+    buttonOutline: {
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    spacer: {
+      height: Spacing.md 
+    } 
+  });
 }
-

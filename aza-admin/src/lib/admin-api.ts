@@ -210,10 +210,9 @@ export interface AdminUser {
   id: string;
   email: string;
   phone: string;
-  handle: string;
+  username: string;
   firstName: string;
   lastName: string;
-  displayName: string;
   profileImageUrl: string | null;
   dateOfBirth: string | null;
   nationality: string | null;
@@ -530,6 +529,7 @@ export interface CannedResponse {
   content: string;
   category: string;
   usageCount: number;
+  createdAt?: string;
 }
 
 export function getCannedResponses(): Promise<CannedResponse[]> {
@@ -698,6 +698,7 @@ export interface RiskAlert {
   riskScore: number;
   triggeredAt: string;
   status: "OPEN" | "INVESTIGATING" | "RESOLVED" | "FALSE_POSITIVE";
+  notes: string | null;
 }
 
 export interface RiskStats {
@@ -792,4 +793,16 @@ export function updateFeeRule(id: string, data: Partial<Pick<FeeRule, "amount" |
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+// ── Support Agents ────────────────────────────────────────────────────────────
+
+export interface AgentStatus {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export function getAvailableAgents(): Promise<AgentStatus[]> {
+  return request("/api/v1/admin/support/agents/available");
 }
