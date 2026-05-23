@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import {
   useAppTheme,
@@ -22,7 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { useDisplayContext } from "../../../providers/DisplayProvider";
+import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS, QUICK_ACTIONS_REGISTRY, QuickActionId } from "../../../providers/DisplayProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useNotifications } from "../../../providers/NotificationProvider";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
@@ -44,10 +46,18 @@ export default function HomeScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { homeBackground } = useDisplayContext();
+  const {
+    homeBackground, homeDim, homeBlur, homeBannerGradient, accentId, balanceCardStyle,
+    homeLayout, balanceHiddenByDefault, reducedMotion, quickActions,
+  } = useDisplayContext();
+  const animDuration = reducedMotion ? 0 : 300;
+  const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
+  const bannerGrad = homeBannerGradient === 'accent'
+    ? [accentPalette.primary, accentPalette.gradientEnd]
+    : (BANNER_GRADIENTS.find(g => g.id === homeBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
   const { handle, profileImageUri } = useProfile();
 
-  const [isBalanceVisible, setIsBalanceVisible] = React.useState(true);
+  const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
   const { unreadCount } = useNotifications();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
@@ -57,13 +67,13 @@ export default function HomeScreen() {
   React.useEffect(() => {
     if (isMoreModalVisible) {
       Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(moreSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(moreBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(moreSheetAnim, { toValue: height, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(moreBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
       ]).start();
     }
   }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim]);
@@ -105,151 +115,137 @@ export default function HomeScreen() {
   }, [refresh]);
 
   const greeting = getGreeting();
-  
+
+  const actionHandlers = React.useMemo<Record<QuickActionId, { icon: string; label: string; onPress: () => void }>>(() => ({
+    send:      { icon: 'arrow-up',    label: 'Send',      onPress: () => navigation.navigate('Send') },
+    request:   { icon: 'arrow-down',  label: 'Request',   onPress: () => navigation.navigate('Receive') },
+    details:   { icon: 'credit-card', label: 'Details',   onPress: () => navigation.navigate('Details') },
+    withdraw:  { icon: 'log-out',     label: 'Withdraw',  onPress: () => navigation.navigate('Withdraw') },
+    topup:     { icon: 'plus-circle', label: 'Top Up',    onPress: () => navigation.navigate('Receive') },
+    statement: { icon: 'file-text',   label: 'Statement', onPress: () => navigation.navigate('StatementDownload') },
+  }), [navigation]);
+
+  // Shared header row used by both layouts
+  const headerRow = (
+    <View style={styles.header}>
+      <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
+        {`${greeting}${handle ? `, ${handle}` : ""}`}
+      </Text>
+      <View style={styles.headerRight}>
+        <TouchableOpacity style={styles.profilePicContainer} onPress={() => navigation.navigate("Profile")} accessibilityLabel="Open profile">
+          {profileImageUri ? (
+            <Image source={{ uri: profileImageUri }} style={styles.profilePic} accessibilityLabel="Profile photo" />
+          ) : (
+            <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
+              <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.bellButton} onPress={() => navigation.navigate("Inbox")} accessibilityLabel="Open notifications">
+          <Feather name="bell" size={24} color={Colors.white} />
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Dynamic quick actions
+  const actionsRow = (
+    <View style={styles.actionsRow}>
+      {quickActions.slice(0, 3).map(id => {
+        const a = actionHandlers[id];
+        return <ActionTarget key={id} icon={a.icon as any} label={a.label} onPress={a.onPress} />;
+      })}
+      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} />
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="transparent"
-        translucent
-      />
-      {/* Background Hero Image */}
-      <View style={styles.topSection}>
-        <Image
-          source={{ uri: homeBackground }}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-        <SafeAreaView>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
-              {`${greeting}${handle ? `, ${handle}` : ""}`}
-            </Text>
-            <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={styles.profilePicContainer}
-                onPress={() => navigation.navigate("Profile")}
-                accessibilityLabel="Open profile"
-              >
-                {profileImageUri ? (
-                  <Image
-                    source={{ uri: profileImageUri }}
-                    style={styles.profilePic}
-                    accessibilityLabel="Profile photo"
-                  />
-                ) : (
-                  <View
-                    style={[styles.profilePic, styles.profilePicPlaceholder]}
-                  >
-                    <Feather
-                      name="user"
-                      size={20}
-                      color="rgba(255,255,255,0.8)"
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.bellButton}
-                onPress={() => navigation.navigate("Inbox")}
-                accessibilityLabel="Open notifications"
-              >
-                <Feather name="bell" size={24} color={Colors.white} />
-                {unreadCount > 0 && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadBadgeText}>
-                      {unreadCount > 99 ? "99+" : unreadCount}
+      {homeLayout === 'minimal' ? (
+        /* ── Minimal layout: compact accent-color header ── */
+        <View style={[styles.minimalBanner, { backgroundColor: accentPalette.primary }]}>
+          <LinearGradient colors={bannerGrad as [string, string]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <SafeAreaView>
+            {headerRow}
+            <View style={styles.minimalBalanceRow}>
+              <View>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <View style={styles.balanceRow}>
+                  {loading && !wallet ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Text style={[Typography.h2, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
+                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
                     </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={22} color={Colors.white} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
+            {actionsRow}
+          </SafeAreaView>
+        </View>
+      ) : (
+        /* ── Default layout: full banner ── */
+        <View style={styles.topSection}>
+          {homeBackground ? (
+            <Image source={{ uri: homeBackground }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : (
+            <LinearGradient colors={bannerGrad as [string, string]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          )}
+          {homeBlur > 0 && <BlurView intensity={homeBlur} tint="default" style={StyleSheet.absoluteFill} />}
+          {homeDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${homeDim})` }]} />}
 
-          {/* Balance */}
-          <View style={styles.balanceSection}>
-            <Text style={[Typography.bodyLg, styles.accountType]}>
-              Main • GHS
-            </Text>
-            <View style={styles.balanceRow}>
-                {loading && !wallet ? (
-                  <ActivityIndicator size="small" color={Colors.white} />
-                ) : (
-                  <Text
-                    style={[Typography.h1, styles.balanceText]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
-                  </Text>
-                )}
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                accessibilityLabel="Toggle balance visibility"
-                onPress={() => setIsBalanceVisible(!isBalanceVisible)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Feather
-                  name={isBalanceVisible ? "eye-off" : "eye"}
-                  size={Typography.h1.fontSize}
-                  color={Colors.white}
-                />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={{ flexDirection: "row", alignItems: "center" }}
-              onPress={onRefresh}
-              disabled={refreshing}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={[Typography.caption, styles.updateTime]}>
-                {updateText}
-              </Text>
-              {refreshing ? (
-                <ActivityIndicator
-                  size="small"
-                  color="rgba(255,255,255,0.8)"
-                  style={{ marginLeft: 6, marginTop: Spacing.sm, transform: [{ scale: 0.6 }] }}
-                />
-              ) : (
-                <Feather
-                  name="refresh-cw"
-                  size={12}
-                  color="rgba(255,255,255,0.8)"
-                  style={{ marginLeft: 6, marginTop: Spacing.sm }}
-                />
+          <SafeAreaView>
+            {headerRow}
+
+            {/* Balance + Actions — wrapped in optional card */}
+            <View style={[
+              balanceCardStyle !== 'flat' && styles.balanceCardWrapper,
+              balanceCardStyle === 'card' && styles.balanceCardSolid,
+            ]}>
+              {balanceCardStyle === 'glass' && (
+                <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
               )}
-            </TouchableOpacity>
-          </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionsRow}>
-            <ActionTarget
-              icon="arrow-up"
-              label="Send"
-              onPress={() => navigation.navigate("Send")}
-            />
-            <ActionTarget
-              icon="arrow-down"
-              label="Request"
-              onPress={() => navigation.navigate("Receive")}
-            />
-            <ActionTarget
-              icon="credit-card"
-              label="Details"
-              onPress={() => navigation.navigate("Details")}
-            />
-            <ActionTarget
-              icon="more-horizontal"
-              label="More"
-              onPress={() => setIsMoreModalVisible(true)}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+              <View style={styles.balanceSection}>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <View style={styles.balanceRow}>
+                  {loading && !wallet ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Text style={[Typography.h1, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
+                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                    </Text>
+                  )}
+                  <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility" onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={Colors.white} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={onRefresh} disabled={refreshing} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={[Typography.caption, styles.updateTime]}>{updateText}</Text>
+                  {refreshing ? (
+                    <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" style={{ marginLeft: 6, marginTop: Spacing.sm, transform: [{ scale: 0.6 }] }} />
+                  ) : (
+                    <Feather name="refresh-cw" size={12} color="rgba(255,255,255,0.8)" style={{ marginLeft: 6, marginTop: Spacing.sm }} />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {actionsRow}
+            </View>
+          </SafeAreaView>
+        </View>
+      )}
 
       <View style={styles.bottomSection}>
         <View style={styles.transactionsHeader}>
@@ -283,7 +279,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* More Options Bottom Sheet */}
+      {/* More Options Bottom Sheet — shows actions not in the quick actions row */}
       <View style={StyleSheet.absoluteFill} pointerEvents={isMoreModalVisible ? 'auto' : 'none'}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: moreBackdropAnim }]}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMoreModalVisible(false)} />
@@ -291,32 +287,21 @@ export default function HomeScreen() {
         <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: moreSheetAnim }] }]}>
           <View style={styles.bottomSheetHandle} />
           <Text style={[Typography.h3, styles.bottomSheetTitle]}>More Options</Text>
-
-          <TouchableOpacity
-            style={styles.bottomSheetItem}
-            onPress={() => {
-              setIsMoreModalVisible(false);
-              navigation.navigate("Withdraw");
-            }}
-          >
-            <View style={styles.bottomSheetIcon}>
-              <Feather name="log-out" size={20} color={Colors.textPrimary} />
-            </View>
-            <Text style={[Typography.body, styles.bottomSheetItemText]}>Withdraw Funds</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.bottomSheetItem}
-            onPress={() => {
-              setIsMoreModalVisible(false);
-              navigation.navigate("StatementDownload");
-            }}
-          >
-            <View style={styles.bottomSheetIcon}>
-              <Feather name="file-text" size={20} color={Colors.textPrimary} />
-            </View>
-            <Text style={[Typography.body, styles.bottomSheetItemText]}>Account Statement</Text>
-          </TouchableOpacity>
+          {QUICK_ACTIONS_REGISTRY.filter(a => !quickActions.includes(a.id)).map(action => {
+            const handler = actionHandlers[action.id];
+            return (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.bottomSheetItem}
+                onPress={() => { setIsMoreModalVisible(false); handler.onPress(); }}
+              >
+                <View style={styles.bottomSheetIcon}>
+                  <Feather name={action.icon as any} size={20} color={Colors.textPrimary} />
+                </View>
+                <Text style={[Typography.body, styles.bottomSheetItemText]}>{action.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </Animated.View>
       </View>
     </View>
@@ -333,6 +318,14 @@ function createStyles(Colors: ThemeColors) {
     topSection: {
       height: height * 0.55,
       backgroundColor: Colors.primary,
+    },
+    minimalBanner: {
+      overflow: 'hidden',
+    },
+    minimalBalanceRow: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.xs,
     },
     header: {
       flexDirection: "row",
@@ -365,6 +358,17 @@ function createStyles(Colors: ThemeColors) {
       backgroundColor: "rgba(0, 0, 0, 0.28)",
       justifyContent: "center",
       alignItems: "center",
+    },
+    balanceCardWrapper: {
+      marginHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      borderRadius: Radius.lg,
+      overflow: "hidden",
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    balanceCardSolid: {
+      backgroundColor: "rgba(0,0,0,0.28)",
     },
     unreadBadge: {
       position: "absolute",

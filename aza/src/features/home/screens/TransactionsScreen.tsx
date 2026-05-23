@@ -32,6 +32,7 @@ import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { INITIAL_RECIPIENTS } from "../../contacts";
 import Button from "../../../components/ui/Button";
 import { useTransactions } from "../../../hooks/useTransactions";
+import { useDisplayContext } from "../../../providers/DisplayProvider";
 
 export type Transaction = {
   id: string;
@@ -124,6 +125,8 @@ export function TransactionsScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Transactions">>();
   const balance = route.params?.balance || "GH₵ 0.00";
+  const { transactionGrouping, reducedMotion } = useDisplayContext();
+  const animDuration = reducedMotion ? 0 : 300;
 
   const [searchQuery, setSearchQuery] = useState("");
   const { sections, loading, refreshing, refresh, loadMore, hasMore, error, filter, setFilter } = useTransactions();
@@ -135,13 +138,13 @@ export function TransactionsScreen() {
   useEffect(() => {
     if (selectedTransaction) {
       Animated.parallel([
-        Animated.timing(txSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(txBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(txSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(txSheetAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
-        Animated.timing(txBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(txSheetAnim, { toValue: SCREEN_HEIGHT, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
       ]).start();
     }
   }, [selectedTransaction, txSheetAnim, txBackdropAnim]);
@@ -151,15 +154,19 @@ export function TransactionsScreen() {
   }, [refresh]);
 
   const filteredSections = useMemo(() => {
-    if (!searchQuery) return sections;
-    return sections.map(section => ({
+    const filtered = !searchQuery ? sections : sections.map(section => ({
       ...section,
-      data: section.data.filter(tx => 
+      data: section.data.filter(tx =>
         tx.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.type.toLowerCase().includes(searchQuery.toLowerCase())
       )
     })).filter(section => section.data.length > 0);
-  }, [sections, searchQuery]);
+
+    if (transactionGrouping === 'flat') {
+      return [{ title: '', data: filtered.flatMap(s => s.data) }];
+    }
+    return filtered;
+  }, [sections, searchQuery, transactionGrouping]);
 
   const formatCurrency = (amount: number) => {
     return `GH₵ ${amount.toLocaleString(undefined, {
@@ -194,15 +201,14 @@ export function TransactionsScreen() {
     </View>
   );
 
-  const renderSectionHeader = ({
-    section: { title },
-  }: {
-    section: Section;
-  }) => (
-    <View style={styles.sectionHeaderContainer}>
-      <Text style={styles.sectionHeader}>{title}</Text>
-    </View>
-  );
+  const renderSectionHeader = ({ section: { title } }: { section: Section }) => {
+    if (!title) return null;
+    return (
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionHeader}>{title}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

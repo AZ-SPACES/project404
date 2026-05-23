@@ -10,12 +10,14 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { useDisplayContext } from '../../../providers/DisplayProvider';
+import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../providers/DisplayProvider';
 import { RootStackParamList } from '../../../navigation/types';
 import { MINI_APP_REGISTRY, getMiniApp } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
@@ -40,7 +42,11 @@ const RECENTLY_USED_IDS = ['airtime_data', 'exchange_rates'];
 export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { hubBackground } = useDisplayContext();
+  const { hubBackground, hubDim, hubBlur, hubBannerGradient, accentId } = useDisplayContext();
+  const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
+  const bannerGrad = hubBannerGradient === 'accent'
+    ? [accentPalette.primary, accentPalette.gradientEnd]
+    : (BANNER_GRADIENTS.find(g => g.id === hubBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
   const navigation = useNavigation<HubNavProp>();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,12 +76,14 @@ export default function HubScreen() {
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Hero background */}
-      <View style={StyleSheet.absoluteFill}>
-        <Image
-          source={{ uri: hubBackground }}
-          style={[StyleSheet.absoluteFill, { height: '55%' }]}
-          resizeMode="cover"
-        />
+      <View style={[StyleSheet.absoluteFill, { height: '55%' }]}>
+        {hubBackground ? (
+          <Image source={{ uri: hubBackground }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={bannerGrad as [string, string]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        )}
+        {hubBlur > 0 && <BlurView intensity={hubBlur} tint="default" style={StyleSheet.absoluteFill} />}
+        {hubDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${hubDim})` }]} />}
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>

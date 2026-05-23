@@ -186,8 +186,8 @@ function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; cha
             </span>
           )}
         </div>
-        <p className="text-sm font-semibold text-white">{user.displayName}</p>
-        {user.handle && <p className="text-xs text-white/40 mt-0.5">@{user.handle}</p>}
+        <p className="text-sm font-semibold text-white">{[user.firstName, user.lastName].filter(Boolean).join(" ") || user.username}</p>
+        {user.username && <p className="text-xs text-white/40 mt-0.5">@{user.username}</p>}
         <p className="text-xs text-white/30 mt-0.5 truncate">{user.email}</p>
       </div>
 
