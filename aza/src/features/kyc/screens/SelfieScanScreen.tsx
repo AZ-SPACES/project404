@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Modal,
   Animated,
   StatusBar } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,6 +55,23 @@ export default function SelfieScanScreen() {
 
   const cameraRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
+
+  const sheetAnim = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isModalVisible) {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(sheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isModalVisible, sheetAnim, backdropAnim]);
 
   // Pulse animation on the oval border while scanning
   const pulseAnim = useRef(new Animated.Value(0.85)).current;
@@ -271,10 +287,12 @@ export default function SelfieScanScreen() {
         )}
       </View>
 
-      {/* Confirmation modal */}
-      <Modal visible={isModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          {/* Preview thumbnail */}
+      {/* Confirmation bottom sheet */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={isModalVisible ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <View style={styles.backdrop} />
+        </Animated.View>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}>
           {capturedImage && capturedImage !== "placeholder" && (
             <View style={styles.previewContainer}>
               <Image
@@ -284,18 +302,11 @@ export default function SelfieScanScreen() {
               />
             </View>
           )}
-
-          <View
-            style={[
-              styles.modalContent,
-              { paddingBottom: insets.bottom || Spacing.lg },
-            ]}
-          >
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom || Spacing.lg }]}>
             <Text style={styles.modalTitle}>Does your selfie look clear?</Text>
             <Text style={styles.modalSubtitle}>
               Make sure your face is fully visible, well-lit, and in focus.
             </Text>
-
             <View style={styles.modalActions}>
               <Button
                 title="Yes, looks good"
@@ -310,7 +321,7 @@ export default function SelfieScanScreen() {
               <Button
                 title="Retake"
                 onPress={handleRetake}
-                backgroundColor={Colors.secondary} 
+                backgroundColor={Colors.secondary}
                 textColor={Colors.primary}
                 borderRadius={10}
                 paddingVertical={16}
@@ -318,8 +329,8 @@ export default function SelfieScanScreen() {
               />
             </View>
           </View>
-        </View>
-      </Modal>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -419,11 +430,14 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 30,
     backgroundColor: "#fff" },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
+  // Bottom sheet
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.6)" },
+  sheet: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%" },
   previewContainer: {
     alignItems: "center",
     marginBottom: -40,

@@ -12,7 +12,6 @@ import {
     Pressable,
     ScrollView,
     Animated,
-    Modal,
     Dimensions,
     StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -233,29 +232,22 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                 </Pressable>
             </KeyboardAvoidingView>
 
-            {/* Success Modal */}
-            <Modal
-                visible={isSuccessModalVisible}
-                transparent
-                animationType="none"
-                onRequestClose={hideSuccessModal}
-            >
-                <View style={styles.modalOverlayContainer}>
-                    <Animated.View style={[styles.modalBackdrop, { opacity: fadeAnim }]}>
-                        <Pressable style={styles.flex} onPress={hideSuccessModal} />
-                    </Animated.View>
-                    <Animated.View style={[styles.modalSheet, { transform: [{ translateY: slideAnim }] }]}>
-                        <View style={styles.modalContent}>
-                            <View style={styles.successIconContainer}>
-                                <Feather name="check" size={20} color={Colors.textPrimary} />
-                            </View>
-                            <Text style={styles.successMessage}>
-                                You've requested GH¢ {displayAmount}{'\n'}from {name}
-                            </Text>
+            {/* Success bottom sheet */}
+            <View style={StyleSheet.absoluteFill} pointerEvents={isSuccessModalVisible ? 'auto' : 'none'}>
+                <Animated.View style={[styles.modalBackdrop, { opacity: fadeAnim }]}>
+                    <Pressable style={styles.flex} onPress={hideSuccessModal} />
+                </Animated.View>
+                <Animated.View style={[styles.modalSheet, { transform: [{ translateY: slideAnim }] }]}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.successIconContainer}>
+                            <Feather name="check" size={20} color={Colors.textPrimary} />
                         </View>
-                    </Animated.View>
-                </View>
-            </Modal>
+                        <Text style={styles.successMessage}>
+                            You've requested GH¢ {displayAmount}{'\n'}from {name}
+                        </Text>
+                    </View>
+                </Animated.View>
+            </View>
         </SafeAreaView>
     );
 }
@@ -418,16 +410,15 @@ function createStyles(Colors: ThemeColors) {
     requestButtonTextActive: {
         color: Colors.white },
         
-    // Success Modal
-    modalOverlayContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
+    // Success bottom sheet
     modalBackdrop: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0,0,0,0.6)',
     },
     modalSheet: {
+        position: 'absolute',
+        bottom: 0,
+        width: '100%',
         backgroundColor: isDark ? Colors.background : Colors.white,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,

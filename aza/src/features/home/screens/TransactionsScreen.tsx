@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  Modal,
-  Pressable,
+  Animated,
+  Dimensions,
   Image,
   ActivityIndicator,
 } from "react-native";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -127,6 +129,22 @@ export function TransactionsScreen() {
   const { sections, loading, refreshing, refresh, loadMore, hasMore, error, filter, setFilter } = useTransactions();
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
+  const txSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const txBackdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (selectedTransaction) {
+      Animated.parallel([
+        Animated.timing(txSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(txSheetAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [selectedTransaction, txSheetAnim, txBackdropAnim]);
 
   const onRefresh = useCallback(() => {
     refresh();
@@ -305,17 +323,11 @@ export function TransactionsScreen() {
         }
       />
 
-      <Modal
-        visible={!!selectedTransaction}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedTransaction(null)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setSelectedTransaction(null)}
-        />
-        <View style={styles.bottomSheet}>
+      <View style={StyleSheet.absoluteFill} pointerEvents={selectedTransaction ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: txBackdropAnim }]}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedTransaction(null)} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: txSheetAnim }] }]}>
           <View style={styles.bottomSheetHandle} />
 
           {selectedTransaction && (
@@ -415,8 +427,8 @@ export function TransactionsScreen() {
         })()}
             </>
           )}
-        </View>
-      </Modal>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -565,7 +577,7 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
     },
     modalOverlay: {
-      flex: 1,
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.5)",
     },
     bottomSheet: {
