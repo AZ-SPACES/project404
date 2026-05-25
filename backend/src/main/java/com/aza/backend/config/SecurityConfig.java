@@ -1,6 +1,7 @@
 package com.aza.backend.config;
 
 import com.aza.backend.security.JwtAuthenticationFilter;
+import com.aza.backend.security.filter.MerchantApiKeyFilter;
 import com.aza.backend.security.filter.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +16,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
@@ -37,6 +37,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final MerchantApiKeyFilter merchantApiKeyFilter;
 
     @Value("${app.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
@@ -78,6 +79,8 @@ public class SecurityConfig {
                             "/ws/chat/**",
                             "/actuator/**"
                     ).permitAll();
+                    // Checkout GET is public; confirm and cancel require authenticated JWT
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(
@@ -94,8 +97,9 @@ public class SecurityConfig {
                             response.sendError(401, "Unauthorized"))
                     .accessDeniedHandler((request, response, accessDeniedException) ->
                             response.sendError(403, "Forbidden")))
-            .addFilterBefore(jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class)
+            // JWT runs first; API key filter then skips if a valid JWT already authenticated the request
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(merchantApiKeyFilter, JwtAuthenticationFilter.class)
             // RateLimitFilter runs AFTER JWT auth so it can read SecurityContext for user-level limits
             .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
@@ -109,7 +113,7 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of(
                 "Authorization", "Content-Type", "X-Requested-With",
-                "X-Device-ID", "X-Platform", "X-Bypass-Token"));
+                "X-Device-ID", "X-Platform", "X-Bypass-Token", "X-Api-Key"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
@@ -118,10 +122,6 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 
     @Bean
     public AuthenticationManager authenticationManager(

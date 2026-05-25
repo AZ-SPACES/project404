@@ -2,6 +2,7 @@ import AirtimeDataApp from './AirtimeDataApp';
 import PayBillsApp from './PayBillsApp';
 import BuyTicketsApp from './BuyTicketsApp';
 import ExchangeRatesApp from './ExchangeRatesApp';
+import MyBusinessApp from './MyBusinessApp';
 import { MiniAppEntry } from './types';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
@@ -40,6 +41,15 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     color: '#00695C',
     category: 'Finance',
     component: ExchangeRatesApp,
+  },
+  {
+    id: 'my_business',
+    name: 'My Business',
+    description: 'Accept payments, manage payouts and API keys',
+    icon: '🏪',
+    color: '#174717',
+    category: 'Business',
+    component: MyBusinessApp,
   },
 ];
 

@@ -63,7 +63,8 @@ import {
   PersonalDetailsScreen,
   PersonalInformationScreen,
   ChangeEmailScreen,
-  ChangePhoneScreen
+  ChangePhoneScreen,
+  DeleteAccountScreen
 } from '../features/profile';
 import { 
   ReasonScreen, 
@@ -146,6 +147,7 @@ export default function AppNavigator() {
       <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

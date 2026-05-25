@@ -31,6 +31,7 @@ const TILE_SIZE = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 
 const ALL_CATEGORIES: ('All' | MiniAppCategory)[] = [
   'All',
+  'Business',
   'Finance',
   'Bills & Utilities',
   'Entertainment',

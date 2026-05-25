@@ -130,6 +130,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Notification preferences updated"));
     }
 
+    // ==================== DELETE (SOFT) ====================
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Object>> deleteMe(
+            @AuthenticationPrincipal User user,
+            HttpServletRequest httpRequest) {
+        userService.softDeleteAccount(user, httpRequest.getHeader("Authorization"));
+        return ResponseEntity.ok(ApiResponse.success("Account deleted"));
+    }
+
     // ==================== DEACTIVATE ====================
 
     @PostMapping("/me/deactivate")
