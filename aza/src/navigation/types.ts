@@ -105,4 +105,5 @@ export type RootStackParamList = {
   SharedMedia: undefined;
   ManageStorage: { storageStats?: any } | undefined;
   MessageInfo: { message: any };
+  DeleteAccount: undefined;
 };

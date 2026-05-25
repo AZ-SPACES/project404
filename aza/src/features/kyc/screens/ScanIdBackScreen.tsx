@@ -100,24 +100,17 @@ export default function ScanIdBackScreen() {
   useEffect(() => {
     let timeout1: NodeJS.Timeout;
     let timeout2: NodeJS.Timeout;
-    let autoCaptureTimeout: NodeJS.Timeout;
 
     if (!capturedImage && permission?.granted) {
       // Mock progression of detecting an ID
       setFeedback("Move Closer");
       timeout1 = setTimeout(() => setFeedback("Align ID"), 1500);
-      timeout2 = setTimeout(() => setFeedback("Hold Still"), 3000);
-
-      // Auto-capture after 1.5s liveness timer (total 4.5s)
-      autoCaptureTimeout = setTimeout(() => {
-        handleCapture();
-      }, 4500);
+      timeout2 = setTimeout(() => setFeedback("Ready to Capture"), 3000);
     }
 
     return () => {
       clearTimeout(timeout1);
       clearTimeout(timeout2);
-      clearTimeout(autoCaptureTimeout);
     };
   }, [capturedImage, permission?.granted]);
 
