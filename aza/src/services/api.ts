@@ -414,6 +414,9 @@ export const clearBypassToken = async (): Promise<void> => {
 
 export const getMerchant = () => api.get('/api/v1/merchant/me');
 
+export const checkMerchantHandleAvailability = (handle: string) =>
+  api.get(`/api/v1/merchant/check-handle?handle=${handle}`);
+
 export const registerMerchant = (data: {
   businessName: string;
   businessHandle: string;

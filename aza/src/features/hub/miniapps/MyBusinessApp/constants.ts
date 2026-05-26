@@ -1,0 +1,21 @@
+export const BUSINESS_CATEGORIES = [
+  'RETAIL', 'FOOD_AND_BEVERAGE', 'SERVICES', 'TECHNOLOGY',
+  'HEALTHCARE', 'EDUCATION', 'ENTERTAINMENT', 'TRANSPORT',
+  'REAL_ESTATE', 'AGRICULTURE', 'FINANCE', 'OTHER',
+];
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  RETAIL: 'Retail', FOOD_AND_BEVERAGE: 'Food & Beverage',
+  SERVICES: 'Services', TECHNOLOGY: 'Technology',
+  HEALTHCARE: 'Healthcare', EDUCATION: 'Education',
+  ENTERTAINMENT: 'Entertainment', TRANSPORT: 'Transport',
+  REAL_ESTATE: 'Real Estate', AGRICULTURE: 'Agriculture',
+  FINANCE: 'Finance', OTHER: 'Other',
+};
+
+export const STATUS_COLORS: Record<string, string> = {
+  PENDING: '#FF9800', COMPLETED: '#4CAF50', EXPIRED: '#9E9E9E',
+  CANCELLED: '#F44336', ACTIVE: '#4CAF50', PENDING_KYB: '#FF9800',
+  KYB_SUBMITTED: '#2196F3', KYB_UNDER_REVIEW: '#2196F3',
+  MORE_INFO_REQUIRED: '#FF5722', SUSPENDED: '#F44336', REJECTED: '#F44336',
+};
