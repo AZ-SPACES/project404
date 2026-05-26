@@ -806,3 +806,97 @@ export interface AgentStatus {
 export function getAvailableAgents(): Promise<AgentStatus[]> {
   return request("/api/v1/admin/support/agents/available");
 }
+
+// ── Merchants ─────────────────────────────────────────────────────────────────
+
+export interface AdminMerchant {
+  id: string;
+  userId: string;
+  businessName: string;
+  businessHandle: string;
+  businessEmail: string | null;
+  businessPhone: string | null;
+  businessDescription: string | null;
+  logoUrl: string | null;
+  category: string | null;
+  status: string;
+  rejectionReason: string | null;
+  moreInfoRequest: string | null;
+  balance: number;
+  currency: string;
+  totalVolume: number;
+  feeRateBps: number;
+  createdAt: string;
+  activatedAt: string | null;
+}
+
+export interface MerchantKyb {
+  status: string;
+  registrationNumber: string | null;
+  businessType: string | null;
+  registeredAddress: string | null;
+  city: string | null;
+  taxIdNumber: string | null;
+  ownerFullName: string | null;
+  ownerIdType: string | null;
+  rejectionReason: string | null;
+  moreInfoRequest: string | null;
+  documents: { id: string; documentType: string; fileUrl: string; status: string }[];
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export function getMerchants(params: {
+  query?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<Page<AdminMerchant>> {
+  const qs = new URLSearchParams();
+  if (params.query) qs.set("query", params.query);
+  if (params.status) qs.set("status", params.status);
+  qs.set("page", String(params.page ?? 0));
+  qs.set("size", String(params.size ?? 20));
+  return request(`/api/v1/admin/merchants?${qs}`);
+}
+
+export function getMerchantById(merchantId: string): Promise<AdminMerchant> {
+  return request(`/api/v1/admin/merchants/${merchantId}`);
+}
+
+export function getMerchantKyb(merchantId: string): Promise<MerchantKyb> {
+  return request(`/api/v1/admin/merchants/${merchantId}/kyb`);
+}
+
+export function reviewMerchantKyb(
+  merchantId: string,
+  approve: boolean,
+  rejectionReason?: string,
+  moreInfoRequest?: string
+): Promise<MerchantKyb> {
+  return request(`/api/v1/admin/merchants/${merchantId}/kyb/review`, {
+    method: "POST",
+    body: JSON.stringify({ approve, rejectionReason, moreInfoRequest }),
+  });
+}
+
+export function setMerchantStatus(merchantId: string, status: string): Promise<AdminMerchant> {
+  return request(`/api/v1/admin/merchants/${merchantId}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ── Rate Limit Management ─────────────────────────────────────────────────────
+
+export function resetUserRateLimit(userId: string): Promise<string> {
+  return request(`/api/v1/admin/risk/rate-limits/user/${userId}`, { method: "DELETE" });
+}
+
+export function resetIpRateLimit(ip: string): Promise<string> {
+  return request(`/api/v1/admin/risk/rate-limits/ip?ip=${encodeURIComponent(ip)}`, { method: "DELETE" });
+}
+
+export function resetAllRateLimits(): Promise<{ keysDeleted: number }> {
+  return request("/api/v1/admin/risk/rate-limits", { method: "DELETE" });
+}
