@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,15 +22,17 @@ import Button from "../../../../components/ui/Button";
 import KYCProgressBar from "../../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
-import { submitMerchantKyb } from "../../../../services/api";
+import { submitMerchantKyb, getKycStatus } from "../../../../services/api";
+import { useProfile } from "../../../../providers/ProfileProvider";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantKYBOwner">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantKYBOwner">;
 
 const ID_TYPES = [
+  { value: "GHANA_CARD", label: "Ghana Card", placeholder: "GHA-XXXXXXXXX-X" },
   { value: "PASSPORT", label: "Passport", placeholder: "G1234567" },
-  { value: "NATIONAL_ID", label: "National ID", placeholder: "GHA-XXXXXXXXX-X" },
-  { value: "DRIVERS_LICENSE", label: "Driver's License", placeholder: "12345678" },
+  { value: "VOTER_ID", label: "Voter's ID", placeholder: "0123456789" },
+  { value: "DRIVERS_LICENCE", label: "Driver's License", placeholder: "12345678" },
 ];
 
 export default function MerchantKYBOwnerScreen() {
@@ -50,9 +52,40 @@ export default function MerchantKYBOwnerScreen() {
   } = route.params;
 
   const [ownerFullName, setOwnerFullName] = useState("");
-  const [ownerIdType, setOwnerIdType] = useState("NATIONAL_ID");
+  const [ownerIdType, setOwnerIdType] = useState("GHANA_CARD");
   const [ownerIdNumber, setOwnerIdNumber] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isPrimaryOwner, setIsPrimaryOwner] = useState<"yes" | "no" | null>(null);
+
+  const { displayName } = useProfile();
+  const [kycIdType, setKycIdType] = useState<string | null>(null);
+  const [kycIdNumber, setKycIdNumber] = useState("");
+
+  useEffect(() => {
+    getKycStatus()
+      .then((res: any) => {
+        const d = res.data?.data ?? res.data;
+        setKycIdType(d?.idType ?? null);
+        setKycIdNumber(d?.idNumber ?? "");
+      })
+      .catch(() => {});
+  }, []);
+
+  const handlePrimaryOwnerSelect = (value: "yes" | "no") => {
+    setIsPrimaryOwner(value);
+    if (value === "yes") {
+      setOwnerFullName(displayName || "");
+      let mappedType = "GHANA_CARD";
+      if (kycIdType === 'passport') mappedType = "PASSPORT";
+      if (kycIdType === 'drivers_license') mappedType = "DRIVERS_LICENCE";
+      setOwnerIdType(mappedType);
+      setOwnerIdNumber(kycIdNumber);
+    } else {
+      setOwnerFullName("");
+      setOwnerIdType("GHANA_CARD");
+      setOwnerIdNumber("");
+    }
+  };
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -76,18 +109,20 @@ export default function MerchantKYBOwnerScreen() {
   const handleContinue = async () => {
     setLoading(true);
     try {
-      await submitMerchantKyb({
+      const payload: any = {
         businessType,
-        registrationNumber,
-        registeredAddress,
-        city,
-        taxIdNumber,
-        website,
         ownerFullName: ownerFullName.trim(),
         ownerIdType,
-        ownerIdNumber: ownerIdNumber.trim() || undefined,
-      });
-      navigation.navigate("MerchantKYBDocuments", { merchantId });
+      };
+      if (registrationNumber) payload.registrationNumber = registrationNumber;
+      if (registeredAddress) payload.registeredAddress = registeredAddress;
+      if (city) payload.city = city;
+      if (taxIdNumber) payload.taxIdNumber = taxIdNumber;
+      if (website) payload.website = website;
+      if (ownerIdNumber.trim()) payload.ownerIdNumber = ownerIdNumber.trim();
+
+      await submitMerchantKyb(payload);
+      navigation.navigate("MerchantKYBDocuments", { merchantId, isPrimaryOwner: isPrimaryOwner === "yes" });
     } catch (err: any) {
       const message =
         err?.response?.data?.message ?? err?.message ?? "Something went wrong. Please try again.";
@@ -149,6 +184,40 @@ export default function MerchantKYBOwnerScreen() {
             <Text style={styles.subtitle}>
               We need the details of the primary owner or director.
             </Text>
+
+            {/* Is Primary Owner */}
+            <Text style={styles.label}>Are you the primary owner or director?</Text>
+            <View style={styles.optionsContainer}>
+              {[
+                { value: "yes", label: "Yes, I am" },
+                { value: "no", label: "No, someone else" },
+              ].map((item) => {
+                const isSelected = isPrimaryOwner === item.value;
+                return (
+                  <TouchableOpacity
+                    key={item.value}
+                    style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                    onPress={() => handlePrimaryOwnerSelect(item.value as "yes" | "no")}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionCardText,
+                        isSelected && styles.optionCardTextSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {isSelected && (
+                      <MaterialIcons name="check-circle" size={20} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {/* Full Name */}
             <Text style={styles.label}>Full Name *</Text>

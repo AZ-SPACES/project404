@@ -900,3 +900,46 @@ export function resetIpRateLimit(ip: string): Promise<string> {
 export function resetAllRateLimits(): Promise<{ keysDeleted: number }> {
   return request("/api/v1/admin/risk/rate-limits", { method: "DELETE" });
 }
+
+// ── Mini App Reports ──────────────────────────────────────────────────────────
+
+export interface MiniAppReport {
+  id: string;
+  appId: string;
+  reportedByUserId: string;
+  reportedByHandle: string | null;
+  reason: "SPAM" | "INAPPROPRIATE" | "NOT_WORKING" | "MISLEADING" | "OTHER";
+  details: string | null;
+  status: "OPEN" | "RESOLVED" | "DISMISSED";
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface MiniAppReportStats {
+  total: number;
+  open: number;
+  resolved: number;
+  dismissed: number;
+}
+
+export function getMiniAppReports(page = 0, size = 20, status?: string): Promise<Page<MiniAppReport>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/miniapps/reports?${params}`);
+}
+
+export function getMiniAppReportStats(): Promise<MiniAppReportStats> {
+  return request("/api/v1/admin/miniapps/reports/stats");
+}
+
+export function resolveMiniAppReport(
+  id: string,
+  action: "RESOLVE" | "DISMISS",
+  resolution: string,
+): Promise<MiniAppReport> {
+  return request(`/api/v1/admin/miniapps/reports/${id}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ action, resolution }),
+  });
+}
