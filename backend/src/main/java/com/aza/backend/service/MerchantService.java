@@ -53,6 +53,10 @@ public class MerchantService {
 
     // ==================== MERCHANT PROFILE ====================
 
+    public boolean isHandleAvailable(String handle) {
+        return !merchantRepository.existsByBusinessHandle(handle.toLowerCase());
+    }
+
     public MerchantResponse getMyMerchant(UUID userId) {
         Merchant merchant = merchantRepository.findByUserId(userId).orElse(null);
         if (merchant == null) return null;

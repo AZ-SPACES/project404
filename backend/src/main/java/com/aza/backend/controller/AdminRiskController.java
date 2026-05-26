@@ -4,7 +4,9 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.RiskAlertResponse;
 import com.aza.backend.dto.admin.RiskStatsResponse;
 import com.aza.backend.entity.User;
+import com.aza.backend.security.behavior.BehavioralDetectionService;
 import com.aza.backend.service.RiskService;
+import com.aza.backend.util.RateLimitService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -22,6 +25,8 @@ import java.util.UUID;
 public class AdminRiskController {
 
     private final RiskService riskService;
+    private final RateLimitService rateLimitService;
+    private final BehavioralDetectionService behavioralDetection;
 
     @GetMapping("/alerts")
     public ResponseEntity<ApiResponse<Page<RiskAlertResponse>>> getAlerts(
@@ -44,6 +49,31 @@ public class AdminRiskController {
             @RequestBody AlertUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 riskService.updateAlert(id, request.getStatus(), request.getNotes(), admin)));
+    }
+
+    // ==================== RATE LIMIT MANAGEMENT ====================
+
+    /** Reset sliding-window counters + behavioral block for a specific user. */
+    @DeleteMapping("/rate-limits/user/{userId}")
+    public ResponseEntity<ApiResponse<String>> resetUserRateLimit(@PathVariable UUID userId) {
+        rateLimitService.resetUser(userId);
+        behavioralDetection.unblock("user:" + userId);
+        return ResponseEntity.ok(ApiResponse.success("Rate limits cleared for user " + userId));
+    }
+
+    /** Reset sliding-window counters + behavioral block for a specific IP. */
+    @DeleteMapping("/rate-limits/ip")
+    public ResponseEntity<ApiResponse<String>> resetIpRateLimit(@RequestParam String ip) {
+        rateLimitService.resetIp(ip);
+        behavioralDetection.unblock("ip:" + ip);
+        return ResponseEntity.ok(ApiResponse.success("Rate limits cleared for IP " + ip));
+    }
+
+    /** Flush every rate-limit counter in Redis (all users, all IPs, all fingerprints). */
+    @DeleteMapping("/rate-limits")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> resetAllRateLimits() {
+        long deleted = rateLimitService.resetAll();
+        return ResponseEntity.ok(ApiResponse.success(Map.of("keysDeleted", deleted)));
     }
 
     @Data
