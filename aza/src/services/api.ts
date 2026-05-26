@@ -142,7 +142,12 @@ export const submitPepScreening = (
   isPep: boolean,
   pepStatus?: string,
   pepRole?: string,
-) => api.post("/api/v1/kyc/pep-screening", { isPep, pepStatus, pepRole });
+) => {
+  const body: Record<string, unknown> = { isPep };
+  if (pepStatus) body.pepStatus = pepStatus;
+  if (pepRole) body.pepRole = pepRole;
+  return api.post("/api/v1/kyc/pep-screening", body);
+};
 
 export const submitPepDetails = (
   accountPurpose: string,

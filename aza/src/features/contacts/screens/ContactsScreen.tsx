@@ -35,7 +35,7 @@ import {
   Radius,
 } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import * as Contacts from "expo-contacts";
@@ -90,10 +90,12 @@ export default function ContactsScreen() {
   } = useContactStore();
   const { syncContacts: isSyncAllowed } = useProfile();
 
-  useEffect(() => {
-    fetchContacts();
-    fetchContactRequests();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchContacts();
+      fetchContactRequests();
+    }, [fetchContacts, fetchContactRequests])
+  );
 
   useEffect(() => {
     // Only sync if the user has enabled the setting in Privacy settings
@@ -199,8 +201,6 @@ export default function ContactsScreen() {
   );
 
   const favorites = filteredRecipients.filter((r) => r.isFavorite);
-  const azaUsers = filteredRecipients.filter((r) => r.isOnAza);
-  const otherContacts = filteredRecipients.filter((r) => !r.isOnAza);
 
   const requestRecipients: Recipient[] = (contactRequests || []).map(r => ({
     id: r.id, // the requestId
@@ -213,7 +213,7 @@ export default function ContactsScreen() {
 
   const sections = [
     ...(requestRecipients.length > 0 && !searchQuery ? [{ title: "Pending Requests", data: requestRecipients }] : []),
-    { title: "On Aza", data: azaUsers },
+    { title: "Contacts", data: filteredRecipients },
   ].filter((section) => section.data.length > 0);
 
   const handleRefresh = async () => {

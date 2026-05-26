@@ -61,8 +61,12 @@ export const useContactStore = create<ContactState>((set, get) => ({
       // Backend returns ApiResponse<Page<ContactResponse>>
       // Spring Data Page content is in data.data.content
       const contactList = data.data?.content || data.data || [];
+      console.log('[ContactStore] Raw API response:', JSON.stringify(data, null, 2));
+      console.log('[ContactStore] Parsed contacts count:', contactList.length);
+      console.log('[ContactStore] Contacts:', contactList.map((c: any) => ({ id: c.id, name: c.displayName, isAzaUser: c.isAzaUser, handle: c.handle })));
       set({ contacts: contactList });
     } catch (error: any) {
+      console.error('[ContactStore] fetchContacts error:', error.response?.status, error.message);
       set({ error: error.message || 'Failed to fetch contacts' });
     } finally {
       set({ isLoading: false });
