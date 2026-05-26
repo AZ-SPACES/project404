@@ -473,17 +473,17 @@ public class MerchantService {
     }
 
     public Page<MerchantResponse> adminSearch(String query, String status, int page, int size) {
-        Merchant.MerchantStatus statusEnum = null;
+        String statusValue = null;
         if (status != null && !status.isBlank()) {
             try {
-                statusEnum = Merchant.MerchantStatus.valueOf(status.toUpperCase());
+                statusValue = Merchant.MerchantStatus.valueOf(status.toUpperCase()).name();
             } catch (IllegalArgumentException e) {
                 throw new AppException("INVALID_STATUS", "Invalid merchant status", HttpStatus.BAD_REQUEST);
             }
         }
         return merchantRepository.search(
                         query == null || query.isBlank() ? null : query,
-                        statusEnum,
+                        statusValue,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(this::toResponse);
     }
