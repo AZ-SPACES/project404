@@ -279,7 +279,7 @@ public class CheckoutService {
 
     // ==================== WEBHOOK DISPATCH ====================
 
-    private void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant) {
+    public void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant) {
         List<WebhookEndpoint> endpoints = webhookEndpointRepository
                 .findAllByMerchantIdAndIsActiveTrue(merchant.getId());
         if (endpoints.isEmpty()) return;

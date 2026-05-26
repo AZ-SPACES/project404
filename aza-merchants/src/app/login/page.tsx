@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { preLogin, verifyLoginOtp, getMe } from "@/lib/merchant-api";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Phone } from "lucide-react";
 
@@ -211,15 +212,10 @@ export default function LoginPage() {
         )}
 
         <p className="text-center text-xs text-white/25 mt-6">
-          Don&apos;t have an AZA account?{" "}
-          <a
-            href="https://aza.systems"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#10b981] hover:underline"
-          >
-            Download AZA
-          </a>
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-[#10b981] hover:underline">
+            Create one
+          </Link>
         </p>
       </div>
     </div>

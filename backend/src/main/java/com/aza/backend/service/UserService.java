@@ -5,8 +5,10 @@ import com.aza.backend.dto.user.*;
 import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
+import com.aza.backend.entity.Merchant;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.exception.AppException;
@@ -35,6 +37,7 @@ import java.util.regex.Pattern;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final MerchantRepository merchantRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CloudinaryService cloudinaryService;
     private final StringRedisTemplate redisTemplate;
@@ -275,35 +278,66 @@ public class UserService {
     // ==================== PUBLIC PROFILE ====================
 
     public PublicProfileResponse getPublicProfile(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
-            throw new RuntimeException("User not found");
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
+                throw new RuntimeException("User not found");
+            }
+            return PublicProfileResponse.builder()
+                    .id(user.getId().toString())
+                    .displayName(user.getFirstName() + " " + user.getLastName())
+                    .profileImageUrl(user.getProfileImageUrl())
+                    .onlineStatus("OFFLINE")
+                    .build();
         }
 
-        return PublicProfileResponse.builder()
-                .id(user.getId().toString())
-                .displayName(user.getFirstName() + " " + user.getLastName())
-                .profileImageUrl(user.getProfileImageUrl())
-                .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until a contacts system is built
-                .build();
+        Merchant merchant = merchantRepository.findById(userId).orElse(null);
+        if (merchant != null) {
+            if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+                throw new RuntimeException("User not found");
+            }
+            return PublicProfileResponse.builder()
+                    .id(merchant.getId().toString())
+                    .displayName(merchant.getBusinessName())
+                    .username(merchant.getBusinessHandle())
+                    .profileImageUrl(merchant.getLogoUrl())
+                    .onlineStatus("OFFLINE")
+                    .build();
+        }
+
+        throw new RuntimeException("User not found");
     }
 
     public PublicProfileResponse getPublicProfileByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
-            throw new RuntimeException("User not found");
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user != null) {
+            if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
+                throw new RuntimeException("User not found");
+            }
+            return PublicProfileResponse.builder()
+                    .id(user.getId().toString())
+                    .displayName(user.getFirstName() + " " + user.getLastName())
+                    .username(user.getUsername())
+                    .profileImageUrl(user.getProfileImageUrl())
+                    .onlineStatus("OFFLINE")
+                    .build();
         }
 
-        return PublicProfileResponse.builder()
-                .id(user.getId().toString())
-                .displayName(user.getFirstName() + " " + user.getLastName())
-                .username(user.getUsername())
-                .profileImageUrl(user.getProfileImageUrl())
-                .onlineStatus("OFFLINE")
-                .build();
+        Merchant merchant = merchantRepository.findByBusinessHandle(username).orElse(null);
+        if (merchant != null) {
+            if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+                throw new RuntimeException("User not found");
+            }
+            return PublicProfileResponse.builder()
+                    .id(merchant.getId().toString())
+                    .displayName(merchant.getBusinessName())
+                    .username(merchant.getBusinessHandle())
+                    .profileImageUrl(merchant.getLogoUrl())
+                    .onlineStatus("OFFLINE")
+                    .build();
+        }
+
+        throw new RuntimeException("User not found");
     }
 
     public org.springframework.data.domain.Page<PublicProfileResponse> searchUsers(String query, int page, int size) {
