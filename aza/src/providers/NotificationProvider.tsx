@@ -59,6 +59,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (type === 'KYC_APPROVED') {
           completeKYC();
         }
+
+        // Refresh contacts when a friend request is accepted or a new request is received
+        if (
+          type === 'CONTACT_REQUEST_ACCEPTED' ||
+          type === 'CONTACT_ACCEPTED' ||
+          type === 'FRIEND_REQUEST_ACCEPTED' ||
+          type === 'CONTACT_REQUEST_RECEIVED' ||
+          type === 'FRIEND_REQUEST'
+        ) {
+          try {
+            const { useContactStore } = require('../store/contactStore');
+            const store = useContactStore.getState();
+            void store.fetchContacts();
+            void store.fetchContactRequests();
+          } catch (_) {
+            // contactStore may not be ready yet
+          }
+        }
       });
 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
