@@ -23,6 +23,11 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  Copy,
+  Check,
+  Key,
+  Webhook,
+  User,
   ShieldCheck,
   Store,
   Ban,
@@ -107,6 +112,26 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="flex justify-between items-center gap-4 py-2.5 border-b border-white/4 last:border-0">
+      <span className="text-sm text-white/40 flex-shrink-0">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-mono text-white/50 truncate max-w-[180px]">{value}</span>
+        <button onClick={copy} className="text-white/25 hover:text-white/60 transition-colors flex-shrink-0">
+          {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type Modal = "kyb_approve" | "kyb_reject" | "kyb_more_info" | "suspend" | "activate" | "reject_merchant" | "fee_rate" | null;
 type Tab = "overview" | "kyb" | "payouts" | "sessions";
 
@@ -158,6 +183,13 @@ export default function MerchantDetailPage() {
   }, [merchantId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-switch to KYB tab when the merchant needs review action
+  useEffect(() => {
+    if (merchant && ["KYB_UNDER_REVIEW", "KYB_SUBMITTED", "MORE_INFO_REQUIRED"].includes(merchant.status)) {
+      setTab("kyb");
+    }
+  }, [merchant?.status]);
 
   const loadPayouts = useCallback(async (p: number) => {
     setPayoutsLoading(true);
@@ -272,7 +304,7 @@ export default function MerchantDetailPage() {
   if (!merchant) return null;
 
   const statusCfg = STATUS_CFG[merchant.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: merchant.status };
-  const kybReviewable = kyb && kyb.status === "UNDER_REVIEW";
+  const kybReviewable = kyb && !["APPROVED", "PENDING"].includes(kyb.status) && kyb.ownerFullName != null;
   const canSuspend = merchant.status === "ACTIVE";
   const canActivate = merchant.status === "SUSPENDED";
 
@@ -340,18 +372,40 @@ export default function MerchantDetailPage() {
         ))}
       </div>
 
+      {/* KYB action banner — shown regardless of active tab */}
+      {kybReviewable && tab !== "kyb" && (
+        <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} className="text-amber-400 flex-shrink-0" />
+            <span className="text-sm text-amber-300">
+              KYB submission awaiting review
+              {kyb?.status === "MORE_INFO_REQUIRED" && " — merchant responded to info request"}
+            </span>
+          </div>
+          <button
+            onClick={() => setTab("kyb")}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-400 text-xs font-semibold hover:bg-amber-500/25 transition-all"
+          >
+            <CheckCircle2 size={12} /> Review KYB
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               tab === id ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
             }`}
           >
             <Icon size={14} />
             {label}
+            {id === "kyb" && kybReviewable && tab !== "kyb" && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400" />
+            )}
           </button>
         ))}
       </div>
@@ -366,22 +420,50 @@ export default function MerchantDetailPage() {
                 <Store size={16} className="text-white/40" />
                 <h2 className="text-sm font-semibold text-white">Business Details</h2>
               </div>
-              <Field label="Merchant ID" value={<span className="font-mono text-xs text-white/50">{merchant.id}</span>} />
-              <Field label="Owner User ID" value={<span className="font-mono text-xs text-white/50">{merchant.userId}</span>} />
+              <CopyField label="Merchant ID" value={merchant.id} />
+              <div className="flex justify-between items-center gap-4 py-2.5 border-b border-white/4">
+                <span className="text-sm text-white/40 flex-shrink-0">Owner</span>
+                <button
+                  onClick={() => router.push(`/users/${merchant.userId}`)}
+                  className="flex items-center gap-1.5 text-xs text-[#F5A623] hover:underline font-mono"
+                >
+                  <User size={11} />
+                  {merchant.userId.slice(0, 8)}…
+                </button>
+              </div>
               <Field label="Category" value={merchant.category?.replace(/_/g, " ") ?? "—"} />
               <Field label="Email" value={merchant.businessEmail} />
               <Field label="Phone" value={merchant.businessPhone} />
               <Field label="Description" value={merchant.businessDescription} />
               {merchant.activatedAt && <Field label="Activated" value={fmtDate(merchant.activatedAt)} />}
+
+              {/* API Keys & Webhooks */}
+              {(merchant.activeApiKeyCount != null || merchant.activeWebhookCount != null) && (
+                <div className="mt-3 pt-3 border-t border-white/4 grid grid-cols-2 gap-2">
+                  <div className="bg-white/4 rounded-xl px-3 py-2.5 text-center">
+                    <Key size={13} className="text-white/30 mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-white">{merchant.activeApiKeyCount ?? 0}</p>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider">API Keys</p>
+                  </div>
+                  <div className="bg-white/4 rounded-xl px-3 py-2.5 text-center">
+                    <Webhook size={13} className="text-white/30 mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-white">{merchant.activeWebhookCount ?? 0}</p>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider">Webhooks</p>
+                  </div>
+                </div>
+              )}
+
               {merchant.rejectionReason && (
-                <Field label="Rejection Reason" value={
-                  <span className="text-red-400">{merchant.rejectionReason}</span>
-                } />
+                <div className="mt-3 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-red-400/70 uppercase tracking-wider font-medium mb-1">Rejection Reason</p>
+                  <p className="text-sm text-red-400">{merchant.rejectionReason}</p>
+                </div>
               )}
               {merchant.moreInfoRequest && (
-                <Field label="More Info Request" value={
-                  <span className="text-orange-400">{merchant.moreInfoRequest}</span>
-                } />
+                <div className="mt-3 bg-orange-500/8 border border-orange-500/15 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-orange-400/70 uppercase tracking-wider font-medium mb-1">More Info Requested</p>
+                  <p className="text-sm text-orange-300">{merchant.moreInfoRequest}</p>
+                </div>
               )}
             </div>
 

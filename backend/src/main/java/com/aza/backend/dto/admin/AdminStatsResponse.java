@@ -28,4 +28,7 @@ public class AdminStatsResponse {
     private long activeMerchants;
     private long pendingKybMerchants;
     private BigDecimal totalMerchantVolume;
+
+    private BigDecimal totalWalletBalance;
+    private BigDecimal totalMerchantBalance;
 }

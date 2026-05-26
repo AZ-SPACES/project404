@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getStats, getLiveStats, type AdminStats, type LiveStats } from "@/lib/admin-api";
-import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity, Store } from "lucide-react";
+import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity, Store, Banknote } from "lucide-react";
 
 function StatCard({
   label, value, sub, icon: Icon, color = "text-white",
@@ -118,6 +118,34 @@ export default function DashboardPage() {
           <StatCard label="Active" value={fmt(stats.activeMerchants)} icon={Store} color="text-emerald-400" />
           <StatCard label="Pending KYB" value={fmt(stats.pendingKybMerchants)} icon={ShieldAlert} color="text-amber-400" />
           <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#F5A623]" />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-2">Platform Funds</h2>
+        <p className="text-white/30 text-xs mb-4">Total money held across all accounts right now</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            label="User Wallets"
+            value={fmtGhs(stats.totalWalletBalance)}
+            sub="Sum of all personal wallet balances"
+            icon={Banknote}
+            color="text-emerald-400"
+          />
+          <StatCard
+            label="Merchant Accounts"
+            value={fmtGhs(stats.totalMerchantBalance)}
+            sub="Pending payouts across all merchants"
+            icon={Store}
+            color="text-[#F5A623]"
+          />
+          <StatCard
+            label="Total on Platform"
+            value={fmtGhs(stats.totalWalletBalance + stats.totalMerchantBalance)}
+            sub="Combined wallet + merchant balances"
+            icon={DollarSign}
+            color="text-white"
+          />
         </div>
       </section>
 
