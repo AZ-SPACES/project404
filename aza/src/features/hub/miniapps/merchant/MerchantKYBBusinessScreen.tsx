@@ -66,11 +66,11 @@ export default function MerchantKYBBusinessScreen() {
     navigation.navigate("MerchantKYBOwner", {
       merchantId,
       businessType,
-      registrationNumber: regNum.trim() || undefined,
-      registeredAddress: address.trim() || undefined,
-      city: city.trim() || undefined,
-      taxIdNumber: taxId.trim() || undefined,
-      website: website.trim() || undefined,
+      ...(regNum.trim() ? { registrationNumber: regNum.trim() } : {}),
+      ...(address.trim() ? { registeredAddress: address.trim() } : {}),
+      ...(city.trim() ? { city: city.trim() } : {}),
+      ...(taxId.trim() ? { taxIdNumber: taxId.trim() } : {}),
+      ...(website.trim() ? { website: website.trim() } : {}),
     });
   };
 

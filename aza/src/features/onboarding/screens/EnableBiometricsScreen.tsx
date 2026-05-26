@@ -85,6 +85,7 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
       const t = setTimeout(() => inputRef.current?.focus(), 150);
       return () => clearTimeout(t);
     }
+    return;
   }, [step]);
 
   const startShake = useCallback(() => {

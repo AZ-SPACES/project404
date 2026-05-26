@@ -11,6 +11,7 @@ import com.aza.backend.util.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,9 @@ public class CheckoutService {
     private final UserService userService;
     private final RateLimitService rateLimitService;
     private final ObjectMapper objectMapper;
+
+    @Value("${aza.pay.base-url:https://pay.aza.systems}")
+    private String payBaseUrl;
 
     private static final int SESSION_TTL_MINUTES = 30;
 
@@ -324,6 +328,27 @@ public class CheckoutService {
 
     // ==================== HELPERS ====================
 
+    // ==================== EXPIRE SESSION (merchant-initiated) ====================
+
+    @Transactional
+    public CheckoutSessionResponse expireSession(UUID sessionId, UUID userId) {
+        CheckoutSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Checkout session not found", HttpStatus.NOT_FOUND));
+        Merchant merchant = merchantRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        if (!session.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your session", HttpStatus.FORBIDDEN);
+        }
+        if (session.getStatus() != CheckoutSession.SessionStatus.PENDING) {
+            throw new AppException("CANNOT_EXPIRE", "Only pending sessions can be expired", HttpStatus.BAD_REQUEST);
+        }
+        session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
+        sessionRepository.save(session);
+        return toResponse(session, merchant);
+    }
+
+    // ==================== HELPERS ====================
+
     /** Public-facing response: omits customerId to protect payer privacy. */
     private CheckoutSessionResponse toPublicResponse(CheckoutSession s, Merchant merchant) {
         return CheckoutSessionResponse.builder()
@@ -336,6 +361,7 @@ public class CheckoutService {
                 .currency(s.getCurrency())
                 .description(s.getDescription())
                 .status(s.getStatus().name())
+                .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
                 .build();
@@ -358,6 +384,7 @@ public class CheckoutService {
                 .customerId(s.getCustomerId() != null ? s.getCustomerId().toString() : null)
                 .platformFee(s.getPlatformFee())
                 .netAmount(s.getNetAmount())
+                .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
                 .completedAt(s.getCompletedAt())

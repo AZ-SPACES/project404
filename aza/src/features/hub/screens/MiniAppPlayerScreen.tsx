@@ -60,13 +60,26 @@ export default function MiniAppPlayerScreen() {
   const handleClose = () => navigation.goBack();
 
   const toggleMenu = () => {
-    const toValue = menuVisible ? 0 : 1;
-    setMenuVisible(!menuVisible);
-    Animated.spring(menuAnim, { toValue, useNativeDriver: true, bounciness: 0 }).start();
+    if (menuVisible) {
+      Animated.timing(menuAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+        setMenuVisible(false);
+      });
+    } else {
+      setMenuVisible(true);
+      Animated.timing(menuAnim, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+    }
+  };
+
+  const closeMenu = () => {
+    if (menuVisible) {
+      Animated.timing(menuAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+        setMenuVisible(false);
+      });
+    }
   };
 
   const handleShare = async () => {
-    setMenuVisible(false);
+    closeMenu();
     if (!app) return;
     const deepLink = `aza://miniapps/${appId}`;
     const body = Platform.OS === 'android'
@@ -78,20 +91,20 @@ export default function MiniAppPlayerScreen() {
   };
 
   const openReportSheet = () => {
-    setMenuVisible(false);
+    closeMenu();
     setSelectedReason(null);
     setReportDetails('');
     setReportVisible(true);
     Animated.parallel([
-      Animated.timing(reportSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-      Animated.timing(reportBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(reportSheetAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(reportBackdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
     ]).start();
   };
 
   const closeReportSheet = () => {
     Animated.parallel([
-      Animated.timing(reportSheetAnim, { toValue: SCREEN_HEIGHT, duration: 300, useNativeDriver: true }),
-      Animated.timing(reportBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(reportSheetAnim, { toValue: SCREEN_HEIGHT, duration: 200, useNativeDriver: true }),
+      Animated.timing(reportBackdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setReportVisible(false));
   };
 
@@ -124,7 +137,6 @@ export default function MiniAppPlayerScreen() {
 
   const MiniAppComponent = app.component;
 
-  const menuTranslateY = menuAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] });
   const menuOpacity = menuAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
   return (
@@ -140,7 +152,7 @@ export default function MiniAppPlayerScreen() {
             accessibilityLabel="Close mini app"
             accessibilityRole="button"
           >
-            <Feather name="x" size={22} color={Colors.textPrimary} />
+            <Feather name="x" size={20} color={Colors.textPrimary} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -164,7 +176,7 @@ export default function MiniAppPlayerScreen() {
             accessibilityLabel="More options"
             accessibilityRole="button"
           >
-            <Feather name="more-horizontal" size={22} color={Colors.textPrimary} />
+            <Feather name="more-horizontal" size={20} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -180,23 +192,23 @@ export default function MiniAppPlayerScreen() {
         <>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
-            onPress={() => setMenuVisible(false)}
+            onPress={closeMenu}
             activeOpacity={1}
           />
           <Animated.View
             style={[
               styles.menu,
-              { opacity: menuOpacity, transform: [{ translateY: menuTranslateY }], top: insets.top + HEADER_HEIGHT + 8 },
+              { opacity: menuOpacity, top: insets.top + HEADER_HEIGHT + 8 },
             ]}
           >
             <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
-              <Feather name="share-2" size={18} color={Colors.textPrimary} />
+              <Feather name="share-2" size={16} color={Colors.textPrimary} />
               <Text style={styles.menuItemText}>Share</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity style={styles.menuItem} onPress={openReportSheet}>
-              <Feather name="flag" size={18} color={Colors.error} />
-              <Text style={[styles.menuItemText, { color: Colors.error }]}>Report</Text>
+              <Feather name="flag" size={16} color={Colors.textPrimary} />
+              <Text style={styles.menuItemText}>Report</Text>
             </TouchableOpacity>
           </Animated.View>
         </>
@@ -217,14 +229,14 @@ export default function MiniAppPlayerScreen() {
           </Animated.View>
 
           <Animated.View
-            style={[styles.reportSheet, { transform: [{ translateY: reportSheetAnim }], paddingBottom: insets.bottom + 16 }]}
+            style={[styles.reportSheet, { transform: [{ translateY: reportSheetAnim }], paddingBottom: insets.bottom + 24 }]}
             pointerEvents="auto"
           >
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               {/* Sheet header */}
               <View style={styles.sheetHeader}>
                 <TouchableOpacity style={styles.sheetCloseBtn} onPress={closeReportSheet}>
-                  <AntDesign name="close" size={18} color={Colors.textPrimary} />
+                  <AntDesign name="close" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -232,7 +244,6 @@ export default function MiniAppPlayerScreen() {
               <Text style={styles.sheetSubtitle}>
                 Tell us what's wrong with this mini app.
               </Text>
-              <View style={styles.sheetDivider} />
 
               {/* Reason options */}
               <View style={styles.reasonList}>
@@ -249,7 +260,7 @@ export default function MiniAppPlayerScreen() {
                         {r.label}
                       </Text>
                       {active && (
-                        <Feather name="check-circle" size={18} color={Colors.primary} />
+                        <Feather name="check" size={16} color={Colors.textPrimary} />
                       )}
                     </TouchableOpacity>
                   );
@@ -270,14 +281,14 @@ export default function MiniAppPlayerScreen() {
 
               {/* Submit */}
               <TouchableOpacity
-                style={[styles.submitBtn, (!selectedReason || reportLoading) && { opacity: 0.45 }]}
+                style={[styles.submitBtn, (!selectedReason || reportLoading) && { opacity: 0.5 }]}
                 onPress={submitReport}
                 disabled={!selectedReason || reportLoading}
                 activeOpacity={0.8}
               >
                 {reportLoading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.submitBtnText}>Submit Report</Text>
+                  : <Text style={styles.submitBtnText}>Submit</Text>
                 }
               </TouchableOpacity>
             </KeyboardAvoidingView>
@@ -289,7 +300,6 @@ export default function MiniAppPlayerScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.isDark;
   return StyleSheet.create({
     root: {
       flex: 1,
@@ -314,31 +324,30 @@ function createStyles(Colors: ThemeColors) {
       height: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 20,
     },
     headerCenter: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: Spacing.sm,
+      gap: 8,
     },
     headerIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 8,
+      width: 24,
+      height: 24,
+      borderRadius: 6,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
     },
-    headerIconEmoji: { fontSize: 16 },
+    headerIconEmoji: { fontSize: 14 },
     headerTitle: {
       ...Typography.body,
-      fontWeight: '600',
+      fontWeight: '500',
       color: Colors.textPrimary,
     },
     divider: {
-      height: StyleSheet.hairlineWidth,
+      height: 1,
       backgroundColor: Colors.border,
     },
     content: { flex: 1 },
@@ -347,82 +356,72 @@ function createStyles(Colors: ThemeColors) {
       position: 'absolute',
       right: Spacing.md,
       backgroundColor: Colors.surface,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: 8,
+      borderWidth: 1,
       borderColor: Colors.border,
-      minWidth: 180,
+      minWidth: 160,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 4,
       zIndex: 100,
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.sm,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: 14,
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
     },
     menuItemText: {
       ...Typography.body,
+      fontSize: 14,
       color: Colors.textPrimary,
     },
     menuDivider: {
-      height: StyleSheet.hairlineWidth,
+      height: 1,
       backgroundColor: Colors.border,
-      marginHorizontal: Spacing.md,
     },
     // Report bottom sheet
     backdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: 'rgba(0,0,0,0.4)',
     },
     reportSheet: {
       position: 'absolute',
       bottom: 0,
       width: '100%',
-      backgroundColor: isDark ? Colors.surface : '#ffffff',
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingHorizontal: 24,
-      paddingTop: 24,
+      backgroundColor: Colors.surface,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+      paddingHorizontal: 20,
+      paddingTop: 16,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
       elevation: 8,
     },
     sheetHeader: {
       flexDirection: 'row',
-      justifyContent: 'flex-start',
-      marginBottom: 16,
+      justifyContent: 'flex-end',
+      marginBottom: 8,
     },
     sheetCloseBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
-      alignItems: 'center',
-      justifyContent: 'center',
+      padding: 4,
     },
     sheetTitle: {
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '600',
       color: Colors.textPrimary,
-      letterSpacing: -0.3,
       marginBottom: 4,
     },
     sheetSubtitle: {
       ...Typography.body,
+      fontSize: 14,
       color: Colors.textSecondary,
-      marginBottom: 16,
-    },
-    sheetDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: Colors.border,
-      marginBottom: 16,
+      marginBottom: 20,
     },
     reasonList: { gap: 8, marginBottom: 16 },
     reasonItem: {
@@ -430,46 +429,47 @@ function createStyles(Colors: ThemeColors) {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       borderWidth: 1,
       borderColor: Colors.border,
-      borderRadius: 10,
-      backgroundColor: isDark ? Colors.background : '#FAFAFA',
+      borderRadius: 6,
+      backgroundColor: Colors.surface,
     },
     reasonItemActive: {
-      borderColor: Colors.primary,
-      backgroundColor: isDark ? 'rgba(183,237,126,0.06)' : '#F5FAF0',
+      borderColor: Colors.textPrimary,
     },
     reasonText: {
       ...Typography.body,
+      fontSize: 14,
       color: Colors.textPrimary,
     },
     reasonTextActive: {
-      fontWeight: '600',
-      color: Colors.primary,
+      fontWeight: '500',
+      color: Colors.textPrimary,
     },
     detailsInput: {
       borderWidth: 1,
       borderColor: Colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      minHeight: 72,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      minHeight: 80,
       color: Colors.textPrimary,
       ...Typography.body,
-      backgroundColor: isDark ? Colors.background : '#FAFAFA',
-      marginBottom: 16,
+      fontSize: 14,
+      backgroundColor: Colors.surface,
+      marginBottom: 20,
     },
     submitBtn: {
-      backgroundColor: Colors.error,
-      borderRadius: 24,
-      paddingVertical: 16,
+      backgroundColor: Colors.textPrimary,
+      borderRadius: 8,
+      paddingVertical: 14,
       alignItems: 'center',
     },
     submitBtnText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '600',
+      color: Colors.background,
+      fontSize: 14,
+      fontWeight: '500',
     },
     // Error state
     errorContainer: {
@@ -488,8 +488,8 @@ function createStyles(Colors: ThemeColors) {
     },
     errorButtonText: {
       ...Typography.body,
-      color: Colors.primary,
-      fontWeight: '600',
+      color: Colors.textPrimary,
+      fontWeight: '500',
     },
   });
 }

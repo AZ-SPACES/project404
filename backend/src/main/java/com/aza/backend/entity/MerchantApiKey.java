@@ -33,6 +33,24 @@ public class MerchantApiKey {
     @Builder.Default
     private KeyEnvironment environment = KeyEnvironment.LIVE;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private KeyType keyType = KeyType.SECRET;
+
+    private String scopes; // comma-separated scopes, e.g. "sessions:read,sessions:write"
+
+    private String ipWhitelist; // comma-separated whitelisted IPs/CIDRs
+
+    private LocalDateTime expiresAt;
+
+    private String oldKeyHash; // hash of the previous key during rollover
+
+    private LocalDateTime oldKeyExpiresAt; // expiration of the rolled key grace period
+
+    private String lastUsedIp;
+
+    private String lastUsedUserAgent;
+
     @Builder.Default
     private Boolean isActive = true;
 
@@ -44,6 +62,10 @@ public class MerchantApiKey {
     private LocalDateTime revokedAt;
 
     public enum KeyEnvironment {
-        LIVE, TEST
+        LIVE, TEST;
+    }
+
+    public enum KeyType {
+        SECRET, RESTRICTED;
     }
 }

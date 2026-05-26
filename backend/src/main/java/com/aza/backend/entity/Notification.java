@@ -62,7 +62,10 @@ public class Notification {
         PAYMENT_REQUEST_EXPIRED,
         PAYMENT_REQUEST_CANCELLED,
         SYSTEM_BROADCAST,
-        LOGIN_APPROVAL
+        LOGIN_APPROVAL,
+        KYB_APPROVED,
+        KYB_REJECTED,
+        KYB_MORE_INFO_REQUIRED
     }
 
 }

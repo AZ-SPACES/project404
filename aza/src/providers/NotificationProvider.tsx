@@ -81,9 +81,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
         const data = response.notification.request.content.data;
-        
+
         if (data?.type === 'KYC_APPROVED') {
           completeKYC();
+        } else if (data?.type === 'KYB_APPROVED' || data?.type === 'KYB_REJECTED' || data?.type === 'KYB_MORE_INFO_REQUIRED') {
+          navigate('App', { screen: 'Hub' });
         } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
         } else if (data?.type?.includes('PAYMENT_REQUEST')) {
