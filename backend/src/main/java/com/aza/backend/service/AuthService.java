@@ -213,7 +213,7 @@ public class AuthService {
                     remaining
             );
         }
-        // Also remove the device session from database
+        // Also remove the device session from a database
         refreshTokenRepository.deleteByAccessTokenHash(tokenHash);
     }
 
@@ -245,7 +245,7 @@ public class AuthService {
             }
         }
 
-        // Cancel all pending transfers where user is sender
+        // Cancel all pending transfers where the user is sender
         java.util.List<Transaction> pending = transactionRepository.findAllBySenderIdAndStatus(
                 user.getId(), Transaction.TransactionStatus.PENDING);
 
@@ -354,6 +354,7 @@ public class AuthService {
         emailService.sendPasswordChangedNotification(user.getEmail(), user.getFirstName(), ipAddress, secureToken);
     }
 
+    @Transactional
     public void secureAccountWithToken(String token) {
         String userIdStr = redisTemplate.opsForValue().get("secure_token:" + token);
         if (userIdStr == null) {
@@ -374,7 +375,7 @@ public class AuthService {
             throw new RuntimeException("Two-factor authentication is already enabled");
         }
         String secret = totpService.generateSecret();
-        // Store pending secret for 10 minutes — not committed until user confirms
+        // Store pending secret for 10 minutes — not committed until the user confirms
         redisTemplate.opsForValue().set(
                 TOTP_SETUP_PREFIX + user.getId(), secret, Duration.ofMinutes(10));
         String qrUri = totpService.getQrUri(secret, user.getEmail(), "AZA");
@@ -549,7 +550,7 @@ public class AuthService {
         String ipAddress  = parts.length > 4 ? parts[4] : "Unknown IP";
 
         String requestId = UUID.randomUUID().toString();
-        // Store "{userId}:PENDING" so the respond endpoint can verify ownership.
+        // Store "{userId}:PENDING" so the response endpoint can verify ownership.
         redisTemplate.opsForValue().set(
                 "login_request:" + requestId, session.user().getId() + ":PENDING", Duration.ofMinutes(5));
 

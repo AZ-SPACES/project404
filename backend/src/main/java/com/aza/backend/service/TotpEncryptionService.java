@@ -13,11 +13,9 @@ import java.util.Base64;
 
 /**
  * Encrypts and decrypts TOTP secrets stored in the database using AES-256-GCM.
- *
  * The key MUST be a Base64-encoded 32-byte (256-bit) value supplied via the
  * TOTP_ENCRYPTION_KEY environment variable. Generate one with:
  *   openssl rand -base64 32
- *
  * Wire format (all Base64-encoded as one string):
  *   [ 12-byte IV ][ N-byte GCM ciphertext + 16-byte auth tag ]
  */
