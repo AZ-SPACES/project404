@@ -254,6 +254,20 @@ export interface Page<T> {
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
+export async function signup(data: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+}): Promise<void> {
+  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+    "/api/v1/auth/signup",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  saveTokens(body.data.accessToken, body.data.refreshToken);
+}
+
 export async function preLogin(identifier: string, password: string): Promise<void> {
   await request<{ success: boolean; data: string }>(
     "/api/v1/auth/login",

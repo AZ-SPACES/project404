@@ -53,6 +53,8 @@ export type Recipient = {
   name: string;
   username: string;
   avatar: string;
+  /** The value sent as recipientIdentifier to the backend */
+  identifier?: string;
   isOnAza?: boolean;
   isFavorite?: boolean;
   phoneNumber?: string | undefined;
@@ -146,6 +148,7 @@ export default function ContactsScreen() {
     name: c.displayName,
     username: c.handle ? `@${c.handle}` : (c.phoneNumber || c.email || ''),
     avatar: c.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.displayName)}&background=random`,
+    identifier: c.handle || c.phoneNumber || c.email || '',
     isOnAza: c.isAzaUser,
     isFavorite: c.isFavorite,
     phoneNumber: c.phoneNumber,
@@ -237,6 +240,7 @@ export default function ContactsScreen() {
         name: selectedRecipient.name,
         username: selectedRecipient.username,
         avatar: selectedRecipient.avatar,
+        identifier: selectedRecipient.identifier || selectedRecipient.phoneNumber || selectedRecipient.email || '',
       });
     }
   };
@@ -249,6 +253,7 @@ export default function ContactsScreen() {
         name: selectedRecipient.name,
         username: selectedRecipient.username,
         avatar: selectedRecipient.avatar,
+        identifier: selectedRecipient.identifier || selectedRecipient.phoneNumber || selectedRecipient.email || '',
       });
     }
   };

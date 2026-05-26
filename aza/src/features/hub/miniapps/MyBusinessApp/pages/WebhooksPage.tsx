@@ -30,6 +30,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(['checkout.completed']);
   const [creating, setCreating] = useState(false);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [copiedSecret, setCopiedSecret] = useState(false);
 
   // Editing states
   const [editingWebhookId, setEditingWebhookId] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       const data = extractData(res);
       if (data?.signingSecret) {
         setRevealedSecret(data.signingSecret);
+        setCopiedSecret(false);
       }
       setUrl('');
       setSelectedEvents(['checkout.completed']);
@@ -128,12 +130,16 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       setDeliveries([]);
     } else {
       setExpandedWebhookId(id);
-      setDeliveriesLoading(true);
-      getMerchantWebhookDeliveries(id)
-        .then((r: any) => setDeliveries(extractData(r) ?? []))
-        .catch(() => {})
-        .finally(() => setDeliveriesLoading(false));
+      refreshDeliveries(id);
     }
+  };
+
+  const refreshDeliveries = (id: string) => {
+    setDeliveriesLoading(true);
+    getMerchantWebhookDeliveries(id)
+      .then((r: any) => setDeliveries(extractData(r) ?? []))
+      .catch(() => {})
+      .finally(() => setDeliveriesLoading(false));
   };
 
   const toggleEventCreate = (ev: string) => {
@@ -149,15 +155,33 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       <InternalHeader title="Webhooks" onBack={goBack} Colors={Colors} styles={styles} />
       
       {revealedSecret && (
-        <View style={[styles.revealBox, { backgroundColor: Colors.success + '18', borderColor: Colors.success, margin: Spacing.md }]}>
-          <Text style={[styles.revealTitle, { color: Colors.success }]}>Copy your signing secret — shown once only</Text>
-          <Text style={[styles.revealKey, { color: Colors.textPrimary }]} selectable numberOfLines={2}>{revealedSecret}</Text>
-          <TouchableOpacity onPress={() => { Clipboard.setString(revealedSecret); Alert.alert('Copied!'); }}>
-            <Text style={{ color: Colors.success, fontWeight: '600', marginTop: 8 }}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 8 }} onPress={() => setRevealedSecret(null)}>
-            <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>Dismiss</Text>
-          </TouchableOpacity>
+        <View style={[styles.revealBox, {
+          backgroundColor: Colors.success + '10',
+          borderColor: Colors.success,
+          borderWidth: 1,
+          borderLeftWidth: 4,
+          margin: Spacing.md,
+          padding: Spacing.md,
+          borderRadius: 6,
+        }]}>
+          <Text style={[styles.revealTitle, { color: Colors.success, fontWeight: '700' }]}>Copy your signing secret — shown once only</Text>
+          <Text style={[styles.revealKey, { color: Colors.textPrimary, fontSize: 13 }]} selectable>{revealedSecret}</Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: 8 }}>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              onPress={() => {
+                Clipboard.setString(revealedSecret);
+                setCopiedSecret(true);
+                setTimeout(() => setCopiedSecret(false), 2000);
+              }}
+            >
+              <Feather name={copiedSecret ? "check" : "copy"} size={14} color={Colors.success} />
+              <Text style={{ color: Colors.success, fontWeight: '600', fontSize: 13 }}>{copiedSecret ? 'Copied!' : 'Copy'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setRevealedSecret(null); setCopiedSecret(false); }}>
+              <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -165,6 +189,20 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
         <View style={styles.center}><ActivityIndicator color={Colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+          
+          {/* Active endpoints count indicator */}
+          <View style={[styles.infoCard, { borderColor: Colors.border, backgroundColor: Colors.surface, padding: 12, marginBottom: Spacing.md }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textPrimary }}>Endpoints Configured</Text>
+              <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: Colors.border + '60' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.textPrimary }}>{webhooks.length} / 5</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: Colors.textSecondary, lineHeight: 16 }}>
+              Verify signatures using the X-Aza-Signature header on your server.
+            </Text>
+          </View>
+
           {webhooks.map((w) => {
             const isEditing = editingWebhookId === w.id;
 
@@ -185,30 +223,31 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
 
                   <View style={{ marginBottom: Spacing.md }}>
                     <Text style={[styles.fieldLabel, { color: Colors.textSecondary }]}>Events to listen for</Text>
-                    {ALL_EVENTS.map((ev) => {
-                      const isSelected = editEvents.includes(ev);
-                      return (
-                        <TouchableOpacity
-                          key={ev}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: Spacing.sm,
-                            paddingVertical: 10,
-                            paddingHorizontal: Spacing.md,
-                            borderWidth: 1,
-                            borderRadius: 8,
-                            borderColor: isSelected ? Colors.primary : Colors.border,
-                            backgroundColor: isSelected ? Colors.primary + '10' : Colors.surface,
-                            marginBottom: Spacing.xs,
-                          }}
-                          onPress={() => toggleEventEdit(ev)}
-                        >
-                          <Feather name={isSelected ? "check-square" : "square"} size={16} color={isSelected ? Colors.primary : Colors.textSecondary} />
-                          <Text style={{ fontSize: 13, color: isSelected ? Colors.primary : Colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{ev}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.xs }}>
+                      {ALL_EVENTS.map((ev) => {
+                        const isSelected = editEvents.includes(ev);
+                        return (
+                          <TouchableOpacity
+                            key={ev}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              paddingVertical: 8,
+                              paddingHorizontal: 12,
+                              borderWidth: 1,
+                              borderRadius: 6,
+                              borderColor: isSelected ? Colors.primary : Colors.border,
+                              backgroundColor: isSelected ? Colors.primary + '10' : Colors.surface,
+                            }}
+                            onPress={() => toggleEventEdit(ev)}
+                          >
+                            <Feather name={isSelected ? "check-square" : "square"} size={14} color={isSelected ? Colors.primary : Colors.textSecondary} />
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: isSelected ? Colors.primary : Colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{ev}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
@@ -286,7 +325,13 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
 
                 {expandedWebhookId === w.id && (
                   <View style={{ marginTop: Spacing.sm, borderTopWidth: 0.5, borderTopColor: Colors.border + '40', paddingTop: Spacing.sm }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', marginBottom: Spacing.xs }}>Recent Deliveries</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase' }}>Recent Deliveries</Text>
+                      <TouchableOpacity onPress={() => refreshDeliveries(w.id)} disabled={deliveriesLoading} style={{ padding: 4 }}>
+                        <Feather name="refresh-cw" size={12} color={Colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    
                     {deliveriesLoading ? (
                       <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
                     ) : deliveries.length === 0 ? (
@@ -296,19 +341,26 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
                         const isSuccess = d.status === 'SUCCESS';
                         const isPending = d.status === 'PENDING';
                         return (
-                          <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: Colors.border + '20' }}>
+                          <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: Colors.border + '20' }}>
                             <Feather
                               name={isSuccess ? "check-circle" : (isPending ? "clock" : "alert-circle")}
                               size={13}
                               color={isSuccess ? Colors.success : (isPending ? Colors.warning : Colors.error)}
+                              style={{ marginRight: 6 }}
                             />
-                            <Text style={{ fontSize: 12, color: Colors.textPrimary, flex: 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }} numberOfLines={1}>{d.eventType}</Text>
-                            <Text style={{ fontSize: 11, color: isSuccess ? Colors.success : Colors.error, fontWeight: '600' }}>
-                              {d.httpStatus ? `HTTP ${d.httpStatus}` : 'Error'}
-                            </Text>
-                            <Text style={{ fontSize: 10, color: Colors.textSecondary, marginLeft: Spacing.xs }}>
-                              {fmtDate(d.createdAt)}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 12, color: Colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }} numberOfLines={1}>
+                                {d.eventType}
+                              </Text>
+                              <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 2 }}>
+                                {fmtDate(d.createdAt)} · Attempt #{d.attemptNumber}
+                              </Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={{ fontSize: 11, color: isSuccess ? Colors.success : Colors.error, fontWeight: '600' }}>
+                                {d.httpStatus ? `HTTP ${d.httpStatus}` : 'Error'}
+                              </Text>
+                            </View>
                           </View>
                         );
                       })
@@ -333,30 +385,31 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
 
               <View style={{ marginBottom: Spacing.md }}>
                 <Text style={[styles.fieldLabel, { color: Colors.textSecondary }]}>Events to listen for</Text>
-                {ALL_EVENTS.map((ev) => {
-                  const isSelected = selectedEvents.includes(ev);
-                  return (
-                    <TouchableOpacity
-                      key={ev}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: Spacing.sm,
-                        paddingVertical: 10,
-                        paddingHorizontal: Spacing.md,
-                        borderWidth: 1,
-                        borderRadius: 8,
-                        borderColor: isSelected ? Colors.primary : Colors.border,
-                        backgroundColor: isSelected ? Colors.primary + '10' : Colors.surface,
-                        marginBottom: Spacing.xs,
-                      }}
-                      onPress={() => toggleEventCreate(ev)}
-                    >
-                      <Feather name={isSelected ? "check-square" : "square"} size={16} color={isSelected ? Colors.primary : Colors.textSecondary} />
-                      <Text style={{ fontSize: 13, color: isSelected ? Colors.primary : Colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{ev}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.xs }}>
+                  {ALL_EVENTS.map((ev) => {
+                    const isSelected = selectedEvents.includes(ev);
+                    return (
+                      <TouchableOpacity
+                        key={ev}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingVertical: 8,
+                          paddingHorizontal: 12,
+                          borderWidth: 1,
+                          borderRadius: 6,
+                          borderColor: isSelected ? Colors.primary : Colors.border,
+                          backgroundColor: isSelected ? Colors.primary + '10' : Colors.surface,
+                        }}
+                        onPress={() => toggleEventCreate(ev)}
+                      >
+                        <Feather name={isSelected ? "check-square" : "square"} size={14} color={isSelected ? Colors.primary : Colors.textSecondary} />
+                        <Text style={{ fontSize: 12, fontWeight: '500', color: isSelected ? Colors.primary : Colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{ev}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: Spacing.sm }}>

@@ -12,7 +12,8 @@ export type Page =
   | 'create_session'
   | 'api_keys'
   | 'webhooks'
-  | 'payouts';
+  | 'payouts'
+  | 'store_qr';
 
 export interface MerchantData {
   id: string;
