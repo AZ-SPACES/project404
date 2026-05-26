@@ -330,6 +330,34 @@ export const getTransactionsStatement = (startDate: string, endDate: string) =>
 export const sendTransactionsStatementEmail = (startDate: string, endDate: string) =>
   api.post(`/api/v1/transfers/statement/email?startDate=${startDate}&endDate=${endDate}`);
 
+export const initiateTransfer = (payload: {
+  recipientIdentifier: string;
+  amount: number;
+  note: string;
+  idempotencyKey: string;
+}) => api.post("/api/v1/transfers", payload);
+
+export const confirmTransfer = (id: string, passcode: string) =>
+  api.post(`/api/v1/transfers/${id}/confirm`, { passcode });
+
+export const cancelTransfer = (id: string) =>
+  api.post(`/api/v1/transfers/${id}/cancel`);
+
+export const getTransaction = (id: string) =>
+  api.get(`/api/v1/transfers/${encodeURIComponent(id)}`);
+
+export const requestMoney = (payload: {
+  fromIdentifier: string;
+  amount: number;
+  note: string;
+}) => api.post("/api/v1/money-requests", payload);
+
+export const acceptMoneyRequest = (id: string, passcode: string) =>
+  api.post(`/api/v1/money-requests/${id}/accept`, { passcode });
+
+export const declineMoneyRequest = (id: string) =>
+  api.post(`/api/v1/money-requests/${id}/decline`);
+
 // --- Security & Privacy Endpoints ---
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
@@ -528,6 +556,94 @@ export const requestMerchantPayout = (amount: number, passcode: string) =>
 
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>
   api.post(`/api/v1/miniapps/${appId}/report`, { reason, details });
+
+// --- E2EE Chat Endpoints ---
+
+export type SendMessagePayload = {
+  chatId: string;
+  ciphertext?: string;
+  content?: string;
+  ephemeralKey?: string;
+  preKeyId?: string;
+  type?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "VOICE_NOTE" | "PAYMENT_REQUEST";
+  mediaKey?: string;
+  viewOnce?: boolean;
+};
+
+export const listChats = () => api.get("/api/v1/chats");
+
+export const getOrCreateChat = (userId: string) =>
+  api.post(`/api/v1/chats/${userId}`);
+
+export const getChat = (chatId: string) =>
+  api.get(`/api/v1/chats/${chatId}`);
+
+export const sendChatMessage = (payload: SendMessagePayload) =>
+  api.post("/api/v1/chats/messages", payload);
+
+export const getChatMessages = (chatId: string, page = 0, size = 20) =>
+  api.get(`/api/v1/chats/${chatId}/messages?page=${page}&size=${size}`);
+
+export const markChatRead = (chatId: string) =>
+  api.put(`/api/v1/chats/${chatId}/read`);
+
+export const markChatDelivered = (chatId: string) =>
+  api.put(`/api/v1/chats/${chatId}/delivered`);
+
+export const sendChatTypingIndicator = (chatId: string, isTyping: boolean) =>
+  api.post("/api/v1/chats/typing", { chatId, isTyping });
+
+export const deleteChatMessage = (messageId: string) =>
+  api.delete(`/api/v1/chats/messages/${messageId}`);
+
+export const muteChat = (chatId: string, mute: boolean) =>
+  api.put(`/api/v1/chats/${chatId}/mute?mute=${mute}`);
+
+export const archiveChat = (chatId: string, archive: boolean) =>
+  api.put(`/api/v1/chats/${chatId}/archive?archive=${archive}`);
+
+export const getTotalUnreadChatCount = () => api.get("/api/v1/chats/unread");
+
+export const setDisappearingMessages = (chatId: string, ttlSeconds: number) =>
+  api.put(`/api/v1/chats/${chatId}/disappearing`, { ttlSeconds });
+
+export const markChatMediaViewed = (messageId: string) =>
+  api.post(`/api/v1/chats/messages/${messageId}/viewed`);
+
+export const editChatMessage = (messageId: string, ciphertext: string) =>
+  api.put(`/api/v1/chats/messages/${messageId}`, { ciphertext });
+
+export const uploadChatMedia = (file: any, chatId: string, type: string) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("chatId", chatId);
+  formData.append("type", type);
+  return api.post("/api/v1/chats/media/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
+
+// --- E2EE Key Bundle Endpoints ---
+
+export type KeyBundleUpload = {
+  identityPublicKey: string;
+  signedPreKeyPublic: string;
+  signedPreKeySignature: string;
+  oneTimePreKeys: Array<{ keyId: number; publicKey: string }>;
+};
+
+export const uploadKeyBundle = (bundle: KeyBundleUpload) =>
+  api.put("/api/v1/users/me/key-bundle", bundle);
+
+export const fetchUserKeyBundle = (userId: string) =>
+  api.get(`/api/v1/users/${userId}/key-bundle`);
+
+export const replenishOneTimePreKeys = (
+  oneTimePreKeys: Array<{ keyId: number; publicKey: string }>,
+) => api.post("/api/v1/users/me/one-time-prekeys", { oneTimePreKeys });
+
+export const getKeyBundleStatus = () =>
+  api.get("/api/v1/users/me/key-bundle/status");
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;

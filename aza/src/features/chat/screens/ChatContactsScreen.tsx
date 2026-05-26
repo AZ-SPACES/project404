@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
+import { useChatStore } from "../../../store/chatStore";
 import { Contact } from "../../../features/contacts/types";
 import {
   useAppTheme,
@@ -38,13 +39,23 @@ export default function ChatContactsScreen() {
   const searchAnim = React.useRef(new Animated.Value(0)).current;
 
   const { contacts, isLoading, fetchContacts } = useContactStore();
+  const chats = useChatStore((s) => s.chats);
+  const fetchChats = useChatStore((s) => s.fetchChats);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     fetchContacts();
+    fetchChats().catch(() => {});
   }, []);
+
+  // Build a quick lookup: otherUserId → most-recent chat summary.
+  const chatByPeer = React.useMemo(() => {
+    const out: Record<string, (typeof chats)[string]> = {};
+    for (const c of Object.values(chats)) out[c.otherUserId] = c;
+    return out;
+  }, [chats]);
 
   const toggleSearch = () => {
     if (searchActive) {
@@ -105,8 +116,14 @@ export default function ChatContactsScreen() {
   };
 
   const renderContact = ({ item }: { item: Contact }) => {
-    const chatId = item.contactUserId || item.id;
-    const subtitle = item.handle ? `@${item.handle}` : "Tap to start a conversation";
+    const peerId = item.contactUserId || item.id;
+    const chat = chatByPeer[peerId];
+    // The hook routes off the peer's userId; chat resource resolves on open.
+    const subtitle = chat?.lastMessageAt
+      ? "Tap to open conversation"
+      : item.handle
+        ? `@${item.handle}`
+        : "Tap to start a conversation";
 
     return (
       <TouchableOpacity
@@ -114,10 +131,10 @@ export default function ChatContactsScreen() {
         activeOpacity={0.7}
         onPress={() =>
           navigation.navigate("ChatScreen", {
-            id: chatId,
+            id: peerId,
             name: item.displayName,
             avatar: item.profileImageUrl ?? "",
-            online: false,
+            online: chat?.otherUserStatus === "ONLINE",
           })
         }
       >
@@ -138,6 +155,13 @@ export default function ChatContactsScreen() {
             {subtitle}
           </Text>
         </View>
+        {chat && chat.unreadCount > 0 ? (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadBadgeText}>
+              {chat.unreadCount > 99 ? "99+" : String(chat.unreadCount)}
+            </Text>
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -400,6 +424,21 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
       textAlign: "center",
       lineHeight: 22,
+    },
+    unreadBadge: {
+      minWidth: 22,
+      height: 22,
+      paddingHorizontal: 6,
+      borderRadius: 11,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: Spacing.sm,
+    },
+    unreadBadgeText: {
+      color: Colors.secondary,
+      fontSize: 11,
+      fontWeight: "700",
     },
   });
 }

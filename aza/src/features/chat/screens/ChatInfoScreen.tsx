@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { useChatStore } from "../../../store/chatStore";
+import { useE2EE } from "../../../providers/E2EEProvider";
+import { setDisappearingMessages as apiSetDisappearing } from "../../../services/api";
 
 // ─── Types ──────────────────────────────────────────────────────────
 type ChatInfoParams = {
@@ -143,6 +146,7 @@ export default function ChatInfoScreen() {
   const route = useRoute<ChatInfoRouteProp>();
 
   const {
+    id: chatIdParam,
     name,
     username,
     avatar,
@@ -158,6 +162,58 @@ export default function ChatInfoScreen() {
   const [showDisappearingModal, setShowDisappearingModal] = useState(false);
   const [disappearingTimer, setDisappearingTimer] = useState("Off");
 
+  // ── E2EE verification helpers ─────────────────────────────────────────
+  const { computeSafetyNumber, identity } = useE2EE();
+  const chats = useChatStore((s) => s.chats);
+  const peerKeys = useChatStore((s) => s.peerKeys);
+  const ensurePeerKeys = useChatStore((s) => s.ensurePeerKeys);
+
+  // The route param `id` carries chatId (set by ChatScreen.handleProfilePress).
+  // Look it up to recover otherUserId so we can fetch their identity public key.
+  const chat = chatIdParam ? chats[chatIdParam] : undefined;
+  const otherUserId = chat?.otherUserId;
+  const peer = otherUserId ? peerKeys[otherUserId] : undefined;
+
+  useEffect(() => {
+    if (otherUserId && !peer) ensurePeerKeys(otherUserId).catch(() => {});
+  }, [otherUserId, peer, ensurePeerKeys]);
+
+  const safetyNumberValue = React.useMemo(() => {
+    if (!peer || !identity) return null;
+    return computeSafetyNumber(peer.identityPublicKey);
+  }, [peer, identity, computeSafetyNumber]);
+
+  const handleVerifySafetyNumber = () => {
+    if (!safetyNumberValue) {
+      Alert.alert(
+        "Identity not yet available",
+        "We're still fetching " + name + "'s encryption keys. Try again in a moment.",
+      );
+      return;
+    }
+    Alert.alert(
+      "Verify safety number",
+      `Compare these numbers with ${name} in person or over a call you trust. ` +
+        `If they match, your conversation is end-to-end encrypted and the keys ` +
+        `haven't changed.\n\n${safetyNumberValue}\n\n` +
+        (peer?.verifiedOnce
+          ? "Signed pre-key signature: VALID."
+          : "Signed pre-key signature: NOT VERIFIED — proceed with caution."),
+      [
+        { text: "Copy", onPress: () => Clipboard.setString(safetyNumberValue) },
+        { text: "Close", style: "cancel" },
+      ],
+    );
+  };
+
+  // Map TTL label → seconds. Reversed in initial state below.
+  const TTL_BY_LABEL: Record<string, number> = {
+    Off: 0,
+    "24 hours": 24 * 60 * 60,
+    "7 days": 7 * 24 * 60 * 60,
+    "90 days": 90 * 24 * 60 * 60,
+  };
+
   // Derive initials for fallback avatar
   const initials = name
     .split(" ")
@@ -167,11 +223,11 @@ export default function ChatInfoScreen() {
     .slice(0, 2);
 
   const handleSend = () => {
-    navigation.navigate("SendAmount", { name, username, avatar });
+    navigation.navigate("SendAmount", { name, username, avatar, identifier: otherUserId ?? username });
   };
 
   const handleRequest = () => {
-    navigation.navigate("RequestAmount", { name, username, avatar });
+    navigation.navigate("RequestAmount", { name, username, avatar, identifier: otherUserId ?? username });
   };
 
   const handleShare = () => {
@@ -340,6 +396,14 @@ export default function ChatInfoScreen() {
         {/* ── Privacy section ─────────────────────────── */}
         <View style={styles.sectionCard}>
           <SettingsRow
+            icon={<Feather name="shield" size={20} color={Colors.textPrimary} />}
+            label="Encryption"
+            value={peer?.verifiedOnce ? "Verified" : "End-to-end"}
+            Colors={Colors}
+            onPress={handleVerifySafetyNumber}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
             icon={<Ionicons name="timer-outline" size={20} color={Colors.textPrimary} />}
             label="Disappearing messages"
             value={disappearingTimer}
@@ -389,6 +453,12 @@ export default function ChatInfoScreen() {
         onSelect={(val) => {
           setDisappearingTimer(val);
           setShowDisappearingModal(false);
+          const ttl = TTL_BY_LABEL[val];
+          if (chatIdParam && typeof ttl === "number") {
+            apiSetDisappearing(chatIdParam, ttl).catch((e) =>
+              Alert.alert("Couldn't update", e?.message ?? "Network error"),
+            );
+          }
         }}
       />
     </SafeAreaView>
