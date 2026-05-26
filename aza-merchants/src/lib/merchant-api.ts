@@ -153,7 +153,7 @@ export interface CheckoutSession {
   metadata: string | null;
   successUrl: string | null;
   cancelUrl: string | null;
-  status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+  status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
   customerId: string | null;
   platformFee: number | null;
   netAmount: number | null;
@@ -161,6 +161,8 @@ export interface CheckoutSession {
   createdAt: string;
   expiresAt: string | null;
   completedAt: string | null;
+  cancelledAt: string | null;
+  refundedAt: string | null;
 }
 
 export interface ApiKey {
@@ -388,10 +390,36 @@ export async function getApiKeys(): Promise<ApiKey[]> {
   return body.data;
 }
 
-export async function createApiKey(environment: "TEST" | "LIVE", label?: string): Promise<ApiKey> {
+export async function createApiKey(data: {
+  environment: "TEST" | "LIVE";
+  label?: string;
+  type?: "SECRET" | "RESTRICTED";
+  scopes?: string;
+  ipWhitelist?: string;
+  expirationDays?: number;
+}): Promise<ApiKey> {
   const body = await request<{ success: boolean; data: ApiKey }>(
     "/api/v1/merchant/api-keys",
-    { method: "POST", body: JSON.stringify({ environment, label }) }
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updateApiKey(
+  id: string,
+  data: { label?: string; ipWhitelist?: string; scopes?: string }
+): Promise<ApiKey> {
+  const body = await request<{ success: boolean; data: ApiKey }>(
+    `/api/v1/merchant/api-keys/${id}`,
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function rollApiKey(id: string, expirationHours?: number): Promise<ApiKey> {
+  const body = await request<{ success: boolean; data: ApiKey }>(
+    `/api/v1/merchant/api-keys/${id}/roll`,
+    { method: "POST", body: JSON.stringify({ expirationHours }) }
   );
   return body.data;
 }
@@ -524,6 +552,301 @@ export async function uploadKybDocument(
   }
   const body = await res.json();
   return body.data;
+}
+
+export interface ApiLog {
+  id: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  ipAddress: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export async function getApiLogs(page = 0, size = 20): Promise<Page<ApiLog>> {
+  const body = await request<{ success: boolean; data: Page<ApiLog> }>(
+    `/api/v1/merchant/api-keys/logs?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Refund ──────────────────────────────────────────────────────────────────
+
+export async function refundSession(id: string): Promise<CheckoutSession> {
+  const body = await request<{ success: boolean; data: CheckoutSession }>(
+    `/api/v1/merchant/sessions/${id}/refund`,
+    { method: "POST" }
+  );
+  return body.data;
+}
+
+// ─── Customers ───────────────────────────────────────────────────────────────
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  totalPayments: number;
+  totalSpend: number;
+  firstPaymentAt: string | null;
+  lastPaymentAt: string | null;
+}
+
+export async function getCustomers(page = 0, size = 20): Promise<Page<Customer>> {
+  const body = await request<{ success: boolean; data: Page<Customer> }>(
+    `/api/v1/merchant/customers?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Disputes ────────────────────────────────────────────────────────────────
+
+export interface MerchantDispute {
+  id: string;
+  referenceId: string | null;
+  transactionId: string | null;
+  amount: number | null;
+  currency: string | null;
+  category: string | null;
+  description: string | null;
+  status: string;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export async function getMerchantDisputes(page = 0, size = 20): Promise<Page<MerchantDispute>> {
+  const body = await request<{ success: boolean; data: Page<MerchantDispute> }>(
+    `/api/v1/merchant/disputes?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+export interface MerchantAuditLog {
+  id: string;
+  actorEmail: string | null;
+  action: string;
+  details: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export async function getAuditLogs(page = 0, size = 20): Promise<Page<MerchantAuditLog>> {
+  const body = await request<{ success: boolean; data: Page<MerchantAuditLog> }>(
+    `/api/v1/merchant/audit-logs?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Invoices ────────────────────────────────────────────────────────────────
+
+export interface Invoice {
+  id: string;
+  referenceId: string | null;
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  dueDate: string | null;
+  status: "DRAFT" | "SENT" | "PAID" | "CANCELLED" | "OVERDUE";
+  checkoutSessionId: string | null;
+  checkoutUrl: string | null;
+  createdAt: string;
+  sentAt: string | null;
+  paidAt: string | null;
+}
+
+export async function getInvoices(page = 0, size = 20): Promise<Page<Invoice>> {
+  const body = await request<{ success: boolean; data: Page<Invoice> }>(
+    `/api/v1/merchant/invoices?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+export async function createInvoice(data: {
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+  dueDate?: string;
+}): Promise<Invoice> {
+  const body = await request<{ success: boolean; data: Invoice }>(
+    "/api/v1/merchant/invoices",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updateInvoice(id: string, data: {
+  customerName?: string;
+  customerEmail?: string;
+  amount?: number;
+  description?: string;
+  dueDate?: string;
+}): Promise<Invoice> {
+  const body = await request<{ success: boolean; data: Invoice }>(
+    `/api/v1/merchant/invoices/${id}`,
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function cancelInvoice(id: string): Promise<Invoice> {
+  const body = await request<{ success: boolean; data: Invoice }>(
+    `/api/v1/merchant/invoices/${id}`,
+    { method: "DELETE" }
+  );
+  return body.data;
+}
+
+export async function sendInvoice(id: string): Promise<Invoice> {
+  const body = await request<{ success: boolean; data: Invoice }>(
+    `/api/v1/merchant/invoices/${id}/send`,
+    { method: "POST" }
+  );
+  return body.data;
+}
+
+// ─── Team Members ────────────────────────────────────────────────────────────
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  userId: string | null;
+  role: "ADMIN" | "DEVELOPER" | "ANALYST" | "SUPPORT";
+  status: "INVITED" | "ACTIVE" | "REMOVED";
+  invitedAt: string;
+  joinedAt: string | null;
+}
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
+  const body = await request<{ success: boolean; data: TeamMember[] }>(
+    "/api/v1/merchant/team"
+  );
+  return body.data;
+}
+
+export async function inviteTeamMember(data: {
+  email: string;
+  role: string;
+}): Promise<TeamMember> {
+  const body = await request<{ success: boolean; data: TeamMember }>(
+    "/api/v1/merchant/team/invite",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updateTeamRole(id: string, role: string): Promise<TeamMember> {
+  const body = await request<{ success: boolean; data: TeamMember }>(
+    `/api/v1/merchant/team/${id}/role`,
+    { method: "PUT", body: JSON.stringify({ role }) }
+  );
+  return body.data;
+}
+
+export async function removeTeamMember(id: string): Promise<void> {
+  await request(`/api/v1/merchant/team/${id}`, { method: "DELETE" });
+}
+
+// ─── Plans ───────────────────────────────────────────────────────────────────
+
+export interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  amount: number;
+  currency: string;
+  interval: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
+  active: boolean;
+  createdAt: string;
+}
+
+export async function getPlans(): Promise<Plan[]> {
+  const body = await request<{ success: boolean; data: Plan[] }>(
+    "/api/v1/merchant/plans"
+  );
+  return body.data;
+}
+
+export async function createPlan(data: {
+  name: string;
+  description?: string;
+  amount: number;
+  currency?: string;
+  interval: string;
+}): Promise<Plan> {
+  const body = await request<{ success: boolean; data: Plan }>(
+    "/api/v1/merchant/plans",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updatePlan(id: string, data: {
+  name?: string;
+  description?: string;
+  active?: boolean;
+}): Promise<Plan> {
+  const body = await request<{ success: boolean; data: Plan }>(
+    `/api/v1/merchant/plans/${id}`,
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  await request(`/api/v1/merchant/plans/${id}`, { method: "DELETE" });
+}
+
+export async function getPlanSubscriptions(planId: string, page = 0, size = 20): Promise<Page<Subscription>> {
+  const body = await request<{ success: boolean; data: Page<Subscription> }>(
+    `/api/v1/merchant/plans/${planId}/subscriptions?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Subscriptions ───────────────────────────────────────────────────────────
+
+export interface Subscription {
+  id: string;
+  planId: string;
+  merchantId: string;
+  customerId: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  status: "ACTIVE" | "CANCELLED" | "PAUSED";
+  nextBillingAt: string | null;
+  createdAt: string;
+  cancelledAt: string | null;
+}
+
+export async function getSubscriptions(page = 0, size = 20): Promise<Page<Subscription>> {
+  const body = await request<{ success: boolean; data: Page<Subscription> }>(
+    `/api/v1/merchant/subscriptions?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+export async function createSubscription(data: {
+  planId: string;
+  customerEmail: string;
+  customerName?: string;
+}): Promise<Subscription> {
+  const body = await request<{ success: boolean; data: Subscription }>(
+    "/api/v1/merchant/subscriptions",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function cancelSubscription(id: string): Promise<void> {
+  await request(`/api/v1/merchant/subscriptions/${id}`, { method: "DELETE" });
 }
 
 // ─── Logo upload ─────────────────────────────────────────────────────────────

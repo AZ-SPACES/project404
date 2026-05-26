@@ -60,6 +60,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final ChallengeService challengeService;
     private final ObjectMapper objectMapper;
 
+    @Value("${app.ratelimit.enabled:true}")
+    private boolean rateLimitEnabled;
+
     @Value("${app.ratelimit.ip.limit:150}")
     private int ipLimit;
     @Value("${app.ratelimit.ip.window-seconds:60}")
@@ -85,6 +88,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (!rateLimitEnabled) {
+            return true;
+        }
         String path = request.getRequestURI();
         return path.startsWith("/ws") || path.startsWith("/actuator");
     }

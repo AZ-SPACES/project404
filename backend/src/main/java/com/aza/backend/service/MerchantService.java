@@ -10,6 +10,7 @@ import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
@@ -22,7 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -49,6 +52,10 @@ public class MerchantService {
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
     private final CheckoutSessionRepository checkoutSessionRepository;
+    private final MerchantAuditLogRepository auditLogRepository;
+    private final DisputeRepository disputeRepository;
+    private final MerchantInvoiceRepository invoiceRepository;
+    private final CheckoutService checkoutService;
 
     private static final Pattern HANDLE_PATTERN = Pattern.compile("^[a-z0-9_]{3,30}$");
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024;
@@ -123,6 +130,7 @@ public class MerchantService {
         String url = cloudinaryService.uploadProfileImage(logo);
         merchant.setLogoUrl(url);
         merchantRepository.save(merchant);
+        logMerchantAction(merchant.getId(), "LOGO_UPDATED", resolveActorEmail(userId), null);
         return toResponse(merchant);
     }
 
@@ -327,6 +335,8 @@ public class MerchantService {
 
         apiKeyRepository.save(apiKey);
         log.info("API key created: id={}, env={}, type={}", apiKey.getId(), env, type);
+        logMerchantAction(merchant.getId(), "API_KEY_CREATED", resolveActorEmail(userId),
+                "label=" + request.getLabel() + ", env=" + env + ", type=" + type);
 
         ApiKeyResponse response = toApiKeyResponse(apiKey);
         response.setFullKey(fullKey); // return the unhashed key once
@@ -366,11 +376,15 @@ public class MerchantService {
         if (Boolean.FALSE.equals(key.getIsActive())) {
             apiKeyRepository.delete(key);
             log.info("API key deleted for merchantId={}", merchant.getId());
+            logMerchantAction(merchant.getId(), "API_KEY_REVOKED", resolveActorEmail(userId),
+                    "keyId=" + keyId + " (deleted)");
         } else {
             key.setIsActive(false);
             key.setRevokedAt(LocalDateTime.now());
             apiKeyRepository.save(key);
             log.info("API key revoked for merchantId={}", merchant.getId());
+            logMerchantAction(merchant.getId(), "API_KEY_REVOKED", resolveActorEmail(userId),
+                    "keyId=" + keyId);
         }
     }
 
@@ -487,6 +501,8 @@ public class MerchantService {
 
         apiKeyRepository.save(apiKey);
         log.info("API key rolled: id={}, environment={}", apiKey.getId(), apiKey.getEnvironment());
+        logMerchantAction(merchant.getId(), "API_KEY_ROLLED", resolveActorEmail(userId),
+                "keyId=" + keyId + ", graceHours=" + graceHours);
 
         ApiKeyResponse response = toApiKeyResponse(apiKey);
         response.setFullKey(fullKey);
@@ -545,6 +561,8 @@ public class MerchantService {
                 .build();
 
         webhookRepository.save(endpoint);
+        logMerchantAction(merchant.getId(), "WEBHOOK_CREATED", resolveActorEmail(userId),
+                "url=" + request.getUrl());
 
         return WebhookEndpointResponse.builder()
                 .id(endpoint.getId().toString())
@@ -609,6 +627,8 @@ public class MerchantService {
         }
         endpoint.setIsActive(false);
         webhookRepository.save(endpoint);
+        logMerchantAction(merchant.getId(), "WEBHOOK_DELETED", resolveActorEmail(userId),
+                "endpointId=" + endpointId);
     }
 
     // ==================== PAYOUTS ====================
@@ -655,6 +675,8 @@ public class MerchantService {
 
         payoutRepository.save(payout);
         log.info("Payout completed: merchantId={}, amount={}", merchant.getId(), request.getAmount());
+        logMerchantAction(merchant.getId(), "PAYOUT_REQUESTED", owner.getEmail(),
+                "amount=" + request.getAmount());
 
         return PayoutResponse.builder()
                 .id(payout.getId().toString())
@@ -703,6 +725,7 @@ public class MerchantService {
             merchant.setLogoUrl(request.getLogoUrl());
         }
         merchantRepository.save(merchant);
+        logMerchantAction(merchant.getId(), "SETTINGS_UPDATED", resolveActorEmail(userId), null);
         return toResponse(merchant);
     }
 
@@ -964,6 +987,214 @@ public class MerchantService {
                         .requestedAt(p.getRequestedAt())
                         .completedAt(p.getCompletedAt())
                         .build());
+    }
+
+    // ==================== CUSTOMERS ====================
+
+    public Page<CustomerResponse> listCustomers(UUID userId, int page, int size) {
+        Merchant merchant = requireMerchant(userId);
+        List<UUID> allCustomerIds = checkoutSessionRepository.findDistinctCustomerIdsByMerchantId(merchant.getId());
+
+        int total = allCustomerIds.size();
+        int start = Math.min(page * size, total);
+        int end = Math.min(start + size, total);
+        List<UUID> pageIds = allCustomerIds.subList(start, end);
+
+        List<CustomerResponse> items = new ArrayList<>();
+        for (UUID customerId : pageIds) {
+            User customer = userRepository.findById(customerId).orElse(null);
+            if (customer == null) continue;
+            long totalPayments = checkoutSessionRepository.countByMerchantIdAndCustomerId(merchant.getId(), customerId);
+            BigDecimal totalSpend = checkoutSessionRepository.sumAmountByMerchantIdAndCustomerId(merchant.getId(), customerId);
+            LocalDateTime firstPaymentAt = checkoutSessionRepository.findFirstPaymentAt(merchant.getId(), customerId);
+            LocalDateTime lastPaymentAt = checkoutSessionRepository.findLastPaymentAt(merchant.getId(), customerId);
+            items.add(CustomerResponse.builder()
+                    .id(customerId.toString())
+                    .name(customer.getFirstName() + " " + customer.getLastName())
+                    .email(customer.getEmail())
+                    .phone(customer.getPhoneNumber())
+                    .totalPayments(totalPayments)
+                    .totalSpend(totalSpend)
+                    .firstPaymentAt(firstPaymentAt)
+                    .lastPaymentAt(lastPaymentAt)
+                    .build());
+        }
+
+        return new PageImpl<>(items, PageRequest.of(page, size), total);
+    }
+
+    // ==================== DISPUTES (merchant view) ====================
+
+    public Page<MerchantDisputeResponse> listMerchantDisputes(UUID userId, int page, int size) {
+        Merchant merchant = requireMerchant(userId);
+        List<UUID> transactionIds = checkoutSessionRepository.findTransactionIdsByMerchantId(merchant.getId());
+        if (transactionIds.isEmpty()) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+        Page<Dispute> disputes = disputeRepository.findAllByTransactionIdInOrderByCreatedAtDesc(
+                transactionIds, PageRequest.of(page, Math.min(size, 50)));
+        return disputes.map(d -> MerchantDisputeResponse.builder()
+                .id(d.getId().toString())
+                .referenceId(d.getReferenceId())
+                .transactionId(d.getTransactionId().toString())
+                .amount(d.getAmount())
+                .currency(d.getCurrency())
+                .category(d.getCategory().name())
+                .description(d.getDescription())
+                .status(d.getStatus().name())
+                .createdAt(d.getCreatedAt())
+                .resolvedAt(d.getResolvedAt())
+                .build());
+    }
+
+    // ==================== AUDIT LOG ====================
+
+    public void logMerchantAction(UUID merchantId, String action, String actorEmail, String details) {
+        try {
+            MerchantAuditLog logEntry = MerchantAuditLog.builder()
+                    .merchantId(merchantId)
+                    .action(action)
+                    .actorEmail(actorEmail)
+                    .details(details)
+                    .build();
+            auditLogRepository.save(logEntry);
+        } catch (Exception e) {
+            log.error("Failed to save merchant audit log: ", e);
+        }
+    }
+
+    private String resolveActorEmail(UUID userId) {
+        return userRepository.findById(userId).map(User::getEmail).orElse(null);
+    }
+
+    public Page<MerchantAuditLog> listAuditLogs(UUID userId, int page, int size) {
+        Merchant merchant = requireMerchant(userId);
+        return auditLogRepository.findAllByMerchantIdOrderByTimestampDesc(
+                merchant.getId(), PageRequest.of(page, Math.min(size, 100)));
+    }
+
+    // ==================== INVOICES ====================
+
+    public Page<InvoiceResponse> listInvoices(UUID userId, int page, int size) {
+        Merchant merchant = requireMerchant(userId);
+        return invoiceRepository.findAllByMerchantIdOrderByCreatedAtDesc(
+                merchant.getId(), PageRequest.of(page, Math.min(size, 50)))
+                .map(this::toInvoiceResponse);
+    }
+
+    @Transactional
+    public InvoiceResponse createInvoice(UUID userId, CreateInvoiceRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        long sequence = invoiceRepository.countByMerchantId(merchant.getId()) + 1;
+        String year = String.valueOf(LocalDate.now().getYear());
+        String referenceId = "INV-" + year + "-" + String.format("%04d", sequence);
+
+        MerchantInvoice invoice = MerchantInvoice.builder()
+                .merchantId(merchant.getId())
+                .referenceId(referenceId)
+                .customerName(request.getCustomerName().trim())
+                .customerEmail(request.getCustomerEmail())
+                .amount(request.getAmount())
+                .description(request.getDescription())
+                .dueDate(request.getDueDate())
+                .status(MerchantInvoice.InvoiceStatus.DRAFT)
+                .build();
+
+        invoiceRepository.save(invoice);
+        log.info("Invoice created: id={}, merchantId={}, referenceId={}", invoice.getId(), merchant.getId(), referenceId);
+        return toInvoiceResponse(invoice);
+    }
+
+    @Transactional
+    public InvoiceResponse updateInvoice(UUID userId, UUID invoiceId, UpdateInvoiceRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        MerchantInvoice invoice = invoiceRepository.findByIdAndMerchantId(invoiceId, merchant.getId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Invoice not found", HttpStatus.NOT_FOUND));
+        if (invoice.getStatus() == MerchantInvoice.InvoiceStatus.PAID
+                || invoice.getStatus() == MerchantInvoice.InvoiceStatus.CANCELLED) {
+            throw new AppException("INVALID_STATUS",
+                    "Cannot update a " + invoice.getStatus().name().toLowerCase() + " invoice", HttpStatus.BAD_REQUEST);
+        }
+        if (request.getCustomerName() != null && !request.getCustomerName().isBlank()) {
+            invoice.setCustomerName(request.getCustomerName().trim());
+        }
+        if (request.getCustomerEmail() != null) {
+            invoice.setCustomerEmail(request.getCustomerEmail());
+        }
+        if (request.getAmount() != null) {
+            invoice.setAmount(request.getAmount());
+        }
+        if (request.getDescription() != null) {
+            invoice.setDescription(request.getDescription());
+        }
+        if (request.getDueDate() != null) {
+            invoice.setDueDate(request.getDueDate());
+        }
+        invoiceRepository.save(invoice);
+        return toInvoiceResponse(invoice);
+    }
+
+    @Transactional
+    public InvoiceResponse cancelInvoice(UUID userId, UUID invoiceId) {
+        Merchant merchant = requireMerchant(userId);
+        MerchantInvoice invoice = invoiceRepository.findByIdAndMerchantId(invoiceId, merchant.getId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Invoice not found", HttpStatus.NOT_FOUND));
+        if (invoice.getStatus() == MerchantInvoice.InvoiceStatus.PAID) {
+            throw new AppException("INVALID_STATUS", "Cannot cancel a paid invoice", HttpStatus.BAD_REQUEST);
+        }
+        invoice.setStatus(MerchantInvoice.InvoiceStatus.CANCELLED);
+        invoiceRepository.save(invoice);
+        log.info("Invoice cancelled: id={}", invoiceId);
+        return toInvoiceResponse(invoice);
+    }
+
+    @Transactional
+    public InvoiceResponse sendInvoice(UUID userId, UUID invoiceId) {
+        Merchant merchant = requireMerchant(userId);
+        MerchantInvoice invoice = invoiceRepository.findByIdAndMerchantId(invoiceId, merchant.getId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Invoice not found", HttpStatus.NOT_FOUND));
+        if (invoice.getStatus() != MerchantInvoice.InvoiceStatus.DRAFT) {
+            throw new AppException("INVALID_STATUS",
+                    "Only draft invoices can be sent", HttpStatus.BAD_REQUEST);
+        }
+
+        CreateCheckoutSessionRequest sessionRequest = new CreateCheckoutSessionRequest();
+        sessionRequest.setAmount(invoice.getAmount());
+        sessionRequest.setDescription("Invoice " + invoice.getReferenceId() + ": " + invoice.getCustomerName());
+        sessionRequest.setIdempotencyKey("invoice:" + invoice.getId());
+
+        CheckoutSessionResponse session = checkoutService.createSession(merchant.getId(), sessionRequest);
+
+        invoice.setCheckoutSessionId(UUID.fromString(session.getId()));
+        invoice.setStatus(MerchantInvoice.InvoiceStatus.SENT);
+        invoice.setSentAt(LocalDateTime.now());
+        invoiceRepository.save(invoice);
+
+        log.info("Invoice sent: id={}, sessionId={}", invoiceId, session.getId());
+        return toInvoiceResponse(invoice, session.getCheckoutUrl());
+    }
+
+    private InvoiceResponse toInvoiceResponse(MerchantInvoice invoice) {
+        return toInvoiceResponse(invoice, null);
+    }
+
+    private InvoiceResponse toInvoiceResponse(MerchantInvoice invoice, String checkoutUrl) {
+        return InvoiceResponse.builder()
+                .id(invoice.getId().toString())
+                .referenceId(invoice.getReferenceId())
+                .customerName(invoice.getCustomerName())
+                .customerEmail(invoice.getCustomerEmail())
+                .amount(invoice.getAmount())
+                .currency(invoice.getCurrency())
+                .description(invoice.getDescription())
+                .dueDate(invoice.getDueDate())
+                .status(invoice.getStatus().name())
+                .checkoutSessionId(invoice.getCheckoutSessionId() != null ? invoice.getCheckoutSessionId().toString() : null)
+                .checkoutUrl(checkoutUrl)
+                .createdAt(invoice.getCreatedAt())
+                .sentAt(invoice.getSentAt())
+                .paidAt(invoice.getPaidAt())
+                .build();
     }
 
     // ==================== INTERNAL HELPERS ====================

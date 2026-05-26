@@ -35,4 +35,24 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
                    "WHERE s.merchant_id = :merchantId AND s.status = 'COMPLETED' AND s.completed_at >= :from " +
                    "GROUP BY CAST(s.completed_at AS DATE) ORDER BY day", nativeQuery = true)
     List<Object[]> getDailyRevenueSince(@Param("merchantId") UUID merchantId, @Param("from") LocalDateTime from);
+
+    Optional<CheckoutSession> findByIdAndMerchantId(UUID id, UUID merchantId);
+
+    @Query("SELECT DISTINCT s.customerId FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED AND s.customerId IS NOT NULL")
+    List<UUID> findDistinctCustomerIdsByMerchantId(@Param("merchantId") UUID merchantId);
+
+    @Query("SELECT COUNT(s) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.customerId = :customerId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    long countByMerchantIdAndCustomerId(@Param("merchantId") UUID merchantId, @Param("customerId") UUID customerId);
+
+    @Query("SELECT COALESCE(SUM(s.amount), 0) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.customerId = :customerId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    java.math.BigDecimal sumAmountByMerchantIdAndCustomerId(@Param("merchantId") UUID merchantId, @Param("customerId") UUID customerId);
+
+    @Query("SELECT MIN(s.completedAt) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.customerId = :customerId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    java.time.LocalDateTime findFirstPaymentAt(@Param("merchantId") UUID merchantId, @Param("customerId") UUID customerId);
+
+    @Query("SELECT MAX(s.completedAt) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.customerId = :customerId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    java.time.LocalDateTime findLastPaymentAt(@Param("merchantId") UUID merchantId, @Param("customerId") UUID customerId);
+
+    @Query("SELECT s.transactionId FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.transactionId IS NOT NULL")
+    List<UUID> findTransactionIdsByMerchantId(@Param("merchantId") UUID merchantId);
 }

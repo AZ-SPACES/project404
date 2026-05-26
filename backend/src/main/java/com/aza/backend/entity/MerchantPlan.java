@@ -1,0 +1,48 @@
+package com.aza.backend.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "merchant_plans")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
+public class MerchantPlan {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false)
+    private UUID merchantId;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount;
+
+    @Builder.Default
+    private String currency = "GHS";
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PlanInterval interval;
+
+    @Builder.Default
+    private boolean isActive = true;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    public enum PlanInterval { DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY }
+}

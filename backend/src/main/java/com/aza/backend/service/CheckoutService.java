@@ -388,6 +388,66 @@ public class CheckoutService {
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
                 .completedAt(s.getCompletedAt())
+                .cancelledAt(s.getCancelledAt())
+                .refundedAt(s.getRefundedAt())
                 .build();
+    }
+
+    // ==================== REFUND SESSION ====================
+
+    @Transactional
+    public CheckoutSessionResponse refundSession(UUID merchantId, UUID sessionId) {
+        CheckoutSession session = sessionRepository.findByIdAndMerchantId(sessionId, merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Session not found", HttpStatus.NOT_FOUND));
+
+        if (session.getStatus() != CheckoutSession.SessionStatus.COMPLETED) {
+            throw new AppException("INVALID_STATUS", "Only completed sessions can be refunded", HttpStatus.BAD_REQUEST);
+        }
+
+        User customer = userRepository.findById(session.getCustomerId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Customer not found", HttpStatus.NOT_FOUND));
+
+        Wallet customerWallet = walletRepository.findByUserIdForUpdate(session.getCustomerId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Customer wallet not found", HttpStatus.NOT_FOUND));
+
+        Merchant merchant = merchantRepository.findByIdForUpdate(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+
+        if (merchant.getBalance().compareTo(session.getNetAmount()) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS",
+                    "Merchant balance is insufficient to process this refund", HttpStatus.BAD_REQUEST);
+        }
+
+        // Debit merchant balance
+        merchant.setBalance(merchant.getBalance().subtract(session.getNetAmount()));
+        merchantRepository.save(merchant);
+
+        // Credit customer wallet
+        customerWallet.setBalance(customerWallet.getBalance().add(session.getNetAmount()));
+        walletRepository.save(customerWallet);
+        customer.setBalance(customerWallet.getBalance());
+        userRepository.save(customer);
+
+        // Create reversal transaction
+        String note = "Refund: " + (session.getDescription() != null ? session.getDescription() : "Payment refund");
+        Transaction tx = Transaction.builder()
+                .senderId(merchant.getUserId())
+                .recipientId(session.getCustomerId())
+                .amount(session.getNetAmount())
+                .note(note)
+                .type(Transaction.TransactionType.TRANSFER)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("refund:" + session.getId())
+                .completedAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(tx);
+
+        // Mark session as refunded
+        session.setStatus(CheckoutSession.SessionStatus.REFUNDED);
+        session.setRefundedAt(LocalDateTime.now());
+        sessionRepository.save(session);
+
+        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, session.getNetAmount());
+        return toResponse(session, merchant);
     }
 }

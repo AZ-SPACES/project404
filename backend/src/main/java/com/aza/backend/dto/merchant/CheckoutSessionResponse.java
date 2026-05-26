@@ -31,4 +31,6 @@ public class CheckoutSessionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
+    private LocalDateTime refundedAt;
 }
