@@ -33,7 +33,7 @@ public class MiniAppReportService {
         MiniAppReport report = MiniAppReport.builder()
                 .appId(appId)
                 .reportedByUserId(reporter.getId())
-                .reportedByHandle(reporter.getHandle())
+                .reportedByHandle(reporter.getUsername())
                 .reason(reason)
                 .details(request.getDetails())
                 .build();

@@ -53,7 +53,7 @@ public class BiometricService {
      */
     @Transactional
     public BiometricTokenResponse issueBiometricToken(User user, BiometricTokenRequest request) {
-        // 1. Verify account is active
+        // 1. Verify an account is active
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
             throw new RuntimeException("Account is not active");
         }
@@ -150,7 +150,7 @@ public class BiometricService {
             throw new RuntimeException("Biometric token has expired. Please re-enable biometrics in settings.");
         }
 
-        // 5. Load user and verify account is active
+        // 5. Load user and verify an account is active
         User user = userRepository.findById(stored.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -173,7 +173,7 @@ public class BiometricService {
         // Store hashed refresh token
         saveRefreshToken(user.getId(), refreshToken, accessToken, stored.getDeviceName(), stored.getDeviceOs(), stored.getDeviceId(), ipAddress);
 
-        // Notify user of biometric login — same signal as password login
+        // Notify user of biometric login — the same signal as password login
         emailService.sendLoginNotification(
                 user.getEmail(), user.getFirstName(), stored.getDeviceName(), stored.getDeviceOs(), ipAddress);
 
@@ -183,28 +183,6 @@ public class BiometricService {
     }
 
     // ==================== REVOKE ====================
-
-    /**
-     * Revoke biometric token for a specific device.
-     * Called when user disables biometrics or removes a device.
-     */
-    @Transactional
-    public void revokeBiometricToken(User user, String deviceId) {
-        BiometricToken token = biometricTokenRepository
-                .findByUserIdAndDeviceId(user.getId(), deviceId)
-                .orElseThrow(() -> new RuntimeException("No biometric token found for this device"));
-
-        biometricTokenRepository.delete(token);
-
-        // Check if user has any other active biometric tokens
-        boolean hasOtherTokens = !biometricTokenRepository.findAllByUserId(user.getId()).isEmpty();
-        if (!hasOtherTokens) {
-            user.setBiometricsEnabled(false);
-            userRepository.save(user);
-        }
-
-        log.info("Biometric token revoked for user {} on device {}", user.getId(), deviceId);
-    }
 
     /**
      * Revoke ALL biometric tokens for a user.

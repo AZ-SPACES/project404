@@ -37,7 +37,7 @@ public class WalletService {
     @Value("${passkit.template-id}")
     private String templateId;
 
-    @Value("${app.base-url:https://aza.app}")
+    @Value("${app.base-url:https://aza.syste,s}")
     private String baseUrl;
 
     private final HttpClient httpClient = HttpClient.newBuilder()

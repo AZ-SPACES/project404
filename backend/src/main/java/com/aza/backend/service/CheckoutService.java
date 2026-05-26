@@ -131,7 +131,7 @@ public class CheckoutService {
             throw new AppException("SESSION_EXPIRED", "This payment link has expired", HttpStatus.BAD_REQUEST);
         }
 
-        // Verify passcode before acquiring locks — avoids holding DB locks during Redis round-trip
+        // Verify passcode before acquiring locks — avoids holding DB locks during a Redis round-trip
         User customer = userService.findById(customerId);
         userService.verifyPasscode(customer, request.getPasscode());
 
@@ -154,7 +154,7 @@ public class CheckoutService {
             throw new AppException("SELF_PAYMENT", "You cannot pay your own merchant account", HttpStatus.BAD_REQUEST);
         }
 
-        // Pessimistic lock on customer wallet — must come after merchant lock to maintain consistent lock ordering
+        // Pessimistic lock on the customer wallet — must come after merchant lock to maintain consistent lock ordering
         Wallet customerWallet = walletRepository.findByUserIdForUpdate(customerId)
                 .orElseThrow(() -> new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND));
 
@@ -283,7 +283,7 @@ public class CheckoutService {
         String payload = buildWebhookPayload(session, merchant);
 
         for (WebhookEndpoint endpoint : endpoints) {
-            if (!isSubscribed(endpoint, "checkout.completed")) continue;
+            if (!isSubscribed(endpoint)) continue;
             WebhookDelivery delivery = WebhookDelivery.builder()
                     .endpointId(endpoint.getId())
                     .checkoutSessionId(session.getId())
@@ -296,10 +296,10 @@ public class CheckoutService {
         }
     }
 
-    private boolean isSubscribed(WebhookEndpoint endpoint, String eventType) {
+    private boolean isSubscribed(WebhookEndpoint endpoint) {
         if (endpoint.getEvents() == null) return false;
         for (String e : endpoint.getEvents().split(",")) {
-            if (e.trim().equalsIgnoreCase(eventType) || e.trim().equals("*")) return true;
+            if (e.trim().equalsIgnoreCase("checkout.completed") || e.trim().equals("*")) return true;
         }
         return false;
     }
