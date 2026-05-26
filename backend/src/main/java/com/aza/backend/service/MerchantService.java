@@ -542,6 +542,35 @@ public class MerchantService {
         return toResponse(merchant);
     }
 
+    @Transactional
+    public MerchantResponse adminSetFeeRate(UUID merchantId, int feeRateBps) {
+        if (feeRateBps < 0 || feeRateBps > 10000) {
+            throw new AppException("INVALID_FEE_RATE", "Fee rate must be between 0 and 10000 bps (0–100%)", HttpStatus.BAD_REQUEST);
+        }
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        merchant.setFeeRateBps(feeRateBps);
+        merchantRepository.save(merchant);
+        log.info("Fee rate updated for merchantId={}, feeRateBps={}", merchantId, feeRateBps);
+        return toResponse(merchant);
+    }
+
+    public Page<PayoutResponse> adminGetPayouts(UUID merchantId, int page, int size) {
+        merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        return payoutRepository.findAllByMerchantIdOrderByRequestedAtDesc(
+                        merchantId, PageRequest.of(page, Math.min(size, 50)))
+                .map(p -> PayoutResponse.builder()
+                        .id(p.getId().toString())
+                        .amount(p.getAmount())
+                        .currency(p.getCurrency())
+                        .status(p.getStatus().name())
+                        .note(p.getNote())
+                        .requestedAt(p.getRequestedAt())
+                        .completedAt(p.getCompletedAt())
+                        .build());
+    }
+
     // ==================== INTERNAL HELPERS ====================
 
     private static void validateWebhookUrl(String rawUrl) {
@@ -662,6 +691,7 @@ public class MerchantService {
                 .registeredAddress(record.getRegisteredAddress())
                 .city(record.getCity())
                 .taxIdNumber(record.getTaxIdNumber())
+                .website(record.getWebsite())
                 .ownerFullName(record.getOwnerFullName())
                 .ownerIdType(record.getOwnerIdType() != null ? record.getOwnerIdType().name() : null)
                 .rejectionReason(record.getRejectionReason())

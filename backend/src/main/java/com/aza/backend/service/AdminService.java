@@ -7,11 +7,13 @@ import com.aza.backend.dto.admin.AdminWalletResponse;
 import com.aza.backend.dto.admin.KycAnalyticsResponse;
 import com.aza.backend.dto.admin.LiveStatsResponse;
 import com.aza.backend.entity.KycRecord;
+import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.KycRecordRepository;
+import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
@@ -36,6 +38,7 @@ public class AdminService {
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final KycRecordRepository kycRecordRepository;
+    private final MerchantRepository merchantRepository;
     private final PresenceService presenceService;
     private final AdminAuditService auditService;
 
@@ -157,6 +160,12 @@ public class AdminService {
         long transactionsToday = transactionRepository.countByInitiatedAtBetween(startOfDay, endOfDay);
         BigDecimal volumeToday = transactionRepository.sumVolumeByInitiatedAtBetween(startOfDay, endOfDay);
 
+        long totalMerchants = merchantRepository.count();
+        long activeMerchants = merchantRepository.countByStatus(Merchant.MerchantStatus.ACTIVE);
+        long pendingKybMerchants = merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_UNDER_REVIEW)
+                + merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_SUBMITTED);
+        BigDecimal totalMerchantVolume = merchantRepository.sumActiveMerchantVolume();
+
         return AdminStatsResponse.builder()
                 .totalUsers(totalUsers)
                 .activeUsers(activeUsers)
@@ -171,6 +180,10 @@ public class AdminService {
                 .totalTransactionVolume(totalVolume != null ? totalVolume : BigDecimal.ZERO)
                 .transactionsToday(transactionsToday)
                 .volumeToday(volumeToday != null ? volumeToday : BigDecimal.ZERO)
+                .totalMerchants(totalMerchants)
+                .activeMerchants(activeMerchants)
+                .pendingKybMerchants(pendingKybMerchants)
+                .totalMerchantVolume(totalMerchantVolume != null ? totalMerchantVolume : BigDecimal.ZERO)
                 .build();
     }
 
