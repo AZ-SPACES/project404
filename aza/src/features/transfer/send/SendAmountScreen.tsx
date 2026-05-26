@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -17,21 +17,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
+import { getWalletBalance } from '../../../services/api';
+import { formatCurrency } from '../../../utils/transactionUtils';
 
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
 export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
-    const { name, username, avatar } = route.params;
+    const { name, username, avatar, identifier } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [balance, setBalance] = useState<number | null>(null);
+    const [balanceCurrency, setBalanceCurrency] = useState('GHS');
     const amountInputRef = useRef<TextInput>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        getWalletBalance()
+            .then(res => {
+                if (cancelled) return;
+                const data = res.data?.data || res.data;
+                setBalance(data.balance);
+                setBalanceCurrency(data.currency || 'GHS');
+            })
+            .catch(() => { /* balance remains null — safe */ });
+        return () => { cancelled = true; };
+    }, []);
 
     const numericAmount = amount === '' || amount === '.' ? 0 : (parseFloat(amount) || 0);
     const displayAmount = numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
+    const isOverBalance = balance !== null && numericAmount > balance;
+    const canSend = numericAmount > 0 && !isLoading && !isOverBalance;
 
     const handleAmountChange = (text: string) => {
         // Allow only digits and a single decimal point
@@ -72,7 +91,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     };
 
     const handleSend = () => {
-        if (numericAmount <= 0 || isLoading) return;
+        if (!canSend) return;
         setIsLoading(true);
         navigation.navigate('SendConfirm', {
             name,
@@ -80,6 +99,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             avatar,
             amount: numericAmount,
             note,
+            identifier,
         });
         // Reset after navigation so button is re-enabled if user goes back
         setTimeout(() => setIsLoading(false), 500);
@@ -158,8 +178,22 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             {/* Balance */}
                             <View style={styles.balanceRow}>
                                 <Text style={styles.balanceLabel}>Available balance:</Text>
-                                <Text style={styles.balanceAmount}>GH¢ 0.00</Text>
+                                <Text style={styles.balanceAmount}>
+                                    {balance !== null
+                                        ? formatCurrency(balance, balanceCurrency)
+                                        : '—'}
+                                </Text>
                             </View>
+
+                            {/* Over-limit warning */}
+                            {isOverBalance && (
+                                <View style={styles.warningRow}>
+                                    <Feather name="alert-circle" size={13} color={Colors.error || '#EF4444'} />
+                                    <Text style={[styles.feeText, { color: Colors.error || '#EF4444', marginLeft: 4 }]}>
+                                        Amount exceeds your balance
+                                    </Text>
+                                </View>
+                            )}
                         </View>
 
                         {/* Spacer */}
@@ -191,25 +225,25 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                         <TouchableOpacity
                             style={[
                                 styles.sendButton,
-                                numericAmount > 0 && !isLoading && styles.sendButtonActive,
+                                canSend && styles.sendButtonActive,
                             ]}
                             activeOpacity={0.7}
                             onPress={handleSend}
-                            disabled={numericAmount <= 0 || isLoading}
+                            disabled={!canSend}
                             accessibilityRole="button"
                             accessibilityLabel={`Send GH¢ ${displayAmount}`}
-                            accessibilityState={{ disabled: numericAmount <= 0 || isLoading }}
+                            accessibilityState={{ disabled: !canSend }}
                         >
                             <Feather
                                 name="arrow-up"
                                 size={18}
-                                color={numericAmount > 0 && !isLoading ? Colors.white : Colors.textSecondary}
+                                color={canSend ? Colors.white : Colors.textSecondary}
                                 style={styles.sendIcon}
                             />
                             <Text
                                 style={[
                                     styles.sendButtonText,
-                                    numericAmount > 0 && !isLoading && styles.sendButtonTextActive,
+                                    canSend && styles.sendButtonTextActive,
                                 ]}
                             >
                                 {isLoading ? 'Preparing…' : `Send GH¢ ${displayAmount}`}
@@ -350,6 +384,10 @@ function createStyles(Colors: ThemeColors) {
         ...Typography.caption,
         fontWeight: '600',
         color: Colors.textPrimary },
+    warningRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: Spacing.xs },
 
     // Note
     noteContainer: {

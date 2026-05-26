@@ -1,10 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
+import { useTransferStore } from '../../../store/transferStore';
+import { useWallet } from '../../../hooks/useWallet';
 
 type SendSuccessScreenProps = NativeStackScreenProps<RootStackParamList, 'SendSuccess'>;
 
@@ -12,6 +14,13 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const { name } = route.params;
   const { colors: Colors } = useAppTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const { reset: resetTransferStore } = useTransferStore();
+  const { refresh: refreshWallet } = useWallet();
+
+  useEffect(() => {
+    resetTransferStore();
+    refreshWallet();
+  }, [resetTransferStore, refreshWallet]);
 
   const isDark = Colors.isDark;
   const backgroundColor = isDark ? Colors.background : Colors.accent;

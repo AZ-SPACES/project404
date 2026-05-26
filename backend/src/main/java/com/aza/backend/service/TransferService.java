@@ -149,9 +149,13 @@ public class TransferService {
             throw new RuntimeException("Transfer would exceed your daily limit. Remaining: GHS " + remaining);
         }
 
-        // 2. Find recipient
+        // 2. Find recipient — try email/phone first, then handle
+        String rawIdentifier = request.getRecipientIdentifier();
+        String usernameCandidate = rawIdentifier.startsWith("@")
+                ? rawIdentifier.substring(1) : rawIdentifier;
         User recipient = userRepository
-                .findByEmailOrPhoneNumber(request.getRecipientIdentifier(), request.getRecipientIdentifier())
+                .findByEmailOrPhoneNumber(rawIdentifier, rawIdentifier)
+                .or(() -> userRepository.findByUsername(usernameCandidate))
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
         if (recipient.getId().equals(sender.getId())) {
@@ -309,8 +313,12 @@ public class TransferService {
             throw new RuntimeException("Requested amount exceeds the single transfer limit of GHS " + maxSingleAmount);
         }
 
+        // Find the user to request from — try email/phone first, then handle
+        String rawFrom = request.getFromIdentifier();
+        String usernameCandidate = rawFrom.startsWith("@") ? rawFrom.substring(1) : rawFrom;
         User fromUser = userRepository
-                .findByEmailOrPhoneNumber(request.getFromIdentifier(), request.getFromIdentifier())
+                .findByEmailOrPhoneNumber(rawFrom, rawFrom)
+                .or(() -> userRepository.findByUsername(usernameCandidate))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if(fromUser.getId().equals(requester.getId())) {

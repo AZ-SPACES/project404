@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,10 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  Animated,
-  Dimensions,
-  Image,
+  Modal,
+  Pressable,
   ActivityIndicator,
 } from "react-native";
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -29,10 +26,11 @@ import {
   Radius,
 } from "../../../theme";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
-import { INITIAL_RECIPIENTS } from "../../contacts";
 import Button from "../../../components/ui/Button";
 import { useTransactions } from "../../../hooks/useTransactions";
 import { useDisplayContext } from "../../../providers/DisplayProvider";
+import { useTransferStore } from "../../../store/transferStore";
+import { formatCurrency } from "../../../utils/transactionUtils";
 
 export type Transaction = {
   id: string;
@@ -43,6 +41,13 @@ export type Transaction = {
   isCredit: boolean;
   isPending?: boolean;
   fullDate: string;
+  // Extended backend fields (present when mapped from API)
+  status?: string;
+  note?: string;
+  direction?: string;
+  senderId?: string;
+  recipientId?: string;
+  completedAt?: string | null;
 };
 
 export type Section = {
@@ -125,33 +130,53 @@ export function TransactionsScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Transactions">>();
   const balance = route.params?.balance || "GH₵ 0.00";
-  const { transactionGrouping, reducedMotion } = useDisplayContext();
-  const animDuration = reducedMotion ? 0 : 300;
+  const { transactionGrouping } = useDisplayContext();
 
   const [searchQuery, setSearchQuery] = useState("");
   const { sections, loading, refreshing, refresh, loadMore, hasMore, error, filter, setFilter } = useTransactions();
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
-  const txSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const txBackdropAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (selectedTransaction) {
-      Animated.parallel([
-        Animated.timing(txSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(txBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(txSheetAnim, { toValue: SCREEN_HEIGHT, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(txBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [selectedTransaction, txSheetAnim, txBackdropAnim]);
+  const [actionLoading, setActionLoading] = useState<'accept' | 'decline' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore();
+  // We use a PIN modal state for accepting money requests
+  const [acceptPinVisible, setAcceptPinVisible] = useState(false);
+  const [acceptPin, setAcceptPin] = useState('');
 
   const onRefresh = useCallback(() => {
     refresh();
   }, [refresh]);
+
+  const handleDecline = useCallback(async (tx: Transaction) => {
+    setActionLoading('decline');
+    setActionError(null);
+    try {
+      await declineMoneyRequest(tx.id);
+      setSelectedTransaction(null);
+      refresh();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to decline request.');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [declineMoneyRequest, refresh]);
+
+  const handleAcceptConfirm = useCallback(async () => {
+    if (!selectedTransaction) return;
+    setActionLoading('accept');
+    setActionError(null);
+    try {
+      await acceptMoneyRequest(selectedTransaction.id, acceptPin);
+      setAcceptPinVisible(false);
+      setAcceptPin('');
+      setSelectedTransaction(null);
+      refresh();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed. Check your PIN and try again.');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [selectedTransaction, acceptPin, acceptMoneyRequest, refresh]);
 
   const filteredSections = useMemo(() => {
     const filtered = !searchQuery ? sections : sections.map(section => ({
@@ -329,112 +354,165 @@ export function TransactionsScreen() {
         }
       />
 
-      <View style={StyleSheet.absoluteFill} pointerEvents={selectedTransaction ? 'auto' : 'none'}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: txBackdropAnim }]}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedTransaction(null)} />
-        </Animated.View>
-        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: txSheetAnim }] }]}>
+      {/* Transaction Detail Sheet */}
+      <Modal
+        visible={!!selectedTransaction}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setSelectedTransaction(null); setActionError(null); }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => { setSelectedTransaction(null); setActionError(null); }}
+        />
+        <View style={styles.bottomSheet}>
           <View style={styles.bottomSheetHandle} />
 
           {selectedTransaction && (
             <>
-              {(() => {
-                const contact = INITIAL_RECIPIENTS.find(
-                  (c) => c.name.toLowerCase() === selectedTransaction.name.toLowerCase()
-                );
+              {/* Icon / direction indicator */}
+              <View
+                style={[
+                  styles.bottomSheetIcon,
+                  {
+                    alignSelf: "center",
+                    backgroundColor: selectedTransaction.isCredit
+                      ? "rgba(183, 238, 122, 0.2)"
+                      : "rgba(234, 67, 53, 0.1)",
+                    marginBottom: Spacing.md,
+                  },
+                ]}
+              >
+                <Feather
+                  name={selectedTransaction.isCredit ? "arrow-down-left" : "arrow-up-right"}
+                  size={24}
+                  color={selectedTransaction.isCredit ? Colors.primary : Colors.error}
+                />
+              </View>
 
-                return (
-                  <>
-                    {contact ? (
-                      <View style={{ alignItems: "center", marginBottom: Spacing.md }}>
-                        <Image source={{ uri: contact.avatar }} style={styles.contactAvatar} />
-                        <Text style={styles.contactName}>{contact.name}</Text>
-                        <Text style={styles.contactUsername}>{contact.username}</Text>
-                      </View>
-                    ) : (
-                      <View
-                        style={[
-                          styles.bottomSheetIcon,
-                          {
-                            alignSelf: "center",
-                            backgroundColor: selectedTransaction.isCredit
-                              ? "rgba(183, 238, 122, 0.2)"
-                              : "rgba(234, 67, 53, 0.1)",
-                            marginBottom: Spacing.md,
-                          },
-                        ]}
-                      >
-                        <Feather
-                          name={
-                            selectedTransaction.isCredit
-                              ? "arrow-down-left"
-                              : "arrow-up-right"
-                          }
-                          size={24}
-                          color={
-                            selectedTransaction.isCredit ? Colors.primary : Colors.error
-                          }
-                        />
-                      </View>
-                    )}
+              <Text style={styles.bottomSheetAmount}>
+                {formatCurrency(selectedTransaction.amount)}
+              </Text>
+              <Text style={styles.bottomSheetTitle}>{selectedTransaction.name}</Text>
 
-                    <Text style={styles.bottomSheetAmount}>
-                      {formatCurrency(selectedTransaction.amount)}
-                    </Text>
-
-                    {!contact && (
-                      <Text style={styles.bottomSheetTitle}>
-                        {selectedTransaction.name}
-                      </Text>
-                    )}
-
-                    <View style={styles.detailsList}>
+              <View style={styles.detailsList}>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Status</Text>
                   <Text
                     style={[
                       styles.detailValue,
-                      selectedTransaction.isPending && {
-                        color: Colors.primary,
-                      },
+                      selectedTransaction.isPending && { color: Colors.primary },
                     ]}
                   >
-                    {selectedTransaction.isPending ? "Pending" : "Successful"}
+                    {selectedTransaction.status || (selectedTransaction.isPending ? "Pending" : "Successful")}
                   </Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Type</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedTransaction.type}
-                  </Text>
+                  <Text style={styles.detailValue}>{selectedTransaction.type}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Time</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedTransaction.time}
-                  </Text>
+                  <Text style={styles.detailValue}>{selectedTransaction.time}</Text>
                 </View>
+                {selectedTransaction.note ? (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Note</Text>
+                    <Text style={[styles.detailValue, { flex: 1, textAlign: 'right', marginLeft: 8 }]} numberOfLines={2}>
+                      {selectedTransaction.note}
+                    </Text>
+                  </View>
+                ) : null}
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Reference ID</Text>
                   <Text style={styles.detailValue}>
-                    AZA-{selectedTransaction.id.padStart(8, "0")}
+                    AZA-{selectedTransaction.id.slice(0, 8).toUpperCase()}
                   </Text>
                 </View>
               </View>
 
-              <Button
-                title="Close"
-                onPress={() => setSelectedTransaction(null)}
-                backgroundColor={isDark ? Colors.background : Colors.surface}
-                textColor={Colors.textPrimary}
-              />
-            </>
-          );
-        })()}
+              {/* Action error */}
+              {actionError && (
+                <Text style={{ color: Colors.error, fontSize: 13, textAlign: 'center', marginBottom: 8 }}>
+                  {actionError}
+                </Text>
+              )}
+
+              {/* Accept PIN prompt */}
+              {acceptPinVisible ? (
+                <View style={{ marginBottom: Spacing.md }}>
+                  <Text style={[styles.detailLabel, { marginBottom: 8, textAlign: 'center' }]}>
+                    Enter your PIN to pay
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.detailValue,
+                      {
+                        borderWidth: 1,
+                        borderColor: Colors.border,
+                        borderRadius: 8,
+                        padding: 10,
+                        textAlign: 'center',
+                        fontSize: 20,
+                        letterSpacing: 12,
+                        color: Colors.textPrimary,
+                      }
+                    ]}
+                    value={acceptPin}
+                    onChangeText={t => setAcceptPin(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    secureTextEntry
+                    maxLength={4}
+                    placeholder="••••"
+                    placeholderTextColor={Colors.textSecondary}
+                    autoFocus
+                  />
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                    <Button
+                      title="Cancel"
+                      onPress={() => { setAcceptPinVisible(false); setAcceptPin(''); setActionError(null); }}
+                      backgroundColor={Colors.surface}
+                      textColor={Colors.textPrimary}
+                    />
+                    <Button
+                      title={actionLoading === 'accept' ? 'Paying…' : 'Pay'}
+                      onPress={handleAcceptConfirm}
+                      disabled={acceptPin.length < 4 || actionLoading === 'accept'}
+                    />
+                  </View>
+                </View>
+              ) : selectedTransaction.isPending && selectedTransaction.type === 'Money Request' && !selectedTransaction.isCredit ? (
+                /* Payer sees Accept + Decline for incoming money requests */
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: Spacing.md }}>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title={actionLoading === 'decline' ? 'Declining…' : 'Decline'}
+                      onPress={() => handleDecline(selectedTransaction)}
+                      disabled={!!actionLoading}
+                      backgroundColor={Colors.surface}
+                      textColor={Colors.error}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Pay now"
+                      onPress={() => { setActionError(null); setAcceptPinVisible(true); }}
+                      disabled={!!actionLoading}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <Button
+                  title="Close"
+                  onPress={() => { setSelectedTransaction(null); setActionError(null); }}
+                  backgroundColor={isDark ? Colors.background : Colors.surface}
+                  textColor={Colors.textPrimary}
+                />
+              )}
             </>
           )}
-        </Animated.View>
-      </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

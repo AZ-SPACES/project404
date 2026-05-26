@@ -12,6 +12,8 @@ import {
     Pressable,
     ScrollView,
     Animated,
+    ActivityIndicator,
+    Modal,
     Dimensions,
     StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -19,16 +21,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
+import { useTransferStore } from '../../../store/transferStore';
 
 type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'RequestAmount'>;
 
 export default function RequestAmountScreen({ navigation, route }: RequestAmountScreenProps) {
-    const { name, username, avatar } = route.params;
+    const { name, username, avatar, identifier } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
+    const [apiError, setApiError] = useState<string | null>(null);
+    const { requestMoney, status: requestStatus, reset: resetStore } = useTransferStore();
     const amountInputRef = useRef<TextInput>(null);
 
     const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);
@@ -36,6 +41,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const showSuccessModal = () => {
+        resetStore();  // clear 'requesting' status before navigation
         setSuccessModalVisible(true);
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -103,10 +109,15 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
         setAmount(num.toFixed(2));
     };
 
-    const handleRequest = () => {
-        if (numericAmount <= 0) return;
-        // Handle request logic
-        showSuccessModal();
+    const handleRequest = async () => {
+        if (numericAmount <= 0 || requestStatus === 'requesting') return;
+        setApiError(null);
+        try {
+            await requestMoney({ fromIdentifier: identifier, amount: numericAmount, note });
+            showSuccessModal();
+        } catch (err: any) {
+            setApiError(err.message || 'Could not send request. Please try again.');
+        }
     };
 
     return (
@@ -203,29 +214,42 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                             </View>
                         </View>
 
+                        {/* Error message */}
+                        {apiError && (
+                            <View style={{ paddingHorizontal: Spacing.lg, marginBottom: 4 }}>
+                                <Text style={{ fontSize: 13, color: Colors.error || '#EF4444', textAlign: 'center' }}>
+                                    {apiError}
+                                </Text>
+                            </View>
+                        )}
+
                         {/* Request Button */}
                         <TouchableOpacity
                             style={[
                                 styles.requestButton,
-                                numericAmount > 0 && styles.requestButtonActive,
+                                numericAmount > 0 && requestStatus !== 'requesting' && styles.requestButtonActive,
                             ]}
                             activeOpacity={0.7}
                             onPress={handleRequest}
-                            disabled={numericAmount <= 0}
+                            disabled={numericAmount <= 0 || requestStatus === 'requesting'}
                         >
-                            <Feather
-                                name="arrow-down"
-                                size={18}
-                                color={numericAmount > 0 ? Colors.white : Colors.textSecondary}
-                                style={styles.requestIcon}
-                            />
+                            {requestStatus === 'requesting' ? (
+                                <ActivityIndicator size="small" color={Colors.white} style={styles.requestIcon} />
+                            ) : (
+                                <Feather
+                                    name="arrow-down"
+                                    size={18}
+                                    color={numericAmount > 0 ? Colors.white : Colors.textSecondary}
+                                    style={styles.requestIcon}
+                                />
+                            )}
                             <Text
                                 style={[
                                     styles.requestButtonText,
-                                    numericAmount > 0 && styles.requestButtonTextActive,
+                                    numericAmount > 0 && requestStatus !== 'requesting' && styles.requestButtonTextActive,
                                 ]}
                             >
-                                Request GH¢ {displayAmount}
+                                {requestStatus === 'requesting' ? 'Sending request…' : `Request GH¢ ${displayAmount}`}
                             </Text>
                         </TouchableOpacity>
                   </ScrollView>

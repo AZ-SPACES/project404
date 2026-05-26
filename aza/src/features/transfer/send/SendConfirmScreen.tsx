@@ -5,38 +5,45 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
+import { useTransferStore } from '../../../store/transferStore';
 
 type SendConfirmScreenProps = NativeStackScreenProps<RootStackParamList, 'SendConfirm'>;
 
 export default function SendConfirmScreen({ navigation, route }: SendConfirmScreenProps) {
-  const { name, username, avatar, amount, note } = route.params;
+  const { name, username, avatar, amount, note, identifier } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const displayAmount = amount.toFixed(2);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { initiateTransfer } = useTransferStore();
 
   const handleEditNote = () => {
-    navigation.goBack(); // Going back lets them edit the note on the previous screen
+    navigation.goBack();
   };
 
-  const handleConfirmSend = () => {
+  const handleConfirmSend = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    navigation.navigate('SendPin', {
-      name,
-      username,
-      avatar,
-      amount,
-      note,
-    });
-    setTimeout(() => setIsLoading(false), 500);
+    setApiError(null);
+    try {
+      await initiateTransfer({ recipientIdentifier: identifier, amount, note });
+      // pendingTransactionId is now stored in the transfer store
+      navigation.navigate('SendPin', { name, username, avatar, amount, note });
+    } catch (err: any) {
+      setApiError(err.message || 'Could not initiate transfer. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -111,6 +118,14 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
           </View>
         </View>
 
+        {/* API Error */}
+        {apiError && (
+          <View style={styles.errorCard}>
+            <Feather name="alert-circle" size={16} color={Colors.error || '#EF4444'} />
+            <Text style={styles.errorText}>{apiError}</Text>
+          </View>
+        )}
+
         <View style={styles.spacer} />
 
         {/* Send Button */}
@@ -123,7 +138,11 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
           accessibilityLabel="Confirm and send"
           accessibilityState={{ disabled: isLoading }}
         >
-          <Text style={styles.sendButtonText}>{isLoading ? 'Confirming…' : 'Send'}</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <Text style={styles.sendButtonText}>Send</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -133,147 +152,151 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
 function createStyles(Colors: ThemeColors) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: isDark ? Colors.background : Colors.surface, // Adapts to theme
-  },
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    flexGrow: 1,
-  },
-  spacer: {
-    flex: 1,
-    minHeight: Spacing.lg,
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 50,
-    backgroundColor: isDark ? Colors.surface : Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pageTitle: {
-    ...Typography.h2,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    marginTop: Spacing.xs,
-  },
-
-  // Cards
-  card: {
-    backgroundColor: isDark ? Colors.surface : Colors.white,
-    borderRadius: 12, // Matches typical border radius used so far
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  marginTop: {
-    marginTop: Spacing.md,
-  },
-
-  // Typography for cards
-  label: {
-    ...Typography.body,
-    color: Colors.textSecondary,
-    fontSize: 14,
-  },
-  valueBold: {
-    ...Typography.body,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    fontSize: 14,
-  },
-
-  // Warning Card Specific
-  warningHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  warningTitle: {
-    ...Typography.body,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    flex: 1,
-    paddingRight: Spacing.sm,
-  },
-  warningIconContainer: {
-    backgroundColor: '#F59E0B', // Orange color from mockup
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  warningIconText: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  warningText: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-
-  // Note Card Specific
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editIcon: {
-    marginRight: 4,
-  },
-  editButtonText: {
-    ...Typography.caption,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
-  noteText: {
-    ...Typography.body,
-    color: Colors.textPrimary,
-    marginTop: Spacing.sm,
-  },
-
-  // Send Button
-  sendButton: {
-    backgroundColor: Colors.primary, // Solid green
-    borderRadius: 30, // Uncodixify usually uses 8-10px but mockup has a pill shape. Keeping pill for primary actions.
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.md,
-  },
-  sendButtonDisabled: {
-    opacity: 0.6,
-  },
-  sendButtonText: {
-    ...Typography.button,
-    color: Colors.white,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: isDark ? Colors.background : Colors.surface,
+    },
+    flex: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.xl,
+      flexGrow: 1,
+    },
+    spacer: {
+      flex: 1,
+      minHeight: Spacing.lg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pageTitle: {
+      ...Typography.h2,
+      fontWeight: '700',
+      color: Colors.textPrimary,
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+      marginTop: Spacing.xs,
+    },
+    card: {
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderRadius: 12,
+      padding: Spacing.lg,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    marginTop: {
+      marginTop: Spacing.md,
+    },
+    label: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      fontSize: 14,
+    },
+    valueBold: {
+      ...Typography.body,
+      fontWeight: '600',
+      color: Colors.textPrimary,
+      fontSize: 14,
+    },
+    warningHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    warningTitle: {
+      ...Typography.body,
+      fontWeight: '700',
+      color: Colors.textPrimary,
+      flex: 1,
+      paddingRight: Spacing.sm,
+    },
+    warningIconContainer: {
+      backgroundColor: '#F59E0B',
+      borderRadius: 12,
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    warningIconText: {
+      color: Colors.white,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    warningText: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+    },
+    editButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    editIcon: {
+      marginRight: 4,
+    },
+    editButtonText: {
+      ...Typography.caption,
+      fontWeight: '600',
+      color: Colors.primary,
+    },
+    noteText: {
+      ...Typography.body,
+      color: Colors.textPrimary,
+      marginTop: Spacing.sm,
+    },
+    errorCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: isDark ? Colors.surface : '#FEF2F2',
+      borderRadius: 8,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: Colors.error || '#FCA5A5',
+    },
+    errorText: {
+      ...Typography.caption,
+      color: Colors.error || '#EF4444',
+      flex: 1,
+    },
+    sendButton: {
+      backgroundColor: Colors.primary,
+      borderRadius: 10,
+      paddingVertical: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: Spacing.md,
+    },
+    sendButtonDisabled: {
+      opacity: 0.6,
+    },
+    sendButtonText: {
+      ...Typography.button,
+      color: Colors.white,
+    },
   });
 }
