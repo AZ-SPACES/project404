@@ -189,7 +189,6 @@ export default function ContactsScreen() {
   const sections = [
     ...(requestRecipients.length > 0 && !searchQuery ? [{ title: "Pending Requests", data: requestRecipients }] : []),
     { title: "On Aza", data: azaUsers },
-    { title: "Others", data: otherContacts },
   ].filter((section) => section.data.length > 0);
 
   const handleRefresh = async () => {
@@ -335,13 +334,34 @@ export default function ContactsScreen() {
         <View style={styles.header}>
           <Text style={[Typography.h1, styles.title]}>Contacts</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Blocked users */}
             <TouchableOpacity
               style={styles.headerIconButton}
               activeOpacity={0.8}
               onPress={() => setShowBlockedModal(true)}
+              accessibilityLabel="Blocked users"
             >
               <Feather name="slash" size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
+            {/* Pending requests badge */}
+            <TouchableOpacity
+              style={styles.requestsBadgeButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('RequestPending')}
+              accessibilityLabel={`Friend requests${
+                contactRequests.length > 0 ? `, ${contactRequests.length} pending` : ''
+              }`}
+            >
+              <Feather name="user-check" size={20} color={Colors.textSecondary} />
+              {contactRequests.length > 0 && (
+                <View style={styles.requestsBadge}>
+                  <Text style={styles.requestsBadgeText}>
+                    {contactRequests.length > 9 ? '9+' : contactRequests.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Invite */}
             <TouchableOpacity
               style={styles.inviteButton}
               activeOpacity={0.8}
@@ -379,7 +399,7 @@ export default function ContactsScreen() {
           <TouchableOpacity
             style={styles.addButton}
             activeOpacity={0.8}
-            onPress={() => setShowAddUserModal(true)}
+            onPress={() => navigation.navigate('AddFriends')}
           >
             <Feather name="plus" size={24} color={Colors.secondary} />
           </TouchableOpacity>
@@ -647,130 +667,7 @@ export default function ContactsScreen() {
         </View>
       </Modal>
 
-      {/* Add User Modal */}
-      <Modal
-        visible={showAddUserModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowAddUserModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={() => setShowAddUserModal(false)}>
-            <View style={styles.bottomSheetBackdrop} />
-          </TouchableWithoutFeedback>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.addUserModalContainer}
-          >
-            <View style={styles.addUserContent}>
-              <View style={styles.addUserHeader}>
-                <Text style={[Typography.h3, { color: Colors.textPrimary }]}>
-                  Add Aza User
-                </Text>
-                <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
-                  <AntDesign
-                    name="close"
-                    size={20}
-                    color={Colors.textPrimary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={[Typography.body, styles.addUserSubtitle]}>
-                Search for friends by their @username or name to add them to
-                your contacts.
-              </Text>
-
-              <View style={styles.addUserInputContainer}>
-                <TextInput
-                  style={styles.addUserInput}
-                  placeholder="@username or name"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={addUserQuery}
-                  onChangeText={setAddUserQuery}
-                  autoFocus
-                  autoCapitalize="none"
-                />
-              </View>
-
-              {globalSearchResults.length > 0 ? (
-                <FlatList
-                  data={globalSearchResults}
-                  keyExtractor={(item) => item.id}
-                  style={{ maxHeight: 250, marginVertical: Spacing.md }}
-                  renderItem={({ item }) => (
-                    <View style={[styles.row, { paddingVertical: Spacing.sm }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <Image 
-                          source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }} 
-                          style={styles.avatar} 
-                        />
-                        <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
-                          <Text style={[Typography.bodyLg, styles.rowName]}>{item.displayName}</Text>
-                          <Text style={[Typography.body, styles.rowUsername]}>@{item.handle}</Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity 
-                        style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
-                        onPress={async () => {
-                          try {
-                            await useContactStore.getState().requestContact(item.id);
-                            Alert.alert("Success", `Contact request sent to ${item.displayName}`);
-                            setShowAddUserModal(false);
-                            setAddUserQuery("");
-                            setGlobalSearchResults([]);
-                          } catch (e: any) {
-                            Alert.alert("Error", e.message || "Failed to send request");
-                          }
-                        }}
-                      >
-                        <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Add</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                />
-              ) : null}
-
-              <Button
-                title="Search Users"
-                onPress={async () => {
-                  const query = addUserQuery.trim().replace(/^@/, '');
-                  if (query) {
-                    try {
-                      setIsSearchingGlobal(true);
-                      setGlobalSearchResults([]);
-                      const results = await searchGlobal(query);
-                      
-                      // Also try to find by exact handle to ensure it's at the top
-                      const exactMatch = await findUserByHandle(query);
-                      
-                      let finalResults = [...results];
-                      if (exactMatch && !finalResults.find(r => r.id === exactMatch.id)) {
-                        finalResults.unshift(exactMatch);
-                      }
-                      
-                      setGlobalSearchResults(finalResults);
-                      
-                      if (finalResults.length === 0) {
-                        Alert.alert("Not Found", `No user found matching "${query}"`);
-                      }
-                    } catch (error) {
-                      Alert.alert("Error", "Search failed.");
-                    } finally {
-                      setIsSearchingGlobal(false);
-                    }
-                  }
-                }}
-                paddingVertical={14}
-                borderRadius={10}
-                disabled={!addUserQuery.trim() || isSearchingGlobal}
-                loading={isSearchingGlobal}
-              />
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
       {/* Blocked Users Modal */}
       <Modal
         visible={showBlockedModal}
@@ -868,6 +765,50 @@ function createStyles(Colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: Spacing.xs,
+    },
+    requestsBadgeButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: Spacing.xs,
+    },
+    requestsBadge: {
+      position: 'absolute',
+      top: 6,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: Colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+      borderWidth: 1.5,
+      borderColor: Colors.background,
+    },
+    requestsBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: Colors.secondary,
+      lineHeight: 13,
+    },
+    othersEmptyPlaceholder: {
+      alignItems: 'center',
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.lg,
+    },
+    othersEmptyText: {
+      color: Colors.textSecondary,
+      fontWeight: '600',
+      marginTop: Spacing.sm,
+      textAlign: 'center',
+    },
+    othersEmptySubText: {
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 4,
+      lineHeight: 18,
     },
     inviteButton: {
       flexDirection: "row",

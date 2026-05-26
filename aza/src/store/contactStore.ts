@@ -72,20 +72,17 @@ export const useContactStore = create<ContactState>((set, get) => ({
   syncDeviceContacts: async (deviceContacts: any[]) => {
     try {
       set({ isSyncing: true, error: null });
-      const { data } = await syncContacts(deviceContacts);
-      const syncedContacts = data.data?.contacts || [];
-      
-      // Update local contacts with synced ones
-      set((state) => {
-        const existingIds = new Set(state.contacts.map(c => c.id));
-        const newContacts = syncedContacts.filter((c: Contact) => !existingIds.has(c.id));
-        return { 
-          contacts: [...state.contacts, ...newContacts],
-          isSyncing: false 
-        };
-      });
+      // Send device contacts to backend for matching. The raw sync response
+      // may include a stub record for every phone contact regardless of
+      // whether they're in the system, so we don't use it directly.
+      // Instead we re-fetch the contacts list which the backend filters to
+      // only confirmed/matched entries.
+      await syncContacts(deviceContacts);
+      await get().fetchContacts();
     } catch (error: any) {
-      set({ error: error.message || 'Failed to sync contacts', isSyncing: false });
+      set({ error: error.message || 'Failed to sync contacts' });
+    } finally {
+      set({ isSyncing: false });
     }
   },
 
