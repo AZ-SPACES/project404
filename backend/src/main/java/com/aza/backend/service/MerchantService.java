@@ -1,5 +1,6 @@
 package com.aza.backend.service;
 
+import com.aza.backend.dto.admin.MerchantStatsResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
@@ -461,7 +462,7 @@ public class MerchantService {
     public MerchantResponse adminGetById(UUID merchantId) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
-        return toResponse(merchant);
+        return toAdminResponse(merchant);
     }
 
     public KybStatusResponse getKybStatusForAdmin(UUID merchantId) {
@@ -485,7 +486,7 @@ public class MerchantService {
                         query == null || query.isBlank() ? null : query,
                         statusValue,
                         PageRequest.of(page, Math.min(size, 50)))
-                .map(this::toResponse);
+                .map(this::toAdminResponse);
     }
 
     @Transactional
@@ -497,11 +498,14 @@ public class MerchantService {
         KybRecord record = kybRecordRepository.findByMerchantId(merchantId)
                 .orElseThrow(() -> new AppException("NO_KYB", "No KYB record found", HttpStatus.NOT_FOUND));
 
-        if (record.getStatus() != KybRecord.KybStatus.UNDER_REVIEW) {
-            throw new AppException("NOT_UNDER_REVIEW", "KYB is not under review", HttpStatus.BAD_REQUEST);
+        if (record.getStatus() == KybRecord.KybStatus.APPROVED) {
+            throw new AppException("ALREADY_APPROVED", "KYB is already approved", HttpStatus.BAD_REQUEST);
         }
 
         record.setReviewedAt(LocalDateTime.now());
+        if (record.getSubmittedAt() == null) {
+            record.setSubmittedAt(LocalDateTime.now());
+        }
 
         if (approve) {
             record.setStatus(KybRecord.KybStatus.APPROVED);
@@ -553,6 +557,33 @@ public class MerchantService {
         merchantRepository.save(merchant);
         log.info("Fee rate updated for merchantId={}, feeRateBps={}", merchantId, feeRateBps);
         return toResponse(merchant);
+    }
+
+    public Page<MerchantResponse> adminGetKybQueue(int page, int size) {
+        List<Merchant.MerchantStatus> statuses = List.of(
+                Merchant.MerchantStatus.KYB_SUBMITTED,
+                Merchant.MerchantStatus.KYB_UNDER_REVIEW,
+                Merchant.MerchantStatus.MORE_INFO_REQUIRED
+        );
+        return merchantRepository.findByStatusIn(statuses, PageRequest.of(page, Math.min(size, 50)))
+                .map(this::toAdminResponse);
+    }
+
+    public MerchantStatsResponse adminGetStats() {
+        BigDecimal totalBalance = merchantRepository.sumTotalMerchantBalance();
+        BigDecimal totalVolume = merchantRepository.sumActiveMerchantVolume();
+        return MerchantStatsResponse.builder()
+                .total(merchantRepository.count())
+                .active(merchantRepository.countByStatus(Merchant.MerchantStatus.ACTIVE))
+                .pendingKyb(merchantRepository.countByStatus(Merchant.MerchantStatus.PENDING_KYB))
+                .kybSubmitted(merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_SUBMITTED))
+                .kybUnderReview(merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_UNDER_REVIEW))
+                .moreInfoRequired(merchantRepository.countByStatus(Merchant.MerchantStatus.MORE_INFO_REQUIRED))
+                .suspended(merchantRepository.countByStatus(Merchant.MerchantStatus.SUSPENDED))
+                .rejected(merchantRepository.countByStatus(Merchant.MerchantStatus.REJECTED))
+                .totalBalance(totalBalance != null ? totalBalance : BigDecimal.ZERO)
+                .totalVolume(totalVolume != null ? totalVolume : BigDecimal.ZERO)
+                .build();
     }
 
     public Page<PayoutResponse> adminGetPayouts(UUID merchantId, int page, int size) {
@@ -660,6 +691,20 @@ public class MerchantService {
     }
 
     private MerchantResponse toResponse(Merchant m) {
+        return toResponseBuilder(m).build();
+    }
+
+    private MerchantResponse toAdminResponse(Merchant m) {
+        int activeKeys = (int) apiKeyRepository.findAllByMerchantIdOrderByCreatedAtDesc(m.getId())
+                .stream().filter(k -> Boolean.TRUE.equals(k.getIsActive())).count();
+        int activeWebhooks = webhookRepository.findAllByMerchantIdAndIsActiveTrue(m.getId()).size();
+        return toResponseBuilder(m)
+                .activeApiKeyCount(activeKeys)
+                .activeWebhookCount(activeWebhooks)
+                .build();
+    }
+
+    private MerchantResponse.MerchantResponseBuilder toResponseBuilder(Merchant m) {
         return MerchantResponse.builder()
                 .id(m.getId().toString())
                 .userId(m.getUserId().toString())
@@ -678,8 +723,7 @@ public class MerchantService {
                 .totalVolume(m.getTotalVolume())
                 .feeRateBps(m.getFeeRateBps())
                 .createdAt(m.getCreatedAt())
-                .activatedAt(m.getActivatedAt())
-                .build();
+                .activatedAt(m.getActivatedAt());
     }
 
     private KybStatusResponse toKybResponse(KybRecord record, UUID merchantId) {

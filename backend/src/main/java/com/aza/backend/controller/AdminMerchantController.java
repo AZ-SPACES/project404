@@ -1,6 +1,7 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.admin.MerchantStatsResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.service.CheckoutService;
 import com.aza.backend.service.MerchantService;
@@ -19,6 +20,18 @@ public class AdminMerchantController {
 
     private final MerchantService merchantService;
     private final CheckoutService checkoutService;
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<MerchantStatsResponse>> stats() {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.adminGetStats()));
+    }
+
+    @GetMapping("/kyb-queue")
+    public ResponseEntity<ApiResponse<Page<MerchantResponse>>> kybQueue(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.adminGetKybQueue(page, size)));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<MerchantResponse>>> list(
