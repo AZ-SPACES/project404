@@ -137,6 +137,14 @@ public class UserService {
         if (request.getHomeBackground() != null) updateHomeBackground(user, request.getHomeBackground());
         if (request.getHubBackground() != null) updateHubBackground(user, request.getHubBackground());
 
+        if (request.getProfileImageUrl() != null) {
+            String url = request.getProfileImageUrl();
+            if (!url.startsWith("https://api.navii.dev/")) {
+                throw new AppException("INVALID_AVATAR_URL", "Avatar URL must be from api.navii.dev", HttpStatus.BAD_REQUEST);
+            }
+            user.setProfileImageUrl(url);
+        }
+
         applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
         user = userRepository.save(user);

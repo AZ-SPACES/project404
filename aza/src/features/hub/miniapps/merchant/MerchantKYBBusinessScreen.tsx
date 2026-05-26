@@ -26,11 +26,10 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantKYB
 type RoutePropType = RouteProp<RootStackParamList, "MerchantKYBBusiness">;
 
 const BUSINESS_TYPES = [
-  { value: "SOLE_PROPRIETORSHIP", label: "Sole Proprietorship" },
+  { value: "SOLE_PROPRIETOR", label: "Sole Proprietorship" },
   { value: "PARTNERSHIP", label: "Partnership" },
-  { value: "LIMITED_LIABILITY", label: "Limited Liability (LLC)" },
-  { value: "CORPORATION", label: "Corporation" },
-  { value: "NON_PROFIT", label: "Non-Profit" },
+  { value: "LIMITED_COMPANY", label: "Limited Company (LLC)" },
+  { value: "NGO", label: "NGO / Non-Profit" },
   { value: "OTHER", label: "Other" },
 ];
 
@@ -42,7 +41,7 @@ export default function MerchantKYBBusinessScreen() {
   const route = useRoute<RoutePropType>();
   const { merchantId } = route.params;
 
-  const [businessType, setBusinessType] = useState("SOLE_PROPRIETORSHIP");
+  const [businessType, setBusinessType] = useState("SOLE_PROPRIETOR");
   const [regNum, setRegNum] = useState("");
   const [taxId, setTaxId] = useState("");
   const [address, setAddress] = useState("");

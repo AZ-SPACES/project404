@@ -492,6 +492,11 @@ export const getMerchantPayouts = (page = 0, size = 20) =>
 export const requestMerchantPayout = (amount: number, passcode: string) =>
   api.post('/api/v1/merchant/payouts', { amount, passcode });
 
+// --- Mini App Endpoints ---
+
+export const reportMiniApp = (appId: string, reason: string, details?: string) =>
+  api.post(`/api/v1/miniapps/${appId}/report`, { reason, details });
+
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -534,6 +539,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const sanitizeMessage = (msg: any) => {
+      if (typeof msg !== 'string') return msg;
+      return msg.replace(/^(\[?[A-Za-z0-9_]+\]?)\s*[:\-]\s*/, "");
+    };
+
+    if (error.response?.data?.message) {
+      error.response.data.message = sanitizeMessage(error.response.data.message);
+    }
+    if (error.response?.data?.error) {
+      error.response.data.error = sanitizeMessage(error.response.data.error);
+    }
+    if (error.message) {
+      error.message = sanitizeMessage(error.message);
+    }
+
     const originalRequest = error.config;
 
     // 429 — rate limited. Attach metadata so callers can show a countdown or CAPTCHA prompt.

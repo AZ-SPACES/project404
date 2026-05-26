@@ -112,6 +112,6 @@ export type RootStackParamList = {
   MerchantKYBIntro: { merchantId: string };
   MerchantKYBBusiness: { merchantId: string };
   MerchantKYBOwner: { merchantId: string; businessType: string; registrationNumber?: string; registeredAddress?: string; city?: string; taxIdNumber?: string; website?: string };
-  MerchantKYBDocuments: { merchantId: string };
+  MerchantKYBDocuments: { merchantId: string; isPrimaryOwner: boolean };
   MerchantKYBSubmitted: undefined;
 };
