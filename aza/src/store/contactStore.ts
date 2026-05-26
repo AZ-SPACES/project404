@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { 
-  getContacts, 
-  syncContacts, 
-  searchContacts, 
-  markContactFavorite, 
+import {
+  getContacts,
+  syncContacts,
+  searchContacts,
+  markContactFavorite,
   unmarkContactFavorite,
   blockUser as blockUserApi,
   unblockUser as unblockUserApi,
@@ -13,13 +13,15 @@ import {
   searchUsersGlobal,
   requestContact as requestContactApi,
   approveContactRequest as approveContactRequestApi,
-  rejectContactRequest as rejectContactRequestApi
+  rejectContactRequest as rejectContactRequestApi,
+  getSentContactRequests,
 } from '../services/api';
-import { Contact, BlockedUser, PublicProfile, ContactRequest } from '../features/contacts/types';
+import { Contact, BlockedUser, PublicProfile, ContactRequest, SentContactRequest } from '../features/contacts/types';
 
 interface ContactState {
   contacts: Contact[];
   contactRequests: ContactRequest[];
+  sentContactRequests: SentContactRequest[];
   blockedUsers: BlockedUser[];
   isLoading: boolean;
   isSyncing: boolean;
@@ -38,6 +40,7 @@ interface ContactState {
   searchGlobal: (query: string) => Promise<PublicProfile[]>;
   requestContact: (userId: string) => Promise<void>;
   fetchContactRequests: () => Promise<void>;
+  fetchSentContactRequests: () => Promise<void>;
   approveContactRequest: (requestId: string) => Promise<void>;
   rejectContactRequest: (requestId: string) => Promise<void>;
 }
@@ -45,6 +48,7 @@ interface ContactState {
 export const useContactStore = create<ContactState>((set, get) => ({
   contacts: [],
   contactRequests: [],
+  sentContactRequests: [],
   blockedUsers: [],
   isLoading: false,
   isSyncing: false,
@@ -57,8 +61,12 @@ export const useContactStore = create<ContactState>((set, get) => ({
       // Backend returns ApiResponse<Page<ContactResponse>>
       // Spring Data Page content is in data.data.content
       const contactList = data.data?.content || data.data || [];
+      console.log('[ContactStore] Raw API response:', JSON.stringify(data, null, 2));
+      console.log('[ContactStore] Parsed contacts count:', contactList.length);
+      console.log('[ContactStore] Contacts:', contactList.map((c: any) => ({ id: c.id, name: c.displayName, isAzaUser: c.isAzaUser, handle: c.handle })));
       set({ contacts: contactList });
     } catch (error: any) {
+      console.error('[ContactStore] fetchContacts error:', error.response?.status, error.message);
       set({ error: error.message || 'Failed to fetch contacts' });
     } finally {
       set({ isLoading: false });
@@ -68,20 +76,17 @@ export const useContactStore = create<ContactState>((set, get) => ({
   syncDeviceContacts: async (deviceContacts: any[]) => {
     try {
       set({ isSyncing: true, error: null });
-      const { data } = await syncContacts(deviceContacts);
-      const syncedContacts = data.data?.contacts || [];
-      
-      // Update local contacts with synced ones
-      set((state) => {
-        const existingIds = new Set(state.contacts.map(c => c.id));
-        const newContacts = syncedContacts.filter((c: Contact) => !existingIds.has(c.id));
-        return { 
-          contacts: [...state.contacts, ...newContacts],
-          isSyncing: false 
-        };
-      });
+      // Send device contacts to backend for matching. The raw sync response
+      // may include a stub record for every phone contact regardless of
+      // whether they're in the system, so we don't use it directly.
+      // Instead we re-fetch the contacts list which the backend filters to
+      // only confirmed/matched entries.
+      await syncContacts(deviceContacts);
+      await get().fetchContacts();
     } catch (error: any) {
-      set({ error: error.message || 'Failed to sync contacts', isSyncing: false });
+      set({ error: error.message || 'Failed to sync contacts' });
+    } finally {
+      set({ isSyncing: false });
     }
   },
 
@@ -226,5 +231,14 @@ export const useContactStore = create<ContactState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch contact requests', error);
     }
-  }
+  },
+
+  fetchSentContactRequests: async () => {
+    try {
+      const { data } = await getSentContactRequests();
+      set({ sentContactRequests: data.data || [] });
+    } catch (error) {
+      console.error('Failed to fetch sent contact requests', error);
+    }
+  },
 }));

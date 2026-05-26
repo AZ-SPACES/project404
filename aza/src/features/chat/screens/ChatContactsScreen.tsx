@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,15 @@ import {
   Animated,
   TextInput,
   Easing,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { Contact, CONTACTS } from "../../../components/chat/chatTypes";
+import { useContactStore } from "../../../store/contactStore";
+import { Contact } from "../../../features/contacts/types";
 import {
   useAppTheme,
   ThemeColors,
@@ -35,8 +37,14 @@ export default function ChatContactsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchAnim = React.useRef(new Animated.Value(0)).current;
 
+  const { contacts, isLoading, fetchContacts } = useContactStore();
+
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
 
   const toggleSearch = () => {
     if (searchActive) {
@@ -61,21 +69,23 @@ export default function ChatContactsScreen() {
   };
 
   const filteredContacts = React.useMemo(() => {
-    let result = CONTACTS;
+    let result = contacts;
     if (activeFilter === "Favorites") {
       result = result.filter(c => c.isFavorite);
     } else if (activeFilter === "Archived") {
-      result = result.filter(c => c.isArchived);
-    } else {
-      // "All" or "Recent" - hide archived by default
-      result = result.filter(c => !c.isArchived);
+      return [];
     }
 
     if (searchQuery.trim()) {
-      result = result.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        c =>
+          c.displayName.toLowerCase().includes(q) ||
+          (c.handle && c.handle.toLowerCase().includes(q))
+      );
     }
     return result;
-  }, [activeFilter, searchQuery]);
+  }, [contacts, activeFilter, searchQuery]);
 
   const FILTERS = ["All", "Favorites", "Recent", "Archived"];
 
@@ -95,37 +105,38 @@ export default function ChatContactsScreen() {
   };
 
   const renderContact = ({ item }: { item: Contact }) => {
+    const chatId = item.contactUserId || item.id;
+    const subtitle = item.handle ? `@${item.handle}` : "Tap to start a conversation";
+
     return (
       <TouchableOpacity
         style={styles.contactRow}
         activeOpacity={0.7}
         onPress={() =>
           navigation.navigate("ChatScreen", {
-            id: item.id,
-            name: item.name,
-            avatar: item.avatar,
-            online: item.online,
+            id: chatId,
+            name: item.displayName,
+            avatar: item.profileImageUrl ?? "",
+            online: false,
           })
         }
       >
         <View style={styles.avatarContainer}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
-          {item.online && <View style={styles.onlineIndicator} />}
+          {item.profileImageUrl ? (
+            <Image source={{ uri: item.profileImageUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarInitial}>
+                {item.displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
         </View>
         <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{item.name}</Text>
+          <Text style={styles.contactName}>{item.displayName}</Text>
           <Text style={styles.lastMessage} numberOfLines={1}>
-            {item.lastMessage}
+            {subtitle}
           </Text>
-        </View>
-        <View style={styles.contactMeta}>
-          {item.unread > 0 ? (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{item.unread}</Text>
-            </View>
-          ) : (
-            <Text style={styles.timeText}>{item.time}</Text>
-          )}
         </View>
       </TouchableOpacity>
     );
@@ -188,18 +199,45 @@ export default function ChatContactsScreen() {
         />
       </View>
 
-      <FlatList
-        data={filteredContacts}
-        renderItem={renderContact}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contactsListContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No contacts found</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredContacts}
+          renderItem={renderContact}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.contactsListContent,
+            filteredContacts.length === 0 && styles.contactsListEmpty,
+          ]}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Feather name="users" size={52} color={Colors.textSecondary} />
+              <Text style={styles.emptyTitle}>
+                {activeFilter === "Favorites"
+                  ? "No favorites yet"
+                  : activeFilter === "Archived"
+                  ? "No archived chats"
+                  : searchQuery.trim()
+                  ? "No results found"
+                  : "No contacts yet"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activeFilter === "Favorites"
+                  ? "Mark contacts as favorites to find them here."
+                  : activeFilter === "Archived"
+                  ? "Archived conversations will appear here."
+                  : searchQuery.trim()
+                  ? `No contacts match "${searchQuery}".`
+                  : "Add contacts from the Contacts tab to start chatting."}
+              </Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -296,6 +334,14 @@ function createStyles(Colors: ThemeColors) {
       paddingHorizontal: Spacing.lg,
       paddingBottom: Spacing.xl * 2,
     },
+    contactsListEmpty: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     contactRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -311,16 +357,15 @@ function createStyles(Colors: ThemeColors) {
       height: 50,
       borderRadius: Radius.full,
     },
-    onlineIndicator: {
-      position: "absolute",
-      bottom: 0,
-      right: 0,
-      width: 14,
-      height: 14,
-      borderRadius: Radius.full,
-      backgroundColor: Colors.primary, // Using primary color for consistency
-      borderWidth: 2,
-      borderColor: Colors.background,
+    avatarPlaceholder: {
+      backgroundColor: Colors.primary + "33",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarInitial: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: Colors.primary,
     },
     contactInfo: {
       flex: 1,
@@ -336,37 +381,25 @@ function createStyles(Colors: ThemeColors) {
       ...Typography.body,
       color: Colors.textSecondary,
     },
-    contactMeta: {
-      alignItems: "flex-end",
-      justifyContent: "center",
-      marginLeft: Spacing.sm,
-    },
-    timeText: {
-      ...Typography.body,
-      color: Colors.textSecondary,
-    },
-    unreadBadge: {
-      backgroundColor: Colors.primary,
-      borderRadius: 12,
-      minWidth: 24,
-      height: 24,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 6,
-    },
-    unreadText: {
-      ...Typography.caption,
-      color: Colors.white,
-      fontWeight: "600",
-    },
     emptyContainer: {
+      flex: 1,
       padding: Spacing.xl * 2,
       alignItems: "center",
       justifyContent: "center",
+      gap: Spacing.sm,
+    },
+    emptyTitle: {
+      ...Typography.h2,
+      color: Colors.textPrimary,
+      fontWeight: "700",
+      textAlign: "center",
+      marginTop: Spacing.md,
     },
     emptyText: {
       ...Typography.body,
       color: Colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 22,
     },
   });
 }

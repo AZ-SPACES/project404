@@ -17,6 +17,8 @@ import {
   RefreshControl,
   Animated,
   Dimensions,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -33,7 +35,7 @@ import {
   Radius,
 } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import * as Contacts from "expo-contacts";
@@ -68,11 +70,11 @@ export default function ContactsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const { 
-    contacts: backendContacts, 
-    fetchContacts, 
-    syncDeviceContacts, 
-    isLoading, 
+  const {
+    contacts: backendContacts,
+    fetchContacts,
+    syncDeviceContacts,
+    isLoading,
     isSyncing,
     toggleFavorite,
     addContactByUserId,
@@ -88,10 +90,12 @@ export default function ContactsScreen() {
   } = useContactStore();
   const { syncContacts: isSyncAllowed } = useProfile();
 
-  useEffect(() => {
-    fetchContacts();
-    fetchContactRequests();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchContacts();
+      fetchContactRequests();
+    }, [fetchContacts, fetchContactRequests])
+  );
 
   useEffect(() => {
     // Only sync if the user has enabled the setting in Privacy settings
@@ -197,8 +201,6 @@ export default function ContactsScreen() {
   );
 
   const favorites = filteredRecipients.filter((r) => r.isFavorite);
-  const azaUsers = filteredRecipients.filter((r) => r.isOnAza);
-  const otherContacts = filteredRecipients.filter((r) => !r.isOnAza);
 
   const requestRecipients: Recipient[] = (contactRequests || []).map(r => ({
     id: r.id, // the requestId
@@ -211,8 +213,7 @@ export default function ContactsScreen() {
 
   const sections = [
     ...(requestRecipients.length > 0 && !searchQuery ? [{ title: "Pending Requests", data: requestRecipients }] : []),
-    { title: "On Aza", data: azaUsers },
-    { title: "Others", data: otherContacts },
+    { title: "Contacts", data: filteredRecipients },
   ].filter((section) => section.data.length > 0);
 
   const handleRefresh = async () => {
@@ -256,7 +257,7 @@ export default function ContactsScreen() {
     if (item.isRequest) {
       return (
         <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
             onPress={() => {
               if (item.userId) {
@@ -277,13 +278,13 @@ export default function ContactsScreen() {
             </View>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ backgroundColor: Colors.surface, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
               onPress={() => rejectContactRequest(item.id)}
             >
               <Text style={[Typography.body, { color: Colors.textPrimary, fontWeight: '600' }]}>Decline</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
               onPress={() => approveContactRequest(item.id)}
             >
@@ -358,13 +359,33 @@ export default function ContactsScreen() {
         <View style={styles.header}>
           <Text style={[Typography.h1, styles.title]}>Contacts</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Blocked users */}
             <TouchableOpacity
               style={styles.headerIconButton}
               activeOpacity={0.8}
               onPress={() => setShowBlockedModal(true)}
+              accessibilityLabel="Blocked users"
             >
               <Feather name="slash" size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
+            {/* Pending requests badge */}
+            <TouchableOpacity
+              style={styles.requestsBadgeButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('RequestPending')}
+              accessibilityLabel={`Friend requests${contactRequests.length > 0 ? `, ${contactRequests.length} pending` : ''
+                }`}
+            >
+              <Feather name="user-check" size={20} color={Colors.textSecondary} />
+              {contactRequests.length > 0 && (
+                <View style={styles.requestsBadge}>
+                  <Text style={styles.requestsBadgeText}>
+                    {contactRequests.length > 9 ? '9+' : contactRequests.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Invite */}
             <TouchableOpacity
               style={styles.inviteButton}
               activeOpacity={0.8}
@@ -402,7 +423,7 @@ export default function ContactsScreen() {
           <TouchableOpacity
             style={styles.addButton}
             activeOpacity={0.8}
-            onPress={() => setShowAddUserModal(true)}
+            onPress={() => navigation.navigate('AddFriends')}
           >
             <Feather name="plus" size={24} color={Colors.secondary} />
           </TouchableOpacity>
@@ -590,164 +611,74 @@ export default function ContactsScreen() {
         </Animated.View>
       </View>
 
-      {/* Add User Bottom Sheet */}
-      <View style={StyleSheet.absoluteFill} pointerEvents={showAddUserModal ? 'auto' : 'none'}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: addUserBackdropAnim }]}>
-          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={() => setShowAddUserModal(false)} />
-        </Animated.View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.sheetKbWrapper}
-          pointerEvents="box-none"
-        >
-          <Animated.View style={[styles.bottomSheetContainer, { transform: [{ translateY: addUserSheetAnim }] }]}>
-            <View style={styles.addUserHeader}>
-              <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Add Aza User</Text>
-              <TouchableOpacity onPress={() => setShowAddUserModal(false)}>
+
+      {/* Blocked Users Modal */}
+      <Modal
+        visible={showBlockedModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBlockedModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setShowBlockedModal(false)}>
+            <View style={styles.bottomSheetBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl }]}>
+            <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
+              <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
                 <AntDesign name="close" size={20} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={[Typography.body, styles.addUserSubtitle]}>
-              Search for friends by their @username or name to add them to your contacts.
-            </Text>
-            <View style={styles.addUserInputContainer}>
-              <TextInput
-                style={styles.addUserInput}
-                placeholder="@username or name"
-                placeholderTextColor={Colors.textSecondary}
-                value={addUserQuery}
-                onChangeText={setAddUserQuery}
-                autoCapitalize="none"
-              />
-            </View>
-            {globalSearchResults.length > 0 ? (
+
+            {isLoading && blockedUsers.length === 0 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+              </View>
+            ) : blockedUsers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Feather name="shield" size={48} color={Colors.textSecondary} />
+                <Text style={[Typography.bodyLg, styles.emptyTitle, { marginTop: 16 }]}>No blocked users</Text>
+                <Text style={[Typography.body, styles.emptySubtitle, { textAlign: 'center' }]}>
+                  When you block someone, they will appear here.
+                </Text>
+              </View>
+            ) : (
               <FlatList
-                data={globalSearchResults}
-                keyExtractor={(item) => item.id}
-                style={{ maxHeight: 250, marginVertical: Spacing.md }}
+                data={blockedUsers}
+                keyExtractor={(item) => item.blockedUserId}
                 renderItem={({ item }) => (
-                  <View style={[styles.row, { paddingVertical: Spacing.sm }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <View style={styles.blockedUserRow}>
+                    <View style={styles.blockedUserInfo}>
                       <Image
                         source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }}
-                        style={styles.avatar}
+                        style={styles.blockedAvatar}
                       />
-                      <View style={[styles.rowInfo, { marginLeft: 12, flex: 1 }]}>
-                        <Text style={[Typography.bodyLg, styles.rowName]}>{item.displayName}</Text>
-                        <Text style={[Typography.body, styles.rowUsername]}>@{item.handle}</Text>
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={[Typography.bodyLg, { fontWeight: '600', color: Colors.textPrimary }]}>{item.displayName}</Text>
+                        {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
                       </View>
                     </View>
                     <TouchableOpacity
-                      style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
-                      onPress={async () => {
-                        try {
-                          await useContactStore.getState().requestContact(item.id);
-                          Alert.alert("Success", `Contact request sent to ${item.displayName}`);
-                          setShowAddUserModal(false);
-                          setAddUserQuery("");
-                          setGlobalSearchResults([]);
-                        } catch (e: any) {
-                          Alert.alert("Error", e.message || "Failed to send request");
-                        }
+                      style={styles.unblockButton}
+                      onPress={() => {
+                        Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
+                        ]);
                       }}
                     >
-                      <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Add</Text>
+                      <Text style={styles.unblockButtonText}>Unblock</Text>
                     </TouchableOpacity>
                   </View>
                 )}
+                contentContainerStyle={{ padding: Spacing.lg }}
               />
-            ) : null}
-            <Button
-              title="Search Users"
-              onPress={async () => {
-                const query = addUserQuery.trim().replace(/^@/, '');
-                if (query) {
-                  try {
-                    setIsSearchingGlobal(true);
-                    setGlobalSearchResults([]);
-                    const results = await searchGlobal(query);
-                    const exactMatch = await findUserByHandle(query);
-                    let finalResults = [...results];
-                    if (exactMatch && !finalResults.find(r => r.id === exactMatch.id)) {
-                      finalResults.unshift(exactMatch);
-                    }
-                    setGlobalSearchResults(finalResults);
-                    if (finalResults.length === 0) {
-                      Alert.alert("Not Found", `No user found matching "${query}"`);
-                    }
-                  } catch (error) {
-                    Alert.alert("Error", "Search failed.");
-                  } finally {
-                    setIsSearchingGlobal(false);
-                  }
-                }
-              }}
-              paddingVertical={14}
-              borderRadius={10}
-              disabled={!addUserQuery.trim() || isSearchingGlobal}
-              loading={isSearchingGlobal}
-            />
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </View>
-      {/* Blocked Users Bottom Sheet */}
-      <View style={StyleSheet.absoluteFill} pointerEvents={showBlockedModal ? 'auto' : 'none'}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: blockedBackdropAnim }]}>
-          <TouchableOpacity style={styles.bottomSheetBackdrop} activeOpacity={1} onPress={() => setShowBlockedModal(false)} />
-        </Animated.View>
-        <Animated.View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl, transform: [{ translateY: blockedSheetAnim }] }]}>
-          <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
-            <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            )}
           </View>
-          {isLoading && blockedUsers.length === 0 ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          ) : blockedUsers.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Feather name="shield" size={48} color={Colors.textSecondary} />
-              <Text style={[Typography.bodyLg, styles.emptyTitle, { marginTop: 16 }]}>No blocked users</Text>
-              <Text style={[Typography.body, styles.emptySubtitle, { textAlign: 'center' }]}>
-                When you block someone, they will appear here.
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={blockedUsers}
-              keyExtractor={(item) => item.blockedUserId}
-              renderItem={({ item }) => (
-                <View style={styles.blockedUserRow}>
-                  <View style={styles.blockedUserInfo}>
-                    <Image
-                      source={{ uri: item.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.displayName)}&background=random` }}
-                      style={styles.blockedAvatar}
-                    />
-                    <View style={{ marginLeft: 12 }}>
-                      <Text style={[Typography.bodyLg, { fontWeight: '600', color: Colors.textPrimary }]}>{item.displayName}</Text>
-                      {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.unblockButton}
-                    onPress={() => {
-                      Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
-                      ]);
-                    }}
-                  >
-                    <Text style={styles.unblockButtonText}>Unblock</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              contentContainerStyle={{ padding: Spacing.lg }}
-            />
-          )}
-        </Animated.View>
-      </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -778,6 +709,50 @@ function createStyles(Colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: Spacing.xs,
+    },
+    requestsBadgeButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: Spacing.xs,
+    },
+    requestsBadge: {
+      position: 'absolute',
+      top: 6,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: Colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 3,
+      borderWidth: 1.5,
+      borderColor: Colors.background,
+    },
+    requestsBadgeText: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: Colors.secondary,
+      lineHeight: 13,
+    },
+    othersEmptyPlaceholder: {
+      alignItems: 'center',
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.lg,
+    },
+    othersEmptyText: {
+      color: Colors.textSecondary,
+      fontWeight: '600',
+      marginTop: Spacing.sm,
+      textAlign: 'center',
+    },
+    othersEmptySubText: {
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 4,
+      lineHeight: 18,
     },
     inviteButton: {
       flexDirection: "row",
@@ -1175,6 +1150,10 @@ function createStyles(Colors: ThemeColors) {
       paddingVertical: Spacing.sm,
       backgroundColor: isDark ? Colors.surface : "#f3f4f6",
       borderRadius: Radius.full,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end' as const,
     },
     unblockButtonText: {
       ...Typography.caption,
