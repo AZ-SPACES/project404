@@ -28,14 +28,23 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
 
     boolean existsByBusinessHandle(String businessHandle);
 
-    @Query("""
-            SELECT m FROM Merchant m
-            WHERE (:status IS NULL OR m.status = :status)
-            AND (:query IS NULL OR LOWER(m.businessName) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(m.businessHandle) LIKE LOWER(CONCAT('%', :query, '%')))
-            """)
+    @Query(value = """
+            SELECT * FROM merchants
+            WHERE (:status IS NULL OR status = CAST(:status AS varchar))
+            AND (:query IS NULL
+                 OR business_name ILIKE CONCAT('%', :query, '%')
+                 OR business_handle ILIKE CONCAT('%', :query, '%'))
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM merchants
+            WHERE (:status IS NULL OR status = CAST(:status AS varchar))
+            AND (:query IS NULL
+                 OR business_name ILIKE CONCAT('%', :query, '%')
+                 OR business_handle ILIKE CONCAT('%', :query, '%'))
+            """,
+            nativeQuery = true)
     Page<Merchant> search(
             @Param("query") String query,
-            @Param("status") Merchant.MerchantStatus status,
+            @Param("status") String status,
             Pageable pageable);
 }
