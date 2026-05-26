@@ -59,7 +59,7 @@ services:
       TURN_SECRET: ${TURN_SECRET}
       TURN_HOST: ${TURN_HOST:-turn.aza.systems}
       APP_BASE_URL: https://aza.systems
-      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems
+      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems
       TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
       SWAGGER_ENABLED: false
       HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
@@ -103,18 +103,6 @@ services:
     networks:
       - aza-network
 
-  aza-merchants:
-    build:
-      context: ./aza-merchants
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-merchants
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-    networks:
-      - aza-network
-
   nginx:
     image: nginx:alpine
     container_name: aza-nginx
@@ -128,9 +116,6 @@ services:
       - certbot_certs:/etc/letsencrypt:ro
     depends_on:
       - backend
-      - aza-web
-      - aza-admin
-      - aza-merchants
     networks:
       - aza-network
 
