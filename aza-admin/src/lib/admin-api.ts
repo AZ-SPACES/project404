@@ -172,6 +172,21 @@ export interface AdminStats {
   activeMerchants: number;
   pendingKybMerchants: number;
   totalMerchantVolume: number;
+  totalWalletBalance: number;
+  totalMerchantBalance: number;
+}
+
+export interface MerchantStats {
+  total: number;
+  active: number;
+  pendingKyb: number;
+  kybSubmitted: number;
+  kybUnderReview: number;
+  moreInfoRequired: number;
+  suspended: number;
+  rejected: number;
+  totalBalance: number;
+  totalVolume: number;
 }
 
 export function getStats(): Promise<AdminStats> {
@@ -813,6 +828,14 @@ export function getAvailableAgents(): Promise<AgentStatus[]> {
 
 // ── Merchants ─────────────────────────────────────────────────────────────────
 
+export function getMerchantStats(): Promise<MerchantStats> {
+  return request("/api/v1/admin/merchants/stats");
+}
+
+export function getKybQueue(page = 0, size = 50): Promise<Page<AdminMerchant>> {
+  return request(`/api/v1/admin/merchants/kyb-queue?page=${page}&size=${size}`);
+}
+
 export interface AdminMerchant {
   id: string;
   userId: string;
@@ -832,6 +855,8 @@ export interface AdminMerchant {
   feeRateBps: number;
   createdAt: string;
   activatedAt: string | null;
+  activeApiKeyCount: number | null;
+  activeWebhookCount: number | null;
 }
 
 export interface KybDocument {

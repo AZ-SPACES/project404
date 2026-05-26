@@ -30,8 +30,16 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
 
     long countByStatus(Merchant.MerchantStatus status);
 
+    @Query("SELECT m FROM Merchant m WHERE m.status IN :statuses ORDER BY m.createdAt ASC")
+    org.springframework.data.domain.Page<Merchant> findByStatusIn(
+            @Param("statuses") java.util.List<Merchant.MerchantStatus> statuses,
+            org.springframework.data.domain.Pageable pageable);
+
     @Query("SELECT COALESCE(SUM(m.totalVolume), 0) FROM Merchant m WHERE m.status = 'ACTIVE'")
     java.math.BigDecimal sumActiveMerchantVolume();
+
+    @Query("SELECT COALESCE(SUM(m.balance), 0) FROM Merchant m")
+    java.math.BigDecimal sumTotalMerchantBalance();
 
     @Query(value = """
             SELECT * FROM merchants

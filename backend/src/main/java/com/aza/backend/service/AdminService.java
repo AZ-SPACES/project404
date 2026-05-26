@@ -165,6 +165,8 @@ public class AdminService {
         long pendingKybMerchants = merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_UNDER_REVIEW)
                 + merchantRepository.countByStatus(Merchant.MerchantStatus.KYB_SUBMITTED);
         BigDecimal totalMerchantVolume = merchantRepository.sumActiveMerchantVolume();
+        BigDecimal totalWalletBalance = walletRepository.sumTotalBalance();
+        BigDecimal totalMerchantBalance = merchantRepository.sumTotalMerchantBalance();
 
         return AdminStatsResponse.builder()
                 .totalUsers(totalUsers)
@@ -184,6 +186,8 @@ public class AdminService {
                 .activeMerchants(activeMerchants)
                 .pendingKybMerchants(pendingKybMerchants)
                 .totalMerchantVolume(totalMerchantVolume != null ? totalMerchantVolume : BigDecimal.ZERO)
+                .totalWalletBalance(totalWalletBalance != null ? totalWalletBalance : BigDecimal.ZERO)
+                .totalMerchantBalance(totalMerchantBalance != null ? totalMerchantBalance : BigDecimal.ZERO)
                 .build();
     }
 
