@@ -72,6 +72,7 @@ const INITIAL_PROFILE: ProfileData = {
 type ProfileContextType = ProfileData & {
   setUsername: (username: string) => Promise<void>;
   setProfileImage: (uri: string | null) => Promise<void>;
+  setAvatarUrl: (url: string) => Promise<void>;
   requestEmailChange: (email: string) => Promise<void>;
   verifyEmailChange: (email: string, code: string) => Promise<void>;
   requestPhoneChange: (phone: string) => Promise<void>;
@@ -175,6 +176,11 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Failed to save username', e);
       throw e;
     }
+  }, [fetchProfile]);
+
+  const setAvatarUrl = useCallback(async (url: string) => {
+    await updateMe({ profileImageUrl: url });
+    await fetchProfile();
   }, [fetchProfile]);
 
   const setProfileImage = useCallback(async (uri: string | null) => {
@@ -345,6 +351,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...profile,
       setUsername,
       setProfileImage,
+      setAvatarUrl,
       requestEmailChange: requestEmailChangeAction,
       verifyEmailChange: verifyEmailChangeAction,
       requestPhoneChange: requestPhoneChangeAction,
