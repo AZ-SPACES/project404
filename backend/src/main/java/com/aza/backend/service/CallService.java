@@ -69,7 +69,7 @@ public class CallService {
             throw new RuntimeException("Invalid call type. Use VOICE or VIDEO");
         }
 
-        // Create call session record
+        // Create a call session record
         CallSession session = CallSession.builder()
                 .callerId(caller.getId())
                 .calleeId(callee.getId())
@@ -97,7 +97,7 @@ public class CallService {
             webSocketPublisher.publishCallEvent(
                     callee.getId(), WebSocketEventType.CALL_INITIATE, payload);
 
-            // Push notification only when callee is offline (not already handling the event)
+            // Push notification only when the callee is offline (not already handling the event)
             if (!presenceService.isOnline(callee.getId())) {
                 notificationService.sendIncomingCallNotification(
                         callee.getId(),
@@ -466,7 +466,7 @@ public class CallService {
                     session.setEndedAt(LocalDateTime.now());
                     callSessionRepository.save(session);
 
-                    // Notify caller that call was missed
+                    // Notify the caller that the call was missed
                     Map<String, Object> payload = new HashMap<>();
                     payload.put("callId", session.getId().toString());
                     payload.put("status", "MISSED");

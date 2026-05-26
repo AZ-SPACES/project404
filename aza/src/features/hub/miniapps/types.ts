@@ -5,16 +5,17 @@ export type MiniAppCategory =
   | 'Bills & Utilities'
   | 'Entertainment'
   | 'Shopping'
-  | 'Transport';
+  | 'Transport'
+  | 'Business';
 
 export interface MiniAppMeta {
   id: string;
   name: string;
   description: string;
-  /** Emoji icon rendered on the tile */
-  icon: string;
+  /** Emoji icon rendered on the tile or local image require */
+  icon: string | any;
   /** Solid background color for the icon tile */
-  color: string;
+  color?: string;
   category: MiniAppCategory;
 }
 

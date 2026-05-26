@@ -9,24 +9,48 @@ import { useConfetti } from "@/hooks/useConfetti";
 type Status = "idle" | "loading" | "success";
 
 export function WaitlistHero() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]   = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [error, setError]   = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { fire } = useConfetti(canvasRef);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || status === "loading") return;
+
     setStatus("loading");
-    setTimeout(() => {
-      setStatus("success");
-      setEmail("");
-      fire();
-    }, 1500);
+    setError("");
+
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        setStatus("success");
+        setEmail("");
+        fire();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (data.error === "already_registered") {
+          setError("You're already on the waitlist!");
+        } else {
+          setError(data.error ?? "Something went wrong. Please try again.");
+        }
+        setStatus("idle");
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+      setStatus("idle");
+    }
   };
 
   return (
     <div
+      id="waitlist"
       className="relative w-full overflow-hidden"
       style={{ backgroundColor: "#09090b", minHeight: "600px" }}
     >
@@ -42,42 +66,56 @@ export function WaitlistHero() {
       />
 
       {/* Content */}
-      <div className="relative z-20 w-full flex flex-col items-center justify-end pb-16 md:pb-24 pt-40 md:pt-48 gap-6 px-4">
+      <div className="relative z-20 w-full flex flex-col items-center justify-end pb-16 md:pb-24 pt-40 md:pt-48 gap-5 px-4">
         {/* App icon */}
         <div
           className="w-16 h-16 rounded-2xl mb-2 ring-1 ring-white/10 flex items-center justify-center"
           style={{ backgroundColor: "#174717" }}
         >
-          <span
-            style={{
-              color: "#B7EE7A",
-              fontSize: "28px",
-              fontWeight: 800,
-              lineHeight: 1,
-            }}
-          >
+          <span style={{ color: "#B7EE7A", fontSize: "28px", fontWeight: 800, lineHeight: 1 }}>
             A
           </span>
+        </div>
+
+        <div
+          className="inline-flex items-center gap-2 px-[14px] py-[6px] rounded-md text-[0.8rem] font-semibold"
+          style={{
+            background: "rgba(183,238,122,0.12)",
+            border: "1px solid rgba(183,238,122,0.25)",
+            color: "#B7EE7A",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              width: 7, height: 7,
+              background: "#B7EE7A",
+              borderRadius: 999,
+              animation: "badgePulse 2s infinite",
+              flexShrink: 0,
+            }}
+          />
+          Soon available worldwide
         </div>
 
         <h2
           className="text-4xl md:text-5xl lg:text-6xl font-bold text-center tracking-tight"
           style={{ color: "#ffffff" }}
         >
-          Send money.{" "}
-          <span style={{ color: "#B7EE7A" }}>Effortlessly.</span>
+          Get early access.{" "}
+          <span style={{ color: "#B7EE7A" }}>Be first.</span>
         </h2>
 
         <p
           className="text-base md:text-lg font-medium text-center max-w-md"
           style={{ color: "#94a3b8" }}
         >
-          Send and request money, chat with friends, scan QR codes, and access
-          powerful mini-apps — all in one secure platform.
+          Join the waitlist and be among the first to send money, chat with
+          friends, and access the Aza Hub — all in one secure app.
         </p>
 
         {/* Form container */}
-        <div className="w-full max-w-md mt-4 h-[60px] relative">
+        <div className="w-full max-w-md mt-2 h-[60px] relative">
           <canvas
             ref={canvasRef}
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none z-50"
@@ -87,10 +125,26 @@ export function WaitlistHero() {
           <WaitlistForm
             email={email}
             status={status}
+            error={error}
             onChange={(e) => setEmail(e.target.value)}
             onSubmit={handleSubmit}
           />
         </div>
+
+        {/* Error message */}
+        {error && status === "idle" && (
+          <p
+            className="text-sm text-center mt-1"
+            style={{ color: "#f87171" }}
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        <p className="text-[0.75rem] text-center mt-1" style={{ color: "#4b5563" }}>
+          No spam. Unsubscribe anytime.
+        </p>
       </div>
     </div>
   );

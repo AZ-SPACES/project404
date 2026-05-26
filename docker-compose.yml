@@ -39,6 +39,7 @@ services:
     build: ./backend
     container_name: aza-backend
     restart: unless-stopped
+    env_file: ./backend/.env
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-aza_db}
       DB_USERNAME: ${DB_USERNAME}

@@ -23,6 +23,8 @@ import {
   Settings,
   Coins,
   MessageSquare,
+  Store,
+  Flag,
   X,
 } from "lucide-react";
 
@@ -59,6 +61,8 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Finance",
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+      { href: "/merchants", label: "Merchants", icon: Store },
+      { href: "/miniapps", label: "Mini App Reports", icon: Flag },
       { href: "/disputes", label: "Disputes", icon: Scale },
       { href: "/fees", label: "Fee Management", icon: Coins },
       { href: "/reports", label: "Reports", icon: FileBarChart2 },

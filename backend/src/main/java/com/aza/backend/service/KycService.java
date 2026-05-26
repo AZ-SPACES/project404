@@ -2,6 +2,7 @@ package com.aza.backend.service;
 
 import com.aza.backend.dto.kyc.*;
 import com.aza.backend.entity.KycRecord;
+import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.KycRecordRepository;
@@ -31,6 +32,7 @@ public class KycService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
@@ -220,7 +222,7 @@ public class KycService {
         return getStatus(user);
     }
 
-    //STEP 7: SUMBIT
+    //STEP 7: SUBMIT
     @Transactional
     public KycStatusResponse submitKyc(User user) {
         KycRecord record = kycRecordRepository.findByUserId(user.getId())
@@ -264,10 +266,10 @@ public class KycService {
              * ============================================================
              * In production, this is where you would:
              *
-             * 1. Call a KYC provider API (e.g. Smile Identity, Onfido, Veriff)
+             * 1. Call a KYC provider API (e.g., Smile Identity, Onfido, Veriff)
              *    - Send the ID document images for OCR and validation
              *    - Send the selfie for face-match comparison against the ID photo
-             *    - Run the user against PEP and sanctions watchlists
+             *    - Run the user against PEP and sanctions watch lists
              *
              * 2. The provider would return a verification result asynchronously
              *    via a webhook endpoint (POST /api/v1/kyc/webhook)
@@ -358,9 +360,24 @@ public class KycService {
 
         kycRecordRepository.save(record);
 
-        // Send notification email
         String name = user.getFirstName() != null ? user.getFirstName() : "User";
         emailService.sendKycStatusEmail(user.getEmail(), name, approve, rejectionReason);
+
+        if (approve) {
+            notificationService.sendNotification(
+                    user.getId(),
+                    Notification.NotificationType.KYC_APPROVED,
+                    "Identity Verified",
+                    "Your identity has been verified. You can now access all features.",
+                    java.util.Map.of("type", "KYC_APPROVED"));
+        } else {
+            notificationService.sendNotification(
+                    user.getId(),
+                    Notification.NotificationType.KYC_REJECTED,
+                    "Verification Update Required",
+                    rejectionReason != null ? rejectionReason : "Your verification was not successful. Please resubmit.",
+                    java.util.Map.of("type", "KYC_REJECTED"));
+        }
 
         return getStatus(user);
     }

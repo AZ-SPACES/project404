@@ -210,10 +210,9 @@ export interface AdminUser {
   id: string;
   email: string;
   phone: string;
-  handle: string;
+  username: string;
   firstName: string;
   lastName: string;
-  displayName: string;
   profileImageUrl: string | null;
   dateOfBirth: string | null;
   nationality: string | null;
@@ -530,6 +529,7 @@ export interface CannedResponse {
   content: string;
   category: string;
   usageCount: number;
+  createdAt?: string;
 }
 
 export function getCannedResponses(): Promise<CannedResponse[]> {
@@ -698,6 +698,7 @@ export interface RiskAlert {
   riskScore: number;
   triggeredAt: string;
   status: "OPEN" | "INVESTIGATING" | "RESOLVED" | "FALSE_POSITIVE";
+  notes: string | null;
 }
 
 export interface RiskStats {
@@ -791,5 +792,154 @@ export function updateFeeRule(id: string, data: Partial<Pick<FeeRule, "amount" |
   return request(`/api/v1/admin/fees/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+// ── Support Agents ────────────────────────────────────────────────────────────
+
+export interface AgentStatus {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export function getAvailableAgents(): Promise<AgentStatus[]> {
+  return request("/api/v1/admin/support/agents/available");
+}
+
+// ── Merchants ─────────────────────────────────────────────────────────────────
+
+export interface AdminMerchant {
+  id: string;
+  userId: string;
+  businessName: string;
+  businessHandle: string;
+  businessEmail: string | null;
+  businessPhone: string | null;
+  businessDescription: string | null;
+  logoUrl: string | null;
+  category: string | null;
+  status: string;
+  rejectionReason: string | null;
+  moreInfoRequest: string | null;
+  balance: number;
+  currency: string;
+  totalVolume: number;
+  feeRateBps: number;
+  createdAt: string;
+  activatedAt: string | null;
+}
+
+export interface MerchantKyb {
+  status: string;
+  registrationNumber: string | null;
+  businessType: string | null;
+  registeredAddress: string | null;
+  city: string | null;
+  taxIdNumber: string | null;
+  ownerFullName: string | null;
+  ownerIdType: string | null;
+  rejectionReason: string | null;
+  moreInfoRequest: string | null;
+  documents: { id: string; documentType: string; fileUrl: string; status: string }[];
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export function getMerchants(params: {
+  query?: string;
+  status?: string;
+  page?: number;
+  size?: number;
+}): Promise<Page<AdminMerchant>> {
+  const qs = new URLSearchParams();
+  if (params.query) qs.set("query", params.query);
+  if (params.status) qs.set("status", params.status);
+  qs.set("page", String(params.page ?? 0));
+  qs.set("size", String(params.size ?? 20));
+  return request(`/api/v1/admin/merchants?${qs}`);
+}
+
+export function getMerchantById(merchantId: string): Promise<AdminMerchant> {
+  return request(`/api/v1/admin/merchants/${merchantId}`);
+}
+
+export function getMerchantKyb(merchantId: string): Promise<MerchantKyb> {
+  return request(`/api/v1/admin/merchants/${merchantId}/kyb`);
+}
+
+export function reviewMerchantKyb(
+  merchantId: string,
+  approve: boolean,
+  rejectionReason?: string,
+  moreInfoRequest?: string
+): Promise<MerchantKyb> {
+  return request(`/api/v1/admin/merchants/${merchantId}/kyb/review`, {
+    method: "POST",
+    body: JSON.stringify({ approve, rejectionReason, moreInfoRequest }),
+  });
+}
+
+export function setMerchantStatus(merchantId: string, status: string): Promise<AdminMerchant> {
+  return request(`/api/v1/admin/merchants/${merchantId}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+}
+
+// ── Rate Limit Management ─────────────────────────────────────────────────────
+
+export function resetUserRateLimit(userId: string): Promise<string> {
+  return request(`/api/v1/admin/risk/rate-limits/user/${userId}`, { method: "DELETE" });
+}
+
+export function resetIpRateLimit(ip: string): Promise<string> {
+  return request(`/api/v1/admin/risk/rate-limits/ip?ip=${encodeURIComponent(ip)}`, { method: "DELETE" });
+}
+
+export function resetAllRateLimits(): Promise<{ keysDeleted: number }> {
+  return request("/api/v1/admin/risk/rate-limits", { method: "DELETE" });
+}
+
+// ── Mini App Reports ──────────────────────────────────────────────────────────
+
+export interface MiniAppReport {
+  id: string;
+  appId: string;
+  reportedByUserId: string;
+  reportedByHandle: string | null;
+  reason: "SPAM" | "INAPPROPRIATE" | "NOT_WORKING" | "MISLEADING" | "OTHER";
+  details: string | null;
+  status: "OPEN" | "RESOLVED" | "DISMISSED";
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface MiniAppReportStats {
+  total: number;
+  open: number;
+  resolved: number;
+  dismissed: number;
+}
+
+export function getMiniAppReports(page = 0, size = 20, status?: string): Promise<Page<MiniAppReport>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/miniapps/reports?${params}`);
+}
+
+export function getMiniAppReportStats(): Promise<MiniAppReportStats> {
+  return request("/api/v1/admin/miniapps/reports/stats");
+}
+
+export function resolveMiniAppReport(
+  id: string,
+  action: "RESOLVE" | "DISMISS",
+  resolution: string,
+): Promise<MiniAppReport> {
+  return request(`/api/v1/admin/miniapps/reports/${id}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ action, resolution }),
   });
 }

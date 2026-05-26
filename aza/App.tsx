@@ -17,6 +17,7 @@ import { NotificationProvider } from "./src/providers/NotificationProvider";
 import { NetworkProvider } from "./src/providers/NetworkProvider";
 import { SecurityProvider, useSecurity } from "./src/providers/SecurityProvider";
 import { ToastProvider } from "./src/providers/ToastProvider";
+import { PresenceProvider } from "./src/providers/PresenceProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 import { navigationRef, processNavigationQueue } from "./src/navigation/navigationRef";
@@ -136,19 +137,21 @@ export default function App() {
         <ErrorBoundary>
           <NetworkProvider>
             <AuthProvider>
-              <SecurityProvider>
-                <ProfileProvider>
-                  <NotificationProvider>
-                    <DisplayProvider>
-                      <ToastProvider>
-                        <AnimatedSplashScreen>
-                          <AppContent />
-                        </AnimatedSplashScreen>
-                      </ToastProvider>
-                    </DisplayProvider>
-                  </NotificationProvider>
-                </ProfileProvider>
-              </SecurityProvider>
+              <PresenceProvider>
+                <SecurityProvider>
+                  <ProfileProvider>
+                    <NotificationProvider>
+                      <DisplayProvider>
+                        <ToastProvider>
+                          <AnimatedSplashScreen>
+                            <AppContent />
+                          </AnimatedSplashScreen>
+                        </ToastProvider>
+                      </DisplayProvider>
+                    </NotificationProvider>
+                  </ProfileProvider>
+                </SecurityProvider>
+              </PresenceProvider>
             </AuthProvider>
           </NetworkProvider>
         </ErrorBoundary>

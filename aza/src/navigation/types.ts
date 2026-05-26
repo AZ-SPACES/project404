@@ -107,4 +107,13 @@ export type RootStackParamList = {
   SharedMedia: undefined;
   ManageStorage: { storageStats?: any } | undefined;
   MessageInfo: { message: any };
+  DeleteAccount: undefined;
+  MerchantBusinessName: undefined;
+  MerchantBusinessCategory: { businessName: string; businessHandle: string };
+  MerchantBusinessContact: { businessName: string; businessHandle: string; category: string };
+  MerchantKYBIntro: { merchantId: string };
+  MerchantKYBBusiness: { merchantId: string };
+  MerchantKYBOwner: { merchantId: string; businessType: string; registrationNumber?: string; registeredAddress?: string; city?: string; taxIdNumber?: string; website?: string };
+  MerchantKYBDocuments: { merchantId: string; isPrimaryOwner: boolean };
+  MerchantKYBSubmitted: undefined;
 };

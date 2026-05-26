@@ -5,9 +5,13 @@ const productLinks = [
   { label: "Security",      href: "#security"      },
   { label: "Download",      href: "#download"      },
 ];
-const companyLinks = ["About", "Careers", "Blog", "Press"];
-const supportLinks = ["Help Center", "Contact Us", "Chat with Us", "System Status"];
-const legalLinks   = ["Privacy Policy", "Terms of Service", "Cookie Policy", "Compliance"];
+
+const legalLinks = [
+  { label: "Privacy Policy",   href: "/privacy-policy"   },
+  { label: "Terms of Service", href: "/terms-of-service" },
+  { label: "Cookie Policy",    href: "/cookie-policy"    },
+  { label: "Compliance",       href: "/compliance"       },
+];
 
 const socials = [
   {
@@ -33,7 +37,7 @@ export function Footer() {
       <div className="max-w-[1160px] mx-auto px-4 sm:px-6">
         <div
           className="footer-grid grid gap-8 md:gap-12 mb-12"
-          style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }}
+          style={{ gridTemplateColumns: "2fr 1fr 1fr" }}
         >
           {/* Brand */}
           <div className="footer-brand-col">
@@ -50,8 +54,11 @@ export function Footer() {
               </span>
               aza
             </a>
-            <p className="text-[0.875rem] mt-2 mb-4" style={{ color: "var(--aza-text-secondary)" }}>
+            <p className="text-[0.875rem] mt-2 mb-1" style={{ color: "var(--aza-text-secondary)" }}>
               Send money. Effortlessly.
+            </p>
+            <p className="text-[0.8rem] mb-4" style={{ color: "var(--aza-text-secondary)", opacity: 0.7 }}>
+              Soon available worldwide.
             </p>
             <div className="flex gap-2">
               {socials.map(({ label, svg, fill }) => (
@@ -88,34 +95,18 @@ export function Footer() {
             ))}
           </div>
 
-          {/* Company */}
-          <div>
-            <h4 className="text-[0.875rem] font-semibold mb-4" style={{ color: "var(--aza-text)" }}>Company</h4>
-            {companyLinks.map((l) => (
-              <a key={l} href="#" className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>{l}</a>
-            ))}
-          </div>
-
-          {/* Support */}
-          <div>
-            <h4 className="text-[0.875rem] font-semibold mb-4" style={{ color: "var(--aza-text)" }}>Support</h4>
-            {supportLinks.map((l) => (
-              <a key={l} href="#" className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>{l}</a>
-            ))}
-          </div>
-
           {/* Legal */}
           <div>
             <h4 className="text-[0.875rem] font-semibold mb-4" style={{ color: "var(--aza-text)" }}>Legal</h4>
             {legalLinks.map((l) => (
-              <a key={l} href="#" className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>{l}</a>
+              <a key={l.label} href={l.href} className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>{l.label}</a>
             ))}
           </div>
         </div>
 
         <div className="flex justify-between items-center flex-wrap gap-2 pt-6" style={{ borderTop: "1px solid var(--aza-border)" }}>
           <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>© 2026 JumpSpaces, Inc. All rights reserved.</p>
-          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>Available in 150+ countries.</p>
+          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>Soon available worldwide.</p>
         </div>
       </div>
     </footer>

@@ -1,4 +1,4 @@
-import { useDisplayContext } from '../providers/DisplayProvider';
+import { useDisplayContext, ACCENT_PALETTES, CornerRadiusScale } from '../providers/DisplayProvider';
 
 export const LightColors = {
   primary:    '#174717',
@@ -57,11 +57,24 @@ export type ThemeColors = {
   [K in keyof typeof LightColors]: K extends 'isDark' ? boolean : string;
 };
 
+export type Radii = { sm: number; md: number; lg: number; full: number };
+
+const RADIUS_SCALES: Record<CornerRadiusScale, number> = { sharp: 0.3, rounded: 1, pill: 2.5 };
+
 export function useAppTheme() {
-  const { activeColorScheme } = useDisplayContext();
+  const { activeColorScheme, accentId, cornerRadiusScale } = useDisplayContext();
   const isDark = activeColorScheme === 'dark';
-  const colors = isDark ? DarkColors : LightColors;
-  return { colors, isDark };
+  const base = isDark ? DarkColors : LightColors;
+  const palette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
+  const colors: ThemeColors = { ...base, primary: palette.primary, secondary: palette.secondary };
+  const scale = RADIUS_SCALES[cornerRadiusScale] ?? 1;
+  const radii: Radii = {
+    sm:   Math.round(Radius.sm * scale),
+    md:   Math.round(Radius.md * scale),
+    lg:   Math.round(Radius.lg * scale),
+    full: Radius.full,
+  };
+  return { colors, isDark, radii };
 }
 
 export const Typography = {

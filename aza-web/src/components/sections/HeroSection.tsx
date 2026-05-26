@@ -3,9 +3,9 @@
 import { PhoneMockup } from "@/components/phone/PhoneMockup";
 
 const stats = [
-  { value: "2",  label: "Users"       },
-  { value: "1", label: "Country"   },
-  { value: "$0",   label: "Hidden fees" },
+  { value: "$0",      label: "Hidden fees"  },
+  { value: "Instant", label: "Transfers"    },
+  { value: "256-bit", label: "AES Encryption" },
 ];
 
 export function HeroSection() {
