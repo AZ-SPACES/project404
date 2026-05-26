@@ -30,4 +30,6 @@ public class MerchantResponse {
     private Integer feeRateBps;
     private LocalDateTime createdAt;
     private LocalDateTime activatedAt;
+    private Integer activeApiKeyCount;
+    private Integer activeWebhookCount;
 }

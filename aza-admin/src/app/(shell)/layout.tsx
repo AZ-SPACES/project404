@@ -62,6 +62,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/merchants", label: "Merchants", icon: Store },
+      { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag },
       { href: "/disputes", label: "Disputes", icon: Scale },
       { href: "/fees", label: "Fee Management", icon: Coins },
@@ -95,6 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
 function isActive(href: string, pathname: string, exactMatch?: boolean): boolean {
   if (exactMatch) return pathname === href;
   if (href === "/kyc") return pathname === "/kyc" || pathname.startsWith("/kyc/");
+  if (href === "/kyb-review") return pathname === "/kyb-review" || pathname.startsWith("/kyb-review/");
   if (href === "/support") return pathname === "/support";
   return pathname.startsWith(href);
 }
