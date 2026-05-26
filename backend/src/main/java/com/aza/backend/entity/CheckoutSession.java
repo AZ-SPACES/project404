@@ -60,8 +60,9 @@ public class CheckoutSession {
     private LocalDateTime expiresAt;
     private LocalDateTime completedAt;
     private LocalDateTime cancelledAt;
+    private LocalDateTime refundedAt;
 
     public enum SessionStatus {
-        PENDING, COMPLETED, EXPIRED, CANCELLED
+        PENDING, COMPLETED, EXPIRED, CANCELLED, REFUNDED
     }
 }

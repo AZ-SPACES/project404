@@ -4,6 +4,7 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantApiLog;
+import com.aza.backend.entity.MerchantAuditLog;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.MerchantRepository;
@@ -250,6 +251,46 @@ public class MerchantController {
             @Valid @RequestBody PayoutRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(merchantService.requestPayout(user.getId(), request)));
+    }
+
+    // ==================== CUSTOMERS ====================
+
+    @GetMapping("/customers")
+    public ResponseEntity<ApiResponse<Page<CustomerResponse>>> listCustomers(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.listCustomers(user.getId(), page, size)));
+    }
+
+    // ==================== REFUND ====================
+
+    @PostMapping("/sessions/{sessionId}/refund")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> refundSession(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID sessionId) {
+        Merchant merchant = requireMerchant(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.refundSession(merchant.getId(), sessionId)));
+    }
+
+    // ==================== DISPUTES (merchant view) ====================
+
+    @GetMapping("/disputes")
+    public ResponseEntity<ApiResponse<Page<MerchantDisputeResponse>>> listDisputes(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.listMerchantDisputes(user.getId(), page, size)));
+    }
+
+    // ==================== AUDIT LOGS ====================
+
+    @GetMapping("/audit-logs")
+    public ResponseEntity<ApiResponse<Page<MerchantAuditLog>>> listAuditLogs(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.listAuditLogs(user.getId(), page, size)));
     }
 
     // ==================== HELPERS ====================

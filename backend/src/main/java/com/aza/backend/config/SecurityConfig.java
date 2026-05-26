@@ -81,6 +81,8 @@ public class SecurityConfig {
                     ).permitAll();
                     // Checkout GET is public; confirm and cancel require authenticated JWT
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();
+                    // Team invite acceptance is public (email-based verification)
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/merchant/team/accept/*").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(

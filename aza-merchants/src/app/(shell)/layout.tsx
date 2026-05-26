@@ -15,8 +15,13 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
-  Building2,
+  QrCode,
+  Users,
+  FileText,
+  ShieldAlert,
+  ClipboardList,
+  UserCog,
+  Repeat,
 } from "lucide-react";
 
 interface NavItem {
@@ -40,7 +45,17 @@ const NAV: NavSection[] = [
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/payment-links", label: "Payment Links", icon: Link2 },
+      { href: "/store-qr", label: "Store QR", icon: QrCode },
+      { href: "/invoices", label: "Invoices", icon: FileText },
       { href: "/payouts", label: "Payouts", icon: ArrowDownToLine },
+    ],
+  },
+  {
+    label: "Customers",
+    items: [
+      { href: "/customers", label: "Customers", icon: Users },
+      { href: "/disputes", label: "Disputes", icon: ShieldAlert },
+      { href: "/plans", label: "Plans & Subscriptions", icon: Repeat },
     ],
   },
   {
@@ -52,7 +67,11 @@ const NAV: NavSection[] = [
   },
   {
     label: "Business",
-    items: [{ href: "/settings", label: "Settings", icon: Settings }],
+    items: [
+      { href: "/team", label: "Team", icon: UserCog },
+      { href: "/audit-logs", label: "Audit Log", icon: ClipboardList },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
   },
 ];
 
