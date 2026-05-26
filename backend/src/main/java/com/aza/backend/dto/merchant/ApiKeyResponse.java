@@ -16,6 +16,12 @@ public class ApiKeyResponse {
     private String keyPrefix; // shown in dashboard list
     private String fullKey;   // only set on creation, never returned again
     private String environment;
+    private String keyType;
+    private String scopes;
+    private String ipWhitelist;
+    private LocalDateTime expiresAt;
+    private String lastUsedIp;
+    private String lastUsedUserAgent;
     private Boolean isActive;
     private LocalDateTime lastUsedAt;
     private LocalDateTime createdAt;

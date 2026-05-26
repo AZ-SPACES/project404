@@ -12,4 +12,6 @@ public interface MerchantApiKeyRepository extends JpaRepository<MerchantApiKey, 
     List<MerchantApiKey> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
 
     Optional<MerchantApiKey> findByKeyHashAndIsActiveTrue(String keyHash);
+
+    Optional<MerchantApiKey> findByOldKeyHashAndIsActiveTrue(String oldKeyHash);
 }

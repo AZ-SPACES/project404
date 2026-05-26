@@ -27,6 +27,7 @@ public class CheckoutSessionResponse {
     private String customerId;
     private BigDecimal platformFee;
     private BigDecimal netAmount;
+    private String checkoutUrl;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private LocalDateTime completedAt;
