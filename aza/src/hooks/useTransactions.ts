@@ -1,55 +1,56 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getTransactions } from '../services/api';
-import { Transaction, Section } from '../features/home/screens/TransactionsScreen';
+import { Transaction } from '../features/home/screens/TransactionsScreen';
 import { mapBackendTransaction, groupTransactionsByDate } from '../utils/transactionUtils';
 
-export const useTransactions = (initialFilter: string = 'All') => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+export type TransactionFilter = 'All' | 'Money In' | 'Money Out' | 'Pending' | 'Failed';
+
+export const useTransactions = (initialFilter: TransactionFilter = 'All') => {
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState(initialFilter);
+  const [filter, setFilterState] = useState<TransactionFilter>(initialFilter);
 
-  const fetchTransactions = useCallback(async (pageNum: number, currentFilter: string, isRefresh: boolean = false) => {
+  const fetchTransactions = useCallback(async (
+    pageNum: number,
+    currentFilter: TransactionFilter,
+    isRefresh = false,
+  ) => {
+    let status: string | undefined;
+    if (currentFilter === 'Pending') status = 'PENDING';
+    else if (currentFilter === 'Failed') status = 'FAILED';
+
     try {
-      if (!isRefresh) setLoading(true);
-      
-      let type: string | undefined;
-      let status: string | undefined;
+      if (pageNum === 0) setLoading(true);
 
-      if (currentFilter === 'Money In') {
-        // We'll filter by direction in the frontend or update the API to support it.
-        // For now, let's fetch all and filter in frontend to keep it simple, 
-        // OR better, update the API to support direction.
-        // Given the current backend implementation of getTransactionHistory, 
-        // it doesn't support 'direction' filter yet.
-      } else if (currentFilter === 'Pending') {
-        status = 'PENDING';
-      }
-
-      const res = await getTransactions(pageNum, 20, type, status);
-      const content = res.data?.data?.content || res.data?.content || [];
-      const totalPages = res.data?.data?.totalPages ?? 1;
-      
+      const res = await getTransactions(pageNum, 20, undefined, status);
+      const content: any[] = res.data?.data?.content || res.data?.content || [];
+      const totalPages: number = res.data?.data?.totalPages ?? 1;
       const mapped = content.map(mapBackendTransaction);
 
-      setTransactions(prev => isRefresh ? mapped : [...prev, ...mapped]);
+      setAllTransactions(prev => (isRefresh || pageNum === 0) ? mapped : [...prev, ...mapped]);
       setHasMore(pageNum < totalPages - 1);
       setError(null);
-    } catch (err) {
-      console.error('Failed to fetch transactions', err);
-      setError('Failed to load transactions');
+    } catch {
+      setError('Failed to load transactions. Pull down to retry.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
+  // Reset list and re-fetch from page 0 whenever filter changes
   useEffect(() => {
+    setAllTransactions([]);
+    setPage(0);
+    setHasMore(true);
     fetchTransactions(0, filter, true);
   }, [filter, fetchTransactions]);
+
+  const setFilter = useCallback((f: TransactionFilter) => setFilterState(f), []);
 
   const refresh = useCallback(() => {
     setRefreshing(true);
@@ -58,20 +59,18 @@ export const useTransactions = (initialFilter: string = 'All') => {
   }, [filter, fetchTransactions]);
 
   const loadMore = useCallback(() => {
-    if (!loading && hasMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchTransactions(nextPage, filter);
-    }
-  }, [loading, hasMore, page, filter, fetchTransactions]);
+    if (loading || refreshing || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchTransactions(nextPage, filter);
+  }, [loading, refreshing, hasMore, page, filter, fetchTransactions]);
 
+  // Money In / Money Out are client-side direction filters over the full fetched set
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => {
-      if (filter === 'Money In') return tx.isCredit;
-      if (filter === 'Money Out') return !tx.isCredit;
-      return true;
-    });
-  }, [transactions, filter]);
+    if (filter === 'Money In') return allTransactions.filter(tx => tx.isCredit);
+    if (filter === 'Money Out') return allTransactions.filter(tx => !tx.isCredit);
+    return allTransactions;
+  }, [allTransactions, filter]);
 
   const sections = useMemo(() => groupTransactionsByDate(filteredTransactions), [filteredTransactions]);
 

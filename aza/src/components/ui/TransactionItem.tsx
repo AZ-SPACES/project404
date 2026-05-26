@@ -10,32 +10,85 @@ export type TransactionItemProps = {
   onPress?: () => void;
 };
 
+type StatusChip = { label: string; bg: string; color: string };
+
+function resolveStatusChip(status: string | undefined, isPending: boolean | undefined, Colors: ThemeColors): StatusChip | null {
+  const s = status ?? (isPending ? 'PENDING' : undefined);
+  switch (s) {
+    case 'PENDING':   return { label: 'Pending',   bg: 'rgba(245,158,11,0.12)', color: '#D97706' };
+    case 'FAILED':    return { label: 'Failed',    bg: 'rgba(234,67,53,0.10)',  color: Colors.error };
+    case 'CANCELLED': return { label: 'Cancelled', bg: 'rgba(107,114,128,0.12)', color: Colors.textSecondary };
+    default:          return null;
+  }
+}
+
 export function TransactionItem({ item, onPress }: TransactionItemProps) {
   const { colors: Colors } = useAppTheme();
   const { transactionDensity } = useDisplayContext();
-  const styles = React.useMemo(() => createStyles(Colors, transactionDensity === 'compact'), [Colors, transactionDensity]);
+  const compact = transactionDensity === 'compact';
+  const styles = React.useMemo(() => createStyles(Colors, compact), [Colors, compact]);
 
-  const formatCurrency = (amount: number) =>
-    `GH₵ ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const chip = resolveStatusChip(item.status, item.isPending, Colors);
+  const isSettled = !chip; // COMPLETED or unknown — treat as done
+
+  // Icon appearance
+  const isTerminal = item.status === 'FAILED' || item.status === 'CANCELLED';
+  const iconBg = isTerminal
+    ? 'rgba(107,114,128,0.10)'
+    : item.isCredit
+      ? 'rgba(183,238,122,0.22)'
+      : 'rgba(23,71,23,0.08)';
+  const iconColor = isTerminal
+    ? Colors.textSecondary
+    : item.isCredit
+      ? Colors.primary
+      : Colors.textPrimary;
+
+  // Amount
+  const amountColor = isTerminal
+    ? Colors.textSecondary
+    : item.isCredit
+      ? Colors.primary
+      : Colors.textPrimary;
+  const prefix = item.isCredit ? '+' : '−';
+  const amountStr = `${prefix}GH₵ ${item.amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
   return (
     <TouchableOpacity
-      style={styles.transactionItem}
+      style={[styles.row, !isSettled && styles.rowMuted]}
       onPress={onPress}
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
-      <View style={styles.transactionLeft}>
-        <View style={[styles.iconContainer, { backgroundColor: item.isCredit ? "rgba(183, 238, 122, 0.2)" : "rgba(234, 67, 53, 0.1)" }]}>
-          <Feather name={item.isCredit ? "arrow-down-left" : "arrow-up-right"} size={styles.iconSize.width} color={item.isCredit ? Colors.primary : Colors.error} />
-        </View>
-        <View style={styles.transactionDetails}>
-          <Text style={styles.transactionName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.transactionSub}>{item.type} • {item.time}</Text>
+      <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+        <Feather
+          name={item.isCredit ? 'arrow-down-left' : 'arrow-up-right'}
+          size={compact ? 15 : 18}
+          color={iconColor}
+        />
+      </View>
+
+      <View style={styles.middle}>
+        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+        <View style={styles.subRow}>
+          <Text style={styles.sub} numberOfLines={1}>{item.type} · {item.time}</Text>
+          {chip && (
+            <View style={[styles.chip, { backgroundColor: chip.bg }]}>
+              <Text style={[styles.chipText, { color: chip.color }]}>{chip.label}</Text>
+            </View>
+          )}
         </View>
       </View>
-      <Text style={[styles.transactionAmount, { color: item.isCredit ? Colors.primary : Colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
-        {formatCurrency(item.amount)}
+
+      <Text
+        style={[styles.amount, { color: amountColor }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {amountStr}
       </Text>
     </TouchableOpacity>
   );
@@ -43,44 +96,62 @@ export function TransactionItem({ item, onPress }: TransactionItemProps) {
 
 function createStyles(Colors: ThemeColors, compact: boolean) {
   const iconSize = compact ? 32 : 40;
-  const featherSize = compact ? 15 : 18;
   return StyleSheet.create({
-    transactionItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingVertical: compact ? Spacing.sm : Spacing.md,
     },
-    transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
-    iconContainer: {
+    rowMuted: {
+      opacity: 0.72,
+    },
+    iconWrap: {
       width: iconSize,
       height: iconSize,
       borderRadius: Radius.full,
-      justifyContent: "center",
-      alignItems: "center",
+      justifyContent: 'center',
+      alignItems: 'center',
       marginRight: compact ? Spacing.sm : Spacing.md,
+      flexShrink: 0,
     },
-    iconSize: { width: featherSize },
-    transactionDetails: { flex: 1 },
-    transactionName: {
+    middle: {
+      flex: 1,
+      marginRight: Spacing.sm,
+    },
+    name: {
       ...Typography.body,
       fontSize: compact ? 13 : 14,
       color: Colors.textPrimary,
-      fontWeight: "500",
+      fontWeight: '500',
       marginBottom: 2,
     },
-    transactionSub: {
+    subRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'nowrap',
+    },
+    sub: {
       ...Typography.caption,
       fontSize: compact ? 11 : 12,
       color: Colors.textSecondary,
     },
-    transactionAmount: {
+    chip: {
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    chipText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    amount: {
       ...Typography.body,
       fontSize: compact ? 13 : 14,
-      fontWeight: "600",
-      marginLeft: Spacing.sm,
+      fontWeight: '600',
       flexShrink: 1,
-      textAlign: "right",
+      textAlign: 'right',
     },
   });
 }
