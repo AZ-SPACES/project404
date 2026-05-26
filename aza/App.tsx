@@ -1,4 +1,24 @@
-import { StatusBar, View } from "react-native";
+import { StatusBar, View, LogBox } from "react-native";
+import React, { useEffect, useState } from "react";
+
+// ─── Silence terminal noise ───────────────────────────────────────────────────
+// Suppress the yellow-box overlay entirely in dev.
+LogBox.ignoreAllLogs();
+
+// In dev, only print console.warn / console.error messages that come from our
+// own logger (prefixed with [aza:]). This kills the wall of framework noise
+// while keeping our own diagnostics visible.
+if (__DEV__) {
+  const _warn = console.warn.bind(console);
+  const _error = console.error.bind(console);
+  console.warn = (msg: unknown, ...args: unknown[]) => {
+    if (typeof msg === 'string' && msg.startsWith('[aza:')) _warn(msg, ...args);
+  };
+  console.error = (msg: unknown, ...args: unknown[]) => {
+    if (typeof msg === 'string' && msg.startsWith('[aza:')) _error(msg, ...args);
+  };
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import {
@@ -30,7 +50,7 @@ import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiom
 import AppLockScreen from "./src/features/security/screens/AppLockScreen";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
-import React, { useEffect, useState } from "react";
+
 
 const linking = {
   prefixes: ["aza://", "https://aza.me"],
