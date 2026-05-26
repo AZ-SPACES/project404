@@ -24,4 +24,5 @@ public class UpdateProfileRequest {
     private String theme;
     private String homeBackground;
     private String hubBackground;
+    private String profileImageUrl;
 }
