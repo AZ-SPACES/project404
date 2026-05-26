@@ -10,3 +10,4 @@ export { LogoutEverywhereScreen } from './LogoutEverywhereScreen';
 export { FindMeByScreen } from './FindMeByScreen';
 export { BillForwardingIntroScreen } from './BillForwardingIntroScreen';
 export { BillForwardingDetailsScreen } from './BillForwardingDetailsScreen';
+export { DeleteAccountScreen } from './DeleteAccountScreen';

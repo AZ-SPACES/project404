@@ -5,6 +5,9 @@ import {
   getRiskAlerts,
   getRiskStats,
   updateRiskAlert,
+  resetUserRateLimit,
+  resetIpRateLimit,
+  resetAllRateLimits,
   RiskAlert,
   RiskStats,
   Page,
@@ -16,6 +19,8 @@ import {
   Loader2,
   X,
   AlertCircle,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 function fmtDate(iso: string) {
@@ -73,6 +78,58 @@ export default function RiskPage() {
   const [actionNotes, setActionNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Rate limit tools
+  const [rlUserId, setRlUserId] = useState("");
+  const [rlIp, setRlIp] = useState("");
+  const [rlLoading, setRlLoading] = useState<string | null>(null);
+  const [rlToast, setRlToast] = useState<string | null>(null);
+
+  const showRlToast = (msg: string) => {
+    setRlToast(msg);
+    setTimeout(() => setRlToast(null), 3000);
+  };
+
+  const handleResetUser = async () => {
+    if (!rlUserId.trim()) return;
+    setRlLoading("user");
+    try {
+      await resetUserRateLimit(rlUserId.trim());
+      setRlUserId("");
+      showRlToast("Rate limits cleared for user " + rlUserId.trim());
+    } catch (e: any) {
+      setError(e.message ?? "Failed to reset user rate limits");
+    } finally {
+      setRlLoading(null);
+    }
+  };
+
+  const handleResetIp = async () => {
+    if (!rlIp.trim()) return;
+    setRlLoading("ip");
+    try {
+      await resetIpRateLimit(rlIp.trim());
+      setRlIp("");
+      showRlToast("Rate limits cleared for IP " + rlIp.trim());
+    } catch (e: any) {
+      setError(e.message ?? "Failed to reset IP rate limits");
+    } finally {
+      setRlLoading(null);
+    }
+  };
+
+  const handleResetAll = async () => {
+    if (!confirm("This will flush ALL rate-limit counters for every user and IP. Continue?")) return;
+    setRlLoading("all");
+    try {
+      const result = await resetAllRateLimits();
+      showRlToast(`Flushed ${result.keysDeleted} rate-limit keys`);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to reset all rate limits");
+    } finally {
+      setRlLoading(null);
+    }
+  };
+
   useEffect(() => {
     getRiskStats().then(setRiskStats).catch(() => {});
   }, []);
@@ -118,6 +175,12 @@ export default function RiskPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {rlToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm px-4 py-3 rounded-xl shadow-2xl">
+          {rlToast}
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-semibold text-white">Risk Management</h1>
         <p className="text-white/40 text-sm mt-0.5">Fraud detection and real-time risk monitoring</p>
@@ -248,6 +311,73 @@ export default function RiskPage() {
           <button onClick={() => load(page + 1, severityFilter, statusFilter)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
         </div>
       )}
+
+      {/* Rate Limit Tools */}
+      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <RefreshCw size={15} className="text-white/40" />
+          <h2 className="text-sm font-semibold text-white">Rate Limit Management</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* By user ID */}
+          <div className="space-y-2">
+            <p className="text-xs text-white/40 font-medium">By User ID</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="User UUID…"
+                value={rlUserId}
+                onChange={(e) => setRlUserId(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleResetUser()}
+                className="flex-1 min-w-0 bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 font-mono"
+              />
+              <button
+                onClick={handleResetUser}
+                disabled={!rlUserId.trim() || rlLoading !== null}
+                className="px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 disabled:opacity-40 transition-all flex-shrink-0"
+              >
+                {rlLoading === "user" ? <Loader2 size={13} className="animate-spin" /> : "Clear"}
+              </button>
+            </div>
+          </div>
+
+          {/* By IP */}
+          <div className="space-y-2">
+            <p className="text-xs text-white/40 font-medium">By IP Address</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. 1.2.3.4"
+                value={rlIp}
+                onChange={(e) => setRlIp(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleResetIp()}
+                className="flex-1 min-w-0 bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 font-mono"
+              />
+              <button
+                onClick={handleResetIp}
+                disabled={!rlIp.trim() || rlLoading !== null}
+                className="px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 disabled:opacity-40 transition-all flex-shrink-0"
+              >
+                {rlLoading === "ip" ? <Loader2 size={13} className="animate-spin" /> : "Clear"}
+              </button>
+            </div>
+          </div>
+
+          {/* Reset all */}
+          <div className="space-y-2">
+            <p className="text-xs text-white/40 font-medium">Nuclear Option</p>
+            <button
+              onClick={handleResetAll}
+              disabled={rlLoading !== null}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/15 text-red-400 text-xs font-semibold hover:bg-red-500/20 disabled:opacity-40 transition-all"
+            >
+              {rlLoading === "all" ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+              Reset All Rate Limits
+            </button>
+            <p className="text-[10px] text-white/20">Clears every counter for every user and IP</p>
+          </div>
+        </div>
+      </div>
 
       {/* Action modal */}
       {actioning && (

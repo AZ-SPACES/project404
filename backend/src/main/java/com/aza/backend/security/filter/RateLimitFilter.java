@@ -28,16 +28,25 @@ import java.time.Duration;
  * Multi-dimensional rate limiting and abuse detection filter.
  *
  * Runs AFTER JwtAuthenticationFilter so SecurityContext is already populated.
- * Checks are applied in order of cheapest-to-most-expensive:
  *
- *   1. IP reputation (Redis key lookup)              → 403 if blocked
- *   2. Geo-block via CF-IPCountry header             → 403 if blocked country
- *   3. Behavioral block (IP or fingerprint)          → 429 with Retry-After
- *   4. Bypass token check (verified CAPTCHA clients) → skip remaining checks
- *   5. IP-level rate limit (coarse, per-IP)          → 429
- *   6. Fingerprint-level rate limit (per-device)     → 429
- *   7. User-level rate limit (per JWT subject)       → 429
- *   8. Burst detection + suspicion scoring           → 429 if auto-blocked
+ * Actor scoping — this is the key design principle:
+ *   - Authenticated requests  → tracked and blocked PER USER.
+ *     A user's burst/block never spills onto other users at the same IP.
+ *   - Unauthenticated requests → tracked and blocked PER IP / PER FINGERPRINT.
+ *     Auth endpoints always use IP-level limits to resist credential stuffing.
+ *
+ * Check order (cheapest → most expensive):
+ *   1. IP reputation (persistent block set by admin)         → 403
+ *   2. Geo-block via CF-IPCountry header                     → 403
+ *   3. User behavioral block (authenticated only)            → 429  [before bypass]
+ *   4. IP behavioral block (unauthenticated only)            → 429
+ *   5. Fingerprint behavioral block                          → 429
+ *   6. Bypass token check (client completed CAPTCHA)         → skip 7–10
+ *   7. Auth-path IP rate limit (always per-IP on /auth/**)   → 429
+ *   8. IP rate limit (unauthenticated non-auth requests)     → 429
+ *   9. Fingerprint rate limit                                → 429
+ *  10. User rate limit (authenticated requests)              → 429
+ *  11. Burst detection (user actor if authed, IP otherwise)  → 429 if auto-blocked
  */
 @Component
 @RequiredArgsConstructor
@@ -51,20 +60,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final ChallengeService challengeService;
     private final ObjectMapper objectMapper;
 
-    // ── Rate limit tiers ───────────────────────────────────────────────────────
-    // Auth endpoints are intentionally stricter to resist credential stuffing.
-
-    @Value("${app.ratelimit.ip.limit:200}")
+    @Value("${app.ratelimit.ip.limit:150}")
     private int ipLimit;
     @Value("${app.ratelimit.ip.window-seconds:60}")
     private int ipWindowSeconds;
 
-    @Value("${app.ratelimit.ip.auth-limit:30}")
+    @Value("${app.ratelimit.ip.auth-limit:15}")
     private int authIpLimit;
     @Value("${app.ratelimit.ip.auth-window-seconds:900}")
     private int authIpWindowSeconds;
 
-    @Value("${app.ratelimit.fingerprint.limit:150}")
+    @Value("${app.ratelimit.fingerprint.limit:300}")
     private int fingerprintLimit;
     @Value("${app.ratelimit.fingerprint.window-seconds:60}")
     private int fingerprintWindowSeconds;
@@ -74,14 +80,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${app.ratelimit.user.window-seconds:60}")
     private int userWindowSeconds;
 
-    // Burst: how many req/5s before suspicion points are added
-    @Value("${app.ratelimit.burst.threshold:20}")
+    @Value("${app.ratelimit.burst.threshold:40}")
     private int burstThreshold;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        // Never rate-limit WebSocket upgrades or actuator probes
         return path.startsWith("/ws") || path.startsWith("/actuator");
     }
 
@@ -94,7 +98,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         boolean isAuthPath = path.startsWith("/api/v1/auth/");
 
-        // ── 1. IP reputation ──────────────────────────────────────────────────
+        String ipActorKey = "ip:" + ip;
+        String fpActorKey = "fp:" + fingerprint;
+
+        // Resolve the authenticated user — JwtAuthenticationFilter already ran.
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User authenticatedUser = (auth != null && auth.getPrincipal() instanceof User u) ? u : null;
+        String userActorKey = authenticatedUser != null ? "user:" + authenticatedUser.getId() : null;
+
+        // ── 1. IP reputation (admin-set permanent block) ──────────────────────
         if (ipReputation.isBlocked(ip)) {
             rejectAccess(response, "Your IP address has been blocked.");
             return;
@@ -107,43 +119,67 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ── 3. Behavioral block ───────────────────────────────────────────────
-        String ipActorKey = "ip:" + ip;
-        String fpActorKey = "fp:" + fingerprint;
+        // ── 3. User behavioral block ──────────────────────────────────────────
+        // Checked BEFORE the bypass token so a CAPTCHA pass cannot lift a user-level block.
+        if (userActorKey != null && behavioralDetection.isBlocked(userActorKey)) {
+            long ttl = behavioralDetection.getBlockTtlSeconds(userActorKey);
+            rejectRateLimit(response, "Account temporarily restricted. Try again later.", ttl);
+            return;
+        }
 
-        if (behavioralDetection.isBlocked(ipActorKey)) {
+        // ── 4. IP behavioral block (unauthenticated traffic only) ────────────
+        // Authenticated users have valid JWTs and are bounded by their own per-user
+        // limits (steps 10–11). Applying an IP block to them would cause collateral
+        // damage to every user behind a shared NAT (corporate, mobile carrier, etc.).
+        if (authenticatedUser == null && behavioralDetection.isBlocked(ipActorKey)) {
             long ttl = behavioralDetection.getBlockTtlSeconds(ipActorKey);
             rejectRateLimit(response, "Too many suspicious requests. Try again later.", ttl);
             return;
         }
+
+        // ── 5. Fingerprint behavioral block ───────────────────────────────────
         if (behavioralDetection.isBlocked(fpActorKey)) {
             long ttl = behavioralDetection.getBlockTtlSeconds(fpActorKey);
             rejectRateLimit(response, "Suspicious activity detected. Try again later.", ttl);
             return;
         }
 
-        // ── 4. Bypass check (client completed CAPTCHA challenge) ──────────────
+        // ── 6. Bypass check (client completed CAPTCHA challenge) ──────────────
         String bypassToken = request.getHeader("X-Bypass-Token");
         boolean hasVerifiedBypass = challengeService.hasBypass(ipActorKey, bypassToken)
                 || challengeService.hasBypass(fpActorKey, bypassToken);
 
         if (!hasVerifiedBypass) {
-            // ── 5. IP-level rate limit ─────────────────────────────────────────
-            try {
-                if (isAuthPath) {
+            // ── 7. Auth-path IP rate limit ────────────────────────────────────
+            // Always enforced per-IP on /auth/** to resist credential stuffing,
+            // regardless of whether the caller has a JWT.
+            if (isAuthPath) {
+                try {
                     rateLimitService.enforceRateLimit(
                             "ip_auth:" + ip, authIpLimit, Duration.ofSeconds(authIpWindowSeconds));
-                } else {
-                    rateLimitService.enforceRateLimit(
-                            "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
+                } catch (RateLimitExceededException e) {
+                    escalateSuspicion(ipActorKey, 10, ip, "auth IP rate limit exceeded");
+                    rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
+                    return;
                 }
-            } catch (RateLimitExceededException e) {
-                escalateSuspicion(ipActorKey, 10, ip, "IP rate limit exceeded");
-                rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
-                return;
             }
 
-            // ── 6. Fingerprint-level rate limit ───────────────────────────────
+            // ── 8. IP rate limit (unauthenticated non-auth requests only) ─────
+            // Authenticated requests are not IP-rate-limited here — they hit the
+            // per-user limit in step 10 instead. This prevents a burst from one
+            // account from consuming IP quota shared by other accounts.
+            if (!isAuthPath && authenticatedUser == null) {
+                try {
+                    rateLimitService.enforceRateLimit(
+                            "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
+                } catch (RateLimitExceededException e) {
+                    escalateSuspicion(ipActorKey, 10, ip, "IP rate limit exceeded");
+                    rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
+                    return;
+                }
+            }
+
+            // ── 9. Fingerprint-level rate limit ───────────────────────────────
             try {
                 rateLimitService.enforceRateLimit(
                         "fp:" + fingerprint, fingerprintLimit, Duration.ofSeconds(fingerprintWindowSeconds));
@@ -153,51 +189,56 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // ── 7. User-level rate limit (JWT subject, if authenticated) ───────
-            // JwtAuthenticationFilter ran before this filter, so SecurityContext is populated.
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof User user) {
-                String userActorKey = "user:" + user.getId();
-                if (behavioralDetection.isBlocked(userActorKey)) {
-                    long ttl = behavioralDetection.getBlockTtlSeconds(userActorKey);
-                    rejectRateLimit(response, "Account temporarily restricted. Try again later.", ttl);
-                    return;
-                }
+            // ── 10. User rate limit ───────────────────────────────────────────
+            if (userActorKey != null) {
                 try {
                     rateLimitService.enforceRateLimit(
                             userActorKey, userLimit, Duration.ofSeconds(userWindowSeconds));
                 } catch (RateLimitExceededException e) {
-                    escalateSuspicion(userActorKey, 5, user.getId().toString(), "user rate limit exceeded");
+                    escalateSuspicion(userActorKey, 5, authenticatedUser.getId().toString(), "user rate limit exceeded");
                     rejectRateLimit(response, e.getMessage(), e.getRetryAfterSeconds());
                     return;
                 }
             }
 
-            // ── 8. Burst detection ────────────────────────────────────────────
-            long burstCount = behavioralDetection.trackRequest(ipActorKey);
+            // ── 11. Burst detection ───────────────────────────────────────────
+            // Track against the user when authenticated; against the IP otherwise.
+            // This is the fix for the "shared IP" problem: one user's burst now only
+            // affects that user, not every other account behind the same NAT.
+            String burstActorKey = userActorKey != null ? userActorKey : ipActorKey;
+            long burstCount = behavioralDetection.trackRequest(burstActorKey);
             if (burstCount > burstThreshold) {
-                boolean nowBlocked = behavioralDetection.reportSuspiciousEvent(ipActorKey, 5);
+                boolean nowBlocked = behavioralDetection.reportSuspiciousEvent(burstActorKey, 5);
                 if (nowBlocked) {
-                    long ttl = behavioralDetection.getBlockTtlSeconds(ipActorKey);
+                    long ttl = behavioralDetection.getBlockTtlSeconds(burstActorKey);
                     rejectRateLimit(response, "Burst traffic detected. Slow down.", ttl);
                     return;
                 }
             }
         }
 
-        // ── Set informational headers ─────────────────────────────────────────
-        long remaining = rateLimitService.getRemainingCount("ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
-        response.setHeader("X-RateLimit-Limit", String.valueOf(ipLimit));
-        response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
+        // ── Set informational rate-limit headers ──────────────────────────────
+        // Report whichever limit actually applies to this caller.
+        if (userActorKey != null) {
+            long remaining = rateLimitService.getRemainingCount(
+                    userActorKey, userLimit, Duration.ofSeconds(userWindowSeconds));
+            response.setHeader("X-RateLimit-Limit", String.valueOf(userLimit));
+            response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
+        } else {
+            long remaining = rateLimitService.getRemainingCount(
+                    "ip:" + ip, ipLimit, Duration.ofSeconds(ipWindowSeconds));
+            response.setHeader("X-RateLimit-Limit", String.valueOf(ipLimit));
+            response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
+        }
 
         chain.doFilter(request, response);
 
-        // Post-response: record auth failures for behavioral scoring
+        // Post-response: record auth failures for behavioral scoring.
+        // Always scored against the IP because failed logins have no authenticated user.
         int status = response.getStatus();
         if (isAuthPath && (status == 401 || status == 400)) {
             long failures = behavioralDetection.recordFailure(ipActorKey);
             if (failures >= 10) {
-                // 10 auth failures in 15 min → escalate suspicion
                 behavioralDetection.reportSuspiciousEvent(ipActorKey, 20);
                 log.warn("High auth failure rate from IP {} ({}x in window)", ip, failures);
             }
@@ -226,7 +267,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.setHeader("Retry-After", String.valueOf(retryAfterSeconds));
-        response.setHeader("X-Challenge-Available", "true"); // hint: CAPTCHA can bypass
+        response.setHeader("X-Challenge-Available", "true");
         objectMapper.writeValue(response.getWriter(),
                 ApiResponse.error("RATE_LIMIT_EXCEEDED", message));
     }

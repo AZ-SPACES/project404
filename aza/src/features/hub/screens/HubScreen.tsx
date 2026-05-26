@@ -31,13 +31,11 @@ const TILE_SIZE = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 
 const ALL_CATEGORIES: ('All' | MiniAppCategory)[] = [
   'All',
+  'Business',
   'Finance',
   'Bills & Utilities',
   'Entertainment',
 ];
-
-// Simulated recently used — first two apps in registry
-const RECENTLY_USED_IDS = ['airtime_data', 'exchange_rates'];
 
 export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
@@ -63,13 +61,6 @@ export default function HubScreen() {
       return matchesSearch && matchesCategory;
     });
   }, [searchQuery, activeCategory]);
-
-  const recentlyUsed = React.useMemo(
-    () => RECENTLY_USED_IDS.map((id) => getMiniApp(id)).filter(Boolean) as MiniAppEntry[],
-    [],
-  );
-
-  const showRecently = searchQuery.length === 0 && activeCategory === 'All';
 
   return (
     <View style={styles.container}>
@@ -142,33 +133,6 @@ export default function HubScreen() {
                 );
               })}
             </ScrollView>
-
-            {/* Recently used */}
-            {showRecently && recentlyUsed.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>Recently Used</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.recentRow}
-                >
-                  {recentlyUsed.map((app) => (
-                    <TouchableOpacity
-                      key={app.id}
-                      style={styles.recentItem}
-                      onPress={() => openApp(app.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={app.name}
-                    >
-                      <View style={[styles.recentIcon, { backgroundColor: app.color }]}>
-                        <Text style={styles.recentEmoji}>{app.icon}</Text>
-                      </View>
-                      <Text style={styles.recentName} numberOfLines={1}>{app.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            )}
 
             {/* All apps grid */}
             <Text style={styles.sectionLabel}>
@@ -302,29 +266,6 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textPrimary,
       marginTop: Spacing.lg,
       marginBottom: Spacing.md,
-    },
-    recentRow: {
-      gap: Spacing.md,
-      paddingBottom: Spacing.sm,
-    },
-    recentItem: {
-      alignItems: 'center',
-      width: 68,
-    },
-    recentIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 6,
-    },
-    recentEmoji: { fontSize: 26 },
-    recentName: {
-      ...Typography.caption,
-      color: Colors.textSecondary,
-      textAlign: 'center',
-      fontWeight: '600',
     },
     grid: {
       flexDirection: 'row',

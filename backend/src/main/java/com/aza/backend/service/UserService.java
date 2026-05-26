@@ -432,6 +432,48 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // ==================== DELETE (SOFT) ====================
+
+    @Transactional
+    public void softDeleteAccount(User user, String accessToken) {
+        String id = user.getId().toString();
+
+        // Free unique fields so the same credentials can be re-registered later
+        user.setEmail("deleted_" + id + "@aza.deleted");
+        user.setPhoneNumber("deleted_" + id);
+        user.setUsername(null);
+
+        // Wipe PII and secrets
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setDateOfBirth(null);
+        user.setProfileImageUrl(null);
+        user.setHomeAddress(null);
+        user.setCity(null);
+        user.setNationality(null);
+        user.setOtherNationality(null);
+        user.setTaxCountry(null);
+        user.setPasswordHash("deleted");
+        user.setPasscodeHash(null);
+        user.setTwoFactorSecret(null);
+
+        user.setDeletedAt(java.time.LocalDateTime.now());
+        user.setStatus(User.AccountStatus.DEACTIVATED);
+        userRepository.save(user);
+
+        // Revoke all sessions
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+
+        if (accessToken != null && accessToken.startsWith("Bearer ")) {
+            String token = accessToken.substring(7);
+            Duration remaining = jwtUtil.getRemainingValidity(token);
+            if (!remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + hashToken(token), "deleted", remaining);
+            }
+        }
+    }
+
     // ==================== DEACTIVATE ====================
 
     @Transactional
@@ -620,6 +662,11 @@ public class UserService {
         }
         
         return suggestions;
+    }
+
+    public User findById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private boolean isValidImage(byte[] bytes) {
