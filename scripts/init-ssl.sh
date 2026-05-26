@@ -19,6 +19,7 @@ docker compose --env-file "$COMPOSE_DIR/backend/.env" -f "$COMPOSE_DIR/docker-co
   certonly --webroot -w /var/www/certbot \
   -d "$DOMAIN" -d "www.$DOMAIN" \
   -d "api.$DOMAIN" -d "admin.$DOMAIN" \
+  -d "merchants.$DOMAIN" -d "pay.$DOMAIN" \
   --email "$EMAIL" \
   --agree-tos --no-eff-email
 
