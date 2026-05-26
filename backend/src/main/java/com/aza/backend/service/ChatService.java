@@ -75,7 +75,7 @@ public class ChatService {
         userRepository.findById(otherUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Find existing chat or create a new one
+        // Find an existing chat or create a new one
         Chat chat = chatRepository.findByParticipants(user.getId(), otherUserId)
                 .orElseGet(() -> {
                     Chat newChat = Chat.builder()
@@ -124,7 +124,7 @@ public class ChatService {
             }
         }
 
-        // Validate message type
+        // Validate a message type
         ChatMessage.MessageType messageType;
         try {
             messageType = ChatMessage.MessageType.valueOf(request.getType().toUpperCase());
@@ -582,13 +582,13 @@ public class ChatService {
                     (b[0] & 0xFF) == 0x89 && (b[1] & 0xFF) == 0x50
                     && (b[2] & 0xFF) == 0x4E && (b[3] & 0xFF) == 0x47;
             case "image/gif" ->
-                    // GIF87a or GIF89a — first 3 bytes are "GIF"
+                    // GIF87a or GIF89a — the first 3 bytes are "GIF"
                     (b[0] & 0xFF) == 0x47 && (b[1] & 0xFF) == 0x49 && (b[2] & 0xFF) == 0x46;
             case "application/pdf" ->
                     (b[0] & 0xFF) == 0x25 && (b[1] & 0xFF) == 0x50
                     && (b[2] & 0xFF) == 0x44 && (b[3] & 0xFF) == 0x46;
             case "video/mp4", "audio/mp4" ->
-                    // ISO base media file: 'ftyp' box starts at byte 4
+                    // ISO base media file: 'ftp' box starts at byte 4
                     b.length >= 8
                     && (b[4] & 0xFF) == 0x66 && (b[5] & 0xFF) == 0x74
                     && (b[6] & 0xFF) == 0x79 && (b[7] & 0xFF) == 0x70;

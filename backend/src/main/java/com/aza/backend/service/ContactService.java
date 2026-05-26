@@ -92,7 +92,7 @@ public class ContactService {
                 contact.setContactUserId(matchedUser.getId());
                 contact.setIsAzaUser(true);
 
-                // Use Aza display name if device contact name is empty
+                // Use Aza display name if the device contact name is empty
                 if (contact.getDisplayName() == null || contact.getDisplayName().isBlank()) {
                     contact.setDisplayName(matchedUser.getFirstName() + " " + matchedUser.getLastName());
                 }
@@ -127,7 +127,7 @@ public class ContactService {
             return listContacts(userId, page, size);
         }
 
-        // Sanitize query — strip anything that's not alphanumeric, space, @, +, or .
+        // Sanitize a query — strip anything that's not alphanumeric, space, @, +, or .
         String sanitizedQuery = query.replaceAll("[^a-zA-Z0-9\\s@+.]", "").trim();
 
         if (sanitizedQuery.isBlank()) {
@@ -160,8 +160,9 @@ public class ContactService {
             throw new RuntimeException("You cannot request yourself as a contact");
         }
 
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!userRepository.existsById(targetUserId)) {
+            throw new RuntimeException("User not found");
+        }
 
         // Check if already a contact
         if (contactRepository.findByOwnerUserIdAndContactUserId(sender.getId(), targetUserId).isPresent()) {
@@ -259,7 +260,8 @@ public class ContactService {
     }
 
     private Contact addMutualContact(UUID ownerId, UUID contactId) {
-        User targetUser = userRepository.findById(contactId).get();
+        User targetUser = userRepository.findById(contactId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return findOrCreateContact(ownerId, contactId, targetUser);
     }
 

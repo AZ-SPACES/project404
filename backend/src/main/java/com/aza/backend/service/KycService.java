@@ -222,7 +222,7 @@ public class KycService {
         return getStatus(user);
     }
 
-    //STEP 7: SUMBIT
+    //STEP 7: SUBMIT
     @Transactional
     public KycStatusResponse submitKyc(User user) {
         KycRecord record = kycRecordRepository.findByUserId(user.getId())
@@ -266,10 +266,10 @@ public class KycService {
              * ============================================================
              * In production, this is where you would:
              *
-             * 1. Call a KYC provider API (e.g. Smile Identity, Onfido, Veriff)
+             * 1. Call a KYC provider API (e.g., Smile Identity, Onfido, Veriff)
              *    - Send the ID document images for OCR and validation
              *    - Send the selfie for face-match comparison against the ID photo
-             *    - Run the user against PEP and sanctions watchlists
+             *    - Run the user against PEP and sanctions watch lists
              *
              * 2. The provider would return a verification result asynchronously
              *    via a webhook endpoint (POST /api/v1/kyc/webhook)

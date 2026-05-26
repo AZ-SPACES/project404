@@ -15,7 +15,6 @@ import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.TransactionRepository;
-import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,6 @@ public class PaymentRequestService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRepository chatRepository;
-    private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
     private final BlockedUserRepository blockedUserRepository;
@@ -88,7 +86,7 @@ public class PaymentRequestService {
         // Create PaymentRequest first (messageId will be linked below)
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .chatId(req.getChatId())
-                .messageId(UUID.randomUUID()) // placeholder — updated after message is saved
+                .messageId(UUID.randomUUID()) // placeholder — updated after a message is saved
                 .requesterId(requester.getId())
                 .payerId(payerId)
                 .amount(req.getAmount())
@@ -124,9 +122,8 @@ public class PaymentRequestService {
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.PAYMENT_REQUEST_RECEIVED, response);
 
-        // FCM push to payer (respects silent hours with amount threshold)
-        User requesterUser = requester;
-        String requesterName = requesterUser.getFirstName() + " " + requesterUser.getLastName();
+        // FCM push to payer (respects silent hours with an amount threshold)
+        String requesterName = requester.getFirstName() + " " + requester.getLastName();
         notificationService.sendPaymentRequestReceivedNotification(
                 payerId, requesterName, req.getAmount(), paymentRequest.getId().toString());
 
@@ -163,7 +160,7 @@ public class PaymentRequestService {
 
         userService.verifyPasscode(payer, passcode);
 
-        // Enforce daily transfer limit — same cap applies regardless of transfer path
+        // Enforce daily transfer limit — the same cap applies regardless of transfer path
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
@@ -319,14 +316,6 @@ public class PaymentRequestService {
         if (!expired.isEmpty()) {
             log.info("Expired {} payment request(s)", expired.size());
         }
-    }
-
-    // ==================== GET (for embedding in message) ====================
-
-    public PaymentRequestResponse getById(UUID id) {
-        return paymentRequestRepository.findById(id)
-                .map(this::toResponse)
-                .orElse(null);
     }
 
     // ==================== FINANCIAL SUMMARY ====================
