@@ -103,6 +103,18 @@ services:
     networks:
       - aza-network
 
+  aza-merchants:
+    build:
+      context: ./aza-merchants
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-merchants
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
   nginx:
     image: nginx:alpine
     container_name: aza-nginx
@@ -118,6 +130,7 @@ services:
       - backend
       - aza-web
       - aza-admin
+      - aza-merchants
     networks:
       - aza-network
 

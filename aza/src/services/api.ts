@@ -480,8 +480,26 @@ export const createMerchantSession = (data: {
 
 export const getMerchantApiKeys = () => api.get('/api/v1/merchant/api-keys');
 
-export const createMerchantApiKey = (name?: string) =>
-  api.post('/api/v1/merchant/api-keys', name ? { name } : {});
+export const createMerchantApiKey = (data: {
+  label?: string;
+  environment?: 'LIVE' | 'TEST';
+  type?: 'SECRET' | 'RESTRICTED';
+  scopes?: string;
+  ipWhitelist?: string;
+  expirationDays?: number;
+}) => api.post('/api/v1/merchant/api-keys', data);
+
+export const updateMerchantApiKey = (keyId: string, data: {
+  label?: string;
+  ipWhitelist?: string;
+  scopes?: string;
+}) => api.put(`/api/v1/merchant/api-keys/${keyId}`, data);
+
+export const rollMerchantApiKey = (keyId: string, expirationHours?: number) =>
+  api.post(`/api/v1/merchant/api-keys/${keyId}/roll`, { expirationHours });
+
+export const getMerchantApiLogs = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/api-keys/logs?page=${page}&size=${size}`);
 
 export const revokeMerchantApiKey = (keyId: string) =>
   api.delete(`/api/v1/merchant/api-keys/${keyId}`);

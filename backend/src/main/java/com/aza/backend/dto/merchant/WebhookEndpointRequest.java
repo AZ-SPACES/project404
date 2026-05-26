@@ -10,4 +10,6 @@ public class WebhookEndpointRequest {
     private String url;
 
     private String events; // comma-separated, default: "checkout.completed"
+
+    private Boolean isActive;
 }
