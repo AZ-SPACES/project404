@@ -41,6 +41,7 @@ public class MerchantService {
     private final MerchantApiKeyRepository apiKeyRepository;
     private final MerchantApiLogRepository apiLogRepository;
     private final WebhookEndpointRepository webhookRepository;
+    private final WebhookDeliveryRepository webhookDeliveryRepository;
     private final MerchantPayoutRepository payoutRepository;
     private final UserService userService;
     private final WalletRepository walletRepository;
@@ -566,6 +567,36 @@ public class MerchantService {
                         .createdAt(e.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public List<WebhookDeliveryResponse> listWebhookDeliveries(UUID userId, UUID endpointId) {
+        Merchant merchant = requireMerchant(userId);
+        WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Webhook not found", HttpStatus.NOT_FOUND));
+        if (!endpoint.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
+        }
+        return webhookDeliveryRepository.findAllByEndpointIdOrderByCreatedAtDesc(endpointId)
+                .stream()
+                .limit(50)
+                .map(d -> WebhookDeliveryResponse.builder()
+                        .id(d.getId().toString())
+                        .eventType(d.getEventType())
+                        .status(mapDeliveryStatus(d.getStatus()))
+                        .httpStatus(d.getResponseStatusCode())
+                        .attemptNumber(d.getAttemptCount())
+                        .createdAt(d.getCreatedAt())
+                        .nextRetryAt(d.getNextRetryAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private static String mapDeliveryStatus(com.aza.backend.entity.WebhookDelivery.DeliveryStatus status) {
+        return switch (status) {
+            case SUCCESS -> "SUCCESS";
+            case FAILED, ABANDONED -> "FAILED";
+            case PENDING -> "PENDING";
+        };
     }
 
     @Transactional

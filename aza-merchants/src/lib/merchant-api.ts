@@ -254,12 +254,18 @@ export interface Page<T> {
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-export async function login(email: string, password: string) {
-  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+export async function preLogin(identifier: string, password: string): Promise<void> {
+  await request<{ success: boolean; data: string }>(
     "/api/v1/auth/login",
-    { method: "POST", body: JSON.stringify({ email, password }) }
+    { method: "POST", body: JSON.stringify({ identifier, password }) }
   );
-  if (!body.success) throw new Error("Login failed");
+}
+
+export async function verifyLoginOtp(identifier: string, code: string): Promise<{ accessToken: string; refreshToken: string }> {
+  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+    "/api/v1/auth/verify-otp",
+    { method: "POST", body: JSON.stringify({ identifier, code, purpose: "login" }) }
+  );
   saveTokens(body.data.accessToken, body.data.refreshToken);
   return body.data;
 }

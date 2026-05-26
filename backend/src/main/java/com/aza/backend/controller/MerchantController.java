@@ -218,6 +218,14 @@ public class MerchantController {
                 merchantService.updateWebhookEndpoint(user.getId(), endpointId, request)));
     }
 
+    @GetMapping("/webhooks/{endpointId}/deliveries")
+    public ResponseEntity<ApiResponse<List<WebhookDeliveryResponse>>> listWebhookDeliveries(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID endpointId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listWebhookDeliveries(user.getId(), endpointId)));
+    }
+
     @DeleteMapping("/webhooks/{endpointId}")
     public ResponseEntity<ApiResponse<Void>> deleteWebhook(
             @AuthenticationPrincipal User user,
