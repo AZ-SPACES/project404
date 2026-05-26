@@ -7,18 +7,21 @@ import {
   Animated,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../../theme";
 import Button from "../../../../components/ui/Button";
 import KYCProgressBar from "../../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
-import { submitKybFinal } from "../../../../services/api";
+import { uploadKybDocument, submitKybFinal } from "../../../../services/api";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantKYBDocuments">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantKYBDocuments">;
@@ -31,7 +34,7 @@ type DocumentType =
   | "OWNER_ID_BACK"
   | "BANK_STATEMENT";
 
-const DOCUMENTS: { type: DocumentType; label: string; required: boolean }[] = [
+const ALL_DOCUMENTS: { type: DocumentType; label: string; required: boolean }[] = [
   { type: "BUSINESS_REGISTRATION", label: "Business Registration", required: true },
   { type: "CERTIFICATE_OF_INCORPORATION", label: "Certificate of Incorporation", required: false },
   { type: "TAX_CERTIFICATE", label: "Tax Certificate", required: false },
@@ -40,17 +43,22 @@ const DOCUMENTS: { type: DocumentType; label: string; required: boolean }[] = [
   { type: "BANK_STATEMENT", label: "Bank Statement", required: false },
 ];
 
-const REQUIRED_TYPES = DOCUMENTS.filter((d) => d.required).map((d) => d.type);
-
 export default function MerchantKYBDocumentsScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
-  const { merchantId } = route.params;
+  const { merchantId, isPrimaryOwner } = route.params;
+
+  const documents = isPrimaryOwner
+    ? ALL_DOCUMENTS.filter((d) => d.type !== "OWNER_ID_FRONT" && d.type !== "OWNER_ID_BACK")
+    : ALL_DOCUMENTS;
+
+  const requiredTypes = documents.filter((d) => d.required).map((d) => d.type);
 
   const [uploaded, setUploaded] = useState<Set<DocumentType>>(new Set());
+  const [uploading, setUploading] = useState<Set<DocumentType>>(new Set());
   const [submitting, setSubmitting] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -67,27 +75,104 @@ export default function MerchantKYBDocumentsScreen() {
     extrapolate: "clamp",
   });
 
-  const requiredUploaded = REQUIRED_TYPES.every((type) => uploaded.has(type));
+  const requiredUploaded = requiredTypes.every((type) => uploaded.has(type));
+
+  const uploadFile = async (docType: DocumentType, file: any) => {
+    setUploading((prev) => new Set(prev).add(docType));
+    try {
+      await uploadKybDocument(file, docType);
+      setUploaded((prev) => new Set(prev).add(docType));
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ?? err?.message ?? "Upload failed. Please try again.";
+      Alert.alert("Upload Failed", message);
+    } finally {
+      setUploading((prev) => {
+        const next = new Set(prev);
+        next.delete(docType);
+        return next;
+      });
+    }
+  };
+
+  const pickFromCamera = async (docType: DocumentType) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Camera access is needed to take a photo.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const file = {
+        uri: result.assets[0].uri,
+        type: "image/jpeg",
+        name: `${docType.toLowerCase()}.jpg`,
+      };
+      await uploadFile(docType, file);
+    }
+  };
+
+  const pickFromLibrary = async (docType: DocumentType) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Photo library access is needed to select an image.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const file = {
+        uri: result.assets[0].uri,
+        type: "image/jpeg",
+        name: `${docType.toLowerCase()}.jpg`,
+      };
+      await uploadFile(docType, file);
+    }
+  };
+
+  const pickDocument = async (docType: DocumentType) => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["application/pdf", "image/jpeg", "image/png"],
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      const rawMime = asset.mimeType ?? "";
+      const mime = rawMime.includes("pdf")
+        ? "application/pdf"
+        : rawMime.includes("png")
+        ? "image/png"
+        : "image/jpeg";
+      const ext = mime === "application/pdf" ? "pdf" : mime === "image/png" ? "png" : "jpg";
+      const file = {
+        uri: asset.uri,
+        type: mime,
+        name: asset.name ?? `${docType.toLowerCase()}.${ext}`,
+      };
+      await uploadFile(docType, file);
+    }
+  };
 
   const handleDocumentPress = (docType: DocumentType, label: string) => {
     const isUploaded = uploaded.has(docType);
+    const isUploading = uploading.has(docType);
+    if (isUploading) return;
+
     Alert.alert(
-      isUploaded ? "Replace Document" : `Upload ${label}`,
-      isUploaded
-        ? `"${label}" is already uploaded. Would you like to replace it?`
-        : `Simulate uploading "${label}"?`,
+      isUploaded ? `Replace ${label}` : `Upload ${label}`,
+      "Choose a source",
       [
+        { text: "Take Photo", onPress: () => pickFromCamera(docType) },
+        { text: "Choose from Library", onPress: () => pickFromLibrary(docType) },
+        { text: "Upload PDF", onPress: () => pickDocument(docType) },
         { text: "Cancel", style: "cancel" },
-        {
-          text: isUploaded ? "Replace" : "Upload",
-          onPress: () => {
-            setUploaded((prev) => {
-              const next = new Set(prev);
-              next.add(docType);
-              return next;
-            });
-          },
-        },
       ]
     );
   };
@@ -154,20 +239,42 @@ export default function MerchantKYBDocumentsScreen() {
             Upload clear photos or scans. PDF, JPG, and PNG accepted.
           </Text>
 
+          {isPrimaryOwner && (
+            <View style={styles.infoBanner}>
+              <MaterialIcons name="info-outline" size={18} color={Colors.primary} />
+              <Text style={styles.infoBannerText}>
+                Your ID documents are already on file from your personal verification.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.documentsContainer}>
-            {DOCUMENTS.map((doc) => {
+            {documents.map((doc) => {
               const isUploaded = uploaded.has(doc.type);
+              const isUploading = uploading.has(doc.type);
               return (
                 <TouchableOpacity
                   key={doc.type}
-                  style={[styles.documentCard, isUploaded && styles.documentCardUploaded]}
+                  style={[
+                    styles.documentCard,
+                    isUploaded && styles.documentCardUploaded,
+                    isUploading && styles.documentCardUploading,
+                  ]}
                   onPress={() => handleDocumentPress(doc.type, doc.label)}
-                  activeOpacity={0.7}
+                  activeOpacity={isUploading ? 1 : 0.7}
                   accessibilityRole="button"
                   accessibilityLabel={`${doc.label}${doc.required ? ", required" : ", optional"}`}
+                  accessibilityState={{ disabled: isUploading }}
                 >
-                  <View style={[styles.documentIconArea, isUploaded && styles.documentIconAreaUploaded]}>
-                    {isUploaded ? (
+                  <View
+                    style={[
+                      styles.documentIconArea,
+                      isUploaded && styles.documentIconAreaUploaded,
+                    ]}
+                  >
+                    {isUploading ? (
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    ) : isUploaded ? (
                       <Feather name="check-circle" size={24} color={Colors.success} />
                     ) : (
                       <Feather name="upload" size={24} color={Colors.primary} />
@@ -191,7 +298,7 @@ export default function MerchantKYBDocumentsScreen() {
                             : styles.documentTagTextOptional,
                         ]}
                       >
-                        {doc.required ? "Required" : "Optional"}
+                        {isUploading ? "Uploading…" : doc.required ? "Required" : "Optional"}
                       </Text>
                     </View>
                   </View>
@@ -278,6 +385,23 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
       lineHeight: 20,
     },
+    infoBanner: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: Spacing.sm,
+      marginTop: Spacing.lg,
+      padding: Spacing.md,
+      backgroundColor: isDark ? "rgba(183,237,126,0.08)" : "rgba(22,51,0,0.05)",
+      borderRadius: Radius.sm,
+      borderLeftWidth: 3,
+      borderLeftColor: Colors.primary,
+    },
+    infoBannerText: {
+      flex: 1,
+      fontSize: 13,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
     documentsContainer: {
       marginTop: Spacing.xl,
       gap: Spacing.sm,
@@ -296,6 +420,9 @@ function createStyles(Colors: ThemeColors) {
     documentCardUploaded: {
       borderColor: Colors.success,
       backgroundColor: isDark ? Colors.white10 : "#F4FBF0",
+    },
+    documentCardUploading: {
+      opacity: 0.7,
     },
     documentIconArea: {
       width: 44,

@@ -1,13 +1,13 @@
 import MyBusinessApp from './MyBusinessApp';
 import { MiniAppEntry } from './types';
+import { LightColors } from '../../../theme';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
   {
-    id: 'my_business',
-    name: 'My Business',
+    id: 'aza_business',
+    name: 'Aza Business',
     description: 'Accept payments, manage payouts and API keys',
-    icon: '🏪',
-    color: '#174717',
+    icon: require('../../../assets/aza-z.png'),
     category: 'Business',
     component: MyBusinessApp,
   },

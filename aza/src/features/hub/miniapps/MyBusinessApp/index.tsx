@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator,} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useAppTheme, Spacing } from '../../../../theme';
-import { MiniAppProps } from '../types';
 import { getMerchant } from '../../../../services/api';
 
 import { Page, MerchantData, NavProps } from './types';
@@ -51,9 +51,10 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
       .then((res: any) => {
         const m = extractData(res);
         setMerchant(m);
-        if (!m) { setPageStack(['intro']); return; }
+        if (!m || !m.status) { setPageStack(['intro']); return; }
         switch (m.status) {
           case 'ACTIVE': setPageStack(['dashboard']); break;
+          case 'PENDING':
           case 'PENDING_KYB':
             navigation.navigate('MerchantKYBIntro', { merchantId: m.id });
             setPageStack(['intro']);
@@ -94,7 +95,7 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
       case 'suspended':
         return (
           <View style={[styles.center, { padding: Spacing.lg }]}>
-            <Text style={{ fontSize: 48 }}>⛔</Text>
+            <MaterialIcons name="block" size={48} color={Colors.error || "#D1222E"} />
             <Text style={[styles.introTitle, { color: Colors.textPrimary, marginTop: Spacing.md }]}>Account Suspended</Text>
             <Text style={[styles.introSubtitle, { color: Colors.textSecondary }]}>
               Your merchant account has been suspended. Please contact support.
@@ -104,7 +105,7 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
       case 'rejected':
         return (
           <View style={[styles.center, { padding: Spacing.lg }]}>
-            <Text style={{ fontSize: 48 }}>❌</Text>
+            <MaterialIcons name="cancel" size={48} color={Colors.error || "#D1222E"} />
             <Text style={[styles.introTitle, { color: Colors.textPrimary, marginTop: Spacing.md }]}>Application Rejected</Text>
             <Text style={[styles.introSubtitle, { color: Colors.textSecondary }]}>
               {merchant?.rejectionReason ?? 'Your KYB application was not approved. Please contact support for details.'}

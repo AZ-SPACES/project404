@@ -175,8 +175,16 @@ function AppTile({ app, onPress, styles, Colors }: TileProps) {
       accessibilityRole="button"
       accessibilityLabel={`Open ${app.name}`}
     >
-      <View style={[styles.tileIcon, { backgroundColor: app.color }]}>
-        <Text style={styles.tileEmoji}>{app.icon}</Text>
+      <View style={[styles.tileIcon, app.color ? { backgroundColor: app.color } : undefined]}>
+        {typeof app.icon === 'string' ? (
+          <Text style={styles.tileEmoji}>{app.icon}</Text>
+        ) : (
+          <Image 
+            source={app.icon} 
+            style={app.color ? { width: 32, height: 32 } : { width: '100%', height: '100%' }} 
+            resizeMode={app.color ? "contain" : "cover"} 
+          />
+        )}
       </View>
       <Text style={styles.tileName} numberOfLines={2}>{app.name}</Text>
     </TouchableOpacity>
@@ -284,6 +292,7 @@ function createStyles(Colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: Spacing.xs,
+      overflow: 'hidden',
     },
     tileEmoji: { fontSize: 32 },
     tileName: {
