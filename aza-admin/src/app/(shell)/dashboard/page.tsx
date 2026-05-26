@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getStats, getLiveStats, type AdminStats, type LiveStats } from "@/lib/admin-api";
-import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity } from "lucide-react";
+import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity, Store } from "lucide-react";
 
 function StatCard({
   label, value, sub, icon: Icon, color = "text-white",
@@ -108,6 +108,16 @@ export default function DashboardPage() {
           <StatCard label="Completed" value={fmt(stats.completedTransactions)} icon={TrendingUp} color="text-emerald-400" />
           <StatCard label="Total Volume" value={fmtGhs(stats.totalTransactionVolume)} icon={DollarSign} />
           <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#F5A623]" />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-xs uppercase tracking-widest text-white/30 font-medium mb-4">Merchants</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard label="Total Merchants" value={fmt(stats.totalMerchants)} icon={Store} />
+          <StatCard label="Active" value={fmt(stats.activeMerchants)} icon={Store} color="text-emerald-400" />
+          <StatCard label="Pending KYB" value={fmt(stats.pendingKybMerchants)} icon={ShieldAlert} color="text-amber-400" />
+          <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#F5A623]" />
         </div>
       </section>
 

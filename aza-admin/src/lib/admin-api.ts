@@ -168,6 +168,10 @@ export interface AdminStats {
   totalTransactionVolume: number;
   transactionsToday: number;
   volumeToday: number;
+  totalMerchants: number;
+  activeMerchants: number;
+  pendingKybMerchants: number;
+  totalMerchantVolume: number;
 }
 
 export function getStats(): Promise<AdminStats> {
@@ -830,6 +834,16 @@ export interface AdminMerchant {
   activatedAt: string | null;
 }
 
+export interface KybDocument {
+  id: string;
+  type: string;
+  fileName: string | null;
+  url: string;
+  fileSizeBytes: number | null;
+  mimeType: string | null;
+  uploadedAt: string | null;
+}
+
 export interface MerchantKyb {
   status: string;
   registrationNumber: string | null;
@@ -837,13 +851,39 @@ export interface MerchantKyb {
   registeredAddress: string | null;
   city: string | null;
   taxIdNumber: string | null;
+  website: string | null;
   ownerFullName: string | null;
   ownerIdType: string | null;
   rejectionReason: string | null;
   moreInfoRequest: string | null;
-  documents: { id: string; documentType: string; fileUrl: string; status: string }[];
+  documents: KybDocument[];
   submittedAt: string | null;
   reviewedAt: string | null;
+}
+
+export interface MerchantPayout {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  note: string | null;
+  requestedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface MerchantSession {
+  id: string;
+  merchantId: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  status: string;
+  customerId: string | null;
+  platformFee: number | null;
+  netAmount: number | null;
+  createdAt: string;
+  expiresAt: string | null;
+  completedAt: string | null;
 }
 
 export function getMerchants(params: {
@@ -885,6 +925,21 @@ export function setMerchantStatus(merchantId: string, status: string): Promise<A
     method: "PUT",
     body: JSON.stringify({ status }),
   });
+}
+
+export function updateMerchantFeeRate(merchantId: string, feeRateBps: number): Promise<AdminMerchant> {
+  return request(`/api/v1/admin/merchants/${merchantId}/fee-rate`, {
+    method: "PATCH",
+    body: JSON.stringify({ feeRateBps }),
+  });
+}
+
+export function getMerchantPayouts(merchantId: string, page = 0, size = 20): Promise<Page<MerchantPayout>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/payouts?page=${page}&size=${size}`);
+}
+
+export function getMerchantSessions(merchantId: string, page = 0, size = 20): Promise<Page<MerchantSession>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/sessions?page=${page}&size=${size}`);
 }
 
 // ── Rate Limit Management ─────────────────────────────────────────────────────

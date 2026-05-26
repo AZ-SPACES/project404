@@ -2,6 +2,7 @@ package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.*;
+import com.aza.backend.service.CheckoutService;
 import com.aza.backend.service.MerchantService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class AdminMerchantController {
 
     private final MerchantService merchantService;
+    private final CheckoutService checkoutService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<MerchantResponse>>> list(
@@ -54,6 +56,29 @@ public class AdminMerchantController {
         return ResponseEntity.ok(ApiResponse.success(merchantService.adminSetStatus(merchantId, request.getStatus())));
     }
 
+    @PatchMapping("/{merchantId}/fee-rate")
+    public ResponseEntity<ApiResponse<MerchantResponse>> setFeeRate(
+            @PathVariable UUID merchantId,
+            @RequestBody FeeRateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.adminSetFeeRate(merchantId, request.getFeeRateBps())));
+    }
+
+    @GetMapping("/{merchantId}/payouts")
+    public ResponseEntity<ApiResponse<Page<PayoutResponse>>> getPayouts(
+            @PathVariable UUID merchantId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.adminGetPayouts(merchantId, page, size)));
+    }
+
+    @GetMapping("/{merchantId}/sessions")
+    public ResponseEntity<ApiResponse<Page<CheckoutSessionResponse>>> getSessions(
+            @PathVariable UUID merchantId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.listMerchantSessions(merchantId, page, size)));
+    }
+
     @Data
     public static class KybReviewRequest {
         private boolean approve;
@@ -64,5 +89,10 @@ public class AdminMerchantController {
     @Data
     public static class StatusRequest {
         private String status;
+    }
+
+    @Data
+    public static class FeeRateRequest {
+        private int feeRateBps;
     }
 }
