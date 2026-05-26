@@ -55,73 +55,6 @@ export type Section = {
   data: Transaction[];
 };
 
-export const mockTransactions: Section[] = [
-  {
-    title: "January 22, 2024",
-    data: [
-      {
-        id: "0",
-        name: "Paapa Cobbold",
-        type: "Transfers",
-        time: "11:45 AM",
-        amount: 150000.1,
-        isCredit: false,
-        isPending: true,
-        fullDate: "2024-01-22T11:45:00Z",
-      },
-      {
-        id: "1",
-        name: "Davies Opoku",
-        type: "Transfers",
-        time: "10:25 AM",
-        amount: 2000000.0,
-        isCredit: true,
-        fullDate: "2024-01-22T10:25:00Z",
-      },
-      {
-        id: "2",
-        name: "Ibrahim Mahama",
-        type: "Transfers",
-        time: "10:26 AM",
-        amount: 594200.0,
-        isCredit: false,
-        fullDate: "2024-01-22T10:26:00Z",
-      },
-      {
-        id: "3",
-        name: "Charlotte osei",
-        type: "Transfers",
-        time: "10:23 AM",
-        amount: 1204000.0,
-        isCredit: false,
-        fullDate: "2024-01-22T10:23:00Z",
-      },
-    ],
-  },
-  {
-    title: "January 21, 2024",
-    data: [
-      {
-        id: "4",
-        name: "Kevin Okyere",
-        type: "Transfers",
-        time: "10:25 AM",
-        amount: 17200.0,
-        isCredit: false,
-        fullDate: "2024-01-21T10:25:00Z",
-      },
-      {
-        id: "5",
-        name: "Shirley Ayorkor Botchwey",
-        type: "Transfers",
-        time: "10:25 AM",
-        amount: 8000000.0,
-        isCredit: true,
-        fullDate: "2024-01-21T10:25:00Z",
-      },
-    ],
-  },
-];
 
 export function TransactionsScreen() {
   const { colors: Colors, isDark } = useAppTheme();
@@ -192,13 +125,6 @@ export function TransactionsScreen() {
     }
     return filtered;
   }, [sections, searchQuery, transactionGrouping]);
-
-  const formatCurrency = (amount: number) => {
-    return `GH₵ ${amount.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
 
   const renderTransaction = ({ item }: { item: Transaction }) => {
     return (
