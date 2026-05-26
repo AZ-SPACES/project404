@@ -10,12 +10,14 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { useDisplayContext } from '../../../providers/DisplayProvider';
+import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../providers/DisplayProvider';
 import { RootStackParamList } from '../../../navigation/types';
 import { MINI_APP_REGISTRY, getMiniApp } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
@@ -29,18 +31,20 @@ const TILE_SIZE = (width - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 
 const ALL_CATEGORIES: ('All' | MiniAppCategory)[] = [
   'All',
+  'Business',
   'Finance',
   'Bills & Utilities',
   'Entertainment',
 ];
 
-// Simulated recently used — first two apps in registry
-const RECENTLY_USED_IDS = ['airtime_data', 'exchange_rates'];
-
 export default function HubScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { hubBackground } = useDisplayContext();
+  const { hubBackground, hubDim, hubBlur, hubBannerGradient, accentId } = useDisplayContext();
+  const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
+  const bannerGrad = hubBannerGradient === 'accent'
+    ? [accentPalette.primary, accentPalette.gradientEnd]
+    : (BANNER_GRADIENTS.find(g => g.id === hubBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
   const navigation = useNavigation<HubNavProp>();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,24 +62,19 @@ export default function HubScreen() {
     });
   }, [searchQuery, activeCategory]);
 
-  const recentlyUsed = React.useMemo(
-    () => RECENTLY_USED_IDS.map((id) => getMiniApp(id)).filter(Boolean) as MiniAppEntry[],
-    [],
-  );
-
-  const showRecently = searchQuery.length === 0 && activeCategory === 'All';
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Hero background */}
-      <View style={StyleSheet.absoluteFill}>
-        <Image
-          source={{ uri: hubBackground }}
-          style={[StyleSheet.absoluteFill, { height: '55%' }]}
-          resizeMode="cover"
-        />
+      <View style={[StyleSheet.absoluteFill, { height: '55%' }]}>
+        {hubBackground ? (
+          <Image source={{ uri: hubBackground }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <LinearGradient colors={bannerGrad as [string, string]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        )}
+        {hubBlur > 0 && <BlurView intensity={hubBlur} tint="default" style={StyleSheet.absoluteFill} />}
+        {hubDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${hubDim})` }]} />}
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -135,33 +134,6 @@ export default function HubScreen() {
               })}
             </ScrollView>
 
-            {/* Recently used */}
-            {showRecently && recentlyUsed.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>Recently Used</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.recentRow}
-                >
-                  {recentlyUsed.map((app) => (
-                    <TouchableOpacity
-                      key={app.id}
-                      style={styles.recentItem}
-                      onPress={() => openApp(app.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={app.name}
-                    >
-                      <View style={[styles.recentIcon, { backgroundColor: app.color }]}>
-                        <Text style={styles.recentEmoji}>{app.icon}</Text>
-                      </View>
-                      <Text style={styles.recentName} numberOfLines={1}>{app.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            )}
-
             {/* All apps grid */}
             <Text style={styles.sectionLabel}>
               {activeCategory === 'All' ? 'All Apps' : activeCategory}
@@ -203,8 +175,16 @@ function AppTile({ app, onPress, styles, Colors }: TileProps) {
       accessibilityRole="button"
       accessibilityLabel={`Open ${app.name}`}
     >
-      <View style={[styles.tileIcon, { backgroundColor: app.color }]}>
-        <Text style={styles.tileEmoji}>{app.icon}</Text>
+      <View style={[styles.tileIcon, app.color ? { backgroundColor: app.color } : undefined]}>
+        {typeof app.icon === 'string' ? (
+          <Text style={styles.tileEmoji}>{app.icon}</Text>
+        ) : (
+          <Image 
+            source={app.icon} 
+            style={app.color ? { width: 32, height: 32 } : { width: '100%', height: '100%' }} 
+            resizeMode={app.color ? "contain" : "cover"} 
+          />
+        )}
       </View>
       <Text style={styles.tileName} numberOfLines={2}>{app.name}</Text>
     </TouchableOpacity>
@@ -295,29 +275,6 @@ function createStyles(Colors: ThemeColors) {
       marginTop: Spacing.lg,
       marginBottom: Spacing.md,
     },
-    recentRow: {
-      gap: Spacing.md,
-      paddingBottom: Spacing.sm,
-    },
-    recentItem: {
-      alignItems: 'center',
-      width: 68,
-    },
-    recentIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 6,
-    },
-    recentEmoji: { fontSize: 26 },
-    recentName: {
-      ...Typography.caption,
-      color: Colors.textSecondary,
-      textAlign: 'center',
-      fontWeight: '600',
-    },
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -335,6 +292,7 @@ function createStyles(Colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: Spacing.xs,
+      overflow: 'hidden',
     },
     tileEmoji: { fontSize: 32 },
     tileName: {

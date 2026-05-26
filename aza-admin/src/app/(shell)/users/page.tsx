@@ -91,7 +91,7 @@ export default function UsersPage() {
                 {result?.content.map(u => (
                   <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-white font-medium">{u.displayName ?? `${u.firstName} ${u.lastName}`}</p>
+                      <p className="text-white font-medium">{`${u.firstName} ${u.lastName}`.trim() || u.username}</p>
                       <p className="text-white/40 text-xs mt-0.5">{u.email}</p>
                     </td>
                     <td className="px-4 py-3 text-white/60">{u.phone}</td>

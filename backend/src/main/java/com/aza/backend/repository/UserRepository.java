@@ -63,4 +63,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     java.util.List<User> findAllByKycStatus(User.KycStatus kycStatus);
 
     java.util.List<User> findAllByStatus(User.AccountStatus status);
+
+    @Query("SELECT u FROM User u WHERE EXTRACT(MONTH FROM u.dateOfBirth) = :month AND EXTRACT(DAY FROM u.dateOfBirth) = :day AND u.status = 'ACTIVE'")
+    java.util.List<User> findActiveUsersByBirthdayMonthAndDay(@Param("month") int month, @Param("day") int day);
 }
+

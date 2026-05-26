@@ -9,13 +9,13 @@ EMAIL="caleb.dussey04@gmail.com"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Starting services with HTTP-only nginx config..."
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" up -d nginx certbot
+docker compose --env-file "$COMPOSE_DIR/backend/.env" -f "$COMPOSE_DIR/docker-compose.yml" up -d nginx certbot
 
 echo "==> Waiting for nginx to be ready..."
 sleep 5
 
 echo "==> Requesting SSL certificate for all domains..."
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" run --rm --entrypoint certbot certbot \
+docker compose --env-file "$COMPOSE_DIR/backend/.env" -f "$COMPOSE_DIR/docker-compose.yml" run --rm --entrypoint certbot certbot \
   certonly --webroot -w /var/www/certbot \
   -d "$DOMAIN" -d "www.$DOMAIN" \
   -d "api.$DOMAIN" -d "admin.$DOMAIN" \
@@ -27,7 +27,7 @@ cp "$COMPOSE_DIR/nginx/conf.d/default.ssl.conf.template" \
    "$COMPOSE_DIR/nginx/conf.d/default.conf"
 
 echo "==> Reloading nginx..."
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" exec nginx nginx -s reload
+docker compose --env-file "$COMPOSE_DIR/backend/.env" -f "$COMPOSE_DIR/docker-compose.yml" exec nginx nginx -s reload
 
 echo ""
 echo "SSL setup complete. Now bring up all services:"

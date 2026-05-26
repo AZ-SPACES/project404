@@ -3,11 +3,12 @@ type Status = "idle" | "loading" | "success";
 interface WaitlistFormProps {
   email: string;
   status: Status;
+  error: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
-export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistFormProps) {
+export function WaitlistForm({ email, status, error: _error, onChange, onSubmit }: WaitlistFormProps) {
   return (
     <form
       onSubmit={onSubmit}
@@ -25,6 +26,7 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
         value={email}
         disabled={status === "loading"}
         onChange={onChange}
+        aria-label="Email address"
         className="w-full h-[60px] pl-6 pr-[150px] rounded-xl outline-none transition-all duration-200 placeholder-zinc-500 disabled:opacity-70 disabled:cursor-not-allowed"
         style={{
           backgroundColor: "#27272a",
@@ -36,16 +38,16 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
         <button
           type="submit"
           disabled={status === "loading"}
-          className="h-full px-6 rounded-xl font-medium text-white transition-all active:scale-95 hover:brightness-110 disabled:hover:brightness-100 disabled:active:scale-100 disabled:cursor-wait flex items-center justify-center min-w-[130px]"
-          style={{ backgroundColor: "#10b981" }}
+          className="h-full px-6 rounded-xl font-semibold transition-all active:scale-95 hover:opacity-90 disabled:hover:opacity-100 disabled:active:scale-100 disabled:cursor-wait flex items-center justify-center min-w-[130px]"
+          style={{ backgroundColor: "#174717", color: "#B7EE7A" }}
         >
           {status === "loading" ? (
             <svg
-              className="animate-spin h-5 w-5 text-white"
+              className="animate-spin h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              aria-label="Loading"
+              aria-label="Joining…"
             >
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path

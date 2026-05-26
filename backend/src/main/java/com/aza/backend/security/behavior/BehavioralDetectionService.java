@@ -23,16 +23,15 @@ public class BehavioralDetectionService {
 
     private final StringRedisTemplate redis;
 
-    // Burst window: if more than BURST_THRESHOLD requests arrive in BURST_WINDOW_SECONDS
-    // the actor earns suspicion points.
+    // Window used by trackRequest() to count requests for burst detection.
+    // The threshold itself lives in RateLimitFilter (app.ratelimit.burst.threshold).
     private static final int BURST_WINDOW_SECONDS = 5;
-    private static final int BURST_THRESHOLD = 25;
 
     // Points before an auto-block is triggered
     private static final int SUSPICION_BLOCK_THRESHOLD = 50;
 
-    // Progressive block durations (seconds): 1 min → 5 min → 30 min → 2 h
-    private static final long[] BLOCK_DURATIONS = {60L, 300L, 1800L, 7200L};
+    // Progressive block durations (seconds): 15 min → 1 hr → 6 hr → 24 hr
+    private static final long[] BLOCK_DURATIONS = {900L, 3600L, 21600L, 86400L};
 
     // Atomically prune old entries, record the new request, return current window count.
     private static final RedisScript<Long> BURST_SCRIPT = RedisScript.of(
@@ -71,10 +70,6 @@ public class BehavioralDetectionService {
                 String.valueOf((long) BURST_WINDOW_SECONDS * 1000)
         );
         return count != null ? count : 0;
-    }
-
-    public boolean isBursting(String actorKey) {
-        return trackRequest(actorKey) > BURST_THRESHOLD;
     }
 
     /**

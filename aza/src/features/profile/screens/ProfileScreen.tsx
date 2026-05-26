@@ -11,7 +11,8 @@ import {
   Dimensions,
   Alert,
   Platform,
-  Linking } from "react-native";
+  Linking,
+  ActivityIndicator } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
 import { useNavigation } from "@react-navigation/native";
@@ -25,6 +26,7 @@ import Button from "../../../components/ui/Button";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
+import { getMerchant } from "../../../services/api";
 
 const { height } = Dimensions.get('window');
 
@@ -72,8 +74,23 @@ export default function ProfileScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
-  const { displayName, profileImageUri, setProfileImage } = useProfile();
+  const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl } = useProfile();
   const { showToast } = useToast();
+
+  const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
+
+  useEffect(() => {
+    getMerchant()
+      .then((res: any) => {
+        const merchant = res.data?.data ?? res.data;
+        if (merchant && merchant.id) {
+          setHasBusinessAccount(true);
+        }
+      })
+      .catch(() => {
+        setHasBusinessAccount(false);
+      });
+  }, []);
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -84,6 +101,13 @@ export default function ProfileScreen() {
   const [isPhotoSheetVisible, setPhotoSheetVisible] = useState(false);
   const photoSheetAnim = useRef(new Animated.Value(height)).current;
   const photoBackdropAnim = useRef(new Animated.Value(0)).current;
+
+  // Avatar Picker Sheet
+  const [isAvatarSheetVisible, setAvatarSheetVisible] = useState(false);
+  const avatarSheetAnim = useRef(new Animated.Value(height)).current;
+  const avatarBackdropAnim = useRef(new Animated.Value(0)).current;
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (isBottomSheetVisible) {
@@ -137,6 +161,69 @@ export default function ProfileScreen() {
     }
   }, [isPhotoSheetVisible, photoSheetAnim, photoBackdropAnim]);
   
+
+  useEffect(() => {
+    if (isAvatarSheetVisible) {
+      Animated.parallel([
+        Animated.timing(avatarSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(avatarBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(avatarSheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+        Animated.timing(avatarBackdropAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isAvatarSheetVisible, avatarSheetAnim, avatarBackdropAnim]);
+
+  const NAVII_BASE = 'https://api.navii.dev/avatar';
+  const avatarSeed = handle ?? 'aza-user';
+  const AVATAR_VARIANTS = [
+    { seed: avatarSeed,           bg: 'solid' },
+    { seed: avatarSeed + '-b',    bg: 'ring'  },
+    { seed: avatarSeed + '-c',    bg: 'none'  },
+    { seed: avatarSeed + '-d',    bg: 'solid' },
+    { seed: avatarSeed + '-e',    bg: 'ring'  },
+    { seed: avatarSeed + '-f',    bg: 'none'  },
+    { seed: avatarSeed + '-g',    bg: 'solid' },
+    { seed: avatarSeed + '-h',    bg: 'ring'  },
+    { seed: avatarSeed + '-i',    bg: 'none'  },
+    { seed: avatarSeed + '-j',    bg: 'solid' },
+    { seed: avatarSeed + '-k',    bg: 'ring'  },
+    { seed: avatarSeed + '-l',    bg: 'none'  },
+    { seed: avatarSeed + '-m',    bg: 'solid' },
+    { seed: avatarSeed + '-n',    bg: 'ring'  },
+    { seed: avatarSeed + '-o',    bg: 'none'  },
+    { seed: avatarSeed + '-p',    bg: 'solid' },
+    { seed: avatarSeed + '-q',    bg: 'ring'  },
+    { seed: avatarSeed + '-r',    bg: 'none'  },
+    { seed: avatarSeed + '-s',    bg: 'solid' },
+    { seed: avatarSeed + '-t',    bg: 'ring'  },
+  ];
+
+  const naviiUrl = (seed: string, bg: string) =>
+    `${NAVII_BASE}/${encodeURIComponent(seed)}.png?size=200&background=${bg}`;
+
+  const handleChooseAvatar = () => {
+    setPhotoSheetVisible(false);
+    setSelectedAvatarUrl(null);
+    setTimeout(() => setAvatarSheetVisible(true), 350);
+  };
+
+  const handleApplyAvatar = async () => {
+    if (!selectedAvatarUrl) return;
+    setAvatarLoading(true);
+    try {
+      await setAvatarUrl(selectedAvatarUrl);
+      setAvatarSheetVisible(false);
+      setSelectedAvatarUrl(null);
+      showToast('Avatar updated!', 'success');
+    } catch {
+      showToast('Could not apply avatar. Please try again.', 'error');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const handleTakePhoto = async () => {
     try {
@@ -401,12 +488,15 @@ export default function ProfileScreen() {
             title="Business account"
             onPress={() => {
               setBottomSheetVisible(false);
-              // Handle business account selection
+              navigation.navigate('MiniApp', { appId: 'my_business' });
             }}
-            backgroundColor="#B7ED7E"
-            textColor="#1E5128"
+            backgroundColor={hasBusinessAccount ? "#1E5128" : "#B7ED7E"}
+            textColor={hasBusinessAccount ? "#B7ED7E" : "#1E5128"}
             borderRadius={24}
           />
+          {hasBusinessAccount && (
+            <Text style={styles.activeAccountMessage}>You already have a business account</Text>
+          )}
         </Animated.View>
       </View>
 
@@ -477,6 +567,21 @@ export default function ProfileScreen() {
             <Text style={styles.photoOptionText}>Choose from library</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.photoOption}
+            onPress={handleChooseAvatar}
+          >
+            <View
+              style={[
+                styles.photoIconContainer,
+                { backgroundColor: Colors.surface },
+              ]}
+            >
+              <Feather name="smile" size={20} color={Colors.textPrimary} />
+            </View>
+            <Text style={styles.photoOptionText}>Choose an avatar</Text>
+          </TouchableOpacity>
+
           {profileImageUri && (
             <TouchableOpacity
               style={styles.photoOption}
@@ -495,6 +600,83 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           )}
+        </Animated.View>
+      </View>
+
+      {/* Avatar Picker Bottom Sheet */}
+      <View
+        style={StyleSheet.absoluteFill}
+        pointerEvents={isAvatarSheetVisible ? "auto" : "none"}
+      >
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: avatarBackdropAnim, zIndex: 1000 },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setAvatarSheetVisible(false)}
+          />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.avatarSheetContainer,
+            { zIndex: 1001, transform: [{ translateY: avatarSheetAnim }] },
+          ]}
+        >
+          <View style={styles.bottomSheetHeader}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setAvatarSheetVisible(false)}
+            >
+              <AntDesign name="close" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.bottomSheetTitle}>Choose an Avatar</Text>
+          <Text style={styles.avatarSheetSubtitle}>Scroll to explore all options</Text>
+          <View style={styles.bottomSheetDivider} />
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.avatarScrollArea}
+            contentContainerStyle={styles.avatarGrid}
+          >
+            {AVATAR_VARIANTS.map((v, i) => {
+              const url = naviiUrl(v.seed, v.bg);
+              const isSelected = selectedAvatarUrl === url;
+              return (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.avatarGridItem, isSelected && styles.avatarSelected]}
+                  onPress={() => setSelectedAvatarUrl(url)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: url }} style={styles.avatarImg} />
+                  {isSelected && (
+                    <View style={styles.avatarCheckOverlay}>
+                      <Feather name="check" size={20} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.applyBtn, { opacity: selectedAvatarUrl ? 1 : 0.4 }]}
+            onPress={handleApplyAvatar}
+            disabled={!selectedAvatarUrl || avatarLoading}
+            activeOpacity={0.8}
+          >
+            {avatarLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.applyBtnText}>Apply</Text>
+            )}
+          </TouchableOpacity>
         </Animated.View>
       </View>
     </SafeAreaView>
@@ -660,7 +842,68 @@ function createStyles(Colors: ThemeColors) {
   photoOptionText: {
     fontSize: 16,
     fontWeight: "500",
-    color: Colors.textPrimary } });
+    color: Colors.textPrimary },
+  avatarSheetContainer: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    maxHeight: height * 0.78,
+    backgroundColor: isDark ? Colors.surface : '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 48,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5 },
+  avatarSheetSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    marginBottom: 14 },
+  avatarScrollArea: {
+    flexGrow: 0 },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: 8 },
+  avatarGridItem: {
+    width: '23%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: 'hidden',
+    borderWidth: 2.5,
+    borderColor: 'transparent' },
+  avatarImg: {
+    width: '100%',
+    height: '100%' },
+  avatarSelected: {
+    borderColor: Colors.primary },
+  avatarCheckOverlay: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center' },
+  applyBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16 },
+  applyBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600' } });
 }
 
 

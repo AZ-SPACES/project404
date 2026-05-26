@@ -63,7 +63,8 @@ import {
   PersonalDetailsScreen,
   PersonalInformationScreen,
   ChangeEmailScreen,
-  ChangePhoneScreen
+  ChangePhoneScreen,
+  DeleteAccountScreen
 } from '../features/profile';
 import { 
   ReasonScreen, 
@@ -76,6 +77,14 @@ import { InboxScreen } from '../features/notifications';
 
 
 import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
+import MerchantBusinessNameScreen from '../features/hub/miniapps/merchant/MerchantBusinessNameScreen';
+import MerchantBusinessCategoryScreen from '../features/hub/miniapps/merchant/MerchantBusinessCategoryScreen';
+import MerchantBusinessContactScreen from '../features/hub/miniapps/merchant/MerchantBusinessContactScreen';
+import MerchantKYBIntroScreen from '../features/hub/miniapps/merchant/MerchantKYBIntroScreen';
+import MerchantKYBBusinessScreen from '../features/hub/miniapps/merchant/MerchantKYBBusinessScreen';
+import MerchantKYBOwnerScreen from '../features/hub/miniapps/merchant/MerchantKYBOwnerScreen';
+import MerchantKYBDocumentsScreen from '../features/hub/miniapps/merchant/MerchantKYBDocumentsScreen';
+import MerchantKYBSubmittedScreen from '../features/hub/miniapps/merchant/MerchantKYBSubmittedScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -146,6 +155,7 @@ export default function AppNavigator() {
       <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
@@ -169,6 +179,14 @@ export default function AppNavigator() {
         component={MiniAppPlayerScreen}
         options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
       />
+      <Stack.Screen name="MerchantBusinessName" component={MerchantBusinessNameScreen} />
+      <Stack.Screen name="MerchantBusinessCategory" component={MerchantBusinessCategoryScreen} />
+      <Stack.Screen name="MerchantBusinessContact" component={MerchantBusinessContactScreen} />
+      <Stack.Screen name="MerchantKYBIntro" component={MerchantKYBIntroScreen} />
+      <Stack.Screen name="MerchantKYBBusiness" component={MerchantKYBBusinessScreen} />
+      <Stack.Screen name="MerchantKYBOwner" component={MerchantKYBOwnerScreen} />
+      <Stack.Screen name="MerchantKYBDocuments" component={MerchantKYBDocumentsScreen} />
+      <Stack.Screen name="MerchantKYBSubmitted" component={MerchantKYBSubmittedScreen} />
     </Stack.Navigator>
   );
 }

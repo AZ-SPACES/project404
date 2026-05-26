@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  Modal,
-  Pressable,
+  Animated,
+  Dimensions,
   Image,
   ActivityIndicator,
 } from "react-native";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -30,6 +32,7 @@ import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { INITIAL_RECIPIENTS } from "../../contacts";
 import Button from "../../../components/ui/Button";
 import { useTransactions } from "../../../hooks/useTransactions";
+import { useDisplayContext } from "../../../providers/DisplayProvider";
 
 export type Transaction = {
   id: string;
@@ -122,26 +125,48 @@ export function TransactionsScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Transactions">>();
   const balance = route.params?.balance || "GH₵ 0.00";
+  const { transactionGrouping, reducedMotion } = useDisplayContext();
+  const animDuration = reducedMotion ? 0 : 300;
 
   const [searchQuery, setSearchQuery] = useState("");
   const { sections, loading, refreshing, refresh, loadMore, hasMore, error, filter, setFilter } = useTransactions();
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
+  const txSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const txBackdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (selectedTransaction) {
+      Animated.parallel([
+        Animated.timing(txSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(txSheetAnim, { toValue: SCREEN_HEIGHT, duration: animDuration, useNativeDriver: true }),
+        Animated.timing(txBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [selectedTransaction, txSheetAnim, txBackdropAnim]);
 
   const onRefresh = useCallback(() => {
     refresh();
   }, [refresh]);
 
   const filteredSections = useMemo(() => {
-    if (!searchQuery) return sections;
-    return sections.map(section => ({
+    const filtered = !searchQuery ? sections : sections.map(section => ({
       ...section,
-      data: section.data.filter(tx => 
+      data: section.data.filter(tx =>
         tx.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.type.toLowerCase().includes(searchQuery.toLowerCase())
       )
     })).filter(section => section.data.length > 0);
-  }, [sections, searchQuery]);
+
+    if (transactionGrouping === 'flat') {
+      return [{ title: '', data: filtered.flatMap(s => s.data) }];
+    }
+    return filtered;
+  }, [sections, searchQuery, transactionGrouping]);
 
   const formatCurrency = (amount: number) => {
     return `GH₵ ${amount.toLocaleString(undefined, {
@@ -176,15 +201,14 @@ export function TransactionsScreen() {
     </View>
   );
 
-  const renderSectionHeader = ({
-    section: { title },
-  }: {
-    section: Section;
-  }) => (
-    <View style={styles.sectionHeaderContainer}>
-      <Text style={styles.sectionHeader}>{title}</Text>
-    </View>
-  );
+  const renderSectionHeader = ({ section: { title } }: { section: Section }) => {
+    if (!title) return null;
+    return (
+      <View style={styles.sectionHeaderContainer}>
+        <Text style={styles.sectionHeader}>{title}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -305,17 +329,11 @@ export function TransactionsScreen() {
         }
       />
 
-      <Modal
-        visible={!!selectedTransaction}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedTransaction(null)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setSelectedTransaction(null)}
-        />
-        <View style={styles.bottomSheet}>
+      <View style={StyleSheet.absoluteFill} pointerEvents={selectedTransaction ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: txBackdropAnim }]}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedTransaction(null)} />
+        </Animated.View>
+        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: txSheetAnim }] }]}>
           <View style={styles.bottomSheetHandle} />
 
           {selectedTransaction && (
@@ -415,8 +433,8 @@ export function TransactionsScreen() {
         })()}
             </>
           )}
-        </View>
-      </Modal>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -565,7 +583,7 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
     },
     modalOverlay: {
-      flex: 1,
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,0.5)",
     },
     bottomSheet: {

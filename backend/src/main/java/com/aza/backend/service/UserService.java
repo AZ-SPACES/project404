@@ -9,6 +9,8 @@ import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
+import com.aza.backend.exception.AppException;
+import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,6 +42,7 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final OtpService otpService;
     private final NotificationService notificationService;
+    private final ImageService imageService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -133,8 +136,16 @@ public class UserService {
         
         if (request.getLanguage() != null) user.setLanguage(request.getLanguage());
         if (request.getTheme() != null) user.setTheme(request.getTheme());
-        if (request.getHomeBackground() != null) user.setHomeBackground(request.getHomeBackground());
-        if (request.getHubBackground() != null) user.setHubBackground(request.getHubBackground());
+        if (request.getHomeBackground() != null) updateHomeBackground(user, request.getHomeBackground());
+        if (request.getHubBackground() != null) updateHubBackground(user, request.getHubBackground());
+
+        if (request.getProfileImageUrl() != null) {
+            String url = request.getProfileImageUrl();
+            if (!url.startsWith("https://api.navii.dev/")) {
+                throw new AppException("INVALID_AVATAR_URL", "Avatar URL must be from api.navii.dev", HttpStatus.BAD_REQUEST);
+            }
+            user.setProfileImageUrl(url);
+        }
 
         applyDateOfBirthAndEmployment(user, request.getDateOfBirth(), request.getEmploymentStatus());
 
@@ -144,50 +155,49 @@ public class UserService {
 
     // ==================== EMAIL & PHONE CHANGE ====================
 
-    public void requestEmailChange(User user, String newEmail) {
-        if (userRepository.existsByEmail(newEmail.toLowerCase().trim())) {
-            throw new com.aza.backend.exception.AppException("EMAIL_ALREADY_EXISTS", "This email address is already registered with another account", org.springframework.http.HttpStatus.CONFLICT);
+    private void requestCredentialChange(User user, String newValue, String conflictCode, String conflictMsg, String otpType, String alertMsg, java.util.function.BooleanSupplier existsCheck) {
+        if (existsCheck.getAsBoolean()) {
+            throw new AppException(conflictCode, conflictMsg, HttpStatus.CONFLICT);
         }
-        // Send OTP to the NEW email
-        otpService.sendOtp(newEmail.toLowerCase().trim(), "change_email");
-        
-        // Notify the OLD email (security alert)
-        notificationService.sendGenericSecurityAlert(user.getId(), "Account Security", 
-            "A request to change your email address to " + newEmail + " was initiated. If this wasn't you, secure your account immediately.");
+        otpService.sendOtp(newValue, otpType);
+        notificationService.sendGenericSecurityAlert(user.getId(), "Account Security", alertMsg);
+    }
+
+    public void requestEmailChange(User user, String newEmail) {
+        String normalized = newEmail.toLowerCase().trim();
+        requestCredentialChange(user, normalized, "EMAIL_ALREADY_EXISTS", 
+            "This email address is already registered with another account", "change_email",
+            "A request to change your email address to " + normalized + " was initiated. If this wasn't you, secure your account immediately.",
+            () -> userRepository.existsByEmail(normalized));
     }
 
     @Transactional
     public AuthResponse.UserInfo verifyEmailChange(User user, String newEmail, String code) {
-        otpService.verifyOtp(newEmail.toLowerCase().trim(), code, "change_email");
-        user.setEmail(newEmail.toLowerCase().trim());
-        userRepository.save(user);
-        return getProfile(user);
+        String normalized = newEmail.toLowerCase().trim();
+        otpService.verifyOtp(normalized, code, "change_email");
+        user.setEmail(normalized);
+        return getProfile(userRepository.save(user));
     }
 
     public void requestPhoneChange(User user, String newPhone) {
-        if (userRepository.existsByPhoneNumber(newPhone.trim())) {
-            throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already registered with another account", org.springframework.http.HttpStatus.CONFLICT);
-        }
-        // Send OTP to the NEW phone
-        otpService.sendOtp(newPhone.trim(), "change_phone");
-        
-        // Notify current user (security alert)
-        notificationService.sendGenericSecurityAlert(user.getId(), "Account Security", 
-            "A request to change your phone number to " + newPhone + " was initiated.");
+        String normalized = newPhone.trim();
+        requestCredentialChange(user, normalized, "PHONE_ALREADY_EXISTS", 
+            "This phone number is already registered with another account", "change_phone",
+            "A request to change your phone number to " + normalized + " was initiated.",
+            () -> userRepository.existsByPhoneNumber(normalized));
     }
 
     @Transactional
     public AuthResponse.UserInfo verifyPhoneChange(User user, String newPhone, String code) {
-        otpService.verifyOtp(newPhone.trim(), code, "change_phone");
-        user.setPhoneNumber(newPhone.trim());
-        userRepository.save(user);
-        return getProfile(user);
+        String normalized = newPhone.trim();
+        otpService.verifyOtp(normalized, code, "change_phone");
+        user.setPhoneNumber(normalized);
+        return getProfile(userRepository.save(user));
     }
 
     // ==================== PROFILE IMAGE ====================
 
-    @Transactional
-    public AuthResponse.UserInfo uploadProfileImage(User user, MultipartFile file) {
+    private byte[] validateAndGetBytes(MultipartFile file) {
         if (file.isEmpty()) {
             throw new RuntimeException("File is empty");
         }
@@ -200,17 +210,66 @@ public class UserService {
         }
 
         try {
-            if (!isValidImage(file.getBytes())) {
+            byte[] bytes = file.getBytes();
+            if (!isValidImage(bytes)) {
                 throw new RuntimeException("Invalid image content. Only JPEG and PNG are allowed.");
             }
+            return bytes;
         } catch (java.io.IOException e) {
             throw new RuntimeException("Failed to read file content");
         }
+    }
 
+    @Transactional
+    public AuthResponse.UserInfo uploadProfileImage(User user, MultipartFile file) {
+        validateAndGetBytes(file);
         String imageUrl = cloudinaryService.uploadProfileImage(file);
         user.setProfileImageUrl(imageUrl);
         user = userRepository.save(user);
         return getProfile(user);
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo uploadHomeBackground(User user, MultipartFile file) {
+        byte[] bytes = validateAndGetBytes(file);
+        imageService.decrementReferenceCount(user.getHomeBackground());
+        String newUrl = imageService.processAndDeduplicateImage(bytes, "aza/backgrounds/home");
+        user.setHomeBackground(newUrl);
+        user = userRepository.save(user);
+        return getProfile(user);
+    }
+
+    @Transactional
+    public AuthResponse.UserInfo uploadHubBackground(User user, MultipartFile file) {
+        byte[] bytes = validateAndGetBytes(file);
+        imageService.decrementReferenceCount(user.getHubBackground());
+        String newUrl = imageService.processAndDeduplicateImage(bytes, "aza/backgrounds/hub");
+        user.setHubBackground(newUrl);
+        user = userRepository.save(user);
+        return getProfile(user);
+    }
+
+    @SuppressWarnings("HttpUrlsUsage")
+    private boolean isExternalUrl(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase();
+        return (lower.startsWith("http://") || lower.startsWith("https://")) && !lower.contains("res.cloudinary.com");
+    }
+
+    private void updateHomeBackground(User user, String newUrl) {
+        String oldUrl = user.getHomeBackground();
+        if (newUrl == null || !newUrl.equals(oldUrl)) {
+            imageService.decrementReferenceCount(oldUrl);
+            user.setHomeBackground(isExternalUrl(newUrl) ? imageService.processExternalUrl(newUrl, "aza/backgrounds/home") : newUrl);
+        }
+    }
+
+    private void updateHubBackground(User user, String newUrl) {
+        String oldUrl = user.getHubBackground();
+        if (newUrl == null || !newUrl.equals(oldUrl)) {
+            imageService.decrementReferenceCount(oldUrl);
+            user.setHubBackground(isExternalUrl(newUrl) ? imageService.processExternalUrl(newUrl, "aza/backgrounds/hub") : newUrl);
+        }
     }
 
     // ==================== PUBLIC PROFILE ====================
@@ -227,7 +286,7 @@ public class UserService {
                 .id(user.getId().toString())
                 .displayName(user.getFirstName() + " " + user.getLastName())
                 .profileImageUrl(user.getProfileImageUrl())
-                .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until contacts system is built
+                .onlineStatus("OFFLINE") // Default to OFFLINE for privacy until a contacts system is built
                 .build();
     }
 
@@ -252,7 +311,7 @@ public class UserService {
         
         String trimmed = query.trim();
 
-        // 1. Try exact phone match if it looks like a phone
+        // 1. Try an exact phone match if it looks like a phone
         if (PHONE_PATTERN.matcher(trimmed).matches()) {
             String normalized = normalizePhone(trimmed);
             java.util.Optional<User> user = userRepository.findByPhoneNumberAndPrivacy(normalized);
@@ -263,7 +322,7 @@ public class UserService {
             }
         }
 
-        // 2. Try exact email match if it looks like an email
+        // 2. Try an exact email match if it looks like an email
         if (EMAIL_PATTERN.matcher(trimmed).matches()) {
             java.util.Optional<User> user = userRepository.findByEmailAndPrivacy(trimmed.toLowerCase());
             if (user.isPresent()) {
@@ -339,6 +398,48 @@ public class UserService {
     public void updateNotificationPreferences(User user, String preferencesJson) {
         user.setNotificationPreferences(preferencesJson);
         userRepository.save(user);
+    }
+
+    // ==================== DELETE (SOFT) ====================
+
+    @Transactional
+    public void softDeleteAccount(User user, String accessToken) {
+        String id = user.getId().toString();
+
+        // Free unique fields so the same credentials can be re-registered later
+        user.setEmail("deleted_" + id + "@aza.deleted");
+        user.setPhoneNumber("deleted_" + id);
+        user.setUsername(null);
+
+        // Wipe PII and secrets
+        user.setFirstName(null);
+        user.setLastName(null);
+        user.setDateOfBirth(null);
+        user.setProfileImageUrl(null);
+        user.setHomeAddress(null);
+        user.setCity(null);
+        user.setNationality(null);
+        user.setOtherNationality(null);
+        user.setTaxCountry(null);
+        user.setPasswordHash("deleted");
+        user.setPasscodeHash(null);
+        user.setTwoFactorSecret(null);
+
+        user.setDeletedAt(java.time.LocalDateTime.now());
+        user.setStatus(User.AccountStatus.DEACTIVATED);
+        userRepository.save(user);
+
+        // Revoke all sessions
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+
+        if (accessToken != null && accessToken.startsWith("Bearer ")) {
+            String token = accessToken.substring(7);
+            Duration remaining = jwtUtil.getRemainingValidity(token);
+            if (!remaining.isZero()) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + hashToken(token), "deleted", remaining);
+            }
+        }
     }
 
     // ==================== DEACTIVATE ====================
@@ -479,22 +580,19 @@ public class UserService {
         }
     }
     
+    private boolean isFieldAvailable(String value, Pattern pattern, java.util.function.Predicate<String> existsFunc) {
+        if (value == null || value.isBlank()) return false;
+        String normalized = value.toLowerCase().trim();
+        if (!pattern.matcher(normalized).matches()) return false;
+        return !existsFunc.test(normalized);
+    }
+
     public boolean isUsernameAvailable(String username) {
-        if (username == null || username.isBlank()) return false;
-        String normalized = username.toLowerCase().trim();
-        if (!HANDLE_PATTERN.matcher(normalized).matches()) {
-            return false;
-        }
-        return !userRepository.existsByUsername(normalized);
+        return isFieldAvailable(username, HANDLE_PATTERN, userRepository::existsByUsername);
     }
 
     public boolean isEmailAvailable(String email) {
-        if (email == null || email.isBlank()) return false;
-        String normalized = email.toLowerCase().trim();
-        if (!EMAIL_PATTERN.matcher(normalized).matches()) {
-            return false;
-        }
-        return !userRepository.existsByEmail(normalized);
+        return isFieldAvailable(email, EMAIL_PATTERN, userRepository::existsByEmail);
     }
 
     public boolean isPhoneAvailable(String phone) {
@@ -529,6 +627,11 @@ public class UserService {
         }
         
         return suggestions;
+    }
+
+    public User findById(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private boolean isValidImage(byte[] bytes) {
