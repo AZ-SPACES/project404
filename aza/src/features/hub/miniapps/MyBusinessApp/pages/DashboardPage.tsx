@@ -70,10 +70,11 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
   const actionHandlers = [
     { id: 'link', icon: 'link', label: 'Payment Link', onPress: () => navigate('create_session') },
     { id: 'transactions', icon: 'list', label: 'Transactions', onPress: () => navigate('sessions') },
-    { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
+    { id: 'store_qr', icon: 'grid', label: 'Store QR', onPress: () => navigate('store_qr') },
   ];
 
   const moreActionHandlers = [
+    { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
     { id: 'api_keys', icon: 'key', label: 'API Keys', onPress: () => navigate('api_keys') },
     { id: 'webhooks', icon: 'zap', label: 'Webhooks', onPress: () => navigate('webhooks') },
   ];

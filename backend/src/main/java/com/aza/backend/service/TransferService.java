@@ -5,9 +5,13 @@ import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
+import com.aza.backend.entity.Merchant;
+import com.aza.backend.entity.CheckoutSession;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
+import com.aza.backend.repository.MerchantRepository;
+import com.aza.backend.repository.CheckoutSessionRepository;
 import com.aza.backend.exception.AppException;
 import org.springframework.http.HttpStatus;
 import com.aza.backend.util.RateLimitService;
@@ -17,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.RoundingMode;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -35,6 +40,9 @@ public class TransferService {
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final MerchantRepository merchantRepository;
+    private final CheckoutSessionRepository sessionRepository;
+    private final CheckoutService checkoutService;
     private final RateLimitService rateLimitService;
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
@@ -156,14 +164,28 @@ public class TransferService {
         User recipient = userRepository
                 .findByEmailOrPhoneNumber(rawIdentifier, rawIdentifier)
                 .or(() -> userRepository.findByUsername(usernameCandidate))
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
+                .orElse(null);
 
-        if (recipient.getId().equals(sender.getId())) {
-            throw new RuntimeException("Cannot transfer to yourself");
-        }
-
-        if (recipient.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Recipient account is not available");
+        UUID recipientId;
+        if (recipient != null) {
+            if (recipient.getId().equals(sender.getId())) {
+                throw new RuntimeException("Cannot transfer to yourself");
+            }
+            if (recipient.getStatus() != User.AccountStatus.ACTIVE) {
+                throw new RuntimeException("Recipient account is not available");
+            }
+            recipientId = recipient.getId();
+        } else {
+            // Try to find a merchant with this handle
+            Merchant merchant = merchantRepository.findByBusinessHandle(usernameCandidate)
+                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+            if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+                throw new RuntimeException("Recipient account is not available");
+            }
+            if (merchant.getUserId().equals(sender.getId())) {
+                throw new RuntimeException("Cannot transfer to yourself");
+            }
+            recipientId = merchant.getId();
         }
 
         // 3. Check sender balance
@@ -175,7 +197,7 @@ public class TransferService {
         // 4. Create a pending transaction
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
-                .recipientId(recipient.getId())
+                .recipientId(recipientId)
                 .amount(request.getAmount())
                 .note(request.getNote())
                 .type(Transaction.TransactionType.TRANSFER)
@@ -219,12 +241,9 @@ public class TransferService {
             throw new RuntimeException("Transaction has expired. Please initiate a new transfer.");
         }
 
-        //Lock both wallets and execute transfer atomically
+        //Lock sender wallet and execute transfer atomically
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
                 .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
-
-        Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("Recipient wallet not found"));
 
         // Re-check balance (could have changed since initiation)
         if (senderWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
@@ -233,44 +252,103 @@ public class TransferService {
             throw new RuntimeException("Insufficient balance");
         }
 
-        // Debit sender, credit recipient
-        senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
-        recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
- 
-        walletRepository.save(senderWallet);
-        walletRepository.save(recipientWallet);
+        Merchant merchant = merchantRepository.findByIdForUpdate(transaction.getRecipientId()).orElse(null);
+        if (merchant != null) {
+            // Debit sender
+            senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
+            walletRepository.save(senderWallet);
+            sender.setBalance(senderWallet.getBalance());
+            userRepository.save(sender);
 
-        // Update a cached balance in a user table for redundancy/quick lookup
-        User recipient = userRepository.findById(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
-        
-        sender.setBalance(senderWallet.getBalance());
-        recipient.setBalance(recipientWallet.getBalance());
-        userRepository.save(sender);
-        userRepository.save(recipient);
+            // Credit merchant
+            BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
+            BigDecimal platformFee = transaction.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal netAmount = transaction.getAmount().subtract(platformFee);
 
-        // Mark transaction complete
-        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
-        LocalDateTime completedAt = LocalDateTime.now();
-        transaction.setCompletedAt(completedAt);
-        transactionRepository.save(transaction);
+            merchant.setBalance(merchant.getBalance().add(netAmount));
+            merchant.setTotalVolume(merchant.getTotalVolume().add(transaction.getAmount()));
+            merchantRepository.save(merchant);
 
+            // Create virtual completed checkout session for webhooks
+            CheckoutSession session = CheckoutSession.builder()
+                    .merchantId(merchant.getId())
+                    .amount(transaction.getAmount())
+                    .description(transaction.getNote() != null ? transaction.getNote() : "Store payment")
+                    .status(CheckoutSession.SessionStatus.COMPLETED)
+                    .platformFee(platformFee)
+                    .netAmount(netAmount)
+                    .customerId(sender.getId())
+                    .completedAt(LocalDateTime.now())
+                    .transactionId(transaction.getId())
+                    .build();
+            sessionRepository.save(session);
 
-        webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
-                Map.of(
-                        "transactionId", transaction.getId().toString(),
-                        "amount", transaction.getAmount().toString(),
-                        "from", sender.getFirstName() + " " + sender.getLastName(),
-                        "note", transaction.getNote() != null ? transaction.getNote() : ""
-                ));
+            // Queue/Dispatch webhook delivery
+            checkoutService.scheduleWebhookDelivery(session, merchant);
 
-        notificationService.sendMoneyReceivedNotification(
-                transaction.getRecipientId(),
-                sender.getFirstName() + " " + sender.getLastName(),
-                transaction.getAmount().toString(),
-                transaction.getId().toString());
+            // Mark transaction complete
+            transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
+            LocalDateTime completedAt = LocalDateTime.now();
+            transaction.setCompletedAt(completedAt);
+            transactionRepository.save(transaction);
 
-        return buildTransferResponse(transaction, sender, recipient, sender.getId());
+            webSocketPublisher.publishNotification(merchant.getUserId(), WebSocketEventType.TRANSFER_UPDATE,
+                    Map.of(
+                            "transactionId", transaction.getId().toString(),
+                            "amount", transaction.getAmount().toString(),
+                            "from", sender.getFirstName() + " " + sender.getLastName(),
+                            "note", transaction.getNote() != null ? transaction.getNote() : ""
+                    ));
+
+            notificationService.sendMoneyReceivedNotification(
+                    merchant.getUserId(),
+                    sender.getFirstName() + " " + sender.getLastName(),
+                    transaction.getAmount().toString(),
+                    transaction.getId().toString());
+
+            return buildTransferResponse(transaction, sender, null, sender.getId());
+        } else {
+            Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
+                    .orElseThrow(() -> new RuntimeException("Recipient wallet not found"));
+
+            // Debit sender, credit recipient
+            senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
+            recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
+
+            walletRepository.save(senderWallet);
+            walletRepository.save(recipientWallet);
+
+            // Update a cached balance in a user table for redundancy/quick lookup
+            User recipient = userRepository.findById(transaction.getRecipientId())
+                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+
+            sender.setBalance(senderWallet.getBalance());
+            recipient.setBalance(recipientWallet.getBalance());
+            userRepository.save(sender);
+            userRepository.save(recipient);
+
+            // Mark transaction complete
+            transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
+            LocalDateTime completedAt = LocalDateTime.now();
+            transaction.setCompletedAt(completedAt);
+            transactionRepository.save(transaction);
+
+            webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                    Map.of(
+                            "transactionId", transaction.getId().toString(),
+                            "amount", transaction.getAmount().toString(),
+                            "from", sender.getFirstName() + " " + sender.getLastName(),
+                            "note", transaction.getNote() != null ? transaction.getNote() : ""
+                    ));
+
+            notificationService.sendMoneyReceivedNotification(
+                    transaction.getRecipientId(),
+                    sender.getFirstName() + " " + sender.getLastName(),
+                    transaction.getAmount().toString(),
+                    transaction.getId().toString());
+
+            return buildTransferResponse(transaction, sender, recipient, sender.getId());
+        }
     }
 
     // ==================== CANCEL TRANSFER ====================
@@ -491,12 +569,32 @@ public class TransferService {
     private TransferResponse buildTransferResponse(Transaction t, User sender, User recipient, UUID currentUserId) {
         String direction = t.getRecipientId().equals(currentUserId) ? "INCOMING" : "OUTGOING";
         
+        String recipientName = "Unknown";
+        if (recipient != null) {
+            recipientName = recipient.getFirstName() + " " + recipient.getLastName();
+        } else {
+            Optional<Merchant> merchantOpt = merchantRepository.findById(t.getRecipientId());
+            if (merchantOpt.isPresent()) {
+                recipientName = merchantOpt.get().getBusinessName();
+            }
+        }
+
+        String senderName = "Unknown";
+        if (sender != null) {
+            senderName = sender.getFirstName() + " " + sender.getLastName();
+        } else {
+            Optional<Merchant> merchantOpt = merchantRepository.findById(t.getSenderId());
+            if (merchantOpt.isPresent()) {
+                senderName = merchantOpt.get().getBusinessName();
+            }
+        }
+
         return TransferResponse.builder()
                 .id(t.getId().toString())
                 .senderId(t.getSenderId().toString())
-                .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                .senderName(senderName)
                 .recipientId(t.getRecipientId().toString())
-                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientName(recipientName)
                 .amount(t.getAmount())
                 .currency("GHS")
                 .note(t.getNote())
