@@ -28,6 +28,11 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
 
     boolean existsByBusinessHandle(String businessHandle);
 
+    long countByStatus(Merchant.MerchantStatus status);
+
+    @Query("SELECT COALESCE(SUM(m.totalVolume), 0) FROM Merchant m WHERE m.status = 'ACTIVE'")
+    java.math.BigDecimal sumActiveMerchantVolume();
+
     @Query(value = """
             SELECT * FROM merchants
             WHERE (:status IS NULL OR status = CAST(:status AS varchar))
