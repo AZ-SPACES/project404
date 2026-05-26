@@ -1,3 +1,7 @@
+// Must be imported before any crypto/Zustand modules so global.crypto.getRandomValues
+// is available when @noble/* initializes.
+import './src/crypto/random';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
