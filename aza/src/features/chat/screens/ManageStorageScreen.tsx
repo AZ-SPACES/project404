@@ -49,7 +49,7 @@ export default function ManageStorageScreen() {
     setExpandedCategory(prev => (prev === key ? null : key));
   };
 
-  const handleClearCategory = (key: string, categoryData: CategoryStats) => {
+  const handleClearCategory = (key: 'photos' | 'videos' | 'docs' | 'audio', categoryData: CategoryStats) => {
     if (categoryData.messages.length === 0) return;
     const ids = categoryData.messages.map(m => m.id);
     
@@ -58,7 +58,7 @@ export default function ManageStorageScreen() {
     
     // Update local state to reflect deletion immediately
     setStats(prev => {
-      const removedSize = prev[key as keyof StorageDetails].size as number;
+      const removedSize = prev[key].size;
       return {
         ...prev,
         [key]: { size: 0, messages: [] },
@@ -176,7 +176,7 @@ export default function ManageStorageScreen() {
                     ))}
                     <TouchableOpacity 
                       style={styles.clearCategoryButton} 
-                      onPress={() => handleClearCategory(item.key, item.category)}
+                      onPress={() => handleClearCategory(item.key as 'photos' | 'videos' | 'docs' | 'audio', item.category)}
                     >
                       <Feather name="trash-2" size={16} color="#EF4444" style={{ marginRight: 6 }} />
                       <Text style={styles.clearCategoryText}>Clear {item.label}</Text>

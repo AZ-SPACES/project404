@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
+import com.aza.backend.entity.MerchantApiLog;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.MerchantRepository;
@@ -52,11 +53,32 @@ public class MerchantController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(merchant));
     }
 
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<MerchantResponse>> updateMe(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateMerchantRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.updateMerchant(user.getId(), request)));
+    }
+
     @PostMapping("/logo")
     public ResponseEntity<ApiResponse<MerchantResponse>> uploadLogo(
             @AuthenticationPrincipal User user,
             @RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(ApiResponse.success(merchantService.uploadLogo(user.getId(), file)));
+    }
+
+    // ==================== BALANCE ====================
+
+    @GetMapping("/balance")
+    public ResponseEntity<ApiResponse<BalanceResponse>> getBalance(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.getBalance(user.getId())));
+    }
+
+    // ==================== REPORTS ====================
+
+    @GetMapping("/reports/summary")
+    public ResponseEntity<ApiResponse<ReportSummaryResponse>> getReportSummary(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.getReportSummary(user.getId())));
     }
 
     // ==================== KYB ====================
@@ -100,20 +122,27 @@ public class MerchantController {
 
     @GetMapping("/sessions")
     public ResponseEntity<ApiResponse<Page<CheckoutSessionResponse>>> listSessions(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Merchant merchant = requireMerchant(user.getId());
+        UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(
-                checkoutService.listMerchantSessions(merchant.getId(), page, size)));
+                checkoutService.listMerchantSessions(merchantId, page, size)));
     }
 
     @GetMapping("/sessions/{sessionId}")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> getSession(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.getMerchantSession(sessionId, merchantId)));
+    }
+
+    @PostMapping("/sessions/{sessionId}/expire")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> expireSession(
             @AuthenticationPrincipal User user,
             @PathVariable UUID sessionId) {
-        Merchant merchant = requireMerchant(user.getId());
-        return ResponseEntity.ok(ApiResponse.success(checkoutService.getMerchantSession(sessionId, merchant.getId())));
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.expireSession(sessionId, user.getId())));
     }
 
     // ==================== API KEYS ====================
@@ -140,6 +169,31 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @PutMapping("/api-keys/{keyId}")
+    public ResponseEntity<ApiResponse<ApiKeyResponse>> updateApiKey(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID keyId,
+            @RequestBody @Valid UpdateApiKeyRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.updateApiKey(user.getId(), keyId, request)));
+    }
+
+    @PostMapping("/api-keys/{keyId}/roll")
+    public ResponseEntity<ApiResponse<ApiKeyResponse>> rollApiKey(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID keyId,
+            @RequestBody(required = false) RollApiKeyRequest request) {
+        if (request == null) request = new RollApiKeyRequest();
+        return ResponseEntity.ok(ApiResponse.success(merchantService.rollApiKey(user.getId(), keyId, request)));
+    }
+
+    @GetMapping("/api-keys/logs")
+    public ResponseEntity<ApiResponse<Page<MerchantApiLog>>> getApiLogs(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.listApiLogs(user.getId(), page, size)));
+    }
+
     // ==================== WEBHOOKS ====================
 
     @GetMapping("/webhooks")
@@ -153,6 +207,15 @@ public class MerchantController {
             @Valid @RequestBody WebhookEndpointRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(merchantService.createWebhook(user.getId(), request)));
+    }
+
+    @PutMapping("/webhooks/{endpointId}")
+    public ResponseEntity<ApiResponse<WebhookEndpointResponse>> updateWebhook(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID endpointId,
+            @RequestBody WebhookEndpointRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.updateWebhookEndpoint(user.getId(), endpointId, request)));
     }
 
     @DeleteMapping("/webhooks/{endpointId}")

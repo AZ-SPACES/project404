@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.admin.MerchantStatsResponse;
+import com.aza.backend.repository.CheckoutSessionRepository;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,12 +39,15 @@ public class MerchantService {
     private final KybRecordRepository kybRecordRepository;
     private final KybDocumentRepository kybDocumentRepository;
     private final MerchantApiKeyRepository apiKeyRepository;
+    private final MerchantApiLogRepository apiLogRepository;
     private final WebhookEndpointRepository webhookRepository;
     private final MerchantPayoutRepository payoutRepository;
     private final UserService userService;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final NotificationService notificationService;
+    private final CheckoutSessionRepository checkoutSessionRepository;
 
     private static final Pattern HANDLE_PATTERN = Pattern.compile("^[a-z0-9_]{3,30}$");
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024;
@@ -275,6 +280,30 @@ public class MerchantService {
             }
         }
 
+        MerchantApiKey.KeyType type = MerchantApiKey.KeyType.SECRET;
+        if (request.getType() != null && !request.getType().isBlank()) {
+            try {
+                type = MerchantApiKey.KeyType.valueOf(request.getType().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new AppException("INVALID_TYPE", "Key type must be SECRET or RESTRICTED", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        LocalDateTime expiresAt = null;
+        if (request.getExpirationDays() != null && request.getExpirationDays() > 0) {
+            expiresAt = LocalDateTime.now().plusDays(request.getExpirationDays());
+        }
+
+        String ipWhitelist = null;
+        if (request.getIpWhitelist() != null && !request.getIpWhitelist().isBlank()) {
+            ipWhitelist = validateAndNormalizeIpWhitelist(request.getIpWhitelist());
+        }
+
+        String scopes = null;
+        if (type == MerchantApiKey.KeyType.RESTRICTED) {
+            scopes = request.getScopes();
+        }
+
         byte[] randomBytes = new byte[24];
         SECURE_RANDOM.nextBytes(randomBytes);
         String randomPart = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
@@ -289,20 +318,34 @@ public class MerchantService {
                 .keyPrefix(keyPrefix)
                 .keyHash(keyHash)
                 .environment(env)
+                .keyType(type)
+                .scopes(scopes)
+                .ipWhitelist(ipWhitelist)
+                .expiresAt(expiresAt)
                 .build();
 
         apiKeyRepository.save(apiKey);
-        log.info("API key created for merchantId={}, env={}", merchant.getId(), env);
+        log.info("API key created: id={}, env={}, type={}", apiKey.getId(), env, type);
 
-        return ApiKeyResponse.builder()
-                .id(apiKey.getId().toString())
-                .label(apiKey.getLabel())
-                .keyPrefix(keyPrefix)
-                .fullKey(fullKey) // the only time the full key is ever returned
-                .environment(env.name())
-                .isActive(true)
-                .createdAt(apiKey.getCreatedAt())
-                .build();
+        ApiKeyResponse response = toApiKeyResponse(apiKey);
+        response.setFullKey(fullKey); // return the unhashed key once
+        return response;
+    }
+
+    private String validateAndNormalizeIpWhitelist(String rawWhitelist) {
+        String[] parts = rawWhitelist.split(",");
+        List<String> clean = new java.util.ArrayList<>();
+        for (String p : parts) {
+            String ip = p.trim();
+            if (ip.isEmpty()) continue;
+            try {
+                new IpAddressMatcher(ip);
+                clean.add(ip);
+            } catch (Exception e) {
+                throw new AppException("INVALID_IP_WHITELIST", "Invalid IP or CIDR format: " + ip, HttpStatus.BAD_REQUEST);
+            }
+        }
+        return clean.isEmpty() ? null : String.join(",", clean);
     }
 
     public List<ApiKeyResponse> listApiKeys(UUID userId) {
@@ -319,9 +362,160 @@ public class MerchantService {
         if (!key.getMerchantId().equals(merchant.getId())) {
             throw new AppException("FORBIDDEN", "Not your API key", HttpStatus.FORBIDDEN);
         }
-        key.setIsActive(false);
-        key.setRevokedAt(LocalDateTime.now());
+        if (Boolean.FALSE.equals(key.getIsActive())) {
+            apiKeyRepository.delete(key);
+            log.info("API key deleted for merchantId={}", merchant.getId());
+        } else {
+            key.setIsActive(false);
+            key.setRevokedAt(LocalDateTime.now());
+            apiKeyRepository.save(key);
+            log.info("API key revoked for merchantId={}", merchant.getId());
+        }
+    }
+
+    public MerchantApiKey validateApiKey(String keyHash, String ipAddress, String userAgent) {
+        MerchantApiKey apiKey = apiKeyRepository.findByKeyHashAndIsActiveTrue(keyHash).orElse(null);
+        boolean isOldKey = false;
+        if (apiKey == null) {
+            apiKey = apiKeyRepository.findByOldKeyHashAndIsActiveTrue(keyHash).orElse(null);
+            isOldKey = apiKey != null;
+        }
+
+        if (apiKey == null) return null;
+
+        if (apiKey.getExpiresAt() != null && LocalDateTime.now().isAfter(apiKey.getExpiresAt())) {
+            return null;
+        }
+
+        if (isOldKey) {
+            if (apiKey.getOldKeyExpiresAt() == null || LocalDateTime.now().isAfter(apiKey.getOldKeyExpiresAt())) {
+                return null;
+            }
+        }
+
+        if (apiKey.getIpWhitelist() != null && !apiKey.getIpWhitelist().isBlank()) {
+            boolean ipAllowed = false;
+            for (String allowed : apiKey.getIpWhitelist().split(",")) {
+                try {
+                    IpAddressMatcher matcher = new IpAddressMatcher(allowed.trim());
+                    if (matcher.matches(ipAddress)) {
+                        ipAllowed = true;
+                        break;
+                    }
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+            if (!ipAllowed) {
+                throw new AppException("UNAUTHORIZED_IP", "IP address " + ipAddress + " is not whitelisted for this API key", HttpStatus.UNAUTHORIZED);
+            }
+        }
+
+        apiKey.setLastUsedAt(LocalDateTime.now());
+        apiKey.setLastUsedIp(ipAddress);
+        apiKey.setLastUsedUserAgent(userAgent);
+        apiKeyRepository.save(apiKey);
+
+        return apiKey;
+    }
+
+    public Merchant getMerchantForApiKey(MerchantApiKey apiKey) {
+        return merchantRepository.findById(apiKey.getMerchantId()).orElse(null);
+    }
+
+    @Transactional
+    public ApiKeyResponse updateApiKey(UUID userId, UUID keyId, UpdateApiKeyRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        MerchantApiKey key = apiKeyRepository.findById(keyId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "API key not found", HttpStatus.NOT_FOUND));
+        if (!key.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your API key", HttpStatus.FORBIDDEN);
+        }
+
+        if (request.getLabel() != null) {
+            key.setLabel(request.getLabel().trim());
+        }
+        if (request.getIpWhitelist() != null) {
+            if (request.getIpWhitelist().isBlank()) {
+                key.setIpWhitelist(null);
+            } else {
+                key.setIpWhitelist(validateAndNormalizeIpWhitelist(request.getIpWhitelist()));
+            }
+        }
+        if (request.getScopes() != null) {
+            if (key.getKeyType() == MerchantApiKey.KeyType.RESTRICTED) {
+                key.setScopes(request.getScopes().trim());
+            }
+        }
+
         apiKeyRepository.save(key);
+        log.info("API key updated: id={}, label={}", key.getId(), key.getLabel());
+        return toApiKeyResponse(key);
+    }
+
+    @Transactional
+    public ApiKeyResponse rollApiKey(UUID userId, UUID keyId, RollApiKeyRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        MerchantApiKey apiKey = apiKeyRepository.findById(keyId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "API key not found", HttpStatus.NOT_FOUND));
+        if (!apiKey.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your API key", HttpStatus.FORBIDDEN);
+        }
+        if (Boolean.FALSE.equals(apiKey.getIsActive())) {
+            throw new AppException("BAD_REQUEST", "Cannot roll a revoked API key", HttpStatus.BAD_REQUEST);
+        }
+
+        int graceHours = (request != null && request.getExpirationHours() != null) ? request.getExpirationHours() : 24;
+        if (graceHours < 0 || graceHours > 720) {
+            throw new AppException("BAD_REQUEST", "Grace period must be between 0 and 720 hours", HttpStatus.BAD_REQUEST);
+        }
+
+        apiKey.setOldKeyHash(apiKey.getKeyHash());
+        apiKey.setOldKeyExpiresAt(LocalDateTime.now().plusHours(graceHours));
+
+        byte[] randomBytes = new byte[24];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        String randomPart = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        String prefix = apiKey.getEnvironment() == MerchantApiKey.KeyEnvironment.LIVE ? "aza_live_" : "aza_test_";
+        String fullKey = prefix + randomPart;
+        String keyPrefix = fullKey.substring(0, Math.min(fullKey.length(), 20)) + "...";
+        String keyHash = sha256Hex(fullKey);
+
+        apiKey.setKeyPrefix(keyPrefix);
+        apiKey.setKeyHash(keyHash);
+
+        apiKeyRepository.save(apiKey);
+        log.info("API key rolled: id={}, environment={}", apiKey.getId(), apiKey.getEnvironment());
+
+        ApiKeyResponse response = toApiKeyResponse(apiKey);
+        response.setFullKey(fullKey);
+        return response;
+    }
+
+    public Page<MerchantApiLog> listApiLogs(UUID userId, int page, int size) {
+        Merchant merchant = requireMerchant(userId);
+        return apiLogRepository.findAllByMerchantIdOrderByCreatedAtDesc(
+                merchant.getId(), PageRequest.of(page, Math.min(size, 100)));
+    }
+
+    @Transactional
+    public void logApiRequest(UUID merchantId, UUID apiKeyId, String method, String path,
+                               Integer statusCode, String ipAddress, String userAgent, String errorMessage) {
+        try {
+            MerchantApiLog logEntry = MerchantApiLog.builder()
+                    .merchantId(merchantId)
+                    .apiKeyId(apiKeyId)
+                    .method(method)
+                    .path(path)
+                    .statusCode(statusCode)
+                    .ipAddress(ipAddress)
+                    .userAgent(userAgent)
+                    .errorMessage(errorMessage)
+                    .build();
+            apiLogRepository.save(logEntry);
+        } catch (Exception e) {
+            log.error("Failed to save API log: ", e);
+        }
     }
 
     // ==================== WEBHOOKS ====================
@@ -457,6 +651,119 @@ public class MerchantService {
                         .build());
     }
 
+    // ==================== UPDATE PROFILE ====================
+
+    @Transactional
+    public MerchantResponse updateMerchant(UUID userId, UpdateMerchantRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        if (request.getBusinessName() != null && !request.getBusinessName().isBlank()) {
+            merchant.setBusinessName(request.getBusinessName().trim());
+        }
+        if (request.getBusinessEmail() != null) {
+            merchant.setBusinessEmail(request.getBusinessEmail());
+        }
+        if (request.getBusinessPhone() != null) {
+            merchant.setBusinessPhone(request.getBusinessPhone());
+        }
+        if (request.getBusinessDescription() != null) {
+            merchant.setBusinessDescription(request.getBusinessDescription());
+        }
+        if (request.getLogoUrl() != null) {
+            merchant.setLogoUrl(request.getLogoUrl());
+        }
+        merchantRepository.save(merchant);
+        return toResponse(merchant);
+    }
+
+    // ==================== BALANCE ====================
+
+    public BalanceResponse getBalance(UUID userId) {
+        Merchant merchant = requireMerchant(userId);
+        return BalanceResponse.builder()
+                .balance(merchant.getBalance())
+                .currency(merchant.getCurrency())
+                .totalVolume(merchant.getTotalVolume())
+                .build();
+    }
+
+    // ==================== REPORTS ====================
+
+    public ReportSummaryResponse getReportSummary(UUID userId) {
+        Merchant merchant = requireMerchant(userId);
+        UUID merchantId = merchant.getId();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime sevenDaysAgo = now.minusDays(7);
+        LocalDateTime thirtyDaysAgo = now.minusDays(30);
+        LocalDateTime epoch = LocalDateTime.of(2000, 1, 1, 0, 0);
+
+        BigDecimal todayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, startOfToday);
+        BigDecimal sevenDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, sevenDaysAgo);
+        BigDecimal thirtyDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, thirtyDaysAgo);
+        BigDecimal allTimeRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, epoch);
+
+        long todayPayments = checkoutSessionRepository.countCompletedSince(merchantId, startOfToday);
+        long sevenDayPayments = checkoutSessionRepository.countCompletedSince(merchantId, sevenDaysAgo);
+        long thirtyDayPayments = checkoutSessionRepository.countCompletedSince(merchantId, thirtyDaysAgo);
+        long allTimeCompleted = checkoutSessionRepository.countCompletedSince(merchantId, epoch);
+        long allTimeTotal = checkoutSessionRepository.countTotalSince(merchantId, epoch);
+
+        double successRate = allTimeTotal > 0 ? (double) allTimeCompleted / allTimeTotal * 100.0 : 0.0;
+
+        List<Object[]> dailyRaw = checkoutSessionRepository.getDailyRevenueSince(merchantId, thirtyDaysAgo);
+        List<ReportSummaryResponse.DayPoint> dailySeries = dailyRaw.stream()
+                .map(row -> ReportSummaryResponse.DayPoint.builder()
+                        .date(row[0].toString())
+                        .revenue(row[1] instanceof BigDecimal ? (BigDecimal) row[1]
+                                : new BigDecimal(row[1].toString()))
+                        .count(((Number) row[2]).longValue())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ReportSummaryResponse.builder()
+                .todayRevenue(todayRevenue)
+                .sevenDayRevenue(sevenDayRevenue)
+                .thirtyDayRevenue(thirtyDayRevenue)
+                .allTimeRevenue(allTimeRevenue)
+                .todayPayments(todayPayments)
+                .sevenDayPayments(sevenDayPayments)
+                .thirtyDayPayments(thirtyDayPayments)
+                .allTimePayments(allTimeCompleted)
+                .successRate(successRate)
+                .dailySeries(dailySeries)
+                .build();
+    }
+
+    // ==================== UPDATE WEBHOOK ====================
+
+    @Transactional
+    public WebhookEndpointResponse updateWebhookEndpoint(UUID userId, UUID endpointId, WebhookEndpointRequest request) {
+        Merchant merchant = requireMerchant(userId);
+        WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Webhook not found", HttpStatus.NOT_FOUND));
+        if (!endpoint.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
+        }
+        if (request.getUrl() != null && !request.getUrl().isBlank()) {
+            validateWebhookUrl(request.getUrl());
+            endpoint.setUrl(request.getUrl());
+        }
+        if (request.getEvents() != null) {
+            endpoint.setEvents(request.getEvents());
+        }
+        if (request.getIsActive() != null) {
+            endpoint.setIsActive(request.getIsActive());
+        }
+        webhookRepository.save(endpoint);
+        return WebhookEndpointResponse.builder()
+                .id(endpoint.getId().toString())
+                .url(endpoint.getUrl())
+                .isActive(endpoint.getIsActive())
+                .events(endpoint.getEvents())
+                .createdAt(endpoint.getCreatedAt())
+                .build();
+    }
+
     // ==================== ADMIN ====================
 
     public MerchantResponse adminGetById(UUID merchantId) {
@@ -530,6 +837,32 @@ public class MerchantService {
 
         kybRecordRepository.save(record);
         merchantRepository.save(merchant);
+
+        // Push notification to the merchant owner
+        UUID ownerId = merchant.getUserId();
+        if (approve) {
+            notificationService.sendNotification(
+                    ownerId,
+                    Notification.NotificationType.KYB_APPROVED,
+                    "Business Verified 🎉",
+                    "Your business has been verified! You can now accept payments.",
+                    java.util.Map.of("type", "KYB_APPROVED", "merchantId", merchantId.toString()));
+        } else if (moreInfoRequest != null && !moreInfoRequest.isBlank()) {
+            notificationService.sendNotification(
+                    ownerId,
+                    Notification.NotificationType.KYB_MORE_INFO_REQUIRED,
+                    "Action Required: Business Verification",
+                    moreInfoRequest,
+                    java.util.Map.of("type", "KYB_MORE_INFO_REQUIRED", "merchantId", merchantId.toString()));
+        } else {
+            notificationService.sendNotification(
+                    ownerId,
+                    Notification.NotificationType.KYB_REJECTED,
+                    "Business Verification Update",
+                    rejectionReason != null ? rejectionReason : "Your business verification was not successful. Please contact support.",
+                    java.util.Map.of("type", "KYB_REJECTED", "merchantId", merchantId.toString()));
+        }
+
         return toKybResponse(record, merchantId);
     }
 
@@ -658,13 +991,7 @@ public class MerchantService {
         }
     }
 
-    public Merchant findMerchantByApiKeyHash(String keyHash) {
-        MerchantApiKey key = apiKeyRepository.findByKeyHashAndIsActiveTrue(keyHash).orElse(null);
-        if (key == null) return null;
-        key.setLastUsedAt(LocalDateTime.now());
-        apiKeyRepository.save(key);
-        return merchantRepository.findById(key.getMerchantId()).orElse(null);
-    }
+
 
     public static String sha256Hex(String input) {
         try {
@@ -764,6 +1091,12 @@ public class MerchantService {
                 .label(key.getLabel())
                 .keyPrefix(key.getKeyPrefix())
                 .environment(key.getEnvironment().name())
+                .keyType(key.getKeyType() != null ? key.getKeyType().name() : null)
+                .scopes(key.getScopes())
+                .ipWhitelist(key.getIpWhitelist())
+                .expiresAt(key.getExpiresAt())
+                .lastUsedIp(key.getLastUsedIp())
+                .lastUsedUserAgent(key.getLastUsedUserAgent())
                 .isActive(key.getIsActive())
                 .lastUsedAt(key.getLastUsedAt())
                 .createdAt(key.getCreatedAt())
