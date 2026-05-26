@@ -167,7 +167,12 @@ export default function SendScreen({ navigation }: SendScreenProps) {
         >
           <Feather name="chevron-left" size={24} color={Colors.textPrimary} style={styles.backicon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.addButton} activeOpacity={0.7} accessibilityLabel="Add contact">
+        <TouchableOpacity
+          style={styles.addButton}
+          activeOpacity={0.7}
+          accessibilityLabel="Add friend"
+          onPress={() => navigation.navigate('AddFriends')}
+        >
           <Feather name="plus" size={16} color={Colors.white} />
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>

@@ -4,6 +4,7 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.contact.BlockedUserResponse;
 import com.aza.backend.dto.contact.ContactResponse;
 import com.aza.backend.dto.contact.ContactRequestResponse;
+import com.aza.backend.dto.contact.SentContactRequestResponse;
 import com.aza.backend.dto.contact.ContactSyncRequest;
 import com.aza.backend.dto.contact.ContactSyncResponse;
 import com.aza.backend.entity.User;
@@ -158,6 +159,17 @@ public class ContactController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(
                 contactService.getPendingRequests(user.getId())));
+    }
+
+    /**
+     * GET /api/v1/contacts/requests/sent
+     * Get contact requests sent by the current user.
+     */
+    @GetMapping("/requests/sent")
+    public ResponseEntity<ApiResponse<List<SentContactRequestResponse>>> getSentContactRequests(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                contactService.getSentRequests(user.getId())));
     }
 
     /**

@@ -142,7 +142,12 @@ export const submitPepScreening = (
   isPep: boolean,
   pepStatus?: string,
   pepRole?: string,
-) => api.post("/api/v1/kyc/pep-screening", { isPep, pepStatus, pepRole });
+) => {
+  const body: Record<string, unknown> = { isPep };
+  if (pepStatus) body.pepStatus = pepStatus;
+  if (pepRole) body.pepRole = pepRole;
+  return api.post("/api/v1/kyc/pep-screening", body);
+};
 
 export const submitPepDetails = (
   accountPurpose: string,
@@ -287,6 +292,9 @@ export const requestContact = (userId: string) =>
 
 export const getContactRequests = () =>
   api.get("/api/v1/contacts/requests");
+
+export const getSentContactRequests = () =>
+  api.get("/api/v1/contacts/requests/sent");
 
 export const approveContactRequest = (requestId: string) =>
   api.post(`/api/v1/contacts/requests/${requestId}/approve`);

@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.contact.*;
+import com.aza.backend.dto.contact.SentContactRequestResponse;
 import com.aza.backend.entity.BlockedUser;
 import com.aza.backend.entity.Contact;
 import com.aza.backend.entity.ContactRequest;
@@ -200,6 +201,23 @@ public class ContactService {
                 }).toList();
     }
 
+    public List<SentContactRequestResponse> getSentRequests(UUID senderId) {
+        return contactRequestRepository.findAllBySenderUserId(senderId)
+                .stream()
+                .map(req -> {
+                    User receiver = userRepository.findById(req.getReceiverUserId()).orElse(null);
+                    return SentContactRequestResponse.builder()
+                            .id(req.getId().toString())
+                            .receiverUserId(req.getReceiverUserId().toString())
+                            .receiverDisplayName(receiver != null ? receiver.getFirstName() + " " + receiver.getLastName() : "Unknown")
+                            .receiverUsername(receiver != null ? receiver.getUsername() : null)
+                            .receiverProfileImageUrl(receiver != null ? receiver.getProfileImageUrl() : null)
+                            .status(req.getStatus().name())
+                            .createdAt(req.getCreatedAt() != null ? req.getCreatedAt().toString() : null)
+                            .build();
+                }).toList();
+    }
+
     @Transactional
     public ContactResponse approveContactRequest(User receiver, UUID requestId) {
         ContactRequest request = contactRequestRepository.findById(requestId)
@@ -215,8 +233,15 @@ public class ContactService {
         contactRequestRepository.save(request);
         
         // Add each other as contacts
-        addMutualContact(request.getSenderUserId(), request.getReceiverUserId());
-        return toContactResponse(addMutualContact(request.getReceiverUserId(), request.getSenderUserId()));
+        log.info("Approving contact request {}: creating mutual contacts between sender={} and receiver={}",
+                requestId, request.getSenderUserId(), request.getReceiverUserId());
+        Contact senderContact = addMutualContact(request.getSenderUserId(), request.getReceiverUserId());
+        log.info("Created contact for sender: id={}, ownerUserId={}, contactUserId={}",
+                senderContact.getId(), senderContact.getOwnerUserId(), senderContact.getContactUserId());
+        Contact receiverContact = addMutualContact(request.getReceiverUserId(), request.getSenderUserId());
+        log.info("Created contact for receiver: id={}, ownerUserId={}, contactUserId={}",
+                receiverContact.getId(), receiverContact.getOwnerUserId(), receiverContact.getContactUserId());
+        return toContactResponse(receiverContact);
     }
 
     @Transactional
@@ -374,13 +399,14 @@ public class ContactService {
             Optional<User> azaUser = userRepository.findById(contact.getContactUserId());
             if (azaUser.isPresent()) {
                 User user = azaUser.get();
+                // Always show profile data for contacts — the contact relationship
+                // was established either via phone sync match or explicit friend
+                // request acceptance, so identity disclosure is expected.
+                profileImageUrl = user.getProfileImageUrl();
+                username = user.getUsername();
 
-                // Only surface Aza identity if the user still allows discovery
-                if (Boolean.TRUE.equals(user.getFindMeByPhone())) {
-                    profileImageUrl = user.getProfileImageUrl();
-                    username = user.getUsername();
-                } else {
-                    // User revoked discoverability — hide all identifying Aza fields
+                // Respect phone/email privacy preferences for the response
+                if (!Boolean.TRUE.equals(user.getFindMeByPhone())) {
                     responsePhone = null;
                 }
                 if (!Boolean.TRUE.equals(user.getFindMeByEmail())) {

@@ -12,4 +12,6 @@ import java.util.UUID;
 public interface ContactRequestRepository extends JpaRepository<ContactRequest, UUID> {
     Optional<ContactRequest> findBySenderUserIdAndReceiverUserId(UUID senderId, UUID receiverId);
     List<ContactRequest> findAllByReceiverUserIdAndStatus(UUID receiverId, ContactRequest.RequestStatus status);
+    List<ContactRequest> findAllBySenderUserIdAndStatus(UUID senderId, ContactRequest.RequestStatus status);
+    List<ContactRequest> findAllBySenderUserId(UUID senderId);
 }
