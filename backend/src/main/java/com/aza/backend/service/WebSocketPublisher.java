@@ -40,7 +40,7 @@ public class WebSocketPublisher {
     }
 
     /**
-     * Send a call signalling event to a specific user via Redis pub/sub.
+     * Send a call signaling event to a specific user via Redis pub/sub.
      * The RedisMessageSubscriber forwards it to the user's /queue/calls.
      */
     public void publishCallEvent(UUID userId, WebSocketEventType type, Object payload) {
@@ -63,8 +63,8 @@ public class WebSocketPublisher {
     }
 
     /**
-     * Send directly to a user on this instance — no Redis hop.
-     * Use for low-latency responses to the sender (e.g. heartbeat ack).
+     * Send it directly to a user on this instance — no Redis hop.
+     * Use for low-latency responses to the sender (e.g., heartbeat ack).
      */
     public void sendToUser(String userId, String destination, Object payload) {
         messagingTemplate.convertAndSendToUser(userId, destination, payload);

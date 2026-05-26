@@ -294,7 +294,7 @@ public class AdminService {
             throw new AppException("INVALID_STATE", "Only COMPLETED transactions can be reversed", HttpStatus.BAD_REQUEST);
         }
 
-        // Add amount back to sender
+        // Add the amount back to the sender
         Wallet senderWallet = walletRepository.findByUserId(tx.getSenderId())
                 .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Sender wallet not found", HttpStatus.NOT_FOUND));
         senderWallet.setBalance(senderWallet.getBalance().add(tx.getAmount()));
@@ -307,7 +307,7 @@ public class AdminService {
             userRepository.save(senderUser);
         }
 
-        // Deduct from recipient (check they have enough)
+        // Deduct from the recipient (check they have enough)
         Wallet recipientWallet = walletRepository.findByUserId(tx.getRecipientId())
                 .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Recipient wallet not found", HttpStatus.NOT_FOUND));
         if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {

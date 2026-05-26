@@ -82,7 +82,7 @@ public class KeyBundleService {
                     log.info("OPK consumed for recipient {}, remaining: {}",
                             recipientId, opks.size());
 
-                    // Notify recipient to replenish if running low
+                    // Notify the recipient to replenish if running low
                     if (opks.size() < LOW_OPK_THRESHOLD) {
                         notifyLowOpks(recipient, opks.size());
                     }

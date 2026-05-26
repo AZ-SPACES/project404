@@ -297,7 +297,7 @@ public class MerchantService {
                 .id(apiKey.getId().toString())
                 .label(apiKey.getLabel())
                 .keyPrefix(keyPrefix)
-                .fullKey(fullKey) // only time the full key is ever returned
+                .fullKey(fullKey) // the only time the full key is ever returned
                 .environment(env.name())
                 .isActive(true)
                 .createdAt(apiKey.getCreatedAt())
@@ -550,7 +550,7 @@ public class MerchantService {
         }
         java.net.URL parsed;
         try {
-            parsed = new java.net.URL(rawUrl);
+            parsed = java.net.URI.create(rawUrl).toURL();
         } catch (Exception e) {
             throw new AppException("INVALID_URL", "Invalid webhook URL format", HttpStatus.BAD_REQUEST);
         }
@@ -570,9 +570,8 @@ public class MerchantService {
                 throw new AppException("INVALID_URL",
                         "Webhook URL cannot target internal or reserved network addresses", HttpStatus.BAD_REQUEST);
             }
-        } catch (AppException e) {
-            throw e;
         } catch (Exception e) {
+            if (e instanceof AppException) throw (AppException) e;
             // DNS resolution failed — reject; don't deliver to unresolvable hosts
             throw new AppException("INVALID_URL",
                     "Webhook URL host could not be resolved", HttpStatus.BAD_REQUEST);
@@ -594,8 +593,6 @@ public class MerchantService {
                 throw new AppException("INVALID_FILE",
                         "File content does not match its declared type", HttpStatus.BAD_REQUEST);
             }
-        } catch (AppException e) {
-            throw e;
         } catch (java.io.IOException e) {
             throw new AppException("INVALID_FILE", "Could not read file content", HttpStatus.BAD_REQUEST);
         }

@@ -46,7 +46,7 @@ public class NotificationService {
 
     @Transactional
     public void registerFcmToken(UUID userId, FcmTokenRequest request) {
-        // Upsert — update if device already registered, otherwise create
+        // Upsert — update if a device already registered, otherwise create
         fcmTokenRepository.findByUserIdAndDeviceId(userId, request.getDeviceId())
                 .ifPresentOrElse(existing -> {
                     existing.setToken(request.getToken());
@@ -79,13 +79,11 @@ public class NotificationService {
      * If the user is online (WebSocket connected), delivers via WebSocket only.
      * If offline, sends FCM push notification to all their devices.
      */
-    @Transactional
     public void sendNotification(UUID userId, Notification.NotificationType type,
                                  String title, String body, Map<String, Object> data) {
         sendNotificationWithImage(userId, type, title, body, data, null, null);
     }
 
-    @Transactional
     public void sendNotification(UUID userId, Notification.NotificationType type,
                                  String title, String body, Map<String, Object> data,
                                  BigDecimal paymentAmount) {
@@ -181,20 +179,6 @@ public class NotificationService {
                 data);
     }
 
-    public void sendMoneyRequestNotification(UUID recipientId, String requesterName,
-                                             String amount, String transactionId) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("transactionId", transactionId);
-        data.put("type", "MONEY_REQUESTED");
-
-        sendNotification(
-                recipientId,
-                Notification.NotificationType.MONEY_REQUESTED,
-                "Money Request",
-                requesterName + " is requesting GHS " + amount,
-                data);
-    }
-
     public void sendPaymentRequestReceivedNotification(UUID payerId, String requesterName,
                                                         BigDecimal amount, String paymentRequestId) {
         Map<String, Object> data = new HashMap<>();
@@ -264,20 +248,6 @@ public class NotificationService {
                 Notification.NotificationType.PAYMENT_REQUEST_EXPIRED,
                 "Payment Request Expired",
                 "A payment request for GHS " + amount + " has expired",
-                data);
-    }
-
-    public void sendSecurityAlert(UUID userId, String deviceName, String ipAddress) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("type", "SECURITY_ALERT");
-        data.put("deviceName", deviceName);
-        data.put("ipAddress", ipAddress);
-
-        sendNotification(
-                userId,
-                Notification.NotificationType.SECURITY_ALERT,
-                "New Sign-in Detected",
-                "Your account was accessed from " + deviceName,
                 data);
     }
 
@@ -371,11 +341,11 @@ public class NotificationService {
         }
         if (!inSilentWindow) return false;
 
-        // In silent window — check if payment breaks through
+        // In a silent window — check if payment breaks through
         if (paymentAmount != null) {
             BigDecimal threshold = user.getSilentHoursPaymentThreshold();
             if (threshold != null && paymentAmount.compareTo(threshold) >= 0) {
-                return false; // payment amount meets or exceeds threshold — send it
+                return false; // payment amount meets or exceeds a threshold — send it
             }
             // threshold null means no payment breaks through
         }
