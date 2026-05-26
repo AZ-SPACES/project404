@@ -31,12 +31,12 @@ import {
   MoreAction,
   MenuAnchor,
   AttachmentAnchor,
-  AUTO_REPLIES,
   isSameDay,
   formatDateHeader,
   formatTime,
   calculateStorageAsync,
 } from '../../../components/chat/chatTypes';
+import { useChat } from '../../../hooks/useChat';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -49,13 +49,25 @@ export default function ChatScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
   const { id, name, avatar, online } = route.params;
 
+  // `id` from the route is the OTHER user's UUID (set by ChatContactsScreen).
+  // The hook resolves the underlying backend chat resource and runs the E2EE pipeline.
+  const {
+    chatId,
+    messages: liveMessages,
+    isOtherTyping,
+    sendText,
+    setTyping,
+    markRead,
+    deleteMessage: deleteMessageRemote,
+  } = useChat(id);
+
   const flatListRef = useRef<FlatList>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isPickingRef = useRef(false);
 
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  // Local-only messages (forwarded/media) layered on top of liveMessages.
+  const [localOnlyMessages, setLocalOnlyMessages] = useState<Message[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -80,14 +92,24 @@ export default function ChatScreen() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
+  // Merge backend-driven thread with any local-only entries (forwarded msgs / media not yet wired to backend).
+  const messages = useMemo<Message[]>(() => {
+    const combined = [...liveMessages, ...localOnlyMessages];
+    return combined.sort((a, b) => a.timestamp - b.timestamp);
+  }, [liveMessages, localOnlyMessages]);
+
+  // Mark read on focus.
+  useEffect(() => {
+    if (!chatId) return;
+    const unsub = navigation.addListener('focus', () => {
+      markRead().catch(() => {});
+    });
+    markRead().catch(() => {});
+    return unsub;
+  }, [navigation, chatId, markRead]);
+
   // Cleanup all timers on unmount
   useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
-
-  const scheduleTimer = useCallback((fn: () => void, delay: number) => {
-    const id = setTimeout(fn, delay);
-    timersRef.current.push(id);
-    return id;
-  }, []);
 
   // Scroll to bottom when a new message arrives
   const prevMsgCountRef = useRef(messages.length);
@@ -98,30 +120,26 @@ export default function ChatScreen() {
     }
   }, [messages.length]);
 
-  // Listen for media returned from MediaPreviewScreen
+  // Listen for media returned from MediaPreviewScreen.
+  // NOTE: encrypted media upload is a TODO — for now we surface the picked media
+  // locally and send a placeholder text "[Photo]" / "[Video]" through the E2EE
+  // pipeline so the peer at least gets a notification. Wiring the Cloudinary
+  // upload + media-key encryption is a separate task.
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('chat_media_sent', (sentMedia: Message[]) => {
       if (sentMedia && sentMedia.length > 0) {
-        setMessages(prev => [...prev, ...sentMedia]);
-        
-        // Simulate delivery pipeline for media messages
-        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'delivered' } : m)), 800);
-        scheduleTimer(() => setMessages(p => p.map(m => sentMedia.find(s => s.id === m.id) ? { ...m, status: 'read' } : m)), 1800);
-        scheduleTimer(() => {
-          setIsOtherUserTyping(true);
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 2400);
-        scheduleTimer(() => {
-          setIsOtherUserTyping(false);
-          const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
-          setMessages(p => [...p, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
-        }, 4000);
+        setLocalOnlyMessages(prev => [...prev, ...sentMedia]);
+        for (const item of sentMedia) {
+          const placeholder =
+            item.type === 'video' ? '[Video]' : item.type === 'document' ? `[Document] ${item.fileName ?? ''}` : '[Photo]';
+          sendText(placeholder).catch(() => {});
+        }
       }
     });
 
     const clearMediaSub = DeviceEventEmitter.addListener('clear_media_messages', (idsToClear: string[]) => {
       if (idsToClear && idsToClear.length > 0) {
-        setMessages(prev => prev.filter(m => !idsToClear.includes(m.id)));
+        setLocalOnlyMessages(prev => prev.filter(m => !idsToClear.includes(m.id)));
       }
     });
 
@@ -129,25 +147,21 @@ export default function ChatScreen() {
       subscription.remove();
       clearMediaSub.remove();
     };
-  }, [scheduleTimer]);
+  }, [sendText]);
 
-  // Handle injected forwarded message
+  // Handle injected forwarded message — keep locally so we can preserve original metadata.
   useEffect(() => {
     const forwardedMessage = route.params?.forwardedMessage;
     if (forwardedMessage) {
-      setMessages(prev => {
-        // Prevent duplicate injection
+      setLocalOnlyMessages(prev => {
         if (prev.some(m => m.id === forwardedMessage.id)) return prev;
         return [...prev, forwardedMessage];
       });
-      // Clear param so it doesn't re-trigger
       navigation.setParams({ forwardedMessage: undefined });
-      
-      // Simulate delivery pipeline
-      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'delivered' } : m)), 800);
-      scheduleTimer(() => setMessages(p => p.map(m => m.id === forwardedMessage.id ? { ...m, status: 'read' } : m)), 1800);
+      // Also push the visible text through the E2EE pipeline so the peer receives it.
+      if (forwardedMessage.text) sendText(forwardedMessage.text).catch(() => {});
     }
-  }, [route.params?.forwardedMessage, navigation, scheduleTimer]);
+  }, [route.params?.forwardedMessage, navigation, sendText]);
 
   const filteredMessages = useMemo(
     () =>
@@ -164,17 +178,18 @@ export default function ChatScreen() {
 
   const handleProfilePress = useCallback(async () => {
     const mediaCount = messages.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'document').length;
-    
+
     const storageStats = await calculateStorageAsync(messages);
 
     navigation.navigate('ChatInfoScreen', {
+      id: chatId ?? id,
       name,
       username: name.toLowerCase().replace(/\s+/g, '_'),
       avatar,
       mediaCount,
       storageStats,
     });
-  }, [navigation, name, avatar, messages]);
+  }, [navigation, name, avatar, messages, chatId, id]);
 
   const handleMorePress = useCallback((anchor: MenuAnchor) => {
     setMenuAnchor(anchor);
@@ -214,7 +229,8 @@ export default function ChatScreen() {
   }, []);
 
   const handleClearChat = useCallback(() => {
-    setMessages([]);
+    // Clear only the local-only overlay; backend history isn't deletable here.
+    setLocalOnlyMessages([]);
     setShowMoreMenu(false);
   }, []);
 
@@ -239,63 +255,44 @@ export default function ChatScreen() {
     setReplyTo(null);
   }, []);
 
+  // Replace the input box, debounce "typing" updates, and forward the plaintext to the
+  // E2EE pipeline. The store handles optimistic UI; the WS will surface delivered/read.
   const handleSend = useCallback(() => {
-    if (!message.trim()) return;
-    const msgId = Date.now().toString();
-    const msgText = message.trim();
-    const msgTime = formatTime();
-    const msgTimestamp = Date.now();
-    const currentReply = replyTo;
-
-    setMessages(prev => [...prev, {
-      id: msgId,
-      text: msgText,
-      sender: 'me',
-      time: msgTime,
-      timestamp: msgTimestamp,
-      status: 'sent',
-      type: 'text',
-      ...(currentReply ? { replyTo: currentReply.id, replyToMessage: currentReply } : {}),
-    }]);
+    const text = message.trim();
+    if (!text) return;
     setMessage('');
     setReplyTo(null);
+    setTyping(false);
+    sendText(text).catch(() => {});
+  }, [message, sendText, setTyping]);
 
-    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)), 800);
-    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'read' } : m)), 1800);
-    scheduleTimer(() => {
-      setIsOtherUserTyping(true);
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 2400);
-    scheduleTimer(() => {
-      setIsOtherUserTyping(false);
-      const replyText = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)] ?? 'Got it!';
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: replyText, sender: 'other', time: formatTime(), timestamp: Date.now(), type: 'text' }]);
-    }, 4000);
-  }, [message, replyTo, scheduleTimer]);
+  const handleMessageChange = useCallback(
+    (next: string) => {
+      setMessage(next);
+      setTyping(next.length > 0);
+    },
+    [setTyping],
+  );
 
   const handleSendAudio = useCallback((uri: string, duration: number) => {
+    // Encrypted voice notes go through the media-upload flow which isn't wired yet.
+    // For now display locally and notify the peer via a text placeholder.
     const msgId = Date.now().toString();
-    const msgTime = formatTime();
-    const msgTimestamp = Date.now();
-    const currentReply = replyTo;
-
-    setMessages(prev => [...prev, {
+    const newLocal: Message = {
       id: msgId,
       text: 'Voice message',
       sender: 'me',
-      time: msgTime,
-      timestamp: msgTimestamp,
+      time: formatTime(),
+      timestamp: Date.now(),
       status: 'sent',
       type: 'audio',
       uri,
       duration,
-      ...(currentReply ? { replyTo: currentReply.id, replyToMessage: currentReply } : {}),
-    }]);
+    };
+    setLocalOnlyMessages(prev => [...prev, newLocal]);
     setReplyTo(null);
-
-    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)), 800);
-    scheduleTimer(() => setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'read' } : m)), 1800);
-  }, [replyTo, scheduleTimer]);
+    sendText('[Voice message]').catch(() => {});
+  }, [sendText]);
 
   // --------------------------------------------------------------------------
   // Message actions
@@ -308,13 +305,20 @@ export default function ChatScreen() {
 
   const handleDelete = useCallback(() => {
     if (!selectedMessage) return;
-    setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+    // Local-only messages are filtered out client-side. Server-backed messages
+    // are tombstoned via the backend so the peer sees the deletion too.
+    setLocalOnlyMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+    // serverId format from useChat is the backend UUID directly when present.
+    deleteMessageRemote(selectedMessage.id).catch(() => {});
     setSelectedMessage(null);
-  }, [selectedMessage]);
+  }, [selectedMessage, deleteMessageRemote]);
 
   const handleStarMessage = useCallback(() => {
     if (!selectedMessage) return;
-    setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, isStarred: !m.isStarred } : m));
+    // Star is a UI-only concept layered on local-only entries.
+    setLocalOnlyMessages(prev =>
+      prev.map(m => (m.id === selectedMessage.id ? { ...m, isStarred: !m.isStarred } : m)),
+    );
     setSelectedMessage(null);
   }, [selectedMessage]);
 
@@ -357,8 +361,12 @@ export default function ChatScreen() {
   // Media pickers
   // --------------------------------------------------------------------------
   const addMediaMessage = useCallback((newMsg: Message) => {
-    setMessages(prev => [...prev, newMsg]);
-  }, []);
+    setLocalOnlyMessages(prev => [...prev, newMsg]);
+    // Notify the peer with a placeholder until the encrypted media-upload pipeline is wired.
+    const placeholder =
+      newMsg.type === 'document' ? `[Document] ${newMsg.fileName ?? ''}` : '[Photo]';
+    sendText(placeholder).catch(() => {});
+  }, [sendText]);
 
   const handlePickPhoto = useCallback(async () => {
     if (isPickingRef.current) return;
@@ -441,8 +449,8 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const moreMenuActions = useMemo<MoreAction[]>(() => [
     { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('ContactsProfile', { name, username: name.toLowerCase().replace(/\s+/g, '_'), avatar }); } },
-    { icon: 'send', label: 'Send Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SendAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar }); } },
-    { icon: 'download', label: 'Request Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('RequestAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar }); } },
+    { icon: 'send', label: 'Send Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SendAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar, identifier: id }); } },
+    { icon: 'download', label: 'Request Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('RequestAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar, identifier: id }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia' as any); } },
@@ -486,8 +494,8 @@ export default function ChatScreen() {
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
   const listFooter = useMemo(
-    () => isOtherUserTyping ? <ChatTypingIndicator /> : null,
-    [isOtherUserTyping],
+    () => isOtherTyping ? <ChatTypingIndicator /> : null,
+    [isOtherTyping],
   );
 
   // --------------------------------------------------------------------------
@@ -543,7 +551,7 @@ export default function ChatScreen() {
           />
           <ChatInputArea
             message={message}
-            setMessage={setMessage}
+            setMessage={handleMessageChange}
             onSend={handleSend}
             isAddOpen={showAttachment}
             onAddPress={handleAddPress}
@@ -569,7 +577,7 @@ export default function ChatScreen() {
           />
           <ChatInputArea
             message={message}
-            setMessage={setMessage}
+            setMessage={handleMessageChange}
             onSend={handleSend}
             isAddOpen={showAttachment}
             onAddPress={handleAddPress}
