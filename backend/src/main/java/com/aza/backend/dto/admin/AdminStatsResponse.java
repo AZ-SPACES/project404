@@ -23,4 +23,9 @@ public class AdminStatsResponse {
     private BigDecimal totalTransactionVolume;
     private long transactionsToday;
     private BigDecimal volumeToday;
+
+    private long totalMerchants;
+    private long activeMerchants;
+    private long pendingKybMerchants;
+    private BigDecimal totalMerchantVolume;
 }

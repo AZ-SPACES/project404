@@ -18,6 +18,7 @@ public class KybStatusResponse {
     private String registeredAddress;
     private String city;
     private String taxIdNumber;
+    private String website;
     private String ownerFullName;
     private String ownerIdType;
     private String rejectionReason;

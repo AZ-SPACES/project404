@@ -7,9 +7,15 @@ import {
   getMerchantKyb,
   reviewMerchantKyb,
   setMerchantStatus,
+  updateMerchantFeeRate,
+  getMerchantPayouts,
+  getMerchantSessions,
   resetUserRateLimit,
   AdminMerchant,
   MerchantKyb,
+  MerchantPayout,
+  MerchantSession,
+  Page,
 } from "@/lib/admin-api";
 import {
   ArrowLeft,
@@ -23,6 +29,13 @@ import {
   RefreshCw,
   ExternalLink,
   X,
+  Percent,
+  CreditCard,
+  ArrowDownToLine,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 
 function fmtAmount(n: number, currency = "GHS") {
@@ -38,6 +51,13 @@ function fmtFee(bps: number) {
   return `${(bps / 100).toFixed(2)}%`;
 }
 
+function fmtBytes(n: number | null) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const STATUS_CFG: Record<string, { cls: string; label: string }> = {
   ACTIVE:            { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Active" },
   PENDING_KYB:       { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",       label: "Pending KYB" },
@@ -49,16 +69,33 @@ const STATUS_CFG: Record<string, { cls: string; label: string }> = {
 };
 
 const KYB_STATUS_CFG: Record<string, { cls: string; label: string }> = {
-  NOT_SUBMITTED:  { cls: "text-white/40 bg-white/5 border-white/10",                   label: "Not Submitted" },
-  SUBMITTED:      { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",             label: "Submitted" },
-  UNDER_REVIEW:   { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",             label: "Under Review" },
-  APPROVED:       { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",    label: "Approved" },
-  REJECTED:       { cls: "text-red-400 bg-red-500/10 border-red-500/20",                label: "Rejected" },
-  MORE_INFO_REQUIRED:{ cls: "text-orange-400 bg-orange-500/10 border-orange-500/20",   label: "More Info" },
+  PENDING:            { cls: "text-white/40 bg-white/5 border-white/10",                 label: "Pending" },
+  SUBMITTED:          { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Submitted" },
+  UNDER_REVIEW:       { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Under Review" },
+  APPROVED:           { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Approved" },
+  REJECTED:           { cls: "text-red-400 bg-red-500/10 border-red-500/20",             label: "Rejected" },
+  MORE_INFO_REQUIRED: { cls: "text-orange-400 bg-orange-500/10 border-orange-500/20",   label: "More Info" },
+};
+
+const SESSION_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  PENDING:   { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Pending" },
+  COMPLETED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",label: "Completed" },
+  EXPIRED:   { cls: "text-white/35 bg-white/5 border-white/10",                label: "Expired" },
+  CANCELLED: { cls: "text-red-400 bg-red-500/10 border-red-500/20",            label: "Cancelled" },
+};
+
+const PAYOUT_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  PENDING:   { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Pending" },
+  COMPLETED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",label: "Completed" },
+  FAILED:    { cls: "text-red-400 bg-red-500/10 border-red-500/20",            label: "Failed" },
 };
 
 function Badge({ cfg }: { cfg: { cls: string; label: string } }) {
   return <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
+}
+
+function SmBadge({ cfg }: { cfg: { cls: string; label: string } }) {
+  return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -70,7 +107,8 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-type Modal = "kyb_approve" | "kyb_reject" | "kyb_more_info" | "suspend" | "activate" | "reject_merchant" | null;
+type Modal = "kyb_approve" | "kyb_reject" | "kyb_more_info" | "suspend" | "activate" | "reject_merchant" | "fee_rate" | null;
+type Tab = "overview" | "kyb" | "payouts" | "sessions";
 
 export default function MerchantDetailPage() {
   const { merchantId } = useParams<{ merchantId: string }>();
@@ -82,8 +120,20 @@ export default function MerchantDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [inputText, setInputText] = useState("");
+  const [feeInput, setFeeInput] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("overview");
+
+  // Payouts tab state
+  const [payouts, setPayouts] = useState<Page<MerchantPayout> | null>(null);
+  const [payoutsPage, setPayoutsPage] = useState(0);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
+
+  // Sessions tab state
+  const [sessions, setSessions] = useState<Page<MerchantSession> | null>(null);
+  const [sessionsPage, setSessionsPage] = useState(0);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -108,6 +158,37 @@ export default function MerchantDetailPage() {
   }, [merchantId]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadPayouts = useCallback(async (p: number) => {
+    setPayoutsLoading(true);
+    try {
+      const res = await getMerchantPayouts(merchantId, p);
+      setPayouts(res);
+      setPayoutsPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load payouts");
+    } finally {
+      setPayoutsLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadSessions = useCallback(async (p: number) => {
+    setSessionsLoading(true);
+    try {
+      const res = await getMerchantSessions(merchantId, p);
+      setSessions(res);
+      setSessionsPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load sessions");
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, [merchantId]);
+
+  useEffect(() => {
+    if (tab === "payouts" && !payouts) loadPayouts(0);
+    if (tab === "sessions" && !sessions) loadSessions(0);
+  }, [tab, payouts, sessions, loadPayouts, loadSessions]);
 
   const handleKybReview = async (approve: boolean, rejectionReason?: string, moreInfoRequest?: string) => {
     setActionLoading(true);
@@ -135,6 +216,26 @@ export default function MerchantDetailPage() {
       showToast(`Merchant status set to ${status.toLowerCase()}`);
     } catch (e: any) {
       setError(e.message ?? "Status change failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFeeRateUpdate = async () => {
+    const bps = Math.round(parseFloat(feeInput) * 100);
+    if (isNaN(bps) || bps < 0 || bps > 10000) {
+      setError("Enter a valid fee rate between 0% and 100%");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const updated = await updateMerchantFeeRate(merchantId, bps);
+      setMerchant(updated);
+      setModal(null);
+      setFeeInput("");
+      showToast(`Fee rate updated to ${fmtFee(bps)}`);
+    } catch (e: any) {
+      setError(e.message ?? "Fee rate update failed");
     } finally {
       setActionLoading(false);
     }
@@ -171,12 +272,19 @@ export default function MerchantDetailPage() {
   if (!merchant) return null;
 
   const statusCfg = STATUS_CFG[merchant.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: merchant.status };
-  const kybReviewable = kyb && ["SUBMITTED", "UNDER_REVIEW"].includes(kyb.status);
+  const kybReviewable = kyb && kyb.status === "UNDER_REVIEW";
   const canSuspend = merchant.status === "ACTIVE";
   const canActivate = merchant.status === "SUSPENDED";
 
+  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "overview", label: "Overview", icon: Store },
+    { id: "kyb", label: "KYB", icon: ShieldCheck },
+    { id: "payouts", label: "Payouts", icon: ArrowDownToLine },
+    { id: "sessions", label: "Sessions", icon: CreditCard },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm px-4 py-3 rounded-xl shadow-2xl">
@@ -192,12 +300,21 @@ export default function MerchantDetailPage() {
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-semibold text-white">{merchant.businessName}</h1>
-            <Badge cfg={statusCfg} />
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {merchant.logoUrl && (
+            <img
+              src={merchant.logoUrl}
+              alt={merchant.businessName}
+              className="w-10 h-10 rounded-xl object-cover border border-white/10 flex-shrink-0"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl font-semibold text-white truncate">{merchant.businessName}</h1>
+              <Badge cfg={statusCfg} />
+            </div>
+            <p className="text-white/35 text-sm mt-0.5 font-mono">@{merchant.businessHandle}</p>
           </div>
-          <p className="text-white/35 text-sm mt-0.5 font-mono">@{merchant.businessHandle}</p>
         </div>
       </div>
 
@@ -223,37 +340,113 @@ export default function MerchantDetailPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Business Info */}
-        <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Store size={16} className="text-white/40" />
-            <h2 className="text-sm font-semibold text-white">Business Details</h2>
-          </div>
-          <div>
-            <Field label="Merchant ID" value={<span className="font-mono text-xs text-white/50">{merchant.id}</span>} />
-            <Field label="Owner User ID" value={<span className="font-mono text-xs text-white/50">{merchant.userId}</span>} />
-            <Field label="Category" value={merchant.category?.replace(/_/g, " ") ?? "—"} />
-            <Field label="Email" value={merchant.businessEmail} />
-            <Field label="Phone" value={merchant.businessPhone} />
-            <Field label="Description" value={merchant.businessDescription} />
-            {merchant.activatedAt && <Field label="Activated" value={fmtDate(merchant.activatedAt)} />}
-            {merchant.rejectionReason && (
-              <Field label="Rejection Reason" value={
-                <span className="text-red-400">{merchant.rejectionReason}</span>
-              } />
-            )}
-            {merchant.moreInfoRequest && (
-              <Field label="More Info Request" value={
-                <span className="text-orange-400">{merchant.moreInfoRequest}</span>
-              } />
-            )}
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === id ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
 
-        {/* KYB Info */}
+      {/* ── OVERVIEW TAB ── */}
+      {tab === "overview" && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Business Info */}
+            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Store size={16} className="text-white/40" />
+                <h2 className="text-sm font-semibold text-white">Business Details</h2>
+              </div>
+              <Field label="Merchant ID" value={<span className="font-mono text-xs text-white/50">{merchant.id}</span>} />
+              <Field label="Owner User ID" value={<span className="font-mono text-xs text-white/50">{merchant.userId}</span>} />
+              <Field label="Category" value={merchant.category?.replace(/_/g, " ") ?? "—"} />
+              <Field label="Email" value={merchant.businessEmail} />
+              <Field label="Phone" value={merchant.businessPhone} />
+              <Field label="Description" value={merchant.businessDescription} />
+              {merchant.activatedAt && <Field label="Activated" value={fmtDate(merchant.activatedAt)} />}
+              {merchant.rejectionReason && (
+                <Field label="Rejection Reason" value={
+                  <span className="text-red-400">{merchant.rejectionReason}</span>
+                } />
+              )}
+              {merchant.moreInfoRequest && (
+                <Field label="More Info Request" value={
+                  <span className="text-orange-400">{merchant.moreInfoRequest}</span>
+                } />
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5 space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-white mb-3">Account Actions</h2>
+                <div className="flex flex-wrap gap-2">
+                  {canSuspend && (
+                    <button
+                      onClick={() => { setModal("suspend"); setInputText(""); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-medium hover:bg-red-500/25 transition-all"
+                    >
+                      <Ban size={14} /> Suspend
+                    </button>
+                  )}
+                  {canActivate && (
+                    <button
+                      onClick={() => { setModal("activate"); setInputText(""); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-medium hover:bg-emerald-500/25 transition-all"
+                    >
+                      <CheckCircle2 size={14} /> Reactivate
+                    </button>
+                  )}
+                  {merchant.status !== "REJECTED" && (
+                    <button
+                      onClick={() => { setModal("reject_merchant"); setInputText(""); }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/15 text-red-500 text-sm font-medium hover:bg-red-500/20 transition-all"
+                    >
+                      <XCircle size={14} /> Reject Account
+                    </button>
+                  )}
+                  <button
+                    onClick={handleResetRateLimit}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm font-medium hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <RefreshCw size={14} /> Reset Rate Limits
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-4">
+                <h2 className="text-sm font-semibold text-white mb-3">Fee Rate</h2>
+                <div className="flex items-center justify-between bg-white/4 rounded-xl px-4 py-3">
+                  <div>
+                    <p className="text-xs text-white/35 mb-0.5">Current rate</p>
+                    <p className="text-lg font-semibold text-[#F5A623]">{fmtFee(merchant.feeRateBps)}</p>
+                  </div>
+                  <button
+                    onClick={() => { setModal("fee_rate"); setFeeInput((merchant.feeRateBps / 100).toFixed(2)); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 transition-all"
+                  >
+                    <Percent size={12} /> Edit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── KYB TAB ── */}
+      {tab === "kyb" && (
         <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-5">
             <ShieldCheck size={16} className="text-white/40" />
             <h2 className="text-sm font-semibold text-white">KYB Verification</h2>
             {kyb && (
@@ -262,102 +455,223 @@ export default function MerchantDetailPage() {
           </div>
 
           {!kyb ? (
-            <p className="text-sm text-white/30 py-4 text-center">No KYB data submitted yet</p>
+            <p className="text-sm text-white/30 py-8 text-center">No KYB data submitted yet</p>
           ) : (
-            <div>
-              <Field label="Business Type" value={kyb.businessType?.replace(/_/g, " ")} />
-              <Field label="Registration No." value={kyb.registrationNumber} />
-              <Field label="Tax ID" value={kyb.taxIdNumber} />
-              <Field label="Registered Address" value={kyb.registeredAddress} />
-              <Field label="City" value={kyb.city} />
-              <Field label="Owner Name" value={kyb.ownerFullName} />
-              <Field label="Owner ID Type" value={kyb.ownerIdType?.replace(/_/g, " ")} />
-              {kyb.submittedAt && <Field label="Submitted" value={fmtDate(kyb.submittedAt)} />}
-              {kyb.reviewedAt && <Field label="Reviewed" value={fmtDate(kyb.reviewedAt)} />}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
+                <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Business Information</p>
+                <Field label="Business Type" value={kyb.businessType?.replace(/_/g, " ")} />
+                <Field label="Registration No." value={kyb.registrationNumber} />
+                <Field label="Tax ID" value={kyb.taxIdNumber} />
+                <Field label="Registered Address" value={kyb.registeredAddress} />
+                <Field label="City" value={kyb.city} />
+                {kyb.website && (
+                  <Field label="Website" value={
+                    <a href={kyb.website} target="_blank" rel="noopener noreferrer" className="text-[#F5A623] hover:underline flex items-center gap-1">
+                      {kyb.website} <ExternalLink size={11} />
+                    </a>
+                  } />
+                )}
+                {kyb.submittedAt && <Field label="Submitted" value={fmtDate(kyb.submittedAt)} />}
+                {kyb.reviewedAt && <Field label="Reviewed" value={fmtDate(kyb.reviewedAt)} />}
+                {kyb.rejectionReason && (
+                  <Field label="Rejection Reason" value={<span className="text-red-400">{kyb.rejectionReason}</span>} />
+                )}
+                {kyb.moreInfoRequest && (
+                  <Field label="More Info Request" value={<span className="text-orange-400">{kyb.moreInfoRequest}</span>} />
+                )}
+              </div>
 
-              {kyb.documents && kyb.documents.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium">Documents</p>
-                  {kyb.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between bg-white/4 rounded-lg px-3 py-2">
-                      <span className="text-xs text-white/60">{doc.documentType.replace(/_/g, " ")}</span>
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[#F5A623] hover:text-[#F5A623]/80 transition-colors"
-                      >
-                        <ExternalLink size={13} />
-                      </a>
+              <div>
+                <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Owner / Director</p>
+                <Field label="Full Name" value={kyb.ownerFullName} />
+                <Field label="ID Type" value={kyb.ownerIdType?.replace(/_/g, " ")} />
+
+                {kyb.documents && kyb.documents.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Documents</p>
+                    <div className="space-y-2">
+                      {kyb.documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between bg-white/4 rounded-xl px-3 py-2.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {doc.mimeType === "application/pdf"
+                              ? <FileText size={14} className="text-white/40 flex-shrink-0" />
+                              : <ImageIcon size={14} className="text-white/40 flex-shrink-0" />
+                            }
+                            <div className="min-w-0">
+                              <p className="text-xs text-white/70 font-medium">{doc.type.replace(/_/g, " ")}</p>
+                              {doc.fileName && <p className="text-[10px] text-white/30 truncate">{doc.fileName}</p>}
+                              {doc.fileSizeBytes && <p className="text-[10px] text-white/25">{fmtBytes(doc.fileSizeBytes)}</p>}
+                            </div>
+                          </div>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="ml-3 flex items-center gap-1 text-[#F5A623] hover:text-[#F5A623]/80 text-xs transition-colors flex-shrink-0"
+                          >
+                            View <ExternalLink size={11} />
+                          </a>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-              {kybReviewable && (
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                  <button
-                    onClick={() => { setModal("kyb_approve"); setInputText(""); }}
-                    className="py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/25 transition-all flex items-center justify-center gap-1"
-                  >
-                    <CheckCircle2 size={12} /> Approve
-                  </button>
-                  <button
-                    onClick={() => { setModal("kyb_more_info"); setInputText(""); }}
-                    className="py-2 rounded-xl bg-orange-500/15 border border-orange-500/25 text-orange-400 text-xs font-semibold hover:bg-orange-500/25 transition-all"
-                  >
-                    More Info
-                  </button>
-                  <button
-                    onClick={() => { setModal("kyb_reject"); setInputText(""); }}
-                    className="py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-xs font-semibold hover:bg-red-500/25 transition-all flex items-center justify-center gap-1"
-                  >
-                    <XCircle size={12} /> Reject
-                  </button>
-                </div>
-              )}
+          {kybReviewable && (
+            <div className="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-white/5">
+              <button
+                onClick={() => { setModal("kyb_approve"); setInputText(""); }}
+                className="py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-all flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 size={14} /> Approve
+              </button>
+              <button
+                onClick={() => { setModal("kyb_more_info"); setInputText(""); }}
+                className="py-2.5 rounded-xl bg-orange-500/15 border border-orange-500/25 text-orange-400 text-sm font-semibold hover:bg-orange-500/25 transition-all"
+              >
+                More Info
+              </button>
+              <button
+                onClick={() => { setModal("kyb_reject"); setInputText(""); }}
+                className="py-2.5 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-semibold hover:bg-red-500/25 transition-all flex items-center justify-center gap-1.5"
+              >
+                <XCircle size={14} /> Reject
+              </button>
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Actions */}
-      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-        <h2 className="text-sm font-semibold text-white mb-4">Account Actions</h2>
-        <div className="flex flex-wrap gap-2">
-          {canSuspend && (
-            <button
-              onClick={() => setModal("suspend")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-medium hover:bg-red-500/25 transition-all"
-            >
-              <Ban size={14} /> Suspend
-            </button>
+      {/* ── PAYOUTS TAB ── */}
+      {tab === "payouts" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowDownToLine size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Payout History</h2>
+              {payouts && <span className="text-xs text-white/30">{payouts.totalElements} total</span>}
+            </div>
+            {payoutsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+
+          {!payouts && payoutsLoading ? (
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="animate-spin text-white/30" size={20} />
+            </div>
+          ) : payouts?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No payouts yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Note</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Requested</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Completed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {payouts?.content.map((p) => {
+                    const sc = PAYOUT_STATUS_CFG[p.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: p.status };
+                    return (
+                      <tr key={p.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(p.amount, p.currency)}</td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-white/45 text-xs hidden md:table-cell">{p.note ?? "—"}</td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(p.requestedAt)}</td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden lg:table-cell">{fmtDate(p.completedAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {payouts && payouts.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadPayouts(payoutsPage - 1)} disabled={payoutsPage === 0 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="text-xs text-white/40">{payoutsPage + 1} / {payouts.totalPages}</span>
+                  <button onClick={() => loadPayouts(payoutsPage + 1)} disabled={payoutsPage >= payouts.totalPages - 1 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </>
           )}
-          {canActivate && (
-            <button
-              onClick={() => setModal("activate")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-medium hover:bg-emerald-500/25 transition-all"
-            >
-              <CheckCircle2 size={14} /> Reactivate
-            </button>
-          )}
-          {!["REJECTED"].includes(merchant.status) && (
-            <button
-              onClick={() => setModal("reject_merchant")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/15 text-red-500 text-sm font-medium hover:bg-red-500/20 transition-all"
-            >
-              <XCircle size={14} /> Reject Account
-            </button>
-          )}
-          <button
-            onClick={handleResetRateLimit}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm font-medium hover:bg-white/10 hover:text-white transition-all"
-          >
-            <RefreshCw size={14} /> Reset Rate Limits
-          </button>
         </div>
-      </div>
+      )}
+
+      {/* ── SESSIONS TAB ── */}
+      {tab === "sessions" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Checkout Sessions</h2>
+              {sessions && <span className="text-xs text-white/30">{sessions.totalElements} total</span>}
+            </div>
+            {sessionsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+
+          {!sessions && sessionsLoading ? (
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="animate-spin text-white/30" size={20} />
+            </div>
+          ) : sessions?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No checkout sessions yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Description</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Fee</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {sessions?.content.map((s) => {
+                    const sc = SESSION_STATUS_CFG[s.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: s.status };
+                    return (
+                      <tr key={s.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(s.amount, s.currency)}</td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-white/45 text-xs hidden md:table-cell max-w-[200px] truncate">{s.description ?? "—"}</td>
+                        <td className="px-5 py-3.5 text-right font-mono text-xs text-white/40 hidden lg:table-cell">
+                          {s.platformFee != null ? fmtAmount(s.platformFee, s.currency) : "—"}
+                        </td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(s.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {sessions && sessions.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadSessions(sessionsPage - 1)} disabled={sessionsPage === 0 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="text-xs text-white/40">{sessionsPage + 1} / {sessions.totalPages}</span>
+                  <button onClick={() => loadSessions(sessionsPage + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       {modal && (
@@ -372,6 +686,7 @@ export default function MerchantDetailPage() {
                 {modal === "suspend" && "Suspend Merchant"}
                 {modal === "activate" && "Reactivate Merchant"}
                 {modal === "reject_merchant" && "Reject Merchant Account"}
+                {modal === "fee_rate" && "Update Fee Rate"}
               </h3>
               <button onClick={() => setModal(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
             </div>
@@ -388,6 +703,41 @@ export default function MerchantDetailPage() {
                 >
                   {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                   Confirm Approval
+                </button>
+              </>
+            )}
+
+            {modal === "fee_rate" && (
+              <>
+                <p className="text-sm text-white/50 mb-4">
+                  Current rate: <span className="text-[#F5A623] font-semibold">{fmtFee(merchant.feeRateBps)}</span>
+                </p>
+                <div className="mb-5">
+                  <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">New Rate (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={feeInput}
+                      onChange={(e) => setFeeInput(e.target.value)}
+                      placeholder="e.g. 1.50"
+                      className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">%</span>
+                  </div>
+                  <p className="text-[11px] text-white/25 mt-1.5">
+                    {feeInput && !isNaN(parseFloat(feeInput)) ? `= ${Math.round(parseFloat(feeInput) * 100)} bps` : "Enter a value between 0 and 100"}
+                  </p>
+                </div>
+                <button
+                  onClick={handleFeeRateUpdate}
+                  disabled={actionLoading || !feeInput}
+                  className="w-full py-3 rounded-xl bg-[#F5A623]/20 border border-[#F5A623]/30 text-[#F5A623] font-semibold hover:bg-[#F5A623]/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Percent size={16} />}
+                  Update Fee Rate
                 </button>
               </>
             )}

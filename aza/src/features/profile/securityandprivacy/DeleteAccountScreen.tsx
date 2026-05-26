@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Pressable, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
-import { useAppTheme, Typography, Spacing } from '../../../theme';
+import { useAppTheme, Typography, Spacing,} from '../../../theme';
 import { useAuth } from '../../../providers/AuthProvider';
 import { deleteAccount } from '../../../services/api';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DeleteAccount'>;
 
@@ -14,6 +15,7 @@ const { width, height } = Dimensions.get('window');
 
 export function DeleteAccountScreen() {
   const { colors: Colors } = useAppTheme();
+   const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
   
@@ -88,6 +90,9 @@ export function DeleteAccountScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
+        <TouchableOpacity onPress={navigation.goBack} style={[styles.backButton, { backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)" }]}>
+          <MaterialIcons name="chevron-left" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
         <View style={styles.textContainer}>
           <Image 
             source={require('../../../assets/delete_emoji.png')} 
@@ -148,6 +153,14 @@ export function DeleteAccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md,
   },
   content: {
     flex: 1,
