@@ -25,6 +25,7 @@ import Button from "../../../components/ui/Button";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
+import { getMerchant } from "../../../services/api";
 
 const { height } = Dimensions.get('window');
 
@@ -74,6 +75,21 @@ export default function ProfileScreen() {
   const { logout } = useAuth();
   const { displayName, profileImageUri, setProfileImage } = useProfile();
   const { showToast } = useToast();
+
+  const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
+
+  useEffect(() => {
+    getMerchant()
+      .then((res: any) => {
+        const merchant = res.data?.data ?? res.data;
+        if (merchant && merchant.id) {
+          setHasBusinessAccount(true);
+        }
+      })
+      .catch(() => {
+        setHasBusinessAccount(false);
+      });
+  }, []);
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -401,12 +417,15 @@ export default function ProfileScreen() {
             title="Business account"
             onPress={() => {
               setBottomSheetVisible(false);
-              // Handle business account selection
+              navigation.navigate('MiniApp', { appId: 'my_business' });
             }}
-            backgroundColor="#B7ED7E"
-            textColor="#1E5128"
+            backgroundColor={hasBusinessAccount ? "#1E5128" : "#B7ED7E"}
+            textColor={hasBusinessAccount ? "#B7ED7E" : "#1E5128"}
             borderRadius={24}
           />
+          {hasBusinessAccount && (
+            <Text style={styles.activeAccountMessage}>You already have a business account</Text>
+          )}
         </Animated.View>
       </View>
 
