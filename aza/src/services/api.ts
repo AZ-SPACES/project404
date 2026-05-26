@@ -509,8 +509,14 @@ export const getMerchantWebhooks = () => api.get('/api/v1/merchant/webhooks');
 export const createMerchantWebhook = (url: string, events: string) =>
   api.post('/api/v1/merchant/webhooks', { url, events });
 
+export const updateMerchantWebhook = (endpointId: string, data: { url?: string; events?: string; isActive?: boolean }) =>
+  api.put(`/api/v1/merchant/webhooks/${endpointId}`, data);
+
 export const deleteMerchantWebhook = (endpointId: string) =>
   api.delete(`/api/v1/merchant/webhooks/${endpointId}`);
+
+export const getMerchantWebhookDeliveries = (endpointId: string) =>
+  api.get(`/api/v1/merchant/webhooks/${endpointId}/deliveries`);
 
 export const getMerchantPayouts = (page = 0, size = 20) =>
   api.get(`/api/v1/merchant/payouts?page=${page}&size=${size}`);
