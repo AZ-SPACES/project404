@@ -36,7 +36,7 @@ const OVAL_HEIGHT = OVAL_WIDTH * 1.3;
 type FeedbackState =
   | "Center your face"
   | "Move closer"
-  | "Hold still"
+  | "Ready to capture"
   | "Processing...";
 
 export default function SelfieScanScreen() {
@@ -108,13 +108,11 @@ export default function SelfieScanScreen() {
 
     setFeedback("Center your face");
     const t1 = setTimeout(() => setFeedback("Move closer"), 1500);
-    const t2 = setTimeout(() => setFeedback("Hold still"), 3000);
-    const tCapture = setTimeout(() => handleCapture(), 4500);
+    const t2 = setTimeout(() => setFeedback("Ready to capture"), 3000);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearTimeout(tCapture);
     };
   }, [capturedImage, permission?.granted]);
 
@@ -167,7 +165,7 @@ export default function SelfieScanScreen() {
   }
 
   const ovalBorderColor =
-    feedback === "Hold still"
+    feedback === "Ready to capture"
       ? Colors.secondary // green-ish when face is locked
       : "rgba(255,255,255,0.6)";
 

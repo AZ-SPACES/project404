@@ -14,3 +14,4 @@ aza-admin/.env.local
 aza-admin/.next
 aza-web/.next
 
+.DS_Store

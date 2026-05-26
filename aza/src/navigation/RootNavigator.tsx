@@ -24,7 +24,11 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
         <Stack.Group>
-          <Stack.Screen name="Auth" component={AuthNavigator} />
+          <Stack.Screen 
+            name="Auth" 
+            component={AuthNavigator} 
+            options={{ animation: 'fade' }}
+          />
         </Stack.Group>
       ) : (
         <Stack.Group>

@@ -264,6 +264,14 @@ export function SecurityAndPrivacyScreen() {
             subtitle="Learn how we protect and use your personal information"
             onPress={() => {}}
           />
+
+          <SettingRow 
+            iconType="Feather" 
+            iconName="trash-2" 
+            title="Delete account" 
+            subtitle="Permanently delete your Aza account and data"
+            onPress={() => navigation.navigate("DeleteAccount")}
+          />
         </View>
         
         <View style={styles.spacer} />

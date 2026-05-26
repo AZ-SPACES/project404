@@ -1,7 +1,6 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
 
 const getBaseUrl = (): string => {
   return "https://api.aza.systems";
@@ -348,6 +347,9 @@ export const getDevices = () => api.get("/api/v1/users/me/devices");
 export const removeSelfEverywhere = () =>
   api.delete("/api/v1/users/me/privacy");
 
+export const deleteAccount = () =>
+  api.delete("/api/v1/users/me");
+
 export const removeDevice = (deviceId: string) =>
   api.delete(`/api/v1/users/me/devices/${encodeURIComponent(deviceId)}`);
 
@@ -408,6 +410,87 @@ export const clearBypassToken = async (): Promise<void> => {
   await SecureStore.deleteItemAsync(BYPASS_TOKEN_KEY);
 };
 
+// --- Merchant Endpoints ---
+
+export const getMerchant = () => api.get('/api/v1/merchant/me');
+
+export const checkMerchantHandleAvailability = (handle: string) =>
+  api.get(`/api/v1/merchant/check-handle?handle=${handle}`);
+
+export const registerMerchant = (data: {
+  businessName: string;
+  businessHandle: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  businessDescription?: string;
+  category?: string;
+}) => api.post('/api/v1/merchant/register', data);
+
+export const uploadMerchantLogo = (file: any) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/api/v1/merchant/logo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const getMerchantKybStatus = () => api.get('/api/v1/merchant/kyb');
+
+export const submitMerchantKyb = (data: {
+  businessType: string;
+  registrationNumber?: string;
+  registeredAddress?: string;
+  city?: string;
+  taxIdNumber?: string;
+  website?: string;
+  ownerFullName: string;
+  ownerIdType?: string;
+  ownerIdNumber?: string;
+}) => api.post('/api/v1/merchant/kyb', data);
+
+export const uploadKybDocument = (file: any, type: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', type);
+  return api.post('/api/v1/merchant/kyb/document', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const submitKybFinal = () => api.post('/api/v1/merchant/kyb/submit');
+
+export const getMerchantSessions = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/sessions?page=${page}&size=${size}`);
+
+export const createMerchantSession = (data: {
+  amount: number;
+  description?: string;
+  metadata?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+}) => api.post('/api/v1/merchant/sessions', data);
+
+export const getMerchantApiKeys = () => api.get('/api/v1/merchant/api-keys');
+
+export const createMerchantApiKey = (name?: string) =>
+  api.post('/api/v1/merchant/api-keys', name ? { name } : {});
+
+export const revokeMerchantApiKey = (keyId: string) =>
+  api.delete(`/api/v1/merchant/api-keys/${keyId}`);
+
+export const getMerchantWebhooks = () => api.get('/api/v1/merchant/webhooks');
+
+export const createMerchantWebhook = (url: string, events: string) =>
+  api.post('/api/v1/merchant/webhooks', { url, events });
+
+export const deleteMerchantWebhook = (endpointId: string) =>
+  api.delete(`/api/v1/merchant/webhooks/${endpointId}`);
+
+export const getMerchantPayouts = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/payouts?page=${page}&size=${size}`);
+
+export const requestMerchantPayout = (amount: number, passcode: string) =>
+  api.post('/api/v1/merchant/payouts', { amount, passcode });
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;
@@ -473,11 +556,14 @@ api.interceptors.response.use(
 
     // If 401 and we haven't already retried this exact request
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't intercept 401s on the login or refresh endpoints themselves
-      if (
-        originalRequest.url.includes("/auth/login") ||
-        originalRequest.url.includes("/auth/refresh")
-      ) {
+      // Don't intercept 401s on login, 2fa, biometric, or refresh endpoints
+      const isLoginOrRefresh =
+        originalRequest.url?.includes("/auth/login") ||
+        originalRequest.url?.includes("/auth/biometric-login") ||
+        originalRequest.url?.includes("/auth/2fa/login") ||
+        originalRequest.url?.includes("/auth/refresh");
+
+      if (isLoginOrRefresh) {
         return Promise.reject(error);
       }
 
