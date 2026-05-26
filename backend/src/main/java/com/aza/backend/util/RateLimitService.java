@@ -77,4 +77,27 @@ public class RateLimitService {
         Long used = redisTemplate.opsForZSet().zCard(redisKey);
         return Math.max(0, limit - (used != null ? used : 0));
     }
+
+    /** Clear all sliding-window counters for a specific user. */
+    public void resetUser(UUID userId) {
+        redisTemplate.delete("ratelimit:user:" + userId);
+    }
+
+    /** Clear all sliding-window counters for a specific IP address. */
+    public void resetIp(String ip) {
+        redisTemplate.delete("ratelimit:ip:" + ip);
+        redisTemplate.delete("ratelimit:ip_auth:" + ip);
+    }
+
+    /**
+     * Flush every rate-limit counter across all actors.
+     * Uses SCAN to avoid blocking Redis with a KEYS * call.
+     * Returns the number of keys deleted.
+     */
+    public long resetAll() {
+        Set<String> keys = redisTemplate.keys("ratelimit:*");
+        if (keys == null || keys.isEmpty()) return 0;
+        Long deleted = redisTemplate.delete(keys);
+        return deleted != null ? deleted : 0;
+    }
 }

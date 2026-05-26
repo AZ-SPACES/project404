@@ -29,6 +29,13 @@ public class MerchantController {
     private final CheckoutService checkoutService;
     private final MerchantRepository merchantRepository;
 
+    // ==================== HANDLE CHECK ====================
+
+    @GetMapping("/check-handle")
+    public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.isHandleAvailable(handle)));
+    }
+
     // ==================== PROFILE ====================
 
     @GetMapping("/me")
