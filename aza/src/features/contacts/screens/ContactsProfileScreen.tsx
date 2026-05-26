@@ -85,6 +85,7 @@ export default function ContactsProfileScreen() {
       name: displayName,
       username: displayHandle,
       avatar: displayAvatar,
+      identifier: displayHandle,
     });
   };
 
@@ -95,6 +96,7 @@ export default function ContactsProfileScreen() {
       name: displayName,
       username: displayHandle,
       avatar: displayAvatar,
+      identifier: displayHandle,
     });
   };
 
