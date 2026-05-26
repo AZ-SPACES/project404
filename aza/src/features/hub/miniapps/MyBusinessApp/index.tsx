@@ -19,6 +19,7 @@ import CreateSessionPage from './pages/CreateSessionPage';
 import ApiKeysPage from './pages/ApiKeysPage';
 import WebhooksPage from './pages/WebhooksPage';
 import PayoutsPage from './pages/PayoutsPage';
+import StoreQrPage from './pages/StoreQrPage';
 
 // Local interface just for the exported component props
 interface LocalMiniAppProps {
@@ -124,6 +125,8 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
         return <WebhooksPage {...navProps} />;
       case 'payouts':
         return <PayoutsPage {...navProps} />;
+      case 'store_qr':
+        return <StoreQrPage {...navProps} />;
       default:
         return null;
     }
