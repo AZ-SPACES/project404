@@ -11,18 +11,16 @@ if (typeof window !== 'undefined') {
 type Props = { isOpen: boolean; onClose: () => void };
 
 const devLinks = [
-  { label: 'API Reference',      desc: 'Interactive REST endpoint explorer',    href: '/developers/api-explorer', shape: '1' },
-  { label: 'Developer Guides',   desc: 'Tutorials, quickstarts & walkthroughs', href: '/developers/guides',       shape: '2' },
-  { label: 'Merchant Portal',    desc: 'Payments dashboard for your business',  href: 'https://merchants.aza.systems', shape: '3' },
-  { label: 'Checkout Integration', desc: 'Accept payments with hosted sessions', href: '/developers/guides?doc=checkout', shape: '4' },
-  { label: 'Webhook Events',     desc: 'Real-time event delivery & verification', href: '/developers/guides?doc=webhooks-overview', shape: '5' },
+  { label: 'API Reference',    desc: 'Interactive REST endpoint explorer',     href: '/developers/api-explorer',          shape: '1' },
+  { label: 'Developer Guides', desc: 'Tutorials, quickstarts & walkthroughs',  href: '/developers/guides',                shape: '2' },
+  { label: 'Merchant Portal',  desc: 'Payments dashboard for your business',   href: 'https://merchants.aza.systems',     shape: '3' },
+  { label: 'SDKs & Libraries', desc: 'HTTP client setup for Node, Python, PHP', href: '/developers/guides?doc=sdks',      shape: '4' },
+  { label: 'System Status',    desc: 'Live uptime and API health checks',       href: '/developers/status',                shape: '5' },
 ];
 
 const quickLinks = [
-  { label: 'GitHub', href: '#' },
-  { label: 'Discord', href: '#' },
-  { label: 'Status', href: '#' },
-  { label: 'Changelog', href: '/developers/guides?doc=errors' },
+  { label: 'Changelog', href: '/developers/guides?doc=changelog' },
+  { label: 'API Status', href: '/developers/status' },
 ];
 
 export function DeveloperMenu({ isOpen, onClose }: Props) {
