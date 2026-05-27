@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share, Linking, Platform, ScrollView } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
@@ -7,6 +7,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { api } from '../../../services/api';
@@ -19,14 +21,64 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { displayName, profileImageUri, handle } = useProfile();
   const { showToast } = useToast();
-  const userHandle = handle || "username";      
-  const profileLink = `https://api.aza.systems/${userHandle}`;
+  const userHandle = handle || "username";
+  // Universal link that opens SendAmount with this handle pre-filled.
+  // Matches the linking config in App.tsx: `pay/:identifier`.
+  const profileLink = `https://aza.systems/pay/${userHandle}`;
+
+  // Ref on the QR card view so we can rasterize it into a PNG for sharing.
+  const shareCardRef = useRef<View>(null);
+
+  const shareMessage = `Pay ${displayName || `@${userHandle}`} on Aza: ${profileLink}`;
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Try to attach the QR image alongside the link.
+    let imageUri: string | null = null;
     try {
-      await Share.share({
-        message: `Pay me on Aza: ${profileLink}` });
+      imageUri = await captureRef(shareCardRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+    } catch {
+      imageUri = null;
+    }
+
+    if (imageUri) {
+      // iOS: RN Share happily attaches the file via `url` AND keeps the message.
+      // Android: RN's Share drops `url`, so route image+text via expo-sharing instead.
+      if (Platform.OS === 'ios') {
+        try {
+          await Share.share({
+            message: shareMessage,
+            url: imageUri,
+            title: `Pay me on Aza`,
+          });
+          return;
+        } catch {
+          // fall through to expo-sharing
+        }
+      }
+      const available = await Sharing.isAvailableAsync().catch(() => false);
+      if (available) {
+        try {
+          await Sharing.shareAsync(imageUri, {
+            mimeType: 'image/png',
+            UTI: 'public.png',
+            dialogTitle: shareMessage,
+          });
+          return;
+        } catch {
+          // fall through to text-only share
+        }
+      }
+    }
+
+    // Fallback: link-only share (also the path on Android with no Sharing module).
+    try {
+      await Share.share({ message: shareMessage });
     } catch {
       showToast('Could not open share sheet. Please try again.', 'error');
     }
@@ -101,30 +153,34 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
 
           {/* Main QR Content */}
           <View style={styles.mainContent}>
-            <View style={styles.qrCard}>
-              <View style={styles.qrWrapper}>
-                <Image 
-                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${profileLink}` }}
-                  style={styles.qrImage}
-                />
-                <View style={styles.qrLogoContainer}>
-                  <Image source={require('../../../assets/aza-z.png')} style={styles.qrLogo} />
+            {/* The ref groups the QR card + link line so the captured image
+                already includes the printed link beneath the code. */}
+            <View ref={shareCardRef} collapsable={false} style={styles.shareableArea}>
+              <View style={styles.qrCard}>
+                <View style={styles.qrWrapper}>
+                  <Image
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(profileLink)}` }}
+                    style={styles.qrImage}
+                  />
+                  <View style={styles.qrLogoContainer}>
+                    <Image source={require('../../../assets/aza-z.png')} style={styles.qrLogo} />
+                  </View>
                 </View>
               </View>
-            </View>
 
-            <TouchableOpacity 
-              style={styles.copyLinkContainer}
-              onPress={() => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                // Add Clipboard.setString here if needed
-              }}
-            >
-              <Text style={styles.getPaidText}>
-                Get paid at <Text style={styles.linkText}>{profileLink}</Text>
-              </Text>
-              <Feather name="copy" size={14} color={Colors.textSecondary} style={{marginLeft: 6}} />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.copyLinkContainer}
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  // Add Clipboard.setString here if needed
+                }}
+              >
+                <Text style={styles.getPaidText}>
+                  Get paid at <Text style={styles.linkText}>{profileLink}</Text>
+                </Text>
+                <Feather name="copy" size={14} color={Colors.textSecondary} style={{marginLeft: 6}} />
+              </TouchableOpacity>
+            </View>
 
             {/* Wallet Integration Section */}
             <View style={styles.walletContainer}>
@@ -238,6 +294,11 @@ function createStyles(Colors: ThemeColors) {
   mainContent: {
     alignItems: 'center',
     paddingTop: Spacing.xs },
+  shareableArea: {
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md },
   qrCard: {
     backgroundColor: Colors.white,
     padding: 20,

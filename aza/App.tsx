@@ -58,8 +58,10 @@ const linking = {
     screens: {
       App: {
         screens: {
-          // Payment link: aza://pay/naaddo → Send screen
-          Send: "pay/:handle",
+          // Payment link: aza://pay/naaddo (or https://aza.me/pay/naaddo) → SendAmount
+          // with the handle pre-filled as the recipient identifier. The screen
+          // then looks up the rest of the profile by handle.
+          SendAmount: "pay/:identifier",
           // Profile QR code: aza://me/naaddo → MyCode screen (via scan tab)
           MainTabs: {
             screens: {

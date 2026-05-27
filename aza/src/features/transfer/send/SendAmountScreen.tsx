@@ -17,13 +17,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
-import { getWalletBalance } from '../../../services/api';
+import { getWalletBalance, getUserByHandle } from '../../../services/api';
 import { formatCurrency } from '../../../utils/transactionUtils';
 
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
 export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
-    const { name, username, avatar, identifier } = route.params;
+    const { identifier } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
@@ -33,6 +33,37 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const [balance, setBalance] = useState<number | null>(null);
     const [balanceCurrency, setBalanceCurrency] = useState('GHS');
     const amountInputRef = useRef<TextInput>(null);
+
+    // Recipient identity. When the screen is opened from inside the app these come
+    // through the route params; when it's opened via a deep link (aza://pay/<handle>)
+    // only `identifier` is set and we look up the rest via /users/by-handle.
+    const [name, setName] = useState<string>(route.params.name ?? '');
+    const [username, setUsername] = useState<string>(
+        route.params.username ?? (identifier ? `@${identifier}` : ''),
+    );
+    const [avatar, setAvatar] = useState<string>(route.params.avatar ?? '');
+
+    useEffect(() => {
+        // If the caller passed a full recipient bundle, skip the lookup.
+        if (route.params.name && route.params.avatar) return;
+        if (!identifier) return;
+        let cancelled = false;
+        getUserByHandle(identifier)
+            .then((res) => {
+                if (cancelled) return;
+                const u = res.data?.data ?? res.data;
+                if (!u) return;
+                if (u.displayName) setName(u.displayName);
+                if (u.handle) setUsername(`@${u.handle}`);
+                if (u.profileImageUrl) setAvatar(u.profileImageUrl);
+            })
+            .catch(() => {
+                /* Fall back to the placeholder — user can still send by handle. */
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [identifier, route.params.name, route.params.avatar]);
 
     useEffect(() => {
         let cancelled = false;

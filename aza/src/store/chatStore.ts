@@ -159,7 +159,15 @@ function mergeMessage(
   if (matchIdx === -1) {
     return [...thread, incoming].sort((a, b) => a.timestamp - b.timestamp);
   }
-  const merged = { ...thread[matchIdx]!, ...incoming };
+  const existing = thread[matchIdx]!;
+  // If we couldn't decrypt the incoming copy (typical for our own messages
+  // coming back from the server — the ciphertext was encrypted for the peer,
+  // not us) but we already have plaintext locally, keep the local text.
+  // Status, delivery timestamps, and other metadata still flow through.
+  const preservePlaintext = !incoming.decryptOk && existing.decryptOk && !!existing.text;
+  const merged: LocalMessage = preservePlaintext
+    ? { ...existing, ...incoming, text: existing.text, decryptOk: true }
+    : { ...existing, ...incoming };
   const next = thread.slice();
   next[matchIdx] = merged;
   return next;
