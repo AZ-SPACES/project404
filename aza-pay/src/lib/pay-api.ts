@@ -25,21 +25,31 @@ export interface CheckoutSession {
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { cache: "no-store" });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { cache: "no-store" });
+  } catch {
+    throw new Error("Could not reach the AZA server. Check your connection and try again.");
+  }
   const body = await res.json();
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Request failed");
   return body.data as T;
 }
 
 async function post<T>(path: string, payload: unknown, token?: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Could not reach the AZA server. Check your connection and try again.");
+  }
   const body = await res.json();
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? body.message ?? "Request failed");
   return body.data as T;
