@@ -8,19 +8,15 @@ import {
   Copy,
   Check,
   ExternalLink,
-  BookOpen,
-  ArrowRight,
-  AlertTriangle,
-  Info,
   Menu,
   X,
-  Code
+  Code,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 
-// Define the supported code tabs
 type CodeTab = 'curl' | 'js' | 'python';
 
-// Define structure for doc articles
 interface DocArticle {
   id: string;
   title: string;
@@ -29,20 +25,14 @@ interface DocArticle {
   lastUpdated: string;
   description: string;
   content: React.ReactNode;
-  codeSnippets: {
-    curl: string;
-    js: string;
-    python: string;
-  };
+  codeSnippets: { curl: string; js: string; python: string };
 }
 
 export default function GuidesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#ffffff] font-sans antialiased text-[#1f2937]">
-        <div className="text-center">
-          <p className="text-sm font-medium text-gray-500 font-mono">Loading documentation...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans antialiased text-gray-900">
+        <p className="text-sm font-medium text-gray-500 font-mono">Loading documentation...</p>
       </div>
     }>
       <GuidesContent />
@@ -57,7 +47,6 @@ function GuidesContent() {
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Sync active doc state with query parameter
   useEffect(() => {
     const docParam = searchParams.get('doc');
     if (docParam && docMap[docParam]) {
@@ -65,9 +54,9 @@ function GuidesContent() {
     }
   }, [searchParams]);
 
-  // Set the doc parameter in the URL without triggering full page reload
   const handleSelectDoc = (docId: string) => {
     setActiveDoc(docId);
+    setActiveCodeTab('curl');
     setMobileMenuOpen(false);
     const newUrl = `${window.location.pathname}?doc=${docId}`;
     window.history.pushState({ path: newUrl }, '', newUrl);
@@ -82,63 +71,41 @@ function GuidesContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#ffffff] font-sans antialiased text-[#1f2937]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-white font-sans antialiased text-gray-900">
       {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0e2a0e] text-white border-b border-white/10 sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black bg-[#B7EE7A] text-[#174717]">
-            A
-          </span>
+          <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black bg-[#B7EE7A] text-[#174717]">A</span>
           <span className="font-extrabold text-sm tracking-tight">aza developers</span>
         </div>
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1 text-white/80 hover:text-white"
-          aria-label="Toggle navigation menu"
-        >
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 text-white/80 hover:text-white" aria-label="Toggle navigation">
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Sidebar Navigation */}
-      <aside
-        className={`w-full md:w-64 flex-shrink-0 flex flex-col bg-[#0e2a0e] text-white border-r border-[#174717] md:sticky md:top-0 md:h-screen overflow-y-auto z-40 transition-all duration-200 ${
-          mobileMenuOpen ? 'fixed inset-x-0 bottom-0 top-[53px]' : 'hidden md:flex'
-        }`}
-      >
-        {/* Branding header (desktop only) */}
+      {/* Sidebar */}
+      <aside className={`w-full md:w-64 flex-shrink-0 flex flex-col bg-[#0e2a0e] text-white border-r border-[#174717] md:sticky md:top-0 md:h-screen overflow-y-auto z-40 transition-all duration-200 ${mobileMenuOpen ? 'fixed inset-x-0 bottom-0 top-[53px]' : 'hidden md:flex'}`}>
         <div className="hidden md:block p-5 border-b border-white/5">
           <Link href="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black bg-[#B7EE7A] text-[#174717]">
-              A
-            </span>
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black bg-[#B7EE7A] text-[#174717]">A</span>
             <div>
               <p className="font-extrabold text-sm leading-none tracking-tight">aza</p>
-              <p className="text-[10px] font-bold tracking-wider text-[#B7EE7A]/60 mt-1 uppercase">
-                Developer Guides
-              </p>
+              <p className="text-[10px] font-bold tracking-wider text-[#B7EE7A]/60 mt-1 uppercase">Developer Guides</p>
             </div>
           </Link>
         </div>
 
-        {/* Sidebar Navigation List */}
         <nav className="flex-1 p-4 flex flex-col gap-5">
           {navigationGroups.map((group) => (
-            <div key={group.title} className="flex flex-col gap-1">
-              <h2 className="text-[10px] font-extrabold uppercase tracking-wider text-[#B7EE7A]/40 px-2 py-1">
-                {group.title}
-              </h2>
+            <div key={group.title} className="flex flex-col gap-0.5">
+              <h2 className="text-[10px] font-extrabold uppercase tracking-wider text-[#B7EE7A]/40 px-2 py-1 mb-0.5">{group.title}</h2>
               {group.items.map((item) => {
                 const isActive = activeDoc === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleSelectDoc(item.id)}
-                    className={`w-full text-left px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-between ${
-                      isActive
-                        ? 'bg-white/10 text-white font-semibold'
-                        : 'text-white/60 hover:bg-white/5 hover:text-white'
-                    }`}
+                    className={`w-full text-left px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-between ${isActive ? 'bg-white/10 text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
                   >
                     {item.label}
                     {isActive && <ChevronRight size={12} className="text-[#B7EE7A]" />}
@@ -149,93 +116,54 @@ function GuidesContent() {
           ))}
         </nav>
 
-        {/* Sidebar Footer Link */}
         <div className="p-4 border-t border-white/5 bg-[#0a1f0a] flex flex-col gap-2">
-          <Link
-            href="/developers/api-explorer"
-            className="flex items-center justify-between text-xs font-medium text-[#B7EE7A] hover:underline"
-          >
+          <Link href="/developers/api-explorer" className="flex items-center justify-between text-xs font-medium text-[#B7EE7A] hover:underline">
             <span>API Reference Explorer</span>
             <ExternalLink size={12} />
           </Link>
-          <div className="text-[10px] text-white/30 font-mono mt-1">
-            API Version: v1
-          </div>
+          <div className="text-[10px] text-white/30 font-mono mt-1">API Version: v1</div>
         </div>
       </aside>
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Navbar */}
-        <header className="sticky top-0 bg-[#ffffff] border-b border-gray-200 z-30 h-14 flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-gray-500 font-mono hidden md:inline">
-              docs / guides / {currentDoc.category.toLowerCase().replace(' ', '-')}
-            </span>
-          </div>
-
+        <header className="sticky top-0 bg-white border-b border-gray-200 z-30 h-14 flex items-center justify-between px-6">
+          <span className="text-xs text-gray-500 font-mono hidden md:inline">
+            docs / guides / {currentDoc.category.toLowerCase().replace(/ /g, '-')}
+          </span>
           <div className="flex items-center gap-4 text-xs font-semibold">
-            <button
-              onClick={() => handleSelectDoc('intro')}
-              className="px-3 py-1.5 border-b-2 border-[#174717] text-[#174717]"
-            >
-              Guides
-            </button>
-            <Link
-              href="/developers/api-explorer"
-              className="px-3 py-1.5 text-gray-500 hover:text-gray-900 border-b-2 border-transparent transition-colors"
-            >
-              API Reference
-            </Link>
-            <Link
-              href="/developers/login"
-              className="ml-2 px-3 py-1.5 bg-[#174717] text-white hover:bg-[#205c20] rounded-md transition-colors"
-            >
-              Dashboard
-            </Link>
+            <button onClick={() => handleSelectDoc('intro')} className="px-3 py-1.5 border-b-2 border-[#174717] text-[#174717]">Guides</button>
+            <Link href="/developers/api-explorer" className="px-3 py-1.5 text-gray-500 hover:text-gray-900 border-b-2 border-transparent transition-colors">API Reference</Link>
+            <Link href="/developers/login" className="ml-2 px-3 py-1.5 bg-[#174717] text-white hover:bg-[#205c20] rounded-md transition-colors">Dashboard</Link>
           </div>
         </header>
 
-        {/* Content Body: Two-Column Docs layout */}
         <div className="flex-1 flex flex-col xl:flex-row overflow-y-auto">
-          
-          {/* Column 1: Document Details */}
           <main className="flex-1 px-6 py-8 max-w-3xl">
-            <div className="border-b border-gray-150 pb-6 mb-6">
+            <div className="border-b border-gray-100 pb-6 mb-6">
               <span className="text-xs font-extrabold uppercase tracking-wider text-[#2e7d2e] bg-[#2e7d2e]/10 px-2.5 py-1 rounded">
                 {currentDoc.category}
               </span>
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-3">
-                {currentDoc.title}
-              </h1>
+              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-3">{currentDoc.title}</h1>
               <p className="text-sm text-gray-500 mt-2 font-medium">
                 {currentDoc.subtitle} &middot; Last updated {currentDoc.lastUpdated}
               </p>
             </div>
-
             <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed space-y-6">
-              <p className="text-base text-gray-600 font-normal">
-                {currentDoc.description}
-              </p>
-
+              <p className="text-base text-gray-600">{currentDoc.description}</p>
               {currentDoc.content}
             </div>
           </main>
 
-          {/* Column 2: Code Snippets Viewer Panel */}
+          {/* Code Panel */}
           <aside className="w-full xl:w-[420px] bg-[#111827] text-[#e5e7eb] flex-shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-gray-800 xl:sticky xl:top-14 xl:h-[calc(100vh-56px)] overflow-y-auto font-mono">
-            {/* Header Tabs */}
             <div className="flex items-center justify-between px-4 py-2 bg-[#1f2937] border-b border-gray-800">
               <div className="flex items-center gap-1">
                 {(['curl', 'js', 'python'] as CodeTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveCodeTab(tab)}
-                    className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-                      activeCodeTab === tab
-                        ? 'bg-[#111827] text-white border border-gray-700'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeCodeTab === tab ? 'bg-[#111827] text-white border border-gray-700' : 'text-gray-400 hover:text-white'}`}
                   >
                     {tab === 'curl' ? 'cURL' : tab === 'js' ? 'Node.js' : 'Python'}
                   </button>
@@ -244,593 +172,1510 @@ function GuidesContent() {
               <button
                 onClick={() => copyCode(currentDoc.codeSnippets[activeCodeTab])}
                 className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-700"
-                title="Copy code to clipboard"
               >
-                {copied ? (
-                  <>
-                    <Check size={12} className="text-[#B7EE7A]" />
-                    <span className="text-[#B7EE7A]">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Copy</span>
-                  </>
-                )}
+                {copied ? (<><Check size={12} className="text-[#B7EE7A]" /><span className="text-[#B7EE7A]">Copied</span></>) : (<><Copy size={12} /><span>Copy</span></>)}
               </button>
             </div>
-
-            {/* Code Body */}
             <div className="flex-1 p-5 overflow-auto text-xs leading-relaxed bg-[#0b0f19]">
               <pre className="whitespace-pre-wrap break-all font-mono text-[#f3f4f6]">
                 <code>{currentDoc.codeSnippets[activeCodeTab]}</code>
               </pre>
             </div>
-
-            {/* Quick Sandbox Warning */}
             <div className="p-4 bg-[#1f2937] border-t border-gray-800 text-[10px] text-gray-400 leading-normal flex items-start gap-2">
               <Code size={13} className="text-[#B7EE7A] flex-shrink-0 mt-0.5" />
-              <span>
-                To execute requests, use the API sandbox URLs. Authenticate using your test token (`sk_test_...`) generated in the developer dashboard.
-              </span>
+              <span>Authenticate using your API key (<code>sk_live_...</code> or <code>sk_test_...</code>) from the merchant dashboard. Pass it as the <code>X-Api-Key</code> header.</span>
             </div>
           </aside>
-
         </div>
       </div>
     </div>
   );
 }
 
-// ==================== SIDEBAR GROUPS ====================
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 p-4 bg-[#f0f9ff] border border-[#bae6fd] rounded-lg text-sm text-[#0369a1]">
+      <Info size={16} className="flex-shrink-0 mt-0.5" />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function Warn({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 p-4 bg-[#fef3c7] border border-[#fde68a] rounded-lg text-sm text-[#78350f]">
+      <AlertTriangle size={16} className="flex-shrink-0 mt-0.5 text-amber-600" />
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
+        <thead>
+          <tr className="bg-gray-50 border-b border-gray-200">
+            {headers.map((h) => <th key={h} className="p-2.5 font-bold text-gray-800">{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className={i < rows.length - 1 ? 'border-b border-gray-100' : ''}>
+              {row.map((cell, j) => (
+                <td key={j} className={`p-2.5 ${j === 0 ? 'font-semibold text-gray-700' : j === 1 ? 'font-mono text-gray-600' : 'text-gray-600'}`}>
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Endpoint({ method, path }: { method: string; path: string }) {
+  const colors: Record<string, string> = { GET: 'bg-blue-100 text-blue-800', POST: 'bg-green-100 text-green-800', DELETE: 'bg-red-100 text-red-800', PATCH: 'bg-yellow-100 text-yellow-700' };
+  return (
+    <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs">
+      <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${colors[method] ?? 'bg-gray-200 text-gray-700'}`}>{method}</span>
+      <span className="text-gray-700">{path}</span>
+    </div>
+  );
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
 
 const navigationGroups = [
   {
     title: 'Getting Started',
     items: [
-      { id: 'intro', label: 'Introduction' },
-      { id: 'sandbox', label: 'Sandbox & Testing' },
-      { id: 'auth', label: 'Authentication' },
+      { id: 'intro',   label: 'Introduction' },
+      { id: 'auth',    label: 'Authentication & API Keys' },
     ],
   },
   {
-    title: 'Payments (Pay-in)',
+    title: 'Accept Payments',
     items: [
-      { id: 'checkout', label: 'Checkout Sessions' },
-      { id: 'requests', label: 'Payment Requests' },
+      { id: 'checkout',        label: 'Checkout Sessions' },
+      { id: 'payment-links',   label: 'Payment Links & QR' },
+      { id: 'invoices',        label: 'Invoices' },
+      { id: 'discount-codes',  label: 'Discount Codes' },
     ],
   },
   {
-    title: 'Payouts (Pay-out)',
+    title: 'Manage Business',
     items: [
-      { id: 'transfers', label: 'Direct Payouts' },
+      { id: 'customers',  label: 'Customers' },
+      { id: 'disputes',   label: 'Disputes & Refunds' },
+      { id: 'settlements', label: 'Settlements' },
+    ],
+  },
+  {
+    title: 'Payouts',
+    items: [
+      { id: 'payouts', label: 'Merchant Payouts' },
     ],
   },
   {
     title: 'Webhooks',
     items: [
-      { id: 'webhooks-overview', label: 'Webhook Overview' },
-      { id: 'webhooks-signatures', label: 'Signature Verification' },
+      { id: 'webhooks-overview',    label: 'Webhook Setup' },
+      { id: 'webhooks-signatures',  label: 'Signature Verification' },
+    ],
+  },
+  {
+    title: 'Reference',
+    items: [
+      { id: 'errors',          label: 'Error Codes' },
+      { id: 'response-format', label: 'Response Format' },
     ],
   },
 ];
 
-// ==================== DOCUMENT DETAILS & CONTENT ====================
+// ── Doc Articles ──────────────────────────────────────────────────────────────
+
+const BASE = 'https://api.aza.systems';
 
 const docMap: Record<string, DocArticle> = {
+
+  // ── Introduction ────────────────────────────────────────────────────────────
   intro: {
     id: 'intro',
     category: 'Getting Started',
-    title: 'Introduction to Aza Developers',
-    subtitle: 'Learn about Aza\'s architecture and integrations',
+    title: 'Introduction',
+    subtitle: 'Build on Aza\'s payments infrastructure',
     lastUpdated: 'May 2026',
-    description: 'Welcome to the Aza Developer documentation. Aza allows you to programmatically accept payments, send money, configure webhook listeners, and automate financial workflows within your app.',
+    description: 'Aza is a mobile-first payments platform for Ghana and West Africa. As a merchant, you can accept customer payments, manage invoices and discount codes, receive automated payouts, and react to real-time events — all via a single REST API.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">Capabilities Overview</h3>
-        <p>
-          Aza provides robust, high-performance APIs optimized for mobile and web integration. The core flows supported by the Aza platform include:
-        </p>
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong>Payments & Checkouts:</strong> Accept funds from users securely. We host the checkout interface so you do not have to manage compliance and card handling.</li>
-          <li><strong>Direct Payouts:</strong> Pay out instantly to other wallets or connected bank routes.</li>
-          <li><strong>Real-time Synchronization:</strong> Use Webhooks and WebSockets to update client applications when events occur.</li>
+        <h3 className="text-base font-bold text-gray-900">What you can build</h3>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm">
+          <li><strong>Accept payments</strong> — create hosted checkout sessions that customers pay inside the Aza app.</li>
+          <li><strong>Payment links &amp; QR codes</strong> — share a static link or QR that routes customers directly to your storefront.</li>
+          <li><strong>Invoices</strong> — send itemised payment requests to named customers by email.</li>
+          <li><strong>Discount codes</strong> — create percentage or fixed-amount promotions redeemable at checkout.</li>
+          <li><strong>Payouts</strong> — move your settled balance to your linked bank account on demand.</li>
+          <li><strong>Webhooks</strong> — receive real-time HTTP callbacks when payment events occur.</li>
         </ul>
 
-        <div className="flex items-start gap-3 p-4 bg-[#f0f9ff] border border-[#bae6fd] rounded-lg text-sm text-[#0369a1]">
-          <Info size={18} className="flex-shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold">Quick Tip:</span> To test integrations without making live transactions, sign up in the sandbox dashboard to obtain your test key bundle.
-          </div>
+        <h3 className="text-base font-bold text-gray-900">Base URL</h3>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700">
+          {BASE}
         </div>
+        <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>sk_test_...</code>) behave identically to live keys but do not move real money.</p>
+
+        <Note>
+          <strong>Currency:</strong> The default currency is <strong>GHS (Ghana Cedi)</strong>. All amounts in request and response bodies are in GHS unless noted.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Integration steps</h3>
+        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
+          <li>Register your business at <a href="https://merchants.aza.systems/onboarding" className="text-[#2e7d2e] underline">merchants.aza.systems</a> and complete KYB.</li>
+          <li>Generate an API key from <strong>Settings → API Keys</strong>.</li>
+          <li>Create a checkout session via <code>POST /api/v1/merchant/sessions</code>.</li>
+          <li>Listen for the <code>session.completed</code> webhook to confirm payment.</li>
+        </ol>
       </div>
     ),
     codeSnippets: {
-      curl: `# Fetch API status and confirm reachability
-curl -X GET https://api.aza.systems/v1/status`,
-      js: `// Verify connection using the JS SDK
-import { AzaClient } from '@aza/sdk';
-
-const client = new AzaClient();
-const status = await client.getStatus();
-console.log(\`Connection: \${status.connected ? 'Active' : 'Offline'}\`);`,
-      python: `# Verify connection using python
-import aza
-
-client = aza.Client()
-status = client.get_status()
-print(f"Connection: {'Active' if status.connected else 'Offline'}")`,
-    },
-  },
-  sandbox: {
-    id: 'sandbox',
-    category: 'Getting Started',
-    title: 'Sandbox & Environments',
-    subtitle: 'Test your integration end-to-end safely',
-    lastUpdated: 'May 2026',
-    description: 'Aza provides an isolated sandbox environment mirroring the live environment. Test payouts, checkouts, error handling, and webhook delivery before launching in production.',
-    content: (
-      <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">Environment Hostnames</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-2.5 font-bold text-gray-800">Environment</th>
-                <th className="p-2.5 font-bold text-gray-800">Endpoint URL</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">Sandbox (Test)</td>
-                <td className="p-2.5 font-mono text-gray-600">https://api.sandbox.aza.systems/v1</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-semibold text-gray-700">Production (Live)</td>
-                <td className="p-2.5 font-mono text-gray-600">https://api.aza.systems/v1</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="text-base font-bold text-gray-900">Simulating Events</h3>
-        <p>
-          In the sandbox, you can simulate customer actions (like paying an invoice, inputting a bad PIN, or denying a request) programmatically by passing header toggles. See specific guide items below for testing headers.
-        </p>
-      </div>
-    ),
-    codeSnippets: {
-      curl: `# Call sandbox with a test API key
-curl -X GET https://api.sandbox.aza.systems/v1/wallet/balance \\
-  -H "Authorization: Bearer sk_test_51Nx8X2"` ,
-      js: `// Instantiate client pointing to sandbox
-import { AzaClient } from '@aza/sdk';
-
-const client = new AzaClient({
-  apiKey: 'sk_test_51Nx8X2',
-  environment: 'sandbox'
+      curl: `# Verify your API key and fetch your merchant profile
+curl -X GET ${BASE}/api/v1/merchant/profile \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `// Fetch your merchant profile
+const res = await fetch('${BASE}/api/v1/merchant/profile', {
+  headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' }
 });
+const { data } = await res.json();
+console.log(data.businessName, data.status);`,
+      python: `import requests
 
-const balance = await client.wallet.getBalance();`,
-      python: `# Instantiate client pointing to sandbox
-import aza
-
-client = aza.Client(
-    api_key="sk_test_51Nx8X2",
-    environment="sandbox"
+resp = requests.get(
+    '${BASE}/api/v1/merchant/profile',
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
 )
-balance = client.wallet.get_balance()`,
+data = resp.json()['data']
+print(data['businessName'], data['status'])`,
     },
   },
+
+  // ── Authentication & API Keys ────────────────────────────────────────────────
   auth: {
     id: 'auth',
     category: 'Getting Started',
-    title: 'Authentication',
-    subtitle: 'Secure requests to the Aza platform',
+    title: 'Authentication & API Keys',
+    subtitle: 'Secure every request with your merchant API key',
     lastUpdated: 'May 2026',
-    description: 'The Aza API enforces Bearer Token authentication. All requests must include your secure API keys inside the Authorization header.',
+    description: 'Every request to the Aza merchant API must include your API key in the X-Api-Key header. Keys are scoped to your merchant account and can be rotated at any time from the dashboard.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">API Key Formats</h3>
-        <p>
-          Every developer account is assigned two sets of secret keys:
-        </p>
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong>Test Key:</strong> Prefixed with <code>sk_test_</code>. Use this to sign requests made to the sandbox environment.</li>
-          <li><strong>Live Key:</strong> Prefixed with <code>sk_live_</code>. Use this to authenticate real monetary transactions.</li>
-        </ul>
+        <h3 className="text-base font-bold text-gray-900">Header format</h3>
+        <Table
+          headers={['Header', 'Value']}
+          rows={[
+            ['X-Api-Key', 'sk_live_...  or  sk_test_...'],
+          ]}
+        />
 
-        <div className="flex items-start gap-3 p-4 bg-[#fef3c7] border border-[#fde68a] rounded-lg text-sm text-[#78350f]">
-          <AlertTriangle size={18} className="flex-shrink-0 mt-0.5 text-amber-600" />
-          <div>
-            <span className="font-semibold">Security Alert:</span> Keep your live keys hidden. Never publish live keys to GitHub or expose them in client-side applications.
-          </div>
-        </div>
+        <h3 className="text-base font-bold text-gray-900">Key types</h3>
+        <Table
+          headers={['Prefix', 'Environment', 'Effect']}
+          rows={[
+            ['sk_test_...', 'Test', 'Full API access; no real money moves'],
+            ['sk_live_...', 'Live', 'Real transactions and payouts'],
+          ]}
+        />
 
-        <h3 className="text-base font-bold text-gray-900 font-sans">Request Format Table</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-2.5 font-bold text-gray-800">Header Name</th>
-                <th className="p-2.5 font-bold text-gray-800">Value Example</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="p-2.5 font-semibold text-gray-700">Authorization</td>
-                <td className="p-2.5 font-mono text-gray-600">Bearer sk_test_your_secret_key_here</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <Warn>
+          <strong>Keep keys secret.</strong> Never embed live keys in mobile apps or client-side JavaScript. Store them as environment variables on your server.
+        </Warn>
+
+        <h3 className="text-base font-bold text-gray-900">Managing keys via API</h3>
+        <Endpoint method="GET"  path="/api/v1/merchant/api-keys" />
+        <Endpoint method="POST" path="/api/v1/merchant/api-keys" />
+
+        <p className="text-sm">POST body accepts an optional <code>name</code> string to label the key. The secret value is returned <strong>once</strong> at creation — store it immediately.</p>
+
+        <Table
+          headers={['Field', 'Type', 'Description']}
+          rows={[
+            ['name', 'string (optional)', 'Human-readable label, e.g. "Production server"'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Example response</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "id": "key_abc123",
+    "name": "Production server",
+    "keyPrefix": "sk_live_Ab1c",
+    "secret": "sk_live_Ab1cXXXXXXXXXXXX",
+    "createdAt": "2026-05-01T10:00:00Z"
+  }
+}`}</pre>
       </div>
     ),
     codeSnippets: {
-      curl: `# Request using your developer key
-curl -X GET https://api.sandbox.aza.systems/v1/wallet/balance \\
-  -H "Authorization: Bearer sk_test_your_secret_key"`,
-      js: `// Client initialization using key configuration
-import { AzaClient } from '@aza/sdk';
+      curl: `# List all API keys
+curl -X GET ${BASE}/api/v1/merchant/api-keys \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
 
-const client = new AzaClient({
-  apiKey: 'sk_test_your_secret_key'
-});`,
-      python: `# Client initialization using key configuration
-import aza
+# Create a new API key
+curl -X POST ${BASE}/api/v1/merchant/api-keys \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "Production server"}'`,
+      js: `// List API keys
+const list = await fetch('${BASE}/api/v1/merchant/api-keys', {
+  headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' }
+}).then(r => r.json());
 
-client = aza.Client(api_key="sk_test_your_secret_key")`,
+// Create a new key
+const created = await fetch('${BASE}/api/v1/merchant/api-keys', {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': 'sk_live_YOUR_KEY',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ name: 'Production server' }),
+}).then(r => r.json());
+
+console.log(created.data.secret); // store this immediately`,
+      python: `import requests
+
+BASE = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+
+# List API keys
+keys = requests.get(f'{BASE}/api/v1/merchant/api-keys', headers=HEADERS).json()
+
+# Create a new key
+new_key = requests.post(
+    f'{BASE}/api/v1/merchant/api-keys',
+    headers={**HEADERS, 'Content-Type': 'application/json'},
+    json={'name': 'Production server'}
+).json()
+
+print(new_key['data']['secret'])  # store immediately`,
     },
   },
+
+  // ── Checkout Sessions ────────────────────────────────────────────────────────
   checkout: {
     id: 'checkout',
-    category: 'Payments',
+    category: 'Accept Payments',
     title: 'Checkout Sessions',
-    subtitle: 'Initiate hosted checkout payments',
+    subtitle: 'Accept customer payments via the Aza app',
     lastUpdated: 'May 2026',
-    description: 'Allow customers to pay invoices on the web or in-app. The checkout endpoint returns a session URL where the customer completes the transaction safely.',
+    description: 'A checkout session represents a single payment request. When created, the customer opens the session URL in the Aza app and approves the payment with their PIN. You receive a webhook when it completes.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">How Hosted Checkout Works</h3>
-        <p>
-          Creating a session redirects users to Aza's hosted gateway. Once payment is confirmed, Aza redirects the customer back to your application and sends a webhook alert.
-        </p>
+        <h3 className="text-base font-bold text-gray-900">Create a session</h3>
+        <Endpoint method="POST" path="/api/v1/merchant/sessions" />
+        <Table
+          headers={['Field', 'Type', 'Required', 'Description']}
+          rows={[
+            ['amount',      'decimal', 'Yes', 'Amount in GHS, e.g. 50.00'],
+            ['description', 'string',  'No',  'Note shown to the customer at checkout'],
+            ['reference',   'string',  'No',  'Your own idempotency reference'],
+          ]}
+        />
 
-        <h3 className="text-base font-bold text-gray-900">Post Request Parameters</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-2.5 font-bold text-gray-800">Field</th>
-                <th className="p-2.5 font-bold text-gray-800">Type</th>
-                <th className="p-2.5 font-bold text-gray-800">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">amount</td>
-                <td className="p-2.5 text-gray-600 font-mono">decimal</td>
-                <td className="p-2.5 text-gray-600">The amount to charge the user (e.g. 15.50).</td>
-              </tr>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">currency</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">Currency code (e.g. "USD", "EUR").</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-semibold text-gray-700">successUrl</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">URL to redirect to upon successful checkout.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <h3 className="text-base font-bold text-gray-900">Session response</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "id": "sess_7f3a9b",
+    "status": "PENDING",
+    "amount": 50.00,
+    "currency": "GHS",
+    "checkoutUrl": "https://pay.aza.systems/c/sess_7f3a9b",
+    "deepLink": "aza://checkout/sess_7f3a9b",
+    "expiresAt": "2026-05-27T11:30:00Z",
+    "createdAt": "2026-05-27T11:00:00Z"
+  }
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Retrieve a session</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/sessions/{id}" />
+
+        <h3 className="text-base font-bold text-gray-900">List sessions</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/sessions?page=0&size=20" />
+
+        <h3 className="text-base font-bold text-gray-900">Session statuses</h3>
+        <Table
+          headers={['Status', 'Description']}
+          rows={[
+            ['PENDING',   'Created, waiting for customer payment'],
+            ['COMPLETED', 'Payment received successfully'],
+            ['EXPIRED',   'Session timed out (30 minutes)'],
+            ['CANCELLED', 'Cancelled before payment'],
+            ['REFUNDED',  'Full or partial refund issued'],
+          ]}
+        />
+
+        <Note>
+          Redirect or deep-link the customer to <code>checkoutUrl</code> or <code>deepLink</code>. On mobile, prefer the deep link to open the Aza app directly.
+        </Note>
       </div>
     ),
     codeSnippets: {
-      curl: `# Create checkout session
-curl -X POST https://api.sandbox.aza.systems/v1/checkout \\
-  -H "Authorization: Bearer sk_test_your_key" \\
+      curl: `# Create a checkout session
+curl -X POST ${BASE}/api/v1/merchant/sessions \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "amount": 150.00,
-    "currency": "USD",
-    "successUrl": "https://yourapp.com/payment/success",
-    "cancelUrl": "https://yourapp.com/payment/cancel"
-  }'`,
-      js: `// Initiate hosted payment flow
-import { AzaClient } from '@aza/sdk';
-const client = new AzaClient({ apiKey: 'sk_test_your_key' });
+    "amount": 50.00,
+    "description": "Order #1042"
+  }'
 
-const session = await client.checkout.createSession({
-  amount: 150.00,
-  currency: 'USD',
-  successUrl: 'https://yourapp.com/payment/success',
-  cancelUrl: 'https://yourapp.com/payment/cancel'
+# Retrieve a session
+curl -X GET ${BASE}/api/v1/merchant/sessions/sess_7f3a9b \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const BASE = '${BASE}';
+const KEY  = 'sk_live_YOUR_KEY';
+
+// Create a session
+const { data: session } = await fetch(\`\${BASE}/api/v1/merchant/sessions\`, {
+  method: 'POST',
+  headers: { 'X-Api-Key': KEY, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ amount: 50.00, description: 'Order #1042' }),
+}).then(r => r.json());
+
+console.log(session.checkoutUrl);
+// Redirect customer or show QR
+
+// Poll status
+const { data: status } = await fetch(
+  \`\${BASE}/api/v1/merchant/sessions/\${session.id}\`,
+  { headers: { 'X-Api-Key': KEY } }
+).then(r => r.json());
+
+console.log(status.status); // 'COMPLETED'`,
+      python: `import requests
+
+BASE = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Create a session
+session = requests.post(
+    f'{BASE}/api/v1/merchant/sessions',
+    headers=HEADERS,
+    json={'amount': 50.00, 'description': 'Order #1042'}
+).json()['data']
+
+print(session['checkoutUrl'])
+
+# Poll status
+status = requests.get(
+    f'{BASE}/api/v1/merchant/sessions/{session["id"]}',
+    headers=HEADERS
+).json()['data']
+
+print(status['status'])  # 'COMPLETED'`,
+    },
+  },
+
+  // ── Payment Links & QR ──────────────────────────────────────────────────────
+  'payment-links': {
+    id: 'payment-links',
+    category: 'Accept Payments',
+    title: 'Payment Links & QR Codes',
+    subtitle: 'Share a permanent link or QR to your storefront',
+    lastUpdated: 'May 2026',
+    description: 'Every Aza merchant gets a permanent payment page at aza.systems/pay/{handle}. Print the QR code in your store, put the link on your website, or embed it anywhere — customers can pay you without any code on your side.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Your payment page URL</h3>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700">
+          https://aza.systems/pay/<span className="text-[#2e7d2e]">{'{businessHandle}'}</span>
+        </div>
+        <p className="text-sm">This page is live as soon as your merchant account is approved. It shows your business name, logo, and a QR code the customer scans with the Aza app.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Deep link for in-app routing</h3>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700">
+          aza://pay/<span className="text-[#2e7d2e]">{'{businessHandle}'}</span>
+        </div>
+
+        <h3 className="text-base font-bold text-gray-900">Generate a QR code image</h3>
+        <p className="text-sm">Use the free QR server API to generate a PNG you can embed in receipts, menus, or posters:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`https://api.qrserver.com/v1/create-qr-code/
+  ?size=300x300
+  &data=https://aza.systems/pay/jumpspaces
+  &margin=2`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Fetch your public profile</h3>
+        <p className="text-sm">The public endpoint requires no authentication — useful for embedding merchant info on your own website:</p>
+        <Endpoint method="GET" path="/api/v1/merchant/public/{handle}" />
+
+        <Note>
+          The static payment page does not specify an amount. To request a specific amount, use a <strong>Checkout Session</strong> instead.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Fetch your public merchant profile (no auth required)
+curl -X GET ${BASE}/api/v1/merchant/public/jumpspaces
+
+# Example response
+# {
+#   "success": true,
+#   "data": {
+#     "businessHandle": "jumpspaces",
+#     "businessName": "Jumpspaces",
+#     "category": "FINANCE",
+#     "currency": "GHS",
+#     "status": "ACTIVE"
+#   }
+# }`,
+      js: `// Build the payment page URL for your handle
+const handle = 'jumpspaces';
+const paymentPageUrl = \`https://aza.systems/pay/\${handle}\`;
+const deepLink       = \`aza://pay/\${handle}\`;
+
+// QR code image URL (embed in <img>)
+const qrUrl = \`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=\${encodeURIComponent(paymentPageUrl)}&margin=2\`;
+
+// Fetch public profile
+const { data } = await fetch(
+  \`${BASE}/api/v1/merchant/public/\${handle}\`
+).then(r => r.json());
+
+console.log(data.businessName, data.status);`,
+      python: `import requests
+from urllib.parse import quote
+
+handle = 'jumpspaces'
+payment_url = f'https://aza.systems/pay/{handle}'
+deep_link   = f'aza://pay/{handle}'
+
+# QR code image URL
+qr_url = f'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={quote(payment_url)}&margin=2'
+
+# Fetch public profile (no auth)
+profile = requests.get(
+    f'${BASE}/api/v1/merchant/public/{handle}'
+).json()['data']
+
+print(profile['businessName'], profile['status'])`,
+    },
+  },
+
+  // ── Invoices ─────────────────────────────────────────────────────────────────
+  invoices: {
+    id: 'invoices',
+    category: 'Accept Payments',
+    title: 'Invoices',
+    subtitle: 'Send payment requests to customers by email',
+    lastUpdated: 'May 2026',
+    description: 'Invoices let you bill named customers directly. Once sent, the customer receives an email with a payment link. You can track status from DRAFT through to PAID.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
+        <div className="space-y-2">
+          <Endpoint method="GET"    path="/api/v1/merchant/invoices?page=0&size=20" />
+          <Endpoint method="POST"   path="/api/v1/merchant/invoices" />
+          <Endpoint method="POST"   path="/api/v1/merchant/invoices/{id}/send" />
+          <Endpoint method="DELETE" path="/api/v1/merchant/invoices/{id}" />
+        </div>
+
+        <h3 className="text-base font-bold text-gray-900">Create invoice fields</h3>
+        <Table
+          headers={['Field', 'Type', 'Required', 'Description']}
+          rows={[
+            ['customerName',  'string',  'Yes', 'Full name of the customer'],
+            ['customerEmail', 'string',  'Yes', 'Email address to deliver the invoice'],
+            ['amount',        'decimal', 'Yes', 'Amount in GHS'],
+            ['description',   'string',  'No',  'Line-item or service description'],
+            ['dueDate',       'string',  'No',  'ISO 8601 date, e.g. "2026-06-30"'],
+            ['currency',      'string',  'No',  'Defaults to "GHS"'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Invoice lifecycle</h3>
+        <Table
+          headers={['Status', 'Description']}
+          rows={[
+            ['DRAFT',     'Created but not yet sent to the customer'],
+            ['SENT',      'Email dispatched; awaiting payment'],
+            ['PAID',      'Customer has completed payment'],
+            ['CANCELLED', 'Invoice voided before payment'],
+            ['OVERDUE',   'Due date passed with no payment'],
+          ]}
+        />
+
+        <Note>
+          Call <code>POST /invoices/{'{id}'}/send</code> to transition from <strong>DRAFT → SENT</strong> and trigger the customer email. Calling DELETE on a DRAFT or SENT invoice cancels it.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Create a draft invoice
+curl -X POST ${BASE}/api/v1/merchant/invoices \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "customerName": "Kwame Mensah",
+    "customerEmail": "kwame@example.com",
+    "amount": 250.00,
+    "description": "Web design services — May 2026",
+    "dueDate": "2026-06-15"
+  }'
+
+# Send the invoice (triggers customer email)
+curl -X POST ${BASE}/api/v1/merchant/invoices/inv_abc123/send \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# Cancel an invoice
+curl -X DELETE ${BASE}/api/v1/merchant/invoices/inv_abc123 \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const BASE = '${BASE}';
+const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
+
+// Create invoice
+const { data: inv } = await fetch(\`\${BASE}/api/v1/merchant/invoices\`, {
+  method: 'POST',
+  headers: HEADERS,
+  body: JSON.stringify({
+    customerName: 'Kwame Mensah',
+    customerEmail: 'kwame@example.com',
+    amount: 250.00,
+    description: 'Web design services — May 2026',
+    dueDate: '2026-06-15',
+  }),
+}).then(r => r.json());
+
+// Send it
+await fetch(\`\${BASE}/api/v1/merchant/invoices/\${inv.id}/send\`, {
+  method: 'POST',
+  headers: HEADERS,
 });
 
-console.log(\`Redirect your user to: \${session.url}\`);`,
-      python: `# Initiate hosted payment flow
-import aza
-client = aza.Client(api_key="sk_test_your_key")
+console.log('Invoice sent:', inv.id);`,
+      python: `import requests
 
-session = client.checkout.create_session(
-    amount=150.00,
-    currency="USD",
-    success_url="https://yourapp.com/payment/success",
-    cancel_url="https://yourapp.com/payment/cancel"
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Create invoice
+inv = requests.post(
+    f'{BASE}/api/v1/merchant/invoices',
+    headers=HEADERS,
+    json={
+        'customerName': 'Kwame Mensah',
+        'customerEmail': 'kwame@example.com',
+        'amount': 250.00,
+        'description': 'Web design services — May 2026',
+        'dueDate': '2026-06-15',
+    }
+).json()['data']
+
+# Send it
+requests.post(
+    f'{BASE}/api/v1/merchant/invoices/{inv["id"]}/send',
+    headers=HEADERS
 )
-print(f"Redirect your user to: {session.url}")`,
+print('Invoice sent:', inv['id'])`,
     },
   },
-  requests: {
-    id: 'requests',
-    category: 'Payments',
-    title: 'Payment Requests',
-    subtitle: 'Request funds directly using handles',
+
+  // ── Discount Codes ───────────────────────────────────────────────────────────
+  'discount-codes': {
+    id: 'discount-codes',
+    category: 'Accept Payments',
+    title: 'Discount Codes',
+    subtitle: 'Create promotions redeemable at checkout',
     lastUpdated: 'May 2026',
-    description: 'Use the money request API to trigger instant payment notifications inside user applications. The user receives a push prompt to verify and authorize.',
+    description: 'Discount codes let customers reduce the amount they pay at checkout. You can create percentage-based or fixed-amount codes, optionally cap the number of uses, and set an expiry date.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900 font-sans">Money Requests Overview</h3>
-        <p>
-          Instead of redirecting users to web checkout screens, you can solicit direct wallet-to-wallet transfers. The target user receives an alert inside their Aza mobile app and can authorize it with their passcode or face ID.
-        </p>
-
-        <h3 className="text-base font-bold text-gray-900">Post Request Parameters</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-2.5 font-bold text-gray-800">Field</th>
-                <th className="p-2.5 font-bold text-gray-800">Type</th>
-                <th className="p-2.5 font-bold text-gray-800">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">targetHandle</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">The destination user\'s handle (e.g. "@alex").</td>
-              </tr>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">amount</td>
-                <td className="p-2.5 text-gray-600 font-mono">decimal</td>
-                <td className="p-2.5 text-gray-600">The amount to request.</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-semibold text-gray-700">memo</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">Optional text visible to the customer.</td>
-              </tr>
-            </tbody>
-          </table>
+        <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
+        <div className="space-y-2">
+          <Endpoint method="GET"  path="/api/v1/merchant/discount-codes?page=0&size=20" />
+          <Endpoint method="POST" path="/api/v1/merchant/discount-codes" />
         </div>
+
+        <h3 className="text-base font-bold text-gray-900">Create discount code fields</h3>
+        <Table
+          headers={['Field', 'Type', 'Required', 'Description']}
+          rows={[
+            ['code',      'string',            'Yes', 'Uppercase code, min 3 chars, e.g. "SAVE20"'],
+            ['type',      '"PERCENTAGE"|"FIXED"', 'Yes', 'How the discount is calculated'],
+            ['value',     'decimal',           'Yes', 'Percentage (0–100) or fixed GHS amount'],
+            ['maxUses',   'integer',           'No',  'Maximum redemptions. Omit for unlimited'],
+            ['expiresAt', 'string (ISO 8601)', 'No',  'Expiry datetime, e.g. "2026-12-31T23:59:00Z"'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Example response</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "id": "dc_xyz789",
+    "code": "SAVE20",
+    "type": "PERCENTAGE",
+    "value": 20,
+    "maxUses": 100,
+    "usedCount": 0,
+    "isActive": true,
+    "expiresAt": null,
+    "createdAt": "2026-05-27T09:00:00Z"
+  }
+}`}</pre>
       </div>
     ),
     codeSnippets: {
-      curl: `# Request payment from a user
-curl -X POST https://api.sandbox.aza.systems/v1/money-requests \\
-  -H "Authorization: Bearer sk_test_your_key" \\
+      curl: `# Create a 20% discount code (max 100 uses)
+curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "targetHandle": "@alex",
-    "amount": 25.00,
-    "memo": "Dinner settlement"
-  }'`,
-      js: `// Issue a payment request
-import { AzaClient } from '@aza/sdk';
-const client = new AzaClient({ apiKey: 'sk_test_your_key' });
+    "code": "SAVE20",
+    "type": "PERCENTAGE",
+    "value": 20,
+    "maxUses": 100
+  }'
 
-const request = await client.moneyRequests.create({
-  targetHandle: '@alex',
-  amount: 25.00,
-  memo: 'Dinner settlement'
-});`,
-      python: `# Issue a payment request
-import aza
-client = aza.Client(api_key="sk_test_your_key")
+# Create a fixed GH₵10 off code
+curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "code": "OFF10",
+    "type": "FIXED",
+    "value": 10
+  }'
 
-request = client.money_requests.create(
-    target_handle="@alex",
-    amount=25.00,
-    memo="Dinner settlement"
-)`,
+# List all codes
+curl -X GET "${BASE}/api/v1/merchant/discount-codes?page=0&size=20" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const BASE    = '${BASE}';
+const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
+
+// Create 20% off code
+const { data: code } = await fetch(\`\${BASE}/api/v1/merchant/discount-codes\`, {
+  method: 'POST',
+  headers: HEADERS,
+  body: JSON.stringify({
+    code: 'SAVE20',
+    type: 'PERCENTAGE',
+    value: 20,
+    maxUses: 100,
+  }),
+}).then(r => r.json());
+
+console.log(code.id, code.code, code.isActive);`,
+      python: `import requests
+
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Create 20% off code
+code = requests.post(
+    f'{BASE}/api/v1/merchant/discount-codes',
+    headers=HEADERS,
+    json={'code': 'SAVE20', 'type': 'PERCENTAGE', 'value': 20, 'maxUses': 100}
+).json()['data']
+
+print(code['code'], code['isActive'])`,
     },
   },
-  transfers: {
-    id: 'transfers',
+
+  // ── Customers ────────────────────────────────────────────────────────────────
+  customers: {
+    id: 'customers',
+    category: 'Manage Business',
+    title: 'Customers',
+    subtitle: 'View all customers who have paid you',
+    lastUpdated: 'May 2026',
+    description: 'The customers endpoint returns a paginated list of every user who has completed a payment to your merchant account, along with their total spend and transaction count.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Endpoint</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/customers?page=0&size=20" />
+
+        <h3 className="text-base font-bold text-gray-900">Customer object</h3>
+        <Table
+          headers={['Field', 'Type', 'Description']}
+          rows={[
+            ['id',             'string',  'Customer user ID'],
+            ['name',           'string',  'Customer full name'],
+            ['email',          'string',  'Customer email address'],
+            ['totalSpent',     'decimal', 'Cumulative GHS spent with your merchant'],
+            ['paymentCount',   'integer', 'Number of completed payments'],
+            ['lastPaymentAt',  'string',  'ISO 8601 timestamp of most recent payment'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Paginated response</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "content": [ { "id": "u_1", "name": "Ama Owusu", ... } ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 142,
+    "totalPages": 8
+  }
+}`}</pre>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# List customers (page 0, 20 per page)
+curl -X GET "${BASE}/api/v1/merchant/customers?page=0&size=20" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const { data } = await fetch(
+  '${BASE}/api/v1/merchant/customers?page=0&size=20',
+  { headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' } }
+).then(r => r.json());
+
+const customers = data.content;
+console.log(\`\${data.totalElements} total customers\`);
+customers.forEach(c => {
+  console.log(c.name, c.email, \`GH₵\${c.totalSpent}\`);
+});`,
+      python: `import requests
+
+resp = requests.get(
+    '${BASE}/api/v1/merchant/customers',
+    params={'page': 0, 'size': 20},
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+)
+data = resp.json()['data']
+print(f"{data['totalElements']} total customers")
+for c in data['content']:
+    print(c['name'], c['email'], f"GH₵{c['totalSpent']}")`,
+    },
+  },
+
+  // ── Disputes & Refunds ───────────────────────────────────────────────────────
+  disputes: {
+    id: 'disputes',
+    category: 'Manage Business',
+    title: 'Disputes & Refunds',
+    subtitle: 'Handle chargeback requests and issue refunds',
+    lastUpdated: 'May 2026',
+    description: 'When a customer contests a payment, a dispute is opened. You can view active disputes and issue refunds directly against completed checkout sessions.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Disputes endpoints</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/disputes?page=0&size=20" />
+
+        <h3 className="text-base font-bold text-gray-900">Dispute object fields</h3>
+        <Table
+          headers={['Field', 'Type', 'Description']}
+          rows={[
+            ['id',          'string',  'Dispute identifier'],
+            ['sessionId',   'string',  'Related checkout session'],
+            ['amount',      'decimal', 'Disputed amount in GHS'],
+            ['status',      'string',  'OPEN | RESOLVED | LOST'],
+            ['reason',      'string',  'Customer-provided dispute reason'],
+            ['openedAt',    'string',  'ISO 8601 timestamp'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Issue a refund</h3>
+        <Endpoint method="POST" path="/api/v1/merchant/sessions/{sessionId}/refund" />
+        <p className="text-sm">A full refund is issued against the original session. The refund debits your merchant balance and credits the customer wallet. Partially refunded sessions are not currently supported.</p>
+
+        <Warn>
+          Refunds are irreversible. Confirm the session ID before calling this endpoint.
+        </Warn>
+
+        <h3 className="text-base font-bold text-gray-900">Refund response</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "sessionId": "sess_7f3a9b",
+    "refundedAmount": 50.00,
+    "status": "REFUNDED",
+    "refundedAt": "2026-05-27T14:00:00Z"
+  }
+}`}</pre>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# List disputes
+curl -X GET "${BASE}/api/v1/merchant/disputes?page=0&size=20" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# Issue a full refund on a completed session
+curl -X POST ${BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const BASE    = '${BASE}';
+const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY' };
+
+// List disputes
+const { data } = await fetch(
+  \`\${BASE}/api/v1/merchant/disputes?page=0&size=20\`,
+  { headers: HEADERS }
+).then(r => r.json());
+
+console.log(\`\${data.totalElements} open disputes\`);
+
+// Issue refund
+const refund = await fetch(
+  \`\${BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund\`,
+  { method: 'POST', headers: HEADERS }
+).then(r => r.json());
+
+console.log(refund.data.status); // 'REFUNDED'`,
+      python: `import requests
+
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+
+# List disputes
+disputes = requests.get(
+    f'{BASE}/api/v1/merchant/disputes',
+    params={'page': 0, 'size': 20},
+    headers=HEADERS
+).json()['data']
+
+# Issue refund
+refund = requests.post(
+    f'{BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund',
+    headers=HEADERS
+).json()['data']
+
+print(refund['status'])  # 'REFUNDED'`,
+    },
+  },
+
+  // ── Settlements ──────────────────────────────────────────────────────────────
+  settlements: {
+    id: 'settlements',
+    category: 'Manage Business',
+    title: 'Settlements',
+    subtitle: 'View your rolling settlement reports',
+    lastUpdated: 'May 2026',
+    description: 'Settlements summarise the gross revenue, fees deducted, and net amount available for payout over a given settlement period. Aza settles on a daily or weekly cycle depending on your account configuration.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Endpoint</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/settlements?page=0&size=20" />
+
+        <h3 className="text-base font-bold text-gray-900">Settlement object</h3>
+        <Table
+          headers={['Field', 'Type', 'Description']}
+          rows={[
+            ['id',               'string',  'Settlement identifier'],
+            ['periodStart',      'string',  'ISO 8601 start of the settlement window'],
+            ['periodEnd',        'string',  'ISO 8601 end of the settlement window'],
+            ['transactionCount', 'integer', 'Number of payments included'],
+            ['grossAmount',      'decimal', 'Total payments received (GHS)'],
+            ['feesDeducted',     'decimal', 'Platform fees charged (GHS)'],
+            ['netAmount',        'decimal', 'grossAmount – feesDeducted'],
+            ['status',           'string',  'PENDING | SETTLED'],
+            ['settledAt',        'string',  'ISO 8601 timestamp when funds were released'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Example settlement</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "id": "stl_20260527",
+  "periodStart": "2026-05-27T00:00:00Z",
+  "periodEnd": "2026-05-27T23:59:59Z",
+  "transactionCount": 38,
+  "grossAmount": 4750.00,
+  "feesDeducted": 142.50,
+  "netAmount": 4607.50,
+  "status": "SETTLED",
+  "settledAt": "2026-05-28T06:00:00Z"
+}`}</pre>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# List settlements
+curl -X GET "${BASE}/api/v1/merchant/settlements?page=0&size=20" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const { data } = await fetch(
+  '${BASE}/api/v1/merchant/settlements?page=0&size=20',
+  { headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' } }
+).then(r => r.json());
+
+data.content.forEach(s => {
+  console.log(
+    s.periodStart.slice(0, 10),
+    \`GH₵\${s.netAmount}\`,
+    s.status
+  );
+});`,
+      python: `import requests
+
+resp = requests.get(
+    '${BASE}/api/v1/merchant/settlements',
+    params={'page': 0, 'size': 20},
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+).json()
+
+for s in resp['data']['content']:
+    print(s['periodStart'][:10], f"GH₵{s['netAmount']}", s['status'])`,
+    },
+  },
+
+  // ── Merchant Payouts ─────────────────────────────────────────────────────────
+  payouts: {
+    id: 'payouts',
     category: 'Payouts',
-    title: 'Direct Payouts',
-    subtitle: 'Transfer funds from your wallet instantly',
+    title: 'Merchant Payouts',
+    subtitle: 'Withdraw your settled balance to your bank account',
     lastUpdated: 'May 2026',
-    description: 'Use the transfers API to distribute money out of your dashboard balance to users, merchants, or connected bank accounts.',
+    description: 'Use the payouts API to move your available merchant balance to your linked bank account. Payouts are processed within 1–2 business days.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">Transfer Execution</h3>
-        <p>
-          Executing a transfer debits your sandbox/live developer account wallet and instantly credits the receiver.
-        </p>
-
-        <h3 className="text-base font-bold text-gray-900">Parameters Table</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs text-left border-collapse border border-gray-200">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-2.5 font-bold text-gray-800">Field</th>
-                <th className="p-2.5 font-bold text-gray-800">Type</th>
-                <th className="p-2.5 font-bold text-gray-800">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">recipient</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">The destination user identifier or handle.</td>
-              </tr>
-              <tr className="border-b border-gray-150">
-                <td className="p-2.5 font-semibold text-gray-700">amount</td>
-                <td className="p-2.5 text-gray-600 font-mono">decimal</td>
-                <td className="p-2.5 text-gray-600">Monetary value to transfer.</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-semibold text-gray-700">passcode</td>
-                <td className="p-2.5 text-gray-600 font-mono">string</td>
-                <td className="p-2.5 text-gray-600">Optional wallet secure passcode PIN.</td>
-              </tr>
-            </tbody>
-          </table>
+        <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
+        <div className="space-y-2">
+          <Endpoint method="GET"  path="/api/v1/merchant/payouts?page=0&size=20" />
+          <Endpoint method="POST" path="/api/v1/merchant/payouts" />
         </div>
+
+        <h3 className="text-base font-bold text-gray-900">Request a payout</h3>
+        <Table
+          headers={['Field', 'Type', 'Required', 'Description']}
+          rows={[
+            ['amount', 'decimal', 'Yes', 'GHS amount to withdraw. Must not exceed available balance.'],
+            ['note',   'string',  'No',  'Optional internal memo for your records'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Payout statuses</h3>
+        <Table
+          headers={['Status', 'Description']}
+          rows={[
+            ['PENDING',   'Payout queued, awaiting processing'],
+            ['PROCESSING', 'Transfer initiated to your bank'],
+            ['COMPLETED', 'Funds received in your bank account'],
+            ['FAILED',    'Payout failed; balance not debited'],
+          ]}
+        />
+
+        <Note>
+          Your bank account details are configured in the merchant dashboard under <strong>Settings → Bank Account</strong>. Payouts require a verified bank account.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Check your available balance</h3>
+        <Endpoint method="GET" path="/api/v1/merchant/reports/summary" />
+        <p className="text-sm">The summary endpoint returns your current balance, total revenue, and session counts.</p>
       </div>
     ),
     codeSnippets: {
-      curl: `# Perform a direct transfer
-curl -X POST https://api.sandbox.aza.systems/v1/transfers \\
-  -H "Authorization: Bearer sk_test_your_key" \\
+      curl: `# Check available balance
+curl -X GET ${BASE}/api/v1/merchant/reports/summary \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# Request a payout
+curl -X POST ${BASE}/api/v1/merchant/payouts \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "recipient": "@jane",
-    "amount": 50.00,
-    "passcode": "123456"
+    "amount": 2000.00,
+    "note": "Weekly withdrawal"
   }'`,
-      js: `// Send money programmatically
-import { AzaClient } from '@aza/sdk';
-const client = new AzaClient({ apiKey: 'sk_test_your_key' });
+      js: `const BASE    = '${BASE}';
+const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
 
-const tx = await client.transfers.create({
-  recipient: '@jane',
-  amount: 50.00,
-  passcode: '123456'
-});`,
-      python: `# Send money programmatically
-import aza
-client = aza.Client(api_key="sk_test_your_key")
+// Check balance first
+const { data: summary } = await fetch(
+  \`\${BASE}/api/v1/merchant/reports/summary\`,
+  { headers: HEADERS }
+).then(r => r.json());
 
-tx = client.transfers.create(
-    recipient="@jane",
-    amount=50.00,
-    passcode="123456"
-)`,
+console.log('Available:', summary.availableBalance);
+
+// Request payout
+const { data: payout } = await fetch(\`\${BASE}/api/v1/merchant/payouts\`, {
+  method: 'POST',
+  headers: HEADERS,
+  body: JSON.stringify({ amount: 2000.00, note: 'Weekly withdrawal' }),
+}).then(r => r.json());
+
+console.log(payout.id, payout.status);`,
+      python: `import requests
+
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Check balance
+summary = requests.get(
+    f'{BASE}/api/v1/merchant/reports/summary',
+    headers=HEADERS
+).json()['data']
+print('Available:', summary['availableBalance'])
+
+# Request payout
+payout = requests.post(
+    f'{BASE}/api/v1/merchant/payouts',
+    headers=HEADERS,
+    json={'amount': 2000.00, 'note': 'Weekly withdrawal'}
+).json()['data']
+
+print(payout['id'], payout['status'])`,
     },
   },
+
+  // ── Webhook Setup ────────────────────────────────────────────────────────────
   'webhooks-overview': {
     id: 'webhooks-overview',
     category: 'Webhooks',
-    title: 'Webhooks Overview & Setup',
-    subtitle: 'Listen for real-time transaction events',
+    title: 'Webhook Setup',
+    subtitle: 'Receive real-time payment event notifications',
     lastUpdated: 'May 2026',
-    description: 'Configure your endpoints in the dashboard to receive HTTPS POST payloads whenever transactions are completed, updated, or failed.',
+    description: 'Webhooks deliver HTTP POST requests to your server when payment events occur. Configure endpoint URLs in your dashboard or via the API. Your server must respond with 200 within 10 seconds.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">Supported Events List</h3>
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li><code>transfer.completed</code>: Fired when an outgoing transfer succeeds.</li>
-          <li><code>transfer.failed</code>: Fired when an outgoing transfer is aborted.</li>
-          <li><code>checkout.completed</code>: Fired when a customer pays a hosted session invoice.</li>
-        </ul>
+        <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
+        <div className="space-y-2">
+          <Endpoint method="GET"    path="/api/v1/merchant/webhooks" />
+          <Endpoint method="POST"   path="/api/v1/merchant/webhooks" />
+          <Endpoint method="DELETE" path="/api/v1/merchant/webhooks/{id}" />
+        </div>
 
-        <h3 className="text-base font-bold text-gray-900">Acknowledge Responses</h3>
-        <p>
-          Your server must return a <code>200 OK</code> status code within 3 seconds of receiving a webhook. If Aza receives any other status or times out, it will retry sending the webhook up to 5 times with exponential backoff.
-        </p>
+        <h3 className="text-base font-bold text-gray-900">Register a webhook endpoint</h3>
+        <Table
+          headers={['Field', 'Type', 'Required', 'Description']}
+          rows={[
+            ['url',    'string',   'Yes', 'HTTPS URL that receives POST events'],
+            ['events', 'string[]', 'No',  'Specific events to subscribe to. Omit to receive all.'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Supported events</h3>
+        <Table
+          headers={['Event', 'Fired when']}
+          rows={[
+            ['session.completed',  'A checkout session is paid successfully'],
+            ['session.expired',    'A checkout session expires without payment'],
+            ['session.refunded',   'A refund is issued against a session'],
+            ['invoice.paid',       'A customer pays an invoice'],
+            ['invoice.overdue',    'An invoice passes its due date unpaid'],
+            ['payout.completed',   'A payout is successfully sent to your bank'],
+            ['payout.failed',      'A payout processing attempt fails'],
+            ['dispute.opened',     'A customer opens a dispute on a payment'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Event payload structure</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "id": "evt_20260527_abc123",
+  "type": "session.completed",
+  "createdAt": "2026-05-27T11:05:00Z",
+  "data": {
+    "id": "sess_7f3a9b",
+    "amount": 50.00,
+    "currency": "GHS",
+    "status": "COMPLETED",
+    "reference": "order_1042"
+  }
+}`}</pre>
+
+        <Note>
+          If your endpoint returns any status other than <code>2xx</code>, Aza will retry delivery up to <strong>5 times</strong> with exponential backoff (30 s, 2 min, 10 min, 1 hr, 6 hr).
+        </Note>
       </div>
     ),
     codeSnippets: {
-      curl: `# Test local webhook mock handler
-curl -X POST http://localhost:3000/api/webhook \\
+      curl: `# Register a webhook endpoint
+curl -X POST ${BASE}/api/v1/merchant/webhooks \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "id": "evt_098f",
-    "type": "checkout.completed",
-    "data": {
-      "sessionId": "cs_test_abc123",
-      "amount": 150.00,
-      "status": "paid"
-    }
-  }'`,
-      js: `// Example Express handler
+    "url": "https://yourserver.com/webhooks/aza",
+    "events": ["session.completed", "payout.completed"]
+  }'
+
+# List webhooks
+curl -X GET ${BASE}/api/v1/merchant/webhooks \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `// Register webhook
+const { data: wh } = await fetch('${BASE}/api/v1/merchant/webhooks', {
+  method: 'POST',
+  headers: {
+    'X-Api-Key': 'sk_live_YOUR_KEY',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    url: 'https://yourserver.com/webhooks/aza',
+    events: ['session.completed', 'payout.completed'],
+  }),
+}).then(r => r.json());
+
+console.log('Webhook ID:', wh.id, '| Secret:', wh.secret);
+
+// --- Express handler ---
 import express from 'express';
 const app = express();
-
-app.post('/webhook', express.json(), (req, res) => {
+app.post('/webhooks/aza', express.json(), (req, res) => {
   const event = req.body;
-  
-  if (event.type === 'checkout.completed') {
-    const session = event.data;
-    console.log(\`Received payment for session \${session.sessionId}\`);
+  if (event.type === 'session.completed') {
+    console.log('Payment received:', event.data.id, event.data.amount);
   }
-  
-  res.status(200).send({ received: true });
+  res.sendStatus(200);
 });`,
-      python: `# Example Flask handler
+      python: `import requests
 from flask import Flask, request, jsonify
+
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Register webhook
+wh = requests.post(
+    f'{BASE}/api/v1/merchant/webhooks',
+    headers=HEADERS,
+    json={
+        'url': 'https://yourserver.com/webhooks/aza',
+        'events': ['session.completed', 'payout.completed'],
+    }
+).json()['data']
+
+print('Webhook ID:', wh['id'], '| Secret:', wh['secret'])
+
+# --- Flask handler ---
 app = Flask(__name__)
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
+@app.route('/webhooks/aza', methods=['POST'])
+def handle_webhook():
     event = request.json
-    if event['type'] == 'checkout.completed':
-        data = event['data']
-        print(f"Received payment for session {data['sessionId']}")
+    if event['type'] == 'session.completed':
+        print('Payment:', event['data']['id'], event['data']['amount'])
     return jsonify(received=True), 200`,
     },
   },
+
+  // ── Signature Verification ───────────────────────────────────────────────────
   'webhooks-signatures': {
     id: 'webhooks-signatures',
     category: 'Webhooks',
     title: 'Signature Verification',
-    subtitle: 'Verify webhook payloads are authentic',
+    subtitle: 'Authenticate that events come from Aza',
     lastUpdated: 'May 2026',
-    description: 'Ensure payloads originate from Aza and not from impersonation. Verify signatures via SHA-256 HMAC hash functions using your secret.',
+    description: 'Every webhook delivery includes an X-Aza-Signature header. Verify it using your webhook secret to confirm the payload was not tampered with.',
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">The X-Aza-Signature Header</h3>
-        <p>
-          Aza webhooks include an <code>X-Aza-Signature</code> header. The header contains a timestamp and a signature hash:
-        </p>
-        <pre className="p-3 bg-gray-50 border border-gray-200 rounded font-mono text-[11px] text-gray-700">
-          t=1723490283,v1=f89d380e21bc82093ea08e2f89d380e21bc8209...
+        <h3 className="text-base font-bold text-gray-900">Header format</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700">
+          X-Aza-Signature: t=1716800000,v1=a3f9d2...
         </pre>
-        <p>
-          Compute the HMAC SHA-256 signature on the raw body string combined with the timestamp using your webhook signing secret, and confirm it matches the signature in the header.
-        </p>
+
+        <h3 className="text-base font-bold text-gray-900">Verification steps</h3>
+        <ol className="list-decimal pl-5 space-y-2 text-sm">
+          <li>Split the header on <code>,</code> to get the <code>t</code> (timestamp) and <code>v1</code> (HMAC) parts.</li>
+          <li>Build the signed string: <code>{`${'{timestamp}'}.${'{rawBody}'}`}</code></li>
+          <li>Compute <strong>HMAC-SHA256</strong> of that string using your webhook secret.</li>
+          <li>Compare the result (constant-time) to the <code>v1</code> value.</li>
+          <li>Optionally reject events where <code>t</code> is older than 5 minutes to prevent replay attacks.</li>
+        </ol>
+
+        <Warn>
+          Always verify signatures before processing webhook data in production. Skipping this step allows anyone to send fraudulent events to your endpoint.
+        </Warn>
       </div>
     ),
     codeSnippets: {
-      curl: `# Signatures cannot be easily simulated via raw curl. Use a client library code snippet.`,
-      js: `// Verify signatures in Node.js
-import crypto from 'crypto';
+      curl: `# Signatures must be verified in server code.
+# Use the Node.js or Python snippet to implement verification.`,
+      js: `import crypto from 'crypto';
 
-function verifySignature(payload, headerSignature, secret) {
-  const [tPart, vPart] = headerSignature.split(',');
-  const timestamp = tPart.split('=')[1];
-  const signature = vPart.split('=')[1];
-  
-  const signedPayload = \`\${timestamp}.\${payload}\`;
-  const expectedSignature = crypto
+function verifyAzaSignature(rawBody, signatureHeader, secret) {
+  const parts     = signatureHeader.split(',');
+  const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
+  const v1        = parts.find(p => p.startsWith('v1='))?.split('=')[1];
+
+  if (!timestamp || !v1) return false;
+
+  // Reject events older than 5 minutes
+  if (Date.now() / 1000 - parseInt(timestamp) > 300) return false;
+
+  const expected = crypto
     .createHmac('sha256', secret)
-    .update(signedPayload)
+    .update(\`\${timestamp}.\${rawBody}\`)
     .digest('hex');
-    
-  return signature === expectedSignature;
-}`,
-      python: `# Verify signatures in Python
-import hmac
-import hashlib
 
-def verify_signature(payload, header_signature, secret):
-    t_part, v_part = header_signature.split(',')
-    timestamp = tPart.split('=')[1]
-    signature = v_part.split('=')[1]
-    
-    signed_payload = f"{timestamp}.{payload}".encode('utf-8')
-    expected_sig = hmac.new(
-        secret.encode('utf-8'),
-        signed_payload,
-        hashlib.sha256
-    ).hexdigest()
-    
-    return hmac.compare_digest(signature, expected_sig)`,
+  return crypto.timingSafeEqual(
+    Buffer.from(v1),
+    Buffer.from(expected)
+  );
+}
+
+// Express usage
+app.post('/webhooks/aza', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['x-aza-signature'];
+  if (!verifyAzaSignature(req.body.toString(), sig, process.env.AZA_WEBHOOK_SECRET)) {
+    return res.status(400).send('Invalid signature');
+  }
+  const event = JSON.parse(req.body);
+  // process event...
+  res.sendStatus(200);
+});`,
+      python: `import hmac
+import hashlib
+import time
+
+def verify_aza_signature(raw_body: bytes, signature_header: str, secret: str) -> bool:
+    parts     = dict(p.split('=', 1) for p in signature_header.split(','))
+    timestamp = parts.get('t')
+    v1        = parts.get('v1')
+
+    if not timestamp or not v1:
+        return False
+
+    # Reject events older than 5 minutes
+    if time.time() - int(timestamp) > 300:
+        return False
+
+    signed    = f"{timestamp}.".encode() + raw_body
+    expected  = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(v1, expected)
+
+# Flask usage
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+
+@app.route('/webhooks/aza', methods=['POST'])
+def handle():
+    sig = request.headers.get('X-Aza-Signature', '')
+    if not verify_aza_signature(request.data, sig, 'your_webhook_secret'):
+        abort(400)
+    event = request.json
+    # process event...
+    return '', 200`,
+    },
+  },
+
+  // ── Error Codes ──────────────────────────────────────────────────────────────
+  errors: {
+    id: 'errors',
+    category: 'Reference',
+    title: 'Error Codes',
+    subtitle: 'Understand and handle API errors',
+    lastUpdated: 'May 2026',
+    description: 'The Aza API uses standard HTTP status codes. On error, the response body always includes a machine-readable error field alongside a human-readable message.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Error response shape</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": false,
+  "error": "INSUFFICIENT_BALANCE",
+  "message": "Your available balance is GH₵120.00, but GH₵500.00 was requested.",
+  "statusCode": 400
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">HTTP status codes</h3>
+        <Table
+          headers={['Code', 'Meaning']}
+          rows={[
+            ['200', 'OK — request succeeded'],
+            ['201', 'Created — resource successfully created'],
+            ['400', 'Bad Request — invalid parameters or validation error'],
+            ['401', 'Unauthorized — missing or invalid API key'],
+            ['403', 'Forbidden — account not active or feature not permitted'],
+            ['404', 'Not Found — resource does not exist'],
+            ['409', 'Conflict — duplicate resource (e.g. code already exists)'],
+            ['422', 'Unprocessable Entity — business logic error'],
+            ['429', 'Too Many Requests — rate limit exceeded'],
+            ['500', 'Internal Server Error — contact support if persistent'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Common error codes</h3>
+        <Table
+          headers={['error field', 'Description']}
+          rows={[
+            ['INVALID_API_KEY',        'The X-Api-Key header is missing or malformed'],
+            ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended'],
+            ['INSUFFICIENT_BALANCE',   'Requested payout exceeds available balance'],
+            ['SESSION_ALREADY_PAID',   'Attempting to refund a non-completed session'],
+            ['DUPLICATE_CODE',         'Discount code with this value already exists'],
+            ['INVOICE_NOT_DRAFT',      'Trying to send an invoice not in DRAFT status'],
+            ['WEBHOOK_URL_UNREACHABLE','URL failed connectivity check during registration'],
+          ]}
+        />
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# A 401 response (invalid key)
+# HTTP/1.1 401 Unauthorized
+# {
+#   "success": false,
+#   "error": "INVALID_API_KEY",
+#   "message": "The provided API key is invalid or has been revoked.",
+#   "statusCode": 401
+# }
+
+# Test your key
+curl -X GET ${BASE}/api/v1/merchant/profile \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `async function azaRequest(path, options = {}) {
+  const res = await fetch(\`${BASE}\${path}\`, {
+    ...options,
+    headers: {
+      'X-Api-Key': process.env.AZA_API_KEY,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+  const body = await res.json();
+  if (!body.success) {
+    const err = new Error(body.message);
+    err.code = body.error;
+    err.status = res.status;
+    throw err;
+  }
+  return body.data;
+}
+
+// Usage
+try {
+  const profile = await azaRequest('/api/v1/merchant/profile');
+} catch (err) {
+  if (err.code === 'MERCHANT_NOT_ACTIVE') {
+    console.error('Complete KYB before using the API');
+  } else {
+    console.error(err.code, err.message);
+  }
+}`,
+      python: `import requests
+
+class AzaError(Exception):
+    def __init__(self, code, message, status):
+        super().__init__(message)
+        self.code   = code
+        self.status = status
+
+def aza_request(method, path, **kwargs):
+    resp = requests.request(
+        method,
+        f'${BASE}{path}',
+        headers={'X-Api-Key': 'sk_live_YOUR_KEY', **kwargs.pop('headers', {})},
+        **kwargs
+    )
+    body = resp.json()
+    if not body.get('success'):
+        raise AzaError(body['error'], body['message'], resp.status_code)
+    return body['data']
+
+try:
+    profile = aza_request('GET', '/api/v1/merchant/profile')
+except AzaError as e:
+    if e.code == 'MERCHANT_NOT_ACTIVE':
+        print('Complete KYB first')
+    else:
+        print(e.code, str(e))`,
+    },
+  },
+
+  // ── Response Format ──────────────────────────────────────────────────────────
+  'response-format': {
+    id: 'response-format',
+    category: 'Reference',
+    title: 'Response Format',
+    subtitle: 'Consistent JSON envelope across all endpoints',
+    lastUpdated: 'May 2026',
+    description: 'Every response from the Aza API is a JSON object with a predictable envelope. Successful responses have success: true and a data field; errors have success: false and an error field.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Success envelope</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": { ... }           // single object
+}
+
+// OR paginated list:
+{
+  "success": true,
+  "data": {
+    "content": [ ... ],     // array of items
+    "page": 0,              // zero-indexed current page
+    "size": 20,             // items per page
+    "totalElements": 142,   // total records across all pages
+    "totalPages": 8
+  }
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Error envelope</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": false,
+  "error": "INSUFFICIENT_BALANCE",
+  "message": "Human-readable description",
+  "statusCode": 400
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Date & time format</h3>
+        <p className="text-sm">All timestamps are <strong>ISO 8601</strong> strings in UTC, e.g. <code>2026-05-27T11:00:00Z</code>.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Amount format</h3>
+        <p className="text-sm">Amounts are <strong>decimal numbers</strong> (not integers or strings), e.g. <code>50.00</code>. The currency field indicates the unit (default: <code>GHS</code>).</p>
+
+        <h3 className="text-base font-bold text-gray-900">Pagination</h3>
+        <Table
+          headers={['Query parameter', 'Default', 'Description']}
+          rows={[
+            ['page', '0', 'Zero-indexed page number'],
+            ['size', '20', 'Items per page (max 100)'],
+          ]}
+        />
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# All list endpoints support ?page= and ?size=
+curl -X GET "${BASE}/api/v1/merchant/sessions?page=0&size=50" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# Response:
+# {
+#   "success": true,
+#   "data": {
+#     "content": [...],
+#     "page": 0,
+#     "size": 50,
+#     "totalElements": 312,
+#     "totalPages": 7
+#   }
+# }`,
+      js: `// Generic paginator helper
+async function* paginate(path, headers) {
+  let page = 0;
+  while (true) {
+    const res = await fetch(
+      \`${BASE}\${path}?page=\${page}&size=100\`,
+      { headers }
+    ).then(r => r.json());
+
+    const { content, totalPages } = res.data;
+    yield* content;
+
+    if (++page >= totalPages) break;
+  }
+}
+
+// Usage: iterate all sessions
+const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY' };
+for await (const session of paginate('/api/v1/merchant/sessions', HEADERS)) {
+  console.log(session.id, session.status);
+}`,
+      python: `import requests
+
+def paginate(path, headers, size=100):
+    page = 0
+    while True:
+        resp = requests.get(
+            f'${BASE}{path}',
+            params={'page': page, 'size': size},
+            headers=headers
+        ).json()['data']
+        yield from resp['content']
+        page += 1
+        if page >= resp['totalPages']:
+            break
+
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+for session in paginate('/api/v1/merchant/sessions', HEADERS):
+    print(session['id'], session['status'])`,
     },
   },
 };
