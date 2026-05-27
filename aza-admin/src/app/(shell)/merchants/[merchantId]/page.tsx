@@ -10,11 +10,23 @@ import {
   updateMerchantFeeRate,
   getMerchantPayouts,
   getMerchantSessions,
+  getMerchantInvoices,
+  getMerchantSettlements,
+  getMerchantCustomers,
+  getMerchantDisputesByMerchant,
+  getMerchantBulkTransfers,
+  getMerchantAuditLogByMerchant,
   resetUserRateLimit,
   AdminMerchant,
   MerchantKyb,
   MerchantPayout,
   MerchantSession,
+  MerchantInvoice,
+  MerchantSettlement,
+  MerchantCustomer,
+  MerchantBulkTransfer,
+  MerchantAuditLogEntry,
+  Dispute,
   Page,
 } from "@/lib/admin-api";
 import {
@@ -28,6 +40,7 @@ import {
   Key,
   Webhook,
   User,
+  Users,
   ShieldCheck,
   Store,
   Ban,
@@ -37,9 +50,13 @@ import {
   Percent,
   CreditCard,
   ArrowDownToLine,
+  ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
   FileText,
+  TrendingUp,
+  Scale,
+  ScrollText,
   Image as ImageIcon,
 } from "lucide-react";
 
@@ -95,6 +112,34 @@ const PAYOUT_STATUS_CFG: Record<string, { cls: string; label: string }> = {
   FAILED:    { cls: "text-red-400 bg-red-500/10 border-red-500/20",            label: "Failed" },
 };
 
+const INVOICE_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  DRAFT:     { cls: "text-white/40 bg-white/5 border-white/10",                 label: "Draft" },
+  SENT:      { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Sent" },
+  PAID:      { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Paid" },
+  CANCELLED: { cls: "text-red-400 bg-red-500/10 border-red-500/20",             label: "Cancelled" },
+  OVERDUE:   { cls: "text-orange-400 bg-orange-500/10 border-orange-500/20",    label: "Overdue" },
+};
+
+const SETTLEMENT_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  PENDING: { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Pending" },
+  SETTLED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",label: "Settled" },
+};
+
+const BULK_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  PENDING:             { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Pending" },
+  PROCESSING:          { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Processing" },
+  COMPLETED:           { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Completed" },
+  PARTIALLY_COMPLETED: { cls: "text-orange-400 bg-orange-500/10 border-orange-500/20",   label: "Partial" },
+  FAILED:              { cls: "text-red-400 bg-red-500/10 border-red-500/20",             label: "Failed" },
+};
+
+const DISPUTE_STATUS_CFG: Record<string, { cls: string; label: string }> = {
+  OPEN:              { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Open" },
+  UNDER_REVIEW:      { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Under Review" },
+  RESOLVED_APPROVED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Approved" },
+  RESOLVED_DENIED:   { cls: "text-red-400 bg-red-500/10 border-red-500/20",             label: "Denied" },
+};
+
 function Badge({ cfg }: { cfg: { cls: string; label: string } }) {
   return <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
 }
@@ -133,7 +178,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 type Modal = "kyb_approve" | "kyb_reject" | "kyb_more_info" | "suspend" | "activate" | "reject_merchant" | "fee_rate" | null;
-type Tab = "overview" | "kyb" | "payouts" | "sessions";
+type Tab = "overview" | "kyb" | "payouts" | "sessions" | "invoices" | "settlements" | "customers" | "disputes" | "bulk-transfers" | "audit-log";
 
 export default function MerchantDetailPage() {
   const { merchantId } = useParams<{ merchantId: string }>();
@@ -159,6 +204,36 @@ export default function MerchantDetailPage() {
   const [sessions, setSessions] = useState<Page<MerchantSession> | null>(null);
   const [sessionsPage, setSessionsPage] = useState(0);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  // Invoices tab state
+  const [invoices, setInvoices] = useState<Page<MerchantInvoice> | null>(null);
+  const [invoicesPage, setInvoicesPage] = useState(0);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  // Settlements tab state
+  const [settlements, setSettlements] = useState<Page<MerchantSettlement> | null>(null);
+  const [settlementsPage, setSettlementsPage] = useState(0);
+  const [settlementsLoading, setSettlementsLoading] = useState(false);
+
+  // Customers tab state
+  const [customers, setCustomers] = useState<Page<MerchantCustomer> | null>(null);
+  const [customersPage, setCustomersPage] = useState(0);
+  const [customersLoading, setCustomersLoading] = useState(false);
+
+  // Disputes tab state
+  const [merchantDisputes, setMerchantDisputes] = useState<Page<Dispute> | null>(null);
+  const [merchantDisputesPage, setMerchantDisputesPage] = useState(0);
+  const [merchantDisputesLoading, setMerchantDisputesLoading] = useState(false);
+
+  // Bulk Transfers tab state
+  const [bulkTransfers, setBulkTransfers] = useState<Page<MerchantBulkTransfer> | null>(null);
+  const [bulkTransfersPage, setBulkTransfersPage] = useState(0);
+  const [bulkTransfersLoading, setBulkTransfersLoading] = useState(false);
+
+  // Audit Log tab state
+  const [auditLog, setAuditLog] = useState<Page<MerchantAuditLogEntry> | null>(null);
+  const [auditLogPage, setAuditLogPage] = useState(0);
+  const [auditLogLoading, setAuditLogLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -217,10 +292,95 @@ export default function MerchantDetailPage() {
     }
   }, [merchantId]);
 
+  const loadInvoices = useCallback(async (p: number) => {
+    setInvoicesLoading(true);
+    try {
+      const res = await getMerchantInvoices(merchantId, p);
+      setInvoices(res);
+      setInvoicesPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load invoices");
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadSettlements = useCallback(async (p: number) => {
+    setSettlementsLoading(true);
+    try {
+      const res = await getMerchantSettlements(merchantId, p);
+      setSettlements(res);
+      setSettlementsPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load settlements");
+    } finally {
+      setSettlementsLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadCustomers = useCallback(async (p: number) => {
+    setCustomersLoading(true);
+    try {
+      const res = await getMerchantCustomers(merchantId, p);
+      setCustomers(res);
+      setCustomersPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load customers");
+    } finally {
+      setCustomersLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadMerchantDisputes = useCallback(async (p: number) => {
+    setMerchantDisputesLoading(true);
+    try {
+      const res = await getMerchantDisputesByMerchant(merchantId, p);
+      setMerchantDisputes(res);
+      setMerchantDisputesPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load disputes");
+    } finally {
+      setMerchantDisputesLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadBulkTransfers = useCallback(async (p: number) => {
+    setBulkTransfersLoading(true);
+    try {
+      const res = await getMerchantBulkTransfers(merchantId, p);
+      setBulkTransfers(res);
+      setBulkTransfersPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load bulk transfers");
+    } finally {
+      setBulkTransfersLoading(false);
+    }
+  }, [merchantId]);
+
+  const loadAuditLog = useCallback(async (p: number) => {
+    setAuditLogLoading(true);
+    try {
+      const res = await getMerchantAuditLogByMerchant(merchantId, p);
+      setAuditLog(res);
+      setAuditLogPage(p);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load audit log");
+    } finally {
+      setAuditLogLoading(false);
+    }
+  }, [merchantId]);
+
   useEffect(() => {
     if (tab === "payouts" && !payouts) loadPayouts(0);
     if (tab === "sessions" && !sessions) loadSessions(0);
-  }, [tab, payouts, sessions, loadPayouts, loadSessions]);
+    if (tab === "invoices" && !invoices) loadInvoices(0);
+    if (tab === "settlements" && !settlements) loadSettlements(0);
+    if (tab === "customers" && !customers) loadCustomers(0);
+    if (tab === "disputes" && !merchantDisputes) loadMerchantDisputes(0);
+    if (tab === "bulk-transfers" && !bulkTransfers) loadBulkTransfers(0);
+    if (tab === "audit-log" && !auditLog) loadAuditLog(0);
+  }, [tab, payouts, sessions, invoices, settlements, customers, merchantDisputes, bulkTransfers, auditLog,
+      loadPayouts, loadSessions, loadInvoices, loadSettlements, loadCustomers, loadMerchantDisputes, loadBulkTransfers, loadAuditLog]);
 
   const handleKybReview = async (approve: boolean, rejectionReason?: string, moreInfoRequest?: string) => {
     setActionLoading(true);
@@ -309,10 +469,16 @@ export default function MerchantDetailPage() {
   const canActivate = merchant.status === "SUSPENDED";
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview", label: "Overview", icon: Store },
-    { id: "kyb", label: "KYB", icon: ShieldCheck },
-    { id: "payouts", label: "Payouts", icon: ArrowDownToLine },
-    { id: "sessions", label: "Sessions", icon: CreditCard },
+    { id: "overview",       label: "Overview",       icon: Store },
+    { id: "kyb",            label: "KYB",            icon: ShieldCheck },
+    { id: "payouts",        label: "Payouts",        icon: ArrowDownToLine },
+    { id: "sessions",       label: "Sessions",       icon: CreditCard },
+    { id: "invoices",       label: "Invoices",       icon: FileText },
+    { id: "settlements",    label: "Settlements",    icon: TrendingUp },
+    { id: "customers",      label: "Customers",      icon: Users },
+    { id: "disputes",       label: "Disputes",       icon: Scale },
+    { id: "bulk-transfers", label: "Bulk Transfers", icon: ArrowLeftRight },
+    { id: "audit-log",      label: "Audit Log",      icon: ScrollText },
   ];
 
   return (
@@ -392,7 +558,7 @@ export default function MerchantDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-white/5 p-1 rounded-xl overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -748,6 +914,331 @@ export default function MerchantDetailPage() {
                   <button onClick={() => loadSessions(sessionsPage + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
                     <ChevronRight size={14} />
                   </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── INVOICES TAB ── */}
+      {tab === "invoices" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Invoices</h2>
+              {invoices && <span className="text-xs text-white/30">{invoices.totalElements} total</span>}
+            </div>
+            {invoicesLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!invoices && invoicesLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : invoices?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No invoices yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Due</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {invoices?.content.map((inv) => {
+                    const sc = INVOICE_STATUS_CFG[inv.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: inv.status };
+                    return (
+                      <tr key={inv.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm text-white font-medium">{inv.customerName}</p>
+                          <p className="text-xs text-white/35">{inv.customerEmail}</p>
+                        </td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(inv.amount, inv.currency)}</td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-white/35 text-xs hidden md:table-cell">{fmtDate(inv.dueDate)}</td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(inv.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {invoices && invoices.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadInvoices(invoicesPage - 1)} disabled={invoicesPage === 0 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{invoicesPage + 1} / {invoices.totalPages}</span>
+                  <button onClick={() => loadInvoices(invoicesPage + 1)} disabled={invoicesPage >= invoices.totalPages - 1 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── SETTLEMENTS TAB ── */}
+      {tab === "settlements" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Settlements</h2>
+              {settlements && <span className="text-xs text-white/30">{settlements.totalElements} total</span>}
+            </div>
+            {settlementsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!settlements && settlementsLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : settlements?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No settlements yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Gross</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Fees</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Net</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Txns</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Period</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {settlements?.content.map((s) => {
+                    const sc = SETTLEMENT_STATUS_CFG[s.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: s.status };
+                    return (
+                      <tr key={s.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5 font-mono text-white/60 text-xs">{fmtAmount(s.grossAmount)}</td>
+                        <td className="px-5 py-3.5 font-mono text-red-400/60 text-xs hidden md:table-cell">-{fmtAmount(s.feeTotal)}</td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(s.netAmount)}</td>
+                        <td className="px-5 py-3.5 text-white/40 text-xs hidden lg:table-cell">{s.transactionCount}</td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">
+                          {s.periodStart ? `${fmtDate(s.periodStart).split(",")[0]} – ${fmtDate(s.periodEnd).split(",")[0]}` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {settlements && settlements.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadSettlements(settlementsPage - 1)} disabled={settlementsPage === 0 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{settlementsPage + 1} / {settlements.totalPages}</span>
+                  <button onClick={() => loadSettlements(settlementsPage + 1)} disabled={settlementsPage >= settlements.totalPages - 1 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── CUSTOMERS TAB ── */}
+      {tab === "customers" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Customers</h2>
+              {customers && <span className="text-xs text-white/30">{customers.totalElements} total</span>}
+            </div>
+            {customersLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!customers && customersLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : customers?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No customers yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Payments</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Total Spend</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">First Payment</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Last Payment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {customers?.content.map((c) => (
+                    <tr key={c.id} className="hover:bg-white/2">
+                      <td className="px-5 py-3.5">
+                        <p className="text-sm text-white font-medium">{c.name}</p>
+                        <p className="text-xs text-white/35">{c.email ?? c.phone ?? "—"}</p>
+                      </td>
+                      <td className="px-5 py-3.5 text-white/60 text-sm">{c.totalPayments}</td>
+                      <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(c.totalSpend)}</td>
+                      <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden md:table-cell">{fmtDate(c.firstPaymentAt)}</td>
+                      <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden lg:table-cell">{fmtDate(c.lastPaymentAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {customers && customers.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadCustomers(customersPage - 1)} disabled={customersPage === 0 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{customersPage + 1} / {customers.totalPages}</span>
+                  <button onClick={() => loadCustomers(customersPage + 1)} disabled={customersPage >= customers.totalPages - 1 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── DISPUTES TAB ── */}
+      {tab === "disputes" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Scale size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Disputes</h2>
+              {merchantDisputes && <span className="text-xs text-white/30">{merchantDisputes.totalElements} total</span>}
+            </div>
+            {merchantDisputesLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!merchantDisputes && merchantDisputesLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : merchantDisputes?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No disputes</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Ref</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Category</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Filed</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {merchantDisputes?.content.map((d) => {
+                    const sc = DISPUTE_STATUS_CFG[d.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: d.status };
+                    return (
+                      <tr key={d.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5 font-mono text-xs text-white/50">{d.referenceId}</td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(d.amount, d.currency)}</td>
+                        <td className="px-5 py-3.5 text-white/50 text-xs">{d.category.replace(/_/g, " ")}</td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(d.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {merchantDisputes && merchantDisputes.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadMerchantDisputes(merchantDisputesPage - 1)} disabled={merchantDisputesPage === 0 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{merchantDisputesPage + 1} / {merchantDisputes.totalPages}</span>
+                  <button onClick={() => loadMerchantDisputes(merchantDisputesPage + 1)} disabled={merchantDisputesPage >= merchantDisputes.totalPages - 1 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── BULK TRANSFERS TAB ── */}
+      {tab === "bulk-transfers" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowLeftRight size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Bulk Transfers</h2>
+              {bulkTransfers && <span className="text-xs text-white/30">{bulkTransfers.totalElements} total</span>}
+            </div>
+            {bulkTransfersLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!bulkTransfers && bulkTransfersLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : bulkTransfers?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No bulk transfers yet</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Total Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Recipients</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Success / Fail</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/4">
+                  {bulkTransfers?.content.map((bt) => {
+                    const sc = BULK_STATUS_CFG[bt.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: bt.status };
+                    return (
+                      <tr key={bt.id} className="hover:bg-white/2">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(bt.totalAmount)}</td>
+                        <td className="px-5 py-3.5 text-white/60 text-sm">{bt.recipientCount}</td>
+                        <td className="px-5 py-3.5 text-xs hidden md:table-cell">
+                          <span className="text-emerald-400">{bt.successCount}</span>
+                          <span className="text-white/25 mx-1">/</span>
+                          <span className="text-red-400">{bt.failureCount}</span>
+                        </td>
+                        <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
+                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(bt.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {bulkTransfers && bulkTransfers.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadBulkTransfers(bulkTransfersPage - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{bulkTransfersPage + 1} / {bulkTransfers.totalPages}</span>
+                  <button onClick={() => loadBulkTransfers(bulkTransfersPage + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── AUDIT LOG TAB ── */}
+      {tab === "audit-log" && (
+        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ScrollText size={15} className="text-white/40" />
+              <h2 className="text-sm font-semibold text-white">Audit Log</h2>
+              {auditLog && <span className="text-xs text-white/30">{auditLog.totalElements} entries</span>}
+            </div>
+            {auditLogLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+          </div>
+          {!auditLog && auditLogLoading ? (
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+          ) : auditLog?.content.length === 0 ? (
+            <p className="text-center text-white/25 text-sm py-16">No audit entries</p>
+          ) : (
+            <>
+              <div className="divide-y divide-white/4">
+                {auditLog?.content.map((entry) => (
+                  <div key={entry.id} className="px-5 py-3.5 hover:bg-white/2 flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-white/70 font-mono bg-white/5 px-2 py-0.5 rounded">{entry.action}</span>
+                        {entry.actorEmail && <span className="text-xs text-white/35">{entry.actorEmail}</span>}
+                        {entry.ipAddress && <span className="text-[10px] text-white/20 font-mono">{entry.ipAddress}</span>}
+                      </div>
+                      {entry.details && <p className="text-xs text-white/40 mt-1 truncate">{entry.details}</p>}
+                    </div>
+                    <span className="text-[11px] text-white/25 flex-shrink-0">{fmtDate(entry.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
+              {auditLog && auditLog.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
+                  <button onClick={() => loadAuditLog(auditLogPage - 1)} disabled={auditLogPage === 0 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-white/40">{auditLogPage + 1} / {auditLog.totalPages}</span>
+                  <button onClick={() => loadAuditLog(auditLogPage + 1)} disabled={auditLogPage >= auditLog.totalPages - 1 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
