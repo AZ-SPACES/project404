@@ -150,7 +150,7 @@ public class TransferService {
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                sender.getId(), startOfDay, endOfDay, LocalDateTime.now()
+                sender.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ)
         );
         if (todayTotal.add(request.getAmount()).compareTo(maxDailyAmount) > 0) {
             BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
@@ -191,6 +191,10 @@ public class TransferService {
         // 3. Check sender balance
         Wallet senderWallet = walletRepository.findByUserId(sender.getId())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
+
+        if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
 
         validateBalance(senderWallet, request.getAmount());
 
@@ -244,6 +248,10 @@ public class TransferService {
         //Lock sender wallet and execute transfer atomically
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
                 .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
+
+        if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
 
         // Re-check balance (could have changed since initiation)
         if (senderWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
@@ -451,7 +459,7 @@ public class TransferService {
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                payer.getId(), startOfDay, endOfDay, LocalDateTime.now());
+                payer.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
         if (todayTotal.add(transaction.getAmount()).compareTo(maxDailyAmount) > 0) {
             throw new RuntimeException("Accepting this request would exceed your daily transfer limit of GHS " + maxDailyAmount);
         }

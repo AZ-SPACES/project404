@@ -174,6 +174,10 @@ public class CheckoutService {
         Wallet customerWallet = walletRepository.findByUserIdForUpdate(customerId)
                 .orElseThrow(() -> new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND));
 
+        if (Boolean.TRUE.equals(customerWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
+
         if (customerWallet.getBalance().compareTo(session.getAmount()) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
         }
@@ -435,17 +439,18 @@ public class CheckoutService {
         Merchant merchant = merchantRepository.findByIdForUpdate(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
-        if (merchant.getBalance().compareTo(session.getNetAmount()) < 0) {
+        BigDecimal refundAmount = session.getAmount();
+        if (merchant.getBalance().compareTo(refundAmount) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS",
                     "Merchant balance is insufficient to process this refund", HttpStatus.BAD_REQUEST);
         }
 
-        // Debit merchant balance
-        merchant.setBalance(merchant.getBalance().subtract(session.getNetAmount()));
+        // Debit merchant full original amount (merchant absorbs the platform fee on refunds)
+        merchant.setBalance(merchant.getBalance().subtract(refundAmount));
         merchantRepository.save(merchant);
 
-        // Credit customer wallet
-        customerWallet.setBalance(customerWallet.getBalance().add(session.getNetAmount()));
+        // Credit customer the full original amount they paid
+        customerWallet.setBalance(customerWallet.getBalance().add(refundAmount));
         walletRepository.save(customerWallet);
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
@@ -455,7 +460,7 @@ public class CheckoutService {
         Transaction tx = Transaction.builder()
                 .senderId(merchant.getUserId())
                 .recipientId(session.getCustomerId())
-                .amount(session.getNetAmount())
+                .amount(refundAmount)
                 .note(note)
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)
@@ -469,7 +474,7 @@ public class CheckoutService {
         session.setRefundedAt(LocalDateTime.now());
         sessionRepository.save(session);
 
-        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, session.getNetAmount());
+        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, refundAmount);
         return toResponse(session, merchant);
     }
 }

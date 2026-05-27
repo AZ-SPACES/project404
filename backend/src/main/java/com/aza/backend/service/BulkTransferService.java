@@ -154,7 +154,7 @@ public class BulkTransferService {
 
         // Refund failed amounts back to merchant
         if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-            merchant = merchantRepository.findById(merchantId)
+            merchant = merchantRepository.findByIdForUpdate(merchantId)
                     .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
             merchant.setBalance(merchant.getBalance().add(refundAmount));
             merchantRepository.save(merchant);
