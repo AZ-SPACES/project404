@@ -46,16 +46,34 @@ function generateIdempotencyKey(): string {
   });
 }
 
-/** Extracts a human-readable error message from an Axios error. */
+/** Extracts a human-readable error message from an Axios error.
+ *  Some backend error shapes put the message inside an object (e.g.
+ *  `{ error: { code, message } }` or `{ errors: [{ message }] }`).
+ *  If we returned that object verbatim, `new Error(obj)` would coerce it
+ *  to the string "[object Object]" and surface that in the UI. So we
+ *  walk candidates and only accept non-empty strings.
+ */
 function extractError(err: unknown): string {
+  const pickString = (v: unknown): string | null =>
+    typeof v === 'string' && v.trim() ? v : null;
+
   if (err && typeof err === 'object') {
     const axiosErr = err as any;
-    return (
-      axiosErr.response?.data?.message ||
-      axiosErr.response?.data?.error ||
-      axiosErr.message ||
-      'Something went wrong'
-    );
+    const data = axiosErr.response?.data;
+
+    const candidates: unknown[] = [
+      data?.message,
+      data?.error?.message,
+      data?.error,
+      Array.isArray(data?.errors) ? data.errors[0]?.message ?? data.errors[0] : undefined,
+      data?.detail,
+      axiosErr.message,
+    ];
+
+    for (const c of candidates) {
+      const s = pickString(c);
+      if (s) return s;
+    }
   }
   return 'Something went wrong';
 }

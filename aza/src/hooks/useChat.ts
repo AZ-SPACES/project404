@@ -60,7 +60,9 @@ function toMessage(m: LocalMessage): Message {
     ? 'This message was deleted'
     : m.decryptOk
       ? m.text
-      : '\u{1F512} Encrypted message';
+      : m.isSelf
+        ? 'Message sent from another device'
+        : '\u{1F512} Encrypted message';
   return {
     id: m.serverId ?? m.clientId,
     text: displayText,

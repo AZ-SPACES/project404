@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import {
   getContacts,
-  syncContacts,
   searchContacts,
   markContactFavorite,
   unmarkContactFavorite,
@@ -24,12 +23,10 @@ interface ContactState {
   sentContactRequests: SentContactRequest[];
   blockedUsers: BlockedUser[];
   isLoading: boolean;
-  isSyncing: boolean;
   error: string | null;
 
   // Actions
   fetchContacts: (page?: number, size?: number) => Promise<void>;
-  syncDeviceContacts: (deviceContacts: any[]) => Promise<void>;
   search: (query: string) => Promise<Contact[]>;
   toggleFavorite: (contactId: string, isFavorite: boolean) => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
@@ -51,7 +48,6 @@ export const useContactStore = create<ContactState>((set, get) => ({
   sentContactRequests: [],
   blockedUsers: [],
   isLoading: false,
-  isSyncing: false,
   error: null,
 
   fetchContacts: async (page = 0, size = 100) => {
@@ -66,23 +62,6 @@ export const useContactStore = create<ContactState>((set, get) => ({
       set({ error: error.message || 'Failed to fetch contacts' });
     } finally {
       set({ isLoading: false });
-    }
-  },
-
-  syncDeviceContacts: async (deviceContacts: any[]) => {
-    try {
-      set({ isSyncing: true, error: null });
-      // Send device contacts to backend for matching. The raw sync response
-      // may include a stub record for every phone contact regardless of
-      // whether they're in the system, so we don't use it directly.
-      // Instead we re-fetch the contacts list which the backend filters to
-      // only confirmed/matched entries.
-      await syncContacts(deviceContacts);
-      await get().fetchContacts();
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to sync contacts' });
-    } finally {
-      set({ isSyncing: false });
     }
   },
 

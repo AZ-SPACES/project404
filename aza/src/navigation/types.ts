@@ -60,7 +60,7 @@ export type RootStackParamList = {
   HelpTopic: { topicId: string; title: string };
   Inbox: undefined;
   NotificationSettings: undefined;
-  SendAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
+  SendAmount: { id?: string; name?: string; username?: string; avatar?: string; identifier: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string };
   SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; id?: string };
   SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string };
