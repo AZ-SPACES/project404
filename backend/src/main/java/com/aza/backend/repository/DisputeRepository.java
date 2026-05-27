@@ -25,4 +25,7 @@ public interface DisputeRepository extends JpaRepository<Dispute, UUID> {
 
     @Query("SELECT d FROM Dispute d WHERE d.transactionId IN :transactionIds ORDER BY d.createdAt DESC")
     Page<Dispute> findAllByTransactionIdInOrderByCreatedAtDesc(@Param("transactionIds") List<UUID> transactionIds, Pageable pageable);
+
+    boolean existsByTransactionId(UUID transactionId);
+    Page<Dispute> findAllByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 }

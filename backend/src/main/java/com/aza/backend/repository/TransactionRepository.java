@@ -82,4 +82,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.initiatedAt > :since")
     long countByInitiatedAtAfter(@Param("since") java.time.LocalDateTime since);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.recipientId = :userId AND t.type = 'TRANSFER' AND t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end")
+    java.math.BigDecimal getTotalReceivedBetween(@Param("userId") UUID userId,
+                                                 @Param("start") LocalDateTime start,
+                                                 @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.recipientId = :userId AND t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end")
+    long countReceivedBetween(@Param("userId") UUID userId,
+                               @Param("start") LocalDateTime start,
+                               @Param("end") LocalDateTime end);
 }

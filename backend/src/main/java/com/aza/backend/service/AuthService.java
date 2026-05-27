@@ -122,6 +122,7 @@ public class AuthService {
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            emailService.sendFailedLoginAlert(user.getEmail(), user.getFirstName(), ipAddress);
             throw new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED);
         }
 
@@ -233,6 +234,8 @@ public class AuthService {
         user.setForcePasswordReset(true);
         user.setRequireSelfieVerification(true);
         userRepository.save(user);
+
+        emailService.sendAccountSecuredEmail(user.getEmail(), user.getFirstName());
 
         // Blacklist the current access token for its remaining validity
         if (accessToken != null) {
@@ -398,6 +401,7 @@ public class AuthService {
 
         List<String> plainCodes = generateAndSaveCodes(user.getId());
         log.info("2FA enabled for user {} — {} recovery codes issued", user.getId(), plainCodes.size());
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), true, "Authenticator App");
         return new RecoveryCodesResponse(plainCodes, plainCodes.size());
     }
 
@@ -440,6 +444,7 @@ public class AuthService {
         userRepository.save(user);
         recoveryCodeRepository.deleteAllByUserId(user.getId());
         log.info("2FA disabled for user {} — recovery codes purged", user.getId());
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), false, "Authenticator App");
     }
 
     @Transactional
@@ -463,6 +468,9 @@ public class AuthService {
 
         long remaining = recoveryCodeRepository.countByUserIdAndUsedFalse(user.getId());
         log.warn("Recovery code used for user {} — {} code(s) remaining", user.getId(), remaining);
+        if (remaining <= 2) {
+            emailService.sendRecoveryCodesLowEmail(user.getEmail(), user.getFirstName(), remaining);
+        }
 
         return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
@@ -501,6 +509,7 @@ public class AuthService {
         }
         userRepository.save(user);
 
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), true, "SMS");
         // If this is the first 2FA method, generate recovery codes
         if (recoveryCodeRepository.countByUserIdAndUsedFalse(user.getId()) == 0) {
             List<String> plainCodes = generateAndSaveCodes(user.getId());
@@ -524,6 +533,7 @@ public class AuthService {
         }
         userRepository.save(user);
 
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), true, "Email");
         if (recoveryCodeRepository.countByUserIdAndUsedFalse(user.getId()) == 0) {
             List<String> plainCodes = generateAndSaveCodes(user.getId());
             return new RecoveryCodesResponse(plainCodes, plainCodes.size());
@@ -541,6 +551,7 @@ public class AuthService {
             }
         }
         userRepository.save(user);
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), enabled, "In-App Approval");
     }
 
     public String requestAppApproval(String preAuthToken) {
