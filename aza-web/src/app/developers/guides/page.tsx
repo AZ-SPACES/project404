@@ -255,6 +255,7 @@ const navigationGroups = [
     items: [
       { id: 'intro',   label: 'Introduction' },
       { id: 'auth',    label: 'Authentication & API Keys' },
+      { id: 'sdks',    label: 'SDKs & Libraries' },
     ],
   },
   {
@@ -292,6 +293,7 @@ const navigationGroups = [
     items: [
       { id: 'errors',          label: 'Error Codes' },
       { id: 'response-format', label: 'Response Format' },
+      { id: 'changelog',       label: 'Changelog' },
     ],
   },
 ];
@@ -1676,6 +1678,320 @@ def paginate(path, headers, size=100):
 HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
 for session in paginate('/api/v1/merchant/sessions', HEADERS):
     print(session['id'], session['status'])`,
+    },
+  },
+
+  // ── SDKs & Libraries ─────────────────────────────────────────────────────────
+  sdks: {
+    id: 'sdks',
+    category: 'Getting Started',
+    title: 'SDKs & Libraries',
+    subtitle: 'Integrate Aza using your preferred language',
+    lastUpdated: 'May 2026',
+    description: 'Aza does not currently publish official language SDKs. The API is a standard REST interface — any HTTP client works. This guide shows the recommended setup for the most common environments.',
+    content: (
+      <div className="space-y-6">
+        <Note>
+          Official SDKs for Node.js and Python are on the roadmap. Until then, the raw HTTP approach below is the recommended integration path — it requires no extra dependencies.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Node.js / TypeScript</h3>
+        <p className="text-sm">Use the native <code>fetch</code> API (Node 18+) or <code>axios</code>. A thin wrapper is enough:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`// aza.ts
+const BASE = 'https://api.aza.systems';
+
+export async function azaFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(BASE + path, {
+    ...options,
+    headers: {
+      'X-Api-Key': process.env.AZA_API_KEY!,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+  const body = await res.json();
+  if (!body.success) throw Object.assign(new Error(body.message), { code: body.error });
+  return body.data;
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Python</h3>
+        <p className="text-sm">Use the <code>requests</code> library. Create a <code>Session</code> so headers are set once:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`# aza.py
+import os
+import requests
+
+class AzaClient:
+    BASE = 'https://api.aza.systems'
+
+    def __init__(self, api_key: str | None = None):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'X-Api-Key': api_key or os.environ['AZA_API_KEY'],
+            'Content-Type': 'application/json',
+        })
+
+    def get(self, path: str, **params):
+        r = self.session.get(self.BASE + path, params=params)
+        body = r.json()
+        if not body.get('success'):
+            raise RuntimeError(f"{body['error']}: {body['message']}")
+        return body['data']
+
+    def post(self, path: str, payload: dict | None = None):
+        r = self.session.post(self.BASE + path, json=payload or {})
+        body = r.json()
+        if not body.get('success'):
+            raise RuntimeError(f"{body['error']}: {body['message']}")
+        return body['data']`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">PHP</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`// Use Guzzle: composer require guzzlehttp/guzzle
+use GuzzleHttp\\Client;
+
+$client = new Client([
+    'base_uri' => 'https://api.aza.systems',
+    'headers'  => [
+        'X-Api-Key'    => getenv('AZA_API_KEY'),
+        'Content-Type' => 'application/json',
+    ],
+]);
+
+$res  = $client->post('/api/v1/merchant/sessions', ['json' => ['amount' => 50.00]]);
+$body = json_decode($res->getBody(), true);
+echo $body['data']['checkoutUrl'];`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Environment variables</h3>
+        <Table
+          headers={['Variable', 'Value']}
+          rows={[
+            ['AZA_API_KEY',        'Your sk_live_... or sk_test_... key'],
+            ['AZA_WEBHOOK_SECRET', 'Your webhook endpoint signing secret'],
+          ]}
+        />
+        <p className="text-sm">Never hard-code keys. Use <code>.env</code> files locally and your hosting provider's secret management in production.</p>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# No SDK needed — standard curl works everywhere
+
+# Set your key as an env var (recommended)
+export AZA_API_KEY="sk_live_YOUR_KEY"
+
+# Then use it in any request
+curl -X GET https://api.aza.systems/api/v1/merchant/profile \\
+  -H "X-Api-Key: $AZA_API_KEY"
+
+curl -X POST https://api.aza.systems/api/v1/merchant/sessions \\
+  -H "X-Api-Key: $AZA_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"amount": 50.00, "description": "Test payment"}'`,
+      js: `// Minimal wrapper — no npm packages needed (Node 18+)
+// aza.ts
+const BASE = 'https://api.aza.systems';
+
+export async function azaFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(BASE + path, {
+    ...options,
+    headers: {
+      'X-Api-Key': process.env.AZA_API_KEY!,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+  const body = await res.json();
+  if (!body.success) throw Object.assign(new Error(body.message), { code: body.error });
+  return body.data;
+}
+
+// Usage
+const session = await azaFetch<{ id: string; checkoutUrl: string }>(
+  '/api/v1/merchant/sessions',
+  { method: 'POST', body: JSON.stringify({ amount: 50.00 }) }
+);
+console.log(session.checkoutUrl);`,
+      python: `# pip install requests  (only dependency)
+import os
+import requests
+
+class AzaClient:
+    BASE = 'https://api.aza.systems'
+
+    def __init__(self, api_key=None):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'X-Api-Key': api_key or os.environ['AZA_API_KEY'],
+            'Content-Type': 'application/json',
+        })
+
+    def get(self, path, **params):
+        r = self.session.get(self.BASE + path, params=params)
+        body = r.json()
+        if not body.get('success'):
+            raise RuntimeError(f"{body['error']}: {body['message']}")
+        return body['data']
+
+    def post(self, path, payload=None):
+        r = self.session.post(self.BASE + path, json=payload or {})
+        body = r.json()
+        if not body.get('success'):
+            raise RuntimeError(f"{body['error']}: {body['message']}")
+        return body['data']
+
+# Usage
+client = AzaClient()
+session = client.post('/api/v1/merchant/sessions', {'amount': 50.00})
+print(session['checkoutUrl'])`,
+    },
+  },
+
+  // ── Changelog ────────────────────────────────────────────────────────────────
+  changelog: {
+    id: 'changelog',
+    category: 'Reference',
+    title: 'Changelog',
+    subtitle: 'API version history and breaking changes',
+    lastUpdated: 'May 2026',
+    description: 'All notable changes to the Aza Merchant API are documented here. The API follows semantic versioning. Breaking changes increment the major version; additive changes are released within the same version.',
+    content: (
+      <div className="space-y-8">
+        <Note>
+          The current stable version is <strong>v1</strong>. All endpoints are under <code>/api/v1/</code>. When v2 is introduced, v1 will be supported with a 6-month deprecation window.
+        </Note>
+
+        {[
+          {
+            version: 'v1.5.0',
+            date: 'May 2026',
+            tag: 'Latest',
+            tagColor: '#22c55e',
+            changes: [
+              { type: 'New', text: 'Merchant invoices API — create, send, and cancel invoices with customer email delivery' },
+              { type: 'New', text: 'Discount codes API — percentage and fixed-amount codes with optional usage caps and expiry' },
+              { type: 'New', text: 'Settlements endpoint — paginated settlement summaries with gross/fee/net breakdown' },
+              { type: 'New', text: 'Disputes endpoint — view open and resolved disputes against your merchant account' },
+              { type: 'New', text: 'Refund endpoint — POST /sessions/{id}/refund to issue a full refund on any COMPLETED session' },
+              { type: 'New', text: 'Audit logs endpoint — paginated activity log for your merchant account' },
+              { type: 'New', text: 'Customers endpoint — paginated list of all customers with spend and payment count' },
+              { type: 'Improved', text: 'Webhook delivery now retries 5 times with exponential backoff (30s → 6h)' },
+              { type: 'Improved', text: 'Merchant profile endpoint now returns brandColor and checkoutTagline fields' },
+            ],
+          },
+          {
+            version: 'v1.4.0',
+            date: 'Apr 2026',
+            tag: null,
+            tagColor: '',
+            changes: [
+              { type: 'New', text: 'Automated payouts — configure schedules and trigger on-demand withdrawals' },
+              { type: 'New', text: 'Bulk transfers — POST /merchant/bulk-transfers accepts up to 100 recipients' },
+              { type: 'New', text: 'Notification preferences endpoint — manage push and email alert settings' },
+              { type: 'Improved', text: 'Session creation now accepts a reference field for idempotency' },
+              { type: 'Fixed', text: 'Webhook signature header now consistently uses X-Aza-Signature format' },
+            ],
+          },
+          {
+            version: 'v1.3.0',
+            date: 'Mar 2026',
+            tag: null,
+            tagColor: '',
+            changes: [
+              { type: 'New', text: 'Merchant API keys management — create, list, and revoke keys from the API' },
+              { type: 'New', text: 'Webhook endpoints management — register and delete webhook URLs via the API' },
+              { type: 'New', text: 'Static payment page at aza.systems/pay/{handle} — live when merchant is ACTIVE' },
+              { type: 'New', text: 'Public merchant profile endpoint — GET /merchant/public/{handle} (no auth)' },
+              { type: 'Improved', text: 'Payout requests now validate against available balance before queuing' },
+            ],
+          },
+          {
+            version: 'v1.2.0',
+            date: 'Feb 2026',
+            tag: null,
+            tagColor: '',
+            changes: [
+              { type: 'New', text: 'Merchant portal at merchants.aza.systems — KYB onboarding, dashboard, transactions' },
+              { type: 'New', text: 'Checkout sessions API — create hosted payment sessions with deep links' },
+              { type: 'New', text: 'Payment link generation — QR codes pointing to pay.aza.systems/c/{sessionId}' },
+              { type: 'Breaking', text: 'X-Api-Key header replaces Authorization: Bearer for all /merchant/* routes' },
+            ],
+          },
+          {
+            version: 'v1.0.0',
+            date: 'Jan 2026',
+            tag: 'Initial',
+            tagColor: '#6366f1',
+            changes: [
+              { type: 'New', text: 'Initial public release of the Aza Merchant API' },
+              { type: 'New', text: 'User authentication, wallet management, and peer transfers' },
+              { type: 'New', text: 'KYC verification flow' },
+              { type: 'New', text: 'Merchant registration and KYB onboarding' },
+            ],
+          },
+        ].map((release) => (
+          <div key={release.version} className="relative pl-6 border-l-2 border-gray-200">
+            <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-gray-300" />
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-extrabold text-gray-900">{release.version}</span>
+              <span className="text-xs text-gray-400">{release.date}</span>
+              {release.tag && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: release.tagColor + '20', color: release.tagColor }}>
+                  {release.tag}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-2">
+              {release.changes.map((c, i) => {
+                const color = c.type === 'New' ? '#22c55e' : c.type === 'Breaking' ? '#ef4444' : c.type === 'Fixed' ? '#3b82f6' : '#f59e0b';
+                return (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5" style={{ background: color + '15', color }}>
+                      {c.type}
+                    </span>
+                    {c.text}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Check the current API version in any response header
+curl -I https://api.aza.systems/api/v1/merchant/profile \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# The response includes:
+# X-Api-Version: 1.5.0
+# X-Deprecation-Notice: (set if endpoint is deprecated)`,
+      js: `// Verify API version compatibility at startup
+const res = await fetch('https://api.aza.systems/api/v1/merchant/profile', {
+  method: 'HEAD',
+  headers: { 'X-Api-Key': process.env.AZA_API_KEY! },
+});
+
+const version = res.headers.get('X-Api-Version');
+console.log('API version:', version);
+
+// Recommended: pin a minimum version in your integration
+const [major] = (version ?? '1.0').split('.').map(Number);
+if (major < 1) throw new Error('Unsupported API version');`,
+      python: `import requests
+
+# Check API version via HEAD request
+res = requests.head(
+    'https://api.aza.systems/api/v1/merchant/profile',
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+)
+
+version = res.headers.get('X-Api-Version', '1.0')
+print('API version:', version)
+
+major = int(version.split('.')[0])
+if major < 1:
+    raise RuntimeError('Unsupported API version')`,
     },
   },
 };
