@@ -13,7 +13,13 @@ export type Page =
   | 'api_keys'
   | 'webhooks'
   | 'payouts'
-  | 'store_qr';
+  | 'store_qr'
+  | 'customers'
+  | 'disputes'
+  | 'invoices'
+  | 'settlements'
+  | 'discount_codes'
+  | 'audit_logs';
 
 export interface MerchantData {
   id: string;

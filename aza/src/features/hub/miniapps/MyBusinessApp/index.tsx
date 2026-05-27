@@ -20,6 +20,12 @@ import ApiKeysPage from './pages/ApiKeysPage';
 import WebhooksPage from './pages/WebhooksPage';
 import PayoutsPage from './pages/PayoutsPage';
 import StoreQrPage from './pages/StoreQrPage';
+import CustomersPage from './pages/CustomersPage';
+import DisputesPage from './pages/DisputesPage';
+import InvoicesPage from './pages/InvoicesPage';
+import SettlementsPage from './pages/SettlementsPage';
+import DiscountCodesPage from './pages/DiscountCodesPage';
+import AuditLogsPage from './pages/AuditLogsPage';
 
 // Local interface just for the exported component props
 interface LocalMiniAppProps {
@@ -127,6 +133,18 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
         return <PayoutsPage {...navProps} />;
       case 'store_qr':
         return <StoreQrPage {...navProps} />;
+      case 'customers':
+        return <CustomersPage {...navProps} />;
+      case 'disputes':
+        return <DisputesPage {...navProps} />;
+      case 'invoices':
+        return <InvoicesPage {...navProps} />;
+      case 'settlements':
+        return <SettlementsPage {...navProps} />;
+      case 'discount_codes':
+        return <DiscountCodesPage {...navProps} />;
+      case 'audit_logs':
+        return <AuditLogsPage {...navProps} />;
       default:
         return null;
     }

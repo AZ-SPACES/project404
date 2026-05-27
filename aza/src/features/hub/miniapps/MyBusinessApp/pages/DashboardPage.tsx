@@ -7,7 +7,8 @@ import {
   Dimensions,
   StatusBar,
   Animated,
-  Image
+  Image,
+  ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,10 +74,31 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
     { id: 'store_qr', icon: 'grid', label: 'Store QR', onPress: () => navigate('store_qr') },
   ];
 
-  const moreActionHandlers = [
-    { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
-    { id: 'api_keys', icon: 'key', label: 'API Keys', onPress: () => navigate('api_keys') },
-    { id: 'webhooks', icon: 'zap', label: 'Webhooks', onPress: () => navigate('webhooks') },
+  const moreActionSections = [
+    {
+      label: 'Business',
+      items: [
+        { id: 'invoices', icon: 'file-text', label: 'Invoices', onPress: () => navigate('invoices') },
+        { id: 'customers', icon: 'users', label: 'Customers', onPress: () => navigate('customers') },
+        { id: 'settlements', icon: 'trending-up', label: 'Settlements', onPress: () => navigate('settlements') },
+        { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
+      ],
+    },
+    {
+      label: 'Manage',
+      items: [
+        { id: 'disputes', icon: 'shield', label: 'Disputes', onPress: () => navigate('disputes') },
+        { id: 'discount_codes', icon: 'tag', label: 'Discount Codes', onPress: () => navigate('discount_codes') },
+        { id: 'audit_logs', icon: 'clipboard', label: 'Audit Log', onPress: () => navigate('audit_logs') },
+      ],
+    },
+    {
+      label: 'Developer',
+      items: [
+        { id: 'api_keys', icon: 'key', label: 'API Keys', onPress: () => navigate('api_keys') },
+        { id: 'webhooks', icon: 'zap', label: 'Webhooks', onPress: () => navigate('webhooks') },
+      ],
+    },
   ];
 
   const headerRow = (
@@ -217,19 +239,32 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
         </Animated.View>
         <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: moreSheetAnim }] }]}>
           <View style={styles.bottomSheetHandle} />
-          <Text style={[Typography.h3, styles.bottomSheetTitle]}>Developer Options</Text>
-          {moreActionHandlers.map(action => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.bottomSheetItem}
-              onPress={() => { setIsMoreModalVisible(false); action.onPress(); }}
-            >
-              <View style={styles.bottomSheetIcon}>
-                <Feather name={action.icon as any} size={20} color={Colors.textPrimary} />
+          <Text style={[Typography.h3, styles.bottomSheetTitle]}>More Options</Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.55 }}>
+            {moreActionSections.map((section) => (
+              <View key={section.label}>
+                <Text style={{
+                  fontSize: 11, fontWeight: '700', color: Colors.textSecondary,
+                  textTransform: 'uppercase', letterSpacing: 0.8,
+                  marginBottom: 4, marginTop: 8, paddingHorizontal: 4,
+                }}>
+                  {section.label}
+                </Text>
+                {section.items.map(action => (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={styles.bottomSheetItem}
+                    onPress={() => { setIsMoreModalVisible(false); action.onPress(); }}
+                  >
+                    <View style={styles.bottomSheetIcon}>
+                      <Feather name={action.icon as any} size={20} color={Colors.textPrimary} />
+                    </View>
+                    <Text style={[Typography.body, styles.bottomSheetItemText]}>{action.label}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Text style={[Typography.body, styles.bottomSheetItemText]}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
+            ))}
+          </ScrollView>
         </Animated.View>
       </View>
     </View>
