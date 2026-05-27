@@ -967,6 +967,101 @@ export function getMerchantSessions(merchantId: string, page = 0, size = 20): Pr
   return request(`/api/v1/admin/merchants/${merchantId}/sessions?page=${page}&size=${size}`);
 }
 
+// ── Merchant Invoices (admin view) ────────────────────────────────────────────
+
+export interface MerchantInvoice {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+  dueDate: string | null;
+  status: string;
+  createdAt: string;
+  sentAt: string | null;
+  paidAt: string | null;
+}
+
+export function getMerchantInvoices(merchantId: string, page = 0, size = 20): Promise<Page<MerchantInvoice>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/invoices?page=${page}&size=${size}`);
+}
+
+// ── Merchant Settlements (admin view) ─────────────────────────────────────────
+
+export interface MerchantSettlement {
+  id: string;
+  grossAmount: number;
+  feeTotal: number;
+  netAmount: number;
+  transactionCount: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+  status: string;
+  createdAt: string;
+  settledAt: string | null;
+}
+
+export function getMerchantSettlements(merchantId: string, page = 0, size = 20): Promise<Page<MerchantSettlement>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/settlements?page=${page}&size=${size}`);
+}
+
+// ── Merchant Customers (admin view) ──────────────────────────────────────────
+
+export interface MerchantCustomer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  totalPayments: number;
+  totalSpend: number;
+  firstPaymentAt: string | null;
+  lastPaymentAt: string | null;
+}
+
+export function getMerchantCustomers(merchantId: string, page = 0, size = 20): Promise<Page<MerchantCustomer>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/customers?page=${page}&size=${size}`);
+}
+
+// ── Merchant Disputes (admin view, per merchant) ──────────────────────────────
+
+export function getMerchantDisputesByMerchant(merchantId: string, page = 0, size = 20): Promise<Page<Dispute>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/disputes?page=${page}&size=${size}`);
+}
+
+// ── Merchant Bulk Transfers (admin view) ──────────────────────────────────────
+
+export interface MerchantBulkTransfer {
+  id: string;
+  note: string | null;
+  totalAmount: number;
+  recipientCount: number;
+  successCount: number;
+  failureCount: number;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
+}
+
+export function getMerchantBulkTransfers(merchantId: string, page = 0, size = 20): Promise<Page<MerchantBulkTransfer>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/bulk-transfers?page=${page}&size=${size}`);
+}
+
+// ── Merchant Audit Log (admin view) ──────────────────────────────────────────
+
+export interface MerchantAuditLogEntry {
+  id: string;
+  actorEmail: string | null;
+  action: string;
+  details: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export function getMerchantAuditLogByMerchant(merchantId: string, page = 0, size = 30): Promise<Page<MerchantAuditLogEntry>> {
+  return request(`/api/v1/admin/merchants/${merchantId}/audit-logs?page=${page}&size=${size}`);
+}
+
 // ── Rate Limit Management ─────────────────────────────────────────────────────
 
 export function resetUserRateLimit(userId: string): Promise<string> {
