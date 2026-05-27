@@ -366,6 +366,18 @@ export default function HomeScreen() {
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity
+            style={styles.bottomSheetItem}
+            onPress={() => {
+              setIsMoreModalVisible(false);
+              navigation.navigate("ReversalRequest");
+            }}
+          >
+            <View style={styles.bottomSheetIcon}>
+              <Feather name="rotate-ccw" size={20} color={Colors.textPrimary} />
+            </View>
+            <Text style={[Typography.body, styles.bottomSheetItemText]}>Request Reversal</Text>
+          </TouchableOpacity>
         </Animated.View>
       </View>
     </View>

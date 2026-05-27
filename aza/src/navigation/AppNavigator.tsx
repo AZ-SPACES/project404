@@ -32,7 +32,8 @@ import {
 import { 
   WithdrawScreen, 
   StatementDownloadScreen, 
-  TransactionsScreen 
+  TransactionsScreen,
+  ReversalRequestScreen
 } from '../features/home';
 
 // Wrap the entire transfer flow so a crash in any send/receive screen
@@ -134,6 +135,7 @@ export default function AppNavigator() {
         options={{ presentation: 'modal' }}
       />
       <Stack.Screen name="Transactions" component={TransactionsScreen} />
+      <Stack.Screen name="ReversalRequest" component={ReversalRequestScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} />
       <Stack.Screen name="HelpTopic" component={HelpTopicScreen} />

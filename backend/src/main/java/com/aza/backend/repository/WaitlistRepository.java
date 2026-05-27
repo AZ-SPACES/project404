@@ -15,4 +15,8 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, UUID> {
     @Transactional
     @Query("UPDATE WaitlistEntry w SET w.confirmationSent = true WHERE w.id = :id")
     void markConfirmationSent(UUID id);
+
+    java.util.Optional<WaitlistEntry> findByInviteCode(String inviteCode);
+
+    java.util.List<WaitlistEntry> findAllByOrderByCreatedAtDesc(org.springframework.data.domain.Pageable pageable);
 }
