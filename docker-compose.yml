@@ -59,7 +59,7 @@ services:
       TURN_SECRET: ${TURN_SECRET}
       TURN_HOST: ${TURN_HOST:-turn.aza.systems}
       APP_BASE_URL: https://aza.systems
-      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems
+      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems,https://pay.aza.systems
       TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
       SWAGGER_ENABLED: false
       HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
@@ -97,6 +97,30 @@ services:
       args:
         NEXT_PUBLIC_API_URL: https://api.aza.systems
     container_name: aza-admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
+  aza-merchants:
+    build:
+      context: ./aza-merchants
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-merchants
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
+  aza-pay:
+    build:
+      context: ./aza-pay
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-pay
     restart: unless-stopped
     environment:
       NODE_ENV: production
