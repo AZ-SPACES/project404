@@ -13,7 +13,7 @@ type Props = { isOpen: boolean; onClose: () => void };
 const devLinks = [
   { label: 'API Reference',    desc: 'REST & WebSocket endpoints',       href: '/developers/api-explorer', shape: '1' },
   { label: 'SDKs & Libraries', desc: 'iOS, Android, Web & Node.js',      href: '#', shape: '2' },
-  { label: 'Documentation',    desc: 'Guides, tutorials & quick starts', href: '#', shape: '3' },
+  { label: 'Documentation',    desc: 'Guides, tutorials & quick starts', href: '/developers/guides', shape: '3' },
   { label: 'Changelog',        desc: 'Latest updates & deprecations',    href: '#', shape: '4' },
   { label: 'System Status',    desc: 'Live uptime & incident reports',   href: '#', shape: '5' },
 ];
