@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,6 +41,9 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
 
     @Query("SELECT COALESCE(SUM(m.balance), 0) FROM Merchant m")
     java.math.BigDecimal sumTotalMerchantBalance();
+
+    @Query("SELECT m FROM Merchant m WHERE m.autoPayoutEnabled = true AND m.status = com.aza.backend.entity.Merchant.MerchantStatus.ACTIVE")
+    List<Merchant> findAllAutoPayoutEligible();
 
     @Query(value = """
             SELECT * FROM merchants

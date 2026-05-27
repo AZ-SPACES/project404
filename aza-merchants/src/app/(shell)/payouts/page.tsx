@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getBalance, getPayouts, requestPayout, MerchantPayout, BalanceInfo } from "@/lib/merchant-api";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Loader2,
-  ArrowDownToLine,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  AlertCircle,
-  DollarSign,
-  X,
+  getBalance, getPayouts, requestPayout,
+  getAutoPayoutSettings, updateAutoPayoutSettings,
+  MerchantPayout, BalanceInfo, AutoPayoutSettings,
+} from "@/lib/merchant-api";
+import {
+  Loader2, ArrowDownToLine, CheckCircle2, Clock, XCircle,
+  AlertCircle, DollarSign, X, RefreshCw, Save,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -114,6 +112,162 @@ function PayoutModal({
   );
 }
 
+// ─── Auto-payout settings panel ─────────────────────────────────────────────
+
+function AutoPayoutPanel() {
+  const [settings, setSettings] = useState<AutoPayoutSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [minBalance, setMinBalance] = useState("");
+  const [day, setDay] = useState("");
+
+  useEffect(() => {
+    getAutoPayoutSettings()
+      .then((s) => {
+        setSettings(s);
+        setMinBalance(s.autoPayoutMinBalance != null ? String(s.autoPayoutMinBalance) : "");
+        setDay(s.autoPayoutDay != null ? String(s.autoPayoutDay) : "");
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function set<K extends keyof AutoPayoutSettings>(key: K, val: AutoPayoutSettings[K]) {
+    setSettings((s) => s ? { ...s, [key]: val } : s);
+  }
+
+  async function save() {
+    if (!settings) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateAutoPayoutSettings({
+        autoPayoutEnabled: settings.autoPayoutEnabled,
+        autoPayoutSchedule: settings.autoPayoutSchedule ?? undefined,
+        autoPayoutMinBalance: minBalance ? parseFloat(minBalance) : undefined,
+        autoPayoutDay: day ? parseInt(day) : undefined,
+      });
+      setSettings(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#10b981]" size={18} /></div>;
+  if (!settings) return null;
+
+  const scheduleLabel = {
+    DAILY: "Every day at 6 AM",
+    WEEKLY: "Every week on the selected day",
+    MONTHLY: "Every month on the selected date",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-white">Automatic payouts</p>
+          <p className="text-xs text-white/35 mt-0.5">Automatically transfer your balance on a schedule</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => set("autoPayoutEnabled", !settings.autoPayoutEnabled)}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoPayoutEnabled ? "bg-[#10b981]" : "bg-white/15"}`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.autoPayoutEnabled ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </div>
+
+      {settings.autoPayoutEnabled && (
+        <>
+          <div>
+            <label className="block text-xs text-white/40 mb-1.5">Schedule</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => { set("autoPayoutSchedule", s); setDay(""); }}
+                  className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${settings.autoPayoutSchedule === s ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {settings.autoPayoutSchedule && (
+              <p className="text-xs text-white/30 mt-1.5">{scheduleLabel[settings.autoPayoutSchedule]}</p>
+            )}
+          </div>
+
+          {settings.autoPayoutSchedule === "WEEKLY" && (
+            <div>
+              <label className="block text-xs text-white/40 mb-1.5">Day of week</label>
+              <div className="grid grid-cols-7 gap-1">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
+                  <button
+                    key={d}
+                    onClick={() => setDay(String(i + 1))}
+                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${day === String(i + 1) ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/40 hover:border-white/15"}`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {settings.autoPayoutSchedule === "MONTHLY" && (
+            <div>
+              <label className="block text-xs text-white/40 mb-1.5">Day of month (1–28)</label>
+              <input
+                type="number"
+                min="1"
+                max="28"
+                value={day}
+                onChange={(e) => setDay(e.target.value)}
+                className={inputCls}
+                placeholder="1"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs text-white/40 mb-1.5">Minimum balance (GHS)</label>
+            <input
+              type="number"
+              min="1"
+              step="0.01"
+              value={minBalance}
+              onChange={(e) => setMinBalance(e.target.value)}
+              className={inputCls}
+              placeholder="10.00 — only payout if balance is above this"
+            />
+          </div>
+        </>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+        >
+          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {saving ? "Saving…" : "Save"}
+        </button>
+        {saved && <span className="text-xs text-[#10b981] flex items-center gap-1"><CheckCircle2 size={13} />Saved</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function PayoutsPage() {
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [payouts, setPayouts] = useState<MerchantPayout[]>([]);
@@ -121,7 +275,7 @@ export default function PayoutsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const [bal, page] = await Promise.all([
         getBalance().catch(() => null),
@@ -129,14 +283,14 @@ export default function PayoutsPage() {
       ]);
       setBalance(bal);
       setPayouts(page.content);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
@@ -191,6 +345,15 @@ export default function PayoutsPage() {
             <ArrowDownToLine size={15} />
             Request payout
           </button>
+        </div>
+
+        {/* Auto-payout schedule */}
+        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <RefreshCw size={15} className="text-white/40" />
+            <p className="text-sm font-semibold text-white">Auto-payout schedule</p>
+          </div>
+          <AutoPayoutPanel />
         </div>
 
         {/* Payout history */}

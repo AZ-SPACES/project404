@@ -60,6 +60,35 @@ public class Merchant {
     @Builder.Default
     private Integer feeRateBps = 150; // 1.5%
 
+    // ==================== CHECKOUT BRANDING ====================
+
+    private String brandColor;       // e.g. "#10b981"
+    private String checkoutTagline;  // short text shown on checkout page
+    private String supportEmail;     // contact email shown to customers
+
+    // ==================== TAX CONFIGURATION ====================
+
+    @Builder.Default
+    private Boolean taxEnabled = false;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal taxRate;
+
+    private String taxLabel;
+
+    // ==================== AUTO-PAYOUT SCHEDULE ====================
+
+    @Builder.Default
+    private Boolean autoPayoutEnabled = false;
+
+    @Enumerated(EnumType.STRING)
+    private AutoPayoutSchedule autoPayoutSchedule;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal autoPayoutMinBalance;
+
+    private Integer autoPayoutDay;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -75,5 +104,9 @@ public class Merchant {
     public enum BusinessCategory {
         RETAIL, FOOD_AND_BEVERAGE, SERVICES, TECHNOLOGY, HEALTHCARE, EDUCATION,
         ENTERTAINMENT, TRANSPORT, REAL_ESTATE, AGRICULTURE, FINANCE, OTHER
+    }
+
+    public enum AutoPayoutSchedule {
+        DAILY, WEEKLY, MONTHLY
     }
 }

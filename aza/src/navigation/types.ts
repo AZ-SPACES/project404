@@ -62,8 +62,8 @@ export type RootStackParamList = {
   NotificationSettings: undefined;
   SendAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
   SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string };
-  SendPin: { name: string; username: string; avatar: string; amount: number; note: string };
-  SendSuccess: { name: string; username: string; avatar: string; amount: number; note: string };
+  SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; id?: string };
+  SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string };
   RequestAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
   SecurityAndPrivacy: undefined;
   ChangePassword: undefined;

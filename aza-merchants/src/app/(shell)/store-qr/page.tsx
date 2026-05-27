@@ -6,7 +6,7 @@ import { Loader2, Copy, Check, Share2, QrCode, ExternalLink } from "lucide-react
 import Image from "next/image";
 
 function buildStaticLink(handle: string) {
-  return `https://api.aza.systems/${handle}`;
+  return `https://aza.systems/pay/${handle}`;
 }
 
 function buildQrUrl(data: string, size = 400) {

@@ -32,4 +32,14 @@ public class MerchantResponse {
     private LocalDateTime activatedAt;
     private Integer activeApiKeyCount;
     private Integer activeWebhookCount;
+
+    // Branding
+    private String brandColor;
+    private String checkoutTagline;
+    private String supportEmail;
+
+    // Tax
+    private Boolean taxEnabled;
+    private java.math.BigDecimal taxRate;
+    private String taxLabel;
 }

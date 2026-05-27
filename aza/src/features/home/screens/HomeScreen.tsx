@@ -30,6 +30,8 @@ import { useNotifications } from "../../../providers/NotificationProvider";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
+import { cancelTransfer } from "../../../services/api";
+import { formatCurrency } from "../../../utils/transactionUtils";
 
 const { height } = Dimensions.get("window");
 
@@ -61,6 +63,26 @@ export default function HomeScreen() {
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
   const { unreadCount } = useNotifications();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
+
+  const incompleteTransfer = React.useMemo(() => {
+    return recentTransactions.find(
+      (tx) => tx.isPending && !tx.isCredit && tx.type === "Transfer"
+    );
+  }, [recentTransactions]);
+
+  const displayTransactions = React.useMemo(() => {
+    if (!incompleteTransfer) return recentTransactions;
+    return recentTransactions.filter((tx) => tx.id !== incompleteTransfer.id);
+  }, [recentTransactions, incompleteTransfer]);
+
+  const handleCancelIncomplete = React.useCallback(async (txId: string) => {
+    try {
+      await cancelTransfer(txId);
+      refresh();
+    } catch (err) {
+      console.error("Failed to cancel incomplete transfer", err);
+    }
+  }, [refresh]);
   const moreSheetAnim = React.useRef(new Animated.Value(height)).current;
   const moreBackdropAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -257,13 +279,55 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Resume Incomplete Transfer Card */}
+        {incompleteTransfer && (
+          <View style={styles.incompleteCard}>
+            <View style={styles.incompleteCardHeader}>
+              <View style={styles.incompleteTextContainer}>
+                <Text style={styles.incompleteCardTitle}>Resume your transfer</Text>
+                <Text style={styles.incompleteCardSubtitle}>
+                  You started sending {formatCurrency(incompleteTransfer.amount)} to {incompleteTransfer.name}.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleCancelIncomplete(incompleteTransfer.id)}
+                style={styles.incompleteDismissBtn}
+                accessibilityLabel="Dismiss incomplete transfer"
+              >
+                <Feather name="x" size={16} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.incompleteActionsRow}>
+              <TouchableOpacity
+                style={styles.incompleteCancelBtn}
+                onPress={() => handleCancelIncomplete(incompleteTransfer.id)}
+              >
+                <Text style={styles.incompleteCancelBtnText}>Cancel transfer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.incompleteResumeBtn}
+                onPress={() =>
+                  navigation.navigate("SendPin", {
+                    id: incompleteTransfer.id,
+                    name: incompleteTransfer.name,
+                    amount: incompleteTransfer.amount,
+                    note: incompleteTransfer.note ?? "",
+                  })
+                }
+              >
+                <Text style={styles.incompleteResumeBtnText}>Resume</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {loading && recentTransactions.length === 0 ? (
           <View style={[styles.emptyStateCard, { justifyContent: 'center', padding: Spacing.xl }]}>
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
-        ) : recentTransactions.length > 0 ? (
+        ) : displayTransactions.length > 0 ? (
           <View style={styles.recentTransactionsList}>
-            {recentTransactions.map((item) => (
+            {displayTransactions.map((item) => (
               <TransactionItem key={item.id} item={item} />
             ))}
           </View>
@@ -512,6 +576,68 @@ function createStyles(Colors: ThemeColors) {
     bottomSheetItemText: {
       color: Colors.textPrimary,
       fontWeight: "500",
+    },
+    incompleteCard: {
+      backgroundColor: Colors.surface,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderRadius: 8,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    incompleteCardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: Spacing.md,
+    },
+    incompleteTextContainer: {
+      flex: 1,
+      marginRight: Spacing.md,
+    },
+    incompleteCardTitle: {
+      ...Typography.body,
+      fontWeight: "700",
+      color: Colors.textPrimary,
+      marginBottom: 4,
+    },
+    incompleteCardSubtitle: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+    },
+    incompleteDismissBtn: {
+      padding: 4,
+    },
+    incompleteActionsRow: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: Spacing.sm,
+    },
+    incompleteCancelBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      backgroundColor: isDark ? Colors.background : Colors.surface,
+    },
+    incompleteCancelBtnText: {
+      ...Typography.body,
+      fontSize: 13,
+      fontWeight: "500",
+      color: Colors.textPrimary,
+    },
+    incompleteResumeBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      backgroundColor: Colors.primary,
+    },
+    incompleteResumeBtnText: {
+      ...Typography.body,
+      fontSize: 13,
+      fontWeight: "500",
+      color: Colors.white,
     },
   });
 }

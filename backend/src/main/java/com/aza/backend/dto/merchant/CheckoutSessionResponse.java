@@ -17,6 +17,9 @@ public class CheckoutSessionResponse {
     private String merchantName;
     private String merchantHandle;
     private String merchantLogoUrl;
+    private String merchantBrandColor;
+    private String merchantCheckoutTagline;
+    private String merchantSupportEmail;
     private BigDecimal amount;
     private String currency;
     private String description;
@@ -27,6 +30,8 @@ public class CheckoutSessionResponse {
     private String customerId;
     private BigDecimal platformFee;
     private BigDecimal netAmount;
+    private BigDecimal taxAmount;
+    private String taxLabel;
     private String checkoutUrl;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;

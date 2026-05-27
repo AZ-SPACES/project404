@@ -22,6 +22,11 @@ import {
   ClipboardList,
   UserCog,
   Repeat,
+  Landmark,
+  Tag,
+  SendHorizonal,
+  Bell,
+  Code2,
 } from "lucide-react";
 
 interface NavItem {
@@ -47,7 +52,9 @@ const NAV: NavSection[] = [
       { href: "/payment-links", label: "Payment Links", icon: Link2 },
       { href: "/store-qr", label: "Store QR", icon: QrCode },
       { href: "/invoices", label: "Invoices", icon: FileText },
+      { href: "/bulk-transfers", label: "Bulk Transfers", icon: SendHorizonal },
       { href: "/payouts", label: "Payouts", icon: ArrowDownToLine },
+      { href: "/settlements", label: "Settlements", icon: Landmark },
     ],
   },
   {
@@ -55,6 +62,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/disputes", label: "Disputes", icon: ShieldAlert },
+      { href: "/discount-codes", label: "Discount Codes", icon: Tag },
       { href: "/plans", label: "Plans & Subscriptions", icon: Repeat },
     ],
   },
@@ -63,6 +71,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/api-keys", label: "API Keys", icon: Key },
       { href: "/webhooks", label: "Webhooks", icon: Webhook },
+      { href: "/embed", label: "Embed Widget", icon: Code2 },
     ],
   },
   {
@@ -70,6 +79,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/team", label: "Team", icon: UserCog },
       { href: "/audit-logs", label: "Audit Log", icon: ClipboardList },
+      { href: "/notification-preferences", label: "Notifications", icon: Bell },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },

@@ -54,6 +54,11 @@ public class CheckoutSession {
     @Column(precision = 15, scale = 2)
     private BigDecimal netAmount; // amount - platformFee, credited to merchant
 
+    @Column(precision = 15, scale = 2)
+    private BigDecimal taxAmount;
+
+    private String taxLabel;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

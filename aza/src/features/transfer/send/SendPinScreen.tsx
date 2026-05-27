@@ -36,7 +36,7 @@ export default function SendPinScreen({
   navigation,
   route,
 }: SendPinScreenProps) {
-  const { name, amount } = route.params;
+  const { name, amount, id } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { confirmTransfer, cancelPendingTransfer, pendingTransactionId } =
@@ -52,12 +52,20 @@ export default function SendPinScreen({
 
   const displayAmount = useMemo(() => amount.toFixed(2), [amount]);
 
+  // Set the store's pendingTransactionId if we navigated with a specific transaction ID
+  useEffect(() => {
+    if (id) {
+      useTransferStore.setState({ pendingTransactionId: id });
+    }
+  }, [id]);
+
   // If the user somehow got here without a pending transaction, go back
   useEffect(() => {
+    if (id && !pendingTransactionId) return;
     if (!pendingTransactionId) {
       navigation.goBack();
     }
-  }, [pendingTransactionId, navigation]);
+  }, [pendingTransactionId, navigation, id]);
 
   // Focus keyboard on mount
   useEffect(() => {

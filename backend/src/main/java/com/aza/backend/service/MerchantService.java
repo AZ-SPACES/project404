@@ -56,6 +56,7 @@ public class MerchantService {
     private final DisputeRepository disputeRepository;
     private final MerchantInvoiceRepository invoiceRepository;
     private final CheckoutService checkoutService;
+    private final MerchantSettlementService merchantSettlementService;
 
     private static final Pattern HANDLE_PATTERN = Pattern.compile("^[a-z0-9_]{3,30}$");
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024;
@@ -678,6 +679,13 @@ public class MerchantService {
         logMerchantAction(merchant.getId(), "PAYOUT_REQUESTED", owner.getEmail(),
                 "amount=" + request.getAmount());
 
+        // Create settlement record for this payout
+        try {
+            merchantSettlementService.createSettlementForPayout(merchant.getId(), payout.getId());
+        } catch (Exception e) {
+            log.error("Failed to create settlement for payout {}: {}", payout.getId(), e.getMessage(), e);
+        }
+
         return PayoutResponse.builder()
                 .id(payout.getId().toString())
                 .amount(payout.getAmount())
@@ -723,6 +731,26 @@ public class MerchantService {
         }
         if (request.getLogoUrl() != null) {
             merchant.setLogoUrl(request.getLogoUrl());
+        }
+        // Branding
+        if (request.getBrandColor() != null) {
+            merchant.setBrandColor(request.getBrandColor());
+        }
+        if (request.getCheckoutTagline() != null) {
+            merchant.setCheckoutTagline(request.getCheckoutTagline());
+        }
+        if (request.getSupportEmail() != null) {
+            merchant.setSupportEmail(request.getSupportEmail());
+        }
+        // Tax
+        if (request.getTaxEnabled() != null) {
+            merchant.setTaxEnabled(request.getTaxEnabled());
+        }
+        if (request.getTaxRate() != null) {
+            merchant.setTaxRate(request.getTaxRate());
+        }
+        if (request.getTaxLabel() != null) {
+            merchant.setTaxLabel(request.getTaxLabel());
         }
         merchantRepository.save(merchant);
         logMerchantAction(merchant.getId(), "SETTINGS_UPDATED", resolveActorEmail(userId), null);
@@ -1197,6 +1225,77 @@ public class MerchantService {
                 .build();
     }
 
+    // ==================== AUTO-PAYOUT SETTINGS ====================
+
+    public AutoPayoutSettingsResponse getAutoPayoutSettings(UUID merchantId) {
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "No merchant account found", HttpStatus.NOT_FOUND));
+        return toAutoPayoutResponse(merchant);
+    }
+
+    @Transactional
+    public AutoPayoutSettingsResponse updateAutoPayoutSettings(UUID userId, UpdateAutoPayoutSettingsRequest req) {
+        Merchant merchant = requireMerchant(userId);
+
+        if (req.getAutoPayoutEnabled() != null) {
+            merchant.setAutoPayoutEnabled(req.getAutoPayoutEnabled());
+        }
+
+        if (req.getAutoPayoutSchedule() != null && !req.getAutoPayoutSchedule().isBlank()) {
+            Merchant.AutoPayoutSchedule schedule;
+            try {
+                schedule = Merchant.AutoPayoutSchedule.valueOf(req.getAutoPayoutSchedule().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new AppException("INVALID_SCHEDULE",
+                        "Auto-payout schedule must be DAILY, WEEKLY, or MONTHLY", HttpStatus.BAD_REQUEST);
+            }
+            merchant.setAutoPayoutSchedule(schedule);
+
+            // Validate day against new schedule
+            Integer day = req.getAutoPayoutDay() != null ? req.getAutoPayoutDay() : merchant.getAutoPayoutDay();
+            if (day != null) {
+                validateAutoPayoutDay(schedule, day);
+            }
+        }
+
+        if (req.getAutoPayoutDay() != null) {
+            Merchant.AutoPayoutSchedule schedule = merchant.getAutoPayoutSchedule();
+            if (schedule != null) {
+                validateAutoPayoutDay(schedule, req.getAutoPayoutDay());
+            }
+            merchant.setAutoPayoutDay(req.getAutoPayoutDay());
+        }
+
+        if (req.getAutoPayoutMinBalance() != null) {
+            merchant.setAutoPayoutMinBalance(req.getAutoPayoutMinBalance());
+        }
+
+        merchantRepository.save(merchant);
+        log.info("Auto-payout settings updated for merchantId={}", merchant.getId());
+        return toAutoPayoutResponse(merchant);
+    }
+
+    private void validateAutoPayoutDay(Merchant.AutoPayoutSchedule schedule, int day) {
+        if (schedule == Merchant.AutoPayoutSchedule.WEEKLY && (day < 1 || day > 7)) {
+            throw new AppException("INVALID_DAY",
+                    "For WEEKLY schedule, day must be 1-7 (1=Monday, 7=Sunday)", HttpStatus.BAD_REQUEST);
+        }
+        if (schedule == Merchant.AutoPayoutSchedule.MONTHLY && (day < 1 || day > 31)) {
+            throw new AppException("INVALID_DAY",
+                    "For MONTHLY schedule, day must be 1-31", HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private AutoPayoutSettingsResponse toAutoPayoutResponse(Merchant merchant) {
+        return AutoPayoutSettingsResponse.builder()
+                .autoPayoutEnabled(merchant.getAutoPayoutEnabled())
+                .autoPayoutSchedule(merchant.getAutoPayoutSchedule() != null
+                        ? merchant.getAutoPayoutSchedule().name() : null)
+                .autoPayoutMinBalance(merchant.getAutoPayoutMinBalance())
+                .autoPayoutDay(merchant.getAutoPayoutDay())
+                .build();
+    }
+
     // ==================== INTERNAL HELPERS ====================
 
     private static void validateWebhookUrl(String rawUrl) {
@@ -1312,7 +1411,13 @@ public class MerchantService {
                 .totalVolume(m.getTotalVolume())
                 .feeRateBps(m.getFeeRateBps())
                 .createdAt(m.getCreatedAt())
-                .activatedAt(m.getActivatedAt());
+                .activatedAt(m.getActivatedAt())
+                .brandColor(m.getBrandColor())
+                .checkoutTagline(m.getCheckoutTagline())
+                .supportEmail(m.getSupportEmail())
+                .taxEnabled(m.getTaxEnabled())
+                .taxRate(m.getTaxRate())
+                .taxLabel(m.getTaxLabel());
     }
 
     private KybStatusResponse toKybResponse(KybRecord record, UUID merchantId) {

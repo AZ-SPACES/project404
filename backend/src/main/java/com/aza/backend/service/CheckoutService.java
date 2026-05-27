@@ -80,6 +80,16 @@ public class CheckoutService {
             }
         }
 
+        // Calculate tax if enabled
+        BigDecimal taxAmount = null;
+        String taxLabel = null;
+        if (Boolean.TRUE.equals(merchant.getTaxEnabled()) && merchant.getTaxRate() != null) {
+            taxAmount = request.getAmount()
+                    .multiply(merchant.getTaxRate())
+                    .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            taxLabel = merchant.getTaxLabel();
+        }
+
         CheckoutSession session = CheckoutSession.builder()
                 .merchantId(merchantId)
                 .amount(request.getAmount())
@@ -90,6 +100,8 @@ public class CheckoutService {
                 .idempotencyKey(request.getIdempotencyKey())
                 .status(CheckoutSession.SessionStatus.PENDING)
                 .expiresAt(LocalDateTime.now().plusMinutes(SESSION_TTL_MINUTES))
+                .taxAmount(taxAmount)
+                .taxLabel(taxLabel)
                 .build();
 
         sessionRepository.save(session);
@@ -357,9 +369,14 @@ public class CheckoutService {
                 .merchantName(merchant != null ? merchant.getBusinessName() : null)
                 .merchantHandle(merchant != null ? merchant.getBusinessHandle() : null)
                 .merchantLogoUrl(merchant != null ? merchant.getLogoUrl() : null)
+                .merchantBrandColor(merchant != null ? merchant.getBrandColor() : null)
+                .merchantCheckoutTagline(merchant != null ? merchant.getCheckoutTagline() : null)
+                .merchantSupportEmail(merchant != null ? merchant.getSupportEmail() : null)
                 .amount(s.getAmount())
                 .currency(s.getCurrency())
                 .description(s.getDescription())
+                .taxAmount(s.getTaxAmount())
+                .taxLabel(s.getTaxLabel())
                 .status(s.getStatus().name())
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
@@ -374,6 +391,9 @@ public class CheckoutService {
                 .merchantName(merchant != null ? merchant.getBusinessName() : null)
                 .merchantHandle(merchant != null ? merchant.getBusinessHandle() : null)
                 .merchantLogoUrl(merchant != null ? merchant.getLogoUrl() : null)
+                .merchantBrandColor(merchant != null ? merchant.getBrandColor() : null)
+                .merchantCheckoutTagline(merchant != null ? merchant.getCheckoutTagline() : null)
+                .merchantSupportEmail(merchant != null ? merchant.getSupportEmail() : null)
                 .amount(s.getAmount())
                 .currency(s.getCurrency())
                 .description(s.getDescription())
@@ -384,6 +404,8 @@ public class CheckoutService {
                 .customerId(s.getCustomerId() != null ? s.getCustomerId().toString() : null)
                 .platformFee(s.getPlatformFee())
                 .netAmount(s.getNetAmount())
+                .taxAmount(s.getTaxAmount())
+                .taxLabel(s.getTaxLabel())
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
