@@ -16,4 +16,17 @@ public class UpdateMerchantRequest {
     private String businessDescription;
 
     private String logoUrl;
+
+    // Branding
+    private String brandColor;
+
+    @Size(max = 200)
+    private String checkoutTagline;
+
+    private String supportEmail;
+
+    // Tax
+    private Boolean taxEnabled;
+    private java.math.BigDecimal taxRate;
+    private String taxLabel;
 }

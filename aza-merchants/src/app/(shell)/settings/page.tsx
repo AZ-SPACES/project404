@@ -46,6 +46,14 @@ export default function SettingsPage() {
   const [businessEmail, setBusinessEmail] = useState("");
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessDescription, setBusinessDescription] = useState("");
+  // Branding
+  const [brandColor, setBrandColor] = useState("#10b981");
+  const [checkoutTagline, setCheckoutTagline] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  // Tax
+  const [taxEnabled, setTaxEnabled] = useState(false);
+  const [taxRate, setTaxRate] = useState("");
+  const [taxLabel, setTaxLabel] = useState("VAT");
 
   useEffect(() => {
     getMe()
@@ -56,6 +64,12 @@ export default function SettingsPage() {
         setBusinessEmail(me.businessEmail ?? "");
         setBusinessPhone(me.businessPhone ?? "");
         setBusinessDescription(me.businessDescription ?? "");
+        setBrandColor(me.brandColor ?? "#10b981");
+        setCheckoutTagline(me.checkoutTagline ?? "");
+        setSupportEmail(me.supportEmail ?? "");
+        setTaxEnabled(me.taxEnabled ?? false);
+        setTaxRate(me.taxRate != null ? String(me.taxRate) : "");
+        setTaxLabel(me.taxLabel ?? "VAT");
       })
       .catch((err: any) => setError(err.message))
       .finally(() => setLoading(false));
@@ -85,6 +99,12 @@ export default function SettingsPage() {
         businessEmail: businessEmail || undefined,
         businessPhone: businessPhone || undefined,
         businessDescription: businessDescription || undefined,
+        brandColor: brandColor || undefined,
+        checkoutTagline: checkoutTagline || undefined,
+        supportEmail: supportEmail || undefined,
+        taxEnabled,
+        taxRate: taxEnabled && taxRate ? parseFloat(taxRate) : undefined,
+        taxLabel: taxEnabled && taxLabel ? taxLabel : undefined,
       });
       setMerchant(updated);
       setSuccess(true);
@@ -201,6 +221,120 @@ export default function SettingsPage() {
             {saving ? "Saving…" : "Save changes"}
           </button>
         </form>
+      </div>
+
+      {/* Checkout branding */}
+      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+        <p className="text-sm font-semibold text-white mb-1">Checkout branding</p>
+        <p className="text-xs text-white/30 mb-5">Customize how your checkout page looks to customers</p>
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <label className="text-sm font-medium text-white/65">Brand color</label>
+              <span className="text-xs text-white/30">Used for the pay button on checkout</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={brandColor}
+                onChange={(e) => setBrandColor(e.target.value)}
+                className="w-10 h-10 rounded-lg cursor-pointer border border-white/10 bg-transparent"
+              />
+              <input
+                type="text"
+                value={brandColor}
+                onChange={(e) => setBrandColor(e.target.value)}
+                placeholder="#10b981"
+                className={inputCls + " font-mono w-36"}
+              />
+              <div
+                className="flex-1 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white text-xs font-semibold"
+                style={{ backgroundColor: brandColor }}
+              >
+                Pay now
+              </div>
+            </div>
+          </div>
+          <Field label="Checkout tagline" hint="Short text under your business name">
+            <input
+              type="text"
+              value={checkoutTagline}
+              onChange={(e) => setCheckoutTagline(e.target.value)}
+              placeholder="Fast & secure payments"
+              maxLength={80}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Support email" hint="Shown to customers on checkout">
+            <input
+              type="email"
+              value={supportEmail}
+              onChange={(e) => setSupportEmail(e.target.value)}
+              placeholder="support@yourbusiness.com"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* Tax configuration */}
+      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Tax</p>
+            <p className="text-xs text-white/30 mt-0.5">Automatically calculate tax on invoices and checkouts</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTaxEnabled((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${taxEnabled ? "bg-[#10b981]" : "bg-white/15"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${taxEnabled ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+        {taxEnabled && (
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Tax rate (%)">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={taxRate}
+                onChange={(e) => setTaxRate(e.target.value)}
+                placeholder="12.50"
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Tax label">
+              <input
+                type="text"
+                value={taxLabel}
+                onChange={(e) => setTaxLabel(e.target.value)}
+                placeholder="VAT"
+                maxLength={20}
+                className={inputCls}
+              />
+            </Field>
+          </div>
+        )}
+      </div>
+
+      {/* Save button (for branding + tax) */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave as unknown as React.MouseEventHandler}
+          disabled={saving}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {saving ? "Saving…" : "Save all settings"}
+        </button>
+        {success && (
+          <span className="flex items-center gap-1.5 text-sm text-[#10b981]">
+            <CheckCircle2 size={15} />Saved
+          </span>
+        )}
       </div>
 
       {/* Account info */}

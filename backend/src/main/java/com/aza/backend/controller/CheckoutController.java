@@ -3,14 +3,18 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CheckoutSessionResponse;
 import com.aza.backend.dto.merchant.ConfirmCheckoutRequest;
+import com.aza.backend.dto.merchant.ValidateDiscountRequest;
+import com.aza.backend.dto.merchant.ValidatedDiscount;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.CheckoutService;
+import com.aza.backend.service.MerchantDiscountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -19,6 +23,7 @@ import java.util.UUID;
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
+    private final MerchantDiscountService discountService;
 
     /** Public — no auth required. Returns session details for the customer to review. */
     @GetMapping("/{sessionId}")
@@ -42,5 +47,22 @@ public class CheckoutController {
             @PathVariable UUID sessionId,
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(checkoutService.cancelSession(sessionId, user.getId())));
+    }
+
+    /**
+     * Public — no auth required.
+     * Validates a discount code and returns the discount amount and final amount.
+     * Does NOT redeem the code.
+     */
+    @PostMapping("/discount/validate")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> validateDiscount(
+            @Valid @RequestBody ValidateDiscountRequest request) {
+        ValidatedDiscount result = discountService.validateAndApply(
+                request.getCode(), request.getMerchantId(), request.getAmount());
+        Map<String, Object> response = Map.of(
+                "discountAmount", result.discountAmount(),
+                "finalAmount", result.finalAmount()
+        );
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

@@ -66,5 +66,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u WHERE EXTRACT(MONTH FROM u.dateOfBirth) = :month AND EXTRACT(DAY FROM u.dateOfBirth) = :day AND u.status = 'ACTIVE'")
     java.util.List<User> findActiveUsersByBirthdayMonthAndDay(@Param("month") int month, @Param("day") int day);
+
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email) OR u.username = :username")
+    Optional<User> findByEmailIgnoreCaseOrUsername(@Param("email") String email, @Param("username") String username);
 }
 

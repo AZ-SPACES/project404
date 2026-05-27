@@ -125,6 +125,19 @@ export interface Merchant {
   currency: string;
   totalVolume: number;
   feeRateBps: number;
+  // Branding
+  brandColor: string | null;
+  checkoutTagline: string | null;
+  supportEmail: string | null;
+  // Tax
+  taxEnabled: boolean;
+  taxRate: number | null;
+  taxLabel: string | null;
+  // Auto-payout
+  autoPayoutEnabled: boolean;
+  autoPayoutSchedule: "DAILY" | "WEEKLY" | "MONTHLY" | null;
+  autoPayoutMinBalance: number | null;
+  autoPayoutDay: number | null;
   createdAt: string;
   activatedAt: string | null;
 }
@@ -299,6 +312,15 @@ export async function updateMe(data: {
   businessPhone?: string;
   businessDescription?: string;
   logoUrl?: string;
+  // Branding
+  brandColor?: string;
+  checkoutTagline?: string;
+  supportEmail?: string;
+  // Tax
+  taxEnabled?: boolean;
+  taxRate?: number;
+  taxLabel?: string;
+  // Auto-payout (updated separately via /auto-payout endpoint)
 }): Promise<Merchant> {
   const body = await request<{ success: boolean; data: Merchant }>("/api/v1/merchant/me", {
     method: "PUT",
@@ -847,6 +869,216 @@ export async function createSubscription(data: {
 
 export async function cancelSubscription(id: string): Promise<void> {
   await request(`/api/v1/merchant/subscriptions/${id}`, { method: "DELETE" });
+}
+
+// ─── Notification Preferences ─────────────────────────────────────────────────
+
+export interface NotificationPreferences {
+  emailPaymentReceived: boolean;
+  emailDisputeOpened: boolean;
+  emailPayoutCompleted: boolean;
+  emailPayoutFailed: boolean;
+  emailInvoicePaid: boolean;
+  emailWeeklySummary: boolean;
+  emailApiKeyCreated: boolean;
+  emailLowBalance: boolean;
+  lowBalanceThreshold: number | null;
+  updatedAt: string | null;
+}
+
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
+  const body = await request<{ success: boolean; data: NotificationPreferences }>(
+    "/api/v1/merchant/notification-preferences"
+  );
+  return body.data;
+}
+
+export async function updateNotificationPreferences(
+  data: Partial<Omit<NotificationPreferences, "updatedAt">>
+): Promise<NotificationPreferences> {
+  const body = await request<{ success: boolean; data: NotificationPreferences }>(
+    "/api/v1/merchant/notification-preferences",
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+// ─── Auto-payout Settings ─────────────────────────────────────────────────────
+
+export interface AutoPayoutSettings {
+  autoPayoutEnabled: boolean;
+  autoPayoutSchedule: "DAILY" | "WEEKLY" | "MONTHLY" | null;
+  autoPayoutMinBalance: number | null;
+  autoPayoutDay: number | null;
+}
+
+export async function getAutoPayoutSettings(): Promise<AutoPayoutSettings> {
+  const body = await request<{ success: boolean; data: AutoPayoutSettings }>(
+    "/api/v1/merchant/auto-payout"
+  );
+  return body.data;
+}
+
+export async function updateAutoPayoutSettings(data: {
+  autoPayoutEnabled?: boolean;
+  autoPayoutSchedule?: string;
+  autoPayoutMinBalance?: number;
+  autoPayoutDay?: number;
+}): Promise<AutoPayoutSettings> {
+  const body = await request<{ success: boolean; data: AutoPayoutSettings }>(
+    "/api/v1/merchant/auto-payout",
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+// ─── Settlements ─────────────────────────────────────────────────────────────
+
+export interface SettlementItem {
+  id: string;
+  checkoutSessionId: string;
+  amount: number;
+  fee: number;
+  net: number;
+  transactionDate: string;
+}
+
+export interface Settlement {
+  id: string;
+  merchantId: string;
+  payoutId: string | null;
+  grossAmount: number;
+  feeTotal: number;
+  netAmount: number;
+  transactionCount: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+  status: "PENDING" | "SETTLED";
+  createdAt: string;
+  settledAt: string | null;
+}
+
+export interface SettlementDetail extends Settlement {
+  items: SettlementItem[];
+}
+
+export async function getSettlements(page = 0, size = 20): Promise<Page<Settlement>> {
+  const body = await request<{ success: boolean; data: Page<Settlement> }>(
+    `/api/v1/merchant/settlements?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+export async function getSettlement(id: string): Promise<SettlementDetail> {
+  const body = await request<{ success: boolean; data: SettlementDetail }>(
+    `/api/v1/merchant/settlements/${id}`
+  );
+  return body.data;
+}
+
+// ─── Discount Codes ───────────────────────────────────────────────────────────
+
+export interface DiscountCode {
+  id: string;
+  code: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  value: number;
+  maxUses: number | null;
+  usedCount: number;
+  expiresAt: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export async function getDiscountCodes(): Promise<DiscountCode[]> {
+  const body = await request<{ success: boolean; data: DiscountCode[] }>(
+    "/api/v1/merchant/discount-codes"
+  );
+  return body.data;
+}
+
+export async function createDiscountCode(data: {
+  code?: string;
+  discountType: "PERCENTAGE" | "FIXED";
+  value: number;
+  maxUses?: number;
+  expiresAt?: string;
+}): Promise<DiscountCode> {
+  const body = await request<{ success: boolean; data: DiscountCode }>(
+    "/api/v1/merchant/discount-codes",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updateDiscountCode(id: string, data: {
+  active?: boolean;
+  maxUses?: number;
+  expiresAt?: string;
+}): Promise<DiscountCode> {
+  const body = await request<{ success: boolean; data: DiscountCode }>(
+    `/api/v1/merchant/discount-codes/${id}`,
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function deleteDiscountCode(id: string): Promise<void> {
+  await request(`/api/v1/merchant/discount-codes/${id}`, { method: "DELETE" });
+}
+
+// ─── Bulk Transfers ───────────────────────────────────────────────────────────
+
+export interface BulkTransferItem {
+  id: string;
+  recipientIdentifier: string;
+  amount: number;
+  note: string | null;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  failureReason: string | null;
+  processedAt: string | null;
+}
+
+export interface BulkTransfer {
+  id: string;
+  merchantId: string;
+  note: string | null;
+  totalAmount: number;
+  recipientCount: number;
+  successCount: number;
+  failureCount: number;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "PARTIALLY_COMPLETED" | "FAILED";
+  createdAt: string;
+  processedAt: string | null;
+}
+
+export interface BulkTransferDetail extends BulkTransfer {
+  items: BulkTransferItem[];
+}
+
+export async function getBulkTransfers(page = 0, size = 20): Promise<Page<BulkTransfer>> {
+  const body = await request<{ success: boolean; data: Page<BulkTransfer> }>(
+    `/api/v1/merchant/bulk-transfers?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+export async function getBulkTransfer(id: string): Promise<BulkTransferDetail> {
+  const body = await request<{ success: boolean; data: BulkTransferDetail }>(
+    `/api/v1/merchant/bulk-transfers/${id}`
+  );
+  return body.data;
+}
+
+export async function createBulkTransfer(data: {
+  note?: string;
+  items: { recipientIdentifier: string; amount: number; note?: string }[];
+}): Promise<BulkTransfer> {
+  const body = await request<{ success: boolean; data: BulkTransfer }>(
+    "/api/v1/merchant/bulk-transfers",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
 }
 
 // ─── Logo upload ─────────────────────────────────────────────────────────────

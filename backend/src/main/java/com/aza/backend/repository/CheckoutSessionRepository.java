@@ -55,4 +55,10 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     @Query("SELECT s.transactionId FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.transactionId IS NOT NULL")
     List<UUID> findTransactionIdsByMerchantId(@Param("merchantId") UUID merchantId);
+
+    @Query("SELECT s FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED AND s.completedAt > :after ORDER BY s.completedAt ASC")
+    List<CheckoutSession> findCompletedSessionsAfter(@Param("merchantId") UUID merchantId, @Param("after") java.time.LocalDateTime after);
+
+    @Query("SELECT s FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED ORDER BY s.completedAt ASC")
+    List<CheckoutSession> findAllCompletedSessions(@Param("merchantId") UUID merchantId);
 }

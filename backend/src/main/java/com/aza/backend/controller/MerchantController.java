@@ -253,6 +253,22 @@ public class MerchantController {
                 .body(ApiResponse.success(merchantService.requestPayout(user.getId(), request)));
     }
 
+    // ==================== AUTO-PAYOUT SETTINGS ====================
+
+    @GetMapping("/auto-payout")
+    public ResponseEntity<ApiResponse<AutoPayoutSettingsResponse>> getAutoPayoutSettings(
+            @AuthenticationPrincipal User user) {
+        Merchant merchant = requireMerchant(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(merchantService.getAutoPayoutSettings(merchant.getId())));
+    }
+
+    @PutMapping("/auto-payout")
+    public ResponseEntity<ApiResponse<AutoPayoutSettingsResponse>> updateAutoPayoutSettings(
+            @AuthenticationPrincipal User user,
+            @RequestBody UpdateAutoPayoutSettingsRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.updateAutoPayoutSettings(user.getId(), request)));
+    }
+
     // ==================== CUSTOMERS ====================
 
     @GetMapping("/customers")
@@ -291,6 +307,32 @@ public class MerchantController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(merchantService.listAuditLogs(user.getId(), page, size)));
+    }
+
+    // ==================== PUBLIC MERCHANT PROFILE ====================
+
+    @GetMapping("/public/{handle}")
+    public ResponseEntity<ApiResponse<MerchantResponse>> getPublicMerchantProfile(
+            @PathVariable String handle) {
+        Merchant merchant = merchantRepository.findByBusinessHandle(handle.toLowerCase())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+            throw new AppException("NOT_ACTIVE", "Merchant is not accepting payments", HttpStatus.FORBIDDEN);
+        }
+        MerchantResponse resp = MerchantResponse.builder()
+                .id(merchant.getId().toString())
+                .businessName(merchant.getBusinessName())
+                .businessHandle(merchant.getBusinessHandle())
+                .businessDescription(merchant.getBusinessDescription())
+                .logoUrl(merchant.getLogoUrl())
+                .category(merchant.getCategory() != null ? merchant.getCategory().name() : null)
+                .status(merchant.getStatus().name())
+                .currency(merchant.getCurrency())
+                .brandColor(merchant.getBrandColor())
+                .checkoutTagline(merchant.getCheckoutTagline())
+                .supportEmail(merchant.getSupportEmail())
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(resp));
     }
 
     // ==================== HELPERS ====================
