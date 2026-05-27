@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== "http://localhost:8080"
     ? process.env.NEXT_PUBLIC_API_URL
@@ -30,7 +32,7 @@ async function fetchMerchant(handle: string): Promise<FetchResult> {
   try {
     const res = await fetch(
       `${API_URL}/api/v1/merchant/public/${handle}`,
-      { next: { revalidate: 60 } },
+      { cache: "no-store" },
     );
     if (res.ok) {
       const json = await res.json();
