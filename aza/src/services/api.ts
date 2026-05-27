@@ -552,6 +552,53 @@ export const getMerchantPayouts = (page = 0, size = 20) =>
 export const requestMerchantPayout = (amount: number, passcode: string) =>
   api.post('/api/v1/merchant/payouts', { amount, passcode });
 
+export const getMerchantCustomers = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/customers?page=${page}&size=${size}`);
+
+export const getMerchantDisputes = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/disputes?page=${page}&size=${size}`);
+
+export const getMerchantAuditLogs = (page = 0, size = 30) =>
+  api.get(`/api/v1/merchant/audit-logs?page=${page}&size=${size}`);
+
+export const refundMerchantSession = (sessionId: string) =>
+  api.post(`/api/v1/merchant/sessions/${sessionId}/refund`);
+
+export const getMerchantInvoices = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/invoices?page=${page}&size=${size}`);
+
+export const createMerchantInvoice = (data: {
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  currency?: string;
+  description?: string;
+  dueDate?: string;
+}) => api.post('/api/v1/merchant/invoices', data);
+
+export const sendMerchantInvoice = (invoiceId: string) =>
+  api.post(`/api/v1/merchant/invoices/${invoiceId}/send`);
+
+export const cancelMerchantInvoice = (invoiceId: string) =>
+  api.delete(`/api/v1/merchant/invoices/${invoiceId}`);
+
+export const getMerchantSettlements = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/settlements?page=${page}&size=${size}`);
+
+export const getMerchantDiscountCodes = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/discount-codes?page=${page}&size=${size}`);
+
+export const createMerchantDiscountCode = (data: {
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+  maxUses?: number;
+  expiresAt?: string;
+}) => api.post('/api/v1/merchant/discount-codes', data);
+
+export const getMerchantReportSummary = () =>
+  api.get('/api/v1/merchant/reports/summary');
+
 // --- Mini App Endpoints ---
 
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>

@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
-import { getMerchantSessions } from '../../../../../services/api';
+import { getMerchantSessions, refundMerchantSession } from '../../../../../services/api';
 import InternalHeader from '../components/InternalHeader';
 import StatusBadge from '../components/StatusBadge';
 
@@ -16,6 +16,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
+  const [refunding, setRefunding] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -48,6 +49,30 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
     } catch (e) {
       // Ignore
     }
+  };
+
+  const handleRefund = (session: any) => {
+    Alert.alert(
+      'Refund Payment',
+      `Refund ${fmtAmount(session.amount, session.currency)} to customer?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Refund', style: 'destructive', onPress: async () => {
+            setRefunding(true);
+            try {
+              await refundMerchantSession(session.id);
+              load();
+              setSelectedSession(null);
+            } catch {
+              Alert.alert('Error', 'Refund failed. Please try again.');
+            } finally {
+              setRefunding(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handlePrint = (session: any) => {
@@ -320,6 +345,25 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                         </View>
                       )}
                     </View>
+
+                    {selectedSession.status === 'COMPLETED' && (
+                      <TouchableOpacity
+                        style={{
+                          marginTop: Spacing.md,
+                          borderWidth: 1,
+                          borderColor: '#ef4444',
+                          borderRadius: 10,
+                          padding: Spacing.md,
+                          alignItems: 'center',
+                        }}
+                        onPress={() => handleRefund(selectedSession)}
+                        disabled={refunding}
+                      >
+                        {refunding ? <ActivityIndicator color="#ef4444" /> : (
+                          <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Issue Refund</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               </ScrollView>

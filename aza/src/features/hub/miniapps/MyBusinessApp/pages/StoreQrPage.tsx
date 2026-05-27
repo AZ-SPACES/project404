@@ -17,7 +17,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
     );
   }
 
-  const staticLink = `https://api.aza.systems/${merchant.businessHandle}`;
+  const staticLink = `https://aza.systems/pay/${merchant.businessHandle}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(staticLink)}`;
 
   const handleCopy = () => {
