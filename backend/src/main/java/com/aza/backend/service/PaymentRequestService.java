@@ -15,6 +15,7 @@ import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.TransactionRepository;
+import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class PaymentRequestService {
     private final ChatRepository chatRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
     private final BlockedUserRepository blockedUserRepository;
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
@@ -164,7 +166,7 @@ public class PaymentRequestService {
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                payer.getId(), startOfDay, endOfDay, LocalDateTime.now());
+                payer.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
         if (todayTotal.add(pr.getAmount()).compareTo(maxDailyAmount) > 0) {
             BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
             throw new RuntimeException("Payment would exceed your daily limit. Remaining: GHS " + remaining);
@@ -176,6 +178,10 @@ public class PaymentRequestService {
         Wallet requesterWallet = walletRepository.findByUserIdForUpdate(pr.getRequesterId())
                 .orElseThrow(() -> new RuntimeException("Requester wallet not found"));
 
+        if (Boolean.TRUE.equals(payerWallet.getFrozen())) {
+            throw new RuntimeException("Your wallet has been frozen. Please contact support.");
+        }
+
         if (payerWallet.getBalance().compareTo(pr.getAmount()) < 0) {
             throw new RuntimeException("Insufficient balance");
         }
@@ -185,6 +191,13 @@ public class PaymentRequestService {
 
         walletRepository.save(payerWallet);
         walletRepository.save(requesterWallet);
+
+        payer.setBalance(payerWallet.getBalance());
+        userRepository.save(payer);
+        userRepository.findById(pr.getRequesterId()).ifPresent(requester -> {
+            requester.setBalance(requesterWallet.getBalance());
+            userRepository.save(requester);
+        });
 
         Transaction transaction = Transaction.builder()
                 .senderId(payer.getId())

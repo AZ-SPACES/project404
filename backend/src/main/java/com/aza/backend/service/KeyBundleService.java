@@ -94,7 +94,7 @@ public class KeyBundleService {
         return KeyBundleResponse.builder()
                 .recipientId(recipientId.toString())
                 .identityPublicKey(recipient.getIdentityPublicKey())
-                .signedPreKyPublic(recipient.getSignedPreKeyPublic())
+                .signedPreKeyPublic(recipient.getSignedPreKeyPublic())
                 .signedPreKeySignature(recipient.getSignedPreKeySignature())
                 .oneTimePreKeyId(String.valueOf(opkId))
                 .oneTimePreKeyPublic(opkPublic)
