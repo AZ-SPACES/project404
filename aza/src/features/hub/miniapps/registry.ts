@@ -1,6 +1,10 @@
 import MyBusinessApp from './MyBusinessApp';
+import Play2048App from './Play2048App';
+import Snake from './Snakegame';
+import Connect4 from './Connect4';
+import Radio from './Radio';
+import Notepad from './Notepad';
 import { MiniAppEntry } from './types';
-import { LightColors } from '../../../theme';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
   {
@@ -11,6 +15,46 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     category: 'Business',
     component: MyBusinessApp,
   },
+  {
+    id: 'play_2048',
+    name: '2048',
+    description: 'Join the numbers and get to the 2048 tile!',
+    icon: require('../../../assets/2048.png'),
+    category: 'Games',
+    component: Play2048App,
+  },
+  {
+    id: 'snake',
+    name: 'Snake',
+    description: 'Eat apples to grow your snake and avoid crashing into walls or yourself!',
+    icon: require('../../../assets/snakegame.png'),
+    category: 'Games',
+    component: Snake,
+  },
+  {
+    id: 'connect4',
+    name: 'Connect 4',
+    description: 'Connect 4 in a row to win!',
+    icon: require('../../../assets/connect4.png'),
+    category: 'Games',
+    component: Connect4,
+  },
+  {
+    id: 'radio',
+    name: 'Radio',
+    description: 'Listen to the radio',
+    icon: require('../../../assets/radio.png'),
+    category: 'Entertainment',
+    component: Radio,
+  },
+  {
+    id: 'notepad',
+    name: 'Notepad',
+    description: 'Take notes',
+    icon: require('../../../assets/notepad.png'),
+    category: 'Productivity',
+    component: Notepad,
+  }
 ];
 
 export function getMiniApp(id: string): MiniAppEntry | undefined {

@@ -6,7 +6,9 @@ export type MiniAppCategory =
   | 'Entertainment'
   | 'Shopping'
   | 'Transport'
-  | 'Business';
+  | 'Business'
+  | 'Productivity'
+  | 'Games';
 
 export interface MiniAppMeta {
   id: string;
