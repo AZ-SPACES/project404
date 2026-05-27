@@ -35,6 +35,8 @@ const ALL_CATEGORIES: ('All' | MiniAppCategory)[] = [
   'Finance',
   'Bills & Utilities',
   'Entertainment',
+  'Productivity',
+  'Games',
 ];
 
 export default function HubScreen() {
