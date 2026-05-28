@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
      * RuntimeException from legacy service code.
      * The message is passed through because existing services rely on it for user feedback.
      * Migrate callers to AppException to gain explicit status control.
-     * TODO: replace all RuntimeException throws in services with AppException.
+
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {

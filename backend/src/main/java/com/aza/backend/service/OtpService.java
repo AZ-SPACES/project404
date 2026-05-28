@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.security.SecureRandom;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -47,19 +48,19 @@ public class OtpService {
         if (attempts >= 5) {
             redisTemplate.delete(getOtpKey(purpose, identifier));
             redisTemplate.delete(attemptKey);
-            throw new RuntimeException("Too many failed OTP attempts. Request a new code.");
+            throw new AppException("Too many failed OTP attempts. Request a new code.");
         }
 
         String key = getOtpKey(purpose, identifier);
         String storedOtp = redisTemplate.opsForValue().get(key);
 
         if (storedOtp == null) {
-            throw new RuntimeException("OTP expired or not found");
+            throw new AppException("OTP expired or not found");
         }
         if (!storedOtp.equals(code)) {
             redisTemplate.opsForValue().set(attemptKey,
                     String.valueOf(attempts + 1), Duration.ofMinutes(5));
-            throw new RuntimeException("Invalid OTP code.");
+            throw new AppException("Invalid OTP code.");
         }
 
         redisTemplate.delete(key);

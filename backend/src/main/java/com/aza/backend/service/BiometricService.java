@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +56,7 @@ public class BiometricService {
     public BiometricTokenResponse issueBiometricToken(User user, BiometricTokenRequest request) {
         // 1. Verify an account is active
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Account is not active");
+            throw new AppException("Account is not active");
         }
 
         // 2. Verify passcode — proves user has physical access + knows their PIN
@@ -66,7 +67,7 @@ public class BiometricService {
                 .filter(t -> !t.getDeviceId().equals(request.getDeviceId()))
                 .count();
         if (enrolledCount >= MAX_ENROLLED_DEVICES) {
-            throw new RuntimeException(
+            throw new AppException(
                     "Maximum of " + MAX_ENROLLED_DEVICES + " enrolled devices reached. Remove an existing device first.");
         }
 
@@ -134,28 +135,28 @@ public class BiometricService {
         // 2. Hash the incoming token and look it up
         String tokenHash = hashToken(request.getBiometricToken());
         BiometricToken stored = biometricTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RuntimeException("Invalid biometric token"));
+                .orElseThrow(() -> new AppException("Invalid biometric token"));
 
         // 3. Verify the device ID matches — prevents token from being used on another device
         if (!stored.getDeviceId().equals(request.getDeviceId())) {
-            throw new RuntimeException("Biometric token is not valid for this device");
+            throw new AppException("Biometric token is not valid for this device");
         }
 
         // 4. Check token is active and not expired
         if (!Boolean.TRUE.equals(stored.getActive())) {
-            throw new RuntimeException("Biometric token has been revoked");
+            throw new AppException("Biometric token has been revoked");
         }
         if (stored.isExpired()) {
             biometricTokenRepository.delete(stored);
-            throw new RuntimeException("Biometric token has expired. Please re-enable biometrics in settings.");
+            throw new AppException("Biometric token has expired. Please re-enable biometrics in settings.");
         }
 
         // 5. Load user and verify an account is active
         User user = userRepository.findById(stored.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Account is not active");
+            throw new AppException("Account is not active");
         }
 
         // 6. Update last used timestamp
@@ -204,7 +205,7 @@ public class BiometricService {
             byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new AppException("SHA-256 not available", e);
         }
     }
 

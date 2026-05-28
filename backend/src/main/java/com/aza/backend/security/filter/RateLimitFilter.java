@@ -196,7 +196,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
 
             // ── 10. User rate limit ───────────────────────────────────────────
-            if (userActorKey != null) {
+            if (userActorKey != null && authenticatedUser != null) {
                 try {
                     rateLimitService.enforceRateLimit(
                             userActorKey, userLimit, Duration.ofSeconds(userWindowSeconds));

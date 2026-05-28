@@ -76,7 +76,6 @@ public class ChallengeService {
      * Verifies the hCaptcha response and, on success, issues a bypass token.
      * Returns the bypass token, or null if verification failed.
      */
-    @SuppressWarnings("unchecked")
     public String verifyAndIssueBypass(String challengeToken, String captchaResponse, String ip) {
         String actorKey = redis.opsForValue().get("challenge:pending:" + challengeToken);
         if (actorKey == null) return null;

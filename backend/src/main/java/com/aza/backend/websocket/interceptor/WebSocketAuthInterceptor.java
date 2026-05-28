@@ -22,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import com.aza.backend.exception.AppException;
 
 @Component
 @RequiredArgsConstructor
@@ -94,7 +95,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new AppException("SHA-256 not available", e);
         }
     }
 }

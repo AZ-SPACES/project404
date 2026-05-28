@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import com.aza.backend.exception.AppException;
 
 @Service
 @Slf4j
@@ -80,7 +81,7 @@ public class CloudinaryService {
             return url;
         } catch (IOException e) {
             log.error("Cloudinary uploadBytes failed: {}", e.getMessage());
-            throw new RuntimeException("Failed to upload file");
+            throw new AppException("Failed to upload file");
         }
     }
 
@@ -104,7 +105,7 @@ public class CloudinaryService {
             return url;
         } catch (IOException e) {
             log.error("Cloudinary upload failed: {}", e.getMessage());
-            throw new RuntimeException("Failed to upload file");
+            throw new AppException("Failed to upload file");
         }
     }
 }

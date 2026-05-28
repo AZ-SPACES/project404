@@ -338,7 +338,7 @@ public class CheckoutService {
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
             log.error("Failed to serialize webhook payload for session {}", session.getId(), e);
-            throw new RuntimeException("Failed to build webhook payload", e);
+            throw new AppException("Failed to build webhook payload", e);
         }
     }
 

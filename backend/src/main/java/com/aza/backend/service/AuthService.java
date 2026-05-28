@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -179,7 +180,7 @@ public class AuthService {
     private AuthResponse finalizeLogin(User user, String deviceName,
                                        String deviceOs, String deviceId, String ipAddress, boolean isSignup) {
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Account is not active");
+            throw new AppException("Account is not active");
         }
 
         user.setLastLoginAt(LocalDateTime.now());
@@ -263,31 +264,31 @@ public class AuthService {
         String token = request.getRefreshToken();
 
         if (jwtUtil.isInvalid(token)) {
-            throw new RuntimeException("Invalid or expired refresh token");
+            throw new AppException("Invalid or expired refresh token");
         }
 
         if (!"REFRESH".equals(jwtUtil.getTokenType(token))) {
-            throw new RuntimeException("Invalid token type");
+            throw new AppException("Invalid token type");
         }
 
         String tokenHash = hashToken(token);
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new AppException(
                         "Refresh token not found — may have been revoked"));
 
         if (stored.isExpired()) {
             refreshTokenRepository.delete(stored);
-            throw new RuntimeException("Refresh token expired");
+            throw new AppException("Refresh token expired");
         }
 
         refreshTokenRepository.delete(stored);
 
         UUID userId = jwtUtil.getUserIdFromToken(token);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (user.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Account is not active");
+            throw new AppException("Account is not active");
         }
 
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
@@ -319,7 +320,7 @@ public class AuthService {
 
         User user = userRepository
                 .findByEmailOrPhoneNumber(request.getIdentifier(), request.getIdentifier())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
@@ -335,7 +336,7 @@ public class AuthService {
     @Transactional
     public void changePassword(User user, ChangePasswordRequest request, String ipAddress) {
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Current password is incorrect");
+            throw new AppException("Current password is incorrect");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -358,11 +359,11 @@ public class AuthService {
     public void secureAccountWithToken(String token) {
         String userIdStr = redisTemplate.opsForValue().get("secure_token:" + token);
         if (userIdStr == null) {
-            throw new RuntimeException("Invalid or expired security token");
+            throw new AppException("Invalid or expired security token");
         }
 
         User user = userRepository.findById(java.util.UUID.fromString(userIdStr))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         secureAccount(user, null);
         redisTemplate.delete("secure_token:" + token);
@@ -372,7 +373,7 @@ public class AuthService {
 
     public TotpSetupResponse initiateTotpSetup(User user) {
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            throw new RuntimeException("Two-factor authentication is already enabled");
+            throw new AppException("Two-factor authentication is already enabled");
         }
         String secret = totpService.generateSecret();
         // Store pending secret for 10 minutes — not committed until the user confirms
@@ -386,10 +387,10 @@ public class AuthService {
     public RecoveryCodesResponse confirmTotpSetup(User user, String code) {
         String secret = redisTemplate.opsForValue().get(TOTP_SETUP_PREFIX + user.getId());
         if (secret == null) {
-            throw new RuntimeException("Setup session expired. Please start 2FA setup again.");
+            throw new AppException("Setup session expired. Please start 2FA setup again.");
         }
         if (totpService.isCodeInvalid(secret, code)) {
-            throw new RuntimeException("Invalid code. Make sure your authenticator app is synced and try again.");
+            throw new AppException("Invalid code. Make sure your authenticator app is synced and try again.");
         }
         user.setTwoFactorSecret(totpEncryptionService.encrypt(secret));
         user.setTwoFactorEnabled(true);
@@ -412,13 +413,13 @@ public class AuthService {
 
         String totpSecret = totpEncryptionService.decrypt(user.getTwoFactorSecret());
         if (totpService.isCodeInvalid(totpSecret, request.getCode())) {
-            throw new RuntimeException("Invalid authenticator code");
+            throw new AppException("Invalid authenticator code");
         }
 
         // Replay prevention — a TOTP code is valid for one use within its 90-second window
         String replayKey = TOTP_USED_PREFIX + user.getId() + ":" + request.getCode();
         if (Boolean.TRUE.equals(redisTemplate.hasKey(replayKey))) {
-            throw new RuntimeException("This code has already been used. Wait for the next code.");
+            throw new AppException("This code has already been used. Wait for the next code.");
         }
         redisTemplate.opsForValue().set(replayKey, "used", Duration.ofSeconds(90));
 
@@ -430,10 +431,10 @@ public class AuthService {
     @Transactional
     public void disableTotp(User user, String code) {
         if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            throw new RuntimeException("Two-factor authentication is not enabled");
+            throw new AppException("Two-factor authentication is not enabled");
         }
         if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), code)) {
-            throw new RuntimeException("Invalid authenticator code");
+            throw new AppException("Invalid authenticator code");
         }
         user.setTwoFactorSecret(null);
         user.setTwoFactorEnabled(false);
@@ -454,7 +455,7 @@ public class AuthService {
         RecoveryCode matched = unused.stream()
                 .filter(rc -> passwordEncoder.matches(request.getRecoveryCode(), rc.getCodeHash()))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Invalid or already-used recovery code"));
+                .orElseThrow(() -> new AppException("Invalid or already-used recovery code"));
 
         matched.setUsed(true);
         matched.setUsedAt(LocalDateTime.now());
@@ -470,10 +471,10 @@ public class AuthService {
     @Transactional
     public RecoveryCodesResponse regenerateRecoveryCodes(User user, String totpCode) {
         if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            throw new RuntimeException("Two-factor authentication is not enabled");
+            throw new AppException("Two-factor authentication is not enabled");
         }
         if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), totpCode)) {
-            throw new RuntimeException("Invalid authenticator code");
+            throw new AppException("Invalid authenticator code");
         }
         recoveryCodeRepository.deleteAllByUserId(user.getId());
         List<String> plainCodes = generateAndSaveCodes(user.getId());
@@ -485,7 +486,7 @@ public class AuthService {
 
     public void initiateSms2faSetup(User user) {
         if (user.getPhoneNumber() == null || user.getPhoneNumber().isBlank()) {
-            throw new RuntimeException("No phone number linked to account");
+            throw new AppException("No phone number linked to account");
         }
         otpService.sendOtp(user.getPhoneNumber(), "sms_2fa_setup");
     }
@@ -562,7 +563,7 @@ public class AuthService {
     public void respondToAppApproval(UUID approvingUserId, String requestId, boolean approve) {
         String value = redisTemplate.opsForValue().get("login_request:" + requestId);
         if (value == null) {
-            throw new RuntimeException("Request expired or invalid.");
+            throw new AppException("Request expired or invalid.");
         }
         int colon = value.indexOf(':');
         String ownerId = colon >= 0 ? value.substring(0, colon) : "";
@@ -577,7 +578,7 @@ public class AuthService {
     public AuthResponse checkAppApprovalStatus(String preAuthToken, String requestId) {
         String value = redisTemplate.opsForValue().get("login_request:" + requestId);
         if (value == null) {
-            throw new RuntimeException("Request expired or invalid.");
+            throw new AppException("Request expired or invalid.");
         }
         // Value format: "{userId}:{STATUS}"
         int colon = value.indexOf(':');
@@ -585,7 +586,7 @@ public class AuthService {
 
         if ("DENIED".equals(status)) {
             redisTemplate.delete("login_request:" + requestId);
-            throw new RuntimeException("Login request was denied.");
+            throw new AppException("Login request was denied.");
         }
         if (!"APPROVED".equals(status)) {
             return null; // Still pending
@@ -605,13 +606,13 @@ public class AuthService {
 
     public void requestSms2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
-        if (user.getPhoneNumber() == null) throw new RuntimeException("No phone number registered");
+        if (user.getPhoneNumber() == null) throw new AppException("No phone number registered");
         otpService.sendOtp(user.getPhoneNumber(), "2fa");
     }
 
     public void requestEmail2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
-        if (user.getEmail() == null) throw new RuntimeException("No email registered");
+        if (user.getEmail() == null) throw new AppException("No email registered");
         otpService.sendOtp(user.getEmail(), "2fa");
     }
 
@@ -690,7 +691,7 @@ public class AuthService {
             byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new AppException("SHA-256 not available", e);
         }
     }
 
@@ -703,11 +704,11 @@ public class AuthService {
     private PreAuthSession getPreAuthSession(String preAuthToken) {
         String value = redisTemplate.opsForValue().get(TOTP_PREAUTH_PREFIX + preAuthToken);
         if (value == null) {
-            throw new RuntimeException("Session expired or invalid. Please log in again.");
+            throw new AppException("Session expired or invalid. Please log in again.");
         }
         String[] parts = value.split("\\|", 5);
         User user = userRepository.findById(UUID.fromString(parts[0]))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
         return new PreAuthSession(user, parts);
     }
 
