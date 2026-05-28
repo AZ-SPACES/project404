@@ -57,6 +57,7 @@ import {
   TotpSetupScreen,
   DisableTotpScreen,
   RecoveryCodesScreen,
+  ManageRecoveryCodesScreen,
   SmsSetupScreen,
   DisableSmsScreen,
   PasskeySetupScreen,
@@ -155,6 +156,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
       <Stack.Screen name="DisableTotp" component={DisableTotpScreen} />
       <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
+      <Stack.Screen name="ManageRecoveryCodes" component={ManageRecoveryCodesScreen} />
       <Stack.Screen name="SmsSetup" component={SmsSetupScreen} />
       <Stack.Screen name="DisableSms" component={DisableSmsScreen} />
       <Stack.Screen name="PasskeySetup" component={PasskeySetupScreen} />

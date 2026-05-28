@@ -6,6 +6,7 @@ export { TwoStepVerificationScreen } from './TwoStepVerificationScreen';
 export { default as TotpSetupScreen } from './TotpSetupScreen';
 export { default as DisableTotpScreen } from './DisableTotpScreen';
 export { default as RecoveryCodesScreen } from './RecoveryCodesScreen';
+export { default as ManageRecoveryCodesScreen } from './ManageRecoveryCodesScreen';
 export { default as SmsSetupScreen } from './SmsSetupScreen';
 export { default as DisableSmsScreen } from './DisableSmsScreen';
 export { default as PasskeySetupScreen } from './PasskeySetupScreen';

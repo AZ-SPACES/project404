@@ -411,8 +411,14 @@ export const confirmTotpSetup = (code: string) =>
 export const disableTotp = (code: string) =>
   api.delete("/api/v1/auth/2fa", { data: { code } });
 
-export const regenerateRecoveryCodes = (code: string) =>
-  api.post("/api/v1/auth/2fa/recovery/regenerate", { code });
+export const getRecoveryCodeCount = () =>
+  api.get('/api/v1/auth/2fa/recovery/count');
+
+export const requestRecoveryRegenSms = () =>
+  api.post('/api/v1/auth/2fa/recovery/sms/request');
+
+export const regenerateRecoveryCodes = (code: string, method: 'TOTP' | 'SMS' = 'TOTP') =>
+  api.post(`/api/v1/auth/2fa/recovery/regenerate?method=${method}`, { code });
 
 export const redeemRecoveryCode = (preAuthToken: string, recoveryCode: string) =>
   api.post("/api/v1/auth/2fa/recovery", { preAuthToken, recoveryCode });
