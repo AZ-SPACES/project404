@@ -264,6 +264,36 @@ public class NotificationService {
                 data);
     }
 
+    public void sendRecoveryContactInvite(UUID contactUserId, java.util.UUID entryId, String senderName, String senderHandle) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("type", "RECOVERY_CONTACT_INVITE");
+        data.put("entryId", entryId.toString());
+        data.put("senderName", senderName);
+        data.put("senderHandle", senderHandle != null ? "@" + senderHandle : senderName);
+
+        sendNotification(
+                contactUserId,
+                Notification.NotificationType.RECOVERY_CONTACT_INVITE,
+                "Recovery contact request",
+                senderName + " wants to add you as their account recovery contact",
+                data);
+    }
+
+    public void sendRecoveryContactRequest(UUID contactUserId, String requestId, String requesterName, String requesterHandle) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("type", "RECOVERY_CONTACT_REQUEST");
+        data.put("requestId", requestId);
+        data.put("requesterName", requesterName);
+        data.put("requesterHandle", requesterHandle != null ? "@" + requesterHandle : requesterName);
+
+        sendNotification(
+                contactUserId,
+                Notification.NotificationType.RECOVERY_CONTACT_REQUEST,
+                "Account recovery needed",
+                requesterName + " needs your help to recover their account",
+                data);
+    }
+
     public void sendLoginApprovalRequest(UUID userId, String deviceName, String requestId, String ipAddress) {
         Map<String, Object> data = new HashMap<>();
         data.put("type", "LOGIN_APPROVAL");

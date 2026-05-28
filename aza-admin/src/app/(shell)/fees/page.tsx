@@ -91,8 +91,8 @@ export default function FeesPage() {
       {feeStats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Revenue Today", value: fmtGhs(feeStats.totalFeeRevenueToday), color: "text-[#F5A623]" },
-            { label: "Revenue This Month", value: fmtGhs(feeStats.totalFeeRevenueMonth), color: "text-[#F5A623]" },
+            { label: "Revenue Today", value: fmtGhs(feeStats.totalFeeRevenueToday), color: "text-[#B7EE7A]" },
+            { label: "Revenue This Month", value: fmtGhs(feeStats.totalFeeRevenueMonth), color: "text-[#B7EE7A]" },
             { label: "Avg Fee / Transaction", value: fmtGhs(feeStats.averageFeePerTransaction), color: "text-white" },
             { label: "Active Fee Rules", value: feeStats.activeFeeRules.toString(), color: "text-emerald-400" },
           ].map(({ label, value, color }) => (
@@ -253,7 +253,7 @@ export default function FeesPage() {
                 <span className="text-sm text-white/70">Rule Active</span>
                 <button
                   onClick={() => setEditDraft((d) => ({ ...d, active: !d.active }))}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${editDraft.active ? "bg-[#F5A623]" : "bg-white/10"}`}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${editDraft.active ? "bg-[#B7EE7A]" : "bg-white/10"}`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${editDraft.active ? "translate-x-5" : "translate-x-0.5"}`} />
                 </button>
@@ -263,7 +263,7 @@ export default function FeesPage() {
             <button
               onClick={handleSave}
               disabled={saveLoading}
-              className="w-full mt-5 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#F5A623] text-black text-sm font-semibold hover:bg-[#F5A623]/90 disabled:opacity-50 transition-all"
+              className="w-full mt-5 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#B7EE7A] text-black text-sm font-semibold hover:bg-[#B7EE7A]/90 disabled:opacity-50 transition-all"
             >
               {saveLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Changes

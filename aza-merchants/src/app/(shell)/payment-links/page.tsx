@@ -96,7 +96,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
                   type="number" step="0.01" min="0.01" required
                   value={amount} onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
                 />
               </div>
             </div>
@@ -105,20 +105,20 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               <input
                 type="text" value={description} onChange={(e) => setDescription(e.target.value)}
                 placeholder="What is this payment for?"
-                className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+                className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
               />
             </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
               {loading && <Loader2 size={14} className="animate-spin" />}
               {loading ? "Creating…" : "Create link"}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-[#10b981]/8 border border-[#10b981]/20 rounded-xl">
-              <CheckCircle2 size={16} className="text-[#10b981] flex-shrink-0" />
-              <p className="text-sm text-[#10b981] font-medium">Link created · expires in 30 min</p>
+            <div className="flex items-center gap-2 p-3 bg-[#B7EE7A]/8 border border-[#B7EE7A]/20 rounded-xl">
+              <CheckCircle2 size={16} className="text-[#B7EE7A] flex-shrink-0" />
+              <p className="text-sm text-[#B7EE7A] font-medium">Link created · expires in 30 min</p>
             </div>
             <div className="bg-black/30 border border-white/8 rounded-xl p-3 break-all">
               <p className="text-[10px] text-white/30 mb-1.5 uppercase tracking-wider font-medium">URL</p>
@@ -126,7 +126,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             </div>
             <div className="flex gap-2">
               <button onClick={copy} className="flex-1 py-2.5 rounded-xl bg-white/6 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 font-medium text-sm transition-colors flex items-center justify-center gap-2">
-                {copied ? <Check size={13} className="text-[#10b981]" /> : <Copy size={13} />}
+                {copied ? <Check size={13} className="text-[#B7EE7A]" /> : <Copy size={13} />}
                 {copied ? "Copied!" : "Copy"}
               </button>
               <a
@@ -209,7 +209,7 @@ export default function PaymentLinksPage() {
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors"
           >
             <Plus size={15} />
             New link
@@ -222,7 +222,7 @@ export default function PaymentLinksPage() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#10b981] text-white" : "text-white/45 hover:text-white"
+                statusFilter === s ? "bg-[#174717] text-white" : "text-white/45 hover:text-white"
               }`}
             >
               {s.charAt(0) + s.slice(1).toLowerCase()}
@@ -245,7 +245,7 @@ export default function PaymentLinksPage() {
             <div className="py-16 text-center">
               <Link2 size={28} className="mx-auto mb-3 text-white/15" />
               <p className="text-sm text-white/30">No payment links yet</p>
-              <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-[#10b981] hover:underline">Create your first link</button>
+              <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-[#B7EE7A] hover:underline">Create your first link</button>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -299,7 +299,7 @@ export default function PaymentLinksPage() {
                             title="Copy link"
                             className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/8 transition-colors"
                           >
-                            {copiedId === s.id ? <Check size={13} className="text-[#10b981]" /> : <Copy size={13} />}
+                            {copiedId === s.id ? <Check size={13} className="text-[#B7EE7A]" /> : <Copy size={13} />}
                           </button>
                           {isPending && (
                             <button

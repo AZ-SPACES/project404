@@ -63,7 +63,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
             <input
               value={form.code}
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50 uppercase"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50 uppercase"
               placeholder="SUMMER20"
               maxLength={20}
             />
@@ -77,7 +77,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
                   key={t}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, discountType: t }))}
-                  className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.discountType === t ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/50 hover:border-white/15"}`}
+                  className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${form.discountType === t ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/50 hover:border-white/15"}`}
                 >
                   {t === "PERCENTAGE" ? "% Percentage" : "GHS Fixed"}
                 </button>
@@ -98,7 +98,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
                 step="0.01"
                 value={form.value}
                 onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="10"
               />
             </div>
@@ -109,7 +109,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
                 min="1"
                 value={form.maxUses}
                 onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="Unlimited"
               />
             </div>
@@ -121,7 +121,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
               type="datetime-local"
               value={form.expiresAt}
               onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
             />
           </div>
 
@@ -134,7 +134,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (c:
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Create Code
@@ -176,7 +176,7 @@ function CodeRow({ code, onToggle, onDelete }: { code: DiscountCode; onToggle: (
         onClick={copyCode}
         className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm font-mono font-semibold text-white hover:bg-white/10 transition-colors flex-shrink-0"
       >
-        {copied ? <Check size={12} className="text-[#10b981]" /> : <Copy size={12} />}
+        {copied ? <Check size={12} className="text-[#B7EE7A]" /> : <Copy size={12} />}
         {code.code}
       </button>
 
@@ -186,7 +186,7 @@ function CodeRow({ code, onToggle, onDelete }: { code: DiscountCode; onToggle: (
           <span className="text-sm font-semibold text-white">
             {code.discountType === "PERCENTAGE" ? `${code.value}% off` : `GHS ${code.value} off`}
           </span>
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${code.active ? "bg-[#10b981]/10 text-[#10b981]" : "bg-white/10 text-white/30"}`}>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${code.active ? "bg-[#B7EE7A]/10 text-[#B7EE7A]" : "bg-white/10 text-white/30"}`}>
             {code.active ? "Active" : "Inactive"}
           </span>
         </div>
@@ -203,7 +203,7 @@ function CodeRow({ code, onToggle, onDelete }: { code: DiscountCode; onToggle: (
           className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"
           title={code.active ? "Deactivate" : "Activate"}
         >
-          {toggling ? <Loader2 size={15} className="animate-spin" /> : code.active ? <ToggleRight size={16} className="text-[#10b981]" /> : <ToggleLeft size={16} />}
+          {toggling ? <Loader2 size={15} className="animate-spin" /> : code.active ? <ToggleRight size={16} className="text-[#B7EE7A]" /> : <ToggleLeft size={16} />}
         </button>
         <button
           onClick={handleDelete}
@@ -261,7 +261,7 @@ export default function DiscountCodesPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
         >
           <Plus size={15} />
           New Code
@@ -271,7 +271,7 @@ export default function DiscountCodesPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">
@@ -281,7 +281,7 @@ export default function DiscountCodesPage() {
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <Tag size={32} className="text-white/15" />
             <p className="text-white/40 text-sm">No discount codes yet</p>
-            <button onClick={() => setShowCreate(true)} className="text-sm text-[#10b981] hover:underline">
+            <button onClick={() => setShowCreate(true)} className="text-sm text-[#B7EE7A] hover:underline">
               Create your first code
             </button>
           </div>

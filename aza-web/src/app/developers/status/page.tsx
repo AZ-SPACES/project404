@@ -141,9 +141,7 @@ export default function StatusPage() {
           </Link>
 
           <div className="flex items-center gap-4 mb-3">
-            <span className="w-10 h-10 rounded-full flex items-center justify-center text-base font-black shrink-0" style={{ background: '#B7EE7A', color: '#174717' }}>
-              A
-            </span>
+            <img src="/logo.png" alt="Aza" className="h-10 w-auto shrink-0" />
             <div>
               <p className="text-white font-extrabold text-xl" style={{ letterSpacing: '-0.04em' }}>Aza System Status</p>
               <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>api.aza.systems</p>

@@ -388,7 +388,7 @@ export default function TransactionsPage() {
                   onClick={() => setSelectedTxId(tx.id)}
                   className={`border-b border-white/5 hover:bg-white/[0.05] transition-colors cursor-pointer ${
                     i % 2 === 0 ? "" : "bg-white/[0.02]"
-                  } ${selectedTxId === tx.id ? "bg-[#F5A623]/5" : ""}`}
+                  } ${selectedTxId === tx.id ? "bg-[#B7EE7A]/5" : ""}`}
                 >
                   <td className="px-4 py-3">
                     <div className="text-white font-medium text-sm">{tx.senderName}</div>

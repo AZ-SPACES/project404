@@ -144,18 +144,10 @@ export default function ApiExplorerPage() {
       >
         {/* Logo */}
         <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <a href="/" className="flex items-center gap-2">
-            <span
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0"
-              style={{ background: '#B7EE7A', color: '#174717' }}
-            >
-              A
-            </span>
+          <a href="/" className="flex flex-col gap-2">
+            <img src="/logo.png" alt="AZA" className="h-6 w-auto self-start" />
             <div>
-              <p className="text-white font-extrabold text-sm leading-none" style={{ letterSpacing: '-0.04em' }}>
-                aza
-              </p>
-              <p className="text-[10px] font-medium" style={{ color: 'rgba(183,238,122,0.5)', letterSpacing: '0.05em' }}>
+              <p className="text-[10px] font-medium mt-1" style={{ color: 'rgba(183,238,122,0.5)', letterSpacing: '0.05em' }}>
                 API EXPLORER
               </p>
             </div>

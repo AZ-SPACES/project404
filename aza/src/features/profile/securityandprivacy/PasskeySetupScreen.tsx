@@ -6,6 +6,9 @@ import {
   ScrollView,
   StatusBar,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
@@ -17,7 +20,8 @@ import * as SecureStore from 'expo-secure-store';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
-import { enablePasskeys, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import { enablePasskeys, biometricEnroll, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import * as Device from 'expo-device';
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
@@ -31,6 +35,32 @@ export default function PasskeySetupScreen() {
   const { fetchProfile } = useProfile();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [needsEnrollment, setNeedsEnrollment] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const handleEnrollAndEnable = async () => {
+    if (passcode.length !== 4) return;
+    setIsEnrolling(true);
+    try {
+      const deviceId = await getDeviceId();
+      const deviceName = Device.modelName ?? 'Unknown Device';
+      const deviceOs = Device.osName ?? 'Unknown OS';
+      const res = await biometricEnroll(passcode, deviceId, deviceName, deviceOs);
+      const token: string = res.data?.data?.biometricToken ?? res.data?.biometricToken;
+      await SecureStore.setItemAsync(BIOMETRIC_TOKEN_KEY, token);
+      await enablePasskeys();
+      await fetchProfile();
+      showToast('Passkeys enabled', 'success');
+      navigation.navigate('TwoStepVerification');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to register this device. Please try again.';
+      showToast(msg, 'error');
+      setPasscode('');
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
 
   const handleEnable = async () => {
     setIsLoading(true);
@@ -62,31 +92,18 @@ export default function PasskeySetupScreen() {
         return;
       }
 
-      // Check if biometric token already stored — re-enroll if not
+      // Check if biometric token already stored
       const existing = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
       if (!existing) {
-        Alert.alert(
-          'Passcode required',
-          'To enable passkeys, enter your Aza passcode to register this device.',
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => setIsLoading(false) },
-            {
-              text: 'Continue',
-              onPress: async () => {
-                navigation.navigate('VerifyPasscode', {
-                  onSuccessScreen: 'PasskeySetup',
-                });
-                setIsLoading(false);
-              },
-            },
-          ]
-        );
+        // No biometric token — need to enroll this device first via passcode
+        setIsLoading(false);
+        setNeedsEnrollment(true);
         return;
       }
 
       // Mark passkeys enabled in backend
       await enablePasskeys();
-      fetchProfile();
+      await fetchProfile();
       showToast('Passkeys enabled', 'success');
       navigation.navigate('TwoStepVerification');
     } catch (err: any) {
@@ -96,6 +113,49 @@ export default function PasskeySetupScreen() {
       setIsLoading(false);
     }
   };
+
+  if (needsEnrollment) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" />
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.header}>
+            <BackButton onPress={() => { setNeedsEnrollment(false); setPasscode(''); }} />
+            <Text style={styles.headerTitle}>Register device</Text>
+          </View>
+          <View style={{ flex: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl }}>
+            <Text style={[styles.title, { marginBottom: Spacing.sm }]}>Enter your passcode</Text>
+            <Text style={{ fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.xl }}>
+              Your passcode is needed to register this device as a trusted passkey.
+            </Text>
+            <TextInput
+              style={[styles.passcodeInput, { borderBottomColor: Colors.primary, color: Colors.textPrimary }]}
+              value={passcode}
+              onChangeText={t => setPasscode(t.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              secureTextEntry
+              autoFocus
+              maxLength={4}
+              placeholder="••••"
+              placeholderTextColor={Colors.textSecondary}
+            />
+          </View>
+          <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl }}>
+            <Button
+              title="Register & Enable"
+              onPress={handleEnrollAndEnable}
+              loading={isEnrolling}
+              disabled={passcode.length !== 4 || isEnrolling}
+              backgroundColor={Colors.primary}
+              textColor={Colors.secondary}
+              borderRadius={Radius.full}
+              paddingVertical={16}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -229,6 +289,14 @@ function createStyles(Colors: ThemeColors) {
     },
     footer: {
       marginTop: 'auto',
+    },
+    passcodeInput: {
+      fontSize: 32,
+      fontWeight: '700',
+      textAlign: 'center',
+      letterSpacing: 12,
+      borderBottomWidth: 2,
+      paddingVertical: 8,
     },
   });
 }

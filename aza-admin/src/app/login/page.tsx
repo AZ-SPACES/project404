@@ -82,8 +82,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#F5A623]/15 mb-4">
-            <Lock size={22} className="text-[#F5A623]" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src="/logo.png" alt="Aza Admin" className="h-10 w-auto" />
           </div>
           <h1 className="text-2xl font-semibold text-white">Admin Portal</h1>
           <p className="text-white/50 text-sm mt-1">AZA Internal Dashboard</p>
@@ -100,7 +100,7 @@ export default function LoginPage() {
                 required
                 autoFocus
                 placeholder="admin@aza.app"
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#F5A623]/50 text-sm"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#B7EE7A]/50 text-sm"
               />
             </div>
             <div>
@@ -112,7 +112,7 @@ export default function LoginPage() {
                   onChange={e => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#F5A623]/50 text-sm pr-11"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#B7EE7A]/50 text-sm pr-11"
                 />
                 <button
                   type="button"
@@ -127,7 +127,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-[#F5A623] text-black font-semibold text-sm hover:bg-[#F5A623]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
               Continue
@@ -148,13 +148,13 @@ export default function LoginPage() {
               required
               autoFocus
               placeholder="Enter OTP"
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#F5A623]/50 text-center text-xl tracking-widest"
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#B7EE7A]/50 text-center text-xl tracking-widest"
             />
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-[#F5A623] text-black font-semibold text-sm hover:bg-[#F5A623]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
               Verify OTP
@@ -181,13 +181,13 @@ export default function LoginPage() {
               required
               autoFocus
               placeholder="000000"
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#F5A623]/50 text-center text-xl tracking-[0.4em]"
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#B7EE7A]/50 text-center text-xl tracking-[0.4em]"
             />
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-[#F5A623] text-black font-semibold text-sm hover:bg-[#F5A623]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
               Verify

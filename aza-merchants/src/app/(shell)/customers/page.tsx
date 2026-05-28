@@ -48,7 +48,7 @@ export default function CustomersPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">
@@ -77,8 +77,8 @@ export default function CustomersPage() {
                     <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#10b981]/15 border border-[#10b981]/25 flex items-center justify-center flex-shrink-0">
-                            <span className="text-[10px] font-bold text-[#10b981]">{initials(c.name)}</span>
+                          <div className="w-8 h-8 rounded-full bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-[#B7EE7A]">{initials(c.name)}</span>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white">{c.name}</p>

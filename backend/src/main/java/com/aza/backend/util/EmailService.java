@@ -38,24 +38,57 @@ public class EmailService {
     @Value("${brevo.sender-email:noreply@aza.systems}")
     private String senderEmail;
 
-    private String logoBase64;
+    private String azaMerchantLogoBase64;
+    private String azaAdminLogoBase64;
+    private String azaPayLogoBase64;
+    private String azaDefaultLogoBase64;
 
-    private String getLogoBase64() {
-        if (logoBase64 == null) {
-            try {
-                byte[] bytes = new ClassPathResource("static/images/paper-plane.png")
-                        .getInputStream().readAllBytes();
-                logoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
-            } catch (Exception e) {
-                log.warn("Could not load paper-plane logo: {}", e.getMessage());
-                logoBase64 = "";
-            }
+    private String getLogoBase64(String logoName, String filename) {
+        try {
+            byte[] bytes = new ClassPathResource("static/images/" + filename)
+                    .getInputStream().readAllBytes();
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            log.warn("Could not load {} logo: {}", logoName, e.getMessage());
+            return "";
         }
-        return logoBase64;
+    }
+
+    private String getAzaMerchantLogoBase64() {
+        if (azaMerchantLogoBase64 == null) {
+            azaMerchantLogoBase64 = getLogoBase64("Aza_Merchant", "Aza_Merchant.png");
+        }
+        return azaMerchantLogoBase64;
+    }
+
+    private String getAzaAdminLogoBase64() {
+        if (azaAdminLogoBase64 == null) {
+            azaAdminLogoBase64 = getLogoBase64("Aza-admin", "Aza-admin.png");
+        }
+        return azaAdminLogoBase64;
+    }
+
+    private String getAzaPayLogoBase64() {
+        if (azaPayLogoBase64 == null) {
+            azaPayLogoBase64 = getLogoBase64("Aza-Pay", "Aza-Pay.png");
+        }
+        return azaPayLogoBase64;
+    }
+
+    private String getAzaDefaultLogoBase64() {
+        if (azaDefaultLogoBase64 == null) {
+            azaDefaultLogoBase64 = getLogoBase64("aza", "aza.png");
+        }
+        return azaDefaultLogoBase64;
     }
 
     private String inlineImages(String html) {
-        return html.replace("src=\"cid:paperplane\"", "src=\"" + getLogoBase64() + "\"");
+        String result = html.replace("src=\"cid:paperplane\"", "src=\"" + getAzaDefaultLogoBase64() + "\"");
+        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + getAzaMerchantLogoBase64() + "\"");
+        result = result.replace("src=\"cid:aza_admin\"", "src=\"" + getAzaAdminLogoBase64() + "\"");
+        result = result.replace("src=\"cid:aza_pay\"", "src=\"" + getAzaPayLogoBase64() + "\"");
+        result = result.replace("src=\"cid:aza_default\"", "src=\"" + getAzaDefaultLogoBase64() + "\"");
+        return result;
     }
 
     public boolean sendEmail(String to, String subject, String htmlBody) {

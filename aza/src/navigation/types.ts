@@ -76,6 +76,10 @@ export type RootStackParamList = {
   TotpSetup: undefined;
   DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
+  ManageRecoveryCodes: undefined;
+  AccountRecoveryContacts: undefined;
+  GenerateRecoveryCode: { requestId: string; requesterName: string; requesterHandle?: string };
+  ContactRecoveryLogin: { preAuthToken: string };
   SmsSetup: undefined;
   DisableSms: undefined;
   PasskeySetup: undefined;

@@ -77,7 +77,7 @@ export default function KycReviewPage() {
         {done === "approved" ? <Check size={28} className="text-emerald-400" /> : <X size={28} className="text-red-400" />}
       </div>
       <p className="text-white font-medium">KYC {done === "approved" ? "approved" : "rejected"} successfully.</p>
-      <Link href="/kyc" className="text-[#F5A623] text-sm hover:underline">← Back to queue</Link>
+      <Link href="/kyc" className="text-[#B7EE7A] text-sm hover:underline">← Back to queue</Link>
     </div>
   );
 

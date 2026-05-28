@@ -164,7 +164,7 @@ export default function KycAnalyticsPage() {
           label="Approval Rate"
           value={`${approvalRatePct}%`}
           icon={<TrendingUp size={18} />}
-          accent="text-[#F5A623]"
+          accent="text-[#B7EE7A]"
           sub="of completed submissions"
         />
       </div>
@@ -202,8 +202,8 @@ export default function KycAnalyticsPage() {
 
       {/* Approval rate callout */}
       <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6 flex items-center gap-6">
-        <div className="flex-shrink-0 w-24 h-24 rounded-full border-4 border-[#F5A623]/40 flex items-center justify-center bg-[#F5A623]/5">
-          <span className="text-2xl font-bold text-[#F5A623]">{approvalRatePct}%</span>
+        <div className="flex-shrink-0 w-24 h-24 rounded-full border-4 border-[#B7EE7A]/40 flex items-center justify-center bg-[#B7EE7A]/5">
+          <span className="text-2xl font-bold text-[#B7EE7A]">{approvalRatePct}%</span>
         </div>
         <div>
           <div className="text-white font-semibold text-lg mb-1">Overall Approval Rate</div>
