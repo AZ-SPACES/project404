@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
@@ -31,6 +31,12 @@ export function TwoStepVerificationScreen() {
   const isDark = Colors.isDark;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'TwoStepVerification'>>();
   const profile = useProfile();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      profile.fetchProfile();
+    }, [profile.fetchProfile])
+  );
 
   const VerificationMethod = (props: VerificationMethodProps & { isEnabled?: boolean }) => {
     const { title, description, securityLevel, isVerySecure, onPress, isEnabled } = props;
@@ -82,17 +88,18 @@ export function TwoStepVerificationScreen() {
         <View style={styles.divider} />
 
         <View style={styles.contentSection}>
-          <VerificationMethod 
+          <VerificationMethod
             iconType="MaterialCommunityIcons"
-            iconName="account-group-outline"
+            iconName="fingerprint"
             title="Passkeys"
             description="Log in with the more secure face and fingerprint recognition."
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.passkeysEnabled}
+            onPress={() => navigation.navigate(profile.passkeysEnabled ? 'DisablePasskey' : 'PasskeySetup')}
           />
-          
-          <VerificationMethod 
+
+          <VerificationMethod
             iconType="Feather"
             iconName="smartphone"
             title="Aza app"
@@ -100,16 +107,17 @@ export function TwoStepVerificationScreen() {
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.appTwoFactorEnabled}
-            onPress={() => profile.toggleApp2fa(!profile.appTwoFactorEnabled)}
+            onPress={() => navigation.navigate('AzaAppSetup')}
           />
 
-          <VerificationMethod 
+          <VerificationMethod
             iconType="Ionicons"
             iconName="chatbubble-outline"
             title="Text message"
             description="Receive a verification code by text. You'll need phone signal for this."
             securityLevel="Fairly secure"
             isEnabled={profile.smsTwoFactorEnabled}
+            onPress={() => navigation.navigate(profile.smsTwoFactorEnabled ? 'DisableSms' : 'SmsSetup')}
           />
         </View>
 
@@ -126,8 +134,8 @@ export function TwoStepVerificationScreen() {
             description="Use an app like Google Authenticator or Authy to get codes."
             securityLevel="Very secure"
             isVerySecure
-            onPress={() => navigation.navigate(profile.twoFactorEnabled ? 'DisableTotp' : 'TotpSetup')}
-            isEnabled={profile.twoFactorEnabled}
+            onPress={() => navigation.navigate(profile.totpEnabled ? 'DisableTotp' : 'TotpSetup')}
+            isEnabled={profile.totpEnabled}
           />
         </View>
       </ScrollView>

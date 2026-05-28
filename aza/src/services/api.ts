@@ -417,8 +417,32 @@ export const regenerateRecoveryCodes = (code: string) =>
 export const redeemRecoveryCode = (preAuthToken: string, recoveryCode: string) =>
   api.post("/api/v1/auth/2fa/recovery", { preAuthToken, recoveryCode });
 
+export const initiateSms2faSetup = () =>
+  api.post('/api/v1/auth/2fa/sms/setup');
+
+export const confirmSms2faSetup = (code: string) =>
+  api.post('/api/v1/auth/2fa/sms/confirm', { code });
+
+export const requestDisableSms2fa = () =>
+  api.post('/api/v1/auth/2fa/sms/disable/request');
+
+export const disableSms2fa = (code: string) =>
+  api.delete('/api/v1/auth/2fa/sms', { data: { code } });
+
+export const enablePasskeys = () =>
+  api.put('/api/v1/users/me/privacy', { passkeysEnabled: true });
+
+export const disablePasskeys = () =>
+  api.put('/api/v1/users/me/privacy', { passkeysEnabled: false });
+
+export const verifyPasskeys2fa = (preAuthToken: string, biometricToken: string, deviceId: string) =>
+  api.post(`/api/v1/auth/2fa/passkeys/verify?preAuthToken=${preAuthToken}`, { biometricToken, deviceId });
+
 export const requestApp2faApproval = (preAuthToken: string) =>
   api.post(`/api/v1/auth/2fa/app/request?preAuthToken=${preAuthToken}`);
+
+export const respondToApp2faApproval = (requestId: string, approve: boolean) =>
+  api.post(`/api/v1/auth/2fa/app/respond?requestId=${encodeURIComponent(requestId)}&approve=${approve}`);
 
 export const checkApp2faStatus = (preAuthToken: string, requestId: string) =>
   api.post(`/api/v1/auth/2fa/app/status?preAuthToken=${preAuthToken}&requestId=${requestId}`);

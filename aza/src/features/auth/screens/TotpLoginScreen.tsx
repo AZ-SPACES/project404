@@ -26,19 +26,25 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { BackButton } from '../../../components/ui/BackButton';
-import { 
-  totpLogin, 
-  requestSms2fa, 
-  requestEmail2fa, 
+import {
+  totpLogin,
+  requestSms2fa,
+  requestEmail2fa,
   verify2faOtp,
-  TOKEN_KEY, 
-  REFRESH_TOKEN_KEY 
+  verifyPasskeys2fa,
+  requestApp2faApproval,
+  checkApp2faStatus,
+  getDeviceId,
+  TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  BIOMETRIC_TOKEN_KEY,
 } from '../../../services/api';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TotpLogin'>;
 type TotpLoginRouteProp = RouteProp<RootStackParamList, 'TotpLogin'>;
 
-type VerificationMethod = 'APP' | 'TOTP' | 'SMS' | 'EMAIL' | 'PASSKEYS';
+type VerificationMethod = 'APP' | 'TOTP' | 'SMS' | 'EMAIL' | 'PASSKEY';
 
 const TotpLoginScreen: React.FC = () => {
   usePreventScreenCapture();
@@ -50,23 +56,32 @@ const TotpLoginScreen: React.FC = () => {
   const { preAuthToken, methods = ['TOTP'], defaultMethod = 'TOTP' } = route.params;
 
   const [currentMethod, setCurrentMethod] = useState<VerificationMethod>(
-    (defaultMethod === 'APP' ? (methods.find(m => m !== 'APP') || 'TOTP') : defaultMethod) as VerificationMethod
+    defaultMethod as VerificationMethod
   );
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [appRequestId, setAppRequestId] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { login } = useAuth();
   const { showToast } = useToast();
 
 
+  // Stop polling on unmount
   useEffect(() => {
-    if (currentMethod === 'SMS') {
-      triggerSms2fa();
-    } else if (currentMethod === 'EMAIL') {
-      triggerEmail2fa();
-    }
+    return () => { stopPolling(); };
+  }, []);
+
+  useEffect(() => {
+    // When method changes away from APP, stop any active poll
+    if (currentMethod !== 'APP') stopPolling();
+
+    if (currentMethod === 'SMS') triggerSms2fa();
+    else if (currentMethod === 'EMAIL') triggerEmail2fa();
+    else if (currentMethod === 'PASSKEY') triggerPasskeyAuth();
+    else if (currentMethod === 'APP') triggerAppApproval();
   }, [currentMethod]);
 
   const triggerSms2fa = async () => {
@@ -88,6 +103,86 @@ const TotpLoginScreen: React.FC = () => {
       showToast('A verification code has been sent to your email.', 'success');
     } catch (error: any) {
       showToast('Failed to send email. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const triggerPasskeyAuth = async () => {
+    setIsLoading(true);
+    try {
+      const biometricToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
+      if (!biometricToken) {
+        showToast('No passkey found on this device. Please use another method.', 'error');
+        setCurrentMethod(methods.find(m => m !== 'PASSKEY') as VerificationMethod ?? 'TOTP');
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify your identity to sign in',
+        cancelLabel: 'Cancel',
+        fallbackLabel: 'Use passcode',
+        disableDeviceFallback: false,
+      });
+
+      if (!result.success) {
+        showToast('Authentication cancelled', 'error');
+        return;
+      }
+
+      const deviceId = await getDeviceId();
+      const res = await verifyPasskeys2fa(preAuthToken, biometricToken, deviceId);
+      await finalizeLogin(res.data?.data ?? res.data);
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Passkey verification failed. Please try another method.';
+      showToast(msg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  const startPolling = (pToken: string, rId: string) => {
+    stopPolling();
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await checkApp2faStatus(pToken, rId);
+        const payload = res.data?.data;
+        if (payload?.accessToken) {
+          stopPolling();
+          await finalizeLogin(payload);
+        }
+        // null means still PENDING — keep polling
+      } catch (err: any) {
+        stopPolling();
+        const msg = err.response?.data?.message || 'Login request expired or was denied.';
+        showToast(msg, 'error');
+        const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
+        setCurrentMethod(fallback);
+        setOtp(Array(6).fill(''));
+      }
+    }, 3000);
+  };
+
+  const triggerAppApproval = async () => {
+    setIsLoading(true);
+    setAppRequestId(null);
+    try {
+      const res = await requestApp2faApproval(preAuthToken);
+      const requestId: string = res.data?.data ?? res.data;
+      setAppRequestId(requestId);
+      startPolling(preAuthToken, requestId);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to send approval request. Please try another method.';
+      showToast(msg, 'error');
+      const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
+      setCurrentMethod(fallback);
     } finally {
       setIsLoading(false);
     }
@@ -163,14 +258,13 @@ const TotpLoginScreen: React.FC = () => {
   };
 
   const switchMethod = (method: VerificationMethod) => {
-    if (method === 'APP') {
-      setShowMethodSelector(false);
-      return;
-    }
     setCurrentMethod(method);
     setShowMethodSelector(false);
     setOtp(Array(6).fill(''));
   };
+
+  const isPasskeyMethod = currentMethod === 'PASSKEY';
+  const isAppMethod = currentMethod === 'APP';
 
   const renderMethodSelector = () => {
     if (!showMethodSelector) return null;
@@ -191,13 +285,14 @@ const TotpLoginScreen: React.FC = () => {
                 {m === 'TOTP' && <MaterialIcons name="security" size={24} color={Colors.primary} />}
                 {m === 'SMS' && <Feather name="message-square" size={24} color={Colors.primary} />}
                 {m === 'EMAIL' && <Feather name="mail" size={24} color={Colors.primary} />}
+                {m === 'PASSKEY' && <MaterialCommunityIcons name="fingerprint" size={24} color={Colors.primary} />}
               </View>
               <View>
                 <Text style={[Typography.body, { color: Colors.textPrimary, fontWeight: '600' }]}>
-                  {m === 'APP' ? 'Aza App' : m === 'TOTP' ? 'Authenticator App' : m === 'SMS' ? 'Text Message' : 'Email'}
+                  {m === 'APP' ? 'Aza App' : m === 'TOTP' ? 'Authenticator App' : m === 'SMS' ? 'Text Message' : m === 'EMAIL' ? 'Email' : 'Passkey'}
                 </Text>
                 <Text style={[Typography.caption, { color: Colors.textSecondary }]}>
-                  {m === 'APP' ? 'Approve from another device' : m === 'TOTP' ? 'Use a 6-digit code' : m === 'SMS' ? 'Receive code via SMS' : 'Receive code via Email'}
+                  {m === 'APP' ? 'Approve from another device' : m === 'TOTP' ? 'Use a 6-digit code' : m === 'SMS' ? 'Receive code via SMS' : m === 'EMAIL' ? 'Receive code via Email' : 'Use Face ID or fingerprint'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -249,33 +344,64 @@ const TotpLoginScreen: React.FC = () => {
             <Text style={styles.title}>Two-Step Verification</Text>
 
             <View style={styles.iconContainer}>
-              <MaterialIcons name={getIconName() as any} size={24} color={Colors.textSecondary} />
+              {isPasskeyMethod
+                ? <MaterialCommunityIcons name="fingerprint" size={24} color={Colors.textSecondary} />
+                : isAppMethod
+                ? <MaterialCommunityIcons name="cellphone-check" size={24} color={Colors.textSecondary} />
+                : <MaterialIcons name={getIconName() as any} size={24} color={Colors.textSecondary} />
+              }
             </View>
 
-            <Text style={styles.subTitle}>
-              {getSubTitleText()}
-            </Text>
-
-            <View style={styles.otpInputWrapper}>
-              {otp.map((digit, index) => (
-                <View key={index} style={styles.otpSlot}>
-                  <TextInput
-                    ref={(ref) => { inputRefs.current[index] = ref; }}
-                    style={styles.otpInput}
-                    value={digit}
-                    onChangeText={(text) => handleOtpChange(text, index)}
-                    onKeyPress={(e) => handleKeyPress(e, index)}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    autoFocus={index === 0}
-                    cursorColor={Colors.primary}
-                  />
-                  {!digit && <View style={styles.dash} pointerEvents="none" />}
+            {isAppMethod ? (
+              <View style={styles.appWaitContainer}>
+                <Text style={styles.subTitle}>
+                  A notification has been sent to your other signed-in devices. Open the Aza app and tap <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>Approve</Text> to complete sign-in.
+                </Text>
+                <View style={styles.appWaitIndicator}>
+                  <MaterialCommunityIcons name="bell-ring-outline" size={28} color={Colors.primary} />
+                  <Text style={styles.appWaitText}>Waiting for approval...</Text>
                 </View>
-              ))}
-            </View>
+                <TouchableOpacity
+                  style={styles.issueButton}
+                  onPress={triggerAppApproval}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.issueText}>Resend notification</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.subTitle}>
+                  {isPasskeyMethod
+                    ? 'Use your device biometrics (Face ID, fingerprint) to verify your identity.'
+                    : getSubTitleText()
+                  }
+                </Text>
 
-            {methods.length > 1 && (
+                {!isPasskeyMethod && (
+                  <View style={styles.otpInputWrapper}>
+                    {otp.map((digit, index) => (
+                      <View key={index} style={styles.otpSlot}>
+                        <TextInput
+                          ref={(ref) => { inputRefs.current[index] = ref; }}
+                          style={styles.otpInput}
+                          value={digit}
+                          onChangeText={(text) => handleOtpChange(text, index)}
+                          onKeyPress={(e) => handleKeyPress(e, index)}
+                          keyboardType="number-pad"
+                          maxLength={1}
+                          autoFocus={index === 0}
+                          cursorColor={Colors.primary}
+                        />
+                        {!digit && <View style={styles.dash} pointerEvents="none" />}
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {methods.length > 1 && !isAppMethod && (
               <TouchableOpacity
                 style={styles.issueButton}
                 onPress={() => setShowMethodSelector(true)}
@@ -286,18 +412,51 @@ const TotpLoginScreen: React.FC = () => {
           </View>
 
           <View style={styles.verifyButtonContainer}>
-            <Button
-              title="Verify"
-              onPress={handleVerify}
-              backgroundColor={Colors.primary}
-              textColor={Colors.secondary}
-              borderRadius={30}
-              paddingVertical={16}
-              fontSize={Typography.button.fontSize}
-              fontWeight={Typography.button.fontWeight}
-              loading={isLoading}
-              disabled={isLoading || otp.join('').length < 6}
-            />
+            {isPasskeyMethod ? (
+              <Button
+                title="Verify with Biometrics"
+                onPress={triggerPasskeyAuth}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={30}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                loading={isLoading}
+                disabled={isLoading}
+              />
+            ) : isAppMethod ? (
+              <>
+                {methods.length > 1 && (
+                  <TouchableOpacity
+                    style={[styles.issueButton, { marginBottom: Spacing.sm }]}
+                    onPress={() => setShowMethodSelector(true)}
+                  >
+                    <Text style={styles.issueText}>Try another way</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <Button
+                title="Verify"
+                onPress={handleVerify}
+                backgroundColor={Colors.primary}
+                textColor={Colors.secondary}
+                borderRadius={30}
+                paddingVertical={16}
+                fontSize={Typography.button.fontSize}
+                fontWeight={Typography.button.fontWeight}
+                loading={isLoading}
+                disabled={isLoading || otp.join('').length < 6}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.recoveryButton}
+              onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
+            >
+              <Text style={styles.recoveryText}>Use a recovery code</Text>
+            </TouchableOpacity>
           </View>
           
           {renderMethodSelector()}
@@ -387,6 +546,33 @@ function createStyles(Colors: ThemeColors) {
       fontWeight: '600',
       color: Colors.primary,
       textDecorationLine: 'underline',
+    },
+    appWaitContainer: { flex: 1 },
+    appWaitIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: isDark ? Colors.surface : '#F0FDF4',
+      borderWidth: 1,
+      borderColor: isDark ? Colors.border : '#BBF7D0',
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: Spacing.sm,
+    },
+    appWaitText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: Colors.textPrimary,
+    },
+    recoveryButton: {
+      paddingVertical: Spacing.md,
+      alignItems: 'center',
+      marginTop: Spacing.xs,
+    },
+    recoveryText: {
+      fontSize: Typography.body.fontSize,
+      color: Colors.textSecondary,
+      fontWeight: '500',
     },
     verifyButtonContainer: { paddingVertical: Spacing.lg },
     

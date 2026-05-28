@@ -84,6 +84,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
         if (data?.type === 'KYC_APPROVED') {
           completeKYC();
+        } else if (data?.type === 'LOGIN_APPROVAL') {
+          navigate('App', {
+            screen: 'AppLoginApproval',
+            params: {
+              requestId: data.requestId,
+              deviceName: data.deviceName ?? 'Unknown device',
+              ipAddress: data.ipAddress ?? 'Unknown',
+            },
+          });
         } else if (data?.type === 'KYB_APPROVED' || data?.type === 'KYB_REJECTED' || data?.type === 'KYB_MORE_INFO_REQUIRED') {
           navigate('App', { screen: 'Hub' });
         } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {

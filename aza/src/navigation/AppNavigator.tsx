@@ -45,10 +45,10 @@ function SendPinWithBoundary(props: React.ComponentProps<typeof SendPinScreen>) 
 function SendSuccessWithBoundary(props: React.ComponentProps<typeof SendSuccessScreen>) { return <ErrorBoundary><SendSuccessScreen {...props} /></ErrorBoundary>; }
 function RequestContactWithBoundary(props: React.ComponentProps<typeof RequestContactScreen>) { return <ErrorBoundary><RequestContactScreen {...props} /></ErrorBoundary>; }
 function RequestAmountWithBoundary(props: React.ComponentProps<typeof RequestAmountScreen>) { return <ErrorBoundary><RequestAmountScreen {...props} /></ErrorBoundary>; }
-import { 
-  ProfileScreen, 
-  AppearanceScreen, 
-  NotificationSettingsScreen, 
+import {
+  ProfileScreen,
+  AppearanceScreen,
+  NotificationSettingsScreen,
   SecurityAndPrivacyScreen,
   SecureAccountScreen,
   LogoutEverywhereScreen,
@@ -57,6 +57,11 @@ import {
   TotpSetupScreen,
   DisableTotpScreen,
   RecoveryCodesScreen,
+  SmsSetupScreen,
+  DisableSmsScreen,
+  PasskeySetupScreen,
+  DisablePasskeyScreen,
+  AzaAppSetupScreen,
   ChangePasswordScreen,
   FindMeByScreen,
   BillForwardingIntroScreen,
@@ -67,12 +72,13 @@ import {
   ChangePhoneScreen,
   DeleteAccountScreen
 } from '../features/profile';
-import { 
-  ReasonScreen, 
-  RefundScreen, 
+import {
+  ReasonScreen,
+  RefundScreen,
   StatementScreen,
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
+  AppLoginApprovalScreen,
 } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
@@ -149,6 +155,11 @@ export default function AppNavigator() {
       <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
       <Stack.Screen name="DisableTotp" component={DisableTotpScreen} />
       <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
+      <Stack.Screen name="SmsSetup" component={SmsSetupScreen} />
+      <Stack.Screen name="DisableSms" component={DisableSmsScreen} />
+      <Stack.Screen name="PasskeySetup" component={PasskeySetupScreen} />
+      <Stack.Screen name="DisablePasskey" component={DisablePasskeyScreen} />
+      <Stack.Screen name="AzaAppSetup" component={AzaAppSetupScreen} />
       <Stack.Screen name="FindMeBy" component={FindMeByScreen} />
       <Stack.Screen name="BillForwardingIntro" component={BillForwardingIntroScreen} />
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
@@ -158,6 +169,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>
