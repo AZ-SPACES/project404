@@ -6,7 +6,6 @@ import { useAppTheme, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
-import { useWallet } from '../../../hooks/useWallet';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
 type SendSuccessScreenProps = NativeStackScreenProps<RootStackParamList, 'SendSuccess'>;
@@ -16,12 +15,11 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const { colors: Colors } = useAppTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const { reset: resetTransferStore } = useTransferStore();
-  const { refresh: refreshWallet } = useWallet();
 
   useEffect(() => {
     resetTransferStore();
-    refreshWallet();
-  }, [resetTransferStore, refreshWallet]);
+    // wallet + transactions are already invalidated by confirmTransfer in transferStore
+  }, [resetTransferStore]);
 
   const isDark = Colors.isDark;
   const backgroundColor = isDark ? Colors.background : Colors.accent;

@@ -107,7 +107,7 @@ export default function SmsSetupScreen() {
     setIsLoading(true);
     try {
       const res = await confirmSms2faSetup(code);
-      await fetchProfile();
+      fetchProfile();
       const codes: string[] = res.data?.data?.codes ?? [];
       if (codes.length > 0) {
         navigation.replace('RecoveryCodes', { codes });

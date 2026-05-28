@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
 import { getMe, updateMe, uploadProfileImage, api, requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, enablePasskeys as apiEnablePasskeys, disablePasskeys as apiDisablePasskeys } from "../services/api";
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 const PROFILE_STORAGE_KEY = 'aza_profile';
 
@@ -87,132 +90,111 @@ type ProfileContextType = ProfileData & {
   togglePasskeys: (enabled: boolean) => Promise<void>;
   updateProfile: (data: Partial<ProfileData>) => Promise<void>;
   updateNotificationPreferences: (prefs: Record<string, any>) => Promise<void>;
-  fetchProfile: () => Promise<void>;
+  fetchProfile: () => void;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
+function mapUserData(userData: any): ProfileData {
+  return {
+    displayName: `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || '',
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    dateOfBirth: userData.dateOfBirth,
+    homeAddress: userData.homeAddress,
+    city: userData.city,
+    nationality: userData.nationality,
+    kycStatus: userData.kycStatus,
+    profileImageUri: userData.profileImageUrl,
+    email: userData.email,
+    phone: userData.phone,
+    handle: userData.handle,
+    pronouns: userData.pronouns,
+    syncContacts: userData.syncContacts ?? true,
+    billForwardingEnabled: userData.billForwardingEnabled ?? false,
+    twoFactorEnabled: userData.twoFactorEnabled ?? false,
+    totpEnabled: userData.totpEnabled ?? false,
+    smsTwoFactorEnabled: userData.smsTwoFactorEnabled ?? false,
+    emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
+    appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
+    passkeysEnabled: userData.passkeysEnabled ?? false,
+    notificationPreferences: userData.notificationPreferences ? JSON.parse(userData.notificationPreferences) : null,
+    findMeByPhone: userData.findMeByPhone ?? true,
+    findMeByEmail: userData.findMeByEmail ?? true,
+    findMeByHandle: userData.findMeByHandle ?? true,
+    biometricData: userData.biometricData ?? true,
+    language: userData.language ?? 'English (US)',
+    theme: userData.theme ?? 'System Default',
+    homeBackground: userData.homeBackground,
+    hubBackground: userData.hubBackground,
+  };
+}
+
+function invalidateProfile() {
+  queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
+}
+
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<ProfileData>(INITIAL_PROFILE);
   const { userToken } = useAuth();
 
-  // Load persisted profile on mount
-  useEffect(() => {
-    AsyncStorage.getItem(PROFILE_STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setProfile(JSON.parse(raw));
-      })
-      .catch(() => {});
-  }, []);
-
-  // Clear profile data when the user logs out
-  useEffect(() => {
-    if (userToken === null) {
-      setProfile(INITIAL_PROFILE);
-      AsyncStorage.removeItem(PROFILE_STORAGE_KEY).catch(() => {});
-    }
-  }, [userToken]);
-
-  const fetchProfile = useCallback(async () => {
-    if (!userToken) return;
-    try {
+  const { data: profile = INITIAL_PROFILE } = useQuery({
+    queryKey: queryKeys.profile(),
+    queryFn: async () => {
       const { data } = await getMe();
       const userData = data.data;
-      const updated: ProfileData = {
-        displayName: `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || '',
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        dateOfBirth: userData.dateOfBirth,
-        homeAddress: userData.homeAddress,
-        city: userData.city,
-        nationality: userData.nationality,
-        kycStatus: userData.kycStatus,
-        profileImageUri: userData.profileImageUrl,
-        email: userData.email,
-        phone: userData.phone,
-        handle: userData.handle,
-        pronouns: userData.pronouns,
-        syncContacts: userData.syncContacts ?? true,
-        billForwardingEnabled: userData.billForwardingEnabled ?? false,
-        twoFactorEnabled: userData.twoFactorEnabled ?? false,
-        totpEnabled: userData.totpEnabled ?? false,
-        smsTwoFactorEnabled: userData.smsTwoFactorEnabled ?? false,
-        emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
-        appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
-        passkeysEnabled: userData.passkeysEnabled ?? false,
-        notificationPreferences: userData.notificationPreferences ? JSON.parse(userData.notificationPreferences) : null,
-        findMeByPhone: userData.findMeByPhone ?? true,
-        findMeByEmail: userData.findMeByEmail ?? true,
-        findMeByHandle: userData.findMeByHandle ?? true,
-        biometricData: userData.biometricData ?? true,
-        language: userData.language ?? 'English (US)',
-        theme: userData.theme ?? 'System Default',
-        homeBackground: userData.homeBackground,
-        hubBackground: userData.hubBackground,
-      };
-      setProfile(updated);
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      const mapped = mapUserData(userData);
 
-      // Also sync notification preferences if available
-      if (userData.notificationPreferences) {
-        try {
-          const prefsKey = `@notification_prefs_${userToken}`;
-          await AsyncStorage.setItem(prefsKey, userData.notificationPreferences);
-        } catch (e) {
-          console.warn('Failed to sync notification preferences from profile', e);
-        }
+      // Persist to AsyncStorage as seed for next cold launch
+      AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(mapped)).catch(() => {});
+
+      // Sync notification preferences
+      if (userData.notificationPreferences && userToken) {
+        AsyncStorage.setItem(`@notification_prefs_${userToken}`, userData.notificationPreferences).catch(() => {});
       }
-    } catch (error) {
-      console.error('Failed to fetch profile', error);
-    }
-  }, [userToken]);
 
-  useEffect(() => {
-    if (userToken) {
-      fetchProfile();
-    }
-  }, [userToken, fetchProfile]);
+      return mapped;
+    },
+    enabled: !!userToken,
+    staleTime: 60_000,
+    placeholderData: () => {
+      // Seed from AsyncStorage on first load (synchronous-looking via placeholderData)
+      return INITIAL_PROFILE;
+    },
+  });
+
+  const fetchProfile = useCallback(() => {
+    invalidateProfile();
+  }, []);
 
   const setUsername = useCallback(async (username: string) => {
     try {
       await updateMe({ handle: username });
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to save username', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const setAvatarUrl = useCallback(async (url: string) => {
     await updateMe({ profileImageUrl: url });
-    await fetchProfile();
-  }, [fetchProfile]);
+    invalidateProfile();
+  }, []);
 
   const setProfileImage = useCallback(async (uri: string | null) => {
     try {
       if (uri) {
-        // Upload to backend
         const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
         const type = match ? `image/${match[1]}` : `image`;
-        
-        const photo = {
-          uri,
-          name: filename,
-          type,
-        } as any;
-
-        await uploadProfileImage(photo);
-      } else {
-        // Handle removal if backend supports it (optional)
-        // For now, just clear locally
+        await uploadProfileImage({ uri, name: filename, type } as any);
       }
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to upload profile image', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const requestEmailChangeAction = useCallback(async (email: string) => {
     try {
@@ -226,12 +208,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const verifyEmailChangeAction = useCallback(async (email: string, code: string) => {
     try {
       await apiVerifyEmailChange(email, code);
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to verify email change', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const requestPhoneChangeAction = useCallback(async (phone: string) => {
     try {
@@ -245,45 +227,45 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const verifyPhoneChangeAction = useCallback(async (phone: string, code: string) => {
     try {
       await apiVerifyPhoneChange(phone, code);
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to verify phone change', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const setHandle = useCallback(async (handle: string | null) => {
     try {
       await updateMe({ handle });
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to save handle', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const setSyncContacts = useCallback(async (enabled: boolean) => {
     try {
       await api.put("/api/v1/users/me/privacy", { syncContacts: enabled });
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to save syncContacts setting', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
+
   const setBillForwardingEnabled = useCallback(async (enabled: boolean) => {
     try {
       await api.put("/api/v1/users/me/privacy", { billForwardingEnabled: enabled });
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to save billForwardingEnabled setting', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const updateProfile = useCallback(async (data: Partial<ProfileData>) => {
     try {
-      // Split fields by backend endpoint
       const PRIVACY_FIELDS = ['findMeByHandle', 'findMeByEmail', 'findMeByPhone', 'syncContacts', 'billForwardingEnabled', 'biometricData'] as const;
       type PrivacyKey = typeof PRIVACY_FIELDS[number];
 
@@ -307,33 +289,20 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       await Promise.all(requests);
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to update profile', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const updateNotificationPreferencesInProvider = useCallback(async (prefs: Record<string, any>) => {
     try {
       await api.put("/api/v1/users/me/notifications", prefs);
-      // Update local state immediately for responsiveness
-      setProfile(prev => ({
-        ...prev,
-        notificationPreferences: prefs
-      }));
-      // Safely persist to AsyncStorage by reading the current value first
-      const raw = await AsyncStorage.getItem(PROFILE_STORAGE_KEY);
-      if (raw) {
-        const currentProfile = JSON.parse(raw);
-        currentProfile.notificationPreferences = prefs;
-        await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(currentProfile));
-      }
-      
-      // Update the specific notification prefs key for other parts of the app
       if (userToken) {
         await AsyncStorage.setItem(`@notification_prefs_${userToken}`, JSON.stringify(prefs));
       }
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to update notification preferences', e);
       throw e;
@@ -343,23 +312,20 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const toggleApp2fa = useCallback(async (enabled: boolean) => {
     try {
       await api.post(`/api/v1/auth/2fa/app/toggle?enabled=${enabled}`);
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to toggle App 2FA', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   const toggleSms2fa = useCallback(async (enabled: boolean) => {
-    const updated = { ...profile, smsTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
-    setProfile(updated);
     try {
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to toggle SMS 2FA', e);
     }
-  }, [profile, fetchProfile]);
+  }, []);
 
   const togglePasskeys = useCallback(async (enabled: boolean) => {
     try {
@@ -368,12 +334,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else {
         await apiDisablePasskeys();
       }
-      await fetchProfile();
+      invalidateProfile();
     } catch (e) {
       console.error('Failed to toggle Passkeys', e);
       throw e;
     }
-  }, [fetchProfile]);
+  }, []);
 
   return (
     <ProfileContext.Provider value={{
@@ -393,7 +359,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       togglePasskeys,
       updateProfile,
       updateNotificationPreferences: updateNotificationPreferencesInProvider,
-      fetchProfile
+      fetchProfile,
     }}>
       {children}
     </ProfileContext.Provider>

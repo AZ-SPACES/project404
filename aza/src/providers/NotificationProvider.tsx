@@ -1,19 +1,19 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from './AuthProvider';
-import { registerFcmToken, unregisterFcmToken, getDeviceId, getUnreadNotificationCount } from '../services/api';
+import { registerFcmToken, unregisterFcmToken, getDeviceId } from '../services/api';
 import { navigate } from '../navigation/navigationRef';
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 type NotificationContextType = {
   checkPermissions: () => Promise<any>;
   requestPermissions: () => Promise<any>;
   registerForNotifications: () => Promise<boolean>;
   sendLocalNotification: (title: string, body: string, data?: any) => Promise<string | undefined>;
-  unreadCount: number;
-  fetchUnreadCount: () => Promise<void>;
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -21,23 +21,11 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userToken, completeKYC } = useAuth();
   const prevTokenRef = useRef<string | null>(null);
-  const [unreadCount, setUnreadCount] = React.useState(0);
-
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const response = await getUnreadNotificationCount();
-      if (response.data?.data?.unreadCount !== undefined) {
-        setUnreadCount(response.data.data.unreadCount);
-      }
-    } catch (e) {
-      console.warn('NotificationProvider: Could not fetch unread count', e);
-    }
-  }, []);
 
   useEffect(() => {
     let subscription: Notifications.Subscription | undefined;
     let responseSubscription: Notifications.Subscription | undefined;
-    
+
     try {
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
@@ -50,7 +38,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       subscription = Notifications.addNotificationReceivedListener((notification: any) => {
         if (userToken !== null) {
-          void fetchUnreadCount();
+          queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
         }
 
         const data = notification.request.content.data;
@@ -60,7 +48,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           completeKYC();
         }
 
-        // Refresh contacts when a friend request is accepted or a new request is received
         if (
           type === 'CONTACT_REQUEST_ACCEPTED' ||
           type === 'CONTACT_ACCEPTED' ||
@@ -68,14 +55,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           type === 'CONTACT_REQUEST_RECEIVED' ||
           type === 'FRIEND_REQUEST'
         ) {
-          try {
-            const { useContactStore } = require('../store/contactStore');
-            const store = useContactStore.getState();
-            void store.fetchContacts();
-            void store.fetchContactRequests();
-          } catch (_) {
-            // contactStore may not be ready yet
-          }
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
+        }
+
+        if (type === 'MONEY_RECEIVED' || type === 'MONEY_REQUESTED' || type === 'PAYMENT_REQUEST_ACCEPTED') {
+          queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
       });
 
@@ -106,12 +92,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (e) {
       console.warn('NotificationProvider: Could not initialize notifications', e);
     }
-    
+
     return () => {
       if (subscription) subscription.remove();
       if (responseSubscription) responseSubscription.remove();
     };
-  }, [userToken, completeKYC, fetchUnreadCount]);
+  }, [userToken, completeKYC]);
 
   useEffect(() => {
     if (userToken === null && prevTokenRef.current !== null) {
@@ -121,7 +107,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       } catch (e) {
         // Notifications not available on this platform
       }
-      
+
       const unregister = async () => {
         try {
           const deviceId = await getDeviceId();
@@ -131,12 +117,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       };
       void unregister();
-      setUnreadCount(0);
     } else if (userToken !== null) {
-      void fetchUnreadCount();
+      // Trigger initial fetch of notification count via React Query
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
     }
     prevTokenRef.current = userToken;
-  }, [userToken, fetchUnreadCount]);
+  }, [userToken]);
 
   const checkPermissions = async () => {
     try {
@@ -213,13 +199,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   return (
-    <NotificationContext.Provider value={{ 
-      checkPermissions, 
-      requestPermissions, 
-      registerForNotifications, 
+    <NotificationContext.Provider value={{
+      checkPermissions,
+      requestPermissions,
+      registerForNotifications,
       sendLocalNotification,
-      unreadCount,
-      fetchUnreadCount
     }}>
       {children}
     </NotificationContext.Provider>

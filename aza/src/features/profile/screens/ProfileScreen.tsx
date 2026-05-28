@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -28,6 +28,8 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { getMerchant } from "../../../services/api";
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
 import { BackButton } from '../../../components/ui/BackButton';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
@@ -77,29 +79,17 @@ export default function ProfileScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
-  const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl, fetchProfile } = useProfile();
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchProfile();
-    }, [fetchProfile])
-  );
+  const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl } = useProfile();
   const { showToast } = useToast();
 
-  const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
-
-  useEffect(() => {
-    getMerchant()
-      .then((res: any) => {
-        const merchant = res.data?.data ?? res.data;
-        if (merchant && merchant.id) {
-          setHasBusinessAccount(true);
-        }
-      })
-      .catch(() => {
-        setHasBusinessAccount(false);
-      });
-  }, []);
+  const { data: merchantData } = useQuery({
+    queryKey: queryKeys.merchant(),
+    queryFn: getMerchant,
+    staleTime: 5 * 60_000,
+    retry: (failureCount, error: any) =>
+      error?.response?.status !== 404 && failureCount < 1,
+  });
+  const hasBusinessAccount = !!((merchantData as any)?.data?.data?.id ?? (merchantData as any)?.data?.id);
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);

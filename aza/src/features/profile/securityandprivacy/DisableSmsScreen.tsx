@@ -118,7 +118,7 @@ export default function DisableSmsScreen() {
             setIsLoading(true);
             try {
               await disableSms2fa(code);
-              await fetchProfile();
+              fetchProfile();
               showToast('Text message verification disabled', 'success');
               navigation.navigate('TwoStepVerification');
             } catch (err: any) {

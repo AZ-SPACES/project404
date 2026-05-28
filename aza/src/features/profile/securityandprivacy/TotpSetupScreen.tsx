@@ -34,7 +34,7 @@ export default function TotpSetupScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { showToast } = useToast();
-  const { fetchProfile } = useProfile();
+  const { fetchProfile: invalidateProfile } = useProfile();
 
   const [step, setStep] = useState(1); // 1: QR/Secret, 2: Verification
   const [setupData, setSetupData] = useState<{ secret: string; qrCodeImage: string } | null>(null);
@@ -72,7 +72,7 @@ export default function TotpSetupScreen() {
     setIsLoading(true);
     try {
       const response = await confirmTotpSetup(verificationCode);
-      await fetchProfile();
+      invalidateProfile();
       navigation.replace("RecoveryCodes", { codes: response.data.data.codes });
     } catch (err: any) {
       const msg = err.response?.data?.message || "Invalid code. Please try again.";
