@@ -12,11 +12,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Clipboard,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from '@react-native-vector-icons/feather';
-import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -24,6 +23,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../components/ui/Button";
 import { initiateTotpSetup, confirmTotpSetup } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
+import { useProfile } from "../../../providers/ProfileProvider";
 import { BackButton } from '../../../components/ui/BackButton';
 
 const { width } = Dimensions.get("window");
@@ -34,9 +34,10 @@ export default function TotpSetupScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { showToast } = useToast();
+  const { fetchProfile: invalidateProfile } = useProfile();
 
   const [step, setStep] = useState(1); // 1: QR/Secret, 2: Verification
-  const [setupData, setSetupData] = useState<{ secret: string; qrUri: string } | null>(null);
+  const [setupData, setSetupData] = useState<{ secret: string; qrCodeImage: string } | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -59,9 +60,9 @@ export default function TotpSetupScreen() {
     }
   };
 
-  const handleCopySecret = () => {
+  const handleCopySecret = async () => {
     if (setupData?.secret) {
-      Clipboard.setString(setupData.secret);
+      await Clipboard.setStringAsync(setupData.secret);
       showToast("Secret copied to clipboard", "success");
     }
   };
@@ -71,6 +72,7 @@ export default function TotpSetupScreen() {
     setIsLoading(true);
     try {
       const response = await confirmTotpSetup(verificationCode);
+      invalidateProfile();
       navigation.replace("RecoveryCodes", { codes: response.data.data.codes });
     } catch (err: any) {
       const msg = err.response?.data?.message || "Invalid code. Please try again.";
@@ -112,7 +114,7 @@ export default function TotpSetupScreen() {
 
               <View style={styles.qrCard}>
                 <Image
-                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(setupData?.qrUri || "")}` }}
+                  source={{ uri: `data:image/png;base64,${setupData?.qrCodeImage ?? ""}` }}
                   style={styles.qrImage}
                 />
               </View>

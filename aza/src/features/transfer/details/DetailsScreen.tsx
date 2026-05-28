@@ -9,37 +9,31 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from '@tanstack/react-query';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { RootStackParamList } from "../../../navigation/types";
 import { getSpendingSummary } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { BackButton } from '../../../components/ui/BackButton';
+import { queryKeys } from '../../../lib/queryKeys';
 
 export default function DetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [spentThisMonth, setSpentThisMonth] = React.useState<number>(0);
-  const [spentLastMonth, setSpentLastMonth] = React.useState<number>(0);
-  const [currency, setCurrency] = React.useState<string>("GHS");
+  const { data: spending } = useQuery({
+    queryKey: queryKeys.spendingSummary(),
+    queryFn: async () => {
+      const response = await getSpendingSummary();
+      return response.data?.data ?? { spentThisMonth: 0, spentLastMonth: 0, currency: 'GHS' };
+    },
+    staleTime: 5 * 60_000,
+  });
 
-  React.useEffect(() => {
-    const fetchSpending = async () => {
-      try {
-        const response = await getSpendingSummary();
-        if (response.data?.data) {
-          setSpentThisMonth(response.data.data.spentThisMonth);
-          setSpentLastMonth(response.data.data.spentLastMonth);
-          setCurrency(response.data.data.currency || "GHS");
-        }
-      } catch (error) {
-        console.error("Failed to fetch spending summary:", error);
-      }
-    };
-
-    fetchSpending();
-  }, []);
+  const spentThisMonth = spending?.spentThisMonth ?? 0;
+  const spentLastMonth = spending?.spentLastMonth ?? 0;
+  const currency = spending?.currency ?? 'GHS';
 
   return (
     <SafeAreaView style={styles.safeArea}>

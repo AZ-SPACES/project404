@@ -197,6 +197,34 @@ public class BiometricService {
         log.info("All biometric tokens revoked for user {}", user.getId());
     }
 
+    // ==================== PASSKEYS 2FA VALIDATION ====================
+
+    /**
+     * Validates a biometric token for a specific user without issuing new tokens.
+     * Used by the passkeys 2FA flow to confirm device possession before completing login.
+     */
+    public void validateBiometricToken(String rawToken, String deviceId, UUID userId) {
+        String tokenHash = hashToken(rawToken);
+        BiometricToken stored = biometricTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new AppException("Invalid passkey credential"));
+
+        if (!stored.getDeviceId().equals(deviceId)) {
+            throw new AppException("Passkey is not valid for this device");
+        }
+        if (!stored.getUserId().equals(userId)) {
+            throw new AppException("Passkey does not belong to this account");
+        }
+        if (!Boolean.TRUE.equals(stored.getActive())) {
+            throw new AppException("Passkey has been revoked");
+        }
+        if (stored.isExpired()) {
+            biometricTokenRepository.delete(stored);
+            throw new AppException("Passkey has expired. Please re-enable passkeys in settings.");
+        }
+        stored.setLastUsedAt(LocalDateTime.now());
+        biometricTokenRepository.save(stored);
+    }
+
     // ==================== HELPERS ====================
 
     private String hashToken(String rawToken) {

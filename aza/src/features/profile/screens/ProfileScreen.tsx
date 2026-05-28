@@ -28,6 +28,8 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { getMerchant } from "../../../services/api";
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
 import { BackButton } from '../../../components/ui/BackButton';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
@@ -80,20 +82,14 @@ export default function ProfileScreen() {
   const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl } = useProfile();
   const { showToast } = useToast();
 
-  const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
-
-  useEffect(() => {
-    getMerchant()
-      .then((res: any) => {
-        const merchant = res.data?.data ?? res.data;
-        if (merchant && merchant.id) {
-          setHasBusinessAccount(true);
-        }
-      })
-      .catch(() => {
-        setHasBusinessAccount(false);
-      });
-  }, []);
+  const { data: merchantData } = useQuery({
+    queryKey: queryKeys.merchant(),
+    queryFn: getMerchant,
+    staleTime: 5 * 60_000,
+    retry: (failureCount, error: any) =>
+      error?.response?.status !== 404 && failureCount < 1,
+  });
+  const hasBusinessAccount = !!((merchantData as any)?.data?.data?.id ?? (merchantData as any)?.data?.id);
 
   // Account Type Bottom Sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -404,8 +400,12 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
-          <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" onPress={() => navigation.navigate("TermsOfService")}/>
-          <SectionItem iconFamily="Feather" iconName="lock" title="Privacy Policy" onPress={() => navigation.navigate("PrivacyPolicy")}/>
+          <SectionItem 
+          iconFamily="Feather" 
+          iconName="info" 
+          title="Terms of Service" 
+          onPress={() => navigation.navigate("TermsOfService")}
+          />
           <SectionItem 
             iconFamily="Feather" 
             iconName="star" 
