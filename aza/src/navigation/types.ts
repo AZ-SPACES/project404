@@ -76,6 +76,7 @@ export type RootStackParamList = {
   TotpSetup: undefined;
   DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
+  ManageRecoveryCodes: undefined;
   SmsSetup: undefined;
   DisableSms: undefined;
   PasskeySetup: undefined;
