@@ -23,7 +23,7 @@ function fmtDate(s: string | null) {
 }
 
 const SUB_STATUS_STYLE: Record<string, string> = {
-  ACTIVE: "bg-[#10b981]/10 text-[#10b981]",
+  ACTIVE: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   CANCELLED: "bg-red-400/10 text-red-400",
   PAUSED: "bg-amber-400/10 text-amber-400",
 };
@@ -72,7 +72,7 @@ function CreatePlanModal({ onClose, onCreate }: { onClose: () => void; onCreate:
               required
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
               placeholder="Monthly Basic"
             />
           </div>
@@ -81,7 +81,7 @@ function CreatePlanModal({ onClose, onCreate }: { onClose: () => void; onCreate:
             <input
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
               placeholder="Optional"
             />
           </div>
@@ -95,7 +95,7 @@ function CreatePlanModal({ onClose, onCreate }: { onClose: () => void; onCreate:
                 step="0.01"
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="0.00"
               />
             </div>
@@ -104,7 +104,7 @@ function CreatePlanModal({ onClose, onCreate }: { onClose: () => void; onCreate:
               <select
                 value={form.interval}
                 onChange={(e) => setForm((f) => ({ ...f, interval: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#B7EE7A]/50"
               >
                 {INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
               </select>
@@ -120,7 +120,7 @@ function CreatePlanModal({ onClose, onCreate }: { onClose: () => void; onCreate:
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Create Plan
@@ -219,7 +219,7 @@ export default function PlansPage() {
         {tab === "plans" && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
           >
             <Plus size={15} />
             New Plan
@@ -244,7 +244,7 @@ export default function PlansPage() {
         <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 className="animate-spin text-[#10b981]" size={22} />
+              <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
             </div>
           ) : error ? (
             <div className="flex items-center justify-center h-48">
@@ -254,7 +254,7 @@ export default function PlansPage() {
             <div className="flex flex-col items-center justify-center h-48 gap-3">
               <Repeat size={32} className="text-white/15" />
               <p className="text-white/40 text-sm">No plans yet</p>
-              <button onClick={() => setShowCreate(true)} className="text-sm text-[#10b981] hover:underline">
+              <button onClick={() => setShowCreate(true)} className="text-sm text-[#B7EE7A] hover:underline">
                 Create your first plan
               </button>
             </div>
@@ -265,7 +265,7 @@ export default function PlansPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-white">{plan.name}</p>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${plan.active ? "bg-[#10b981]/10 text-[#10b981]" : "bg-white/10 text-white/40"}`}>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${plan.active ? "bg-[#B7EE7A]/10 text-[#B7EE7A]" : "bg-white/10 text-white/40"}`}>
                         {plan.active ? "Active" : "Inactive"}
                       </span>
                     </div>
@@ -286,7 +286,7 @@ export default function PlansPage() {
                       {actionLoading === plan.id + ":toggle"
                         ? <Loader2 size={16} className="animate-spin" />
                         : plan.active
-                          ? <ToggleRight size={16} className="text-[#10b981]" />
+                          ? <ToggleRight size={16} className="text-[#B7EE7A]" />
                           : <ToggleLeft size={16} />
                       }
                     </button>
@@ -310,7 +310,7 @@ export default function PlansPage() {
         <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
           {subsLoading ? (
             <div className="flex items-center justify-center h-48">
-              <Loader2 className="animate-spin text-[#10b981]" size={22} />
+              <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
             </div>
           ) : !subsPage || subsPage.content.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-3">

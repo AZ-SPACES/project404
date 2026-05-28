@@ -211,7 +211,7 @@ export default function RiskPage() {
               key={s}
               onClick={() => setSeverityFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                severityFilter === s ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+                severityFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
               }`}
             >
               {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -334,7 +334,7 @@ export default function RiskPage() {
               <button
                 onClick={handleResetUser}
                 disabled={!rlUserId.trim() || rlLoading !== null}
-                className="px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 disabled:opacity-40 transition-all flex-shrink-0"
+                className="px-3 py-2 rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 text-[#B7EE7A] text-xs font-semibold hover:bg-[#B7EE7A]/25 disabled:opacity-40 transition-all flex-shrink-0"
               >
                 {rlLoading === "user" ? <Loader2 size={13} className="animate-spin" /> : "Clear"}
               </button>
@@ -356,7 +356,7 @@ export default function RiskPage() {
               <button
                 onClick={handleResetIp}
                 disabled={!rlIp.trim() || rlLoading !== null}
-                className="px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 disabled:opacity-40 transition-all flex-shrink-0"
+                className="px-3 py-2 rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 text-[#B7EE7A] text-xs font-semibold hover:bg-[#B7EE7A]/25 disabled:opacity-40 transition-all flex-shrink-0"
               >
                 {rlLoading === "ip" ? <Loader2 size={13} className="animate-spin" /> : "Clear"}
               </button>

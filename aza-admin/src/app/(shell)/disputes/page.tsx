@@ -132,7 +132,7 @@ export default function DisputesPage() {
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              filter === tab.key ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
           >
             {tab.label}
@@ -175,7 +175,7 @@ export default function DisputesPage() {
                       {dispute.userHandle && <p className="text-xs text-white/35">@{dispute.userHandle}</p>}
                     </div>
                     <div className="text-right sm:text-left">
-                      <p className="text-sm font-bold text-[#F5A623]">{fmtGhs(dispute.amount)}</p>
+                      <p className="text-sm font-bold text-[#B7EE7A]">{fmtGhs(dispute.amount)}</p>
                       <p className="text-xs text-white/35">Disputed amount</p>
                     </div>
                   </div>
@@ -230,7 +230,7 @@ export default function DisputesPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/40">Amount</span>
-                <span className="text-[#F5A623] font-bold">{fmtGhs(resolving.amount)}</span>
+                <span className="text-[#B7EE7A] font-bold">{fmtGhs(resolving.amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/40">Type</span>

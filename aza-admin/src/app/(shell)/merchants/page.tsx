@@ -177,7 +177,7 @@ export default function MerchantsPage() {
           {
             label: "Total Volume",
             value: stats ? fmtAmount(stats.totalVolume) : "—",
-            color: "text-[#F5A623]",
+            color: "text-[#B7EE7A]",
             icon: TrendingUp,
           },
         ].map(({ label, value, color, icon: Icon }) => (
@@ -230,7 +230,7 @@ export default function MerchantsPage() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+                statusFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
               }`}
             >
               {STATUS_FILTER_LABELS[s]}
@@ -247,7 +247,7 @@ export default function MerchantsPage() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+                statusFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
               }`}
             >
               {STATUS_FILTER_LABELS[s]}

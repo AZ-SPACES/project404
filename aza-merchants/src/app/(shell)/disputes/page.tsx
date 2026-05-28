@@ -16,7 +16,7 @@ function fmtDate(s: string) {
 const STATUS_STYLE: Record<string, string> = {
   OPEN: "bg-amber-400/10 text-amber-400",
   UNDER_REVIEW: "bg-blue-400/10 text-blue-400",
-  RESOLVED: "bg-[#10b981]/10 text-[#10b981]",
+  RESOLVED: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   CLOSED: "bg-white/10 text-white/50",
 };
 
@@ -51,7 +51,7 @@ export default function DisputesPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">

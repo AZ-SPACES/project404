@@ -121,7 +121,7 @@ export function TwoStepVerificationScreen() {
         <View style={styles.divider} />
 
         <View style={styles.contentSection}>
-          <VerificationMethod 
+          <VerificationMethod
             iconType="MaterialCommunityIcons"
             iconName="shield-check-outline"
             title="Authenticator app"
@@ -132,6 +132,26 @@ export function TwoStepVerificationScreen() {
             isEnabled={profile.totpEnabled}
           />
         </View>
+
+        {profile.twoFactorEnabled && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+              <Text style={[Typography.body, styles.sectionLabel]}>Backup</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.contentSection}>
+              <VerificationMethod
+                iconType="MaterialCommunityIcons"
+                iconName="key-outline"
+                title="Recovery codes"
+                description="Use a one-time backup code if you can't access any of your verification methods."
+                securityLevel="Very secure"
+                isVerySecure
+                onPress={() => navigation.navigate('ManageRecoveryCodes')}
+              />
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

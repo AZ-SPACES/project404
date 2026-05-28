@@ -790,6 +790,26 @@ public class AuthService {
         return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
+    // Called by AccountRecoveryContactService to resolve a user without full auth
+    public User getUserFromPreAuth(String preAuthToken) {
+        return getPreAuthSession(preAuthToken).user();
+    }
+
+    // Finalizes login using a preAuthToken — called after recovery contact verification
+    @Transactional
+    public AuthResponse finalizeLoginFromPreAuth(String preAuthToken, String ipAddress) {
+        PreAuthSession session = getPreAuthSession(preAuthToken);
+        User user = session.user();
+        String[] parts = session.parts();
+        String storedIp = parts.length > 4 ? parts[4] : ipAddress;
+        redisTemplate.delete(TOTP_PREAUTH_PREFIX + preAuthToken);
+        return finalizeLogin(user,
+                parts.length > 1 ? parts[1] : null,
+                parts.length > 2 ? parts[2] : null,
+                parts.length > 3 ? parts[3] : null,
+                storedIp, false);
+    }
+
     private String sanitize(String value) {
         return value != null ? value.replace("|", "") : "";
     }

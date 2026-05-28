@@ -18,7 +18,7 @@ const ROLE_DESC: Record<string, string> = {
 
 const STATUS_STYLE: Record<string, string> = {
   INVITED: "bg-amber-400/10 text-amber-400",
-  ACTIVE: "bg-[#10b981]/10 text-[#10b981]",
+  ACTIVE: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   REMOVED: "bg-white/10 text-white/30",
 };
 
@@ -70,7 +70,7 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
               placeholder="colleague@company.com"
             />
           </div>
@@ -79,14 +79,14 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
             <label className="block text-xs text-white/40 mb-1.5">Role</label>
             <div className="space-y-2">
               {ROLES.map((r) => (
-                <label key={r} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${role === r ? "border-[#10b981]/40 bg-[#10b981]/5" : "border-white/8 hover:border-white/15"}`}>
+                <label key={r} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${role === r ? "border-[#B7EE7A]/40 bg-[#B7EE7A]/5" : "border-white/8 hover:border-white/15"}`}>
                   <input
                     type="radio"
                     name="role"
                     value={r}
                     checked={role === r}
                     onChange={() => setRole(r)}
-                    className="mt-0.5 accent-[#10b981]"
+                    className="mt-0.5 accent-[#B7EE7A]"
                   />
                   <div>
                     <p className="text-sm font-medium text-white">{r}</p>
@@ -106,7 +106,7 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Send Invite
@@ -186,7 +186,7 @@ export default function TeamPage() {
         </div>
         <button
           onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
         >
           <UserPlus size={15} />
           Invite
@@ -196,7 +196,7 @@ export default function TeamPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">
@@ -206,7 +206,7 @@ export default function TeamPage() {
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <UserCog size={32} className="text-white/15" />
             <p className="text-white/40 text-sm">No team members yet</p>
-            <button onClick={() => setShowInvite(true)} className="text-sm text-[#10b981] hover:underline">
+            <button onClick={() => setShowInvite(true)} className="text-sm text-[#B7EE7A] hover:underline">
               Invite someone
             </button>
           </div>
@@ -214,8 +214,8 @@ export default function TeamPage() {
           <div className="divide-y divide-white/[0.04]">
             {members.map((m) => (
               <div key={m.id} className="px-5 py-4 flex items-center gap-4">
-                <div className="w-9 h-9 rounded-full bg-[#10b981]/15 border border-[#10b981]/25 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-[#10b981]">{initials(m.email)}</span>
+                <div className="w-9 h-9 rounded-full bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-[#B7EE7A]">{initials(m.email)}</span>
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -247,7 +247,7 @@ export default function TeamPage() {
                               key={r}
                               onClick={() => handleRoleChange(m.id, r)}
                               disabled={actionLoading === m.id + ":role"}
-                              className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors ${r === m.role ? "text-[#10b981] bg-[#10b981]/5" : "text-white/70 hover:text-white hover:bg-white/5"}`}
+                              className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors ${r === m.role ? "text-[#B7EE7A] bg-[#B7EE7A]/5" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                             >
                               {r}
                             </button>

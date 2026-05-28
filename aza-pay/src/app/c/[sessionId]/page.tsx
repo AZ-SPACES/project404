@@ -48,7 +48,7 @@ function PoweredBy() {
   return (
     <div className="flex items-center justify-center gap-1.5 pt-6 pb-4">
       <span className="text-[11px] text-white/20">Secured by</span>
-      <span className="text-[11px] font-semibold text-white/30">AZA</span>
+      <img src="/logo.png" alt="Aza" className="h-3 w-auto opacity-30 mix-blend-screen grayscale" />
     </div>
   );
 }
@@ -259,7 +259,7 @@ export default function CheckoutPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const accent = session?.merchantBrandColor ?? "#F5A623";
+  const accent = session?.merchantBrandColor ?? "#B7EE7A";
 
   // ── step handlers ─────────────────────────────────────────────────────────
 
@@ -344,7 +344,7 @@ export default function CheckoutPage() {
       return (
         <TerminalScreen
           icon={<CheckCircle2 size={24} className="text-emerald-400" />}
-          iconColor="#10b981"
+          iconColor="#B7EE7A"
           title="Payment successful"
           subtitle={`${fmtAmount(session.amount, session.currency)} paid to ${session.merchantName ?? "merchant"}`}
           accent={accent}
@@ -377,7 +377,7 @@ export default function CheckoutPage() {
       return (
         <TerminalScreen
           icon={<CheckCircle2 size={24} className="text-blue-400" />}
-          iconColor="#3b82f6"
+          iconColor="#B7EE7A"
           title="Payment refunded"
           subtitle="This payment was refunded to the original payer."
           accent={accent}

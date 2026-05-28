@@ -528,7 +528,7 @@ export default function MerchantDetailPage() {
         {[
           { label: "Balance", value: fmtAmount(merchant.balance, merchant.currency), color: "text-white" },
           { label: "Total Volume", value: fmtAmount(merchant.totalVolume, merchant.currency), color: "text-emerald-400" },
-          { label: "Platform Fee", value: fmtFee(merchant.feeRateBps), color: "text-[#F5A623]" },
+          { label: "Platform Fee", value: fmtFee(merchant.feeRateBps), color: "text-[#B7EE7A]" },
           { label: "Created", value: fmtDate(merchant.createdAt).split(",")[0], color: "text-white/60" },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
@@ -564,7 +564,7 @@ export default function MerchantDetailPage() {
             key={id}
             onClick={() => setTab(id)}
             className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === id ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+              tab === id ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
           >
             <Icon size={14} />
@@ -591,7 +591,7 @@ export default function MerchantDetailPage() {
                 <span className="text-sm text-white/40 flex-shrink-0">Owner</span>
                 <button
                   onClick={() => router.push(`/users/${merchant.userId}`)}
-                  className="flex items-center gap-1.5 text-xs text-[#F5A623] hover:underline font-mono"
+                  className="flex items-center gap-1.5 text-xs text-[#B7EE7A] hover:underline font-mono"
                 >
                   <User size={11} />
                   {merchant.userId.slice(0, 8)}…
@@ -676,11 +676,11 @@ export default function MerchantDetailPage() {
                 <div className="flex items-center justify-between bg-white/4 rounded-xl px-4 py-3">
                   <div>
                     <p className="text-xs text-white/35 mb-0.5">Current rate</p>
-                    <p className="text-lg font-semibold text-[#F5A623]">{fmtFee(merchant.feeRateBps)}</p>
+                    <p className="text-lg font-semibold text-[#B7EE7A]">{fmtFee(merchant.feeRateBps)}</p>
                   </div>
                   <button
                     onClick={() => { setModal("fee_rate"); setFeeInput((merchant.feeRateBps / 100).toFixed(2)); }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F5A623]/15 border border-[#F5A623]/25 text-[#F5A623] text-xs font-semibold hover:bg-[#F5A623]/25 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 text-[#B7EE7A] text-xs font-semibold hover:bg-[#B7EE7A]/25 transition-all"
                   >
                     <Percent size={12} /> Edit
                   </button>
@@ -715,7 +715,7 @@ export default function MerchantDetailPage() {
                 <Field label="City" value={kyb.city} />
                 {kyb.website && (
                   <Field label="Website" value={
-                    <a href={kyb.website} target="_blank" rel="noopener noreferrer" className="text-[#F5A623] hover:underline flex items-center gap-1">
+                    <a href={kyb.website} target="_blank" rel="noopener noreferrer" className="text-[#B7EE7A] hover:underline flex items-center gap-1">
                       {kyb.website} <ExternalLink size={11} />
                     </a>
                   } />
@@ -757,7 +757,7 @@ export default function MerchantDetailPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="ml-3 flex items-center gap-1 text-[#F5A623] hover:text-[#F5A623]/80 text-xs transition-colors flex-shrink-0"
+                            className="ml-3 flex items-center gap-1 text-[#B7EE7A] hover:text-[#B7EE7A]/80 text-xs transition-colors flex-shrink-0"
                           >
                             View <ExternalLink size={11} />
                           </a>
@@ -1283,7 +1283,7 @@ export default function MerchantDetailPage() {
             {modal === "fee_rate" && (
               <>
                 <p className="text-sm text-white/50 mb-4">
-                  Current rate: <span className="text-[#F5A623] font-semibold">{fmtFee(merchant.feeRateBps)}</span>
+                  Current rate: <span className="text-[#B7EE7A] font-semibold">{fmtFee(merchant.feeRateBps)}</span>
                 </p>
                 <div className="mb-5">
                   <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">New Rate (%)</label>
@@ -1307,7 +1307,7 @@ export default function MerchantDetailPage() {
                 <button
                   onClick={handleFeeRateUpdate}
                   disabled={actionLoading || !feeInput}
-                  className="w-full py-3 rounded-xl bg-[#F5A623]/20 border border-[#F5A623]/30 text-[#F5A623] font-semibold hover:bg-[#F5A623]/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl bg-[#B7EE7A]/20 border border-[#B7EE7A]/30 text-[#B7EE7A] font-semibold hover:bg-[#B7EE7A]/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 >
                   {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Percent size={16} />}
                   Update Fee Rate

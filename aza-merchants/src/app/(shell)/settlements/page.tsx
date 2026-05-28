@@ -20,7 +20,7 @@ function fmtDateTime(s: string | null) {
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING: "bg-amber-400/10 text-amber-400",
-  SETTLED: "bg-[#10b981]/10 text-[#10b981]",
+  SETTLED: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
 };
 
 function DetailModal({ id, onClose }: { id: string; onClose: () => void }) {
@@ -50,7 +50,7 @@ function DetailModal({ id, onClose }: { id: string; onClose: () => void }) {
 
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : !detail ? (
           <div className="flex items-center justify-center h-48">
@@ -70,7 +70,7 @@ function DetailModal({ id, onClose }: { id: string; onClose: () => void }) {
               </div>
               <div>
                 <p className="text-xs text-white/30 mb-1">Net settled</p>
-                <p className="text-base font-bold text-[#10b981]">{fmt(detail.netAmount)}</p>
+                <p className="text-base font-bold text-[#B7EE7A]">{fmt(detail.netAmount)}</p>
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export default function SettlementsPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">

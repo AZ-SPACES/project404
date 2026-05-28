@@ -78,7 +78,7 @@ function NewKeyModal({
         </div>
         <button
           onClick={copy}
-          className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-3"
+          className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-3"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           {copied ? "Copied to clipboard" : "Copy key"}
@@ -139,7 +139,7 @@ function EditKeyModal({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production Server"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
           <div>
@@ -151,14 +151,14 @@ function EditKeyModal({
               value={ipWhitelist}
               onChange={(e) => setIpWhitelist(e.target.value)}
               placeholder="192.168.1.1, 10.0.0.0/24"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Saving…" : "Save changes"}
@@ -237,7 +237,7 @@ function CreateKeyModal({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production Server Key"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
 
@@ -251,7 +251,7 @@ function CreateKeyModal({
                   onClick={() => setKeyType(t)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     keyType === t
-                      ? "bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]"
+                      ? "bg-[#B7EE7A]/15 border-[#B7EE7A]/40 text-[#B7EE7A]"
                       : "bg-white/4 border-white/10 text-white/50 hover:text-white"
                   }`}
                 >
@@ -271,7 +271,7 @@ function CreateKeyModal({
                       type="checkbox"
                       checked={scopes[scope]}
                       onChange={() => setScopes((prev) => ({ ...prev, [scope]: !prev[scope] }))}
-                      className="w-3.5 h-3.5 accent-[#10b981]"
+                      className="w-3.5 h-3.5 accent-[#B7EE7A]"
                     />
                     <span className="text-xs font-mono text-white/65">{scope}</span>
                   </label>
@@ -289,7 +289,7 @@ function CreateKeyModal({
               value={ipWhitelist}
               onChange={(e) => setIpWhitelist(e.target.value)}
               placeholder="192.168.1.1, 10.0.0.0/24"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
 
@@ -303,7 +303,7 @@ function CreateKeyModal({
                   onClick={() => setExpirationDays(opt.val)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     expirationDays === opt.val
-                      ? "bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]"
+                      ? "bg-[#B7EE7A]/15 border-[#B7EE7A]/40 text-[#B7EE7A]"
                       : "bg-white/4 border-white/10 text-white/50 hover:text-white"
                   }`}
                 >
@@ -317,7 +317,7 @@ function CreateKeyModal({
           <button
             type="submit"
             disabled={creating}
-            className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {creating && <Loader2 size={14} className="animate-spin" />}
             {creating ? "Creating…" : "Create key"}
@@ -494,7 +494,7 @@ function ApiLogsView() {
                 {log.method}
               </span>
               <span className="text-sm font-mono text-white/80 flex-1 truncate">{log.path}</span>
-              <span className={`text-sm font-bold font-mono ${isErr ? "text-red-400" : "text-[#10b981]"}`}>
+              <span className={`text-sm font-bold font-mono ${isErr ? "text-red-400" : "text-[#B7EE7A]"}`}>
                 {log.statusCode}
               </span>
             </div>
@@ -783,7 +783,7 @@ export default function ApiKeysPage() {
                   onEdit={setEditingKey}
                   onRoll={handleRoll}
                   rolling={rolling}
-                  color="text-[#10b981]"
+                  color="text-[#B7EE7A]"
                 />
               </>
             )}

@@ -68,7 +68,7 @@ function DocViewer({ doc }: { doc: KybDocument }) {
             href={doc.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[#F5A623] hover:text-[#F5A623]/80 text-xs transition-colors"
+            className="flex items-center gap-1 text-[#B7EE7A] hover:text-[#B7EE7A]/80 text-xs transition-colors"
           >
             {isPdf ? "Open" : "Full size"} <ExternalLink size={11} />
           </a>
@@ -202,7 +202,7 @@ export default function KybReviewPage() {
           <Icon size={28} className={cfg.color} />
         </div>
         <p className="text-white font-medium">{cfg.msg}</p>
-        <Link href="/kyb-review" className="text-[#F5A623] text-sm hover:underline">
+        <Link href="/kyb-review" className="text-[#B7EE7A] text-sm hover:underline">
           ← Back to KYB queue
         </Link>
       </div>
@@ -286,7 +286,7 @@ export default function KybReviewPage() {
           {kyb.website && (
             <Row label="Website" value={
               <a href={kyb.website} target="_blank" rel="noopener noreferrer"
-                className="text-[#F5A623] hover:underline flex items-center gap-1">
+                className="text-[#B7EE7A] hover:underline flex items-center gap-1">
                 {kyb.website} <ExternalLink size={10} />
               </a>
             } />

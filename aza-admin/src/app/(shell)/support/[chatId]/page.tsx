@@ -273,7 +273,7 @@ function CannedPanel({ responses, onSelect }: { responses: CannedResponse[]; onS
               >
                 <div className="flex items-center justify-between mb-0.5">
                   <p className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">{r.title}</p>
-                  <Zap size={11} className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <Zap size={11} className="text-[#B7EE7A] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </div>
                 <p className="text-[11px] text-white/35 line-clamp-2 leading-relaxed">{r.content}</p>
               </button>
@@ -602,7 +602,7 @@ export default function SupportChatPage() {
                       key={c}
                       onClick={() => handleCategoryChange(c)}
                       className={`w-full text-left px-4 py-2 text-xs transition-colors ${
-                        chat?.category === c ? "text-[#F5A623] bg-[#F5A623]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                        chat?.category === c ? "text-[#B7EE7A] bg-[#B7EE7A]/10" : "text-white/60 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       {c.charAt(0) + c.slice(1).toLowerCase()}
@@ -632,7 +632,7 @@ export default function SupportChatPage() {
                       key={p}
                       onClick={() => handlePriorityChange(p)}
                       className={`w-full text-left px-4 py-2 text-xs transition-colors ${
-                        chat?.priority === p ? "text-[#F5A623] bg-[#F5A623]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                        chat?.priority === p ? "text-[#B7EE7A] bg-[#B7EE7A]/10" : "text-white/60 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       {p.charAt(0) + p.slice(1).toLowerCase()}
@@ -723,7 +723,7 @@ export default function SupportChatPage() {
                   <div className={`flex flex-col ${isAgent ? "items-end" : "items-start"} max-w-[80%] lg:max-w-[72%]`}>
                     <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       isAgent
-                        ? "bg-[#F5A623] text-black rounded-br-sm font-medium"
+                        ? "bg-[#B7EE7A] text-black rounded-br-sm font-medium"
                         : "bg-[#1e1e1e] text-white/85 border border-white/6 rounded-bl-sm"
                     }`}>
                       {msg.isDeleted
@@ -770,7 +770,7 @@ export default function SupportChatPage() {
               onClick={() => setInputMode("reply")}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 inputMode === "reply"
-                  ? "bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/25"
+                  ? "bg-[#B7EE7A]/15 text-[#B7EE7A] border border-[#B7EE7A]/25"
                   : "text-white/40 hover:text-white/70"
               }`}
             >
@@ -823,7 +823,7 @@ export default function SupportChatPage() {
                   ? "bg-white/5 text-white/20"
                   : inputMode === "note"
                   ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-                  : "bg-[#F5A623] text-black hover:scale-105 active:scale-95 shadow-lg shadow-[#F5A623]/15"
+                  : "bg-[#B7EE7A] text-black hover:scale-105 active:scale-95 shadow-lg shadow-[#B7EE7A]/15"
               }`}
             >
               <Send size={16} />

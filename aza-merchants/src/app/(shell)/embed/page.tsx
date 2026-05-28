@@ -37,7 +37,7 @@ function CodeBlock({ code, language = "html" }: { code: string; language?: strin
         onClick={copy}
         className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
       >
-        {copied ? <Check size={13} className="text-[#10b981]" /> : <Copy size={13} />}
+        {copied ? <Check size={13} className="text-[#B7EE7A]" /> : <Copy size={13} />}
       </button>
     </div>
   );
@@ -54,7 +54,7 @@ export default function EmbedPage() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [buttonText, setButtonText] = useState("Pay now");
-  const [buttonColor, setButtonColor] = useState("#10b981");
+  const [buttonColor, setButtonColor] = useState("#B7EE7A");
   const [buttonSize, setButtonSize] = useState<"sm" | "md" | "lg">("md");
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function EmbedPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <Loader2 className="animate-spin text-[#10b981]" size={22} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
       </div>
     );
   }
@@ -163,7 +163,7 @@ export default function EmbedPage() {
                 <button
                   key={id}
                   onClick={() => setEmbedType(id)}
-                  className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors text-left ${embedType === id ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
+                  className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors text-left ${embedType === id ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
                 >
                   {label}
                 </button>
@@ -182,7 +182,7 @@ export default function EmbedPage() {
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="0.00"
               />
             </div>
@@ -191,7 +191,7 @@ export default function EmbedPage() {
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="Order #1234, Event ticket…"
               />
             </div>
@@ -206,7 +206,7 @@ export default function EmbedPage() {
                 <input
                   value={buttonText}
                   onChange={(e) => setButtonText(e.target.value)}
-                  className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                  className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                   placeholder="Pay now"
                   maxLength={30}
                 />
@@ -224,7 +224,7 @@ export default function EmbedPage() {
                     type="text"
                     value={buttonColor}
                     onChange={(e) => setButtonColor(e.target.value)}
-                    className="w-28 bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                    className="w-28 bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                   />
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function EmbedPage() {
                 href={payUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 mt-2 text-xs text-[#10b981] hover:underline"
+                className="inline-flex items-center gap-1.5 mt-2 text-xs text-[#B7EE7A] hover:underline"
               >
                 <ExternalLink size={11} />
                 Open in browser
