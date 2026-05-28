@@ -204,15 +204,28 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/2fa/recovery/count")
+    public ResponseEntity<ApiResponse<Long>> getRecoveryCodeCount(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(authService.getRecoveryCodeCount(user)));
+    }
+
+    @PostMapping("/2fa/recovery/sms/request")
+    public ResponseEntity<ApiResponse<String>> requestRecoveryRegenSms(
+            @AuthenticationPrincipal User user) {
+        authService.requestRecoveryCodeRegenSms(user);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your phone"));
+    }
+
     /**
-     * Regenerates all recovery codes for the account.
-     * Old codes are invalidated immediately. Requires a valid TOTP code.
+     * Regenerates all recovery codes. Accepts TOTP or SMS verification depending on what the user has enabled.
      */
     @PostMapping("/2fa/recovery/regenerate")
     public ResponseEntity<ApiResponse<RecoveryCodesResponse>> regenerateRecoveryCodes(
             @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "TOTP") String method,
             @Valid @RequestBody TotpToggleRequest request) {
-        RecoveryCodesResponse codes = authService.regenerateRecoveryCodes(user, request.getCode());
+        RecoveryCodesResponse codes = authService.regenerateRecoveryCodes(user, request.getCode(), method);
         return ResponseEntity.ok(ApiResponse.success(codes));
     }
 

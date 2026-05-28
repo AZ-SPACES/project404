@@ -487,17 +487,37 @@ public class AuthService {
         return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
+    public long getRecoveryCodeCount(User user) {
+        return recoveryCodeRepository.countByUserIdAndUsedFalse(user.getId());
+    }
+
+    public void requestRecoveryCodeRegenSms(User user) {
+        if (user.getPhoneNumber() == null) throw new AppException("No phone number registered");
+        otpService.sendOtp(user.getPhoneNumber(), "recovery_regen");
+    }
+
     @Transactional
-    public RecoveryCodesResponse regenerateRecoveryCodes(User user, String totpCode) {
+    public RecoveryCodesResponse regenerateRecoveryCodes(User user, String code, String method) {
         if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             throw new AppException("Two-factor authentication is not enabled");
         }
-        if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), totpCode)) {
-            throw new AppException("Invalid authenticator code");
+        if ("SMS".equals(method)) {
+            if (!Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())) {
+                throw new AppException("SMS verification is not enabled");
+            }
+            otpService.verifyOtp(user.getPhoneNumber(), code, "recovery_regen");
+        } else {
+            // Default: TOTP
+            if (user.getTwoFactorSecret() == null) {
+                throw new AppException("Authenticator app is not set up. Use SMS verification instead.");
+            }
+            if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), code)) {
+                throw new AppException("Invalid authenticator code");
+            }
         }
         recoveryCodeRepository.deleteAllByUserId(user.getId());
         List<String> plainCodes = generateAndSaveCodes(user.getId());
-        log.info("Recovery codes regenerated for user {}", user.getId());
+        log.info("Recovery codes regenerated for user {} via {}", user.getId(), method);
         return new RecoveryCodesResponse(plainCodes, plainCodes.size());
     }
 
