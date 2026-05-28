@@ -10,7 +10,9 @@ import {
   Alert,
   Clipboard,
 } from "react-native";
-import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
 import { formatBytes, StorageDetails } from "../../../components/chat/chatTypes";

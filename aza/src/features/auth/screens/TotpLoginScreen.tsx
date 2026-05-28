@@ -15,7 +15,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 import { RootStackParamList } from '../../../navigation/types';

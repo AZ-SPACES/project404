@@ -22,11 +22,9 @@ import {
 } from "react-native";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-import {
-  Feather,
-  MaterialCommunityIcons,
-  AntDesign,
-} from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import {
   useAppTheme,
   ThemeColors,

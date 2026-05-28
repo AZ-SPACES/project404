@@ -8,7 +8,7 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
-import { AntDesign } from "@expo/vector-icons";
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import Button from "../../../components/ui/Button";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";

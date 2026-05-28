@@ -79,7 +79,12 @@
       "expo-camera",
       "expo-document-picker",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-vector-icons/feather",
+      "@react-native-vector-icons/ionicons",
+      "@react-native-vector-icons/ant-design",
+      "@react-native-vector-icons/material-icons",
+      "@react-native-vector-icons/material-design-icons"
     ]
   }
 }

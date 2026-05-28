@@ -7,7 +7,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, Typography, Spacing,} from '../../../theme';
 import { useAuth } from '../../../providers/AuthProvider';
 import { deleteAccount } from '../../../services/api';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DeleteAccount'>;
 

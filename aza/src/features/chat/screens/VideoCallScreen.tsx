@@ -8,7 +8,9 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
-import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';

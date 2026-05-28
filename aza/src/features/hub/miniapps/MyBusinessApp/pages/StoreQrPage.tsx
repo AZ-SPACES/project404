@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Alert, Clipboard, Modal, Image, Share, Linking } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import InternalHeader from '../components/InternalHeader';
