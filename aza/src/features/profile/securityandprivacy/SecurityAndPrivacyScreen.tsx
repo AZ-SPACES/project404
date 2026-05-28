@@ -1,4 +1,4 @@
-import React, { ComponentProps, useState, useRef, useEffect, useCallback } from 'react';
+import React, { ComponentProps, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -11,7 +11,6 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { unsyncContacts } from '../../../services/api';
 
 const { height } = Dimensions.get('window');
 
@@ -77,17 +76,8 @@ export function SecurityAndPrivacyScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
   const profile = useProfile();
-  const { syncContacts, setSyncContacts: setSyncContactsInProvider } = profile;
-
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
-
-  const handleSyncContactsChange = useCallback((v: boolean) => {
-    setSyncContactsInProvider(v);
-    if (v === false) {
-       unsyncContacts().catch(() => {});
-    }
-  }, [setSyncContactsInProvider]);
 
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -239,18 +229,8 @@ export function SecurityAndPrivacyScreen() {
             onPress={() => navigation.navigate("BillForwardingIntro")}
           />
 
-          
-          <SettingRow 
-            iconType="Feather" 
-            iconName="users" 
-            title="Sync your phone contacts" 
-            subtitle="Send and request from your contacts who have an Aza account"
-            showSwitch
-            switchValue={syncContacts}
-            onSwitchChange={handleSyncContactsChange}
-          />
-          
-          <SettingRow 
+
+          <SettingRow
             iconType="Ionicons" 
             iconName="id-card-outline" 
             title="Biometric data" 
