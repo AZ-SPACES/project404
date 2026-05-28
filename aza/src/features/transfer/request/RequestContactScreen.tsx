@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
 import { useContactStore } from '../../../store/contactStore';
 import { Contact } from '../../contacts/types';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type ReceiveScreenProps = NativeStackScreenProps<RootStackParamList, 'Receive'>;
 
@@ -127,14 +128,7 @@ export default function RequestContactScreen({ navigation }: ReceiveScreenProps)
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Go back"
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <Text style={styles.title}>Who are you requesting from?</Text>

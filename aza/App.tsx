@@ -53,7 +53,7 @@ import * as SecureStore from "expo-secure-store";
 
 
 const linking = {
-  prefixes: ["aza://", "https://aza.me"],
+  prefixes: ["aza://", "https://aza.systems"],
   config: {
     screens: {
       App: {

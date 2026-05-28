@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { ThemeColors } from '../../../../../theme';
 import { createStyles } from '../styles';
+import { BackButton } from '../../../../../components/ui/BackButton';
 
 export default function InternalHeader({
   title,
@@ -17,9 +18,7 @@ export default function InternalHeader({
 }) {
   return (
     <View style={styles.internalHeader}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-        <Feather name="arrow-left" size={22} color={Colors.textPrimary} />
-      </TouchableOpacity>
+      <BackButton onPress={onBack} />
       <Text style={[styles.internalHeaderTitle, { color: Colors.textPrimary }]}>{title}</Text>
       <View style={styles.backBtn} />
     </View>

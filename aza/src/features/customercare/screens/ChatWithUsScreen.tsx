@@ -18,11 +18,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Spacing, Radius } from "../../../theme";
 import { StatusBar } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Feather from "@expo/vector-icons/Feather";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSupportChat } from "../../../hooks/useSupportChat";
 import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ChatWithUs">;
 
@@ -124,16 +125,7 @@ export default function ChatWithUsScreen() {
       >
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
             
             <TouchableOpacity
               style={styles.callButton}

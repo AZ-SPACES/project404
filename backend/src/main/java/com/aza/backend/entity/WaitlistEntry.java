@@ -34,4 +34,10 @@ public class WaitlistEntry {
     @Column(name = "confirmation_sent")
     @Builder.Default
     private boolean confirmationSent = false;
+
+    @Column(name = "invite_code", unique = true)
+    private String inviteCode;
+
+    @Column(name = "invited_at")
+    private LocalDateTime invitedAt;
 }

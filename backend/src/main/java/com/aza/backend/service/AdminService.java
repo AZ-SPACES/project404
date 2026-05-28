@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Service
@@ -155,7 +156,7 @@ public class AdminService {
         long completedTransactions = transactionRepository.countByStatus(Transaction.TransactionStatus.COMPLETED);
         BigDecimal totalVolume = transactionRepository.sumCompletedVolume();
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = LocalDate.now(ZoneId.of("Africa/Accra")).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         long transactionsToday = transactionRepository.countByInitiatedAtBetween(startOfDay, endOfDay);
         BigDecimal volumeToday = transactionRepository.sumVolumeByInitiatedAtBetween(startOfDay, endOfDay);

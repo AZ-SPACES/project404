@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Submitted</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+        .header { padding: 32px; text-align: center; background-color: #111827; }
+        .logo { width: 48px; height: 48px; }
+        .content { padding: 32px; }
+        .footer { padding: 24px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #f3f4f6; }
+        h1 { font-size: 24px; font-weight: 700; margin-top: 0; color: #111827; }
+        p { margin-bottom: 16px; font-size: 16px; }
+        .badge { display: inline-block; background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-bottom: 16px; }
+        .steps { background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #e5e7eb; }
+        .step { display: flex; gap: 12px; margin-bottom: 12px; font-size: 15px; color: #374151; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #111827; margin-top: 7px; flex-shrink: 0; }
+        .note { font-size: 14px; color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="cid:paperplane" alt="AZA" class="logo">
+        </div>
+        <div class="content">
+            <span class="badge">Under Review</span>
+            <h1>Documents Received</h1>
+            <p>Hi <span th:text="${name}">User</span>, we've received your verification documents submitted at <strong th:text="${submittedAt}">May 27, 2026</strong>.</p>
+            <p>Our compliance team will review your information and you'll hear from us within 1–3 business days.</p>
+
+            <div class="steps">
+                <div class="step"><div class="dot"></div> Identity document reviewed against your details</div>
+                <div class="step"><div class="dot"></div> Selfie matched to your ID</div>
+                <div class="step"><div class="dot"></div> PEP and sanctions screening completed</div>
+                <div class="step"><div class="dot"></div> Decision communicated via email and in-app notification</div>
+            </div>
+
+            <p class="note">If you have questions about the review process, contact us at <a href="mailto:support@aza.systems">support@aza.systems</a>.</p>
+        </div>
+        <div class="footer">&copy; 2026 AZA. All rights reserved.</div>
+    </div>
+</body>
+</html>

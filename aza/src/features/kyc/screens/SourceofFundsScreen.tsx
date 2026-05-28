@@ -14,7 +14,7 @@ import {
   StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";
@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useKYC, FundsSource } from '../../../providers/KYCProvider';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
 type SourceofFundRouteProp = RouteProp<RootStackParamList, "SourceofFund">;
@@ -147,18 +148,7 @@ export default function SourceofFundsScreen() {
                   outputRange: ["transparent", Colors.border] }) },
             ]}
           >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} size={28} />
           <Animated.View
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >

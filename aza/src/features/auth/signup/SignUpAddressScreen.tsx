@@ -17,13 +17,14 @@ import {
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpAddress">;
 
@@ -122,16 +123,7 @@ export default function SignUpAddressScreen() {
               },
             ]}
           >
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
             <Animated.View
               style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
             >

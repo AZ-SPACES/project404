@@ -14,7 +14,10 @@ import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.repository.CheckoutSessionRepository;
 import com.aza.backend.exception.AppException;
 import org.springframework.http.HttpStatus;
+import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
+import com.aza.backend.util.SmsService;
+import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -46,6 +49,9 @@ public class TransferService {
     private final RateLimitService rateLimitService;
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final SmsService smsService;
+    private final MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -59,7 +65,7 @@ public class TransferService {
 
     public WalletResponse getBalance(UUID userId) {
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new AppException("Wallet not found"));
 
         return WalletResponse.builder()
                 .balance(wallet.getBalance())
@@ -128,7 +134,7 @@ public class TransferService {
         if (existing.isPresent()) {
             Transaction t = existing.get();
             if(!t.getSenderId().equals(sender.getId())) {
-                throw new RuntimeException("Invalid idempotency key");
+                throw new AppException("Invalid idempotency key");
             }
             User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
             return buildTransferResponse(t, sender, recipient, sender.getId());
@@ -136,25 +142,25 @@ public class TransferService {
         rateLimitService.enforceRateLimit("transfer:" + sender.getId(), 20, Duration.ofHours(1));
 
         if(sender.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Your account is not active");
+            throw new AppException("Your account is not active");
         }
 
         if(sender.getKycStatus() !=User.KycStatus.VERIFIED) {
-            throw new RuntimeException("KYC verification required before transfer");
+            throw new AppException("KYC verification required before transfer");
         }
 
         if(request.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new RuntimeException("Amount exceeds max single transfer limit of GHS " + maxSingleAmount);
+            throw new AppException("Amount exceeds max single transfer limit of GHS " + maxSingleAmount);
         }
 
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                sender.getId(), startOfDay, endOfDay, LocalDateTime.now()
+                sender.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ)
         );
         if (todayTotal.add(request.getAmount()).compareTo(maxDailyAmount) > 0) {
             BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
-            throw new RuntimeException("Transfer would exceed your daily limit. Remaining: GHS " + remaining);
+            throw new AppException("Transfer would exceed your daily limit. Remaining: GHS " + remaining);
         }
 
         // 2. Find recipient — try email/phone first, then handle
@@ -169,28 +175,32 @@ public class TransferService {
         UUID recipientId;
         if (recipient != null) {
             if (recipient.getId().equals(sender.getId())) {
-                throw new RuntimeException("Cannot transfer to yourself");
+                throw new AppException("Cannot transfer to yourself");
             }
             if (recipient.getStatus() != User.AccountStatus.ACTIVE) {
-                throw new RuntimeException("Recipient account is not available");
+                throw new AppException("Recipient account is not available");
             }
             recipientId = recipient.getId();
         } else {
             // Try to find a merchant with this handle
             Merchant merchant = merchantRepository.findByBusinessHandle(usernameCandidate)
-                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+                    .orElseThrow(() -> new AppException("Recipient not found"));
             if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
-                throw new RuntimeException("Recipient account is not available");
+                throw new AppException("Recipient account is not available");
             }
             if (merchant.getUserId().equals(sender.getId())) {
-                throw new RuntimeException("Cannot transfer to yourself");
+                throw new AppException("Cannot transfer to yourself");
             }
             recipientId = merchant.getId();
         }
 
         // 3. Check sender balance
         Wallet senderWallet = walletRepository.findByUserId(sender.getId())
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new AppException("Wallet not found"));
+
+        if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
 
         validateBalance(senderWallet, request.getAmount());
 
@@ -215,41 +225,45 @@ public class TransferService {
     @Transactional
     public TransferResponse confirmTransfer(User sender, UUID transactionId, String passcode) {
         if (sender.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Your account is not active");
+            throw new AppException("Your account is not active");
         }
         //Verify passcode
         userService.verifyPasscode(sender, passcode);
 
         // Find the pending transaction
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new AppException("Transaction not found"));
 
         if (!transaction.getSenderId().equals(sender.getId())) {
-            throw new RuntimeException("Not authorized to confirm this transaction");
+            throw new AppException("Not authorized to confirm this transaction");
         }
         if (transaction.getStatus() == Transaction.TransactionStatus.COMPLETED) {
             User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
-            throw new RuntimeException("Transaction cannot be confirmed - status: " + transaction.getStatus().name());
+            throw new AppException("Transaction cannot be confirmed - status: " + transaction.getStatus().name());
         }
 
         if (transaction.getExpiresAt() != null && LocalDateTime.now().isAfter(transaction.getExpiresAt())) {
             transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
             transactionRepository.save(transaction);
-            throw new RuntimeException("Transaction has expired. Please initiate a new transfer.");
+            throw new AppException("Transaction has expired. Please initiate a new transfer.");
         }
 
         //Lock sender wallet and execute transfer atomically
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
-                .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
+                .orElseThrow(() -> new AppException("Sender wallet not found"));
+
+        if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
 
         // Re-check balance (could have changed since initiation)
         if (senderWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
             transaction.setStatus(Transaction.TransactionStatus.FAILED);
             transactionRepository.save(transaction);
-            throw new RuntimeException("Insufficient balance");
+            throw new AppException("Insufficient balance");
         }
 
         Merchant merchant = merchantRepository.findByIdForUpdate(transaction.getRecipientId()).orElse(null);
@@ -306,10 +320,30 @@ public class TransferService {
                     transaction.getAmount().toString(),
                     transaction.getId().toString());
 
+            String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
+            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                    merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef, senderWallet.getBalance());
+            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                smsService.sendTransferSentSms(sender.getPhoneNumber(), merchant.getBusinessName(),
+                        transaction.getAmount(), merchantTxnRef);
+            }
+
+            boolean emailPaymentReceived = merchantNotificationPrefRepository
+                    .findByMerchantId(merchant.getId())
+                    .map(p -> p.isEmailPaymentReceived())
+                    .orElse(true);
+            if (emailPaymentReceived) {
+                userRepository.findById(merchant.getUserId()).ifPresent(merchantOwner ->
+                    emailService.sendMerchantPaymentReceivedEmail(
+                            merchantOwner.getEmail(), merchantOwner.getFirstName(),
+                            merchant.getBusinessName(), transaction.getAmount(),
+                            sender.getFirstName() + " " + sender.getLastName(), merchantTxnRef));
+            }
+
             return buildTransferResponse(transaction, sender, null, sender.getId());
         } else {
             Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                    .orElseThrow(() -> new RuntimeException("Recipient wallet not found"));
+                    .orElseThrow(() -> new AppException("Recipient wallet not found"));
 
             // Debit sender, credit recipient
             senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
@@ -320,7 +354,7 @@ public class TransferService {
 
             // Update a cached balance in a user table for redundancy/quick lookup
             User recipient = userRepository.findById(transaction.getRecipientId())
-                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+                    .orElseThrow(() -> new AppException("Recipient not found"));
 
             sender.setBalance(senderWallet.getBalance());
             recipient.setBalance(recipientWallet.getBalance());
@@ -347,6 +381,21 @@ public class TransferService {
                     transaction.getAmount().toString(),
                     transaction.getId().toString());
 
+            String txnRef = transaction.getId().toString().substring(28).toUpperCase();
+            String senderFullName = sender.getFirstName() + " " + sender.getLastName();
+            String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
+
+            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                    recipientFullName, transaction.getAmount(), txnRef, senderWallet.getBalance());
+            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
+                        transaction.getAmount(), txnRef);
+            }
+            if (recipient.getPhoneNumber() != null && !recipient.getPhoneNumber().isBlank()) {
+                smsService.sendTransferReceivedSms(recipient.getPhoneNumber(), senderFullName,
+                        transaction.getAmount(), txnRef);
+            }
+
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
     }
@@ -356,13 +405,13 @@ public class TransferService {
     @Transactional
     public TransferResponse cancelTransfer(User sender, UUID transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new AppException("Transaction not found"));
 
         if (!transaction.getSenderId().equals(sender.getId())) {
-            throw new RuntimeException("Not authorized to cancel this transaction");
+            throw new AppException("Not authorized to cancel this transaction");
         }
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
-            throw new RuntimeException("Only pending transactions can be cancelled");
+            throw new AppException("Only pending transactions can be cancelled");
         }
 
         transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
@@ -370,7 +419,7 @@ public class TransferService {
         transactionRepository.save(transaction);
 
         User recipient = userRepository.findById(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
+                .orElseThrow(() -> new AppException("Recipient not found"));
 
         return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
@@ -380,15 +429,15 @@ public class TransferService {
     @Transactional
     public TransferResponse requestMoney(User requester, MoneyRequestDto request) {
         if (requester.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Your account is not active");
+            throw new AppException("Your account is not active");
         }
         if (requester.getKycStatus() != User.KycStatus.VERIFIED) {
-            throw new RuntimeException("KYC verification required before requesting money");
+            throw new AppException("KYC verification required before requesting money");
         }
         rateLimitService.enforceRateLimit("request:" + requester.getId(), 20, Duration.ofHours(1));
 
         if (request.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new RuntimeException("Requested amount exceeds the single transfer limit of GHS " + maxSingleAmount);
+            throw new AppException("Requested amount exceeds the single transfer limit of GHS " + maxSingleAmount);
         }
 
         // Find the user to request from — try email/phone first, then handle
@@ -397,10 +446,10 @@ public class TransferService {
         User fromUser = userRepository
                 .findByEmailOrPhoneNumber(rawFrom, rawFrom)
                 .or(() -> userRepository.findByUsername(usernameCandidate))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if(fromUser.getId().equals(requester.getId())) {
-            throw new RuntimeException("Cannot request money from yourself");
+            throw new AppException("Cannot request money from yourself");
         }
 
         Transaction transaction = Transaction.builder()
@@ -415,25 +464,34 @@ public class TransferService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
+
+        String requesterName = requester.getFirstName() + " " + requester.getLastName();
+        notificationService.sendMoneyReceivedNotification(
+                fromUser.getId(), requesterName,
+                request.getAmount().toString(), transaction.getId().toString());
+        if (fromUser.getPhoneNumber() != null && !fromUser.getPhoneNumber().isBlank()) {
+            smsService.sendMoneyRequestedSms(fromUser.getPhoneNumber(), requesterName, request.getAmount());
+        }
+
         return buildTransferResponse(transaction, fromUser, requester, requester.getId());
     }
 
     @Transactional
     public TransferResponse acceptMoneyRequest(User payer, UUID transactionId, String passcode) {
         if (payer.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("Your account is not active");
+            throw new AppException("Your account is not active");
         }
         if (payer.getKycStatus() != User.KycStatus.VERIFIED) {
-            throw new RuntimeException("KYC verification required before sending money");
+            throw new AppException("KYC verification required before sending money");
         }
 
         userService.verifyPasscode(payer, passcode);
 
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new AppException("Transaction not found"));
 
         if (!transaction.getSenderId().equals(payer.getId())) {
-            throw new RuntimeException("Not authorized — this request is not addressed to you");
+            throw new AppException("Not authorized — this request is not addressed to you");
         }
         if(transaction.getStatus() == Transaction.TransactionStatus.COMPLETED) {
             User requester = userRepository.findById(transaction.getRecipientId()).orElse(null);
@@ -441,26 +499,26 @@ public class TransferService {
         }
 
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
-            throw new RuntimeException("Request is no longer pending");
+            throw new AppException("Request is no longer pending");
         }
 
         if (transaction.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new RuntimeException("Amount exceeds your single transfer limit of GHS " + maxSingleAmount);
+            throw new AppException("Amount exceeds your single transfer limit of GHS " + maxSingleAmount);
         }
 
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
-                payer.getId(), startOfDay, endOfDay, LocalDateTime.now());
+                payer.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
         if (todayTotal.add(transaction.getAmount()).compareTo(maxDailyAmount) > 0) {
-            throw new RuntimeException("Accepting this request would exceed your daily transfer limit of GHS " + maxDailyAmount);
+            throw new AppException("Accepting this request would exceed your daily transfer limit of GHS " + maxDailyAmount);
         }
 
         // Execute transfer
         Wallet payerWallet = walletRepository.findByUserIdForUpdate(payer.getId())
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new AppException("Wallet not found"));
         Wallet requesterWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new AppException("Wallet not found"));
 
         validateBalance(payerWallet, transaction.getAmount());
 
@@ -472,7 +530,7 @@ public class TransferService {
 
         // Update cached balance in a user table
         User requester = userRepository.findById(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         payer.setBalance(payerWallet.getBalance());
         requester.setBalance(requesterWallet.getBalance());
@@ -499,13 +557,13 @@ public class TransferService {
     @Transactional
     public TransferResponse declineMoneyRequest(User payer, UUID transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new AppException("Transaction not found"));
 
         if (!transaction.getSenderId().equals(payer.getId())) {
-            throw new RuntimeException("Not authorized");
+            throw new AppException("Not authorized");
         }
         if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
-            throw new RuntimeException("Request is no longer pending");
+            throw new AppException("Request is no longer pending");
         }
 
         transaction.setStatus(Transaction.TransactionStatus.DECLINED);
@@ -513,7 +571,7 @@ public class TransferService {
         transactionRepository.save(transaction);
 
         User requester = userRepository.findById(transaction.getRecipientId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         return buildTransferResponse(transaction, payer, requester, payer.getId());
     }
@@ -531,14 +589,14 @@ public class TransferService {
                 transactions = transactionRepository.findAllByUserIdAndType(
                         userId, Transaction.TransactionType.valueOf(type.toUpperCase()), pageRequest);
             } catch (IllegalArgumentException e ) {
-                throw new RuntimeException("Invalid transaction type. Accepted values: TRANSFER, REQUEST");
+                throw new AppException("Invalid transaction type. Accepted values: TRANSFER, REQUEST");
             }
         } else if (status != null && !status.isBlank()) {
             try {
                 transactions = transactionRepository.findAllByUserIdAndStatus(
                         userId, Transaction.TransactionStatus.valueOf(status.toUpperCase()), pageRequest);
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid status. Accepted values: DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
+                throw new AppException("Invalid status. Accepted values: DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED");
             }
         } else {
             transactions = transactionRepository.findAllByUserId(userId, pageRequest);
@@ -553,10 +611,10 @@ public class TransferService {
 
     public TransferResponse getTransaction(UUID transactionId, UUID userId) {
         Transaction t = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new AppException("Transaction not found"));
 
         if (!t.getSenderId().equals(userId) && !t.getRecipientId().equals(userId)) {
-            throw new RuntimeException("Not authorized to view this transaction");
+            throw new AppException("Not authorized to view this transaction");
         }
 
         User sender = userRepository.findById(t.getSenderId()).orElse(null);

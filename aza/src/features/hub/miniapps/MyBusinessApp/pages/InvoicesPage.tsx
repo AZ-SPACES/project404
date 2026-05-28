@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity,
   Modal, Alert, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing, Radius } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';

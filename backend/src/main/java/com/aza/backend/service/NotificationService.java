@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -305,7 +306,7 @@ public class NotificationService {
     public void markAsRead(UUID userId, UUID notificationId) {
         notificationRepository.findById(notificationId).ifPresent(notification -> {
             if (!notification.getUserId().equals(userId)) {
-                throw new RuntimeException("Not authorized");
+                throw new AppException("Not authorized");
             }
             notification.setIsRead(true);
             notificationRepository.save(notification);

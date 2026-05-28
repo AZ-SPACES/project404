@@ -16,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
-import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/v1/chats")

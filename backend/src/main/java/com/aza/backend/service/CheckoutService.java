@@ -7,6 +7,8 @@ import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.repository.*;
+import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
+import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class CheckoutService {
     private final UserService userService;
     private final RateLimitService rateLimitService;
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
+    private final MerchantNotificationPreferenceRepository notificationPrefRepository;
 
     @Value("${aza.pay.base-url:https://pay.aza.systems}")
     private String payBaseUrl;
@@ -174,6 +178,10 @@ public class CheckoutService {
         Wallet customerWallet = walletRepository.findByUserIdForUpdate(customerId)
                 .orElseThrow(() -> new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND));
 
+        if (Boolean.TRUE.equals(customerWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
+        }
+
         if (customerWallet.getBalance().compareTo(session.getAmount()) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
         }
@@ -223,6 +231,18 @@ public class CheckoutService {
 
         // Dispatch webhooks asynchronously
         scheduleWebhookDelivery(session, merchant);
+
+        boolean sendInvoiceEmail = notificationPrefRepository.findByMerchantId(merchant.getId())
+                .map(com.aza.backend.entity.MerchantNotificationPreference::isEmailInvoicePaid)
+                .orElse(true);
+        if (sendInvoiceEmail) {
+            String senderName = customer.getFirstName() + " " + customer.getLastName();
+            String ref = "CHK-" + sessionId.toString().substring(28).toUpperCase();
+            userRepository.findById(merchant.getUserId()).ifPresent(owner ->
+                    emailService.sendMerchantPaymentReceivedEmail(
+                            owner.getEmail(), owner.getFirstName(),
+                            merchant.getBusinessName(), session.getAmount(), senderName, ref));
+        }
 
         return toResponse(session, merchant);
     }
@@ -334,7 +354,7 @@ public class CheckoutService {
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
             log.error("Failed to serialize webhook payload for session {}", session.getId(), e);
-            throw new RuntimeException("Failed to build webhook payload", e);
+            throw new AppException("Failed to build webhook payload", e);
         }
     }
 
@@ -435,17 +455,18 @@ public class CheckoutService {
         Merchant merchant = merchantRepository.findByIdForUpdate(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
-        if (merchant.getBalance().compareTo(session.getNetAmount()) < 0) {
+        BigDecimal refundAmount = session.getAmount();
+        if (merchant.getBalance().compareTo(refundAmount) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS",
                     "Merchant balance is insufficient to process this refund", HttpStatus.BAD_REQUEST);
         }
 
-        // Debit merchant balance
-        merchant.setBalance(merchant.getBalance().subtract(session.getNetAmount()));
+        // Debit merchant full original amount (merchant absorbs the platform fee on refunds)
+        merchant.setBalance(merchant.getBalance().subtract(refundAmount));
         merchantRepository.save(merchant);
 
-        // Credit customer wallet
-        customerWallet.setBalance(customerWallet.getBalance().add(session.getNetAmount()));
+        // Credit customer the full original amount they paid
+        customerWallet.setBalance(customerWallet.getBalance().add(refundAmount));
         walletRepository.save(customerWallet);
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
@@ -455,7 +476,7 @@ public class CheckoutService {
         Transaction tx = Transaction.builder()
                 .senderId(merchant.getUserId())
                 .recipientId(session.getCustomerId())
-                .amount(session.getNetAmount())
+                .amount(refundAmount)
                 .note(note)
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)
@@ -469,7 +490,7 @@ public class CheckoutService {
         session.setRefundedAt(LocalDateTime.now());
         sessionRepository.save(session);
 
-        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, session.getNetAmount());
+        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, refundAmount);
         return toResponse(session, merchant);
     }
 }

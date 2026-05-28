@@ -10,13 +10,14 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useContactStore } from '../../../store/contactStore';
 import { PublicProfile } from '../types';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type AddFriendsScreenProps = NativeStackScreenProps<RootStackParamList, 'AddFriends'>;
 
@@ -127,14 +128,7 @@ export default function AddFriendsScreen({ navigation }: AddFriendsScreenProps) 
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Go back"
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Add Friends</Text>
         <View style={styles.headerSpacer} />
       </View>

@@ -1,8 +1,9 @@
 import React, { memo, useMemo, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import type { MenuAnchor } from './chatTypes';
+import { BackButton } from '../ui/BackButton';
 
 // ----------------------------------------------------------------------------
 // Props
@@ -62,9 +63,7 @@ export const ChatHeader = memo(function ChatHeader({
 
   return (
     <View style={styles.header}>
-      <TouchableOpacity style={styles.iconButton} onPress={onBack} activeOpacity={0.8}>
-        <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-      </TouchableOpacity>
+      <BackButton onPress={onBack} style={styles.iconButton} />
 
       <TouchableOpacity
         style={styles.profileInfo}

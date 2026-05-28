@@ -20,12 +20,13 @@ import {
   Image,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useTransferStore } from "../../../store/transferStore";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -196,13 +197,7 @@ export default function SendPinScreen({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={handleBack}
-              style={styles.backButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="chevron-left" size={24} color={Colors.textPrimary} style={styles.backicon} />
-            </TouchableOpacity>
+            <BackButton onPress={handleBack} />
           </View>
 
           <View style={styles.content}>

@@ -3,8 +3,9 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   StatusBar, Dimensions, Alert, Platform,
 } from 'react-native';
+import Button from '../../../components/ui/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { CameraView, useCameraPermissions, FlashMode, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -44,9 +45,17 @@ export default function CameraScreen() {
         <Text style={styles.permissionBody}>
           We need access to your camera to take photos.
         </Text>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission} activeOpacity={0.8}>
-          <Text style={styles.permissionBtnText}>Grant Permission</Text>
-        </TouchableOpacity>
+        <Button
+          title="Grant Permission"
+          onPress={requestPermission}
+          backgroundColor="#174717"
+          textColor="#fff"
+          paddingVertical={12}
+          paddingHorizontal={24}
+          borderRadius={8}
+          width="auto"
+          style={{ marginTop: 12 }}
+        />
         <TouchableOpacity style={styles.permissionBackBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
           <Text style={styles.permissionBackText}>Go Back</Text>
         </TouchableOpacity>
@@ -209,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   camera: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 
   // Top bar
@@ -354,13 +363,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-  },
-  permissionBtn: {
-    backgroundColor: '#174717',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    marginTop: 12,
   },
   permissionBtnText: {
     color: '#fff',

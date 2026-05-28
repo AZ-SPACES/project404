@@ -20,12 +20,13 @@ import {
   ThemeColors,
 } from "../../../theme";
 import { StatusBar } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Feather from "@expo/vector-icons/Feather";
-import { AntDesign } from "@expo/vector-icons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 const { height } = Dimensions.get("window");
 
@@ -108,16 +109,7 @@ export default function TalkToUsScreen() {
         backgroundColor="transparent"
       />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialIcons
-            name="chevron-left"
-            size={28}
-            color={Colors.textPrimary}
-          />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={28} />
         <Text style={styles.title}>Talk to us</Text>
       </View>
 

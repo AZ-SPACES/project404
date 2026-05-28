@@ -13,13 +13,14 @@ import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useToast } from '../../../providers/ToastProvider';
 import { useKYC } from '../../../providers/KYCProvider';
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -183,18 +184,7 @@ export default function ScanIdBackScreen() {
       <View style={[styles.overlay, { paddingTop: insets.top }]}>
         {!isModalVisible && (
           <View style={styles.headerContainer}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              accessibilityLabel="Go back"
-              accessibilityRole="button"
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={34}
-                color={Colors.background}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={34} color={Colors.background} />
             <View style={styles.textContainer}>
               <KYCProgressBar
                 currentStep={5}

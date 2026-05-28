@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { ChatMessageBubble } from '../../../components/chat/ChatMessageBubble';
 import { Message, formatTime } from '../../../components/chat/chatTypes';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const MOCK_STARRED: Message[] = [
   {
@@ -41,9 +42,7 @@ export default function StarredMessagesScreen() {
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Starred Messages</Text>
         <View style={{ width: 24 }} />
       </View>

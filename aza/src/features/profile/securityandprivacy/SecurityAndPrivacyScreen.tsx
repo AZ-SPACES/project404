@@ -1,14 +1,18 @@
-import React, { ComponentProps, useState, useRef, useEffect, useCallback } from 'react';
+import React, { ComponentProps, useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-import { unsyncContacts } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { height } = Dimensions.get('window');
 
@@ -74,17 +78,8 @@ export function SecurityAndPrivacyScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { isBiometricsEnabled, toggleBiometrics } = useAuth();
   const profile = useProfile();
-  const { syncContacts, setSyncContacts: setSyncContactsInProvider } = profile;
-
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
-
-  const handleSyncContactsChange = useCallback((v: boolean) => {
-    setSyncContactsInProvider(v);
-    if (v === false) {
-       unsyncContacts().catch(() => {});
-    }
-  }, [setSyncContactsInProvider]);
 
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -140,12 +135,7 @@ export function SecurityAndPrivacyScreen() {
               outputRange: ["transparent", Colors.border] }) }
         ]}
       >
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
           <Text style={[Typography.h3, styles.headerTitle]}>Security and privacy</Text>
         </Animated.View>
@@ -236,18 +226,8 @@ export function SecurityAndPrivacyScreen() {
             onPress={() => navigation.navigate("BillForwardingIntro")}
           />
 
-          
-          <SettingRow 
-            iconType="Feather" 
-            iconName="users" 
-            title="Sync your phone contacts" 
-            subtitle="Send and request from your contacts who have an Aza account"
-            showSwitch
-            switchValue={syncContacts}
-            onSwitchChange={handleSyncContactsChange}
-          />
-          
-          <SettingRow 
+
+          <SettingRow
             iconType="Ionicons" 
             iconName="id-card-outline" 
             title="Biometric data" 
@@ -301,12 +281,7 @@ export function SecurityAndPrivacyScreen() {
         >
           <View style={styles.bottomSheetHeader}>
             <Text style={[Typography.h2, styles.bottomSheetTitle]}>App security</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setBottomSheetVisible(false)} />
           </View>
           
           <TouchableOpacity style={styles.bottomSheetItem} activeOpacity={0.7} onPress={() => { toggleBiometrics(!isBiometricsEnabled); setBottomSheetVisible(false); }}>

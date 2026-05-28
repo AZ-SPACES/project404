@@ -604,6 +604,14 @@ export const getMerchantReportSummary = () =>
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>
   api.post(`/api/v1/miniapps/${appId}/report`, { reason, details });
 
+// --- Dispute / Reversal Endpoints ---
+
+export const createDispute = (payload: { transactionId: string; category: string; description: string }) =>
+  api.post("/api/v1/disputes", payload);
+
+export const getUserDisputes = (page = 0, size = 20) =>
+  api.get(`/api/v1/disputes?page=${page}&size=${size}`);
+
 // --- E2EE Chat Endpoints ---
 
 export type SendMessagePayload = {

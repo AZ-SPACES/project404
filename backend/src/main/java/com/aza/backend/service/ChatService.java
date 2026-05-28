@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -69,11 +70,11 @@ public class ChatService {
     @Transactional
     public ChatResponse getOrCreateChat(User user, UUID otherUserId) {
         if (user.getId().equals(otherUserId)) {
-            throw new RuntimeException("Cannot create a chat with yourself");
+            throw new AppException("Cannot create a chat with yourself");
         }
 
         userRepository.findById(otherUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         // Find an existing chat or create a new one
         Chat chat = chatRepository.findByParticipants(user.getId(), otherUserId)
@@ -92,7 +93,7 @@ public class ChatService {
 
     public ChatResponse getChat(User user, UUID chatId) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
         return toChatResponse(chat, user.getId());
@@ -103,7 +104,7 @@ public class ChatService {
     @Transactional
     public MessageResponse sendMessage(User sender, SendMessageRequest request) {
         Chat chat = chatRepository.findById(request.getChatId())
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         return sendMessage(sender, chat, request);
     }
@@ -117,10 +118,10 @@ public class ChatService {
         // Enforce block in both directions (only for non-support chats)
         if (!chat.isSupport()) {
             if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(recipientId, sender.getId())) {
-                throw new RuntimeException("You cannot send messages to this user");
+                throw new AppException("You cannot send messages to this user");
             }
             if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(sender.getId(), recipientId)) {
-                throw new RuntimeException("You cannot send messages to this user");
+                throw new AppException("You cannot send messages to this user");
             }
         }
 
@@ -129,7 +130,7 @@ public class ChatService {
         try {
             messageType = ChatMessage.MessageType.valueOf(request.getType().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid message type: " + request.getType());
+            throw new AppException("Invalid message type: " + request.getType());
         }
 
         // Compute expiry for disappearing messages
@@ -182,7 +183,7 @@ public class ChatService {
 
     public Page<MessageResponse> getMessages(User user, UUID chatId, int page, int size) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -196,7 +197,7 @@ public class ChatService {
     @Transactional
     public void markAsRead(User user, UUID chatId) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -221,7 +222,7 @@ public class ChatService {
     @Transactional
     public void markAsDelivered(User user, UUID chatId) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -243,7 +244,7 @@ public class ChatService {
 
     public void sendTypingIndicator(User user, TypingRequest request) {
         Chat chat = chatRepository.findById(request.getChatId())
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -262,10 +263,10 @@ public class ChatService {
     @Transactional
     public void deleteMessage(User user, UUID messageId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
+                .orElseThrow(() -> new AppException("Message not found"));
 
         if (!message.getSenderId().equals(user.getId())) {
-            throw new RuntimeException("Not authorized to delete this message");
+            throw new AppException("Not authorized to delete this message");
         }
 
         message.setIsDeleted(true);
@@ -281,7 +282,7 @@ public class ChatService {
     @Transactional
     public void muteChat(User user, UUID chatId, boolean mute) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -296,7 +297,7 @@ public class ChatService {
     @Transactional
     public void archiveChat(User user, UUID chatId, boolean archive) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
 
         assertParticipant(chat, user.getId());
 
@@ -313,7 +314,7 @@ public class ChatService {
     @Transactional
     public ChatResponse getOrCreateSupportChat(User user, String supportHandle) {
         User supportUser = userRepository.findByUsername(supportHandle)
-                .orElseThrow(() -> new RuntimeException("Support account not found"));
+                .orElseThrow(() -> new AppException("Support account not found"));
 
         Chat chat = chatRepository.findByParticipants(user.getId(), supportUser.getId())
                 .orElseGet(() -> {
@@ -336,9 +337,9 @@ public class ChatService {
     @Transactional
     public MessageResponse sendSupportMessage(User user, UUID chatId, String content) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
         if (!chat.isSupport()) {
-            throw new RuntimeException("This is not a support chat");
+            throw new AppException("This is not a support chat");
         }
 
         SendMessageRequest request = new SendMessageRequest();
@@ -360,7 +361,7 @@ public class ChatService {
     @Transactional
     public void setDisappearingMessages(User user, UUID chatId, Integer ttlSeconds) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
         assertParticipant(chat, user.getId());
 
         chat.setDisappearingMessagesTtl(ttlSeconds == 0 ? null : ttlSeconds);
@@ -412,21 +413,21 @@ public class ChatService {
     @Transactional
     public MessageResponse markMediaViewed(User viewer, UUID messageId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
+                .orElseThrow(() -> new AppException("Message not found"));
 
         if (!Boolean.TRUE.equals(message.getViewOnce())) {
-            throw new RuntimeException("This message is not a view-once message");
+            throw new AppException("This message is not a view-once message");
         }
         if (message.getSenderId().equals(viewer.getId())) {
-            throw new RuntimeException("Sender cannot consume their own view-once message");
+            throw new AppException("Sender cannot consume their own view-once message");
         }
         if (message.getViewedAt() != null) {
-            throw new RuntimeException("This media has already been viewed");
+            throw new AppException("This media has already been viewed");
         }
 
         // Verify the viewer is a participant of the chat
         Chat chat = chatRepository.findById(message.getChatId())
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
         assertParticipant(chat, viewer.getId());
 
         message.setViewedAt(LocalDateTime.now());
@@ -452,21 +453,21 @@ public class ChatService {
     @Transactional
     public MessageResponse editMessage(User editor, UUID messageId, String newCiphertext) {
         ChatMessage message = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
+                .orElseThrow(() -> new AppException("Message not found"));
 
         if (!message.getSenderId().equals(editor.getId())) {
-            throw new RuntimeException("You can only edit your own messages");
+            throw new AppException("You can only edit your own messages");
         }
         if (Boolean.TRUE.equals(message.getIsDeleted())) {
-            throw new RuntimeException("Cannot edit a deleted message");
+            throw new AppException("Cannot edit a deleted message");
         }
         if (message.getType() != ChatMessage.MessageType.TEXT) {
-            throw new RuntimeException("Only text messages can be edited");
+            throw new AppException("Only text messages can be edited");
         }
         if (message.getSentAt() != null &&
                 message.getSentAt().isBefore(
                         LocalDateTime.now().minusMinutes(MESSAGE_EDIT_WINDOW_MINUTES))) {
-            throw new RuntimeException(
+            throw new AppException(
                     "Messages can only be edited within " + MESSAGE_EDIT_WINDOW_MINUTES + " minutes of sending");
         }
 
@@ -477,7 +478,7 @@ public class ChatService {
         MessageResponse response = toMessageResponse(message, editor.getId());
 
         Chat chat = chatRepository.findById(message.getChatId())
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE_EDITED, response);
@@ -490,7 +491,7 @@ public class ChatService {
 
     public ChatMediaResponse uploadChatMedia(User user, MultipartFile file, UUID chatId, String type) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new RuntimeException("Chat not found"));
+                .orElseThrow(() -> new AppException("Chat not found"));
         assertParticipant(chat, user.getId());
 
         rateLimitService.enforceRateLimit("chat_media:" + user.getId(), 20, Duration.ofHours(1));
@@ -507,7 +508,7 @@ public class ChatService {
     private void assertParticipant(Chat chat, UUID userId) {
         if (!chat.getParticipantOneId().equals(userId) &&
                 !chat.getParticipantTwoId().equals(userId)) {
-            throw new RuntimeException("Not authorized to access this chat");
+            throw new AppException("Not authorized to access this chat");
         }
     }
 
@@ -551,14 +552,14 @@ public class ChatService {
 
     private void validateMediaFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("File is required");
+            throw new AppException("File is required");
         }
         if (file.getSize() > MAX_MEDIA_SIZE) {
-            throw new RuntimeException("File exceeds the 25 MB limit");
+            throw new AppException("File exceeds the 25 MB limit");
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_MEDIA_TYPES.contains(contentType)) {
-            throw new RuntimeException("Unsupported file type. Allowed: JPEG, PNG, GIF, MP4, MP3, AAC, audio/mp4, PDF");
+            throw new AppException("Unsupported file type. Allowed: JPEG, PNG, GIF, MP4, MP3, AAC, audio/mp4, PDF");
         }
         // Skip magic-byte check for types where it is unreliable
         if (MAGIC_BYTES_FALLBACK.contains(contentType)) return;
@@ -566,10 +567,10 @@ public class ChatService {
         try {
             byte[] bytes = file.getBytes();
             if (!isValidMagicBytes(bytes, contentType)) {
-                throw new RuntimeException("File content does not match its declared type");
+                throw new AppException("File content does not match its declared type");
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read uploaded file");
+            throw new AppException("Failed to read uploaded file");
         }
     }
 

@@ -8,13 +8,14 @@ import {
   StatusBar 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from '@react-navigation/native';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import Button from '../../../components/ui/Button';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableNotification'>;
 
@@ -102,9 +103,7 @@ export default function EnableNotificationsScreen({ onComplete }: EnableNotifica
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <AntDesign name="close" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <CloseButton onPress={handleClose} size={24} />
       </View>
 
       <View style={styles.content}>
