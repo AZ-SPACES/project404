@@ -94,13 +94,13 @@ export default function NotificationsPage() {
                 onClick={() => setAudience(a.value)}
                 className={`p-4 rounded-xl border text-left transition-all ${
                   audience === a.value
-                    ? "bg-[#F5A623]/10 border-[#F5A623]/40 text-white"
+                    ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-white"
                     : "bg-[#1a1a1a] border-white/5 text-white/60 hover:border-white/15 hover:text-white"
                 }`}
               >
                 <div
                   className={`mb-2 ${
-                    audience === a.value ? "text-[#F5A623]" : "text-white/40"
+                    audience === a.value ? "text-[#B7EE7A]" : "text-white/40"
                   }`}
                 >
                   {a.icon}
@@ -123,7 +123,7 @@ export default function NotificationsPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value.slice(0, 100))}
             placeholder="Notification title"
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm transition-colors"
             required
           />
         </div>
@@ -139,7 +139,7 @@ export default function NotificationsPage() {
             onChange={(e) => setBody(e.target.value.slice(0, 500))}
             placeholder="Notification message body"
             rows={4}
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm resize-none transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm resize-none transition-colors"
             required
           />
         </div>
@@ -154,7 +154,7 @@ export default function NotificationsPage() {
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
             placeholder="https://example.com/image.png"
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm transition-colors"
           />
         </div>
 
@@ -166,8 +166,8 @@ export default function NotificationsPage() {
               {/* Phone-like notification card */}
               <div className="flex-1 max-w-sm mx-auto bg-white/5 rounded-2xl p-4 border border-white/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-md bg-[#F5A623]/20 flex items-center justify-center flex-shrink-0">
-                    <Bell size={12} className="text-[#F5A623]" />
+                  <div className="w-6 h-6 rounded-md bg-[#B7EE7A]/20 flex items-center justify-center flex-shrink-0">
+                    <Bell size={12} className="text-[#B7EE7A]" />
                   </div>
                   <span className="text-xs text-white/40 font-medium">aza · now</span>
                 </div>
@@ -199,7 +199,7 @@ export default function NotificationsPage() {
         <button
           type="submit"
           disabled={sending || !title.trim() || !body.trim()}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#F5A623] hover:bg-[#F5A623]/90 text-black font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {sending ? (
             <>

@@ -28,7 +28,7 @@ export default function StoreQrPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-[#10b981]" size={24} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={24} />
       </div>
     );
   }
@@ -83,8 +83,8 @@ export default function StoreQrPage() {
               className="w-12 h-12 rounded-xl object-cover border border-white/10"
             />
           ) : (
-            <div className="w-12 h-12 rounded-xl bg-[#10b981]/15 border border-[#10b981]/25 flex items-center justify-center flex-shrink-0">
-              <span className="text-base font-bold text-[#10b981]">
+            <div className="w-12 h-12 rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 flex items-center justify-center flex-shrink-0">
+              <span className="text-base font-bold text-[#B7EE7A]">
                 {merchant.businessName.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
               </span>
             </div>
@@ -114,7 +114,7 @@ export default function StoreQrPage() {
             {/* Aza logo overlay */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="bg-white rounded-md p-1 shadow-sm">
-                <div className="w-7 h-7 rounded bg-[#10b981] flex items-center justify-center">
+                <div className="w-7 h-7 rounded bg-[#174717] flex items-center justify-center">
                   <span className="text-white font-bold text-xs">A</span>
                 </div>
               </div>
@@ -136,7 +136,7 @@ export default function StoreQrPage() {
             onClick={copyLink}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/6 border border-white/10 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
-            {copied ? <Check size={15} className="text-[#10b981]" /> : <Copy size={15} />}
+            {copied ? <Check size={15} className="text-[#B7EE7A]" /> : <Copy size={15} />}
             {copied ? "Copied!" : "Copy payment link"}
           </button>
           <button
@@ -150,7 +150,7 @@ export default function StoreQrPage() {
             href={printQrUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors"
           >
             <ExternalLink size={15} />
             Save / Print Poster

@@ -142,7 +142,7 @@ export default function CompliancePage() {
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              filter === tab.key ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
           >
             {tab.label}
