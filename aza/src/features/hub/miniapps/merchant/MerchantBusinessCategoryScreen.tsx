@@ -16,6 +16,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import Button from "../../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
+import { BackButton } from '../../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantBusinessCategory">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantBusinessCategory">;
@@ -85,14 +86,7 @@ export default function MerchantBusinessCategoryScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} size={28} />
           <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
             <Text style={styles.headerTitle} numberOfLines={1}>
               What type of business?

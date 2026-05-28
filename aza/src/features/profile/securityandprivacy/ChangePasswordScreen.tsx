@@ -13,6 +13,7 @@ import { isValidPassword, getPasswordRules } from '../../../utils/validation';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
 import { changePassword as changePasswordApi } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export function ChangePasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -55,12 +56,7 @@ export function ChangePasswordScreen() {
       
       {!forcePasswordReset && (
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
         </View>
       )}
 

@@ -27,6 +27,7 @@ import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { biometricEnroll, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiometrics'>;
 
@@ -196,9 +197,7 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={{ flex: 1 }}>
               <View style={styles.header}>
-                <TouchableOpacity style={styles.closeButton} onPress={() => { setStep('intro'); setPin(''); setPinError(false); }}>
-                  <AntDesign name="arrow-left" size={22} color={Colors.textPrimary} />
-                </TouchableOpacity>
+                <CloseButton onPress={() => { setStep('intro'); setPin(''); setPinError(false); }} />
               </View>
 
               <View style={styles.pinContent}>
@@ -268,9 +267,7 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={handleFinish}>
-          <AntDesign name="close" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <CloseButton onPress={handleFinish} size={24} />
       </View>
 
       <View style={styles.content}>

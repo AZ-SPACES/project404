@@ -14,7 +14,6 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
-
 import { ChatHeader } from '../../../components/chat/ChatHeader';
 import { ChatMessageBubble, ChatTypingIndicator } from '../../../components/chat/ChatMessageBubble';
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';

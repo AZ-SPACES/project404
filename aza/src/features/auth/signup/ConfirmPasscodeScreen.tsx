@@ -24,6 +24,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSignupActions } from "../../../providers/SignUpProvider";
 import { api } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -211,16 +212,7 @@ export default function ConfirmPasscodeScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
             <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <MaterialIcons
-                  name="chevron-left"
-                  size={28}
-                  color={Colors.textPrimary}
-                />
-              </TouchableOpacity>
+              <BackButton onPress={() => navigation.goBack()} size={28} />
             </View>
 
             <View style={styles.content}>

@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
-    // Using system fonts as per Uncodixify
   },
 });
 

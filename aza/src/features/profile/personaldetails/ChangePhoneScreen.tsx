@@ -20,6 +20,7 @@ import Button from "../../../components/ui/Button";
 import { isValidPhone } from "../../../utils/validation";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -86,12 +87,7 @@ export function ChangePhoneScreen() {
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => step === "verify" ? setStep("input") : navigation.goBack()}
-        >
-          <Feather name={step === "verify" ? "arrow-left" : "chevron-left"} size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => step === "verify" ? setStep("input") : navigation.goBack()} />
         <Animated.View
           style={[styles.headerTitleContainer, { 
             opacity: scrollY.interpolate({

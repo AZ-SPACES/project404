@@ -7,6 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
 import { useWallet } from '../../../hooks/useWallet';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 type SendSuccessScreenProps = NativeStackScreenProps<RootStackParamList, 'SendSuccess'>;
 
@@ -33,13 +34,7 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
     <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top', 'bottom']}>
       {/* Header with Close Button */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleDone}
-          style={[styles.closeButton, { backgroundColor: isDark ? Colors.white10 : Colors.black10 }]}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="x" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <CloseButton onPress={handleDone} />
       </View>
 
       {/* Content */}

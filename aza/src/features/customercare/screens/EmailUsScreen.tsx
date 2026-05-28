@@ -22,6 +22,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { sendSupportMessage, getOrCreateSupportChat } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "EmailUs">;
 
@@ -94,12 +95,7 @@ export default function EmailUsScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
             <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-              </TouchableOpacity>
+              <BackButton onPress={() => navigation.goBack()} size={28} />
               <Text style={styles.title}>Email Us</Text>
               <Text style={styles.subtitle}>
                 Tell us as much as you can about the problem. We'll aim to respond within 24 hours.

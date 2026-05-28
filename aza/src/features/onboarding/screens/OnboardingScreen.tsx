@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors } from "../../../theme";
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -329,12 +330,7 @@ export default function OnboardingScreen() {
           ]}
         >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setBottomSheetVisible(false)} />
           </View>
           <Text style={styles.bottomSheetTitle}>Get Started</Text>
           <Text style={styles.bottomSheetDescription}>
