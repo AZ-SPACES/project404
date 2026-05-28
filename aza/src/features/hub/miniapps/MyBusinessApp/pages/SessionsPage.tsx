@@ -1,34 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Image, Share, Linking, Clipboard, Alert, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
 import { getMerchantSessions, refundMerchantSession } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import StatusBadge from '../components/StatusBadge';
 
 export default function SessionsPage({ navigate, goBack, Colors, styles }: NavProps) {
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+  const { data: sessions = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantSessions(),
+    queryFn: async () => { const r = await getMerchantSessions(0, 30); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
+
   // Detailed modal states
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
   const [refunding, setRefunding] = useState(false);
 
-  const load = () => {
-    setLoading(true);
-    getMerchantSessions(0, 30)
-      .then((r: any) => setSessions(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const handleCopy = (session: any) => {
     const link = session.checkoutUrl || `https://pay.aza.systems/c/${session.id}`;
@@ -62,7 +57,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
             setRefunding(true);
             try {
               await refundMerchantSession(session.id);
-              load();
+              queryClient.invalidateQueries({ queryKey: queryKeys.merchantSessions() });
               setSelectedSession(null);
             } catch {
               Alert.alert('Error', 'Refund failed. Please try again.');

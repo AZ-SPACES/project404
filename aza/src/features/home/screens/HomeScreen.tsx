@@ -57,7 +57,8 @@ export default function HomeScreen() {
   const bannerGrad = homeBannerGradient === 'accent'
     ? [accentPalette.primary, accentPalette.gradientEnd]
     : (BANNER_GRADIENTS.find(g => g.id === homeBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
-  const { handle, profileImageUri } = useProfile();
+  const { handle, firstName, profileImageUri } = useProfile();
+  const displayName = firstName || handle;
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
@@ -162,7 +163,7 @@ export default function HomeScreen() {
   const headerRow = (
     <View style={styles.header}>
       <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
-        {`${greeting}${handle ? `, ${handle}` : ""}`}
+        {`${greeting}${displayName ? `, ${displayName}` : ""}`}
       </Text>
       <View style={styles.headerRight}>
         <TouchableOpacity style={styles.profilePicContainer} onPress={() => navigation.navigate("Profile")} accessibilityLabel="Open profile">
@@ -209,13 +210,13 @@ export default function HomeScreen() {
             {headerRow}
             <View style={styles.minimalBalanceRow}>
               <View>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • {wallet?.currency}</Text>
                 <View style={styles.balanceRow}>
                   {loading && !wallet ? (
                     <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
                     <Text style={[Typography.h2, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
-                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                      {isBalanceVisible ? (wallet?.formattedBalance || formatCurrency(0, wallet?.currency)) : "••••"}
                     </Text>
                   )}
                   <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -251,13 +252,13 @@ export default function HomeScreen() {
               )}
 
               <View style={styles.balanceSection}>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • {wallet?.currency}</Text>
                 <View style={styles.balanceRow}>
                   {loading && !wallet ? (
                     <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
                     <Text style={[Typography.h1, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
-                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                      {isBalanceVisible ? (wallet?.formattedBalance || formatCurrency(0, wallet?.currency)) : "••••"}
                     </Text>
                   )}
                   <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility" onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -285,7 +286,7 @@ export default function HomeScreen() {
           <Text style={[Typography.h3, styles.transactionsTitle]}>
             Transactions
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || "GH₵ 0.00" })}>
+          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })}>
             <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
           </TouchableOpacity>
         </View>
