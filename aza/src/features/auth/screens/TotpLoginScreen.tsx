@@ -457,6 +457,12 @@ const TotpLoginScreen: React.FC = () => {
             >
               <Text style={styles.recoveryText}>Use a recovery code</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.recoveryButton, { marginTop: 2 }]}
+              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
+            >
+              <Text style={styles.recoveryText}>Contact a recovery person</Text>
+            </TouchableOpacity>
           </View>
           
           {renderMethodSelector()}

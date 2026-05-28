@@ -58,6 +58,7 @@ import {
   DisableTotpScreen,
   RecoveryCodesScreen,
   ManageRecoveryCodesScreen,
+  AccountRecoveryContactsScreen,
   SmsSetupScreen,
   DisableSmsScreen,
   PasskeySetupScreen,
@@ -80,6 +81,7 @@ import {
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
   AppLoginApprovalScreen,
+  GenerateRecoveryCodeScreen,
 } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
@@ -172,6 +174,8 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
+      <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
+      <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

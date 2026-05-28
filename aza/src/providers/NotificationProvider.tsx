@@ -79,6 +79,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               ipAddress: data.ipAddress ?? 'Unknown',
             },
           });
+        } else if (data?.type === 'RECOVERY_CONTACT_INVITE') {
+          navigate('App', { screen: 'AccountRecoveryContacts' });
+        } else if (data?.type === 'RECOVERY_CONTACT_REQUEST') {
+          navigate('App', {
+            screen: 'GenerateRecoveryCode',
+            params: {
+              requestId: data.requestId,
+              requesterName: data.requesterName ?? 'Someone',
+              requesterHandle: data.requesterHandle,
+            },
+          });
         } else if (data?.type === 'KYB_APPROVED' || data?.type === 'KYB_REJECTED' || data?.type === 'KYB_MORE_INFO_REQUIRED') {
           navigate('App', { screen: 'Hub' });
         } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {

@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNetwork } from '../../providers/NetworkProvider';
 import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
-import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming, useSharedValue, runOnJS, withSpring } from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 
 export function OfflineBanner() {
@@ -13,19 +14,59 @@ export function OfflineBanner() {
   
   // Consider offline if explicitly disconnected or internet is unreachable
   const isOffline = isConnected === false || isInternetReachable === false;
+  const [isDismissed, setIsDismissed] = useState(false);
   
   const visible = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
 
   useEffect(() => {
-    visible.value = withTiming(isOffline ? 1 : 0, { duration: 300 });
-  }, [isOffline, visible]);
+    if (isOffline && !isDismissed) {
+      visible.value = withTiming(1, { duration: 300 });
+      translateX.value = withTiming(0, { duration: 300 });
+      translateY.value = withTiming(0, { duration: 300 });
+    } else {
+      visible.value = withTiming(0, { duration: 300 });
+    }
+  }, [isOffline, isDismissed, visible, translateX, translateY]);
+
+  // Reset dismissed state when network comes back online
+  useEffect(() => {
+    if (!isOffline) {
+      setIsDismissed(false);
+    }
+  }, [isOffline]);
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+  };
+
+  const panGesture = Gesture.Pan()
+    .onChange((event) => {
+      // Allow dragging in any direction
+      translateX.value = event.translationX;
+      translateY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      // Dismiss if dragged up
+      if (event.translationY < -20 || event.velocityY < -500) {
+        runOnJS(handleDismiss)();
+      } else {
+        // Otherwise, spring back to original position
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+      }
+    });
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
       opacity: visible.value,
       transform: [
         {
-          translateY: (1 - visible.value) * -8,
+          translateX: translateX.value,
+        },
+        {
+          translateY: translateY.value + (1 - visible.value) * -8,
         }
       ]
     };
@@ -38,24 +79,26 @@ export function OfflineBanner() {
 
   return (
     <View style={[styles.container, { top: insets.top + Spacing.xs }]} pointerEvents="box-none">
-      <Animated.View
-        style={[
-          styles.banner,
-          animatedStyle,
-          { 
-            backgroundColor: bannerBg,
-            borderColor: isDark ? colors.border : colors.textPrimary,
-          }
-        ]}
-        accessibilityLiveRegion="assertive"
-        accessibilityLabel="Offline"
-        pointerEvents={isOffline ? 'auto' : 'none'}
-      >
-        <MaterialIcons name="cloud-off" size={14} color={iconColor} />
-        <Text style={[styles.text, { color: textColor }]}>
-          Offline
-        </Text>
-      </Animated.View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.banner,
+            animatedStyle,
+            { 
+              backgroundColor: bannerBg,
+              borderColor: isDark ? colors.border : colors.textPrimary,
+            }
+          ]}
+          accessibilityLiveRegion="assertive"
+          accessibilityLabel="Offline"
+          pointerEvents={isOffline && !isDismissed ? 'auto' : 'none'}
+        >
+          <MaterialIcons name="cloud-off" size={14} color={iconColor} />
+          <Text style={[styles.text, { color: textColor }]}>
+            Offline
+          </Text>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

@@ -17,3 +17,4 @@ export { FindMeByScreen } from './FindMeByScreen';
 export { BillForwardingIntroScreen } from './BillForwardingIntroScreen';
 export { BillForwardingDetailsScreen } from './BillForwardingDetailsScreen';
 export { DeleteAccountScreen } from './DeleteAccountScreen';
+export { default as AccountRecoveryContactsScreen } from './AccountRecoveryContactsScreen';
