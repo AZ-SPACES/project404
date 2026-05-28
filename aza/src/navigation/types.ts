@@ -7,6 +7,8 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
   TotpLogin: { preAuthToken: string; methods?: string[]; defaultMethod?: string };
+  RecoveryCodeLogin: { preAuthToken: string };
+  AppLoginApproval: { requestId: string; deviceName: string; ipAddress: string };
   ChangePhoneNumber: undefined;
   AccountDeactivated: undefined;
   NewDeviceLogin: undefined;
@@ -74,6 +76,11 @@ export type RootStackParamList = {
   TotpSetup: undefined;
   DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
+  SmsSetup: undefined;
+  DisableSms: undefined;
+  PasskeySetup: undefined;
+  DisablePasskey: undefined;
+  AzaAppSetup: undefined;
   FindMeBy: undefined;
   BillForwardingIntro: undefined;
   BillForwardingDetails: undefined;

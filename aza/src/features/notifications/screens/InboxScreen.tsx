@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -13,52 +13,33 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from "../../../theme";
-import { useNotifications } from "../../../providers/NotificationProvider";
 import { useToast } from "../../../providers/ToastProvider";
-
-import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, deleteAllNotifications } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { useNotificationsQuery, NotificationItem } from '../hooks/useNotificationQueries';
+import { useMarkAllReadMutation, useMarkReadMutation, useDeleteAllNotificationsMutation } from '../hooks/useNotificationMutations';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
-interface NotificationItem {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  data: string;
-  imageUrl?: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-type ScreenState = 
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'error'; error: string }
-  | { status: 'success'; data: NotificationItem[] };
-
-const NotificationCard = ({ 
-  item, 
-  styles, 
+const NotificationCard = ({
+  item,
+  styles,
   Colors,
   onPress
-}: { 
-  item: NotificationItem, 
-  styles: ReturnType<typeof createStyles>, 
+}: {
+  item: NotificationItem,
+  styles: ReturnType<typeof createStyles>,
   Colors: ThemeColors,
   onPress: (id: string) => void
 }) => {
   const date = new Date(item.createdAt);
-  const formattedDate = !isNaN(date.getTime()) 
+  const formattedDate = !isNaN(date.getTime())
     ? date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     : item.createdAt;
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.notificationCard, !item.isRead && styles.notificationCardUnread]}
       onPress={() => onPress(item.id)}
       disabled={item.isRead}
@@ -75,9 +56,9 @@ const NotificationCard = ({
         </Text>
       </View>
       {item.imageUrl && (
-        <Image 
-          source={{ uri: item.imageUrl }} 
-          style={styles.notificationImage} 
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.notificationImage}
           resizeMode="cover"
         />
       )}
@@ -93,87 +74,33 @@ export default function InboxScreen() {
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
-  const { fetchUnreadCount } = useNotifications();
   const { showToast } = useToast();
-  
-  const [screenState, setScreenState] = useState<ScreenState>({ status: 'idle' });
 
-  const fetchNotifications = useCallback(async (isRefresh = false) => {
-    if (!isRefresh) {
-      setScreenState({ status: 'loading' });
-    }
-    try {
-      const response = await getNotifications();
-      if (response.data?.data?.content) {
-        const mapped = response.data.data.content.map((n: any) => ({
-          ...n,
-          isRead: n.isRead !== undefined ? n.isRead : n.read
-        }));
-        setScreenState({ status: 'success', data: mapped });
-      } else {
-        setScreenState({ status: 'success', data: [] });
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-      setScreenState({ status: 'error', error: 'Failed to load notifications' });
-    }
-  }, []);
+  const { data: notifications = [], isLoading, isError, refetch } = useNotificationsQuery();
+  const { mutate: markAllRead } = useMarkAllReadMutation();
+  const { mutate: deleteAll } = useDeleteAllNotificationsMutation();
+  const { mutate: markRead } = useMarkReadMutation();
 
-  useEffect(() => {
-    void fetchNotifications();
-
-    const subscription = Notifications.addNotificationReceivedListener(() => {
-      void fetchNotifications(true);
+  const handleClearNotifications = () => {
+    markAllRead(undefined, {
+      onSuccess: () => showToast('All notifications marked as read', 'success'),
+      onError: () => showToast('Failed to mark notifications as read', 'error'),
     });
-
-    return () => subscription.remove();
-  }, [fetchNotifications]);
-
-  const handleClearNotifications = async () => {
-    if (screenState.status !== 'success') return;
-    try {
-      await markAllNotificationsAsRead();
-      setScreenState({
-        status: 'success',
-        data: screenState.data.map(n => ({ ...n, isRead: true }))
-      });
-      void fetchUnreadCount();
-      showToast('All notifications marked as read', 'success');
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
-      showToast('Failed to mark notifications as read', 'error');
-    }
   };
 
-  const handleDeleteAllNotifications = async () => {
-    if (screenState.status !== 'success') return;
-    try {
-      await deleteAllNotifications();
-      setScreenState({ status: 'success', data: [] });
-      void fetchUnreadCount();
-      showToast('Notifications cleared', 'success');
-    } catch (error) {
-      console.error('Failed to delete all notifications:', error);
-      showToast('Failed to clear notifications', 'error');
-    }
+  const handleDeleteAllNotifications = () => {
+    deleteAll(undefined, {
+      onSuccess: () => showToast('Notifications cleared', 'success'),
+      onError: () => showToast('Failed to clear notifications', 'error'),
+    });
   };
 
-  const handleNotificationPress = async (id: string) => {
-    if (screenState.status !== 'success') return;
-    const notification = screenState.data.find(n => n.id === id);
-    if (!notification) return;
-
-    try {
-      await markNotificationAsRead(id);
-      setScreenState({
-        status: 'success',
-        data: screenState.data.map(n => n.id === id ? { ...n, isRead: true } : n)
-      });
-      void fetchUnreadCount();
-    } catch (error) {
-      console.error('Failed to handle notification action:', error);
-      showToast('Failed to read notification', 'error');
-    }
+  const handleNotificationPress = (id: string) => {
+    const notification = notifications.find(n => n.id === id);
+    if (!notification || notification.isRead) return;
+    markRead(id, {
+      onError: () => showToast('Failed to read notification', 'error'),
+    });
   };
 
   return (
@@ -182,20 +109,20 @@ export default function InboxScreen() {
 
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} />
-        
+
         <View style={styles.headerActions}>
-          {screenState.status === 'success' && screenState.data.length > 0 && (
+          {notifications.length > 0 && (
             <TouchableOpacity
               style={styles.actionButtonOutline}
-              onPress={() => void handleDeleteAllNotifications()}
+              onPress={handleDeleteAllNotifications}
             >
               <Text style={styles.actionButtonOutlineText}>Clear</Text>
             </TouchableOpacity>
           )}
-          {screenState.status === 'success' && screenState.data.some(n => !n.isRead) && (
+          {notifications.some(n => !n.isRead) && (
             <TouchableOpacity
               style={styles.actionButtonPrimary}
-              onPress={() => void handleClearNotifications()}
+              onPress={handleClearNotifications}
             >
               <Text style={styles.actionButtonPrimaryText}>Mark read</Text>
             </TouchableOpacity>
@@ -214,36 +141,36 @@ export default function InboxScreen() {
         <View style={styles.divider} />
       </View>
 
-      {screenState.status === 'loading' && (
+      {isLoading && (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       )}
 
-      {screenState.status === 'error' && (
+      {isError && (
         <View style={styles.centerContainer}>
           <Text style={[Typography.body, { color: Colors.error, marginBottom: Spacing.md }]}>
-            {screenState.error}
+            Failed to load notifications
           </Text>
-          <TouchableOpacity 
-            style={styles.actionButtonPrimary} 
-            onPress={() => void fetchNotifications()}
+          <TouchableOpacity
+            style={styles.actionButtonPrimary}
+            onPress={() => refetch()}
           >
             <Text style={styles.actionButtonPrimaryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {screenState.status === 'success' && (
+      {!isLoading && !isError && (
         <FlatList
-          data={screenState.data}
+          data={notifications}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <NotificationCard 
-              item={item} 
-              styles={styles} 
-              Colors={Colors} 
-              onPress={handleNotificationPress} 
+            <NotificationCard
+              item={item}
+              styles={styles}
+              Colors={Colors}
+              onPress={handleNotificationPress}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -276,7 +203,7 @@ function createStyles(Colors: ThemeColors) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Colors.background 
+      backgroundColor: Colors.background
     },
     header: {
       flexDirection: "row",
@@ -284,7 +211,7 @@ function createStyles(Colors: ThemeColors) {
       alignItems: "center",
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.sm,
-      paddingBottom: Spacing.sm 
+      paddingBottom: Spacing.sm
     },
     backButton: {
       width: 40,
@@ -294,11 +221,11 @@ function createStyles(Colors: ThemeColors) {
       borderColor: Colors.border,
       backgroundColor: Colors.surface,
       justifyContent: "center",
-      alignItems: "center" 
+      alignItems: "center"
     },
     headerActions: {
-      flexDirection: 'row', 
-      gap: 12 
+      flexDirection: 'row',
+      gap: 12
     },
     actionButtonPrimary: {
       backgroundColor: Colors.primary,
@@ -310,7 +237,7 @@ function createStyles(Colors: ThemeColors) {
     actionButtonPrimaryText: {
       ...Typography.body,
       fontWeight: "500",
-      color: Colors.white 
+      color: Colors.white
     },
     actionButtonOutline: {
       backgroundColor: Colors.surface,
@@ -324,25 +251,25 @@ function createStyles(Colors: ThemeColors) {
     actionButtonOutlineText: {
       ...Typography.body,
       fontWeight: "500",
-      color: Colors.textPrimary 
+      color: Colors.textPrimary
     },
     titleSection: {
       paddingHorizontal: Spacing.lg,
       marginTop: Spacing.md,
-      marginBottom: Spacing.lg 
+      marginBottom: Spacing.lg
     },
     sectionHeader: {
       paddingHorizontal: Spacing.lg,
-      marginBottom: Spacing.md 
+      marginBottom: Spacing.md
     },
     sectionTitle: {
       color: Colors.textSecondary,
-      marginBottom: Spacing.xs 
+      marginBottom: Spacing.xs
     },
     divider: {
       height: 1,
       backgroundColor: Colors.border,
-      opacity: 0.5 
+      opacity: 0.5
     },
     centerContainer: {
       flex: 1,
@@ -353,7 +280,7 @@ function createStyles(Colors: ThemeColors) {
     listContent: {
       flexGrow: 1,
       paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.xl 
+      paddingBottom: Spacing.xl
     },
     notificationCard: {
       backgroundColor: Colors.surface,
@@ -372,19 +299,19 @@ function createStyles(Colors: ThemeColors) {
       height: 160,
       borderRadius: Radius.sm,
       marginTop: Spacing.sm,
-      marginBottom: Spacing.sm 
+      marginBottom: Spacing.sm
     },
     notificationHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "flex-start",
-      marginBottom: Spacing.xs 
+      marginBottom: Spacing.xs
     },
     titleContainer: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
-      paddingRight: Spacing.md 
+      paddingRight: Spacing.md
     },
     unreadDot: {
       width: 8,
@@ -392,16 +319,16 @@ function createStyles(Colors: ThemeColors) {
       borderRadius: 4,
       backgroundColor: Colors.primary,
       marginRight: Spacing.sm,
-      marginTop: 2 
+      marginTop: 2
     },
     notificationTitle: {
       color: Colors.textPrimary,
-      flexShrink: 1 
+      flexShrink: 1
     },
     notificationDate: {
       color: Colors.textSecondary,
       textAlign: "right",
-      minWidth: 80 
+      minWidth: 80
     },
     notificationContent: {
       color: Colors.textSecondary,
@@ -410,26 +337,26 @@ function createStyles(Colors: ThemeColors) {
     emptyContainer: {
       paddingTop: 80,
       alignItems: "center",
-      paddingHorizontal: Spacing.xl 
+      paddingHorizontal: Spacing.xl
     },
     iconCircle: {
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: Spacing.lg 
+      marginBottom: Spacing.lg
     },
     icon: {
       width: 160,
-      height: 160 
+      height: 160
     },
     emptyTitle: {
       color: Colors.textPrimary,
       marginBottom: Spacing.sm,
-      textAlign: "center" 
+      textAlign: "center"
     },
     emptyText: {
       color: Colors.textSecondary,
       textAlign: "center",
-      lineHeight: 20 
+      lineHeight: 20
     }
   });
 }

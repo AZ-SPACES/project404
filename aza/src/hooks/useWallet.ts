@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../providers/AuthProvider';
 import { getWalletBalance, getTransactions } from '../services/api';
 import { Transaction } from '../features/home/screens/TransactionsScreen';
 import { mapBackendTransaction, formatCurrency } from '../utils/transactionUtils';
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 export interface WalletData {
   balance: number;
@@ -9,47 +12,51 @@ export interface WalletData {
   formattedBalance: string;
 }
 
+interface WalletQueryResult {
+  wallet: WalletData;
+  recentTransactions: Transaction[];
+}
+
+async function fetchWalletData(): Promise<WalletQueryResult> {
+  const [balanceRes, transactionsRes] = await Promise.all([
+    getWalletBalance(),
+    getTransactions(0, 5),
+  ]);
+
+  const balanceData = balanceRes.data?.data || balanceRes.data;
+  const wallet: WalletData = {
+    balance: balanceData.balance,
+    currency: balanceData.currency,
+    formattedBalance: formatCurrency(balanceData.balance, balanceData.currency),
+  };
+
+  const txContent = transactionsRes.data?.data?.content || transactionsRes.data?.content || [];
+  const recentTransactions: Transaction[] = txContent.map(mapBackendTransaction);
+
+  return { wallet, recentTransactions };
+}
+
 export const useWallet = () => {
-  const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { userToken } = useAuth();
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [balanceRes, transactionsRes] = await Promise.all([
-        getWalletBalance(),
-        getTransactions(0, 5),
-      ]);
+  const { data, isLoading, isFetching, isRefetching, error } = useQuery({
+    queryKey: queryKeys.wallet(),
+    queryFn: fetchWalletData,
+    enabled: !!userToken,
+    staleTime: 30_000,
+  });
 
-      const balanceData = balanceRes.data?.data || balanceRes.data;
-      setWallet({
-        balance: balanceData.balance,
-        currency: balanceData.currency,
-        formattedBalance: formatCurrency(balanceData.balance, balanceData.currency),
-      });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  };
 
-      const txContent = transactionsRes.data?.data?.content || transactionsRes.data?.content || [];
-      setRecentTransactions(txContent.map(mapBackendTransaction));
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch wallet data', err);
-      setError('Failed to load wallet data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const refresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData();
-  }, [fetchData]);
-
-  return { wallet, recentTransactions, loading, refreshing, refresh, error };
+  return {
+    wallet: data?.wallet ?? null,
+    recentTransactions: data?.recentTransactions ?? [],
+    loading: isLoading,
+    refreshing: isRefetching,
+    refresh,
+    error: error ? 'Failed to load wallet data' : null,
+  };
 };

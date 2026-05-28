@@ -87,9 +87,9 @@ export function FindMeByScreen() {
 
   const navigation = useNavigation<NavigationProp>();
   const { 
-    handle, email, phone, 
+    handle, email, phone,
     findMeByHandle, findMeByEmail, findMeByPhone,
-    updateProfile, fetchProfile 
+    updateProfile, fetchProfile: invalidateProfile
   } = useProfile();
 
   const handleWiseTagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
@@ -241,7 +241,7 @@ export function FindMeByScreen() {
               onPress={async () => {
                 try {
                   await removeSelfEverywhereApi();
-                  await fetchProfile();
+                  invalidateProfile();
                   setModalVisible(false);
                   navigation.goBack();
                 } catch (e) {
