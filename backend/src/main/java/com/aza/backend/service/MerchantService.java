@@ -7,6 +7,7 @@ import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.*;
 import com.aza.backend.util.CloudinaryService;
+import com.aza.backend.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -51,6 +52,8 @@ public class MerchantService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final MerchantNotificationPreferenceRepository notificationPrefRepository;
     private final CheckoutSessionRepository checkoutSessionRepository;
     private final MerchantAuditLogRepository auditLogRepository;
     private final DisputeRepository disputeRepository;
@@ -339,6 +342,16 @@ public class MerchantService {
         logMerchantAction(merchant.getId(), "API_KEY_CREATED", resolveActorEmail(userId),
                 "label=" + request.getLabel() + ", env=" + env + ", type=" + type);
 
+        boolean sendEmail = notificationPrefRepository.findByMerchantId(merchant.getId())
+                .map(com.aza.backend.entity.MerchantNotificationPreference::isEmailApiKeyCreated)
+                .orElse(true);
+        if (sendEmail) {
+            final MerchantApiKey.KeyEnvironment finalEnv = env;
+            userRepository.findById(userId).ifPresent(owner ->
+                emailService.sendApiKeyCreatedEmail(owner.getEmail(), owner.getFirstName(),
+                        merchant.getBusinessName(), request.getLabel(), keyPrefix, finalEnv.name()));
+        }
+
         ApiKeyResponse response = toApiKeyResponse(apiKey);
         response.setFullKey(fullKey); // return the unhashed key once
         return response;
@@ -386,6 +399,10 @@ public class MerchantService {
             log.info("API key revoked for merchantId={}", merchant.getId());
             logMerchantAction(merchant.getId(), "API_KEY_REVOKED", resolveActorEmail(userId),
                     "keyId=" + keyId);
+            userRepository.findById(userId).ifPresent(owner ->
+                    emailService.sendApiKeyRevokedEmail(
+                            owner.getEmail(), owner.getFirstName(),
+                            merchant.getBusinessName(), key.getLabel(), key.getKeyPrefix()));
         }
     }
 
@@ -679,6 +696,15 @@ public class MerchantService {
         logMerchantAction(merchant.getId(), "PAYOUT_REQUESTED", owner.getEmail(),
                 "amount=" + request.getAmount());
 
+        boolean sendPayoutEmail = notificationPrefRepository.findByMerchantId(merchant.getId())
+                .map(com.aza.backend.entity.MerchantNotificationPreference::isEmailPayoutCompleted)
+                .orElse(true);
+        if (sendPayoutEmail) {
+            String payoutRef = payout.getId().toString().substring(28).toUpperCase();
+            emailService.sendPayoutCompletedEmail(owner.getEmail(), owner.getFirstName(),
+                    merchant.getBusinessName(), payout.getAmount(), payoutRef);
+        }
+
         // Create settlement record for this payout
         try {
             merchantSettlementService.createSettlementForPayout(merchant.getId(), payout.getId());
@@ -944,6 +970,13 @@ public class MerchantService {
                     rejectionReason != null ? rejectionReason : "Your business verification was not successful. Please contact support.",
                     java.util.Map.of("type", "KYB_REJECTED", "merchantId", merchantId.toString()));
         }
+
+        userRepository.findById(ownerId).ifPresent(owner -> {
+            String moreInfoOrReason = approve ? null
+                    : (moreInfoRequest != null && !moreInfoRequest.isBlank() ? moreInfoRequest : rejectionReason);
+            emailService.sendKybStatusEmail(owner.getEmail(), owner.getFirstName(),
+                    merchant.getBusinessName(), approve, moreInfoOrReason);
+        });
 
         return toKybResponse(record, merchantId);
     }
@@ -1360,7 +1393,7 @@ public class MerchantService {
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new AppException("SHA-256 not available", e);
         }
     }
 

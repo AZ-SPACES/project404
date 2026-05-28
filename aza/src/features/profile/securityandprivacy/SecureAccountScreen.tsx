@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
@@ -10,6 +12,7 @@ import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { secureAccount as secureAccountApi } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export function SecureAccountScreen() {
   const { colors: Colors } = useAppTheme();
@@ -37,12 +40,7 @@ export function SecureAccountScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

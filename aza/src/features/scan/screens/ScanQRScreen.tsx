@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Button from '../../../components/ui/Button';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Radius } from '../../../theme';
@@ -113,9 +115,11 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   if (!permission?.granted) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.buttonText}>Grant Camera Permission</Text>
-        </TouchableOpacity>
+        <Button
+          title="Grant Camera Permission"
+          onPress={requestPermission}
+          width="auto"
+        />
       </View>
     );
   }
@@ -191,16 +195,10 @@ function createStyles(Colors: ThemeColors) {
     backgroundColor: Colors.black, 
     justifyContent: 'center' 
   },
-  button: { 
-    padding: 16, 
-    backgroundColor: Colors.primary, 
-    borderRadius: 8, 
-    alignSelf: 'center' 
-  },
-  buttonText: { 
+  buttonText: {
     color: Colors.white
-    , 
-    fontWeight: 'bold' 
+    ,
+    fontWeight: 'bold'
   },
   overlay: { 
     ...StyleSheet.absoluteFill, 

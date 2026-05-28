@@ -2,13 +2,18 @@ import React, { ComponentProps, useState, useRef, useEffect } from "react";
 import { View,Text,StyleSheet,TouchableOpacity,ScrollView,StatusBar,Switch,Animated,Dimensions,Image } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather,Ionicons,MaterialCommunityIcons,AntDesign } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { removeSelfEverywhere as removeSelfEverywhereApi } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { height } = Dimensions.get("window");
 
@@ -126,12 +131,7 @@ export function FindMeByScreen() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
 
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <ScrollView
@@ -224,12 +224,7 @@ export function FindMeByScreen() {
           ]}
         >
           <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setModalVisible(false)} />
             <Text style={[Typography.h2, styles.modalTitle]}>
               Remove yourself as a recipient
             </Text>

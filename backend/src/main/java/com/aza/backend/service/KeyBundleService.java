@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +39,7 @@ public class KeyBundleService {
             String opksJson = objectMapper.writeValueAsString(request.getOneTimePreKeys());
             user.setOneTimePreKeysJson(opksJson);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize one-time pre-keys");
+            throw new AppException("Failed to serialize one-time pre-keys");
         }
         
         userRepository.save(user);
@@ -50,13 +51,13 @@ public class KeyBundleService {
     public KeyBundleResponse fetchKeyBundle(UUID requesterId, UUID recipientId) {
         // Only allow key bundle fetches between users who share a chat
         chatRepository.findByParticipants(requesterId, recipientId)
-                .orElseThrow(() -> new RuntimeException("Key bundle not available"));
+                .orElseThrow(() -> new AppException("Key bundle not available"));
 
         User recipient = userRepository.findById(recipientId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (recipient.getIdentityPublicKey() == null) {
-            throw new RuntimeException("Recipient has not set up E2EE keys yet");
+            throw new AppException("Recipient has not set up E2EE keys yet");
         }
 
         Integer opkId = null;
@@ -94,7 +95,7 @@ public class KeyBundleService {
         return KeyBundleResponse.builder()
                 .recipientId(recipientId.toString())
                 .identityPublicKey(recipient.getIdentityPublicKey())
-                .signedPreKyPublic(recipient.getSignedPreKeyPublic())
+                .signedPreKeyPublic(recipient.getSignedPreKeyPublic())
                 .signedPreKeySignature(recipient.getSignedPreKeySignature())
                 .oneTimePreKeyId(String.valueOf(opkId))
                 .oneTimePreKeyPublic(opkPublic)
@@ -126,7 +127,7 @@ public class KeyBundleService {
                 user.setOneTimePreKeysJson(objectMapper.writeValueAsString(existing));
                 userRepository.save(user);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize OPKs");
+            throw new AppException("Failed to serialize OPKs");
         }
 
         log.info("OPKs replenished for user {}, total now: {}",

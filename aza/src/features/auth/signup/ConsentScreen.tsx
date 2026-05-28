@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -22,6 +22,7 @@ import { useSignupData, useSignupActions, useSignupLoading } from "../../../prov
 import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
@@ -104,12 +105,7 @@ export default function ConsentScreen() {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} size={28} />
         </Animated.View>
 
         {/* Content */}

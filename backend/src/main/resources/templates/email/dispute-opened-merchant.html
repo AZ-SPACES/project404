@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispute Opened</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+        .header { padding: 32px; text-align: center; background-color: #111827; }
+        .logo { width: 48px; height: 48px; }
+        .content { padding: 32px; }
+        .footer { padding: 24px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #f3f4f6; }
+        h1 { font-size: 24px; font-weight: 700; margin-top: 0; }
+        p { margin-bottom: 16px; font-size: 16px; }
+        .badge { display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-bottom: 16px; }
+        .card { background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #e5e7eb; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .label { color: #6b7280; font-size: 14px; }
+        .value { font-weight: 600; color: #111827; font-size: 14px; }
+        .amount { font-size: 28px; font-weight: 800; color: #b91c1c; margin: 8px 0; }
+        .note { font-size: 14px; color: #6b7280; background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-top: 20px; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #111827; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><img src="cid:paperplane" alt="AZA" class="logo"></div>
+        <div class="content">
+            <span class="badge">Dispute Opened</span>
+            <h1>A Customer Has Raised a Dispute</h1>
+            <p>Hi <span th:text="${name}">Merchant</span>, a dispute has been opened against a transaction for <strong th:text="${businessName}">Your Business</strong>.</p>
+
+            <div class="card">
+                <div class="amount">GHS <span th:text="${#numbers.formatDecimal(amount, 1, 2)}">0.00</span></div>
+                <div class="row">
+                    <span class="label">Reference</span>
+                    <span class="value" th:text="${referenceId}">DISP-XXXXXXXX</span>
+                </div>
+                <div class="row">
+                    <span class="label">Category</span>
+                    <span class="value" th:text="${category}">UNAUTHORIZED</span>
+                </div>
+                <div class="row">
+                    <span class="label">Opened at</span>
+                    <span class="value" th:text="${openedAt}">May 27, 2026 14:00</span>
+                </div>
+            </div>
+
+            <div class="note">Our team is reviewing this dispute. You do not need to take any action at this time. We will contact you if additional information is required.</div>
+            <a href="aza://merchant/dashboard" class="btn">Go to Dashboard</a>
+        </div>
+        <div class="footer">&copy; 2026 AZA. All rights reserved. &bull; <a href="mailto:support@aza.systems">support@aza.systems</a></div>
+    </div>
+</body>
+</html>

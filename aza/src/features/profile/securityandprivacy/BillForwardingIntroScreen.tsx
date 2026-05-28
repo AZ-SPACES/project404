@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, StatusBar, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const { width } = Dimensions.get('window');
 
@@ -22,12 +23,7 @@ export function BillForwardingIntroScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <View style={styles.content}>

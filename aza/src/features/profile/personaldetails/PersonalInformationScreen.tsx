@@ -12,7 +12,8 @@ import {
   ScrollView,
   ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, AntDesign } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -22,6 +23,7 @@ import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { checkHandleAvailability, suggestHandles } from "../../../services/api";
 import { debounce } from "lodash";
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -201,12 +203,7 @@ export function PersonalInformationScreen() {
               outputRange: ["transparent", Colors.border] }) },
         ]}
       >
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => navigation.goBack()}
-        >
-          <AntDesign name="close" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <CloseButton onPress={() => navigation.goBack()} size={24} />
         <Animated.View
           style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
         >

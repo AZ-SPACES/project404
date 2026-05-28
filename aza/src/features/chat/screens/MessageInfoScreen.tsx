@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { ChatMessageBubble } from '../../../components/chat/ChatMessageBubble';
 import { Message } from '../../../components/chat/chatTypes';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type MessageInfoRouteProp = RouteProp<RootStackParamList, 'MessageInfo'>;
 
@@ -35,9 +36,7 @@ export default function MessageInfoScreen() {
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Message Info</Text>
         <View style={{ width: 24 }} />
       </View>

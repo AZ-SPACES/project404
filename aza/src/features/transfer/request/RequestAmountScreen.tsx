@@ -13,15 +13,15 @@ import {
     ScrollView,
     Animated,
     ActivityIndicator,
-    Modal,
     Dimensions,
     StatusBar } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'RequestAmount'>;
 
@@ -137,13 +137,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                   >
                         {/* Header */}
                         <View style={styles.header}>
-                            <TouchableOpacity
-                                onPress={() => navigation.goBack()}
-                                style={styles.backButton}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <Feather name="chevron-left" size={24} color={Colors.textPrimary} style={styles.backicon} />
-                            </TouchableOpacity>
+                            <BackButton onPress={() => navigation.goBack()} />
                             <Text style={styles.headerTitle}>Request Money</Text>
                             <View style={styles.backButtonPlaceholder} />
                         </View>

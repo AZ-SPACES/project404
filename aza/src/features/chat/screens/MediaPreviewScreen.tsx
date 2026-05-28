@@ -5,7 +5,7 @@ import {
   DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
@@ -60,6 +60,7 @@ export default function MediaPreviewScreen() {
 
   // Per-image edits map (keyed by index)
   const [editsMap, setEditsMap] = useState<Record<number, ImageEdits>>({});
+  const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions({ writeOnly: true });
 
   const currentEdits = useMemo<ImageEdits>(
     () => editsMap[activeIndex] ?? { drawPaths: [], textLabels: [] },
@@ -159,12 +160,14 @@ export default function MediaPreviewScreen() {
   const handleToolTap = useCallback(async (label: string) => {
     switch (label) {
       case 'Save': {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== 'granted') {
+        let perm = mediaPermission;
+        if (!perm?.granted) {
+          perm = await requestMediaPermission();
+        }
+        if (!perm?.granted) {
           Alert.alert('Permission Required', 'Allow access to save images to your gallery.');
           return;
         }
-        // If there are edits, capture composite first
         const edits = editsMap[activeIndex];
         let uriToSave = media[activeIndex]?.uri;
         if (edits && (edits.drawPaths.length > 0 || edits.textLabels.length > 0)) {
@@ -173,7 +176,7 @@ export default function MediaPreviewScreen() {
         }
         if (uriToSave) {
           try {
-            await MediaLibrary.saveToLibraryAsync(uriToSave);
+            await MediaLibrary.Asset.create(uriToSave);
             Alert.alert('Saved', 'Image saved to your gallery.');
           } catch {
             Alert.alert('Error', 'Failed to save image.');

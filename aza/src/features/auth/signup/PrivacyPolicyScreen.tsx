@@ -2,9 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://aza.systems/privacy-policy';
 
@@ -18,12 +19,7 @@ export default function PrivacyPolicyScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={28} />
         <Text style={styles.headerTitle}>Privacy Policy</Text>
         <View style={{ width: 44 }} />
       </View>

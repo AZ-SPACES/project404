@@ -7,11 +7,12 @@ import {
   ScrollView,
   StatusBar,
   Share,
-  Clipboard,
   Platform,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -29,8 +30,8 @@ export default function RecoveryCodesScreen() {
 
   const { codes } = route.params;
 
-  const handleCopy = () => {
-    Clipboard.setString(codes.join("\n"));
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(codes.join("\n"));
     showToast("Recovery codes copied to clipboard", "success");
   };
 
@@ -84,14 +85,24 @@ export default function RecoveryCodesScreen() {
         </View>
 
         <View style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
-            <Feather name="copy" size={20} color={Colors.textPrimary} />
-            <Text style={styles.actionText}>Copy codes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Feather name="download" size={20} color={Colors.textPrimary} />
-            <Text style={styles.actionText}>Save as text</Text>
-          </TouchableOpacity>
+          <Button
+            title="Copy codes"
+            onPress={handleCopy}
+            backgroundColor="transparent"
+            textColor={Colors.textPrimary}
+            leftIcon={<Feather name="copy" size={20} color={Colors.textPrimary} />}
+            width="auto"
+            style={{ borderWidth: 0 }}
+          />
+          <Button
+            title="Save as text"
+            onPress={handleShare}
+            backgroundColor="transparent"
+            textColor={Colors.textPrimary}
+            leftIcon={<Feather name="download" size={20} color={Colors.textPrimary} />}
+            width="auto"
+            style={{ borderWidth: 0 }}
+          />
         </View>
       </ScrollView>
 
@@ -194,16 +205,6 @@ function createStyles(Colors: ThemeColors) {
       flexDirection: "row",
       justifyContent: "center",
       gap: Spacing.xl,
-    },
-    actionButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    actionText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: Colors.textPrimary,
     },
     footer: {
       paddingHorizontal: Spacing.lg,

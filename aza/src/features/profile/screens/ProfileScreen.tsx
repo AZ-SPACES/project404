@@ -14,7 +14,8 @@ import {
   Linking,
   ActivityIndicator } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
@@ -27,6 +28,8 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { getMerchant } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { height } = Dimensions.get('window');
 
@@ -329,12 +332,17 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addAccountButton} onPress={() => setBottomSheetVisible(true)}>
-          <Text style={styles.addAccountText}>Open an Account</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Button
+          title="Open an Account"
+          onPress={() => setBottomSheetVisible(true)}
+          backgroundColor={Colors.primary}
+          textColor={Colors.white}
+          paddingVertical={Spacing.md}
+          paddingHorizontal={Spacing.md}
+          borderRadius={Radius.lg}
+          width="auto"
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -458,12 +466,7 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setBottomSheetVisible(false)} />
           </View>
           
           <Text style={styles.bottomSheetTitle}>Which account type would you like?</Text>
@@ -488,7 +491,7 @@ export default function ProfileScreen() {
             title="Business account"
             onPress={() => {
               setBottomSheetVisible(false);
-              navigation.navigate('MiniApp', { appId: 'my_business' });
+              navigation.navigate('MiniApp', { appId: 'aza_business' });
             }}
             backgroundColor={hasBusinessAccount ? "#1E5128" : "#B7ED7E"}
             textColor={hasBusinessAccount ? "#B7ED7E" : "#1E5128"}
@@ -526,12 +529,7 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setPhotoSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setPhotoSheetVisible(false)} />
           </View>
 
           <Text style={styles.bottomSheetTitle}>Edit profile photo</Text>
@@ -627,12 +625,7 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setAvatarSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setAvatarSheetVisible(false)} />
           </View>
 
           <Text style={styles.bottomSheetTitle}>Choose an Avatar</Text>

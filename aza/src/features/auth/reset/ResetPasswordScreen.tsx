@@ -16,11 +16,12 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
 import { Alert } from "react-native";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
 import { forgotPassword } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -45,16 +46,7 @@ export default function ResetPasswordScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
           <View style={styles.content}>

@@ -14,7 +14,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
@@ -31,6 +31,7 @@ import { useTransactions, TransactionFilter } from "../../../hooks/useTransactio
 import { useDisplayContext } from "../../../providers/DisplayProvider";
 import { useTransferStore } from "../../../store/transferStore";
 import { formatCurrency } from "../../../utils/transactionUtils";
+import { BackButton } from '../../../components/ui/BackButton';
 
 export type Transaction = {
   id: string;
@@ -443,13 +444,7 @@ export function TransactionsScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Feather name="arrow-left" size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={22} />
         <Text style={styles.headerTitle}>Transaction History</Text>
         <View style={{ width: 22 }} />
       </View>

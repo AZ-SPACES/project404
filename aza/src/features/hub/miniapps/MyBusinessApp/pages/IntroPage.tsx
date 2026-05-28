@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Dimensions, TouchableOpacity } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import Button from '../../../../../components/ui/Button';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../../navigation/types';
 import { ThemeColors } from '../../../../../theme';
 import { NavProps } from '../types';
+import { CloseButton } from '../../../../../components/ui/CloseButton';
 
 const { width, height } = Dimensions.get('window');
 const SLIDE_DURATION = 5000;
@@ -290,12 +291,7 @@ export default function IntroPage({ Colors }: NavProps) {
           ]}
         >
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setBottomSheetVisible(false)} />
           </View>
           <Text style={styles.bottomSheetTitle}>Get Started</Text>
           <Text style={styles.bottomSheetDescription}>

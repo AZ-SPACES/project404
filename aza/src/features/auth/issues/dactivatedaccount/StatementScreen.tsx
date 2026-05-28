@@ -5,7 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../../theme';
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { BackButton } from '../../../../components/ui/BackButton';
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Statement'>;
@@ -19,9 +20,7 @@ export default function Statement() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={28} />
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>I want a statement for my account</Text>

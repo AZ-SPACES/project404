@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';

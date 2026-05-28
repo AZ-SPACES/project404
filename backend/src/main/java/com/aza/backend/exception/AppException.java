@@ -17,6 +17,18 @@ public class AppException extends RuntimeException {
         this.status = status;
     }
 
+    public AppException(String message) {
+        super(message);
+        this.code = "ERROR";
+        this.status = HttpStatus.BAD_REQUEST;
+    }
+
+    public AppException(String message, Throwable cause) {
+        super(message, cause);
+        this.code = "INTERNAL_ERROR";
+        this.status = HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+
     public HttpStatus getStatus() { return status; }
     public String getCode() { return code; }
 }

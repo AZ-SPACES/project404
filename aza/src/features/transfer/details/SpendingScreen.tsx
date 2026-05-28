@@ -8,13 +8,14 @@ import {
   Image,
   Dimensions,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { RootStackParamList } from "../../../navigation/types";
 import { getYearlySpendingSummary } from "../../../services/api";
+import { BackButton } from "../../../components/ui/BackButton";
 
 const { width } = Dimensions.get("window");
 
@@ -54,13 +55,7 @@ export default function SpendingScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-          >
-            <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>

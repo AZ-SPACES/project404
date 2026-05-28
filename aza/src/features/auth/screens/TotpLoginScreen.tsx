@@ -15,7 +15,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MaterialIcons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import Button from '../../../components/ui/Button';
 import { RootStackParamList } from '../../../navigation/types';
@@ -23,6 +25,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { BackButton } from '../../../components/ui/BackButton';
 import { 
   totpLogin, 
   requestSms2fa, 
@@ -239,9 +242,7 @@ const TotpLoginScreen: React.FC = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <MaterialIcons name="chevron-left" style={styles.backIcon} />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} />
           </View>
 
           <View style={styles.content}>

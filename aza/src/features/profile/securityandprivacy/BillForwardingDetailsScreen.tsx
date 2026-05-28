@@ -10,13 +10,14 @@ import {
 import * as Haptics from "expo-haptics";
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { updatePrivacySettings } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -59,12 +60,7 @@ export function BillForwardingDetailsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
 
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <ScrollView

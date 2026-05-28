@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,16 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
-import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { RootStackParamList } from '../../../navigation/types';
-import { Typography } from '../../../theme';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { width } = Dimensions.get('window');
 const PIP_WIDTH = 100;
@@ -77,9 +79,7 @@ export default function VideoCallScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Feather name="arrow-left" size={24} color="#fff" />
-        </TouchableOpacity>
+        <CloseButton onPress={() => navigation.goBack()} />
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerName} numberOfLines={1}>{name}</Text>
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
 
   // Remote video
   remoteVideo: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },

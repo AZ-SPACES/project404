@@ -15,13 +15,14 @@ import {
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
 import { useToast } from "../../../providers/ToastProvider";
 import { verifyOtp } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
@@ -117,9 +118,7 @@ const ResetOTPScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-              <MaterialIcons name="chevron-left" style={styles.backicon} />
-            </TouchableOpacity>
+            <BackButton onPress={handleClose} />
           </View>
 
           {/* Content */}
