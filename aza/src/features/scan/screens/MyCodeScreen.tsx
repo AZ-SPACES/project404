@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share, Linking, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Feather } from '@react-native-vector-icons/feather';
-import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { useAppTheme, ThemeColors, Spacing, Radius } from '../../../theme';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
@@ -12,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { api } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const { width } = Dimensions.get('window');
 
@@ -63,12 +63,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
       <SafeAreaView style={styles.safeArea}>
         {/* Top Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()} 
-            style={styles.backButton}
-          >
-            <Ionicons name="chevron-back" size={28} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconCircle}>

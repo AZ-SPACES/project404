@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +13,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import { RootStackParamList } from "../../../navigation/types";
 import { getSpendingSummary } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
+import { BackButton } from '../../../components/ui/BackButton';
 
 export default function DetailsScreen() {
   const { colors: Colors } = useAppTheme();
@@ -46,13 +46,7 @@ export default function DetailsScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
-          >
-            <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>

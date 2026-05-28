@@ -10,6 +10,7 @@ import { getTransactionsStatement, sendTransactionsStatementEmail } from "../../
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert, ActivityIndicator } from "react-native";
+import { BackButton } from "../../../components/ui/BackButton";
 
 const DURATIONS = [
   { id: '1m', label: 'Last 30 Days' },
@@ -162,9 +163,7 @@ export function StatementDownloadScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={[Typography.h2, { color: Colors.textPrimary, marginLeft: Spacing.md }]}>
           Account Statement
         </Text>

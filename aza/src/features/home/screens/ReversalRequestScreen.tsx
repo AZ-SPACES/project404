@@ -22,6 +22,7 @@ import { Transaction } from "./TransactionsScreen";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import Button from "../../../components/ui/Button";
 import { RootStackParamList } from "../../../navigation/types";
+import { BackButton } from '../../../components/ui/BackButton';
 
 const REASON_CATEGORIES = [
   { id: "WRONG_AMOUNT", label: "Wrong Amount" },
@@ -328,13 +329,7 @@ export function ReversalRequestScreen() {
       {/* Header */}
       {step !== "success" && (
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={handleGoBack} />
           <Text style={[Typography.h2, { color: Colors.textPrimary, marginLeft: Spacing.md }]}>
             {step === "select_tx" ? "Request Reversal" : "Request Details"}
           </Text>

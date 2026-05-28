@@ -6,6 +6,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { formatBytes, StorageDetails, Message, CategoryStats } from '../../../components/chat/chatTypes';
 import { RootStackParamList } from '../../../navigation/types';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type ManageStorageRouteProp = RouteProp<RootStackParamList, 'ManageStorage'> & {
   params: {
@@ -101,9 +102,7 @@ export default function ManageStorageScreen() {
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Manage Storage</Text>
         <View style={{ width: 24 }} />
       </View>

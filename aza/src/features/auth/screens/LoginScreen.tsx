@@ -27,6 +27,7 @@ import { isValidEmail, isValidPhone, sanitizeText } from '../../../utils/validat
 import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -163,9 +164,7 @@ const LoginScreen: React.FC = () => {
         >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <MaterialIcons style={styles.closeIcon} name="close" />
-          </TouchableOpacity>
+          <CloseButton onPress={handleClose} />
         </View>
 
         {/* Content */}

@@ -26,6 +26,7 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "OTP">;
 type OTPRouteProp = RouteProp<RootStackParamList, "OTP">;
@@ -158,9 +159,7 @@ const OTPScreen: React.FC = () => {
         
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-            <MaterialIcons name="chevron-left" style={styles.backicon} />
-          </TouchableOpacity>
+          <BackButton onPress={handleClose} />
         </View>
 
         {/* Content */}

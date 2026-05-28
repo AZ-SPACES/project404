@@ -21,6 +21,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePasscode">;
 
@@ -168,9 +169,7 @@ export default function CreatePasscodeScreen() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
             <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-              </TouchableOpacity>
+              <BackButton onPress={() => navigation.goBack()} size={28} />
             </View>
 
             <View style={styles.content}>

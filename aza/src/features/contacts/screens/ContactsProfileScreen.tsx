@@ -20,6 +20,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
 import { getContactDetails } from "../../../services/api";
 import { Contact } from "../types";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type ContactsProfileRouteProp = RouteProp<RootStackParamList, "ContactsProfile">;
 
@@ -151,9 +152,7 @@ export default function ContactsProfileScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
-          <Feather name="chevron-left" size={28} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={28} />
         <TouchableOpacity
           style={styles.headerIcon}
           onPress={handleToggleFavorite}

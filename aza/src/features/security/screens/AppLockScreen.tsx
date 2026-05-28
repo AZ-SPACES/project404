@@ -11,15 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
-  Image,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { useNavigation } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useAppTheme, ThemeColors, Spacing, Typography, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography } from "../../../theme";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSecurity } from "../../../providers/SecurityProvider";
 

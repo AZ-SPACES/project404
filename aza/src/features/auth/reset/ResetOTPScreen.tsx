@@ -22,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
 import { useToast } from "../../../providers/ToastProvider";
 import { verifyOtp } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
@@ -117,9 +118,7 @@ const ResetOTPScreen: React.FC = () => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={handleClose} style={styles.backButton}>
-              <MaterialIcons name="chevron-left" style={styles.backicon} />
-            </TouchableOpacity>
+            <BackButton onPress={handleClose} />
           </View>
 
           {/* Content */}

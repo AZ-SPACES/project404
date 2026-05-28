@@ -20,6 +20,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../providers/ToastProvider';
 import { getDevices, removeDevice } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { height } = Dimensions.get('window');
 
@@ -135,12 +137,7 @@ export function DevicesScreen() {
       />
 
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -201,9 +198,7 @@ export function DevicesScreen() {
           style={[styles.sheet, { zIndex: 1001, transform: [{ translateY: sheetAnim }] }]}
         >
           <View style={styles.sheetHeader}>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setSheetVisible(false)}>
-              <AntDesign name="close" size={18} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setSheetVisible(false)} size={18} />
             <View style={{ flex: 1 }}>
               <Text style={[Typography.h2, styles.sheetTitle]} numberOfLines={1}>
                 {selected?.deviceName ?? selected?.deviceOs ?? 'Device'}

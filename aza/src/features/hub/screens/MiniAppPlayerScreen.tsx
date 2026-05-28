@@ -24,6 +24,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { getMiniApp } from '../miniapps/registry';
 import { reportMiniApp } from '../../../services/api';
 import { useToast } from '../../../providers/ToastProvider';
+import { CloseButton } from '../../../components/ui/CloseButton';
+import Button from '../../../components/ui/Button';
 
 type PlayerRouteProp = RouteProp<RootStackParamList, 'MiniApp'>;
 type PlayerNavProp = NativeStackNavigationProp<RootStackParamList, 'MiniApp'>;
@@ -128,9 +130,11 @@ export default function MiniAppPlayerScreen() {
       <View style={[styles.notFoundSafeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Mini app not found.</Text>
-          <TouchableOpacity onPress={handleClose} style={styles.errorButton}>
-            <Text style={styles.errorButtonText}>Go Back</Text>
-          </TouchableOpacity>
+          <Button
+            title="Go Back"
+            onPress={handleClose}
+            width="auto"
+          />
         </View>
       </View>
     );
@@ -236,9 +240,7 @@ export default function MiniAppPlayerScreen() {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               {/* Sheet header */}
               <View style={styles.sheetHeader}>
-                <TouchableOpacity style={styles.sheetCloseBtn} onPress={closeReportSheet}>
-                  <AntDesign name="close" size={20} color={Colors.textSecondary} />
-                </TouchableOpacity>
+                <CloseButton onPress={closeReportSheet} color={Colors.textSecondary} />
               </View>
 
               <Text style={styles.sheetTitle}>Report {app.name}</Text>
@@ -482,15 +484,6 @@ function createStyles(Colors: ThemeColors) {
     errorText: {
       ...Typography.body,
       color: Colors.textSecondary,
-    },
-    errorButton: {
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.sm,
-    },
-    errorButtonText: {
-      ...Typography.body,
-      color: Colors.textPrimary,
-      fontWeight: '500',
     },
   });
 }

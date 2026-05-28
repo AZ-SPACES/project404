@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
@@ -37,9 +38,7 @@ export default function SharedMediaScreen() {
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Shared Media</Text>
         <View style={{ width: 24 }} />
       </View>

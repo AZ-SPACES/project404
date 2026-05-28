@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from '@react-native-vector-icons/feather';
+import { BackButton } from "../../../components/ui/BackButton";
 
 export function WithdrawScreen() {
   const { colors: Colors } = useAppTheme();
@@ -12,9 +13,7 @@ export function WithdrawScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={[Typography.h2, { color: Colors.textPrimary, marginLeft: Spacing.md }]}>
           Withdraw
         </Text>
