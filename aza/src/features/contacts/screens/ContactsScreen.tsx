@@ -36,10 +36,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import * as Contacts from "expo-contacts";
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
-import { useProfile } from "../../../providers/ProfileProvider";
 import { Contact as BackendContact } from "../types";
 
 const AZA_ICON = require("../../../assets/aza-z.png");
@@ -73,9 +71,7 @@ export default function ContactsScreen() {
   const {
     contacts: backendContacts,
     fetchContacts,
-    syncDeviceContacts,
     isLoading,
-    isSyncing,
     toggleFavorite,
     addContactByUserId,
     findUserByHandle,
@@ -88,7 +84,6 @@ export default function ContactsScreen() {
     approveContactRequest,
     rejectContactRequest
   } = useContactStore();
-  const { syncContacts: isSyncAllowed } = useProfile();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -96,38 +91,6 @@ export default function ContactsScreen() {
       fetchContactRequests();
     }, [fetchContacts, fetchContactRequests])
   );
-
-  useEffect(() => {
-    // Only sync if the user has enabled the setting in Privacy settings
-    if (!isSyncAllowed) return;
-
-    (async () => {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status === "granted") {
-        const { data } = await Contacts.getContactsAsync({
-          fields: [
-            Contacts.Fields.FirstName,
-            Contacts.Fields.LastName,
-            Contacts.Fields.PhoneNumbers,
-            Contacts.Fields.Emails,
-          ],
-        });
-
-        if (data.length > 0) {
-          const deviceContacts = data
-            .filter((c) => c.name || (c.firstName || c.lastName))
-            .map((c) => ({
-              displayName: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-              phoneNumber: c.phoneNumbers?.[0]?.number,
-              email: c.emails?.[0]?.email,
-            }));
-
-          // Sync with backend
-          await syncDeviceContacts(deviceContacts);
-        }
-      }
-    })();
-  }, [isSyncAllowed]);
 
   // Deduplicate by id — backend may return the same contact more than once
   // (e.g. matched by both phone and email during sync)
