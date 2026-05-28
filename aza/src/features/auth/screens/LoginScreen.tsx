@@ -12,7 +12,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../theme';
@@ -54,6 +54,15 @@ const LoginScreen: React.FC = () => {
     });
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setPhoneNumber('');
+      setEmail('');
+      setPassword('');
+      setTouched(false);
+    }, [])
+  );
+
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
   const credentialError = touched && !credentialValid
     ? useEmail ? 'Enter a valid email address' : 'Enter a valid phone number'
@@ -75,8 +84,7 @@ const LoginScreen: React.FC = () => {
         deviceId: await getDeviceId(),
       });
       
-      // On success, navigate to OTP
-      navigation.navigate('OTP', { isLogin: true, phoneNumber: identifier });
+      navigation.navigate('TotpLogin', { loginIdentifier: identifier, methods: ['SMS'], defaultMethod: 'SMS' });
     } catch (error: any) {
       console.error('Login failed', error);
       const errorMsg = error.response?.data?.message || 'Invalid credentials. Please try again.';

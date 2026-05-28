@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -38,56 +37,15 @@ public class EmailService {
     @Value("${brevo.sender-email:noreply@aza.systems}")
     private String senderEmail;
 
-    private String azaMerchantLogoBase64;
-    private String azaAdminLogoBase64;
-    private String azaPayLogoBase64;
-    private String azaDefaultLogoBase64;
-
-    private String getLogoBase64(String logoName, String filename) {
-        try {
-            byte[] bytes = new ClassPathResource("static/images/" + filename)
-                    .getInputStream().readAllBytes();
-            return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
-        } catch (Exception e) {
-            log.warn("Could not load {} logo: {}", logoName, e.getMessage());
-            return "";
-        }
-    }
-
-    private String getAzaMerchantLogoBase64() {
-        if (azaMerchantLogoBase64 == null) {
-            azaMerchantLogoBase64 = getLogoBase64("Aza_Merchant", "Aza_Merchant.png");
-        }
-        return azaMerchantLogoBase64;
-    }
-
-    private String getAzaAdminLogoBase64() {
-        if (azaAdminLogoBase64 == null) {
-            azaAdminLogoBase64 = getLogoBase64("Aza-admin", "Aza-admin.png");
-        }
-        return azaAdminLogoBase64;
-    }
-
-    private String getAzaPayLogoBase64() {
-        if (azaPayLogoBase64 == null) {
-            azaPayLogoBase64 = getLogoBase64("Aza-Pay", "Aza-Pay.png");
-        }
-        return azaPayLogoBase64;
-    }
-
-    private String getAzaDefaultLogoBase64() {
-        if (azaDefaultLogoBase64 == null) {
-            azaDefaultLogoBase64 = getLogoBase64("aza", "aza.png");
-        }
-        return azaDefaultLogoBase64;
-    }
+    @Value("${app.base-url:https://aza.systems}")
+    private String appBaseUrl;
 
     private String inlineImages(String html) {
-        String result = html.replace("src=\"cid:paperplane\"", "src=\"" + getAzaDefaultLogoBase64() + "\"");
-        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + getAzaMerchantLogoBase64() + "\"");
-        result = result.replace("src=\"cid:aza_admin\"", "src=\"" + getAzaAdminLogoBase64() + "\"");
-        result = result.replace("src=\"cid:aza_pay\"", "src=\"" + getAzaPayLogoBase64() + "\"");
-        result = result.replace("src=\"cid:aza_default\"", "src=\"" + getAzaDefaultLogoBase64() + "\"");
+        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + appBaseUrl + "/images/aza.png\"");
+        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + appBaseUrl + "/images/Aza_Merchant.png\"");
+        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + appBaseUrl + "/images/Aza-admin.png\"");
+        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + appBaseUrl + "/images/Aza-Pay.png\"");
+        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + appBaseUrl + "/images/aza.png\"");
         return result;
     }
 

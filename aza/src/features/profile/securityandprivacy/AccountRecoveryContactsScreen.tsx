@@ -264,8 +264,8 @@ export default function AccountRecoveryContactsScreen() {
               return (
                 <ContactRow
                   key={u.id}
-                  name={`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()}
-                  handle={u.handle}
+                  name={u.displayName || 'Unknown'}
+                  handle={u.username}
                   avatar={u.profileImageUrl}
                   Colors={Colors} isDark={isDark}
                   right={

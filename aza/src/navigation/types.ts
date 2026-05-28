@@ -3,10 +3,9 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   TroubleLogin: undefined;
-  OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
-  TotpLogin: { preAuthToken: string; methods?: string[]; defaultMethod?: string };
+  TotpLogin: { preAuthToken?: string; loginIdentifier?: string; methods?: string[]; defaultMethod?: string };
   RecoveryCodeLogin: { preAuthToken: string };
   AppLoginApproval: { requestId: string; deviceName: string; ipAddress: string };
   ChangePhoneNumber: undefined;

@@ -229,6 +229,14 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(codes));
     }
 
+    @PutMapping("/2fa/default-method")
+    public ResponseEntity<ApiResponse<String>> setDefault2faMethod(
+            @AuthenticationPrincipal User user,
+            @RequestParam String method) {
+        authService.setDefaultTwoFactorMethod(user, method);
+        return ResponseEntity.ok(ApiResponse.success("Default method updated"));
+    }
+
     @PostMapping("/2fa/sms/setup")
     public ResponseEntity<ApiResponse<String>> setupSms2fa(
             @AuthenticationPrincipal User user) {

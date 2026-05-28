@@ -374,6 +374,25 @@ public class AuthService {
 
     // ==================== TOTP / 2FA ====================
 
+    @Transactional
+    public void setDefaultTwoFactorMethod(User user, String method) {
+        User.TwoFactorMethod parsed;
+        try {
+            parsed = User.TwoFactorMethod.valueOf(method.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new AppException("Invalid 2FA method: " + method);
+        }
+        switch (parsed) {
+            case TOTP    -> { if (user.getTwoFactorSecret() == null)                          throw new AppException("Authenticator app is not enabled."); }
+            case SMS     -> { if (!Boolean.TRUE.equals(user.getSmsTwoFactorEnabled()))        throw new AppException("SMS 2FA is not enabled."); }
+            case EMAIL   -> { if (!Boolean.TRUE.equals(user.getEmailTwoFactorEnabled()))      throw new AppException("Email 2FA is not enabled."); }
+            case APP     -> { if (!Boolean.TRUE.equals(user.getAppTwoFactorEnabled()))        throw new AppException("App 2FA is not enabled."); }
+            case PASSKEY -> { if (!Boolean.TRUE.equals(user.getPasskeysEnabled()))            throw new AppException("Passkeys is not enabled."); }
+        }
+        user.setDefaultTwoFactorMethod(parsed);
+        userRepository.save(user);
+    }
+
     public TotpSetupResponse initiateTotpSetup(User user) {
         if (user.getTwoFactorSecret() != null) {
             throw new AppException("Authenticator app is already set up for this account");
