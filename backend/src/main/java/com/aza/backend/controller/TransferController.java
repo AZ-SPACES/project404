@@ -111,6 +111,22 @@ public class TransferController {
                 .body(pdf);
     }
 
+    @GetMapping("/transfers/statement/csv")
+    public ResponseEntity<byte[]> downloadStatementCsv(
+            @AuthenticationPrincipal User user,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
+        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+
+        byte[] csv = statementService.generateStatementCsv(user, start, end);
+
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .header("Content-Disposition", "attachment; filename=statement.csv")
+                .body(csv);
+    }
+
     @PostMapping("/transfers/statement/email")
     public ResponseEntity<ApiResponse<String>> sendStatementEmail(
             @AuthenticationPrincipal User user,

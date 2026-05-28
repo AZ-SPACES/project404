@@ -291,7 +291,7 @@ public class KycService {
         } else {
             record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
             updateUserKycStatus(user, User.KycStatus.UNDER_REVIEW);
-
+            emailService.sendKycSubmittedEmail(user.getEmail(), user.getFirstName());
             log.info("KYC submitted for manual review for user {}", user.getId());
         }
 

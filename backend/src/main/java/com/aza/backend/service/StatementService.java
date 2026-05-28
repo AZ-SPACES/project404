@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -99,6 +101,35 @@ public class StatementService {
             throw new AppException("Error generating PDF", e);
         }
 
+        return out.toByteArray();
+    }
+
+    public byte[] generateStatementCsv(User user, LocalDateTime start, LocalDateTime end) {
+        List<Transaction> transactions = transactionRepository.findAllByUserIdAndDateRange(user.getId(), start, end);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+            writer.write("Date,Description,Type,Amount,Status\n");
+            for (Transaction tx : transactions) {
+                String description;
+                if (tx.getSenderId().equals(user.getId())) {
+                    User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+                    description = "To: " + (recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown");
+                } else {
+                    User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+                    description = "From: " + (sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown");
+                }
+                String sign = tx.getSenderId().equals(user.getId()) ? "-" : "+";
+                writer.write(String.format("%s,\"%s\",%s,%s%s,%s\n",
+                        tx.getInitiatedAt().format(fmt),
+                        description.replace("\"", "\"\""),
+                        tx.getType().name(),
+                        sign, tx.getAmount().toPlainString(),
+                        tx.getStatus().name()));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating CSV", e);
+        }
         return out.toByteArray();
     }
 }

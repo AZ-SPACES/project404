@@ -17,6 +17,7 @@ import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
+import com.aza.backend.util.SmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,6 +48,7 @@ public class PaymentRequestService {
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
     private final UserService userService;
+    private final SmsService smsService;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -230,6 +232,11 @@ public class PaymentRequestService {
         notificationService.sendMoneyReceivedNotification(
                 pr.getRequesterId(), payerName,
                 pr.getAmount().toString(), transaction.getId().toString());
+
+        User requester = userService.findById(pr.getRequesterId());
+        if (requester.getPhoneNumber() != null && !requester.getPhoneNumber().isBlank()) {
+            smsService.sendPaymentRequestPaidSms(requester.getPhoneNumber(), payerName, pr.getAmount());
+        }
 
         log.info("Payment request {} approved by {} — transaction {}", id, payer.getId(), transaction.getId());
         return response;

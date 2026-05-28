@@ -4,6 +4,7 @@ import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.*;
+import com.aza.backend.util.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class BulkTransferService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final EmailService emailService;
 
     @Transactional
     public BulkTransferResponse createBulkTransfer(UUID merchantId, CreateBulkTransferRequest request) {
@@ -178,6 +180,17 @@ public class BulkTransferService {
 
         log.info("Bulk transfer completed: id={}, merchantId={}, total={}, success={}, failed={}",
                 bulkTransfer.getId(), merchantId, totalAmount, successCount, failureCount);
+
+        final UUID ownerUserId = merchant.getUserId();
+        final String businessName = merchant.getBusinessName();
+        final String statusName = finalStatus.name();
+        final int finalSuccessCount = successCount;
+        final int finalFailureCount = failureCount;
+        final BigDecimal disbursed = totalAmount.subtract(refundAmount);
+        userRepository.findById(ownerUserId).ifPresent(owner ->
+                emailService.sendBulkTransferSummaryEmail(
+                        owner.getEmail(), owner.getFirstName(),
+                        businessName, disbursed, finalSuccessCount, finalFailureCount, statusName));
 
         return toResponse(bulkTransfer);
     }

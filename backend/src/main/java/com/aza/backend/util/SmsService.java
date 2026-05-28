@@ -6,9 +6,12 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -63,12 +66,42 @@ public class SmsService {
         return sendSms(phoneNumber, message);
     }
 
-    /**
-     * Send Birthday SMS
-     */
     public boolean sendBirthdaySms(String phoneNumber, String name) {
-        String message = "Happy Birthday, " + name + "! 🎂 Wishing you a wonderful day from all of us at AZA.";
+        String message = "Happy Birthday, " + name + "! Wishing you a wonderful day from all of us at AZA.";
         return sendSms(phoneNumber, message);
+    }
+
+    public void sendTransferSentSms(String phoneNumber, String recipientName, BigDecimal amount, String txnRef) {
+        CompletableFuture.runAsync(() -> {
+            String msg = "AZA: You sent GHS " + amount.setScale(2, RoundingMode.HALF_UP)
+                    + " to " + recipientName + ". Ref: " + txnRef;
+            sendSms(phoneNumber, msg);
+        });
+    }
+
+    public void sendTransferReceivedSms(String phoneNumber, String senderName, BigDecimal amount, String txnRef) {
+        CompletableFuture.runAsync(() -> {
+            String msg = "AZA: GHS " + amount.setScale(2, RoundingMode.HALF_UP)
+                    + " received from " + senderName + ". Ref: " + txnRef;
+            sendSms(phoneNumber, msg);
+        });
+    }
+
+    public void sendMoneyRequestedSms(String phoneNumber, String requesterName, BigDecimal amount) {
+        CompletableFuture.runAsync(() -> {
+            String msg = "AZA: " + requesterName + " is requesting GHS "
+                    + amount.setScale(2, RoundingMode.HALF_UP)
+                    + " from you. Open AZA to review.";
+            sendSms(phoneNumber, msg);
+        });
+    }
+
+    public void sendPaymentRequestPaidSms(String phoneNumber, String payerName, BigDecimal amount) {
+        CompletableFuture.runAsync(() -> {
+            String msg = "AZA: GHS " + amount.setScale(2, RoundingMode.HALF_UP)
+                    + " received from " + payerName + " for your payment request.";
+            sendSms(phoneNumber, msg);
+        });
     }
 
 

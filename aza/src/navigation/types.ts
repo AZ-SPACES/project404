@@ -98,6 +98,7 @@ export type RootStackParamList = {
   Withdraw: undefined;
   StatementDownload: undefined;
   Transactions: { balance: string };
+  ReversalRequest: undefined;
   AddFriends: undefined;
   RequestPending: undefined;
   ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
