@@ -1,22 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
 import { getMerchantCustomers } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
 import InternalHeader from '../components/InternalHeader';
 
 export default function CustomersPage({ goBack, Colors, styles }: NavProps) {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getMerchantCustomers(0, 30)
-      .then((r: any) => setCustomers(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: customers = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantCustomers(),
+    queryFn: async () => { const r = await getMerchantCustomers(0, 30); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
 
   const initials = (name: string) =>
     name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();

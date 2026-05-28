@@ -11,4 +11,16 @@ export const queryKeys = {
   kycStatus:           () => ['kyc-status'] as const,
   merchant:            () => ['merchant'] as const,
   spendingSummary:     () => ['spending-summary'] as const,
+  // Merchant portal sub-resources
+  merchantSessions:    () => ['merchant', 'sessions'] as const,
+  merchantPayouts:     () => ['merchant', 'payouts'] as const,
+  merchantInvoices:    () => ['merchant', 'invoices'] as const,
+  merchantCustomers:   () => ['merchant', 'customers'] as const,
+  merchantDisputes:    () => ['merchant', 'disputes'] as const,
+  merchantDiscounts:   () => ['merchant', 'discounts'] as const,
+  merchantSettlements: () => ['merchant', 'settlements'] as const,
+  merchantAuditLogs:   () => ['merchant', 'audit-logs'] as const,
+  merchantWebhooks:    () => ['merchant', 'webhooks'] as const,
+  merchantApiKeys:     () => ['merchant', 'api-keys'] as const,
+  merchantApiLogs:     (page?: number) => ['merchant', 'api-logs', page ?? 0] as const,
 } as const;

@@ -4,6 +4,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../theme";
 import { useDisplayContext } from "../../providers/DisplayProvider";
 import { Transaction } from "../../features/home/screens/TransactionsScreen";
+import { formatCurrency } from "../../utils/transactionUtils";
 
 export type TransactionItemProps = {
   item: Transaction;
@@ -51,10 +52,8 @@ export function TransactionItem({ item, onPress }: TransactionItemProps) {
       ? Colors.primary
       : Colors.textPrimary;
   const prefix = item.isCredit ? '+' : '−';
-  const amountStr = `${prefix}GH₵ ${item.amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  const amountFormatted = formatCurrency(item.amount, item.currency);
+  const amountStr = `${prefix}${amountFormatted}`;
 
   return (
     <TouchableOpacity

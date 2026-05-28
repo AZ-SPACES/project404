@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../providers/ToastProvider';
 import { getDevices, removeDevice } from '../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryClient } from '../../../lib/queryClient';
 import { BackButton } from '../../../components/ui/BackButton';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
@@ -40,8 +42,15 @@ export function DevicesScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { showToast } = useToast();
 
-  const [sessions, setSessions] = useState<DeviceSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: sessions = [], isLoading } = useQuery({
+    queryKey: ['devices'],
+    queryFn: async () => {
+      const res = await getDevices();
+      const data = res.data?.data ?? res.data ?? [];
+      return Array.isArray(data) ? (data as DeviceSession[]) : [];
+    },
+    staleTime: 60_000,
+  });
   const [selected, setSelected] = useState<DeviceSession | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -50,19 +59,6 @@ export function DevicesScreen() {
   const sheetAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const res = await getDevices();
-      const data = res.data?.data ?? res.data ?? [];
-      setSessions(Array.isArray(data) ? data : []);
-    } catch {
-      showToast('Could not load active sessions', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   useEffect(() => {
     Animated.parallel([
@@ -89,10 +85,9 @@ export function DevicesScreen() {
     setIsRemoving(true);
     try {
       await removeDevice(selected.id);
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
       setSheetVisible(false);
       showToast('Session removed', 'success');
-      // Re-fetch from server so the list is authoritative
-      await fetchSessions();
     } catch (err: unknown) {
       const message = (err as any)?.response?.data?.message ?? 'Failed to remove session';
       showToast(message, 'error');

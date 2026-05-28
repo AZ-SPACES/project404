@@ -2,17 +2,10 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from "react-native";
 import { useAuth } from "./AuthProvider";
-import { uploadHomeBackground, uploadHubBackground, updateMe, api, getMe } from "../services/api";
-import { useQuery } from "@tanstack/react-query";
+import { useProfile } from "./ProfileProvider";
+import { uploadHomeBackground, uploadHubBackground, updateMe, api } from "../services/api";
 import { queryKeys } from "../lib/queryKeys";
 import { queryClient } from "../lib/queryClient";
-
-type ProfileSnapshot = {
-  language: string;
-  theme: string;
-  homeBackground: string | null;
-  hubBackground: string | null;
-};
 
 export type ThemeOption = "Light" | "Dark" | "System Default";
 export type LanguageOption = "English (US)" | "French" | "Spanish";
@@ -164,21 +157,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [tabOrder, setTabOrderState] = useState<TabId[]>(DEFAULT_TAB_ORDER);
 
   const { userToken } = useAuth();
-  const { data: profile } = useQuery<ProfileSnapshot>({
-    queryKey: queryKeys.profile(),
-    queryFn: async () => {
-      const { data } = await getMe();
-      const d = data.data;
-      return {
-        language: d.language ?? 'English (US)',
-        theme: d.theme ?? 'System Default',
-        homeBackground: d.homeBackground ?? null,
-        hubBackground: d.hubBackground ?? null,
-      };
-    },
-    enabled: !!userToken,
-    staleTime: 60_000,
-  });
+  const profile = useProfile();
   const colorScheme = useColorScheme();
   const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme());
 
@@ -266,13 +245,13 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
 
   // Sync profile → local
   useEffect(() => {
-    if (userToken && profile?.language) {
+    if (userToken && profile.language) {
       if (profile.language !== language && LANGUAGES.includes(profile.language as LanguageOption)) setLanguageState(profile.language as LanguageOption);
       if (profile.theme !== theme && THEMES.includes(profile.theme as ThemeOption)) setThemeState(profile.theme as ThemeOption);
       if (profile.homeBackground && profile.homeBackground !== homeBackground) setHomeBackgroundState(profile.homeBackground);
       if (profile.hubBackground && profile.hubBackground !== hubBackground) setHubBackgroundState(profile.hubBackground);
     }
-  }, [profile?.language, profile?.theme, profile?.homeBackground, profile?.hubBackground, userToken]);
+  }, [profile.language, profile.theme, profile.homeBackground, profile.hubBackground, userToken]);
 
   const setTheme = (t: ThemeOption) => {
     setThemeState(t);

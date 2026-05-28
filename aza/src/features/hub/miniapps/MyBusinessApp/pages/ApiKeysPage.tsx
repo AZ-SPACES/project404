@@ -1,23 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert, Clipboard, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
-import { 
-  getMerchantApiKeys, 
-  createMerchantApiKey, 
+import {
+  getMerchantApiKeys,
+  createMerchantApiKey,
   revokeMerchantApiKey,
   updateMerchantApiKey,
   rollMerchantApiKey,
   getMerchantApiLogs
 } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 
 export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
   // Main view states
-  const [keys, setKeys] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: keys = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantApiKeys(),
+    queryFn: async () => { const r = await getMerchantApiKeys(); return extractData(r) ?? []; },
+    staleTime: 60_000,
+  });
+  const invalidateKeys = () => queryClient.invalidateQueries({ queryKey: queryKeys.merchantApiKeys() });
   const [activeSubTab, setActiveSubTab] = useState<'KEYS' | 'LOGS'>('KEYS');
   const [activeTab, setActiveTab] = useState<'LIVE' | 'TEST'>('LIVE');
 
@@ -58,15 +65,6 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
   const [logsPage, setLogsPage] = useState(0);
   const [hasMoreLogs, setHasMoreLogs] = useState(false);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    getMerchantApiKeys()
-      .then((r: any) => setKeys(extractData(r) ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const loadLogs = (page = 0) => {
     setLogsLoading(true);
@@ -126,7 +124,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setNewKeyExpirationDays(null);
       setNewKeyScopes({ 'sessions:read': false, 'sessions:write': false });
       setShowForm(false);
-      load();
+      invalidateKeys();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create key.');
     } finally {
@@ -147,7 +145,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       }
       await updateMerchantApiKey(keyId, payload);
       setEditingKeyId(null);
-      load();
+      invalidateKeys();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update key.');
     } finally {
@@ -164,7 +162,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
         setRevealedKey(data.fullKey);
       }
       setRollingKeyId(null);
-      load();
+      invalidateKeys();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to roll key.');
     } finally {
@@ -177,7 +175,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       { text: 'Revoke', style: 'destructive', onPress: async () => {
         try {
           await revokeMerchantApiKey(keyId);
-          load();
+          invalidateKeys();
         } catch {
           Alert.alert('Error', 'Failed to revoke key.');
         }
@@ -191,7 +189,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try {
           await revokeMerchantApiKey(keyId);
-          load();
+          invalidateKeys();
         } catch {
           Alert.alert('Error', 'Failed to delete key.');
         }

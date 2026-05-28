@@ -1,22 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
 import { getMerchantSettlements } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
 import InternalHeader from '../components/InternalHeader';
 
 export default function SettlementsPage({ goBack, Colors, styles }: NavProps) {
-  const [settlements, setSettlements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getMerchantSettlements(0, 30)
-      .then((r: any) => setSettlements(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: settlements = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantSettlements(),
+    queryFn: async () => { const r = await getMerchantSettlements(0, 30); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
 
   return (
     <View style={{ flex: 1 }}>

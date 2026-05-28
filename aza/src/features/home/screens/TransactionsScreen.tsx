@@ -48,6 +48,7 @@ export type Transaction = {
   senderId?: string;
   recipientId?: string;
   completedAt?: string | null;
+  currency?: string;
 };
 
 export type Section = {
@@ -181,7 +182,7 @@ export function TransactionsScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Transactions">>();
-  const balance = route.params?.balance || "GH₵ 0.00";
+  const balance = route.params?.balance || formatCurrency(0);
   const { transactionGrouping } = useDisplayContext();
 
   const [searchQuery, setSearchQuery] = useState("");

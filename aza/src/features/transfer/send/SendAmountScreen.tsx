@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -18,6 +18,8 @@ import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { getWalletBalance } from '../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../lib/queryKeys';
 import { formatCurrency } from '../../../utils/transactionUtils';
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -31,22 +33,14 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [balance, setBalance] = useState<number | null>(null);
-    const [balanceCurrency, setBalanceCurrency] = useState('GHS');
     const amountInputRef = useRef<TextInput>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        getWalletBalance()
-            .then(res => {
-                if (cancelled) return;
-                const data = res.data?.data || res.data;
-                setBalance(data.balance);
-                setBalanceCurrency(data.currency || 'GHS');
-            })
-            .catch(() => { /* balance remains null — safe */ });
-        return () => { cancelled = true; };
-    }, []);
+    const { data: walletData } = useQuery({
+      queryKey: queryKeys.wallet(),
+      queryFn: async () => { const res = await getWalletBalance(); return res.data?.data || res.data; },
+      staleTime: 30_000,
+    });
+    const balance: number | null = walletData?.balance ?? null;
+    const balanceCurrency: string = walletData?.currency ?? 'GHS';
 
     const numericAmount = amount === '' || amount === '.' ? 0 : (parseFloat(amount) || 0);
     const displayAmount = numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
