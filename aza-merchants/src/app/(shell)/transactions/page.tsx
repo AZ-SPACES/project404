@@ -346,7 +346,7 @@ function FilterTabs({ options, value, onChange }: { options: string[]; value: st
           key={o}
           onClick={() => onChange(o)}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            value === o ? "bg-[#10b981] text-white" : "text-white/45 hover:text-white"
+            value === o ? "bg-[#174717] text-white" : "text-white/45 hover:text-white"
           }`}
         >
           {o.charAt(0) + o.slice(1).toLowerCase()}

@@ -7,7 +7,7 @@ import { signup } from "@/lib/merchant-api";
 import { Loader2, Eye, EyeOff, Phone, Mail, User } from "lucide-react";
 
 const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 focus:bg-white/8 transition-all text-sm";
+  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -55,14 +55,8 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-[#10b981] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
-            </div>
-            <span className="text-xl font-semibold">
-              aza{" "}
-              <span className="text-[#10b981] text-xs font-normal">merchants</span>
-            </span>
+          <div className="inline-flex items-center justify-center mb-6">
+            <img src="/logo.png" alt="Aza Merchants" className="h-8 w-auto" />
           </div>
           <h1 className="text-2xl font-bold text-white">Create your account</h1>
           <p className="text-white/45 text-sm mt-1.5">
@@ -213,7 +207,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-1"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-1"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
             {loading ? "Creating account…" : "Create account"}
@@ -222,7 +216,7 @@ export default function SignupPage() {
 
         <p className="text-center text-xs text-white/25 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-[#10b981] hover:underline">
+          <Link href="/login" className="text-[#B7EE7A] hover:underline">
             Sign in
           </Link>
         </p>

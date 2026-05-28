@@ -107,7 +107,7 @@ export default function DashboardPage() {
           <StatCard label="Total" value={fmt(stats.totalTransactions)} icon={TrendingUp} />
           <StatCard label="Completed" value={fmt(stats.completedTransactions)} icon={TrendingUp} color="text-emerald-400" />
           <StatCard label="Total Volume" value={fmtGhs(stats.totalTransactionVolume)} icon={DollarSign} />
-          <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#F5A623]" />
+          <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#B7EE7A]" />
         </div>
       </section>
 
@@ -117,7 +117,7 @@ export default function DashboardPage() {
           <StatCard label="Total Merchants" value={fmt(stats.totalMerchants)} icon={Store} />
           <StatCard label="Active" value={fmt(stats.activeMerchants)} icon={Store} color="text-emerald-400" />
           <StatCard label="Pending KYB" value={fmt(stats.pendingKybMerchants)} icon={ShieldAlert} color="text-amber-400" />
-          <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#F5A623]" />
+          <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#B7EE7A]" />
         </div>
       </section>
 
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             value={fmtGhs(stats.totalMerchantBalance)}
             sub="Pending payouts across all merchants"
             icon={Store}
-            color="text-[#F5A623]"
+            color="text-[#B7EE7A]"
           />
           <StatCard
             label="Total on Platform"

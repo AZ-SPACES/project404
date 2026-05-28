@@ -74,12 +74,12 @@ function Sparkline({ data }: { data: { revenue: number }[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-14" preserveAspectRatio="none">
       <defs>
         <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          <stop offset="0%" stopColor="#B7EE7A" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#B7EE7A" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={area} fill="url(#sg)" />
-      <path d={path} fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={path} fill="none" stroke="#B7EE7A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -135,7 +135,7 @@ function PaymentLinkModal({ onClose }: { onClose: () => void }) {
                   type="number" step="0.01" min="0.01" required
                   value={amount} onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
                 />
               </div>
             </div>
@@ -144,27 +144,27 @@ function PaymentLinkModal({ onClose }: { onClose: () => void }) {
               <input
                 type="text" value={description} onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Order #1234"
-                className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+                className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
               />
             </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
               {loading && <Loader2 size={14} className="animate-spin" />}
               {loading ? "Generating…" : "Generate link"}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-[#10b981]/8 border border-[#10b981]/20 rounded-xl">
-              <CheckCircle2 size={16} className="text-[#10b981] flex-shrink-0" />
-              <p className="text-sm text-[#10b981] font-medium">Payment link created</p>
+            <div className="flex items-center gap-2 p-3 bg-[#B7EE7A]/8 border border-[#B7EE7A]/20 rounded-xl">
+              <CheckCircle2 size={16} className="text-[#B7EE7A] flex-shrink-0" />
+              <p className="text-sm text-[#B7EE7A] font-medium">Payment link created</p>
             </div>
             <div className="bg-black/30 border border-white/8 rounded-xl p-3">
               <p className="text-[10px] text-white/35 mb-1.5 uppercase tracking-wider font-medium">Checkout URL</p>
               <p className="text-xs text-white/70 font-mono break-all">{result.checkoutUrl}</p>
             </div>
             <button onClick={copyLink} className="w-full py-2.5 rounded-xl bg-white/6 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 font-medium text-sm transition-colors flex items-center justify-center gap-2">
-              {copied ? <Check size={14} className="text-[#10b981]" /> : <Copy size={14} />}
+              {copied ? <Check size={14} className="text-[#B7EE7A]" /> : <Copy size={14} />}
               {copied ? "Copied!" : "Copy link"}
             </button>
             <button onClick={onClose} className="w-full py-2 text-sm text-white/35 hover:text-white/60 transition-colors">Done</button>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-[#10b981]" size={24} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={24} />
       </div>
     );
   }
@@ -215,7 +215,7 @@ export default function DashboardPage() {
       value: summary ? fmtShort(Number(summary.todayRevenue)) : "—",
       sub: `${summary?.todayPayments ?? 0} payments`,
       icon: DollarSign,
-      color: "text-[#10b981]",
+      color: "text-[#B7EE7A]",
     },
     {
       label: "Last 7 days",
@@ -251,14 +251,14 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold text-white">{merchant?.businessName ?? "Dashboard"}</h1>
             <p className="text-white/40 text-sm mt-0.5">
               @{merchant?.businessHandle} ·{" "}
-              <span className={merchant?.status === "ACTIVE" ? "text-[#10b981]" : "text-amber-400"}>
+              <span className={merchant?.status === "ACTIVE" ? "text-[#B7EE7A]" : "text-amber-400"}>
                 {merchant?.status === "ACTIVE" ? "Live" : merchant?.status?.replace(/_/g, " ") ?? ""}
               </span>
             </p>
           </div>
           <button
             onClick={() => setShowLinkModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors"
           >
             <Link2 size={15} />
             <span className="hidden sm:block">Generate payment link</span>
@@ -287,12 +287,12 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm font-semibold text-white">Revenue — last 30 days</p>
-                <p className="text-2xl font-bold text-[#10b981] mt-0.5">
+                <p className="text-2xl font-bold text-[#B7EE7A] mt-0.5">
                   {summary ? fmtGHS(Number(summary.thirtyDayRevenue)) : "—"}
                 </p>
               </div>
               {summary && Number(summary.thirtyDayRevenue) > 0 && (
-                <div className="flex items-center gap-1 text-xs text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-full">
+                <div className="flex items-center gap-1 text-xs text-[#B7EE7A] bg-[#B7EE7A]/10 px-2.5 py-1 rounded-full">
                   <ArrowUpRight size={12} />
                   Live
                 </div>
@@ -345,7 +345,7 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-white">Recent transactions</p>
             <button
               onClick={() => router.push("/transactions")}
-              className="flex items-center gap-1 text-xs text-white/40 hover:text-[#10b981] transition-colors"
+              className="flex items-center gap-1 text-xs text-white/40 hover:text-[#B7EE7A] transition-colors"
             >
               View all <ArrowRight size={12} />
             </button>

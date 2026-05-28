@@ -180,7 +180,7 @@ export default function UserDetailPage() {
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${KYC_COLORS[user.kycStatus] ?? "bg-white/10 text-white/40"}`}>
           KYC: {user.kycStatus.replace(/_/g, " ")}
         </span>
-        <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${isAdmin ? "bg-[#F5A623]/15 text-[#F5A623]" : "bg-white/10 text-white/40"}`}>
+        <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${isAdmin ? "bg-[#B7EE7A]/15 text-[#B7EE7A]" : "bg-white/10 text-white/40"}`}>
           {isAdmin && <Crown size={11} />} {user.role}
         </span>
       </div>
@@ -314,7 +314,7 @@ export default function UserDetailPage() {
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${
               isAdmin
                 ? "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
-                : "bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/20 hover:bg-[#F5A623]/20"
+                : "bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 hover:bg-[#B7EE7A]/20"
             }`}
           >
             {roleUpdating && <Loader2 size={14} className="animate-spin" />}
@@ -347,7 +347,7 @@ export default function UserDetailPage() {
               className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none resize-none" />
             <div className="flex gap-3">
               <button onClick={applyStatus} disabled={updating || !newStatus}
-                className="flex-1 py-2.5 rounded-xl bg-[#F5A623] text-black font-semibold text-sm hover:bg-[#F5A623]/90 disabled:opacity-50 flex items-center justify-center gap-2">
+                className="flex-1 py-2.5 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 disabled:opacity-50 flex items-center justify-center gap-2">
                 {updating && <Loader2 size={14} className="animate-spin" />} Apply
               </button>
               <button onClick={() => setStatusModal(false)}

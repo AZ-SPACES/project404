@@ -22,7 +22,7 @@ function fmtDate(s: string | null) {
 const STATUS_STYLE: Record<string, string> = {
   DRAFT: "bg-white/10 text-white/50",
   SENT: "bg-blue-400/10 text-blue-400",
-  PAID: "bg-[#10b981]/10 text-[#10b981]",
+  PAID: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   CANCELLED: "bg-red-400/10 text-red-400",
   OVERDUE: "bg-amber-400/10 text-amber-400",
 };
@@ -83,7 +83,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
                 required
                 value={form.customerName}
                 onChange={(e) => setForm((f) => ({ ...f, customerName: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="John Doe"
               />
             </div>
@@ -94,7 +94,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
                 type="email"
                 value={form.customerEmail}
                 onChange={(e) => setForm((f) => ({ ...f, customerEmail: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="john@example.com"
               />
             </div>
@@ -107,7 +107,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
                 step="0.01"
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="0.00"
               />
             </div>
@@ -117,7 +117,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
               />
             </div>
             <div className="col-span-2">
@@ -125,7 +125,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
               <input
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="Services rendered"
               />
             </div>
@@ -140,7 +140,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Create Invoice
@@ -219,7 +219,7 @@ export default function InvoicesPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
         >
           <Plus size={15} />
           New Invoice
@@ -229,7 +229,7 @@ export default function InvoicesPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">
@@ -239,7 +239,7 @@ export default function InvoicesPage() {
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <FileText size={32} className="text-white/15" />
             <p className="text-white/40 text-sm">No invoices yet</p>
-            <button onClick={() => setShowCreate(true)} className="text-sm text-[#10b981] hover:underline">
+            <button onClick={() => setShowCreate(true)} className="text-sm text-[#B7EE7A] hover:underline">
               Create your first invoice
             </button>
           </div>
@@ -300,7 +300,7 @@ export default function InvoicesPage() {
                             <button
                               onClick={() => handleSend(inv.id)}
                               disabled={actionLoading === inv.id + ":send"}
-                              className="p-1.5 rounded-lg text-[#10b981]/70 hover:text-[#10b981] hover:bg-[#10b981]/10 transition-colors disabled:opacity-50"
+                              className="p-1.5 rounded-lg text-[#B7EE7A]/70 hover:text-[#B7EE7A] hover:bg-[#B7EE7A]/10 transition-colors disabled:opacity-50"
                               title="Send invoice"
                             >
                               {actionLoading === inv.id + ":send" ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}

@@ -104,15 +104,10 @@ export default function DevSignupPage() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-8">
-          <span
-            className="w-9 h-9 rounded-full flex items-center justify-center text-base font-black"
-            style={{ background: '#B7EE7A', color: '#174717' }}
-          >
-            A
-          </span>
+        <div className="flex items-center gap-3 mb-8">
+          <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
-            aza <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
+            <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
         </div>
 

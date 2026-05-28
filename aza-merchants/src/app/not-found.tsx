@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="text-center">
         <p className="text-5xl font-bold text-white/10 mb-4">404</p>
         <p className="text-white/50 text-sm mb-6">Page not found</p>
-        <Link href="/dashboard" className="text-sm text-[#10b981] hover:underline">
+        <Link href="/dashboard" className="text-sm text-[#B7EE7A] hover:underline">
           Back to dashboard
         </Link>
       </div>

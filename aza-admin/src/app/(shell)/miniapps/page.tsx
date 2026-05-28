@@ -164,7 +164,7 @@ export default function MiniAppsPage() {
                     {r.status === "OPEN" && (
                       <button
                         onClick={() => { setResolving(r); setResolution(""); }}
-                        className="text-xs text-[#F5A623] hover:underline"
+                        className="text-xs text-[#B7EE7A] hover:underline"
                       >
                         Review
                       </button>

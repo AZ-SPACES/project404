@@ -155,7 +155,7 @@ export default function SupportAnalyticsPage() {
               <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Avg First Response</p>
               <Clock size={16} className="text-white/20" />
             </div>
-            <p className="text-3xl font-semibold text-[#F5A623] mt-1.5">{fmtMinutes(data.avgFirstResponseMinutes)}</p>
+            <p className="text-3xl font-semibold text-[#B7EE7A] mt-1.5">{fmtMinutes(data.avgFirstResponseMinutes)}</p>
             <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full ${
@@ -173,7 +173,7 @@ export default function SupportAnalyticsPage() {
               <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Avg Resolution Time</p>
               <CheckCircle2 size={16} className="text-white/20" />
             </div>
-            <p className="text-3xl font-semibold text-[#F5A623] mt-1.5">{fmtMinutes(data.avgResolutionHours * 60)}</p>
+            <p className="text-3xl font-semibold text-[#B7EE7A] mt-1.5">{fmtMinutes(data.avgResolutionHours * 60)}</p>
             <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full ${
@@ -249,7 +249,7 @@ export default function SupportAnalyticsPage() {
                   <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full flex gap-0.5 items-end" style={{ height: "72px" }}>
                       <div
-                        className="flex-1 bg-[#F5A623]/60 rounded-t"
+                        className="flex-1 bg-[#B7EE7A]/60 rounded-t"
                         style={{ height: `${(d.opened / maxVal) * 100}%` }}
                         title={`Opened: ${d.opened}`}
                       />
@@ -266,7 +266,7 @@ export default function SupportAnalyticsPage() {
             </div>
             <div className="flex gap-4 mt-3">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-sm bg-[#F5A623]/60" />
+                <div className="w-2.5 h-2.5 rounded-sm bg-[#B7EE7A]/60" />
                 <span className="text-[11px] text-white/35">Opened</span>
               </div>
               <div className="flex items-center gap-1.5">

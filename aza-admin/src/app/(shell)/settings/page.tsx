@@ -21,7 +21,7 @@ function Toggle({ enabled, onChange, label, description, danger }: {
         onClick={() => onChange(!enabled)}
         className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
           enabled
-            ? danger ? "bg-red-500" : "bg-[#F5A623]"
+            ? danger ? "bg-red-500" : "bg-[#B7EE7A]"
             : "bg-white/10"
         }`}
       >
@@ -280,7 +280,7 @@ export default function SettingsPage() {
             <button
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#F5A623] text-black text-sm font-semibold hover:bg-[#F5A623]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#B7EE7A] text-black text-sm font-semibold hover:bg-[#B7EE7A]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? "Saving..." : "Save Changes"}

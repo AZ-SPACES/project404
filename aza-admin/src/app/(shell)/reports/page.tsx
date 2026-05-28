@@ -92,7 +92,7 @@ export default function ReportsPage() {
             key={p}
             onClick={() => setPeriod(p)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              period === p ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+              period === p ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
           >
             {PERIOD_LABELS[p]}
@@ -120,7 +120,7 @@ export default function ReportsPage() {
               value={report ? fmtGhs(report.transactionVolume) : stats ? fmtGhs(stats.totalTransactionVolume) : "—"}
               sub={report ? `${report.transactionCount.toLocaleString()} transactions` : undefined}
               icon={TrendingUp}
-              color="text-[#F5A623]"
+              color="text-[#B7EE7A]"
             />
             <MetricCard
               label="Fee Revenue"
