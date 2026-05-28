@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
 import { Alert } from "react-native";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";

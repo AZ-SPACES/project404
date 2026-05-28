@@ -4,7 +4,7 @@ import {
   StatusBar, Dimensions, Alert, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { CameraView, useCameraPermissions, FlashMode, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';

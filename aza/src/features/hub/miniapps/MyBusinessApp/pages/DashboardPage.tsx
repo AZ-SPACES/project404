@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../../../theme';
 import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../../../providers/DisplayProvider';

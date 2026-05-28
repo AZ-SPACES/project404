@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { useNavigation } from "@react-navigation/native";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { Calendar } from "react-native-calendars";
 import Button from "../../../components/ui/Button";
 import { getTransactionsStatement, sendTransactionsStatementEmail } from "../../../services/api";

@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import type { MenuAnchor } from './chatTypes';
 

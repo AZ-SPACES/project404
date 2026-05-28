@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { HomeScreen } from "../features/home";
 import { HubScreen } from "../features/hub";
 import { ContactsScreen } from "../features/contacts";

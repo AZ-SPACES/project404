@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../theme';
 import Button from '../../../components/ui/Button';
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../../providers/AuthProvider';
 import { Alert } from 'react-native';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated, Dimensions, TouchableOpacity } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import Button from '../../../../../components/ui/Button';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useNavigation } from '@react-navigation/native';

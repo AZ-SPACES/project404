@@ -68,7 +68,7 @@ public class KycService {
         KycRecord record = getOrCreateRecord(user);
 
         if (Boolean.TRUE.equals(record.getBiometricConsent())) {
-            throw new RuntimeException("Consent already recorded");
+            throw new AppException("Consent already recorded");
         }
         record.setBiometricConsent(true);
         record.setConsentTimestamp(LocalDateTime.now());
@@ -88,7 +88,7 @@ public class KycService {
         for (String source : request.getFundsSource().split(",")) {
             String s = source.strip().toLowerCase();
             if (!ALLOWED_FUNDS_SOURCES.contains(s)) {
-                throw new RuntimeException("Invalid funds source: \"" + s
+                throw new AppException("Invalid funds source: \"" + s
                         + "\". Allowed values: " + ALLOWED_FUNDS_SOURCES);
             }
         }
@@ -107,17 +107,17 @@ public class KycService {
         ensureNotSubmitted(record);
 
         if (request.getIdType() == null || request.getIdType().isBlank()) {
-            throw new RuntimeException("ID type is required");
+            throw new AppException("ID type is required");
         }
         if (request.getIdNumber() == null || request.getIdNumber().isBlank()) {
-            throw new RuntimeException("ID number is required");
+            throw new AppException("ID number is required");
         }
 
         //Validate ID type
         try {
             KycRecord.IdType.valueOf(request.getIdType().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid id type");
+            throw new AppException("Invalid id type");
         }
 
         //Validate and upload front image
@@ -134,7 +134,7 @@ public class KycService {
 
         String idNumber = request.getIdNumber().replaceAll("\\s", "").toUpperCase();
         if (!ID_NUMBER_PATTERN.matcher(idNumber).matches()) {
-            throw new RuntimeException("Invalid ID number format. Only letters, digits, and hyphens are accepted (4–30 characters).");
+            throw new AppException("Invalid ID number format. Only letters, digits, and hyphens are accepted (4–30 characters).");
         }
 
         record.setIdType(KycRecord.IdType.valueOf(request.getIdType().toUpperCase()));
@@ -176,7 +176,7 @@ public class KycService {
             try {
                 record.setPepStatus(KycRecord.PepStatus.valueOf(request.getPepStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Invalid PEP status. Accepted; SELF, FAMILY_ASSOCIATE");
+                throw new AppException("Invalid PEP status. Accepted; SELF, FAMILY_ASSOCIATE");
             }
             record.setPepRole(request.getPepRole());
         }
@@ -191,7 +191,7 @@ public class KycService {
         ensureNotSubmitted(record);
 
         if (!Boolean.TRUE.equals(record.getIsPep())) {
-            throw new RuntimeException("PEP details only required for Politically Exposed Persons");
+            throw new AppException("PEP details only required for Politically Exposed Persons");
         }
 
         record.setPepAccountPurpose(request.getAccountPurpose());
@@ -208,7 +208,7 @@ public class KycService {
         ensureNotSubmitted(record);
 
         if (!Boolean.TRUE.equals(record.getIsPep())) {
-            throw new RuntimeException("Proof of wealth only required for Politically Exposed Persons");
+            throw new AppException("Proof of wealth only required for Politically Exposed Persons");
         }
 
         validateFile(proofDoc, MAX_DOC_SIZE, ALLOWED_DOC_TYPES, "Proof of wealth document");
@@ -226,35 +226,35 @@ public class KycService {
     @Transactional
     public KycStatusResponse submitKyc(User user) {
         KycRecord record = kycRecordRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("No KYC record found — complete all steps first"));
+                .orElseThrow(() -> new AppException("No KYC record found — complete all steps first"));
 
         // Validate all required steps are complete
         if (!Boolean.TRUE.equals(record.getBiometricConsent())) {
-            throw new RuntimeException("Step 1 incomplete: biometric consent not given");
+            throw new AppException("Step 1 incomplete: biometric consent not given");
         }
         if (record.getFundsSource() == null) {
-            throw new RuntimeException("Step 2 incomplete: funds source not submitted");
+            throw new AppException("Step 2 incomplete: funds source not submitted");
         }
         if (record.getIdNumber() == null || record.getIdFrontImageUrl() == null) {
-            throw new RuntimeException("Step 3 incomplete: ID document not submitted");
+            throw new AppException("Step 3 incomplete: ID document not submitted");
         }
         if (record.getSelfieImageUrl() == null) {
-            throw new RuntimeException("Step 4 incomplete: selfie not submitted");
+            throw new AppException("Step 4 incomplete: selfie not submitted");
         }
         if (record.getIsPep() == null) {
-            throw new RuntimeException("Step 5 incomplete: PEP screening not completed");
+            throw new AppException("Step 5 incomplete: PEP screening not completed");
         }
 
         // If PEP, ensure EDD details are provided
         if (record.getIsPep()) {
             if (record.getPepAccountPurpose() == null || record.getPepWealthSource() == null) {
-                throw new RuntimeException("Step 6 incomplete: PEP enhanced due diligence details required");
+                throw new AppException("Step 6 incomplete: PEP enhanced due diligence details required");
             }
         }
 
         // Prevent re-submission
         if (record.getSubmittedAt() != null) {
-            throw new RuntimeException("KYC already submitted. Current status: " + record.getStatus().name());
+            throw new AppException("KYC already submitted. Current status: " + record.getStatus().name());
         }
 
         record.setSubmittedAt(LocalDateTime.now());
@@ -333,14 +333,14 @@ public class KycService {
     @Transactional
     public KycStatusResponse reviewRecord(UUID userId, boolean approve, String rejectionReason) {
         KycRecord record = kycRecordRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("KYC record not found"));
+                .orElseThrow(() -> new AppException("KYC record not found"));
 
         if (record.getStatus() != KycRecord.KycStatus.UNDER_REVIEW) {
-            throw new RuntimeException("Record is not under review. Current status: " + record.getStatus());
+            throw new AppException("Record is not under review. Current status: " + record.getStatus());
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (approve) {
             record.setStatus(KycRecord.KycStatus.VERIFIED);
@@ -427,7 +427,7 @@ public class KycService {
 
     private void ensureNotSubmitted(KycRecord record) {
         if (record.getSubmittedAt() != null) {
-            throw new RuntimeException("KYC already submitted — cannot modify. Current status: "
+            throw new AppException("KYC already submitted — cannot modify. Current status: "
                     + record.getStatus().name());
         }
     }
@@ -439,24 +439,24 @@ public class KycService {
 
     private void validateFile(MultipartFile file, long maxSize, List<String> allowedTypes, String fieldName) {
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException(fieldName + " is required");
+            throw new AppException(fieldName + " is required");
         }
         if (file.getSize() > maxSize) {
-            throw new RuntimeException(fieldName + " exceeds maximum size of " + (maxSize / 1024 / 1024) + "MB");
+            throw new AppException(fieldName + " exceeds maximum size of " + (maxSize / 1024 / 1024) + "MB");
         }
         String contentType = file.getContentType();
         if (contentType == null || !allowedTypes.contains(contentType)) {
-            throw new RuntimeException(fieldName + " must be one of: " + String.join(", ", allowedTypes));
+            throw new AppException(fieldName + " must be one of: " + String.join(", ", allowedTypes));
         }
 
         // Validate actual file bytes (magic bytes check)
         try {
             byte[] bytes = file.getBytes();
             if (!isValidFileContent(bytes, allowedTypes)) {
-                throw new RuntimeException(fieldName + " content does not match its declared type");
+                throw new AppException(fieldName + " content does not match its declared type");
             }
         } catch (java.io.IOException e) {
-            throw new RuntimeException("Failed to read " + fieldName);
+            throw new AppException("Failed to read " + fieldName);
         }
     }
 

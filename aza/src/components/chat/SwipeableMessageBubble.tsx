@@ -9,7 +9,7 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme } from '../../theme';
 import type { Message } from './chatTypes';

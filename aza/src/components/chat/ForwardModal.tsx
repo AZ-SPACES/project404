@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { Contact, CONTACTS, Message } from './chatTypes';

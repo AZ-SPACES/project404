@@ -3,7 +3,8 @@ import { StyleSheet, View, Animated, Easing } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 import * as Font from 'expo-font';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { Feather } from '@react-native-vector-icons/feather';
 
 import { useDisplayContext } from '../../providers/DisplayProvider';
 

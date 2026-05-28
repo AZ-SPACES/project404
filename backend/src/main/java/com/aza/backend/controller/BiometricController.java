@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import com.aza.backend.exception.AppException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -109,11 +110,11 @@ public class BiometricController {
             @PathVariable UUID id) {
         BiometricToken token = biometricTokenRepository
                 .findById(id)
-                .orElseThrow(() -> new RuntimeException("Device not found"));
+                .orElseThrow(() -> new AppException("Device not found"));
 
         // Ownership check — ensure the token belongs to this user
         if (!token.getUserId().equals(user.getId())) {
-            throw new RuntimeException("Not authorized");
+            throw new AppException("Not authorized");
         }
 
         biometricTokenRepository.delete(token);

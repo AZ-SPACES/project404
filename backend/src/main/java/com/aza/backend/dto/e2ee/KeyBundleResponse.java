@@ -10,7 +10,7 @@ import lombok.Data;
 public class KeyBundleResponse {
     private String recipientId;
     private String identityPublicKey;
-    private String signedPreKyPublic;
+    private String signedPreKeyPublic;
     private String signedPreKeySignature;
     private String oneTimePreKeyId;
     private String oneTimePreKeyPublic;
