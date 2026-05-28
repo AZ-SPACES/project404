@@ -11,6 +11,7 @@ import Button from '../../../components/ui/Button';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { logoutEverywhere as logoutEverywhereApi } from '../../../services/api';
+import { BackButton } from '../../../components/ui/BackButton';
 
 export function LogoutEverywhereScreen() {
   const { colors: Colors } = useAppTheme();
@@ -38,12 +39,7 @@ export function LogoutEverywhereScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>

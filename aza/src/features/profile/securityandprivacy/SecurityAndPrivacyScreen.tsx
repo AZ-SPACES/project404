@@ -11,6 +11,8 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const { height } = Dimensions.get('window');
 
@@ -133,12 +135,7 @@ export function SecurityAndPrivacyScreen() {
               outputRange: ["transparent", Colors.border] }) }
         ]}
       >
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
           <Text style={[Typography.h3, styles.headerTitle]}>Security and privacy</Text>
         </Animated.View>
@@ -284,12 +281,7 @@ export function SecurityAndPrivacyScreen() {
         >
           <View style={styles.bottomSheetHeader}>
             <Text style={[Typography.h2, styles.bottomSheetTitle]}>App security</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setBottomSheetVisible(false)}
-            >
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setBottomSheetVisible(false)} />
           </View>
           
           <TouchableOpacity style={styles.bottomSheetItem} activeOpacity={0.7} onPress={() => { toggleBiometrics(!isBiometricsEnabled); setBottomSheetVisible(false); }}>

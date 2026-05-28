@@ -21,6 +21,7 @@ import Button from "../../../components/ui/Button";
 import { disableTotp } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
+import { BackButton } from '../../../components/ui/BackButton';
 
 export default function DisableTotpScreen() {
   const { colors: Colors } = useAppTheme();
@@ -71,12 +72,7 @@ export default function DisableTotpScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.headerTitle}>Authenticator app</Text>
         </View>
 

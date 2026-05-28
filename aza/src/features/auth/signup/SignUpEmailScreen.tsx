@@ -24,6 +24,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkEmailAvailability } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmail">;
 
@@ -126,16 +127,7 @@ export default function SignUpEmailScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
           {/* Content */}

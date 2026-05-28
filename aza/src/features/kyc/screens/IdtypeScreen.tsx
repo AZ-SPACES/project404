@@ -22,6 +22,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useKYC, IdType } from '../../../providers/KYCProvider';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Idtype'>;
 type IdtypeRouteProp = RouteProp<RootStackParamList, "Idtype">;
@@ -123,9 +124,7 @@ export default function IdtypeScreen() {
                   outputRange: ["transparent", Colors.border] }) },
             ]}
           >
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityLabel="Go back" accessibilityRole="button">
-              <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
             <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
               <Text style={styles.headerTitle} numberOfLines={1}>
                 Identity Verification

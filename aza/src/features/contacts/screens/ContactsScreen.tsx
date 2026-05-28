@@ -39,6 +39,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
 import { Contact as BackendContact } from "../types";
+import { CloseButton } from '../../../components/ui/CloseButton';
 
 const AZA_ICON = require("../../../assets/aza-z.png");
 
@@ -462,9 +463,7 @@ export default function ContactsScreen() {
         </Animated.View>
         <Animated.View style={[styles.bottomSheetContainer, { transform: [{ translateY: recipientSheetAnim }] }]}>
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity style={styles.closeButton} onPress={closeSheet}>
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={closeSheet} />
           </View>
           {selectedRecipient && (
             <View style={styles.sheetContent}>
@@ -518,9 +517,7 @@ export default function ContactsScreen() {
         </Animated.View>
         <Animated.View style={[styles.bottomSheetContainer, styles.inviteSheetContainer, { transform: [{ translateY: inviteSheetAnim }] }]}>
           <View style={styles.bottomSheetHeader}>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowInviteModal(false)}>
-              <AntDesign name="close" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={() => setShowInviteModal(false)} />
           </View>
           <View style={styles.inviteContent}>
             <View style={styles.stackedAvatars}>
@@ -593,9 +590,7 @@ export default function ContactsScreen() {
           <View style={[styles.bottomSheetContainer, { maxHeight: '80%', paddingBottom: Spacing.xl }]}>
             <View style={[styles.bottomSheetHeader, { justifyContent: 'space-between', alignItems: 'center' }]}>
               <Text style={[Typography.h3, { color: Colors.textPrimary }]}>Blocked Contacts</Text>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setShowBlockedModal(false)}>
-                <AntDesign name="close" size={20} color={Colors.textPrimary} />
-              </TouchableOpacity>
+              <CloseButton onPress={() => setShowBlockedModal(false)} />
             </View>
 
             {isLoading && blockedUsers.length === 0 ? (

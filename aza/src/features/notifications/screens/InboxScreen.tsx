@@ -20,6 +20,7 @@ import { useNotifications } from "../../../providers/NotificationProvider";
 import { useToast } from "../../../providers/ToastProvider";
 
 import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, deleteAllNotifications } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Inbox">;
 
@@ -180,12 +181,7 @@ export default function InboxScreen() {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
 
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         
         <View style={styles.headerActions}>
           {screenState.status === 'success' && screenState.data.length > 0 && (

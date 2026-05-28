@@ -22,6 +22,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidPassword, getPasswordRules } from "../../../utils/validation";
 import { resetPassword } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetNewPassword">;
 type RouteProps = RouteProp<RootStackParamList, "ResetNewPassword">;
@@ -76,16 +77,7 @@ export default function ResetNewPasswordScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
           {/* Content */}

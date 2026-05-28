@@ -19,6 +19,7 @@
     ]
   },
   "dependencies": {
+    "@expo/ui": "^56.0.14",
     "@noble/ciphers": "^2.2.0",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
