@@ -1,71 +1,35 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New API Key Created</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb; }
-        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-        .header { padding: 32px; text-align: center; background-color: #111827; }
-        .logo { width: 48px; height: 48px; }
-        .content { padding: 32px; }
-        .footer { padding: 24px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #f3f4f6; }
-        h1 { font-size: 24px; font-weight: 700; margin-top: 0; color: #111827; }
-        p { margin-bottom: 16px; font-size: 16px; }
-        .badge { display: inline-block; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-bottom: 16px; }
-        .card { background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0; border: 1px solid #e5e7eb; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .label { color: #6b7280; font-size: 14px; }
-        .value { font-weight: 600; color: #111827; font-size: 14px; }
-        .mono { font-family: "SF Mono", "Fira Code", monospace; background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-        .env-live { color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-        .env-test { color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-        .warning { background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; font-size: 14px; color: #854d0e; margin: 20px 0; }
-        .btn { display: inline-block; padding: 12px 24px; background-color: #111827; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 8px; }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>New API Key Created</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="cid:paperplane" alt="AZA" class="logo">
-        </div>
-        <div class="content">
-            <span class="badge">Security Notice</span>
-            <h1>New API Key Created</h1>
-            <p>Hi <span th:text="${name}">Merchant</span>, a new API key was just created for <strong th:text="${businessName}">Your Business</strong>.</p>
-
-            <div class="card">
-                <div class="row">
-                    <span class="label">Label</span>
-                    <span class="value" th:text="${label}">My Key</span>
-                </div>
-                <div class="row">
-                    <span class="label">Prefix</span>
-                    <span class="value"><span class="mono" th:text="${keyPrefix}">aza_live_...</span></span>
-                </div>
-                <div class="row">
-                    <span class="label">Environment</span>
-                    <span class="value">
-                        <span th:if="${environment == 'LIVE'}" class="env-live">LIVE</span>
-                        <span th:if="${environment != 'LIVE'}" class="env-test" th:text="${environment}">TEST</span>
-                    </span>
-                </div>
-                <div class="row">
-                    <span class="label">Created</span>
-                    <span class="value" th:text="${createdAt}">May 27, 2026 14:00</span>
-                </div>
-            </div>
-
-            <div class="warning">
-                If you did not create this key, revoke it immediately from your merchant dashboard and contact our support team.
-            </div>
-
-            <a href="aza://merchant/api-keys" class="btn">Manage API Keys</a>
-        </div>
-        <div class="footer">
-            &copy; 2026 AZA. All rights reserved. &bull; <a href="mailto:support@aza.systems">support@aza.systems</a>
-        </div>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0E0F0C;margin:0;padding:0;background-color:#E6ECE1;">
+<div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #DADCE0;border-radius:12px;overflow:hidden;">
+  <div style="padding:28px 40px;border-bottom:1px solid #EAECEF;">
+    <table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;"><img src="cid:aza_merchant" alt="AZA" width="28" height="28" style="display:block;border:0;"></td>
+      
+    </tr></table>
+  </div>
+  <div style="padding:40px;">
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;margin-bottom:20px;letter-spacing:0.06em;text-transform:uppercase;background:#F0F0F0;color:#5F6368;">Security Notice</span>
+    <h1 style="font-size:32px;font-weight:800;color:#0E0F0C;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.2;">New API Key Created</h1>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 16px 0;line-height:1.6;">Hi <span th:text="${name}">Merchant</span>, a new API key was just created for <strong style="color:#0E0F0C;" th:text="${businessName}">Your Business</strong>.</p>
+    <div style="background:#F8F9FA;border:1px solid #EAECEF;border-radius:10px;overflow:hidden;margin:24px 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Label</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${label}">My Key</td></tr>
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Prefix</td><td style="padding:14px 20px;text-align:right;"><span style="font-family:ui-monospace,'SF Mono','Fira Code',monospace;background:#EAECEF;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:600;" th:text="${keyPrefix}">aza_live_...</span></td></tr>
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Environment</td><td style="padding:14px 20px;text-align:right;"><span th:if="${environment == 'LIVE'}" style="background:#B7EE7A;color:#174717;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;">LIVE</span><span th:if="${environment != 'LIVE'}" style="background:#F0F0F0;color:#5F6368;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;" th:text="${environment}">TEST</span></td></tr>
+        <tr><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Created</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${createdAt}">May 27, 2026 14:00</td></tr>
+      </table>
     </div>
+    <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:8px;padding:16px 20px;margin:20px 0;font-size:14px;color:#b45309;line-height:1.6;">If you did not create this key, revoke it immediately from your merchant dashboard and contact our support team.</div>
+    <a href="aza://merchant/api-keys" style="display:inline-block;padding:14px 28px;background:#174717;color:#fff !important;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;margin-top:8px;">Manage API Keys</a>
+  </div>
+  <div style="padding:28px 40px;background:#F8F9FA;border-top:1px solid #EAECEF;">
+    <p style="margin:0;font-size:13px;color:#9AA0A6;">&copy; 2026 AZA. All rights reserved. &bull; <a href="mailto:support@aza.systems" style="color:#9AA0A6;">support@aza.systems</a></p>
+  </div>
+</div>
 </body>
 </html>

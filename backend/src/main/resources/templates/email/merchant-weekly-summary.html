@@ -1,56 +1,47 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Summary</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb; }
-        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-        .header { padding: 32px; text-align: center; background-color: #111827; }
-        .logo { width: 48px; height: 48px; }
-        .content { padding: 32px; }
-        .footer { padding: 24px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #f3f4f6; }
-        h1 { font-size: 24px; font-weight: 700; margin-top: 0; }
-        p { margin-bottom: 16px; font-size: 16px; }
-        .period { font-size: 14px; color: #6b7280; margin-bottom: 24px; }
-        .stats { display: flex; gap: 12px; margin: 24px 0; }
-        .stat { flex: 1; background: #f3f4f6; border-radius: 8px; padding: 20px 16px; text-align: center; border: 1px solid #e5e7eb; }
-        .stat-num { font-size: 24px; font-weight: 800; color: #111827; }
-        .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
-        .balance-card { background: #111827; border-radius: 8px; padding: 20px; margin: 24px 0; color: #fff; }
-        .balance-label { font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
-        .balance-amount { font-size: 32px; font-weight: 800; }
-        .btn { display: inline-block; padding: 12px 24px; background-color: #111827; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 8px; }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Weekly Summary</title>
 </head>
-<body>
-    <div class="container">
-        <div class="header"><img src="cid:paperplane" alt="AZA" class="logo"></div>
-        <div class="content">
-            <h1>Your Weekly Summary</h1>
-            <p>Hi <span th:text="${name}">Merchant</span>, here's how <strong th:text="${businessName}">Your Business</strong> performed last week.</p>
-            <div class="period" th:text="${weekRange}">May 20 – May 26, 2026</div>
-
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-num">GHS <span th:text="${#numbers.formatDecimal(revenue, 1, 2)}">0.00</span></div>
-                    <div class="stat-label">Revenue</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-num" th:text="${txnCount}">0</div>
-                    <div class="stat-label">Transactions</div>
-                </div>
-            </div>
-
-            <div class="balance-card">
-                <div class="balance-label">Available Balance</div>
-                <div class="balance-amount">GHS <span th:text="${#numbers.formatDecimal(balance, 1, 2)}">0.00</span></div>
-            </div>
-
-            <a href="aza://merchant/dashboard" class="btn">View Dashboard</a>
-        </div>
-        <div class="footer">&copy; 2026 AZA. All rights reserved.</div>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0E0F0C;margin:0;padding:0;background-color:#E6ECE1;">
+<div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #DADCE0;border-radius:12px;overflow:hidden;">
+  <div style="padding:28px 40px;border-bottom:1px solid #EAECEF;">
+    <table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;"><img src="cid:aza_merchant" alt="AZA" width="28" height="28" style="display:block;border:0;"></td>
+      
+    </tr></table>
+  </div>
+  <div style="padding:40px;">
+    <h1 style="font-size:32px;font-weight:800;color:#0E0F0C;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.2;">Your Weekly Summary</h1>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 16px 0;line-height:1.6;">Hi <span th:text="${name}">Merchant</span>, here&apos;s how <strong style="color:#0E0F0C;" th:text="${businessName}">Your Business</strong> performed last week.</p>
+    <p style="font-size:14px;color:#9AA0A6;margin:0 0 24px 0;" th:text="${weekRange}">May 20 &ndash; May 26, 2026</p>
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:16px;">
+      <tr>
+        <td style="width:49%;vertical-align:top;">
+          <div style="background:#F8F9FA;border:1px solid #EAECEF;border-radius:10px;padding:20px;text-align:center;">
+            <p style="font-size:11px;font-weight:700;color:#9AA0A6;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px 0;">Revenue</p>
+            <p style="font-size:26px;font-weight:900;color:#0E0F0C;margin:0;line-height:1;">GHS <span th:text="${#numbers.formatDecimal(revenue,1,2)}">0.00</span></p>
+          </div>
+        </td>
+        <td style="width:2%;"></td>
+        <td style="width:49%;vertical-align:top;">
+          <div style="background:#F8F9FA;border:1px solid #EAECEF;border-radius:10px;padding:20px;text-align:center;">
+            <p style="font-size:11px;font-weight:700;color:#9AA0A6;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px 0;">Transactions</p>
+            <p style="font-size:26px;font-weight:900;color:#0E0F0C;margin:0;line-height:1;" th:text="${txnCount}">0</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+    <div style="background:#174717;border-radius:10px;padding:24px;margin:16px 0 24px;">
+      <p style="font-size:12px;font-weight:700;color:#B7EE7A;letter-spacing:0.06em;text-transform:uppercase;margin:0 0 8px 0;">Available Balance</p>
+      <p style="font-size:36px;font-weight:900;color:#fff;margin:0;line-height:1;">GHS <span th:text="${#numbers.formatDecimal(balance,1,2)}">0.00</span></p>
     </div>
+    <a href="aza://merchant/dashboard" style="display:inline-block;padding:14px 28px;background:#174717;color:#fff !important;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;margin-top:8px;">View Dashboard</a>
+  </div>
+  <div style="padding:28px 40px;background:#F8F9FA;border-top:1px solid #EAECEF;">
+    <p style="margin:0;font-size:13px;color:#9AA0A6;">&copy; 2026 AZA. All rights reserved. &bull; <a href="mailto:support@aza.systems" style="color:#9AA0A6;">support@aza.systems</a></p>
+  </div>
+</div>
 </body>
 </html>
