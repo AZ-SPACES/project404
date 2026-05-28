@@ -14,7 +14,10 @@ import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.repository.CheckoutSessionRepository;
 import com.aza.backend.exception.AppException;
 import org.springframework.http.HttpStatus;
+import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
+import com.aza.backend.util.SmsService;
+import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -46,6 +49,9 @@ public class TransferService {
     private final RateLimitService rateLimitService;
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final SmsService smsService;
+    private final MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -314,6 +320,26 @@ public class TransferService {
                     transaction.getAmount().toString(),
                     transaction.getId().toString());
 
+            String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
+            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                    merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef, senderWallet.getBalance());
+            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                smsService.sendTransferSentSms(sender.getPhoneNumber(), merchant.getBusinessName(),
+                        transaction.getAmount(), merchantTxnRef);
+            }
+
+            boolean emailPaymentReceived = merchantNotificationPrefRepository
+                    .findByMerchantId(merchant.getId())
+                    .map(p -> p.isEmailPaymentReceived())
+                    .orElse(true);
+            if (emailPaymentReceived) {
+                userRepository.findById(merchant.getUserId()).ifPresent(merchantOwner ->
+                    emailService.sendMerchantPaymentReceivedEmail(
+                            merchantOwner.getEmail(), merchantOwner.getFirstName(),
+                            merchant.getBusinessName(), transaction.getAmount(),
+                            sender.getFirstName() + " " + sender.getLastName(), merchantTxnRef));
+            }
+
             return buildTransferResponse(transaction, sender, null, sender.getId());
         } else {
             Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
@@ -354,6 +380,21 @@ public class TransferService {
                     sender.getFirstName() + " " + sender.getLastName(),
                     transaction.getAmount().toString(),
                     transaction.getId().toString());
+
+            String txnRef = transaction.getId().toString().substring(28).toUpperCase();
+            String senderFullName = sender.getFirstName() + " " + sender.getLastName();
+            String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
+
+            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                    recipientFullName, transaction.getAmount(), txnRef, senderWallet.getBalance());
+            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
+                        transaction.getAmount(), txnRef);
+            }
+            if (recipient.getPhoneNumber() != null && !recipient.getPhoneNumber().isBlank()) {
+                smsService.sendTransferReceivedSms(recipient.getPhoneNumber(), senderFullName,
+                        transaction.getAmount(), txnRef);
+            }
 
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
@@ -423,6 +464,15 @@ public class TransferService {
                 .build();
 
         transaction = transactionRepository.save(transaction);
+
+        String requesterName = requester.getFirstName() + " " + requester.getLastName();
+        notificationService.sendMoneyReceivedNotification(
+                fromUser.getId(), requesterName,
+                request.getAmount().toString(), transaction.getId().toString());
+        if (fromUser.getPhoneNumber() != null && !fromUser.getPhoneNumber().isBlank()) {
+            smsService.sendMoneyRequestedSms(fromUser.getPhoneNumber(), requesterName, request.getAmount());
+        }
+
         return buildTransferResponse(transaction, fromUser, requester, requester.getId());
     }
 

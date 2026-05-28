@@ -9,4 +9,8 @@ import java.util.UUID;
 public interface MerchantNotificationPreferenceRepository extends JpaRepository<MerchantNotificationPreference, UUID> {
 
     Optional<MerchantNotificationPreference> findByMerchantId(UUID merchantId);
+
+    java.util.List<MerchantNotificationPreference> findByEmailLowBalanceTrue();
+
+    java.util.List<MerchantNotificationPreference> findByEmailWeeklySummaryTrue();
 }

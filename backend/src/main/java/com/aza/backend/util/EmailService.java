@@ -157,6 +157,265 @@ public class EmailService {
         });
     }
 
+    public void sendKycSubmittedEmail(String email, String name) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("submittedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/kyc-submitted", ctx));
+            sendViaBrevo("AZA Support", senderEmail, email,
+                    "AZA - We've Received Your Verification Documents", html, null, null);
+        });
+    }
+
+    public void sendDisputeOpenedMerchantEmail(String email, String name, String businessName,
+                                                BigDecimal amount, String referenceId, String category) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("referenceId", referenceId);
+            ctx.setVariable("category", category);
+            ctx.setVariable("openedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/dispute-opened-merchant", ctx));
+            sendViaBrevo("AZA Support", senderEmail, email,
+                    "Dispute Opened - " + referenceId, html, null, null);
+        });
+    }
+
+    public void sendDisputeResolvedEmail(String email, String name, boolean approved,
+                                          BigDecimal amount, String referenceId) {
+        CompletableFuture.runAsync(() -> {
+            String subject = approved
+                    ? "Dispute Approved - " + referenceId
+                    : "Dispute Closed - " + referenceId;
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("approved", approved);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("referenceId", referenceId);
+            ctx.setVariable("resolvedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/dispute-resolved", ctx));
+            sendViaBrevo("AZA Support", senderEmail, email, subject, html, null, null);
+        });
+    }
+
+    public void sendRecoveryCodesLowEmail(String email, String name, long remaining) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("remaining", remaining);
+            String html = inlineImages(templateEngine.process("email/recovery-codes-low", ctx));
+            sendViaBrevo("AZA Security", senderEmail, email,
+                    "Action Required: Recovery Codes Running Low", html, null, null);
+        });
+    }
+
+    public void sendApiKeyRevokedEmail(String email, String name, String businessName,
+                                        String label, String keyPrefix) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("label", label);
+            ctx.setVariable("keyPrefix", keyPrefix);
+            ctx.setVariable("revokedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/api-key-revoked", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "API Key Revoked - " + businessName, html, null, null);
+        });
+    }
+
+    public void sendBulkTransferSummaryEmail(String email, String name, String businessName,
+                                              BigDecimal totalAmount, int successCount,
+                                              int failureCount, String status) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("totalAmount", totalAmount);
+            ctx.setVariable("successCount", successCount);
+            ctx.setVariable("failureCount", failureCount);
+            ctx.setVariable("status", status);
+            ctx.setVariable("processedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/bulk-transfer-summary", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "Bulk Transfer " + status + " - " + businessName, html, null, null);
+        });
+    }
+
+    public void sendMerchantWeeklySummaryEmail(String email, String name, String businessName,
+                                                BigDecimal revenue, long txnCount,
+                                                BigDecimal balance, String weekRange) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("revenue", revenue);
+            ctx.setVariable("txnCount", txnCount);
+            ctx.setVariable("balance", balance);
+            ctx.setVariable("weekRange", weekRange);
+            String html = inlineImages(templateEngine.process("email/merchant-weekly-summary", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "Your Weekly Summary - " + businessName, html, null, null);
+        });
+    }
+
+    public void sendWaitlistInvitationEmail(String email, String inviteUrl) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("inviteUrl", inviteUrl);
+            String html = inlineImages(templateEngine.process("email/waitlist-invitation", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "You're Invited - Create Your AZA Account", html, null, null);
+        });
+    }
+
+    public void sendKybStatusEmail(String email, String ownerName, String businessName,
+                                    boolean approved, String moreInfoOrReason) {
+        CompletableFuture.runAsync(() -> {
+            String subject = approved
+                    ? "Business Verified - " + businessName
+                    : "Business Verification Update - " + businessName;
+            Context ctx = new Context();
+            ctx.setVariable("ownerName", ownerName);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("approved", approved);
+            ctx.setVariable("moreInfoOrReason", moreInfoOrReason);
+            String html = inlineImages(templateEngine.process("email/kyb-status", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email, subject, html, null, null);
+        });
+    }
+
+    public void sendApiKeyCreatedEmail(String email, String name, String businessName,
+                                        String label, String keyPrefix, String environment) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("label", label);
+            ctx.setVariable("keyPrefix", keyPrefix);
+            ctx.setVariable("environment", environment);
+            ctx.setVariable("createdAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/api-key-created", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "New API Key Created - " + businessName, html, null, null);
+        });
+    }
+
+    public void sendFailedLoginAlert(String email, String name, String ipAddress) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("ipAddress", ipAddress);
+            LocationInfo loc = fetchLocationDetails(ipAddress);
+            ctx.setVariable("location", loc.getDescription());
+            ctx.setVariable("attemptTime", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/failed-login", ctx));
+            sendViaBrevo("AZA Security", senderEmail, email,
+                    "Security Alert: Failed Login Attempt on your AZA Account", html, null, null);
+        });
+    }
+
+    public void sendTwoFactorChangedEmail(String email, String name, boolean enabled, String method) {
+        CompletableFuture.runAsync(() -> {
+            String subject = enabled
+                    ? "Two-Factor Authentication Enabled - AZA"
+                    : "Two-Factor Authentication Disabled - AZA";
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("enabled", enabled);
+            ctx.setVariable("method", method);
+            ctx.setVariable("changedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/two-factor-changed", ctx));
+            sendViaBrevo("AZA Security", senderEmail, email, subject, html, null, null);
+        });
+    }
+
+    public void sendAccountSecuredEmail(String email, String name) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("securedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/account-secured", ctx));
+            sendViaBrevo("AZA Security", senderEmail, email,
+                    "Security Alert: Your AZA Account Has Been Secured", html, null, null);
+        });
+    }
+
+    public void sendMerchantPaymentReceivedEmail(String email, String name, String businessName,
+                                                  BigDecimal amount, String customerName, String txnRef) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("customerName", customerName);
+            ctx.setVariable("txnRef", txnRef);
+            ctx.setVariable("receivedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/merchant-payment-received", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "Payment Received - GHS " + amount, html, null, null);
+        });
+    }
+
+    public void sendMerchantLowBalanceAlert(String email, String name, String businessName,
+                                             BigDecimal balance, BigDecimal threshold) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("balance", balance);
+            ctx.setVariable("threshold", threshold);
+            String html = inlineImages(templateEngine.process("email/merchant-low-balance", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "Low Balance Alert - " + businessName, html, null, null);
+        });
+    }
+
+    public void sendTransferSentEmail(String email, String name, String recipientName,
+                                       BigDecimal amount, String txnRef, BigDecimal newBalance) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("recipientName", recipientName);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("txnRef", txnRef);
+            ctx.setVariable("newBalance", newBalance);
+            ctx.setVariable("completedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/transfer-sent", ctx));
+            sendViaBrevo("AZA", senderEmail, email, "Transfer Successful - GHS " + amount, html, null, null);
+        });
+    }
+
+    public void sendPayoutCompletedEmail(String email, String name, String businessName,
+                                          BigDecimal amount, String payoutRef) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("businessName", businessName);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("payoutRef", payoutRef);
+            ctx.setVariable("completedAt", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/payout-completed", ctx));
+            sendViaBrevo("AZA Business", senderEmail, email,
+                    "Payout Completed - " + businessName, html, null, null);
+        });
+    }
+
     public void sendStatement(String email, String name, byte[] pdfContent, String period) {
         CompletableFuture.runAsync(() -> {
             String html = "<h3>Hello " + name + ",</h3>"

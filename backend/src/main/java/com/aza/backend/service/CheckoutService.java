@@ -7,6 +7,8 @@ import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.repository.*;
+import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
+import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class CheckoutService {
     private final UserService userService;
     private final RateLimitService rateLimitService;
     private final ObjectMapper objectMapper;
+    private final EmailService emailService;
+    private final MerchantNotificationPreferenceRepository notificationPrefRepository;
 
     @Value("${aza.pay.base-url:https://pay.aza.systems}")
     private String payBaseUrl;
@@ -227,6 +231,18 @@ public class CheckoutService {
 
         // Dispatch webhooks asynchronously
         scheduleWebhookDelivery(session, merchant);
+
+        boolean sendInvoiceEmail = notificationPrefRepository.findByMerchantId(merchant.getId())
+                .map(com.aza.backend.entity.MerchantNotificationPreference::isEmailInvoicePaid)
+                .orElse(true);
+        if (sendInvoiceEmail) {
+            String senderName = customer.getFirstName() + " " + customer.getLastName();
+            String ref = "CHK-" + sessionId.toString().substring(28).toUpperCase();
+            userRepository.findById(merchant.getUserId()).ifPresent(owner ->
+                    emailService.sendMerchantPaymentReceivedEmail(
+                            owner.getEmail(), owner.getFirstName(),
+                            merchant.getBusinessName(), session.getAmount(), senderName, ref));
+        }
 
         return toResponse(session, merchant);
     }
