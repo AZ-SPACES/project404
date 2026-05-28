@@ -1,9 +1,18 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from "react-native";
-import { useProfile } from "./ProfileProvider";
 import { useAuth } from "./AuthProvider";
-import { uploadHomeBackground, uploadHubBackground } from "../services/api";
+import { uploadHomeBackground, uploadHubBackground, updateMe, api, getMe } from "../services/api";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../lib/queryKeys";
+import { queryClient } from "../lib/queryClient";
+
+type ProfileSnapshot = {
+  language: string;
+  theme: string;
+  homeBackground: string | null;
+  hubBackground: string | null;
+};
 
 export type ThemeOption = "Light" | "Dark" | "System Default";
 export type LanguageOption = "English (US)" | "French" | "Spanish";
@@ -155,7 +164,21 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [tabOrder, setTabOrderState] = useState<TabId[]>(DEFAULT_TAB_ORDER);
 
   const { userToken } = useAuth();
-  const profile = useProfile();
+  const { data: profile } = useQuery<ProfileSnapshot>({
+    queryKey: queryKeys.profile(),
+    queryFn: async () => {
+      const { data } = await getMe();
+      const d = data.data;
+      return {
+        language: d.language ?? 'English (US)',
+        theme: d.theme ?? 'System Default',
+        homeBackground: d.homeBackground ?? null,
+        hubBackground: d.hubBackground ?? null,
+      };
+    },
+    enabled: !!userToken,
+    staleTime: 60_000,
+  });
   const colorScheme = useColorScheme();
   const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme());
 
@@ -243,24 +266,32 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
 
   // Sync profile → local
   useEffect(() => {
-    if (userToken && profile.language) {
+    if (userToken && profile?.language) {
       if (profile.language !== language && LANGUAGES.includes(profile.language as LanguageOption)) setLanguageState(profile.language as LanguageOption);
       if (profile.theme !== theme && THEMES.includes(profile.theme as ThemeOption)) setThemeState(profile.theme as ThemeOption);
       if (profile.homeBackground && profile.homeBackground !== homeBackground) setHomeBackgroundState(profile.homeBackground);
       if (profile.hubBackground && profile.hubBackground !== hubBackground) setHubBackgroundState(profile.hubBackground);
     }
-  }, [profile.language, profile.theme, profile.homeBackground, profile.hubBackground, userToken]);
+  }, [profile?.language, profile?.theme, profile?.homeBackground, profile?.hubBackground, userToken]);
 
   const setTheme = (t: ThemeOption) => {
     setThemeState(t);
     AsyncStorage.setItem('AppTheme', t).catch(() => {});
-    if (userToken) profile.updateProfile({ theme: t }).catch(() => {});
+    if (userToken) {
+      updateMe({ theme: t })
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.profile() }))
+        .catch(() => {});
+    }
   };
 
   const setLanguage = (l: LanguageOption) => {
     setLanguageState(l);
     AsyncStorage.setItem('AppLanguage', l).catch(() => {});
-    if (userToken) profile.updateProfile({ language: l }).catch(() => {});
+    if (userToken) {
+      updateMe({ language: l })
+        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.profile() }))
+        .catch(() => {});
+    }
   };
 
   const setAccentId = (id: string) => {
@@ -278,10 +309,10 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
           await uploadHomeBackground({ uri, name: filename, type } as any);
-          await profile.fetchProfile();
         } else {
-          await profile.updateProfile({ homeBackground: uri });
+          await updateMe({ homeBackground: uri });
         }
+        queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
       } catch (err) {
         console.error("Failed to sync home background", err);
       }
@@ -298,10 +329,10 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
           await uploadHubBackground({ uri, name: filename, type } as any);
-          await profile.fetchProfile();
         } else {
-          await profile.updateProfile({ hubBackground: uri });
+          await updateMe({ hubBackground: uri });
         }
+        queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
       } catch (err) {
         console.error("Failed to sync hub background", err);
       }

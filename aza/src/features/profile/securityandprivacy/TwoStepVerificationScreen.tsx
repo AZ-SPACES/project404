@@ -82,17 +82,18 @@ export function TwoStepVerificationScreen() {
         <View style={styles.divider} />
 
         <View style={styles.contentSection}>
-          <VerificationMethod 
+          <VerificationMethod
             iconType="MaterialCommunityIcons"
-            iconName="account-group-outline"
+            iconName="fingerprint"
             title="Passkeys"
             description="Log in with the more secure face and fingerprint recognition."
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.passkeysEnabled}
+            onPress={() => navigation.navigate(profile.passkeysEnabled ? 'DisablePasskey' : 'PasskeySetup')}
           />
-          
-          <VerificationMethod 
+
+          <VerificationMethod
             iconType="Feather"
             iconName="smartphone"
             title="Aza app"
@@ -100,16 +101,17 @@ export function TwoStepVerificationScreen() {
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.appTwoFactorEnabled}
-            onPress={() => profile.toggleApp2fa(!profile.appTwoFactorEnabled)}
+            onPress={() => navigation.navigate('AzaAppSetup')}
           />
 
-          <VerificationMethod 
+          <VerificationMethod
             iconType="Ionicons"
             iconName="chatbubble-outline"
             title="Text message"
             description="Receive a verification code by text. You'll need phone signal for this."
             securityLevel="Fairly secure"
             isEnabled={profile.smsTwoFactorEnabled}
+            onPress={() => navigation.navigate(profile.smsTwoFactorEnabled ? 'DisableSms' : 'SmsSetup')}
           />
         </View>
 
@@ -126,8 +128,8 @@ export function TwoStepVerificationScreen() {
             description="Use an app like Google Authenticator or Authy to get codes."
             securityLevel="Very secure"
             isVerySecure
-            onPress={() => navigation.navigate(profile.twoFactorEnabled ? 'DisableTotp' : 'TotpSetup')}
-            isEnabled={profile.twoFactorEnabled}
+            onPress={() => navigation.navigate(profile.totpEnabled ? 'DisableTotp' : 'TotpSetup')}
+            isEnabled={profile.totpEnabled}
           />
         </View>
       </ScrollView>

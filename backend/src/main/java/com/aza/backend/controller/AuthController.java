@@ -297,6 +297,31 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @PostMapping("/2fa/sms/disable/request")
+    public ResponseEntity<ApiResponse<String>> requestDisableSms2fa(
+            @AuthenticationPrincipal User user) {
+        authService.requestDisableSms2fa(user);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your phone"));
+    }
+
+    @DeleteMapping("/2fa/sms")
+    public ResponseEntity<ApiResponse<String>> disableSms2fa(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TotpToggleRequest request) {
+        authService.disableSms2fa(user, request.getCode());
+        return ResponseEntity.ok(ApiResponse.success("SMS two-factor authentication disabled"));
+    }
+
+    @PostMapping("/2fa/passkeys/verify")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyPasskeys2fa(
+            @RequestParam String preAuthToken,
+            @Valid @RequestBody BiometricLoginRequest request,
+            HttpServletRequest httpRequest) {
+        String ipAddress = getClientIp(httpRequest);
+        AuthResponse response = authService.verifyPasskeys2fa(preAuthToken, request.getBiometricToken(), request.getDeviceId(), ipAddress);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     /**
      * Disables 2FA on the account. Requires a valid TOTP code to confirm intent.
      */

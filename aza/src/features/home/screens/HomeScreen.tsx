@@ -21,12 +21,12 @@ import {
   Radius,
 } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS, QUICK_ACTIONS_REGISTRY, QuickActionId } from "../../../providers/DisplayProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
-import { useNotifications } from "../../../providers/NotificationProvider";
+import { useNotificationCountQuery } from "../../notifications/hooks/useNotificationQueries";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
@@ -61,7 +61,7 @@ export default function HomeScreen() {
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
-  const { unreadCount } = useNotifications();
+  const { data: unreadCount = 0 } = useNotificationCountQuery();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
 
   const incompleteTransfer = React.useMemo(() => {
@@ -83,6 +83,7 @@ export default function HomeScreen() {
       console.error("Failed to cancel incomplete transfer", err);
     }
   }, [refresh]);
+
   const moreSheetAnim = React.useRef(new Animated.Value(height)).current;
   const moreBackdropAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -99,6 +100,16 @@ export default function HomeScreen() {
       ]).start();
     }
   }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isMoreModalVisible) {
+        moreSheetAnim.setValue(height);
+        moreBackdropAnim.setValue(0);
+      }
+    }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim])
+  );
+
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   const [updateText, setUpdateText] = React.useState("Updated just now");
 
@@ -543,7 +554,7 @@ function createStyles(Colors: ThemeColors) {
       marginTop: Spacing.sm,
     },
     modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: "rgba(0,0,0,0.5)",
     },
     bottomSheet: {
