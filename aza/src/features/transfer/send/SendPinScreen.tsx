@@ -20,7 +20,7 @@ import {
   Image,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";

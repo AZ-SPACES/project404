@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';

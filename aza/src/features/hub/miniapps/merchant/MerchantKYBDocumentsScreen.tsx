@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { RouteProp, useRoute } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Feather } from "@expo/vector-icons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../../theme";

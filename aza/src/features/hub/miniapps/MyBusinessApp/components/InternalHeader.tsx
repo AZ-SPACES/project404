@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { ThemeColors } from '../../../../../theme';
 import { createStyles } from '../styles';
 

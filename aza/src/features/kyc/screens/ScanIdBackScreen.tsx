@@ -13,7 +13,7 @@ import { useNavigation, RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useToast } from '../../../providers/ToastProvider';
 import { useKYC } from '../../../providers/KYCProvider';
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";

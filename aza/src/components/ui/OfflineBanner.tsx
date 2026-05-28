@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNetwork } from '../../providers/NetworkProvider';
 import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 
 export function OfflineBanner() {
   const { isConnected, isInternetReachable } = useNetwork();

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { ChatMessageBubble } from '../../../components/chat/ChatMessageBubble';

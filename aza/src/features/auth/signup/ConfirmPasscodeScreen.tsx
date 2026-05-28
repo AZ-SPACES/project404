@@ -16,7 +16,7 @@ import * as Haptics from "expo-haptics";
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";

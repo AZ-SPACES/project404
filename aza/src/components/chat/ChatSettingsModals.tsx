@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors, Typography, Spacing, Radius } from '../../theme';
 

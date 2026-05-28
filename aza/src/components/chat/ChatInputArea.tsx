@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import type { AttachmentAnchor, ReplyInfo } from './chatTypes';

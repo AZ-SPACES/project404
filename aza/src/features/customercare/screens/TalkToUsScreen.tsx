@@ -20,9 +20,9 @@ import {
   ThemeColors,
 } from "../../../theme";
 import { StatusBar } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Feather from "@expo/vector-icons/Feather";
-import { AntDesign } from "@expo/vector-icons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../../components/ui/Button";
 import { getAvailableSupportAgents, initiateCall } from "../../../services/api";
