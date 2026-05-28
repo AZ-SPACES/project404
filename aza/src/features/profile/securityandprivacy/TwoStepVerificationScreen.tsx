@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
@@ -31,12 +31,6 @@ export function TwoStepVerificationScreen() {
   const isDark = Colors.isDark;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'TwoStepVerification'>>();
   const profile = useProfile();
-
-  useFocusEffect(
-    React.useCallback(() => {
-      profile.fetchProfile();
-    }, [profile.fetchProfile])
-  );
 
   const VerificationMethod = (props: VerificationMethodProps & { isEnabled?: boolean }) => {
     const { title, description, securityLevel, isVerySecure, onPress, isEnabled } = props;

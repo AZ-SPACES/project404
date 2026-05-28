@@ -9,6 +9,7 @@ import React, {
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { setForceLogoutHandler, getKycStatus } from "../services/api";
+import { queryClient } from "../lib/queryClient";
 
 type AuthState = {
   userToken: string | null;
@@ -174,6 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       requireSelfieVerification: false,
       isLoading: false,
     });
+    // Wipe all server-state cache so stale data never bleeds into the next session
+    queryClient.clear();
     // Clear all persisted secrets in the background
     Promise.all([
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),

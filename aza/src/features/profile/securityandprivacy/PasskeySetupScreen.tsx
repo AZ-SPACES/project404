@@ -86,7 +86,7 @@ export default function PasskeySetupScreen() {
 
       // Mark passkeys enabled in backend
       await enablePasskeys();
-      await fetchProfile();
+      fetchProfile();
       showToast('Passkeys enabled', 'success');
       navigation.navigate('TwoStepVerification');
     } catch (err: any) {

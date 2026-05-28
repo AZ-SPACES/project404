@@ -17,6 +17,8 @@ import {
   getSentContactRequests,
 } from '../services/api';
 import { Contact, BlockedUser, PublicProfile, ContactRequest, SentContactRequest } from '../features/contacts/types';
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 interface ContactState {
   contacts: Contact[];
@@ -57,11 +59,15 @@ export const useContactStore = create<ContactState>((set, get) => ({
   fetchContacts: async (page = 0, size = 100) => {
     try {
       set({ isLoading: true, error: null });
-      const { data } = await getContacts(page, size);
-      // Backend returns ApiResponse<Page<ContactResponse>>
-      // Spring Data Page content is in data.data.content
-      const contactList = data.data?.content || data.data || [];
-      set({ contacts: contactList });
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.contacts(),
+        queryFn: async () => {
+          const { data } = await getContacts(page, size);
+          return data.data?.content || data.data || [];
+        },
+        staleTime: 30_000,
+      });
+      set({ contacts: data });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch contacts' });
     } finally {
@@ -72,12 +78,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
   syncDeviceContacts: async (deviceContacts: any[]) => {
     try {
       set({ isSyncing: true, error: null });
-      // Send device contacts to backend for matching. The raw sync response
-      // may include a stub record for every phone contact regardless of
-      // whether they're in the system, so we don't use it directly.
-      // Instead we re-fetch the contacts list which the backend filters to
-      // only confirmed/matched entries.
       await syncContacts(deviceContacts);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
       await get().fetchContacts();
     } catch (error: any) {
       set({ error: error.message || 'Failed to sync contacts' });
@@ -97,20 +99,26 @@ export const useContactStore = create<ContactState>((set, get) => ({
   },
 
   toggleFavorite: async (contactId: string, isFavorite: boolean) => {
+    // Optimistic update
+    set((state) => ({
+      contacts: state.contacts.map(c =>
+        c.id === contactId ? { ...c, isFavorite: !isFavorite } : c
+      ),
+    }));
     try {
       if (isFavorite) {
         await unmarkContactFavorite(contactId);
       } else {
         await markContactFavorite(contactId);
       }
-      
-      // Update local state
-      set((state) => ({
-        contacts: state.contacts.map(c => 
-          c.id === contactId ? { ...c, isFavorite: !isFavorite } : c
-        )
-      }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
     } catch (error) {
+      // Roll back optimistic update
+      set((state) => ({
+        contacts: state.contacts.map(c =>
+          c.id === contactId ? { ...c, isFavorite } : c
+        ),
+      }));
       console.error('Failed to toggle favorite', error);
     }
   },
@@ -118,7 +126,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
   blockUser: async (userId: string) => {
     try {
       await blockUserApi(userId);
-      // Refresh contacts and blocked users
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
       await get().fetchBlockedUsers();
       await get().fetchContacts();
     } catch (error) {
@@ -129,6 +138,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
   unblockUser: async (userId: string) => {
     try {
       await unblockUserApi(userId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
       await get().fetchBlockedUsers();
     } catch (error) {
       console.error('Failed to unblock user', error);
@@ -137,8 +148,15 @@ export const useContactStore = create<ContactState>((set, get) => ({
 
   fetchBlockedUsers: async () => {
     try {
-      const { data } = await getBlockedUsers();
-      set({ blockedUsers: data.data || [] });
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.blockedUsers(),
+        queryFn: async () => {
+          const { data } = await getBlockedUsers();
+          return data.data || [];
+        },
+        staleTime: 30_000,
+      });
+      set({ blockedUsers: data });
     } catch (error) {
       console.error('Failed to fetch blocked users', error);
     }
@@ -148,6 +166,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
     try {
       set({ isLoading: true });
       await addContact(userId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContacts();
     } catch (error: any) {
       set({ error: error.message || 'Failed to add contact' });
@@ -159,7 +179,7 @@ export const useContactStore = create<ContactState>((set, get) => ({
   findUserByHandle: async (handle: string): Promise<PublicProfile | null> => {
     try {
       const { data } = await getUserByHandle(handle);
-      return data.data; // Public profile
+      return data.data;
     } catch (error) {
       console.error('Failed to find user by handle', error);
       return null;
@@ -181,6 +201,7 @@ export const useContactStore = create<ContactState>((set, get) => ({
     try {
       set({ isLoading: true });
       await requestContactApi(userId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.sentContactRequests() });
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Failed to send contact request';
       set({ error: msg });
@@ -194,6 +215,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
     try {
       set({ isLoading: true });
       await approveContactRequestApi(requestId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContacts();
       await get().fetchContactRequests();
     } catch (error: any) {
@@ -209,6 +232,7 @@ export const useContactStore = create<ContactState>((set, get) => ({
     try {
       set({ isLoading: true });
       await rejectContactRequestApi(requestId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContactRequests();
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Failed to reject request';
@@ -221,9 +245,16 @@ export const useContactStore = create<ContactState>((set, get) => ({
 
   fetchContactRequests: async () => {
     try {
-      const { getContactRequests } = require('../services/api');
-      const { data } = await getContactRequests();
-      set({ contactRequests: data.data || [] });
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.contactRequests(),
+        queryFn: async () => {
+          const { getContactRequests } = require('../services/api');
+          const { data } = await getContactRequests();
+          return data.data || [];
+        },
+        staleTime: 30_000,
+      });
+      set({ contactRequests: data });
     } catch (error) {
       console.error('Failed to fetch contact requests', error);
     }
@@ -231,8 +262,15 @@ export const useContactStore = create<ContactState>((set, get) => ({
 
   fetchSentContactRequests: async () => {
     try {
-      const { data } = await getSentContactRequests();
-      set({ sentContactRequests: data.data || [] });
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.sentContactRequests(),
+        queryFn: async () => {
+          const { data } = await getSentContactRequests();
+          return data.data || [];
+        },
+        staleTime: 30_000,
+      });
+      set({ sentContactRequests: data });
     } catch (error) {
       console.error('Failed to fetch sent contact requests', error);
     }

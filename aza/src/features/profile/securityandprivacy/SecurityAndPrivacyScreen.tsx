@@ -5,7 +5,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { AntDesign } from '@react-native-vector-icons/ant-design';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../providers/AuthProvider';
@@ -80,12 +80,6 @@ export function SecurityAndPrivacyScreen() {
   const profile = useProfile();
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
-
-  useFocusEffect(
-    React.useCallback(() => {
-      profile.fetchProfile();
-    }, [profile.fetchProfile])
-  );
 
   // State for bottom sheet
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
