@@ -7,18 +7,13 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./src/assets/aza-logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.semekor.k.aza"
     },
     "android": {
       "allowBackup": false,
-      "softInputMode": "adjustResize",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -57,6 +52,14 @@
       "package": "com.semekor.k.aza"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./src/assets/aza-logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
       "expo-video",
       [
         "expo-audio",
@@ -74,7 +77,9 @@
         }
       ],
       "expo-camera",
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-font",
+      "expo-asset"
     ]
   }
 }
