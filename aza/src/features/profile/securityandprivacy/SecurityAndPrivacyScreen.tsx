@@ -165,18 +165,26 @@ export function SecurityAndPrivacyScreen() {
             onPress={() => navigation.navigate("ChangePassword")}
           />
           
-          <SettingRow 
-            iconType="MaterialCommunityIcons" 
-            iconName="fingerprint" 
-            title="2-step verification" 
+          <SettingRow
+            iconType="MaterialCommunityIcons"
+            iconName="fingerprint"
+            title="2-step verification"
             subtitle={profile.twoFactorEnabled ? "Status: On" : "Status: Off"}
             onPress={() => navigation.navigate("TwoStepVerification")}
           />
-          
-          <SettingRow 
-            iconType="Feather" 
-            iconName="smartphone" 
-            title="Devices" 
+
+          <SettingRow
+            iconType="Feather"
+            iconName="users"
+            title="Recovery contacts"
+            subtitle="Up to 3 trusted people who can help you"
+            onPress={() => navigation.navigate("AccountRecoveryContacts")}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="smartphone"
+            title="Devices"
             subtitle="Manage your devices"
             onPress={() => navigation.navigate("Devices")}
           />

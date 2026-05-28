@@ -65,7 +65,9 @@ public class Notification {
         LOGIN_APPROVAL,
         KYB_APPROVED,
         KYB_REJECTED,
-        KYB_MORE_INFO_REQUIRED
+        KYB_MORE_INFO_REQUIRED,
+        RECOVERY_CONTACT_INVITE,
+        RECOVERY_CONTACT_REQUEST
     }
 
 }
