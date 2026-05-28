@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import KYCProgressBar from "../../../components/ui/KYCProgressBar";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VerifyFaceId'>;
 type VerifyFaceIdRouteProp = RouteProp<RootStackParamList, "VerifyFaceId">;
@@ -60,16 +61,7 @@ export default function VerifyFaceIdScreen() {
                 outputRange: ["transparent", Colors.border] }) },
           ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons
-              name="chevron-left"
-              size={28}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} size={28} />
           <Animated.View
             style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
           >

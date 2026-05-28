@@ -13,6 +13,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -268,12 +269,7 @@ export default function NotificationSettingsScreen() {
           }
         ]}
       >
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')}
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs')} />
         <Animated.View style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}>
           <Text style={[Typography.h3, styles.headerTitle]}>Notifications</Text>
         </Animated.View>

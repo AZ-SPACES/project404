@@ -25,6 +25,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { BackButton } from '../../../components/ui/BackButton';
 import { 
   totpLogin, 
   requestSms2fa, 
@@ -241,9 +242,7 @@ const TotpLoginScreen: React.FC = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <MaterialIcons name="chevron-left" style={styles.backIcon} />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} />
           </View>
 
           <View style={styles.content}>

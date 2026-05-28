@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
-  Clipboard,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
 import { setDisappearingMessages as apiSetDisappearing } from "../../../services/api";
+import { BackButton } from '../../../components/ui/BackButton';
 
 // ─── Types ──────────────────────────────────────────────────────────
 type ChatInfoParams = {
@@ -96,8 +97,8 @@ type DetailRowProps = {
 };
 
 function DetailRow({ label, value, copyable, Colors }: DetailRowProps) {
-  const handleCopy = () => {
-    Clipboard.setString(value);
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(value);
     Alert.alert("Copied", `${label} copied to clipboard`);
   };
 
@@ -202,7 +203,7 @@ export default function ChatInfoScreen() {
           ? "Signed pre-key signature: VALID."
           : "Signed pre-key signature: NOT VERIFIED — proceed with caution."),
       [
-        { text: "Copy", onPress: () => Clipboard.setString(safetyNumberValue) },
+        { text: "Copy", onPress: () => Clipboard.setStringAsync(safetyNumberValue) },
         { text: "Close", style: "cancel" },
       ],
     );
@@ -260,13 +261,7 @@ export default function ChatInfoScreen() {
 
       {/* ── Header bar ────────────────────────────────── */}
       <View style={styles.headerBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="arrow-left" size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={22} />
         <Text style={styles.headerTitle}>Contact info</Text>
         <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.editText}>Edit</Text>

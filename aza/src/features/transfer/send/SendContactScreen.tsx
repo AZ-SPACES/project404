@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { useFocusEffect } from '@react-navigation/native';
 import { useContactStore } from '../../../store/contactStore';
 import { Contact } from '../../contacts/types';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type SendScreenProps = NativeStackScreenProps<RootStackParamList, 'Send'>;
 
@@ -131,14 +132,7 @@ export default function SendScreen({ navigation }: SendScreenProps) {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Go back"
-        >
-          <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
       </View>
 
       <Text style={styles.title}>Who are you sending to?</Text>

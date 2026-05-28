@@ -8,10 +8,8 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert,
   ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,6 +22,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidPhone } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkPhoneAvailability } from "../../../services/api";
+import BackButton from "../../../components/ui/BackButton";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpNumber">;
 
@@ -125,16 +124,7 @@ export default function SignUpNumberScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="close"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} />
           </View>
 
           {/* Content */}

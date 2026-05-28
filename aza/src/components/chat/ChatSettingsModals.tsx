@@ -4,6 +4,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors, Typography, Spacing, Radius } from '../../theme';
+import { CloseButton } from '../ui/CloseButton';
 
 // ----------------------------------------------------------------------------
 // Block Contact Modal
@@ -80,9 +81,7 @@ export const ReportModal = ({ visible, contactName, isDark, Colors, onClose, onR
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Report {contactName}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Feather name="x" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={onClose} />
           </View>
           <Text style={styles.sheetDesc}>
             The last 5 messages from this contact will be forwarded to our team. This contact will not be notified.
@@ -146,9 +145,7 @@ export const DisappearingMessagesModal = ({ visible, currentValue, isDark, Color
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Message Timer</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Feather name="x" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={onClose} />
           </View>
           <Text style={styles.sheetDesc}>
             Make messages in this chat disappear for everyone after a set time. Anyone can change this setting.
@@ -203,9 +200,7 @@ export const ChatThemeModal = ({ visible, isDark, Colors, onClose, onSelectTheme
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Chat Theme</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Feather name="x" size={20} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <CloseButton onPress={onClose} />
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.themeList}>

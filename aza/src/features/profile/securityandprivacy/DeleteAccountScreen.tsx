@@ -8,6 +8,7 @@ import { useAppTheme, Typography, Spacing,} from '../../../theme';
 import { useAuth } from '../../../providers/AuthProvider';
 import { deleteAccount } from '../../../services/api';
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DeleteAccount'>;
 
@@ -90,9 +91,7 @@ export function DeleteAccountScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <TouchableOpacity onPress={navigation.goBack} style={[styles.backButton, { backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)" }]}>
-          <MaterialIcons name="chevron-left" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton onPress={navigation.goBack} />
         <View style={styles.textContainer}>
           <Image 
             source={require('../../../assets/delete_emoji.png')} 

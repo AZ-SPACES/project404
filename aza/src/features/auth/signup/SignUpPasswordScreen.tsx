@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { isValidPassword, getPasswordRules } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpPassword">;
 
@@ -56,16 +57,7 @@ export default function SignUpPasswordScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons
-                name="chevron-left"
-                size={28}
-                color={Colors.textPrimary}
-              />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
           {/* Content */}

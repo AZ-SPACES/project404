@@ -7,6 +7,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
+import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -46,16 +47,7 @@ export default function ForgotPasswordScreen() {
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialIcons
-            name="chevron-left"
-            size={28}
-            color={Colors.textPrimary}
-          />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} size={28} />
         <Animated.View
           style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
         >

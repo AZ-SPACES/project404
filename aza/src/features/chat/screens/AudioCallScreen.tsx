@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { RootStackParamList } from '../../../navigation/types';
+import { BackButton } from '../../../components/ui/BackButton';
 
 const { width, height } = Dimensions.get('window');
 const AVATAR_SIZE = width * 0.42;
@@ -136,9 +137,7 @@ export default function AudioCallScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Feather name="arrow-left" size={24} color="#fff" />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerName} numberOfLines={1}>{name}</Text>
@@ -274,7 +273,7 @@ const styles = StyleSheet.create({
 
   // Audio mode avatar
   avatarSection: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

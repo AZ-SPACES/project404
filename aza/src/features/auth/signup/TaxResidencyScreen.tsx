@@ -26,6 +26,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TaxResidenc
 
 import nationalities from "i18n-nationality";
 import englishNationalities from "i18n-nationality/langs/en.json";
+import { BackButton } from '../../../components/ui/BackButton';
 
 nationalities.registerLocale(englishNationalities);
 
@@ -97,12 +98,7 @@ export default function TaxResidencyScreen() {
               },
             ]}
           >
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <MaterialIcons name="chevron-left" size={28} color={Colors.textPrimary} />
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} size={28} />
             <Animated.View
               style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
             >
