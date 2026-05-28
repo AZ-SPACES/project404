@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { Calendar, DateData } from "react-native-calendars";
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from "../../theme";
 

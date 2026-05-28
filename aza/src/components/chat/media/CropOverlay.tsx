@@ -9,7 +9,7 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
 } from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');

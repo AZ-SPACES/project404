@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -145,11 +146,11 @@ public class ContactService {
     @Transactional
     public ContactResponse addContact(User owner, UUID targetUserId) {
         if (owner.getId().equals(targetUserId)) {
-            throw new RuntimeException("You cannot add yourself as a contact");
+            throw new AppException("You cannot add yourself as a contact");
         }
 
         User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         Contact contact = findOrCreateContact(owner.getId(), targetUserId, targetUser);
         return toContactResponse(contact);
@@ -158,21 +159,21 @@ public class ContactService {
     @Transactional
     public void requestContact(User sender, UUID targetUserId) {
         if (sender.getId().equals(targetUserId)) {
-            throw new RuntimeException("You cannot request yourself as a contact");
+            throw new AppException("You cannot request yourself as a contact");
         }
 
         if (!userRepository.existsById(targetUserId)) {
-            throw new RuntimeException("User not found");
+            throw new AppException("User not found");
         }
 
         // Check if already a contact
         if (contactRepository.findByOwnerUserIdAndContactUserId(sender.getId(), targetUserId).isPresent()) {
-            throw new RuntimeException("User is already a contact");
+            throw new AppException("User is already a contact");
         }
 
         Optional<ContactRequest> existing = contactRequestRepository.findBySenderUserIdAndReceiverUserId(sender.getId(), targetUserId);
         if (existing.isPresent() && existing.get().getStatus() == ContactRequest.RequestStatus.PENDING) {
-            throw new RuntimeException("Contact request already sent");
+            throw new AppException("Contact request already sent");
         }
 
         ContactRequest request = ContactRequest.builder()
@@ -221,12 +222,12 @@ public class ContactService {
     @Transactional
     public ContactResponse approveContactRequest(User receiver, UUID requestId) {
         ContactRequest request = contactRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new AppException("Request not found"));
         if (!request.getReceiverUserId().equals(receiver.getId())) {
-            throw new RuntimeException("Not authorized");
+            throw new AppException("Not authorized");
         }
         if (request.getStatus() != ContactRequest.RequestStatus.PENDING) {
-            throw new RuntimeException("Request already processed");
+            throw new AppException("Request already processed");
         }
         
         request.setStatus(ContactRequest.RequestStatus.APPROVED);
@@ -247,9 +248,9 @@ public class ContactService {
     @Transactional
     public void rejectContactRequest(User receiver, UUID requestId) {
         ContactRequest request = contactRequestRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new AppException("Request not found"));
         if (!request.getReceiverUserId().equals(receiver.getId())) {
-            throw new RuntimeException("Not authorized");
+            throw new AppException("Not authorized");
         }
         
         request.setStatus(ContactRequest.RequestStatus.REJECTED);
@@ -286,13 +287,13 @@ public class ContactService {
 
     private Contact addMutualContact(UUID ownerId, UUID contactId) {
         User targetUser = userRepository.findById(contactId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
         return findOrCreateContact(ownerId, contactId, targetUser);
     }
 
     public ContactResponse getContact(UUID userId, UUID contactId) {
         Contact contact = contactRepository.findByIdAndOwnerUserId(contactId, userId)
-                .orElseThrow(() -> new RuntimeException("Contact not found"));
+                .orElseThrow(() -> new AppException("Contact not found"));
         return toContactResponse(contact);
     }
 
@@ -301,7 +302,7 @@ public class ContactService {
     @Transactional
     public ContactResponse markFavorite(UUID userId, UUID contactId) {
         Contact contact = contactRepository.findByIdAndOwnerUserId(contactId, userId)
-                .orElseThrow(() -> new RuntimeException("Contact not found"));
+                .orElseThrow(() -> new AppException("Contact not found"));
         contact.setIsFavorite(true);
         contact = contactRepository.save(contact);
         return toContactResponse(contact);
@@ -310,7 +311,7 @@ public class ContactService {
     @Transactional
     public ContactResponse unmarkFavorite(UUID userId, UUID contactId) {
         Contact contact = contactRepository.findByIdAndOwnerUserId(contactId, userId)
-                .orElseThrow(() -> new RuntimeException("Contact not found"));
+                .orElseThrow(() -> new AppException("Contact not found"));
         contact.setIsFavorite(false);
         contact = contactRepository.save(contact);
         return toContactResponse(contact);
@@ -321,13 +322,13 @@ public class ContactService {
     @Transactional
     public void blockUser(User blocker, UUID targetUserId) {
         if (blocker.getId().equals(targetUserId)) {
-            throw new RuntimeException("You cannot block yourself");
+            throw new AppException("You cannot block yourself");
         }
         userRepository.findById(targetUserId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId)) {
-            throw new RuntimeException("User is already blocked");
+            throw new AppException("User is already blocked");
         }
 
         blockedUserRepository.save(BlockedUser.builder()
@@ -341,7 +342,7 @@ public class ContactService {
     @Transactional
     public void unblockUser(User blocker, UUID targetUserId) {
         if (!blockedUserRepository.existsByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId)) {
-            throw new RuntimeException("This user is not blocked");
+            throw new AppException("This user is not blocked");
         }
         blockedUserRepository.deleteByBlockerIdAndBlockedUserId(blocker.getId(), targetUserId);
         log.info("User {} unblocked {}", blocker.getId(), targetUserId);

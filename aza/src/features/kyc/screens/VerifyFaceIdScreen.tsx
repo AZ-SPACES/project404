@@ -10,7 +10,7 @@ import {
   StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { RootStackParamList } from "../../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";

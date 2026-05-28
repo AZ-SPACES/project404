@@ -12,7 +12,8 @@ import {
   ScrollView,
   ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, AntDesign } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";

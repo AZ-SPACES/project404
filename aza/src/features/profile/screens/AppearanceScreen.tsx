@@ -15,7 +15,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { BlurView } from "expo-blur";

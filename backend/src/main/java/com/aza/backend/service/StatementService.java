@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -97,7 +98,7 @@ public class StatementService {
             document.close();
 
         } catch (DocumentException e) {
-            throw new RuntimeException("Error generating PDF", e);
+            throw new AppException("Error generating PDF", e);
         }
 
         return out.toByteArray();

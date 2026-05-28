@@ -10,7 +10,8 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";

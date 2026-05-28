@@ -14,7 +14,9 @@ import {
   Linking,
   ActivityIndicator } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, Ionicons, AntDesign } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";

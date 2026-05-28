@@ -105,14 +105,14 @@ public class UserService {
         
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new RuntimeException("Email is already registered");
+                throw new AppException("Email is already registered");
             }
             user.setEmail(request.getEmail());
         }
 
         if (request.getPhone() != null && !request.getPhone().equals(user.getPhoneNumber())) {
             if (userRepository.existsByPhoneNumber(request.getPhone())) {
-                throw new RuntimeException("Phone number is already registered");
+                throw new AppException("Phone number is already registered");
             }
             user.setPhoneNumber(request.getPhone());
         }
@@ -129,10 +129,10 @@ public class UserService {
         if (request.getHandle() != null) {
             String newHandle = request.getHandle().toLowerCase();
             if (!HANDLE_PATTERN.matcher(newHandle).matches()) {
-                throw new RuntimeException("Handle must be 3-30 characters and contain only lowercase letters, numbers, and underscores");
+                throw new AppException("Handle must be 3-30 characters and contain only lowercase letters, numbers, and underscores");
             }
             if (!newHandle.equals(user.getUsername()) && userRepository.existsByUsername(newHandle)) {
-                throw new RuntimeException("Handle is already taken");
+                throw new AppException("Handle is already taken");
             }
             user.setUsername(newHandle);
         }
@@ -202,24 +202,24 @@ public class UserService {
 
     private byte[] validateAndGetBytes(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new RuntimeException("File is empty");
+            throw new AppException("File is empty");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("File size exceeds 5MB limit");
+            throw new AppException("File size exceeds 5MB limit");
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new RuntimeException("Only JPEG and PNG images are accepted");
+            throw new AppException("Only JPEG and PNG images are accepted");
         }
 
         try {
             byte[] bytes = file.getBytes();
             if (!isValidImage(bytes)) {
-                throw new RuntimeException("Invalid image content. Only JPEG and PNG are allowed.");
+                throw new AppException("Invalid image content. Only JPEG and PNG are allowed.");
             }
             return bytes;
         } catch (java.io.IOException e) {
-            throw new RuntimeException("Failed to read file content");
+            throw new AppException("Failed to read file content");
         }
     }
 
@@ -281,7 +281,7 @@ public class UserService {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null) {
             if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
-                throw new RuntimeException("User not found");
+                throw new AppException("User not found");
             }
             return PublicProfileResponse.builder()
                     .id(user.getId().toString())
@@ -294,7 +294,7 @@ public class UserService {
         Merchant merchant = merchantRepository.findById(userId).orElse(null);
         if (merchant != null) {
             if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
-                throw new RuntimeException("User not found");
+                throw new AppException("User not found");
             }
             return PublicProfileResponse.builder()
                     .id(merchant.getId().toString())
@@ -305,14 +305,14 @@ public class UserService {
                     .build();
         }
 
-        throw new RuntimeException("User not found");
+        throw new AppException("User not found");
     }
 
     public PublicProfileResponse getPublicProfileByUsername(String username) {
         User user = userRepository.findByUsername(username).orElse(null);
         if (user != null) {
             if (user.getStatus() == User.AccountStatus.DEACTIVATED) {
-                throw new RuntimeException("User not found");
+                throw new AppException("User not found");
             }
             return PublicProfileResponse.builder()
                     .id(user.getId().toString())
@@ -326,7 +326,7 @@ public class UserService {
         Merchant merchant = merchantRepository.findByBusinessHandle(username).orElse(null);
         if (merchant != null) {
             if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
-                throw new RuntimeException("User not found");
+                throw new AppException("User not found");
             }
             return PublicProfileResponse.builder()
                     .id(merchant.getId().toString())
@@ -337,7 +337,7 @@ public class UserService {
                     .build();
         }
 
-        throw new RuntimeException("User not found");
+        throw new AppException("User not found");
     }
 
     public org.springframework.data.domain.Page<PublicProfileResponse> searchUsers(String query, int page, int size) {
@@ -503,7 +503,7 @@ public class UserService {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+            throw new AppException("SHA-256 not available", e);
         }
     }
 
@@ -513,7 +513,7 @@ public class UserService {
     public void updateSilentHours(User user, SilentHoursRequest request) {
         if (Boolean.TRUE.equals(request.getEnabled())) {
             if (request.getStartTime() == null || request.getEndTime() == null) {
-                throw new RuntimeException("startTime and endTime are required when enabling silent hours");
+                throw new AppException("startTime and endTime are required when enabling silent hours");
             }
         }
         user.setSilentHoursEnabled(request.getEnabled());
@@ -543,7 +543,7 @@ public class UserService {
     @Transactional
     public void removeDevice(User user, UUID deviceId) {
         RefreshToken token = refreshTokenRepository.findByIdAndUserId(deviceId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Device not found or does not belong to this account"));
+                .orElseThrow(() -> new AppException("Device not found or does not belong to this account"));
 
         // Immediately blacklist the paired access token so the device is logged out right now,
         // not just when its JWT naturally expires.
@@ -577,7 +577,7 @@ public class UserService {
 
     public void verifyPasscode(User user, String passcode) {
         if (user.getPasscodeHash() == null) {
-            throw new RuntimeException("Passcode not set. Please set a passcode first.");
+            throw new AppException("Passcode not set. Please set a passcode first.");
         }
 
         String attemptsKey = "pin:attempts:" + user.getId();
@@ -585,13 +585,13 @@ public class UserService {
         int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
 
         if (attempts >= 5) {
-            throw new RuntimeException("Too many failed attempts. Try again in 5 minutes.");
+            throw new AppException("Too many failed attempts. Try again in 5 minutes.");
         }
 
         if (!passwordEncoder.matches(passcode, user.getPasscodeHash())) {
             redisTemplate.opsForValue().set(attemptsKey,
                     String.valueOf(attempts + 1), 5, TimeUnit.MINUTES);
-            throw new RuntimeException("Invalid passcode.");
+            throw new AppException("Invalid passcode.");
         }
 
         redisTemplate.delete(attemptsKey);
@@ -601,10 +601,10 @@ public class UserService {
         if (dob != null && !dob.isBlank()) {
             LocalDate birthDate = LocalDate.parse(dob);
             if (birthDate.isAfter(LocalDate.now().minusYears(18))) {
-                throw new RuntimeException("You must be at least 18 years old to register.");
+                throw new AppException("You must be at least 18 years old to register.");
             }
             if (birthDate.isBefore(LocalDate.now().minusYears(120))) {
-                throw new RuntimeException("Invalid date of birth.");
+                throw new AppException("Invalid date of birth.");
             }
             user.setDateOfBirth(birthDate);
         }
@@ -665,7 +665,7 @@ public class UserService {
 
     public User findById(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
     }
 
     private boolean isValidImage(byte[] bytes) {

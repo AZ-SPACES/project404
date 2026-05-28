@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator,} from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, Spacing } from '../../../../theme';
 import { getMerchant } from '../../../../services/api';
 

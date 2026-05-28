@@ -8,7 +8,7 @@ import {
   StatusBar 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from '@react-navigation/native';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

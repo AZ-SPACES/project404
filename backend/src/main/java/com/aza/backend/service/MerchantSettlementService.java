@@ -4,7 +4,6 @@ import com.aza.backend.dto.merchant.SettlementDetailResponse;
 import com.aza.backend.dto.merchant.SettlementItemResponse;
 import com.aza.backend.dto.merchant.SettlementResponse;
 import com.aza.backend.entity.CheckoutSession;
-import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantSettlement;
 import com.aza.backend.entity.MerchantSettlementItem;
 import com.aza.backend.exception.AppException;
@@ -16,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,8 +51,9 @@ public class MerchantSettlementService {
 
     @Transactional
     public MerchantSettlement createSettlementForPayout(UUID merchantId, UUID payoutId) {
-        Merchant merchant = merchantRepository.findById(merchantId)
-                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        if (!merchantRepository.existsById(merchantId)) {
+            throw new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND);
+        }
 
         // Find the last settlement to determine the period start
         List<MerchantSettlement> existing = settlementRepository.findTopByMerchantIdOrderByPeriodEndDesc(

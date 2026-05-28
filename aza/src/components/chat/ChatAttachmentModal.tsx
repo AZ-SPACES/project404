@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Feather } from '@expo/vector-icons';
+import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import type { AttachmentAnchor } from './chatTypes';
 import { ATTACHMENT_TILES } from './chatTypes';

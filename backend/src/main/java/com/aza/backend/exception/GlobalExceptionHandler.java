@@ -4,9 +4,12 @@ import com.aza.backend.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.util.List;
 
 @ControllerAdvice
 @Slf4j
@@ -15,11 +18,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationError(
             MethodArgumentNotValidException ex) {
-        String field = ex.getBindingResult().getFieldErrors().get(0).getField();
-        String message = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
+        if (!fieldErrors.isEmpty()) {
+            String field = fieldErrors.get(0).getField();
+            String message = fieldErrors.get(0).getDefaultMessage();
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("VALIDATION_ERROR", message, field));
+        }
+        String message = ex.getBindingResult().getAllErrors().isEmpty()
+                ? "Validation failed"
+                : ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("VALIDATION_ERROR", message, field));
+                .body(ApiResponse.error("VALIDATION_ERROR", message));
     }
 
     /**
@@ -37,7 +49,7 @@ public class GlobalExceptionHandler {
      * RuntimeException from legacy service code.
      * The message is passed through because existing services rely on it for user feedback.
      * Migrate callers to AppException to gain explicit status control.
-     * TODO: replace all RuntimeException throws in services with AppException.
+
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {

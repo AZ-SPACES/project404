@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";

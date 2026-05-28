@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, useColorScheme } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeColors, Typography, Spacing, Radius, LightColors, DarkColors } from '../../theme';
 interface Props {
