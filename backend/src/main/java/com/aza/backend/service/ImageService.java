@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Optional;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +43,7 @@ public class ImageService {
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             log.error("SHA-256 algorithm not found", e);
-            throw new RuntimeException("SHA-256 algorithm not available", e);
+            throw new AppException("SHA-256 algorithm not available", e);
         }
     }
 
@@ -60,7 +61,7 @@ public class ImageService {
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
             if (response.statusCode() != 200) {
-                throw new RuntimeException("Failed to download image: HTTP status " + response.statusCode());
+                throw new AppException("Failed to download image: HTTP status " + response.statusCode());
             }
 
             return response.body();
@@ -69,7 +70,7 @@ public class ImageService {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            throw new RuntimeException("Failed to download image: " + e.getMessage());
+            throw new AppException("Failed to download image: " + e.getMessage());
         }
     }
 
@@ -79,7 +80,7 @@ public class ImageService {
     @Transactional
     public String processAndDeduplicateImage(byte[] bytes, String folder) {
         if (!isValidImage(bytes)) {
-            throw new RuntimeException("Invalid image format. Only JPEG and PNG are allowed.");
+            throw new AppException("Invalid image format. Only JPEG and PNG are allowed.");
         }
 
         String sha256 = computeSha256(bytes);

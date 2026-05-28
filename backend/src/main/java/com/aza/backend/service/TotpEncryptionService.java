@@ -10,6 +10,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 import java.util.Base64;
+import com.aza.backend.exception.AppException;
 
 /**
  * Encrypts and decrypts TOTP secrets stored in the database using AES-256-GCM.
@@ -55,7 +56,7 @@ public class TotpEncryptionService {
             System.arraycopy(ciphertext, 0, blob, IV_BYTES, ciphertext.length);
             return Base64.getEncoder().encodeToString(blob);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to encrypt TOTP secret", e);
+            throw new AppException("Failed to encrypt TOTP secret", e);
         }
     }
 
@@ -71,7 +72,7 @@ public class TotpEncryptionService {
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(TAG_BITS, iv));
             return new String(cipher.doFinal(ciphertext));
         } catch (Exception e) {
-            throw new RuntimeException("Failed to decrypt TOTP secret", e);
+            throw new AppException("Failed to decrypt TOTP secret", e);
         }
     }
 }

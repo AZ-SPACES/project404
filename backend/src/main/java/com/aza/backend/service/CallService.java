@@ -20,6 +20,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.aza.backend.exception.AppException;
 
 @Service
 @RequiredArgsConstructor
@@ -49,24 +50,24 @@ public class CallService {
     @Transactional
     public CallResponse initiateCall(User caller, InitiateCallRequest request) {
         if (caller.getId().equals(request.getCalleeId())) {
-            throw new RuntimeException("Cannot call yourself");
+            throw new AppException("Cannot call yourself");
         }
 
         User callee = userRepository.findById(request.getCalleeId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException("User not found"));
 
         if (callee.getStatus() != User.AccountStatus.ACTIVE) {
-            throw new RuntimeException("User is not available");
+            throw new AppException("User is not available");
         }
         if (blockedUserRepository.existsBlockBetween(caller.getId(), callee.getId())) {
-            throw new RuntimeException("User is not available");
+            throw new AppException("User is not available");
         }
 
         CallSession.CallType callType;
         try {
             callType = CallSession.CallType.valueOf(request.getType().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid call type. Use VOICE or VIDEO");
+            throw new AppException("Invalid call type. Use VOICE or VIDEO");
         }
 
         // Create a call session record
@@ -136,7 +137,7 @@ public class CallService {
 
         if (session.getStatus() != CallSession.CallStatus.RINGING &&
                 session.getStatus() != CallSession.CallStatus.INITIATING) {
-            throw new RuntimeException("Call is no longer available");
+            throw new AppException("Call is no longer available");
         }
 
         session.setStatus(CallSession.CallStatus.ACTIVE);
@@ -176,12 +177,12 @@ public class CallService {
     @Transactional
     public void endCall(User user, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
 
         // Either participant can end the call
         if (!session.getCallerId().equals(user.getId()) &&
                 !session.getCalleeId().equals(user.getId())) {
-            throw new RuntimeException("Not authorized to end this call");
+            throw new AppException("Not authorized to end this call");
         }
 
         if (session.getStatus() == CallSession.CallStatus.ENDED) {
@@ -231,10 +232,10 @@ public class CallService {
     private void relaySignal(User sender, CallSignalRequest request,
                               WebSocketEventType type, String dataKey) {
         CallSession session = callSessionRepository.findById(request.getCallId())
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         if (!session.getCallerId().equals(sender.getId()) &&
                 !session.getCalleeId().equals(sender.getId())) {
-            throw new RuntimeException("Not a participant of this call");
+            throw new AppException("Not a participant of this call");
         }
         UUID targetId = getOtherParticipantId(session, sender.getId());
         webSocketPublisher.publishCallEvent(targetId, type, Map.of(
@@ -249,17 +250,17 @@ public class CallService {
     @Transactional
     public CallResponse requestUpgrade(User requester, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         assertParticipant(session, requester.getId());
 
         if (session.getStatus() != CallSession.CallStatus.ACTIVE) {
-            throw new RuntimeException("Can only upgrade an active call");
+            throw new AppException("Can only upgrade an active call");
         }
         if (session.getType() == CallSession.CallType.VIDEO) {
-            throw new RuntimeException("Call is already a video call");
+            throw new AppException("Call is already a video call");
         }
         if (Boolean.TRUE.equals(session.getUpgradeRequested())) {
-            throw new RuntimeException("An upgrade request is already pending");
+            throw new AppException("An upgrade request is already pending");
         }
 
         session.setUpgradeRequested(true);
@@ -281,14 +282,14 @@ public class CallService {
     @Transactional
     public CallResponse acceptUpgrade(User acceptor, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         assertParticipant(session, acceptor.getId());
 
         if (!Boolean.TRUE.equals(session.getUpgradeRequested())) {
-            throw new RuntimeException("No pending upgrade request for this call");
+            throw new AppException("No pending upgrade request for this call");
         }
         if (acceptor.getId().equals(session.getUpgradeRequestedBy())) {
-            throw new RuntimeException("Cannot accept your own upgrade request");
+            throw new AppException("Cannot accept your own upgrade request");
         }
 
         session.setType(CallSession.CallType.VIDEO);
@@ -311,14 +312,14 @@ public class CallService {
     @Transactional
     public void declineUpgrade(User decliner, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         assertParticipant(session, decliner.getId());
 
         if (!Boolean.TRUE.equals(session.getUpgradeRequested())) {
-            throw new RuntimeException("No pending upgrade request for this call");
+            throw new AppException("No pending upgrade request for this call");
         }
         if (decliner.getId().equals(session.getUpgradeRequestedBy())) {
-            throw new RuntimeException("Cannot decline your own upgrade request");
+            throw new AppException("Cannot decline your own upgrade request");
         }
 
         UUID requesterId = session.getUpgradeRequestedBy();
@@ -342,12 +343,12 @@ public class CallService {
     @Transactional
     public void reconnectCall(User user, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         assertParticipant(session, user.getId());
 
         if (session.getStatus() != CallSession.CallStatus.ACTIVE &&
                 session.getStatus() != CallSession.CallStatus.RECONNECTING) {
-            throw new RuntimeException("Call is not in a reconnectable state");
+            throw new AppException("Call is not in a reconnectable state");
         }
 
         session.setStatus(CallSession.CallStatus.RECONNECTING);
@@ -368,11 +369,11 @@ public class CallService {
     @Transactional
     public void confirmReconnected(User user, UUID callId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         assertParticipant(session, user.getId());
 
         if (session.getStatus() != CallSession.CallStatus.RECONNECTING) {
-            throw new RuntimeException("Call is not in RECONNECTING state");
+            throw new AppException("Call is not in RECONNECTING state");
         }
 
         session.setStatus(CallSession.CallStatus.ACTIVE);
@@ -490,15 +491,15 @@ public class CallService {
 
     private void assertParticipant(CallSession session, UUID userId) {
         if (!session.getCallerId().equals(userId) && !session.getCalleeId().equals(userId)) {
-            throw new RuntimeException("Not a participant of this call");
+            throw new AppException("Not a participant of this call");
         }
     }
 
     private CallSession getCallAndVerifyCallee(UUID callId, UUID calleeId) {
         CallSession session = callSessionRepository.findById(callId)
-                .orElseThrow(() -> new RuntimeException("Call not found"));
+                .orElseThrow(() -> new AppException("Call not found"));
         if (!session.getCalleeId().equals(calleeId)) {
-            throw new RuntimeException("Not authorized for this call");
+            throw new AppException("Not authorized for this call");
         }
         return session;
     }
@@ -558,7 +559,7 @@ public class CallService {
             byte[] rawHmac = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(rawHmac);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate HMAC-SHA1 credential", e);
+            throw new AppException("Failed to generate HMAC-SHA1 credential", e);
         }
     }
 }
