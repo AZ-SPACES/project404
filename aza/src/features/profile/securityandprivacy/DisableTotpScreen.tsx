@@ -49,7 +49,7 @@ export default function DisableTotpScreen() {
             setIsLoading(true);
             try {
               await disableTotp(verificationCode);
-              await fetchProfile();
+              fetchProfile();
               showToast("Authenticator app disabled", "success");
               navigation.navigate("TwoStepVerification");
             } catch (err: any) {

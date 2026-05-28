@@ -12,6 +12,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from '@tanstack/react-query';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { RootStackParamList } from "../../../navigation/types";
 import { getYearlySpendingSummary } from "../../../services/api";
@@ -26,29 +27,21 @@ type MonthData = { spent: number; avg: number };
 export default function SpendingScreen() {
   const currentMonthIdx = new Date().getMonth();
   const [selectedMonth, setSelectedMonth] = useState<string>(MONTHS[currentMonthIdx]!);
-  const [spendingData, setSpendingData] = useState<Record<string, MonthData>>({});
-  const [currency, setCurrency] = useState<string>("GHS");
-  const [loading, setLoading] = useState<boolean>(true);
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await getYearlySpendingSummary();
-        if (response.data?.data) {
-          setSpendingData(response.data.data.months || {});
-          setCurrency(response.data.data.currency || "GHS");
-        }
-      } catch (error) {
-        console.error("Failed to load spending data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const { data: yearlyData, isLoading: loading } = useQuery({
+    queryKey: ['spending-yearly'],
+    queryFn: async () => {
+      const response = await getYearlySpendingSummary();
+      return response.data?.data ?? { months: {}, currency: 'GHS' };
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const spendingData: Record<string, MonthData> = yearlyData?.months ?? {};
+  const currency: string = yearlyData?.currency ?? 'GHS';
 
   return (
     <SafeAreaView style={styles.safeArea}>

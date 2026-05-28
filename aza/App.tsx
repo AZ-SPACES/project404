@@ -20,6 +20,8 @@ if (__DEV__) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./src/lib/queryClient";
 
 import {
   NavigationContainer,
@@ -156,6 +158,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
           <NetworkProvider>
             <AuthProvider>
@@ -181,6 +184,7 @@ export default function App() {
             </AuthProvider>
           </NetworkProvider>
         </ErrorBoundary>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

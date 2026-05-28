@@ -242,7 +242,7 @@ export function SecurityAndPrivacyScreen() {
             iconName="info" 
             title="Privacy policy" 
             subtitle="Learn how we protect and use your personal information"
-            onPress={() => {}}
+            onPress={() => navigation.navigate("PrivacyPolicy")}
           />
 
           <SettingRow 

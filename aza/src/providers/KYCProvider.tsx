@@ -5,6 +5,8 @@ import React, {
   useState,
 } from 'react';
 import * as api from '../services/api';
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -336,11 +338,12 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
 
   const refreshStatus = useCallback(async () => {
     try {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.kycStatus() });
       const response = await api.getKycStatus();
       if (response.data?.status) {
-        update({ 
+        update({
           status: response.data.status,
-          rejectionReason: response.data.rejectionReason 
+          rejectionReason: response.data.rejectionReason
         });
         return response.data.status;
       }

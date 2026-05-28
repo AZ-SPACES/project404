@@ -7,6 +7,8 @@ import {
   acceptMoneyRequest as acceptMoneyRequestApi,
   declineMoneyRequest as declineMoneyRequestApi,
 } from '../services/api';
+import { queryClient } from '../lib/queryClient';
+import { queryKeys } from '../lib/queryKeys';
 
 type TransferStatus = 'idle' | 'initiating' | 'confirming' | 'requesting' | 'success' | 'error';
 
@@ -91,6 +93,8 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     try {
       await confirmTransferApi(txId, passcode);
       set({ status: 'success', pendingTransactionId: null });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (err) {
       const msg = extractError(err);
       set({ status: 'error', error: msg });
@@ -103,6 +107,8 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     if (!pendingTransactionId) return;
     try {
       await cancelTransferApi(pendingTransactionId);
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch {
       // Best-effort cancel — don't surface this error to user
     } finally {
@@ -130,6 +136,8 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     try {
       await acceptMoneyRequestApi(txId, passcode);
       set({ status: 'success' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (err) {
       const msg = extractError(err);
       set({ status: 'error', error: msg });
@@ -141,6 +149,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     set({ status: 'idle', error: null });
     try {
       await declineMoneyRequestApi(txId);
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (err) {
       const msg = extractError(err);
       set({ status: 'error', error: msg });

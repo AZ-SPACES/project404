@@ -84,6 +84,7 @@ public class UserService {
                 .syncContacts(user.getSyncContacts())
                 .billForwardingEnabled(user.getBillForwardingEnabled())
                 .twoFactorEnabled(user.getTwoFactorEnabled())
+                .totpEnabled(user.getTwoFactorSecret() != null)
                 .smsTwoFactorEnabled(user.getSmsTwoFactorEnabled())
                 .emailTwoFactorEnabled(user.getEmailTwoFactorEnabled())
                 .appTwoFactorEnabled(user.getAppTwoFactorEnabled())
@@ -413,6 +414,9 @@ public class UserService {
         }
         if (request.getBiometricsEnabled() != null) {
             user.setBiometricsEnabled(request.getBiometricsEnabled());
+        }
+        if (request.getPasskeysEnabled() != null) {
+            user.setPasskeysEnabled(request.getPasskeysEnabled());
         }
         userRepository.save(user);
     }
