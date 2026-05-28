@@ -1,5 +1,5 @@
-import React, { ComponentProps } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import React, { ComponentProps, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
@@ -10,6 +10,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
+import { setDefault2faMethod } from '../../../services/api';
 
 type VerificationMethodProps = (
   | { iconType: 'Feather'; iconName: ComponentProps<typeof Feather>['name'] }
@@ -21,6 +22,8 @@ type VerificationMethodProps = (
   securityLevel: 'Very secure' | 'Fairly secure';
   isVerySecure?: boolean;
   onPress?: () => void;
+  onSetDefault?: () => void;
+  settingDefault?: boolean;
 };
 
 
@@ -31,9 +34,33 @@ export function TwoStepVerificationScreen() {
   const isDark = Colors.isDark;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'TwoStepVerification'>>();
   const profile = useProfile();
+  const { fetchProfile } = profile;
+  const [settingDefault, setSettingDefault] = useState<string | null>(null);
 
-  const VerificationMethod = (props: VerificationMethodProps & { isEnabled?: boolean }) => {
-    const { title, description, securityLevel, isVerySecure, onPress, isEnabled } = props;
+  const handleSetDefault = async (method: string) => {
+    setSettingDefault(method);
+    try {
+      await setDefault2faMethod(method);
+      fetchProfile();
+    } catch {
+      Alert.alert('Error', 'Could not update default method. Please try again.');
+    } finally {
+      setSettingDefault(null);
+    }
+  };
+
+  const enabledMethodCount = [
+    profile.totpEnabled,
+    profile.smsTwoFactorEnabled,
+    profile.emailTwoFactorEnabled,
+    profile.appTwoFactorEnabled,
+    profile.passkeysEnabled,
+  ].filter(Boolean).length;
+
+  const VerificationMethod = (props: VerificationMethodProps & { isEnabled?: boolean; methodKey?: string }) => {
+    const { title, description, securityLevel, isVerySecure, onPress, isEnabled, methodKey } = props;
+    const isDefault = isEnabled && methodKey != null && profile.defaultTwoFactorMethod === methodKey;
+    const canSetDefault = isEnabled && !isDefault && enabledMethodCount > 1 && methodKey != null;
     return (
       <TouchableOpacity style={styles.methodRow} onPress={onPress} activeOpacity={0.7}>
         <View style={styles.iconContainer}>
@@ -42,9 +69,14 @@ export function TwoStepVerificationScreen() {
           {props.iconType === 'Ionicons' && <Ionicons name={props.iconName} size={24} color={isEnabled ? Colors.primary : Colors.textPrimary} />}
         </View>
         <View style={styles.methodInfo}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
             <Text style={[Typography.bodyLg, styles.methodTitle]}>{title}</Text>
-            {isEnabled && (
+            {isDefault && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
+            )}
+            {isEnabled && !isDefault && (
               <View style={styles.activeBadge}>
                 <Text style={styles.activeBadgeText}>Enabled</Text>
               </View>
@@ -54,6 +86,17 @@ export function TwoStepVerificationScreen() {
           <Text style={[Typography.body, styles.securityLevel, isVerySecure ? styles.verySecure : styles.fairlySecure]}>
             {securityLevel}
           </Text>
+          {canSetDefault && (
+            <TouchableOpacity
+              onPress={() => handleSetDefault(methodKey!)}
+              disabled={settingDefault === methodKey}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.setDefaultText}>
+                {settingDefault === methodKey ? 'Setting...' : 'Set as default'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
       </TouchableOpacity>
@@ -90,6 +133,7 @@ export function TwoStepVerificationScreen() {
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.passkeysEnabled}
+            methodKey="PASSKEY"
             onPress={() => navigation.navigate(profile.passkeysEnabled ? 'DisablePasskey' : 'PasskeySetup')}
           />
 
@@ -101,6 +145,7 @@ export function TwoStepVerificationScreen() {
             securityLevel="Very secure"
             isVerySecure
             isEnabled={profile.appTwoFactorEnabled}
+            methodKey="APP"
             onPress={() => navigation.navigate('AzaAppSetup')}
           />
 
@@ -111,6 +156,7 @@ export function TwoStepVerificationScreen() {
             description="Receive a verification code by text. You'll need phone signal for this."
             securityLevel="Fairly secure"
             isEnabled={profile.smsTwoFactorEnabled}
+            methodKey="SMS"
             onPress={() => navigation.navigate(profile.smsTwoFactorEnabled ? 'DisableSms' : 'SmsSetup')}
           />
         </View>
@@ -130,6 +176,7 @@ export function TwoStepVerificationScreen() {
             isVerySecure
             onPress={() => navigation.navigate(profile.totpEnabled ? 'DisableTotp' : 'TotpSetup')}
             isEnabled={profile.totpEnabled}
+            methodKey="TOTP"
           />
         </View>
 
@@ -240,12 +287,31 @@ function createStyles(Colors: ThemeColors) {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
-    marginLeft: 8,
   },
   activeBadgeText: {
     fontSize: 12,
     fontWeight: '700',
     color: isDark ? '#4ADE80' : '#166534',
+  },
+  defaultBadge: {
+    backgroundColor: isDark ? 'rgba(183, 238, 122, 0.2)' : '#F0FDF4',
+    borderWidth: 1,
+    borderColor: isDark ? Colors.primary : '#86EFAC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  defaultBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  setDefaultText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginTop: 6,
+    textDecorationLine: 'underline',
   },
 });
 }

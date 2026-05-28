@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
-import { AntDesign } from '@react-native-vector-icons/ant-design';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
@@ -85,6 +84,12 @@ export function DevicesScreen() {
     setIsRemoving(true);
     try {
       await removeDevice(selected.id);
+      
+      // Optimistically remove from list
+      queryClient.setQueryData(['devices'], (old: DeviceSession[] | undefined) => 
+        old ? old.filter(d => d.id !== selected?.id) : []
+      );
+      
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       setSheetVisible(false);
       showToast('Session removed', 'success');

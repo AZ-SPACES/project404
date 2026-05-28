@@ -462,6 +462,9 @@ export const requestEmail2fa = (preAuthToken: string) =>
 export const verify2faOtp = (preAuthToken: string, code: string, method: string) =>
   api.post(`/api/v1/auth/2fa/otp/verify?preAuthToken=${preAuthToken}&code=${code}&method=${method}`);
 
+export const setDefault2faMethod = (method: string) =>
+  api.put(`/api/v1/auth/2fa/default-method?method=${method}`);
+
 // --- Account Recovery Contacts ---
 
 export const getMyRecoveryContacts = () =>
