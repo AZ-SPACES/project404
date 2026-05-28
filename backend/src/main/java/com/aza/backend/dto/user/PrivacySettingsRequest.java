@@ -10,4 +10,5 @@ public class PrivacySettingsRequest {
     private Boolean syncContacts;
     private Boolean billForwardingEnabled;
     private Boolean biometricsEnabled;
+    private Boolean passkeysEnabled;
 }

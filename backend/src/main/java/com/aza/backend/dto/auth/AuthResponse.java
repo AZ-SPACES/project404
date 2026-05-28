@@ -44,6 +44,7 @@ public class AuthResponse {
         private Boolean billForwardingEnabled;
         // Security
         private Boolean twoFactorEnabled;
+        private Boolean totpEnabled;       // true only when authenticator app is specifically set up
         private Boolean smsTwoFactorEnabled;
         private Boolean emailTwoFactorEnabled;
         private Boolean appTwoFactorEnabled;

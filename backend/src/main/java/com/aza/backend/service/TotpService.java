@@ -2,10 +2,12 @@ package com.aza.backend.service;
 
 import dev.samstevens.totp.code.*;
 import dev.samstevens.totp.qr.QrData;
+import dev.samstevens.totp.qr.ZxingPngQrGenerator;
 import dev.samstevens.totp.secret.DefaultSecretGenerator;
 import dev.samstevens.totp.time.SystemTimeProvider;
 import dev.samstevens.totp.time.TimeProvider;
 import org.springframework.stereotype.Service;
+import java.util.Base64;
 
 @Service
 public class TotpService {
@@ -24,6 +26,23 @@ public class TotpService {
                 .period(30)
                 .build();
         return data.getUri();
+    }
+
+    public String generateQrCodeBase64(String secret, String accountName, String issuer) {
+        QrData data = new QrData.Builder()
+                .label(accountName)
+                .secret(secret)
+                .issuer(issuer)
+                .algorithm(HashingAlgorithm.SHA1)
+                .digits(6)
+                .period(30)
+                .build();
+        try {
+            byte[] imageBytes = new ZxingPngQrGenerator().generate(data);
+            return Base64.getEncoder().encodeToString(imageBytes);
+        } catch (Exception e) {
+            throw new com.aza.backend.exception.AppException("Failed to generate QR code", e);
+        }
     }
 
     public boolean isCodeInvalid(String secret, String code) {

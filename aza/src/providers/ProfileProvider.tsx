@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
-import { getMe, updateMe, uploadProfileImage, api,requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, } from "../services/api";
+import { getMe, updateMe, uploadProfileImage, api, requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, enablePasskeys as apiEnablePasskeys, disablePasskeys as apiDisablePasskeys } from "../services/api";
 
 const PROFILE_STORAGE_KEY = 'aza_profile';
 
@@ -22,6 +22,7 @@ type ProfileData = {
   syncContacts: boolean;
   billForwardingEnabled: boolean;
   twoFactorEnabled: boolean;
+  totpEnabled: boolean;
   smsTwoFactorEnabled: boolean;
   emailTwoFactorEnabled: boolean;
   appTwoFactorEnabled: boolean;
@@ -54,6 +55,7 @@ const INITIAL_PROFILE: ProfileData = {
   syncContacts: true,
   billForwardingEnabled: false,
   twoFactorEnabled: false,
+  totpEnabled: false,
   smsTwoFactorEnabled: false,
   emailTwoFactorEnabled: false,
   appTwoFactorEnabled: false,
@@ -81,6 +83,8 @@ type ProfileContextType = ProfileData & {
   setSyncContacts: (enabled: boolean) => Promise<void>;
   setBillForwardingEnabled: (enabled: boolean) => Promise<void>;
   toggleApp2fa: (enabled: boolean) => Promise<void>;
+  toggleSms2fa: (enabled: boolean) => Promise<void>;
+  togglePasskeys: (enabled: boolean) => Promise<void>;
   updateProfile: (data: Partial<ProfileData>) => Promise<void>;
   updateNotificationPreferences: (prefs: Record<string, any>) => Promise<void>;
   fetchProfile: () => Promise<void>;
@@ -131,6 +135,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         syncContacts: userData.syncContacts ?? true,
         billForwardingEnabled: userData.billForwardingEnabled ?? false,
         twoFactorEnabled: userData.twoFactorEnabled ?? false,
+        totpEnabled: userData.totpEnabled ?? false,
         smsTwoFactorEnabled: userData.smsTwoFactorEnabled ?? false,
         emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
         appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
@@ -336,15 +341,39 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [userToken]);
 
   const toggleApp2fa = useCallback(async (enabled: boolean) => {
-    const updated = { ...profile, appTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
-    setProfile(updated);
     try {
       await api.post(`/api/v1/auth/2fa/app/toggle?enabled=${enabled}`);
-      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await fetchProfile();
     } catch (e) {
       console.error('Failed to toggle App 2FA', e);
+      throw e;
     }
-  }, [profile]);
+  }, [fetchProfile]);
+
+  const toggleSms2fa = useCallback(async (enabled: boolean) => {
+    const updated = { ...profile, smsTwoFactorEnabled: enabled, twoFactorEnabled: enabled || profile.twoFactorEnabled };
+    setProfile(updated);
+    try {
+      await AsyncStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      await fetchProfile();
+    } catch (e) {
+      console.error('Failed to toggle SMS 2FA', e);
+    }
+  }, [profile, fetchProfile]);
+
+  const togglePasskeys = useCallback(async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        await apiEnablePasskeys();
+      } else {
+        await apiDisablePasskeys();
+      }
+      await fetchProfile();
+    } catch (e) {
+      console.error('Failed to toggle Passkeys', e);
+      throw e;
+    }
+  }, [fetchProfile]);
 
   return (
     <ProfileContext.Provider value={{
@@ -360,6 +389,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setSyncContacts,
       setBillForwardingEnabled,
       toggleApp2fa,
+      toggleSms2fa,
+      togglePasskeys,
       updateProfile,
       updateNotificationPreferences: updateNotificationPreferencesInProvider,
       fetchProfile

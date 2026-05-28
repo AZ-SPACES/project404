@@ -375,15 +375,15 @@ public class AuthService {
     // ==================== TOTP / 2FA ====================
 
     public TotpSetupResponse initiateTotpSetup(User user) {
-        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            throw new AppException("Two-factor authentication is already enabled");
+        if (user.getTwoFactorSecret() != null) {
+            throw new AppException("Authenticator app is already set up for this account");
         }
         String secret = totpService.generateSecret();
         // Store pending secret for 10 minutes — not committed until the user confirms
         redisTemplate.opsForValue().set(
                 TOTP_SETUP_PREFIX + user.getId(), secret, Duration.ofMinutes(10));
-        String qrUri = totpService.getQrUri(secret, user.getEmail(), "AZA");
-        return TotpSetupResponse.builder().secret(secret).qrUri(qrUri).build();
+        String qrCodeImage = totpService.generateQrCodeBase64(secret, user.getEmail(), "AZA");
+        return TotpSetupResponse.builder().secret(secret).qrCodeImage(qrCodeImage).build();
     }
 
     @Transactional
@@ -434,17 +434,28 @@ public class AuthService {
 
     @Transactional
     public void disableTotp(User user, String code) {
-        if (!Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            throw new AppException("Two-factor authentication is not enabled");
+        if (user.getTwoFactorSecret() == null) {
+            throw new AppException("Authenticator app is not enabled");
         }
         if (totpService.isCodeInvalid(totpEncryptionService.decrypt(user.getTwoFactorSecret()), code)) {
             throw new AppException("Invalid authenticator code");
         }
         user.setTwoFactorSecret(null);
-        user.setTwoFactorEnabled(false);
+        if (User.TwoFactorMethod.TOTP.equals(user.getDefaultTwoFactorMethod())) {
+            user.setDefaultTwoFactorMethod(null);
+        }
+        boolean anyOtherEnabled = Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())
+                || Boolean.TRUE.equals(user.getEmailTwoFactorEnabled())
+                || Boolean.TRUE.equals(user.getAppTwoFactorEnabled())
+                || Boolean.TRUE.equals(user.getPasskeysEnabled());
+        if (!anyOtherEnabled) {
+            user.setTwoFactorEnabled(false);
+            recoveryCodeRepository.deleteAllByUserId(user.getId());
+            log.info("2FA fully disabled for user {} — recovery codes purged", user.getId());
+        } else {
+            log.info("Authenticator app disabled for user {} — other 2FA methods remain active", user.getId());
+        }
         userRepository.save(user);
-        recoveryCodeRepository.deleteAllByUserId(user.getId());
-        log.info("2FA disabled for user {} — recovery codes purged", user.getId());
         emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), false, "Authenticator App");
     }
 
@@ -704,6 +715,59 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new AppException("SHA-256 not available", e);
         }
+    }
+
+    // ==================== SMS 2FA DISABLE ====================
+
+    public void requestDisableSms2fa(User user) {
+        if (!Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())) {
+            throw new AppException("SMS two-factor authentication is not enabled");
+        }
+        otpService.sendOtp(user.getPhoneNumber(), "sms_2fa_disable");
+    }
+
+    @Transactional
+    public void disableSms2fa(User user, String code) {
+        if (!Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())) {
+            throw new AppException("SMS two-factor authentication is not enabled");
+        }
+        otpService.verifyOtp(user.getPhoneNumber(), code, "sms_2fa_disable");
+        user.setSmsTwoFactorEnabled(false);
+        boolean anyOtherEnabled = user.getTwoFactorSecret() != null
+                || Boolean.TRUE.equals(user.getEmailTwoFactorEnabled())
+                || Boolean.TRUE.equals(user.getAppTwoFactorEnabled())
+                || Boolean.TRUE.equals(user.getPasskeysEnabled());
+        if (!anyOtherEnabled) {
+            user.setTwoFactorEnabled(false);
+            recoveryCodeRepository.deleteAllByUserId(user.getId());
+        }
+        if (User.TwoFactorMethod.SMS.equals(user.getDefaultTwoFactorMethod())) {
+            user.setDefaultTwoFactorMethod(null);
+        }
+        userRepository.save(user);
+        emailService.sendTwoFactorChangedEmail(user.getEmail(), user.getFirstName(), false, "SMS");
+    }
+
+    // ==================== PASSKEYS 2FA ====================
+
+    @Transactional
+    public AuthResponse verifyPasskeys2fa(String preAuthToken, String biometricToken, String deviceId, String ipAddress) {
+        rateLimitService.enforceRateLimit("passkeys_login:" + ipAddress, 5, Duration.ofMinutes(15));
+
+        PreAuthSession session = getPreAuthSession(preAuthToken);
+        User user = session.user();
+        String[] parts = session.parts();
+        String storedIp = parts.length > 4 ? parts[4] : ipAddress;
+
+        if (!Boolean.TRUE.equals(user.getPasskeysEnabled())) {
+            throw new AppException("Passkeys are not enabled for this account");
+        }
+
+        // Delegate biometric token validation to BiometricService
+        biometricService.validateBiometricToken(biometricToken, deviceId, user.getId());
+
+        redisTemplate.delete(TOTP_PREAUTH_PREFIX + preAuthToken);
+        return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
     private String sanitize(String value) {

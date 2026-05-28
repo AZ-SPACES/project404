@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -77,7 +77,13 @@ export default function ProfileScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { logout } = useAuth();
-  const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl } = useProfile();
+  const { displayName, profileImageUri, handle, setProfileImage, setAvatarUrl, fetchProfile } = useProfile();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
   const { showToast } = useToast();
 
   const [hasBusinessAccount, setHasBusinessAccount] = useState(false);
@@ -404,8 +410,12 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Actions and Agreements</Text>
-          <SectionItem iconFamily="Feather" iconName="info" title="Terms of Service" onPress={() => navigation.navigate("TermsOfService")}/>
-          <SectionItem iconFamily="Feather" iconName="lock" title="Privacy Policy" onPress={() => navigation.navigate("PrivacyPolicy")}/>
+          <SectionItem 
+          iconFamily="Feather" 
+          iconName="info" 
+          title="Terms of Service" 
+          onPress={() => navigation.navigate("TermsOfService")}
+          />
           <SectionItem 
             iconFamily="Feather" 
             iconName="star" 
