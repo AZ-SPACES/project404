@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Statement Verification — AZA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0E0F0C;
+      color: #E8EAE4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── header ── */
+    header {
+      background: #161616;
+      border-bottom: 2px solid #B7EE7A;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .wordmark {
+      font-size: 22px;
+      font-weight: 800;
+      color: #B7EE7A;
+      letter-spacing: -0.03em;
+    }
+    header .pipe { color: #3a3d35; font-size: 20px; }
+    header .page-title {
+      font-size: 14px;
+      color: #8a8d82;
+      font-weight: 500;
+    }
+
+    /* ── main ── */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 48px 16px 64px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: #161616;
+      border: 1px solid #2a2d25;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    /* ── result banner ── */
+    .banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 24px 28px;
+    }
+    .banner.verified   { background: #0d1f0d; border-bottom: 1px solid #1e3d1e; }
+    .banner.unverified { background: #1f0d0d; border-bottom: 1px solid #3d1e1e; }
+
+    .banner-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 22px;
+    }
+    .banner.verified   .banner-icon { background: rgba(183,238,122,0.15); }
+    .banner.unverified .banner-icon { background: rgba(239,68,68,0.15); }
+
+    .banner-text h2 {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .banner.verified   .banner-text h2 { color: #B7EE7A; }
+    .banner.unverified .banner-text h2 { color: #f87171; }
+
+    .banner-text p {
+      font-size: 13px;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .banner.verified   .banner-text p { color: #6a8f52; }
+    .banner.unverified .banner-text p { color: #a05050; }
+
+    /* ── details ── */
+    .details { padding: 24px 28px; }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #5a5f52;
+      margin-bottom: 14px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid #1e211a;
+    }
+    .row:last-child { border-bottom: none; }
+    .row .lbl { font-size: 13px; color: #7a7d72; }
+    .row .val { font-size: 13px; font-weight: 600; color: #E8EAE4; text-align: right; }
+    .row .val.green  { color: #4ade80; }
+    .row .val.red    { color: #f87171; }
+    .row .val.accent { color: #B7EE7A; font-size: 15px; }
+
+    .divider {
+      height: 1px;
+      background: #1e211a;
+      margin: 20px 0;
+    }
+
+    /* ── code block ── */
+    .code-block {
+      background: #0E0F0C;
+      border: 1px solid #2a2d25;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .code-block .code-label {
+      font-size: 10px;
+      color: #5a5f52;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .code-block .code-value {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #B7EE7A;
+      letter-spacing: 0.12em;
+    }
+    .code-block .checkmark {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ── footer ── */
+    footer {
+      text-align: center;
+      padding: 28px 16px;
+      font-size: 12px;
+      color: #3a3d35;
+      line-height: 1.7;
+    }
+    footer a { color: #5a5f52; text-decoration: none; }
+    footer a:hover { color: #B7EE7A; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="wordmark">aza</span>
+    <span class="pipe">|</span>
+    <span class="page-title">Statement Verification</span>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <!-- Verified -->
+      <div th:if="${verified}" class="banner verified">
+        <div class="banner-icon">✓</div>
+        <div class="banner-text">
+          <h2>Statement verified</h2>
+          <p>This document was issued by AZA Financial Technology Ltd and has not been altered.</p>
+        </div>
+      </div>
+
+      <!-- Not verified -->
+      <div th:unless="${verified}" class="banner unverified">
+        <div class="banner-icon">✗</div>
+        <div class="banner-text">
+          <h2>Verification failed</h2>
+          <p th:text="${errorMsg}">This code does not match any statement in our records.</p>
+        </div>
+      </div>
+
+      <!-- Statement details (only when verified) -->
+      <div th:if="${verified}" class="details">
+
+        <p class="section-title">Account Information</p>
+
+        <div class="row">
+          <span class="lbl">Account Holder</span>
+          <span class="val" th:text="${accountHolderName}">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Account Number</span>
+          <span class="val" th:text="${accountNumber}">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Statement Period</span>
+          <span class="val" th:text="${periodStart + ' – ' + periodEnd}">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Transactions</span>
+          <span class="val" th:text="${transactionCount}">—</span>
+        </div>
+
+        <div class="divider"></div>
+        <p class="section-title">Balance Summary (GHS)</p>
+
+        <div class="row">
+          <span class="lbl">Opening Balance</span>
+          <span class="val" th:text="${#numbers.formatDecimal(openingBalance, 1, 'COMMA', 2, 'POINT')}">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Total Credits</span>
+          <span class="val green" th:text="'+ ' + #numbers.formatDecimal(totalCredits, 1, 'COMMA', 2, 'POINT')">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Total Debits</span>
+          <span class="val red" th:text="'− ' + #numbers.formatDecimal(totalDebits, 1, 'COMMA', 2, 'POINT')">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Closing Balance</span>
+          <span class="val accent" th:text="#numbers.formatDecimal(closingBalance, 1, 'COMMA', 2, 'POINT')">—</span>
+        </div>
+
+        <div class="divider"></div>
+        <p class="section-title">Document Details</p>
+
+        <div class="row">
+          <span class="lbl">Generated On</span>
+          <span class="val" th:text="${generatedAt}">—</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Issued By</span>
+          <span class="val">AZA Financial Technology Ltd</span>
+        </div>
+
+        <div class="code-block">
+          <div>
+            <div class="code-label">Verification Code</div>
+            <div class="code-value" th:text="${verifyCode}">XXXX-XXXX-XXXX-XXXX</div>
+          </div>
+          <span class="checkmark">✓</span>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    AZA Financial Technology Ltd &nbsp;·&nbsp;
+    Licensed by the Bank of Ghana under the Payment Systems and Services Act, 2019 (Act 987)<br/>
+    <a href="https://aza.systems">aza.systems</a> &nbsp;·&nbsp;
+    <a href="mailto:support@aza.systems">support@aza.systems</a>
+  </footer>
+
+</body>
+</html>
