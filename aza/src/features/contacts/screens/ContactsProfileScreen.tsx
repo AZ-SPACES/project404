@@ -20,6 +20,8 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
 import { getContactDetails } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../../../lib/queryClient";
+import { queryKeys } from "../../../lib/queryKeys";
 import { Contact } from "../types";
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -49,7 +51,7 @@ export default function ContactsProfileScreen() {
   const { blockUser, toggleFavorite } = useContactStore();
 
   const { data: contact, isLoading: loading } = useQuery({
-    queryKey: ['contact-details', id],
+    queryKey: queryKeys.contactDetails(id!),
     queryFn: async () => {
       const { data } = await getContactDetails(id!);
       return (data.data ?? data) as Contact;
@@ -109,7 +111,7 @@ export default function ContactsProfileScreen() {
     if (!id) return;
     try {
       await toggleFavorite(id, isFavorite);
-      setContact((prev) => prev ? { ...prev, isFavorite: !isFavorite } : prev);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contactDetails(id) });
     } catch {
       Alert.alert("Error", "Could not update favorite status.");
     }

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,15 @@ public class SupportController {
             @RequestBody SendSupportMessageRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 supportService.sendUserMessage(user, request.getContent())));
+    }
+
+    @PostMapping("/chat/message/attachment")
+    public ResponseEntity<ApiResponse<MessageResponse>> sendAttachment(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "caption", required = false) String caption) {
+        return ResponseEntity.ok(ApiResponse.success(
+                supportService.sendUserMediaMessage(user, file, caption)));
     }
 
     @GetMapping("/agents/available")
