@@ -98,6 +98,8 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/merchant/team/accept/*").permitAll();
                     // Public merchant profile by handle — for customer payment pages
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/merchant/public/*").permitAll();
+                    // Statement verification — publicly accessible so employers/banks can verify
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(
