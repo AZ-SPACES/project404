@@ -100,6 +100,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/merchant/public/*").permitAll();
                     // Statement verification — publicly accessible so employers/banks can verify
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/verify/statement").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(
