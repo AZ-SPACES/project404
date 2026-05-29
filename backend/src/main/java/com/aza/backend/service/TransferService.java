@@ -325,18 +325,27 @@ public class TransferService {
                             "note", transaction.getNote() != null ? transaction.getNote() : ""
                     ));
 
+            String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
+
+            notificationService.sendMoneySentNotification(
+                    sender.getId(),
+                    merchant.getBusinessName(),
+                    transaction.getAmount().toString(),
+                    transaction.getId().toString(),
+                    senderWallet.getBalance());
+
             notificationService.sendMoneyReceivedNotification(
                     merchant.getUserId(),
                     sender.getFirstName() + " " + sender.getLastName(),
                     transaction.getAmount().toString(),
-                    transaction.getId().toString());
+                    transaction.getId().toString(),
+                    null);
 
-            String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
             emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
                     merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef, senderWallet.getBalance());
             if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
                 smsService.sendTransferSentSms(sender.getPhoneNumber(), merchant.getBusinessName(),
-                        transaction.getAmount(), merchantTxnRef);
+                        transaction.getAmount(), merchantTxnRef, senderWallet.getBalance());
             }
 
             boolean emailPaymentReceived = merchantNotificationPrefRepository
@@ -386,25 +395,33 @@ public class TransferService {
                             "note", transaction.getNote() != null ? transaction.getNote() : ""
                     ));
 
+            String txnRef = transaction.getId().toString().substring(28).toUpperCase();
+            String senderFullName    = sender.getFirstName() + " " + sender.getLastName();
+            String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
+
+            notificationService.sendMoneySentNotification(
+                    sender.getId(),
+                    recipientFullName,
+                    transaction.getAmount().toString(),
+                    transaction.getId().toString(),
+                    senderWallet.getBalance());
+
             notificationService.sendMoneyReceivedNotification(
                     transaction.getRecipientId(),
-                    sender.getFirstName() + " " + sender.getLastName(),
+                    senderFullName,
                     transaction.getAmount().toString(),
-                    transaction.getId().toString());
-
-            String txnRef = transaction.getId().toString().substring(28).toUpperCase();
-            String senderFullName = sender.getFirstName() + " " + sender.getLastName();
-            String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
+                    transaction.getId().toString(),
+                    recipientWallet.getBalance());
 
             emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
                     recipientFullName, transaction.getAmount(), txnRef, senderWallet.getBalance());
             if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
                 smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
-                        transaction.getAmount(), txnRef);
+                        transaction.getAmount(), txnRef, senderWallet.getBalance());
             }
             if (recipient.getPhoneNumber() != null && !recipient.getPhoneNumber().isBlank()) {
                 smsService.sendTransferReceivedSms(recipient.getPhoneNumber(), senderFullName,
-                        transaction.getAmount(), txnRef);
+                        transaction.getAmount(), txnRef, recipientWallet.getBalance());
             }
 
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
@@ -568,6 +585,33 @@ public class TransferService {
                         "from", payer.getFirstName() + " " + payer.getLastName(),
                         "note", transaction.getNote() != null ? transaction.getNote() : ""
                 ));
+
+        String reqTxnRef      = transaction.getId().toString().substring(28).toUpperCase();
+        String payerFullName  = payer.getFirstName() + " " + payer.getLastName();
+        String reqFullName    = requester.getFirstName() + " " + requester.getLastName();
+
+        notificationService.sendMoneySentNotification(
+                payer.getId(),
+                reqFullName,
+                transaction.getAmount().toString(),
+                transaction.getId().toString(),
+                payerWallet.getBalance());
+
+        notificationService.sendMoneyReceivedNotification(
+                requester.getId(),
+                payerFullName,
+                transaction.getAmount().toString(),
+                transaction.getId().toString(),
+                requesterWallet.getBalance());
+
+        if (payer.getPhoneNumber() != null && !payer.getPhoneNumber().isBlank()) {
+            smsService.sendTransferSentSms(payer.getPhoneNumber(), reqFullName,
+                    transaction.getAmount(), reqTxnRef, payerWallet.getBalance());
+        }
+        if (requester.getPhoneNumber() != null && !requester.getPhoneNumber().isBlank()) {
+            smsService.sendTransferReceivedSms(requester.getPhoneNumber(), payerFullName,
+                    transaction.getAmount(), reqTxnRef, requesterWallet.getBalance());
+        }
 
         return buildTransferResponse(transaction, payer, requester, payer.getId());
     }
