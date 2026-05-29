@@ -245,6 +245,15 @@ export const getSupportMessages = (page = 0, size = 50) =>
 export const sendSupportMessage = (content: string) =>
   api.post("/api/v1/support/chat/message", { content });
 
+export const sendSupportAttachment = (fileUri: string, mimeType: string, caption?: string) => {
+  const form = new FormData();
+  form.append('file', { uri: fileUri, type: mimeType, name: 'attachment' } as any);
+  if (caption) form.append('caption', caption);
+  return api.post('/api/v1/support/chat/message/attachment', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 export const getAvailableSupportAgents = () =>
   api.get("/api/v1/support/agents/available");
 

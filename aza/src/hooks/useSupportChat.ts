@@ -1,6 +1,6 @@
 import 'fast-text-encoding';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getOrCreateSupportChat, getSupportMessages, sendSupportMessage, BASE_URL, TOKEN_KEY } from '../services/api';
+import { getOrCreateSupportChat, getSupportMessages, sendSupportMessage, sendSupportAttachment, BASE_URL, TOKEN_KEY } from '../services/api';
 import * as SecureStore from 'expo-secure-store';
 import { Client } from '@stomp/stompjs';
 
@@ -10,6 +10,7 @@ export interface Message {
   isSender: boolean;
   timestamp: number;
   imageUri?: string;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 export const useSupportChat = () => {
@@ -28,6 +29,7 @@ export const useSupportChat = () => {
         text: m.content ?? '',
         isSender: m.isSelf ?? false,
         timestamp: m.sentAt ? new Date(m.sentAt).getTime() : Date.now(),
+        imageUri: m.mediaKey ?? undefined,
       })).reverse();
       
       setMessages((prev) => {
@@ -77,6 +79,7 @@ export const useSupportChat = () => {
                       text: p.content ?? "",
                       isSender: p.isSelf ?? false,
                       timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
+                      imageUri: p.mediaKey ?? undefined,
                     },
                   ];
                 });
@@ -133,23 +136,51 @@ export const useSupportChat = () => {
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
-
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setMessages(prev => [...prev, {
+      id: tempId, text, isSender: true, timestamp: Date.now(), status: 'sending',
+    }]);
     try {
       const res = await sendSupportMessage(text.trim());
       const p = res.data?.data ?? res.data;
-      const newMsg: Message = {
-        id: p.id,
-        text: p.content ?? text,
-        isSender: true,
+      const confirmed: Message = {
+        id: p.id, text: p.content ?? text, isSender: true,
         timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
+        status: 'sent',
       };
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
+      setMessages(prev => {
+        const without = prev.filter(m => m.id !== tempId);
+        return without.some(m => m.id === confirmed.id) ? without : [...without, confirmed];
       });
       setIsOtherTyping(false);
     } catch (err) {
-      console.error('Failed to send support message', err);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+      throw err;
+    }
+  }, []);
+
+  const sendAttachment = useCallback(async (fileUri: string, mimeType: string, caption?: string) => {
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // Show local URI immediately so the image appears while uploading
+    setMessages(prev => [...prev, {
+      id: tempId, text: caption ?? '', isSender: true,
+      timestamp: Date.now(), imageUri: fileUri, status: 'sending',
+    }]);
+    try {
+      const res = await sendSupportAttachment(fileUri, mimeType, caption);
+      const p = res.data?.data ?? res.data;
+      const confirmed: Message = {
+        id: p.id, text: p.content ?? caption ?? '', isSender: true,
+        timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
+        imageUri: p.mediaKey ?? fileUri,
+        status: 'sent',
+      };
+      setMessages(prev => {
+        const without = prev.filter(m => m.id !== tempId);
+        return without.some(m => m.id === confirmed.id) ? without : [...without, confirmed];
+      });
+    } catch (err) {
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
       throw err;
     }
   }, []);
@@ -171,5 +202,5 @@ export const useSupportChat = () => {
     }
   }, [chatId]);
 
-  return { messages, loading, sendMessage, isOtherTyping, sendTypingStatus, loadHistory };
+  return { messages, loading, sendMessage, sendAttachment, isOtherTyping, sendTypingStatus, loadHistory };
 };

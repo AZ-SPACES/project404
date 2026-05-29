@@ -18,6 +18,7 @@ import { Feather } from "@react-native-vector-icons/feather";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { getTransactions, createDispute } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys";
 import { mapBackendTransaction, formatCurrency } from "../../../utils/transactionUtils";
 import { Transaction } from "./TransactionsScreen";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
@@ -41,13 +42,13 @@ export function ReversalRequestScreen() {
   // Selection/form states
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const { data: transactions = [], isLoading: loadingTxs, error: txError } = useQuery({
-    queryKey: ['transactions', 'COMPLETED', 'outgoing'],
+    queryKey: queryKeys.transactions('COMPLETED'),
     queryFn: async () => {
       const res = await getTransactions(0, 50, undefined, "COMPLETED");
       const content: any[] = res.data?.data?.content || res.data?.content || [];
       return content.map(mapBackendTransaction).filter((tx) => !tx.isCredit);
     },
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
 
   const [category, setCategory] = useState<string>("OTHER");

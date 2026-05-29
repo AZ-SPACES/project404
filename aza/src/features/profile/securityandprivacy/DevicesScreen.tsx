@@ -21,6 +21,7 @@ import { useToast } from '../../../providers/ToastProvider';
 import { getDevices, removeDevice } from '../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryClient } from '../../../lib/queryClient';
+import { queryKeys } from '../../../lib/queryKeys';
 import { BackButton } from '../../../components/ui/BackButton';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
@@ -42,7 +43,7 @@ export function DevicesScreen() {
   const { showToast } = useToast();
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ['devices'],
+    queryKey: queryKeys.devices(),
     queryFn: async () => {
       const res = await getDevices();
       const data = res.data?.data ?? res.data ?? [];
@@ -90,7 +91,7 @@ export function DevicesScreen() {
         old ? old.filter(d => d.id !== selected?.id) : []
       );
       
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.devices() });
       setSheetVisible(false);
       showToast('Session removed', 'success');
     } catch (err: unknown) {

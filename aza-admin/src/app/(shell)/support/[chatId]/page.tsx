@@ -69,11 +69,6 @@ const BUILT_IN_CANNED: CannedResponse[] = [
 
 const SLA_MINUTES: Record<string, number> = { URGENT: 60, HIGH: 240, NORMAL: 1440, LOW: 4320 };
 
-function slaElapsed(lastAt: string | null): { minutes: number; pct: number; status: "ok" | "warning" | "breach" } | null {
-  if (!lastAt) return null;
-  return null; // calculated per-priority in the component
-}
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ChatItem =
@@ -304,7 +299,7 @@ export default function SupportChatPage() {
   const [loading, setLoading] = useState(true);
   const [inputMode, setInputMode] = useState<InputMode>("reply");
   const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
 
@@ -419,52 +414,55 @@ export default function SupportChatPage() {
     ...notes.map((n) => ({ kind: "note" as const, ts: new Date(n.createdAt).getTime(), data: n })),
   ].sort((a, b) => a.ts - b.ts);
 
-  const handleAutoSend = async (text: string, mode: InputMode) => {
-    if (!text.trim() || sending) return;
-    const content = text.trim();
-    setSending(true);
-    setError(null);
-    try {
-      if (mode === "reply") {
-        if (chat?.status === "RESOLVED") {
-          setError("Cannot send reply to a resolved chat. Please reopen it first.");
-          setSending(false);
-          return;
-        }
-        const msg = await sendSupportReply(chatId, content);
-        setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        sendTypingIndicator(chatId, false).catch(() => {});
-      } else {
-        const note = await addInternalNote(chatId, content);
-        setNotes((prev) => [...prev, note]);
-      }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to send quick reply");
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleSend = async () => {
-    if (!replyText.trim() || sending) return;
+    if (!replyText.trim()) return;
     const content = replyText.trim();
     setReplyText("");
-    setSending(true);
     setError(null);
-    try {
-      if (inputMode === "reply") {
-        const msg = await sendSupportReply(chatId, content);
-        setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        sendTypingIndicator(chatId, false).catch(() => {});
-      } else {
-        const note = await addInternalNote(chatId, content);
-        setNotes((prev) => [...prev, note]);
+
+    if (inputMode === "reply") {
+      if (chat?.status === "RESOLVED") {
+        setError("Cannot reply to a resolved chat. Reopen it first.");
+        setReplyText(content);
+        return;
       }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to send");
-      setReplyText(content);
-    } finally {
-      setSending(false);
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: SupportMessage = {
+        id: tempId, chatId, senderId: "me", content,
+        type: "TEXT", status: "SENT",
+        sentAt: new Date().toISOString(), isDeleted: false, isSelf: true,
+      };
+      setMessages(prev => [...prev, optimistic]);
+      sendTypingIndicator(chatId, false).catch(() => {});
+      try {
+        const msg = await sendSupportReply(chatId, content);
+        setMessages(prev => {
+          const without = prev.filter(m => m.id !== tempId);
+          return without.some(m => m.id === msg.id) ? without : [...without, msg];
+        });
+      } catch (e: any) {
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setError(e.message ?? "Failed to send");
+        setReplyText(content);
+      }
+    } else {
+      const tempId = `temp-note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: InternalNote = {
+        id: tempId, chatId, authorId: "", authorName: "You",
+        content, createdAt: new Date().toISOString(),
+      };
+      setNotes(prev => [...prev, optimistic]);
+      try {
+        const note = await addInternalNote(chatId, content);
+        setNotes(prev => {
+          const without = prev.filter(n => n.id !== tempId);
+          return without.some(n => n.id === note.id) ? without : [...without, note];
+        });
+      } catch (e: any) {
+        setNotes(prev => prev.filter(n => n.id !== tempId));
+        setError(e.message ?? "Failed to add note");
+        setReplyText(content);
+      }
     }
   };
 
@@ -817,9 +815,9 @@ export default function SupportChatPage() {
             />
             <button
               onClick={handleSend}
-              disabled={!replyText.trim() || sending || (isResolved && inputMode === "reply")}
+              disabled={!replyText.trim() || (isResolved && inputMode === "reply")}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                !replyText.trim() || sending || (isResolved && inputMode === "reply")
+                !replyText.trim() || (isResolved && inputMode === "reply")
                   ? "bg-white/5 text-white/20"
                   : inputMode === "note"
                   ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
@@ -846,7 +844,7 @@ export default function SupportChatPage() {
         <div className="hidden lg:flex flex-col w-72 border-l border-white/5 bg-[#0d0d0d] flex-shrink-0 overflow-hidden">
           <SlaIndicator priority={chat?.priority ?? "NORMAL"} lastMessageAt={chat?.lastMessageAt ?? null} status={chat?.status ?? "OPEN"} />
           <div className="flex-1 overflow-hidden">
-            <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); handleAutoSend(text, "reply"); }} />
+            <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); setReplyText(text); textareaRef.current?.focus(); }} />
           </div>
         </div>
 
@@ -861,7 +859,7 @@ export default function SupportChatPage() {
               </div>
               <SlaIndicator priority={chat?.priority ?? "NORMAL"} lastMessageAt={chat?.lastMessageAt ?? null} status={chat?.status ?? "OPEN"} />
               <div className="flex-1 overflow-hidden">
-                <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); handleAutoSend(text, "reply"); setShowRightPanel(false); }} />
+                <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); setReplyText(text); setShowRightPanel(false); textareaRef.current?.focus(); }} />
               </div>
             </div>
           </>

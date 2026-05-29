@@ -49,6 +49,7 @@ export const useWallet = () => {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.spendingYearly() });
   };
 
   return {

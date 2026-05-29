@@ -9,6 +9,7 @@ import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ public class SupportService {
     private final WebSocketPublisher webSocketPublisher;
     private final NotificationService notificationService;
     private final PresenceService presenceService;
+    private final CloudinaryService cloudinaryService;
 
     // ==================== USER-FACING ====================
 
@@ -305,6 +308,52 @@ public class SupportService {
                 .toList();
     }
 
+    @Transactional
+    public MessageResponse sendUserMediaMessage(User user, MultipartFile file, String caption) {
+        Chat chat = getOrCreateSupportChat(user);
+
+        String mediaUrl = cloudinaryService.uploadChatMedia(file, chat.getId().toString());
+        ChatMessage.MessageType type = resolveMediaType(file.getContentType());
+
+        ChatMessage message = ChatMessage.builder()
+                .chatId(chat.getId())
+                .senderId(user.getId())
+                .content(caption != null && !caption.isBlank() ? caption.strip() : null)
+                .mediaKey(mediaUrl)
+                .type(type)
+                .status(ChatMessage.MessageStatus.SENT)
+                .build();
+
+        message = chatMessageRepository.save(message);
+        chat.setLastMessageAt(LocalDateTime.now());
+        chatRepository.save(chat);
+
+        MessageResponse response = toMessageResponse(message, user.getId());
+
+        notificationService.sendNewMessageNotification(
+                chat.getParticipantTwoId(),
+                user.getFirstName() + " " + user.getLastName(),
+                chat.getId().toString());
+
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.CHAT_MESSAGE, toMessageResponse(message));
+
+        webSocketPublisher.publishToAdminSupport(
+                WebSocketEventType.SUPPORT_NEW_MESSAGE,
+                getSupportChatSummary(chat.getId()));
+
+        return response;
+    }
+
+    private ChatMessage.MessageType resolveMediaType(String contentType) {
+        if (contentType == null) return ChatMessage.MessageType.DOCUMENT;
+        if (contentType.startsWith("image/")) return ChatMessage.MessageType.IMAGE;
+        if (contentType.startsWith("video/")) return ChatMessage.MessageType.VIDEO;
+        if (contentType.startsWith("audio/")) return ChatMessage.MessageType.VOICE_NOTE;
+        return ChatMessage.MessageType.DOCUMENT;
+    }
+
     // ==================== DTOs ====================
 
     private MessageResponse toMessageResponse(ChatMessage message) {
@@ -325,6 +374,7 @@ public class SupportService {
                 .readAt(message.getReadAt() != null ? message.getReadAt().toString() : null)
                 .isDeleted(deleted)
                 .isSelf(currentUserId != null ? message.getSenderId().equals(currentUserId) : null)
+                .mediaKey(message.getMediaKey())
                 .build();
     }
 
