@@ -24,6 +24,7 @@ public class TransferController {
     private final com.aza.backend.util.EmailService emailService;
     private final com.aza.backend.service.NotificationService notificationService;
     private final com.aza.backend.service.SystemSettingService settingService;
+    private final com.aza.backend.repository.LimitIncreaseRequestRepository limitRequestRepo;
 
     // ==================== WALLET ====================
 
@@ -67,19 +68,17 @@ public class TransferController {
         java.math.BigDecimal currentSingle = user.getCustomSingleTransactionLimitGhs() != null
                 ? user.getCustomSingleTransactionLimitGhs() : settings.getMaxSingleTransactionGhs();
 
-        String userName = (user.getFirstName() != null ? user.getFirstName() : "") +
-                " " + (user.getLastName() != null ? user.getLastName() : "");
-        String subject = "Limit Increase Request — " + userName.trim();
-        String html = "<p>User <strong>" + userName.trim() + "</strong> (" + user.getEmail() + ") has requested a limit increase.</p>"
-                + "<ul>"
-                + "<li>Current daily limit: GHS " + currentDaily + "</li>"
-                + "<li>Requested daily limit: GHS " + body.getRequestedDailyLimitGhs() + "</li>"
-                + "<li>Current single-transaction limit: GHS " + currentSingle + "</li>"
-                + "<li>Requested single-transaction limit: GHS " + body.getRequestedSingleTransactionLimitGhs() + "</li>"
-                + "</ul>"
-                + "<p><strong>Reason:</strong> " + (body.getReason() != null ? body.getReason() : "Not provided") + "</p>";
+        limitRequestRepo.save(com.aza.backend.entity.LimitIncreaseRequest.builder()
+                .userId(user.getId())
+                .currentDailyLimitGhs(currentDaily)
+                .currentSingleTransactionLimitGhs(currentSingle)
+                .requestedDailyLimitGhs(body.getRequestedDailyLimitGhs() != null
+                        ? body.getRequestedDailyLimitGhs() : currentDaily)
+                .requestedSingleTransactionLimitGhs(body.getRequestedSingleTransactionLimitGhs() != null
+                        ? body.getRequestedSingleTransactionLimitGhs() : currentSingle)
+                .reason(body.getReason())
+                .build());
 
-        emailService.sendEmail(emailService.getSupportEmail(), subject, html);
         notificationService.sendNotification(
                 user.getId(),
                 com.aza.backend.entity.Notification.NotificationType.SYSTEM_BROADCAST,

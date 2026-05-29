@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Animated,
+  ScrollView,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -346,11 +347,11 @@ export default function HomeScreen() {
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         ) : displayTransactions.length > 0 ? (
-          <View style={styles.recentTransactionsList}>
+          <ScrollView style={styles.recentTransactionsList} showsVerticalScrollIndicator={false}>
             {displayTransactions.map((item) => (
               <TransactionItem key={item.id} item={item} />
             ))}
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyStateCard}>
             <View style={styles.clockIconContainer}>

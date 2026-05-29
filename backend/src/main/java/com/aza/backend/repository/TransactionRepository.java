@@ -63,6 +63,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                     @Param("start") LocalDateTime start,
                                     @Param("end") LocalDateTime end);
 
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.initiatedAt >= :after")
+    BigDecimal getTotalSentAfter(@Param("userId") UUID userId, @Param("after") LocalDateTime after);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.recipientId = :userId AND t.status = 'COMPLETED' AND t.initiatedAt >= :after")
+    BigDecimal getTotalReceivedAfter(@Param("userId") UUID userId, @Param("after") LocalDateTime after);
+
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
     long countByStatus(Transaction.TransactionStatus status);
