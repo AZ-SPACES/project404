@@ -1,4 +1,5 @@
 export { SecurityAndPrivacyScreen } from './SecurityAndPrivacyScreen';
+export { AppSecurityScreen } from './AppSecurityScreen';
 export { SecureAccountScreen } from './SecureAccountScreen';
 export { ChangePasswordScreen } from './ChangePasswordScreen';
 export { DevicesScreen } from './DevicesScreen';

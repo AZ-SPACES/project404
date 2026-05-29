@@ -366,6 +366,9 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
 export const forgotPassword = (identifier: string) =>
   api.post("/api/v1/auth/forgot-password", { identifier });
 
+export const initAccountRecovery = (email: string) =>
+  api.post(`/api/v1/auth/account-recovery/init?email=${encodeURIComponent(email)}`);
+
 export const resetPassword = (identifier: string, code: string, newPassword: string) =>
   api.post("/api/v1/auth/reset-password", { identifier, code, newPassword });
 

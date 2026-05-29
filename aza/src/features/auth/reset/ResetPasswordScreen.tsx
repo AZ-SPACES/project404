@@ -9,7 +9,9 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  StatusBar
+  StatusBar,
+  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -18,10 +20,10 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
-import { Alert } from "react-native";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
-import { forgotPassword } from "../../../services/api";
+import { forgotPassword, initAccountRecovery } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { Feather } from '@react-native-vector-icons/feather';
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -32,6 +34,21 @@ export default function ResetPasswordScreen() {
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState<'code' | 'contact' | null>(null);
+
+  const handleRecovery = async (dest: 'RecoveryCodeLogin' | 'ContactRecoveryLogin') => {
+    if (!isValidEmail(email)) { setTouched(true); return; }
+    setRecoveryLoading(dest === 'RecoveryCodeLogin' ? 'code' : 'contact');
+    try {
+      const res = await initAccountRecovery(email);
+      const preAuthToken: string = res.data?.data ?? res.data;
+      navigation.navigate(dest, { preAuthToken });
+    } catch (err: any) {
+      Alert.alert("Error", err.response?.data?.message || "Could not start account recovery. Please try again.");
+    } finally {
+      setRecoveryLoading(null);
+    }
+  };
 
   const emailError = touched && email.length > 0 && !isValidEmail(email)
     ? "Enter a valid email address"
@@ -49,7 +66,7 @@ export default function ResetPasswordScreen() {
             <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
-          <View style={styles.content}>
+          <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Reset password</Text>
             <Text style={styles.subtitle}>
               Enter the email address you registered with We'll send you an
@@ -101,10 +118,52 @@ export default function ResetPasswordScreen() {
                 fontSize={Typography.button.fontSize}
                 fontWeight={Typography.button.fontWeight}
                 loading={isLoading}
-                disabled={isLoading}
+                disabled={isLoading || recoveryLoading != null}
               />
             </View>
-          </View>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>or recover your account</Text>
+              <View style={styles.divider} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.recoveryOption}
+              onPress={() => handleRecovery('RecoveryCodeLogin')}
+              disabled={recoveryLoading != null || isLoading}
+            >
+              <View style={styles.recoveryIcon}>
+                <Feather name="key" size={20} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recoveryTitle}>Use a recovery code</Text>
+                <Text style={styles.recoverySubtitle}>Enter one of your saved backup codes</Text>
+              </View>
+              {recoveryLoading === 'code'
+                ? <Feather name="loader" size={18} color={Colors.textSecondary} />
+                : <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.recoveryOption}
+              onPress={() => handleRecovery('ContactRecoveryLogin')}
+              disabled={recoveryLoading != null || isLoading}
+            >
+              <View style={styles.recoveryIcon}>
+                <Feather name="users" size={20} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recoveryTitle}>Contact a recovery person</Text>
+                <Text style={styles.recoverySubtitle}>Ask someone you've set as a recovery contact</Text>
+              </View>
+              {recoveryLoading === 'contact'
+                ? <Feather name="loader" size={18} color={Colors.textSecondary} />
+                : <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
+              }
+            </TouchableOpacity>
+          </ScrollView>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -134,7 +193,6 @@ function createStyles(Colors: ThemeColors) {
     justifyContent: "center",
   },
   content: {
-    flex: 1,
     paddingHorizontal: Spacing.lg,
   },
   title: {
@@ -184,6 +242,52 @@ function createStyles(Colors: ThemeColors) {
   },
   buttonContainer: {
     marginBottom: Spacing.lg,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    gap: 10,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  recoveryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 16,
+    marginBottom: Spacing.md,
+    backgroundColor: isDark ? Colors.surface : '#FAFAFA',
+  },
+  recoveryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(22,51,0,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recoveryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  recoverySubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
   },
 });
 }
