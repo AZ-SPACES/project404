@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getUserDetail,
   updateUserStatus,
@@ -87,68 +88,56 @@ function DocImage({ url, label }: { url: string | null; label: string }) {
 export default function UserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
-
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [kycRecord, setKycRecord] = useState<KycRecord | null>(null);
-  const [userTxs, setUserTxs] = useState<AdminTransaction[]>([]);
+  const queryClient = useQueryClient();
 
   const [statusModal, setStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [reason, setReason] = useState("");
-  const [updating, setUpdating] = useState(false);
-  const [roleUpdating, setRoleUpdating] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [userResult] = await Promise.all([
-        getUserDetail(userId),
-        getKycRecord(userId)
-          .then(setKycRecord)
-          .catch(() => { /* silently ignore — no KYC submission yet */ }),
-        getUserTransactions(userId, 0, 5)
-          .then(page => setUserTxs(page.content))
-          .catch(() => { /* silently ignore */ }),
-      ]);
-      setUser(userResult);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load user");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+  const { data: user, isLoading, error } = useQuery<AdminUser>({
+    queryKey: ["user", userId],
+    queryFn: () => getUserDetail(userId),
+  });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data: kycRecord } = useQuery<KycRecord>({
+    queryKey: ["kycRecord", userId],
+    queryFn: () => getKycRecord(userId),
+    enabled: !!userId,
+    retry: false,
+  });
 
-  async function applyStatus() {
-    if (!newStatus) return;
-    setUpdating(true);
-    try {
-      setUser(await updateUserStatus(userId, newStatus, reason));
+  const { data: txPage } = useQuery({
+    queryKey: ["userTxs", userId],
+    queryFn: () => getUserTransactions(userId, 0, 5),
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const userTxs: AdminTransaction[] = txPage?.content ?? [];
+
+  const statusMutation = useMutation({
+    mutationFn: () => updateUserStatus(userId, newStatus, reason),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
       setStatusModal(false);
       setReason("");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setUpdating(false); }
-  }
+    },
+  });
 
-  async function toggleRole() {
-    if (!user) return;
-    const next = user.role === "ADMIN" ? "USER" : "ADMIN";
-    setRoleUpdating(true);
-    try { setUser(await updateUserRole(userId, next)); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setRoleUpdating(false); }
-  }
+  const roleMutation = useMutation({
+    mutationFn: () => {
+      const next = user?.role === "ADMIN" ? "USER" : "ADMIN";
+      return updateUserRole(userId, next);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
+    },
+  });
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
   if (error && !user) return (
     <div className="space-y-4">
-      <p className="text-red-400">{error}</p>
+      <p className="text-red-400">{(error as Error).message}</p>
       <Link href="/users" className="text-white/50 text-sm hover:text-white flex items-center gap-1"><ArrowLeft size={14} /> Back</Link>
     </div>
   );
@@ -159,7 +148,6 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/users" className="text-white/40 hover:text-white transition-colors"><ArrowLeft size={20} /></Link>
         <div className="flex-1">
@@ -172,7 +160,6 @@ export default function UserDetailPage() {
         </button>
       </div>
 
-      {/* Status chips */}
       <div className="flex flex-wrap gap-2">
         <span className={`text-xs px-3 py-1 rounded-full font-medium border ${STATUS_COLORS[user.accountStatus] ?? "bg-white/10 text-white/40"}`}>
           {user.accountStatus}
@@ -185,7 +172,6 @@ export default function UserDetailPage() {
         </span>
       </div>
 
-      {/* Wallet */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Wallet</p>
         <p className="text-3xl font-semibold text-white">
@@ -193,7 +179,6 @@ export default function UserDetailPage() {
         </p>
       </div>
 
-      {/* Profile */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Profile</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -209,7 +194,6 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* Security */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Security</p>
         <div className="flex flex-wrap gap-4">
@@ -224,7 +208,6 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* KYC Documents */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">KYC Documents</p>
         {!kycRecord ? (
@@ -254,7 +237,6 @@ export default function UserDetailPage() {
         )}
       </div>
 
-      {/* Transaction History */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Recent Transactions</p>
         {userTxs.length === 0 ? (
@@ -298,7 +280,6 @@ export default function UserDetailPage() {
         )}
       </div>
 
-      {/* Admin role toggle */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-3">Admin Access</p>
         <div className="flex items-center justify-between">
@@ -309,21 +290,20 @@ export default function UserDetailPage() {
             </p>
           </div>
           <button
-            onClick={toggleRole}
-            disabled={roleUpdating}
+            onClick={() => roleMutation.mutate()}
+            disabled={roleMutation.isPending}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${
               isAdmin
                 ? "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
                 : "bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 hover:bg-[#B7EE7A]/20"
             }`}
           >
-            {roleUpdating && <Loader2 size={14} className="animate-spin" />}
+            {roleMutation.isPending && <Loader2 size={14} className="animate-spin" />}
             {isAdmin ? "Revoke Admin" : "Make Admin"}
           </button>
         </div>
       </div>
 
-      {/* KYC review link */}
       {user.kycStatus === "UNDER_REVIEW" && (
         <Link href={`/kyc/${user.id}`}
           className="flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400 text-sm font-medium hover:bg-amber-400/15 transition-colors">
@@ -331,9 +311,10 @@ export default function UserDetailPage() {
         </Link>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {(statusMutation.error || roleMutation.error) && (
+        <p className="text-red-400 text-sm">{((statusMutation.error || roleMutation.error) as Error).message}</p>
+      )}
 
-      {/* Status modal */}
       {statusModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
@@ -346,9 +327,9 @@ export default function UserDetailPage() {
               placeholder="Reason (optional)" rows={2}
               className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none resize-none" />
             <div className="flex gap-3">
-              <button onClick={applyStatus} disabled={updating || !newStatus}
+              <button onClick={() => statusMutation.mutate()} disabled={statusMutation.isPending || !newStatus}
                 className="flex-1 py-2.5 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 disabled:opacity-50 flex items-center justify-center gap-2">
-                {updating && <Loader2 size={14} className="animate-spin" />} Apply
+                {statusMutation.isPending && <Loader2 size={14} className="animate-spin" />} Apply
               </button>
               <button onClick={() => setStatusModal(false)}
                 className="px-4 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white">

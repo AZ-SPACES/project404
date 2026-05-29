@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getKycAnalytics, KycAnalytics } from "@/lib/admin-api";
 import {
   ShieldCheck,
@@ -78,28 +78,12 @@ function StackedBar({ data }: { data: KycAnalytics }) {
 }
 
 export default function KycAnalyticsPage() {
-  const [data, setData] = useState<KycAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useQuery<KycAnalytics>({
+    queryKey: ["kycAnalytics"],
+    queryFn: getKycAnalytics,
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getKycAnalytics();
-      setData(res);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load KYC analytics");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="animate-spin text-white/40" size={28} />
@@ -111,7 +95,7 @@ export default function KycAnalyticsPage() {
     return (
       <div className="max-w-3xl mx-auto">
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm">
-          {error}
+          {(error as Error).message}
         </div>
       </div>
     );
@@ -128,7 +112,6 @@ export default function KycAnalyticsPage() {
         <p className="text-white/50 text-sm">Verification funnel and approval rates</p>
       </div>
 
-      {/* Stat cards grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="Not Started"
@@ -169,7 +152,6 @@ export default function KycAnalyticsPage() {
         />
       </div>
 
-      {/* Last 30 Days */}
       <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6">
         <h2 className="text-base font-medium text-white mb-5">Last 30 Days</h2>
         <div className="grid grid-cols-3 gap-4">
@@ -194,13 +176,11 @@ export default function KycAnalyticsPage() {
         </div>
       </div>
 
-      {/* Status breakdown bar */}
       <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6">
         <h2 className="text-base font-medium text-white mb-5">Status Breakdown</h2>
         <StackedBar data={data} />
       </div>
 
-      {/* Approval rate callout */}
       <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6 flex items-center gap-6">
         <div className="flex-shrink-0 w-24 h-24 rounded-full border-4 border-[#B7EE7A]/40 flex items-center justify-center bg-[#B7EE7A]/5">
           <span className="text-2xl font-bold text-[#B7EE7A]">{approvalRatePct}%</span>

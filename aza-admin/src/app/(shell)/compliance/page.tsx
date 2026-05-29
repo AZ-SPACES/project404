@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getFlaggedTransactions,
   getComplianceStats,
@@ -32,9 +33,7 @@ function RiskScore({ score }: { score: number }) {
   const color = score >= 80 ? "text-red-400 bg-red-500/10 border-red-500/20"
     : score >= 60 ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
     : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${color}`}>{score}</span>
-  );
+  return <span className={`px-2 py-0.5 rounded text-xs font-bold border ${color}`}>{score}</span>;
 }
 
 function StatusBadge({ status }: { status: FlaggedTransaction["status"] }) {
@@ -50,54 +49,34 @@ function StatusBadge({ status }: { status: FlaggedTransaction["status"] }) {
 type ActiveFilter = "ALL" | "PENDING_REVIEW" | "CLEARED" | "REPORTED";
 
 export default function CompliancePage() {
-  const [data, setData] = useState<Page<FlaggedTransaction> | null>(null);
-  const [compStats, setCompStats] = useState<ComplianceStats | null>(null);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<ActiveFilter>("PENDING_REVIEW");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<FlaggedTransaction | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
-  const [reviewLoading, setReviewLoading] = useState(false);
 
-  useEffect(() => {
-    getComplianceStats().then(setCompStats).catch(() => {});
-  }, []);
+  const { data: compStats } = useQuery<ComplianceStats>({
+    queryKey: ["complianceStats"],
+    queryFn: getComplianceStats,
+  });
 
-  const load = useCallback(async (p: number, f: ActiveFilter) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = f === "ALL" ? undefined : f;
-      const res = await getFlaggedTransactions(p, 20, status);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load flagged transactions");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery<Page<FlaggedTransaction>>({
+    queryKey: ["flaggedTxs", { filter, page }],
+    queryFn: () => getFlaggedTransactions(page, 20, filter === "ALL" ? undefined : filter),
+  });
 
-  useEffect(() => { load(0, filter); }, [load, filter]);
-
-  const handleReview = async (action: "CLEAR" | "REPORT") => {
-    if (!reviewing) return;
-    setReviewLoading(true);
-    try {
-      const updated = await reviewFlaggedTransaction(reviewing.id, action, reviewNotes);
-      setData((prev) => prev
-        ? { ...prev, content: prev.content.map((t) => t.id === updated.id ? updated : t) }
-        : prev
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "CLEAR" | "REPORT" }) =>
+      reviewFlaggedTransaction(id, action, reviewNotes),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Page<FlaggedTransaction>>(["flaggedTxs", { filter, page }], (prev) =>
+        prev ? { ...prev, content: prev.content.map(t => t.id === updated.id ? updated : t) } : prev
       );
+      queryClient.invalidateQueries({ queryKey: ["complianceStats"] });
       setReviewing(null);
       setReviewNotes("");
-    } catch (e: any) {
-      setError(e.message ?? "Review failed");
-    } finally {
-      setReviewLoading(false);
-    }
-  };
+    },
+  });
 
   const tabs: { key: ActiveFilter; label: string }[] = [
     { key: "ALL", label: "All" },
@@ -113,7 +92,6 @@ export default function CompliancePage() {
         <p className="text-white/40 text-sm mt-0.5">Anti-money laundering monitoring and suspicious activity reports</p>
       </div>
 
-      {/* Stats */}
       {compStats && (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           {[
@@ -135,12 +113,11 @@ export default function CompliancePage() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => { setFilter(tab.key); setPage(0); }}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
@@ -153,11 +130,11 @@ export default function CompliancePage() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
           <AlertCircle size={16} />
-          {error}
+          {(error as Error).message}
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="animate-spin text-white/30" size={24} />
         </div>
@@ -221,22 +198,19 @@ export default function CompliancePage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => load(page - 1, filter)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
           <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => load(page + 1, filter)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
         </div>
       )}
 
-      {/* Review modal */}
       {reviewing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setReviewing(null)} />
           <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-semibold text-white">Review Flagged Transaction</h3>
-              <button onClick={() => setReviewing(null)} className="text-white/40 hover:text-white">
-                <X size={18} />
-              </button>
+              <button onClick={() => setReviewing(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
             </div>
 
             <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4 space-y-2">
@@ -269,18 +243,22 @@ export default function CompliancePage() {
               />
             </div>
 
+            {reviewMutation.error && (
+              <p className="text-red-400 text-sm mb-3">{(reviewMutation.error as Error).message}</p>
+            )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => handleReview("CLEAR")}
-                disabled={reviewLoading}
+                onClick={() => reviewMutation.mutate({ id: reviewing.id, action: "CLEAR" })}
+                disabled={reviewMutation.isPending}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 disabled:opacity-50 transition-all"
               >
                 <CheckCircle2 size={15} />
                 Clear Transaction
               </button>
               <button
-                onClick={() => handleReview("REPORT")}
-                disabled={reviewLoading}
+                onClick={() => reviewMutation.mutate({ id: reviewing.id, action: "REPORT" })}
+                disabled={reviewMutation.isPending}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-semibold hover:bg-red-500/25 disabled:opacity-50 transition-all"
               >
                 <FileText size={15} />

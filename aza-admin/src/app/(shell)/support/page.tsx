@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getSupportChats,
   getSupportStats,
@@ -103,25 +104,31 @@ const CATEGORIES = ["All Categories", "BILLING", "TECHNICAL", "ACCOUNT", "KYC", 
 
 export default function SupportPage() {
   const router = useRouter();
-  const [data, setData] = useState<Page<SupportChatSummary> | null>(null);
-  const [stats, setStats] = useState<SupportStats | null>(null);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("ALL");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { clearUnread, addInboxListener, removeInboxListener } = useSupportWs();
 
-  // Clear the nav badge when the inbox is open
   useEffect(() => {
     clearUnread();
   }, [clearUnread]);
 
-  // Live inbox updates via WebSocket — upsert chat summary and re-sort by lastMessageAt
+  const { data: stats } = useQuery<SupportStats>({
+    queryKey: ["supportStats"],
+    queryFn: getSupportStats,
+  });
+
+  const { data, isLoading, error } = useQuery<Page<SupportChatSummary>>({
+    queryKey: ["supportChats", { statusFilter, page }],
+    queryFn: () => getSupportChats(page, 25, statusFilter === "ALL" ? undefined : statusFilter),
+  });
+
+  // Live inbox updates via WebSocket — upsert and re-sort
   useEffect(() => {
     const handleUpdate = (summary: SupportChatSummary) => {
-      setData((prev) => {
+      queryClient.setQueryData<Page<SupportChatSummary>>(["supportChats", { statusFilter, page }], (prev) => {
         if (!prev) return prev;
         const exists = prev.content.some((c) => c.chatId === summary.chatId);
         const updated = exists
@@ -132,34 +139,11 @@ export default function SupportPage() {
         );
         return { ...prev, content: sorted };
       });
-      getSupportStats().then(setStats).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ["supportStats"] });
     };
     addInboxListener(handleUpdate);
     return () => removeInboxListener(handleUpdate);
-  }, [addInboxListener, removeInboxListener]);
-
-  useEffect(() => {
-    getSupportStats().then(setStats).catch(() => {});
-  }, []);
-
-  const load = useCallback(async (p: number, status: FilterStatus) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const s = status === "ALL" ? undefined : status;
-      const res = await getSupportChats(p, 25, s);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load support chats");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load(0, statusFilter);
-  }, [load, statusFilter]);
+  }, [queryClient, statusFilter, page, addInboxListener, removeInboxListener]);
 
   const filtered = data?.content.filter((chat) => {
     const q = search.toLowerCase();
@@ -200,9 +184,7 @@ export default function SupportPage() {
         )}
       </div>
 
-      {/* Filters row */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        {/* Search */}
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input
@@ -214,7 +196,6 @@ export default function SupportPage() {
           />
         </div>
 
-        {/* Category filter */}
         <div className="relative">
           <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
           <select
@@ -229,12 +210,11 @@ export default function SupportPage() {
         </div>
       </div>
 
-      {/* Status tabs */}
       <div className="flex gap-1 mb-5 bg-white/5 p-1 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => { setStatusFilter(tab.key); }}
+            onClick={() => { setStatusFilter(tab.key); setPage(0); }}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
               statusFilter === tab.key
                 ? "bg-[#B7EE7A] text-black"
@@ -255,11 +235,11 @@ export default function SupportPage() {
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm mb-5">
-          {error}
+          {(error as Error).message}
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-[72px] bg-white/4 rounded-xl animate-pulse" />
@@ -287,7 +267,6 @@ export default function SupportPage() {
                 }`}
               >
                 <div className="flex items-center gap-3.5">
-                  {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <div className="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center overflow-hidden">
                       {chat.userAvatar ? (
@@ -342,18 +321,16 @@ export default function SupportPage() {
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3 mt-8">
           <button
-            onClick={() => load(page - 1, statusFilter)}
-            disabled={page === 0 || loading}
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 0 || isLoading}
             className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors border border-white/5"
           >
             Previous
           </button>
-          <span className="text-sm text-white/40 tabular-nums">
-            {page + 1} / {data.totalPages}
-          </span>
+          <span className="text-sm text-white/40 tabular-nums">{page + 1} / {data.totalPages}</span>
           <button
-            onClick={() => load(page + 1, statusFilter)}
-            disabled={page >= data.totalPages - 1 || loading}
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= data.totalPages - 1 || isLoading}
             className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors border border-white/5"
           >
             Next

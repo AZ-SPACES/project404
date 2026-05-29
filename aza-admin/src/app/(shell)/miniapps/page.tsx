@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMiniAppReports,
   getMiniAppReportStats,
@@ -37,52 +38,32 @@ function StatusBadge({ status }: { status: MiniAppReport["status"] }) {
 type FilterStatus = "ALL" | "OPEN" | "RESOLVED" | "DISMISSED";
 
 export default function MiniAppsPage() {
-  const [data, setData] = useState<Page<MiniAppReport> | null>(null);
-  const [stats, setStats] = useState<MiniAppReportStats | null>(null);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterStatus>("OPEN");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState<MiniAppReport | null>(null);
   const [resolution, setResolution] = useState("");
-  const [resolveLoading, setResolveLoading] = useState(false);
 
-  useEffect(() => {
-    getMiniAppReportStats().then(setStats).catch(() => {});
-  }, []);
+  const { data: stats } = useQuery<MiniAppReportStats>({
+    queryKey: ["miniAppStats"],
+    queryFn: getMiniAppReportStats,
+  });
 
-  const load = useCallback(async (p: number, f: FilterStatus) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = f === "ALL" ? undefined : f;
-      const res = await getMiniAppReports(p, 20, status);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load reports");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery<Page<MiniAppReport>>({
+    queryKey: ["miniAppReports", { filter, page }],
+    queryFn: () => getMiniAppReports(page, 20, filter === "ALL" ? undefined : filter),
+  });
 
-  useEffect(() => { load(0, filter); }, [load, filter]);
-
-  const handleResolve = async (action: "RESOLVE" | "DISMISS") => {
-    if (!resolving) return;
-    setResolveLoading(true);
-    try {
-      await resolveMiniAppReport(resolving.id, action, resolution);
+  const resolveMutation = useMutation({
+    mutationFn: ({ action }: { action: "RESOLVE" | "DISMISS" }) =>
+      resolveMiniAppReport(resolving!.id, action, resolution),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["miniAppReports"] });
+      queryClient.invalidateQueries({ queryKey: ["miniAppStats"] });
       setResolving(null);
       setResolution("");
-      getMiniAppReportStats().then(setStats).catch(() => {});
-      load(page, filter);
-    } catch (e: any) {
-      alert(e.message ?? "Failed to update report");
-    } finally {
-      setResolveLoading(false);
-    }
-  };
+    },
+  });
 
   const reports = data?.content ?? [];
 
@@ -93,7 +74,6 @@ export default function MiniAppsPage() {
         <p className="text-white/40 text-sm mt-1">User-submitted reports about mini apps</p>
       </div>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total",     value: stats?.total     ?? "—", icon: Flag,          cls: "text-white/60" },
@@ -111,7 +91,6 @@ export default function MiniAppsPage() {
         ))}
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-1 bg-white/5 border border-white/8 rounded-lg p-1 w-fit">
         {(["ALL", "OPEN", "RESOLVED", "DISMISSED"] as FilterStatus[]).map((f) => (
           <button
@@ -126,14 +105,13 @@ export default function MiniAppsPage() {
         ))}
       </div>
 
-      {/* Table */}
       <div className="bg-white/5 border border-white/8 rounded-xl overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={24} className="animate-spin text-white/40" />
           </div>
         ) : error ? (
-          <div className="text-center py-16 text-red-400 text-sm">{error}</div>
+          <div className="text-center py-16 text-red-400 text-sm">{(error as Error).message}</div>
         ) : reports.length === 0 ? (
           <div className="text-center py-16 text-white/30 text-sm">No reports found</div>
         ) : (
@@ -176,21 +154,20 @@ export default function MiniAppsPage() {
           </table>
         )}
 
-        {/* Pagination */}
         {data && data.totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-white/8 text-sm text-white/40">
             <span>Page {page + 1} of {data.totalPages}</span>
             <div className="flex gap-2">
               <button
                 disabled={page === 0}
-                onClick={() => load(page - 1, filter)}
+                onClick={() => setPage(p => p - 1)}
                 className="px-3 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-30"
               >
                 Previous
               </button>
               <button
                 disabled={page + 1 >= data.totalPages}
-                onClick={() => load(page + 1, filter)}
+                onClick={() => setPage(p => p + 1)}
                 className="px-3 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-30"
               >
                 Next
@@ -200,7 +177,6 @@ export default function MiniAppsPage() {
         )}
       </div>
 
-      {/* Resolve modal */}
       {resolving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4">
@@ -236,18 +212,22 @@ export default function MiniAppsPage() {
               onChange={(e) => setResolution(e.target.value)}
             />
 
+            {resolveMutation.error && (
+              <p className="text-red-400 text-sm mb-3">{(resolveMutation.error as Error).message}</p>
+            )}
+
             <div className="flex gap-3">
               <button
-                disabled={resolveLoading}
-                onClick={() => handleResolve("RESOLVE")}
+                disabled={resolveMutation.isPending}
+                onClick={() => resolveMutation.mutate({ action: "RESOLVE" })}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
               >
-                {resolveLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                {resolveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                 Resolve
               </button>
               <button
-                disabled={resolveLoading}
-                onClick={() => handleResolve("DISMISS")}
+                disabled={resolveMutation.isPending}
+                onClick={() => resolveMutation.mutate({ action: "DISMISS" })}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/8 hover:bg-white/12 text-white/60 hover:text-white text-sm font-medium transition-colors disabled:opacity-50"
               >
                 <XCircle size={16} />

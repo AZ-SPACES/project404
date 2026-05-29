@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getDisputes,
   getDisputeStats,
@@ -43,54 +44,34 @@ function StatusBadge({ status }: { status: Dispute["status"] }) {
 type FilterStatus = "ALL" | "OPEN" | "UNDER_REVIEW" | "RESOLVED_APPROVED" | "RESOLVED_DENIED";
 
 export default function DisputesPage() {
-  const [data, setData] = useState<Page<Dispute> | null>(null);
-  const [disputeStats, setDisputeStats] = useState<DisputeStats | null>(null);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterStatus>("OPEN");
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState<Dispute | null>(null);
   const [resolution, setResolution] = useState("");
-  const [resolveLoading, setResolveLoading] = useState(false);
 
-  useEffect(() => {
-    getDisputeStats().then(setDisputeStats).catch(() => {});
-  }, []);
+  const { data: disputeStats } = useQuery<DisputeStats>({
+    queryKey: ["disputeStats"],
+    queryFn: getDisputeStats,
+  });
 
-  const load = useCallback(async (p: number, f: FilterStatus) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = f === "ALL" ? undefined : f;
-      const res = await getDisputes(p, 20, status);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load disputes");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery<Page<Dispute>>({
+    queryKey: ["disputes", { filter, page }],
+    queryFn: () => getDisputes(page, 20, filter === "ALL" ? undefined : filter),
+  });
 
-  useEffect(() => { load(0, filter); }, [load, filter]);
-
-  const handleResolve = async (action: "APPROVE" | "DENY") => {
-    if (!resolving) return;
-    setResolveLoading(true);
-    try {
-      const updated = await resolveDispute(resolving.id, action, resolution);
-      setData((prev) => prev
-        ? { ...prev, content: prev.content.map((d) => d.id === updated.id ? updated : d) }
-        : prev
+  const resolveMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "APPROVE" | "DENY" }) =>
+      resolveDispute(id, action, resolution),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Page<Dispute>>(["disputes", { filter, page }], (prev) =>
+        prev ? { ...prev, content: prev.content.map(d => d.id === updated.id ? updated : d) } : prev
       );
+      queryClient.invalidateQueries({ queryKey: ["disputeStats"] });
       setResolving(null);
       setResolution("");
-    } catch (e: any) {
-      setError(e.message ?? "Failed to resolve dispute");
-    } finally {
-      setResolveLoading(false);
-    }
-  };
+    },
+  });
 
   const tabs: { key: FilterStatus; label: string }[] = [
     { key: "ALL", label: "All" },
@@ -130,7 +111,7 @@ export default function DisputesPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => { setFilter(tab.key); setPage(0); }}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
               filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
             }`}
@@ -141,10 +122,10 @@ export default function DisputesPage() {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">{(error as Error).message}</div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="animate-spin text-white/30" size={24} />
         </div>
@@ -156,10 +137,7 @@ export default function DisputesPage() {
       ) : (
         <div className="space-y-2">
           {data?.content.map((dispute) => (
-            <div
-              key={dispute.id}
-              className="bg-[#161616] border border-white/5 rounded-xl px-5 py-4"
-            >
+            <div key={dispute.id} className="bg-[#161616] border border-white/5 rounded-xl px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -187,7 +165,6 @@ export default function DisputesPage() {
                     </div>
                   )}
                 </div>
-
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
                   <p className="text-xs text-white/30">{fmtDate(dispute.createdAt)}</p>
                   {(dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW") && (
@@ -207,13 +184,12 @@ export default function DisputesPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => load(page - 1, filter)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
           <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => load(page + 1, filter)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
         </div>
       )}
 
-      {/* Resolve modal */}
       {resolving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setResolving(null)} />
@@ -249,18 +225,22 @@ export default function DisputesPage() {
               />
             </div>
 
+            {resolveMutation.error && (
+              <p className="text-red-400 text-sm mb-3">{(resolveMutation.error as Error).message}</p>
+            )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => handleResolve("APPROVE")}
-                disabled={resolveLoading || !resolution.trim()}
+                onClick={() => resolveMutation.mutate({ id: resolving.id, action: "APPROVE" })}
+                disabled={resolveMutation.isPending || !resolution.trim()}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 disabled:opacity-50 transition-all"
               >
                 <CheckCircle2 size={15} />
                 Approve Dispute
               </button>
               <button
-                onClick={() => handleResolve("DENY")}
-                disabled={resolveLoading || !resolution.trim()}
+                onClick={() => resolveMutation.mutate({ id: resolving.id, action: "DENY" })}
+                disabled={resolveMutation.isPending || !resolution.trim()}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-semibold hover:bg-red-500/25 disabled:opacity-50 transition-all"
               >
                 <XCircle size={15} />
