@@ -38,10 +38,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<String>> login(
+    public ResponseEntity<ApiResponse<Object>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ipAddress = getClientIp(httpRequest);
-        authService.preLogin(request, ipAddress);
+        Object response = authService.preLogin(request, ipAddress);
+        if (response != null) {
+            return ResponseEntity.ok(ApiResponse.success(response));
+        }
         return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone. Please verify to complete login."));
     }
 
@@ -109,6 +112,14 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
         return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone"));
+    }
+
+    @PostMapping("/account-recovery/init")
+    public ResponseEntity<ApiResponse<String>> initAccountRecovery(
+            @RequestParam String email, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        String preAuthToken = authService.initAccountRecovery(email, ip);
+        return ResponseEntity.ok(ApiResponse.success(preAuthToken));
     }
 
     @PostMapping("/reset-password")

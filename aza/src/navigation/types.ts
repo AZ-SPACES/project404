@@ -72,6 +72,7 @@ export type RootStackParamList = {
   LogoutEverywhere: undefined;
   Devices: undefined;
   TwoStepVerification: undefined;
+  AppSecurity: { disableAppLock?: boolean } | undefined;
   TotpSetup: undefined;
   DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };

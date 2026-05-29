@@ -32,6 +32,8 @@ import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
 import { cancelTransfer } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
+import { queryClient } from "../../../lib/queryClient";
+import { queryKeys } from "../../../lib/queryKeys";
 
 const { height } = Dimensions.get("window");
 
@@ -64,6 +66,12 @@ export default function HomeScreen() {
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
   const { data: unreadCount = 0 } = useNotificationCountQuery();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
+    }, [])
+  );
 
   const incompleteTransfer = React.useMemo(() => {
     return recentTransactions.find(

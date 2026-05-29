@@ -92,7 +92,7 @@ export function FindMeByScreen() {
     updateProfile, fetchProfile: invalidateProfile
   } = useProfile();
 
-  const handleWiseTagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
+  const handleAZATagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
   const handleEmailChange = (v: boolean) => { updateProfile({ findMeByEmail: v }); };
   const handlePhoneChange = (v: boolean) => { updateProfile({ findMeByPhone: v }); };
 
@@ -151,7 +151,7 @@ export function FindMeByScreen() {
             title="Aza tag"
             subtitle={handle ? `@${handle}` : '@—'}
             switchValue={findMeByHandle ?? true}
-            onSwitchChange={handleWiseTagChange}
+            onSwitchChange={handleAZATagChange}
           />
 
           <SettingRow

@@ -110,7 +110,7 @@ public class AuthService {
 
     // ==================== LOGIN ====================
 
-    public void preLogin(LoginRequest request, String ipAddress) {
+    public Object preLogin(LoginRequest request, String ipAddress) {
         rateLimitService.enforceRateLimit("login:" + ipAddress, 50, Duration.ofMinutes(15));
 
         String identifier = request.getIdentifier().trim();
@@ -131,7 +131,39 @@ public class AuthService {
             throw new com.aza.backend.exception.AppException("ACCOUNT_INACTIVE", "Your account is not active", org.springframework.http.HttpStatus.FORBIDDEN);
         }
 
-        otpService.sendOtp(identifier, "login");
+        if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            String preAuthToken = UUID.randomUUID().toString();
+            // Pipe-delimited: userId|deviceName|deviceOs|deviceId|ipAddress
+            String value = user.getId()
+                    + "|" + sanitize(request.getDeviceName())
+                    + "|" + sanitize(request.getDeviceOs())
+                    + "|" + sanitize(request.getDeviceId())
+                    + "|" + sanitize(ipAddress);
+            redisTemplate.opsForValue().set(
+                    TOTP_PREAUTH_PREFIX + preAuthToken, value, Duration.ofMinutes(5));
+
+            List<String> methods = new ArrayList<>();
+            if (user.getTwoFactorSecret() != null) methods.add("TOTP");
+            if (Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())) methods.add("SMS");
+            if (Boolean.TRUE.equals(user.getEmailTwoFactorEnabled())) methods.add("EMAIL");
+            if (Boolean.TRUE.equals(user.getAppTwoFactorEnabled()) && refreshTokenRepository.countByUserId(user.getId()) > 0) {
+                methods.add("APP");
+            }
+            if (Boolean.TRUE.equals(user.getPasskeysEnabled())) methods.add("PASSKEY");
+
+            String defMethod = user.getDefaultTwoFactorMethod() != null ? user.getDefaultTwoFactorMethod().name() : null;
+            if (defMethod == null || !methods.contains(defMethod)) {
+                defMethod = methods.isEmpty() ? null : methods.getFirst();
+            }
+
+            return TwoFactorPendingResponse.builder()
+                    .preAuthToken(preAuthToken)
+                    .methods(methods)
+                    .defaultMethod(defMethod)
+                    .build();
+        }
+
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false);
     }
 
     @Transactional
@@ -370,6 +402,22 @@ public class AuthService {
 
         secureAccount(user, null);
         redisTemplate.delete("secure_token:" + token);
+    }
+
+    // ==================== Account Recovery (forgot-password path) ====================
+
+    public String initAccountRecovery(String email, String ipAddress) {
+        rateLimitService.enforceRateLimit("account_recovery:" + email, 5, Duration.ofHours(1));
+        User user = userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new AppException("No account found with that email address."));
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new AppException("This account is not active.");
+        }
+        String preAuthToken = UUID.randomUUID().toString();
+        // Device/IP fields are empty — this token is only valid for recovery code / contact recovery redemption
+        String value = user.getId() + "||||" + sanitize(ipAddress);
+        redisTemplate.opsForValue().set(TOTP_PREAUTH_PREFIX + preAuthToken, value, Duration.ofMinutes(15));
+        return preAuthToken;
     }
 
     // ==================== TOTP / 2FA ====================

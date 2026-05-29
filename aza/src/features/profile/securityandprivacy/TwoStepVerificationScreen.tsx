@@ -134,7 +134,7 @@ export function TwoStepVerificationScreen() {
             isVerySecure
             isEnabled={profile.passkeysEnabled}
             methodKey="PASSKEY"
-            onPress={() => navigation.navigate(profile.passkeysEnabled ? 'DisablePasskey' : 'PasskeySetup')}
+            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: profile.passkeysEnabled ? 'DisablePasskey' : 'PasskeySetup' })}
           />
 
           <VerificationMethod
@@ -146,7 +146,7 @@ export function TwoStepVerificationScreen() {
             isVerySecure
             isEnabled={profile.appTwoFactorEnabled}
             methodKey="APP"
-            onPress={() => navigation.navigate('AzaAppSetup')}
+            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: 'AzaAppSetup' })}
           />
 
           <VerificationMethod
@@ -157,7 +157,7 @@ export function TwoStepVerificationScreen() {
             securityLevel="Fairly secure"
             isEnabled={profile.smsTwoFactorEnabled}
             methodKey="SMS"
-            onPress={() => navigation.navigate(profile.smsTwoFactorEnabled ? 'DisableSms' : 'SmsSetup')}
+            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: profile.smsTwoFactorEnabled ? 'DisableSms' : 'SmsSetup' })}
           />
         </View>
 
@@ -174,7 +174,7 @@ export function TwoStepVerificationScreen() {
             description="Use an app like Google Authenticator or Authy to get codes."
             securityLevel="Very secure"
             isVerySecure
-            onPress={() => navigation.navigate(profile.totpEnabled ? 'DisableTotp' : 'TotpSetup')}
+            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: profile.totpEnabled ? 'DisableTotp' : 'TotpSetup' })}
             isEnabled={profile.totpEnabled}
             methodKey="TOTP"
           />
@@ -194,7 +194,7 @@ export function TwoStepVerificationScreen() {
                 description="Use a one-time backup code if you can't access any of your verification methods."
                 securityLevel="Very secure"
                 isVerySecure
-                onPress={() => navigation.navigate('ManageRecoveryCodes')}
+                onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: 'ManageRecoveryCodes' })}
               />
             </View>
           </>

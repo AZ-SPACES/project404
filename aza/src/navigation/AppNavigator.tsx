@@ -50,6 +50,7 @@ import {
   AppearanceScreen,
   NotificationSettingsScreen,
   SecurityAndPrivacyScreen,
+  AppSecurityScreen,
   SecureAccountScreen,
   LogoutEverywhereScreen,
   DevicesScreen,
@@ -87,6 +88,8 @@ import { InboxScreen } from '../features/notifications';
 
 
 import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
+import CreatePasscodeScreen from '../features/security/screens/CreatePasscodeScreen';
+import ConfirmPasscodeScreen from '../features/auth/signup/ConfirmPasscodeScreen';
 import MerchantBusinessNameScreen from '../features/hub/miniapps/merchant/MerchantBusinessNameScreen';
 import MerchantBusinessCategoryScreen from '../features/hub/miniapps/merchant/MerchantBusinessCategoryScreen';
 import MerchantBusinessContactScreen from '../features/hub/miniapps/merchant/MerchantBusinessContactScreen';
@@ -169,7 +172,10 @@ export default function AppNavigator() {
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="AppSecurity" component={AppSecurityScreen} />
       <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
+      <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
+      <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
