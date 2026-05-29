@@ -25,6 +25,7 @@ import {
   MessageSquare,
   Store,
   Flag,
+  TrendingUp,
   X,
 } from "lucide-react";
 
@@ -65,6 +66,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag },
       { href: "/disputes", label: "Disputes", icon: Scale },
+      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp },
       { href: "/fees", label: "Fee Management", icon: Coins },
       { href: "/reports", label: "Reports", icon: FileBarChart2 },
     ],

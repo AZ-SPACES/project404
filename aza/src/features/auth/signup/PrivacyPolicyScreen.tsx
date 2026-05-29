@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
 import { BackButton } from '../../../components/ui/BackButton';

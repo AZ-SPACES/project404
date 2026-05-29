@@ -164,7 +164,7 @@ export default function ChatWithUsScreen() {
             </View>
           )}
           {messages.map((msg: any) => (
-            <View key={msg.id} style={styles.messageRow}>
+            <View key={msg.id} style={[styles.messageRow, msg.isSender ? styles.senderRow : styles.receiverRow]}>
               <View
                 style={[
                   styles.messageBubble,
@@ -298,11 +298,9 @@ function createStyles(Colors: any) {
     paddingHorizontal: 8 },
   senderBubble: {
     backgroundColor: Colors.primary, 
-    alignSelf: 'flex-end',
     borderTopRightRadius: 4 },
   receiverBubble: {
     backgroundColor: isDark ? Colors.surface : Colors.secondary, 
-    alignSelf: 'flex-start',
     borderTopLeftRadius: 4 },
   messageText: {
     fontSize: 16,
@@ -386,7 +384,12 @@ function createStyles(Colors: any) {
     alignItems: 'center',
     paddingVertical: 24 },
   messageRow: {
+    width: '100%',
+    marginBottom: 4 },
+  senderRow: {
     alignItems: 'flex-end' },
+  receiverRow: {
+    alignItems: 'flex-start' },
   messagePending: {
     opacity: 0.55 },
   messageFailed: {

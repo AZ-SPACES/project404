@@ -1,5 +1,5 @@
 import React, { ComponentProps, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../../providers/NotificationProvider';
