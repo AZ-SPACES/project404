@@ -177,6 +177,17 @@ export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
 export const getMe = () => api.get("/api/v1/users/me");
 
+export const getUserLimits = (): Promise<{ data: { data: { dailyLimitGhs: number; singleTransactionLimitGhs: number } } }> =>
+  api.get("/api/v1/users/me/limits");
+
+export const getTodaySent = () => api.get("/api/v1/wallet/today-sent");
+
+export const requestLimitIncrease = (data: {
+  requestedDailyLimitGhs: number;
+  requestedSingleTransactionLimitGhs: number;
+  reason: string;
+}) => api.post("/api/v1/users/me/limits/request", data);
+
 export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
 
 export const uploadProfileImage = (file: any) => {

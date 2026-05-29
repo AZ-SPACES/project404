@@ -14,26 +14,18 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useKYC } from "../../../providers/KYCProvider";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys";
+import { getUserLimits } from "../../../services/api";
+import { formatCurrency } from "../../../utils/transactionUtils";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "FeesAndLimits">;
 
-type LimitRow = {
-  label: string;
-  tier1: string;
-  tier2: string;
-};
-
-const TRANSACTION_LIMITS: LimitRow[] = [
-  { label: "Daily send limit",    tier1: "GH¢ 1,000",  tier2: "GH¢ 5,000"  },
-  { label: "Monthly balance cap", tier1: "GH¢ 5,000",  tier2: "GH¢ 50,000" },
-  { label: "Min. account balance", tier1: "GH¢ 0",     tier2: "GH¢ 0"      },
-];
-
-const FEE_ROWS: LimitRow[] = [
-  { label: "Send money",         tier1: "Free",  tier2: "Free"  },
-  { label: "Receive money",      tier1: "Free",  tier2: "Free"  },
-  { label: "Cash withdrawal",    tier1: "Free",  tier2: "Free"  },
-  { label: "Account maintenance", tier1: "Free", tier2: "Free"  },
+const FEE_ROWS = [
+  { label: "Send money",          value: "Free" },
+  { label: "Receive money",       value: "Free" },
+  { label: "Cash withdrawal",     value: "Free" },
+  { label: "Account maintenance", value: "Free" },
 ];
 
 export default function FeesAndLimitsScreen() {
@@ -43,6 +35,17 @@ export default function FeesAndLimitsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { data: kycData } = useKYC();
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const { data: limitsData } = useQuery({
+    queryKey: queryKeys.userLimits(),
+    queryFn: async () => { const res = await getUserLimits(); return res.data?.data || res.data; },
+    staleTime: 5 * 60_000,
+  });
+
+  const dailyLimit: number | null = limitsData?.dailyLimitGhs ?? null;
+  const singleLimit: number | null = limitsData?.singleTransactionLimitGhs ?? null;
+  const dailyLimitStr = dailyLimit !== null ? formatCurrency(dailyLimit, 'GHS') : '—';
+  const singleLimitStr = singleLimit !== null ? formatCurrency(singleLimit, 'GHS') : '—';
 
   const isVerified = kycData.status === 'VERIFIED';
 
@@ -101,8 +104,7 @@ export default function FeesAndLimitsScreen() {
           <View style={styles.table}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Fee type</Text>
-              <Text style={styles.tableHeaderCell}>Tier 1</Text>
-              <Text style={styles.tableHeaderCell}>Tier 2</Text>
+              <Text style={styles.tableHeaderCell}>Amount</Text>
             </View>
             {FEE_ROWS.map((row, i) => (
               <View
@@ -110,53 +112,44 @@ export default function FeesAndLimitsScreen() {
                 style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}
               >
                 <Text style={[styles.tableCell, { flex: 2 }]}>{row.label}</Text>
-                <Text style={[styles.tableCell, styles.tableCellFree]}>{row.tier1}</Text>
-                <Text style={[styles.tableCell, styles.tableCellFree]}>{row.tier2}</Text>
+                <Text style={[styles.tableCell, styles.tableCellFree]}>{row.value}</Text>
               </View>
             ))}
           </View>
 
           {/* Limits table */}
-          <Text style={styles.sectionLabel}>Account limits</Text>
+          <Text style={styles.sectionLabel}>Your account limits</Text>
           <View style={styles.table}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Limit</Text>
-              <Text style={styles.tableHeaderCell}>Tier 1</Text>
-              <Text style={styles.tableHeaderCell}>Tier 2</Text>
+              <Text style={styles.tableHeaderCell}>Amount</Text>
             </View>
-            {TRANSACTION_LIMITS.map((row, i) => (
-              <View
-                key={row.label}
-                style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}
-              >
-                <Text style={[styles.tableCell, { flex: 2 }]}>{row.label}</Text>
-                <Text style={styles.tableCell}>{row.tier1}</Text>
-                <Text style={styles.tableCell}>{row.tier2}</Text>
-              </View>
-            ))}
+            <View style={[styles.tableRow, styles.tableRowAlt]}>
+              <Text style={[styles.tableCell, { flex: 2 }]}>Max per transfer</Text>
+              <Text style={styles.tableCell}>{singleLimitStr}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 2 }]}>Daily send limit</Text>
+              <Text style={styles.tableCell}>{dailyLimitStr}</Text>
+            </View>
           </View>
 
-          {/* Tier explanation */}
-          <View style={styles.tierNote}>
-            <MaterialIcons 
-              name={isVerified ? "upgrade" : "hourglass-empty"} 
-              size={16} 
-              color={Colors.primary} 
-            />
-            <Text style={styles.tierNoteText}>
-              {isVerified 
-                ? <>Your account is already at <Text style={styles.bold}>Tier 2</Text> — KYC verification was completed during sign-up. Higher limits apply immediately.</>
-                : <>Your account is currently at <Text style={styles.bold}>Tier 1</Text> while we review your identity documents. Tier 2 limits will apply once verified.</>}
-            </Text>
-          </View>
+          {/* KYC note */}
+          {!isVerified && (
+            <View style={styles.tierNote}>
+              <MaterialIcons name="hourglass-empty" size={16} color={Colors.primary} />
+              <Text style={styles.tierNoteText}>
+                Your account is pending KYC review. Limits may change once your identity is verified.
+              </Text>
+            </View>
+          )}
 
           {/* Regulatory note */}
           <View style={styles.legalNote}>
             <MaterialIcons name="info-outline" size={16} color={Colors.textSecondary} />
             <Text style={styles.legalNoteText}>
-              Tiered account limits are set by the Bank of Ghana under the Payment
-              Systems and Services Act, 2019 (Act 987). Limits apply per calendar
-              day and month and may be adjusted by aza with 30 days' notice.
+              Limits are set per your account profile and may be adjusted by aza in
+              accordance with Bank of Ghana regulations (Act 987).
             </Text>
           </View>
         </Animated.ScrollView>

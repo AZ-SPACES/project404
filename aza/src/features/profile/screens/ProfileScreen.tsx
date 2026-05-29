@@ -374,6 +374,13 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Settings</Text>
+          <SectionItem
+            iconFamily="Feather"
+            iconName="trending-up"
+            title="Fees & Limits"
+            subtitle="View usage, limits and request an increase"
+            onPress={() => navigation.navigate("LimitsAndUsage")}
+          />
           <SectionItem iconFamily="Feather" iconName="shield" title="Security and Privacy" subtitle="Change your security and privacy settings" onPress={() => navigation.navigate("SecurityAndPrivacy")} />
           <SectionItem 
             iconFamily="Feather" 

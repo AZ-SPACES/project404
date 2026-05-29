@@ -22,6 +22,8 @@ public class TransferController {
     private final TransferService transferService;
     private final com.aza.backend.service.StatementService statementService;
     private final com.aza.backend.util.EmailService emailService;
+    private final com.aza.backend.service.NotificationService notificationService;
+    private final com.aza.backend.service.SystemSettingService settingService;
 
     // ==================== WALLET ====================
 
@@ -37,6 +39,54 @@ public class TransferController {
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(
                 transferService.getSpendingSummary(user.getId())));
+    }
+
+    @GetMapping("/wallet/today-sent")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> getTodaySent(
+            @AuthenticationPrincipal User user) {
+        java.math.BigDecimal sent = transferService.getTodaySent(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(java.util.Map.of(
+                "sentToday", sent,
+                "currency", "GHS")));
+    }
+
+    @lombok.Data
+    static class LimitIncreaseRequest {
+        private java.math.BigDecimal requestedDailyLimitGhs;
+        private java.math.BigDecimal requestedSingleTransactionLimitGhs;
+        private String reason;
+    }
+
+    @PostMapping("/users/me/limits/request")
+    public ResponseEntity<ApiResponse<String>> requestLimitIncrease(
+            @AuthenticationPrincipal User user,
+            @RequestBody LimitIncreaseRequest body) {
+        com.aza.backend.dto.admin.SystemSettingsResponse settings = settingService.getSettings();
+        java.math.BigDecimal currentDaily = user.getCustomDailyLimitGhs() != null
+                ? user.getCustomDailyLimitGhs() : settings.getMaxDailyTransferGhs();
+        java.math.BigDecimal currentSingle = user.getCustomSingleTransactionLimitGhs() != null
+                ? user.getCustomSingleTransactionLimitGhs() : settings.getMaxSingleTransactionGhs();
+
+        String userName = (user.getFirstName() != null ? user.getFirstName() : "") +
+                " " + (user.getLastName() != null ? user.getLastName() : "");
+        String subject = "Limit Increase Request — " + userName.trim();
+        String html = "<p>User <strong>" + userName.trim() + "</strong> (" + user.getEmail() + ") has requested a limit increase.</p>"
+                + "<ul>"
+                + "<li>Current daily limit: GHS " + currentDaily + "</li>"
+                + "<li>Requested daily limit: GHS " + body.getRequestedDailyLimitGhs() + "</li>"
+                + "<li>Current single-transaction limit: GHS " + currentSingle + "</li>"
+                + "<li>Requested single-transaction limit: GHS " + body.getRequestedSingleTransactionLimitGhs() + "</li>"
+                + "</ul>"
+                + "<p><strong>Reason:</strong> " + (body.getReason() != null ? body.getReason() : "Not provided") + "</p>";
+
+        emailService.sendEmail(emailService.getSupportEmail(), subject, html);
+        notificationService.sendNotification(
+                user.getId(),
+                com.aza.backend.entity.Notification.NotificationType.SYSTEM_BROADCAST,
+                "Limit increase request received",
+                "We've received your request and will review it within 2 business days.",
+                null, null);
+        return ResponseEntity.ok(ApiResponse.success("Request submitted successfully."));
     }
 
     @GetMapping("/wallet/spending/yearly")

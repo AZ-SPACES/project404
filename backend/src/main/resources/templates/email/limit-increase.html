@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Transaction Limits Increased</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0E0F0C;margin:0;padding:0;background-color:#E6ECE1;">
+<div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #DADCE0;border-radius:12px;overflow:hidden;">
+  <div style="padding:28px 40px;border-bottom:1px solid #EAECEF;">
+    <table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;"><img src="cid:aza_default" alt="AZA" width="28" height="28" style="display:block;border:0;"></td>
+    </tr></table>
+  </div>
+  <div style="padding:40px;">
+    <h1 style="font-size:32px;font-weight:800;color:#0E0F0C;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.2;">Your limits have been increased</h1>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 16px 0;line-height:1.6;">Hi <span th:text="${name}">there</span>,</p>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 24px 0;line-height:1.6;">Great news! Your AZA transaction limits have been updated. Here's what changed:</p>
+
+    <div style="background:#F0FFF4;border:1px solid #BDE4BD;border-radius:10px;padding:24px;margin:0 0 24px 0;">
+      <div th:if="${dailyIncreased}" style="margin-bottom:12px;">
+        <p style="font-size:13px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px 0;">Daily Transfer Limit</p>
+        <p style="font-size:22px;font-weight:700;color:#174717;margin:0;">GHS <span th:text="${#numbers.formatDecimal(newDaily,1,'COMMA',2,'POINT')}">0.00</span></p>
+      </div>
+      <div th:if="${singleIncreased}">
+        <p style="font-size:13px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px 0;">Single Transaction Limit</p>
+        <p style="font-size:22px;font-weight:700;color:#174717;margin:0;">GHS <span th:text="${#numbers.formatDecimal(newSingle,1,'COMMA',2,'POINT')}">0.00</span></p>
+      </div>
+    </div>
+
+    <p style="font-size:16px;color:#5F6368;margin:0 0 16px 0;line-height:1.6;">Your new limits are active immediately. You can view your current limits anytime in the AZA app under <strong>Profile → Fees &amp; Limits</strong>.</p>
+    <p style="font-size:14px;color:#9AA0A6;margin:0 0 16px 0;line-height:1.6;">If you didn't request this change or have any questions, please contact our support team.</p>
+  </div>
+  <div style="padding:28px 40px;background:#F8F9FA;border-top:1px solid #EAECEF;">
+    <p style="margin:0;font-size:13px;color:#9AA0A6;">&copy; 2026 AZA. All rights reserved.</p>
+  </div>
+</div>
+</body>
+</html>

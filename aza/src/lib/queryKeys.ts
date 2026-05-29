@@ -12,6 +12,8 @@ export const queryKeys = {
   contactDetails:      (id: string) => ['contact-details', id] as const,
   devices:             () => ['devices'] as const,
   kycStatus:           () => ['kyc-status'] as const,
+  userLimits:          () => ['user-limits'] as const,
+  todaySent:           () => ['today-sent'] as const,
   merchant:            () => ['merchant'] as const,
   spendingSummary:     () => ['spending-summary'] as const,
   // Merchant portal sub-resources

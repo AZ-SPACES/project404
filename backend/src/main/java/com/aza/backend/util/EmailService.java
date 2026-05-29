@@ -49,6 +49,10 @@ public class EmailService {
         return result;
     }
 
+    public String getSupportEmail() {
+        return senderEmail;
+    }
+
     public boolean sendEmail(String to, String subject, String htmlBody) {
         return sendViaBrevo("AZA", senderEmail, to, subject, htmlBody, null, null);
     }
@@ -103,6 +107,21 @@ public class EmailService {
             String html = inlineImages(templateEngine.process("email/login-notification", ctx));
             sendViaBrevo("AZA Security", senderEmail, email,
                     "Security Alert: New Login to your AZA Account", html, null, null);
+        });
+    }
+
+    public void sendLimitIncreaseEmail(String email, String firstName,
+                                       boolean dailyIncreased, java.math.BigDecimal newDaily,
+                                       boolean singleIncreased, java.math.BigDecimal newSingle) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", firstName);
+            ctx.setVariable("dailyIncreased", dailyIncreased);
+            ctx.setVariable("newDaily", newDaily);
+            ctx.setVariable("singleIncreased", singleIncreased);
+            ctx.setVariable("newSingle", newSingle);
+            String html = inlineImages(templateEngine.process("email/limit-increase", ctx));
+            sendViaBrevo("AZA", senderEmail, email, "Your AZA transaction limits have been increased", html, null, null);
         });
     }
 

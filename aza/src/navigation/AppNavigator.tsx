@@ -75,6 +75,8 @@ import {
   ChangePhoneScreen,
   DeleteAccountScreen
 } from '../features/profile';
+import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
+import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
 import {
   ReasonScreen,
   RefundScreen,
@@ -172,6 +174,8 @@ export default function AppNavigator() {
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="LimitsAndUsage" component={LimitsAndUsageScreen} />
+      <Stack.Screen name="LimitIncreaseRequest" component={LimitIncreaseRequestScreen} />
       <Stack.Screen name="AppSecurity" component={AppSecurityScreen} />
       <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
       <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
