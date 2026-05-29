@@ -71,20 +71,38 @@ public class SmsService {
         return sendSms(phoneNumber, message);
     }
 
-    public void sendTransferSentSms(String phoneNumber, String recipientName, BigDecimal amount, String txnRef) {
+    public void sendTransferSentSms(String phoneNumber, String recipientName,
+                                    BigDecimal amount, String txnRef) {
+        sendTransferSentSms(phoneNumber, recipientName, amount, txnRef, null);
+    }
+
+    public void sendTransferSentSms(String phoneNumber, String recipientName,
+                                    BigDecimal amount, String txnRef, BigDecimal newBalance) {
         CompletableFuture.runAsync(() -> {
-            String msg = "AZA: You sent GHS " + amount.setScale(2, RoundingMode.HALF_UP)
-                    + " to " + recipientName + ". Ref: " + txnRef;
+            String msg = "AZA: Debit GHS " + fmt(amount) + " to " + recipientName
+                    + ". Ref: " + txnRef + "."
+                    + (newBalance != null ? " Avail bal: GHS " + fmt(newBalance) + "." : "");
             sendSms(phoneNumber, msg);
         });
     }
 
-    public void sendTransferReceivedSms(String phoneNumber, String senderName, BigDecimal amount, String txnRef) {
+    public void sendTransferReceivedSms(String phoneNumber, String senderName,
+                                        BigDecimal amount, String txnRef) {
+        sendTransferReceivedSms(phoneNumber, senderName, amount, txnRef, null);
+    }
+
+    public void sendTransferReceivedSms(String phoneNumber, String senderName,
+                                        BigDecimal amount, String txnRef, BigDecimal newBalance) {
         CompletableFuture.runAsync(() -> {
-            String msg = "AZA: GHS " + amount.setScale(2, RoundingMode.HALF_UP)
-                    + " received from " + senderName + ". Ref: " + txnRef;
+            String msg = "AZA: Credit GHS " + fmt(amount) + " from " + senderName
+                    + ". Ref: " + txnRef + "."
+                    + (newBalance != null ? " Avail bal: GHS " + fmt(newBalance) + "." : "");
             sendSms(phoneNumber, msg);
         });
+    }
+
+    private static String fmt(BigDecimal v) {
+        return String.format("%,.2f", v.setScale(2, RoundingMode.HALF_UP));
     }
 
     public void sendMoneyRequestedSms(String phoneNumber, String requesterName, BigDecimal amount) {

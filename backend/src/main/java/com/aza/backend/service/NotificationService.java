@@ -187,16 +187,57 @@ public class NotificationService {
 
     public void sendMoneyReceivedNotification(UUID recipientId, String senderName,
                                               String amount, String transactionId) {
+        sendMoneyReceivedNotification(recipientId, senderName, amount, transactionId, null);
+    }
+
+    public void sendMoneyReceivedNotification(UUID recipientId, String senderName,
+                                              String amount, String transactionId,
+                                              java.math.BigDecimal newBalance) {
         Map<String, Object> data = new HashMap<>();
         data.put("transactionId", transactionId);
         data.put("type", "MONEY_RECEIVED");
 
+        String body = "Credit: GHS " + fmtAmt(amount) + " from " + senderName + ".";
+        if (newBalance != null)
+            body += " Avail. bal: GHS " + fmtBal(newBalance) + ".";
+
         sendNotification(
                 recipientId,
                 Notification.NotificationType.MONEY_RECEIVED,
-                "Money Received",
-                "You received GHS " + amount + " from " + senderName,
+                "GHS " + fmtAmt(amount) + " received",
+                body,
                 data);
+    }
+
+    public void sendMoneySentNotification(UUID senderId, String recipientName,
+                                          String amount, String transactionId,
+                                          java.math.BigDecimal newBalance) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("transactionId", transactionId);
+        data.put("type", "TRANSFER_COMPLETED");
+
+        String body = "Debit: GHS " + fmtAmt(amount) + " to " + recipientName + ".";
+        if (newBalance != null)
+            body += " Avail. bal: GHS " + fmtBal(newBalance) + ".";
+
+        sendNotification(
+                senderId,
+                Notification.NotificationType.TRANSFER_COMPLETED,
+                "GHS " + fmtAmt(amount) + " sent",
+                body,
+                data);
+    }
+
+    private static String fmtAmt(String raw) {
+        try {
+            return new java.math.BigDecimal(raw)
+                    .setScale(2, java.math.RoundingMode.HALF_UP)
+                    .toPlainString();
+        } catch (Exception e) { return raw; }
+    }
+
+    private static String fmtBal(java.math.BigDecimal v) {
+        return String.format("%,.2f", v);
     }
 
     public void sendPaymentRequestReceivedNotification(UUID payerId, String requesterName,
