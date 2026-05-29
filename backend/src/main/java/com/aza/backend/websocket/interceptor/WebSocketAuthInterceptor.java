@@ -12,15 +12,12 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.UUID;
 import com.aza.backend.exception.AppException;
 
@@ -74,15 +71,11 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("User not found or account inactive");
             }
 
-            // Set authenticated principal — Spring uses this for /user/... routing
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            user,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-
-            accessor.setUser(authentication);
+            // Set the session principal to the user's UUID string.
+            // Spring routes convertAndSendToUser(userId, ...) by matching principal.getName(),
+            // so this must return the UUID — not user.toString() which is a JVM object hash.
+            final String principalName = userId.toString();
+            accessor.setUser(() -> principalName);
             log.info("WebSocket CONNECT authenticated: userId={}", userId);
         }
 
