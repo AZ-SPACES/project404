@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@stomp/stompjs": "^7.3.0",
+    "@tanstack/react-query": "^5.100.14",
     "@types/sockjs-client": "^1.5.4",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

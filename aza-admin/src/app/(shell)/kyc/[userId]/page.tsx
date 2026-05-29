@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { getKycRecord, reviewKyc, type KycRecord } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,37 +40,24 @@ export default function KycReviewPage() {
   const params = useParams();
   const userId = params.userId as string;
 
-  const [record, setRecord] = useState<KycRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [done, setDone] = useState<"approved" | "rejected" | null>(null);
 
-  useEffect(() => {
-    getKycRecord(userId)
-      .then(setRecord)
-      .catch(e => setError(e.message ?? "KYC record not found."))
-      .finally(() => setLoading(false));
-  }, [userId]);
+  const { data: record, isLoading, error } = useQuery<KycRecord>({
+    queryKey: ["kycRecord", userId],
+    queryFn: () => getKycRecord(userId),
+  });
 
-  async function approve() {
-    setSubmitting(true);
-    try { await reviewKyc(userId, true, ""); setDone("approved"); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setSubmitting(false); }
-  }
+  const reviewMutation = useMutation({
+    mutationFn: ({ approved, reason }: { approved: boolean; reason: string }) =>
+      reviewKyc(userId, approved, reason),
+    onSuccess: (_data, { approved }) => {
+      setDone(approved ? "approved" : "rejected");
+    },
+  });
 
-  async function reject() {
-    if (!rejectReason.trim()) return;
-    setSubmitting(true);
-    try { await reviewKyc(userId, false, rejectReason); setDone("rejected"); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setSubmitting(false); }
-  }
-
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
 
   if (done) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -83,7 +71,7 @@ export default function KycReviewPage() {
 
   if (error || !record) return (
     <div className="space-y-4">
-      <p className="text-red-400">{error || "Record not found"}</p>
+      <p className="text-red-400">{error ? (error as Error).message : "Record not found"}</p>
       <Link href="/kyc" className="text-white/50 text-sm hover:text-white flex items-center gap-1"><ArrowLeft size={14} /> Back</Link>
     </div>
   );
@@ -126,11 +114,11 @@ export default function KycReviewPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         {!showReject ? (
           <>
-            <button onClick={approve} disabled={submitting}
+            <button onClick={() => reviewMutation.mutate({ approved: true, reason: "" })} disabled={reviewMutation.isPending}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium text-sm hover:bg-emerald-500/25 transition-colors disabled:opacity-50">
-              {submitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Approve
+              {reviewMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Approve
             </button>
-            <button onClick={() => setShowReject(true)} disabled={submitting}
+            <button onClick={() => setShowReject(true)} disabled={reviewMutation.isPending}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 transition-colors disabled:opacity-50">
               <X size={16} /> Reject
             </button>
@@ -141,9 +129,11 @@ export default function KycReviewPage() {
               placeholder="Reason for rejection (required)" rows={3}
               className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-red-500/50 text-sm resize-none" />
             <div className="flex gap-3">
-              <button onClick={reject} disabled={submitting || !rejectReason.trim()}
+              <button
+                onClick={() => reviewMutation.mutate({ approved: false, reason: rejectReason })}
+                disabled={reviewMutation.isPending || !rejectReason.trim()}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/20 font-medium text-sm hover:bg-red-500/25 disabled:opacity-50">
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />} Confirm Rejection
+                {reviewMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />} Confirm Rejection
               </button>
               <button onClick={() => setShowReject(false)}
                 className="px-4 py-3 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white">
@@ -153,7 +143,7 @@ export default function KycReviewPage() {
           </div>
         )}
       </div>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {reviewMutation.error && <p className="text-red-400 text-sm">{(reviewMutation.error as Error).message}</p>}
     </div>
   );
 }

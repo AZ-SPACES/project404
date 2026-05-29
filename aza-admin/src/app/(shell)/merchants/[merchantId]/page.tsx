@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMerchantById,
   getMerchantKyb,
@@ -183,81 +184,41 @@ type Tab = "overview" | "kyb" | "payouts" | "sessions" | "invoices" | "settlemen
 export default function MerchantDetailPage() {
   const { merchantId } = useParams<{ merchantId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [merchant, setMerchant] = useState<AdminMerchant | null>(null);
-  const [kyb, setKyb] = useState<MerchantKyb | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [inputText, setInputText] = useState("");
   const [feeInput, setFeeInput] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
+  const [error, setError] = useState<string | null>(null);
 
-  // Payouts tab state
-  const [payouts, setPayouts] = useState<Page<MerchantPayout> | null>(null);
+  // Per-tab page numbers
   const [payoutsPage, setPayoutsPage] = useState(0);
-  const [payoutsLoading, setPayoutsLoading] = useState(false);
-
-  // Sessions tab state
-  const [sessions, setSessions] = useState<Page<MerchantSession> | null>(null);
   const [sessionsPage, setSessionsPage] = useState(0);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-
-  // Invoices tab state
-  const [invoices, setInvoices] = useState<Page<MerchantInvoice> | null>(null);
   const [invoicesPage, setInvoicesPage] = useState(0);
-  const [invoicesLoading, setInvoicesLoading] = useState(false);
-
-  // Settlements tab state
-  const [settlements, setSettlements] = useState<Page<MerchantSettlement> | null>(null);
   const [settlementsPage, setSettlementsPage] = useState(0);
-  const [settlementsLoading, setSettlementsLoading] = useState(false);
-
-  // Customers tab state
-  const [customers, setCustomers] = useState<Page<MerchantCustomer> | null>(null);
   const [customersPage, setCustomersPage] = useState(0);
-  const [customersLoading, setCustomersLoading] = useState(false);
-
-  // Disputes tab state
-  const [merchantDisputes, setMerchantDisputes] = useState<Page<Dispute> | null>(null);
   const [merchantDisputesPage, setMerchantDisputesPage] = useState(0);
-  const [merchantDisputesLoading, setMerchantDisputesLoading] = useState(false);
-
-  // Bulk Transfers tab state
-  const [bulkTransfers, setBulkTransfers] = useState<Page<MerchantBulkTransfer> | null>(null);
   const [bulkTransfersPage, setBulkTransfersPage] = useState(0);
-  const [bulkTransfersLoading, setBulkTransfersLoading] = useState(false);
-
-  // Audit Log tab state
-  const [auditLog, setAuditLog] = useState<Page<MerchantAuditLogEntry> | null>(null);
   const [auditLogPage, setAuditLogPage] = useState(0);
-  const [auditLogLoading, setAuditLogLoading] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [m, k] = await Promise.all([
-        getMerchantById(merchantId),
-        getMerchantKyb(merchantId).catch(() => null),
-      ]);
-      setMerchant(m);
-      setKyb(k);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load merchant");
-    } finally {
-      setLoading(false);
-    }
-  }, [merchantId]);
+  // Core data
+  const { data: merchant, isLoading: loading, error: loadError } = useQuery<AdminMerchant>({
+    queryKey: ["merchant", merchantId],
+    queryFn: () => getMerchantById(merchantId),
+  });
 
-  useEffect(() => { load(); }, [load]);
+  const { data: kyb } = useQuery<MerchantKyb | null>({
+    queryKey: ["merchantKyb", merchantId],
+    queryFn: () => getMerchantKyb(merchantId).catch(() => null),
+    enabled: !!merchantId,
+  });
 
   // Auto-switch to KYB tab when the merchant needs review action
   useEffect(() => {
@@ -266,182 +227,115 @@ export default function MerchantDetailPage() {
     }
   }, [merchant?.status]);
 
-  const loadPayouts = useCallback(async (p: number) => {
-    setPayoutsLoading(true);
-    try {
-      const res = await getMerchantPayouts(merchantId, p);
-      setPayouts(res);
-      setPayoutsPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load payouts");
-    } finally {
-      setPayoutsLoading(false);
-    }
-  }, [merchantId]);
+  // Tab data queries — only fetch when the relevant tab is active
+  const { data: payouts, isLoading: payoutsLoading } = useQuery({
+    queryKey: ["merchantPayouts", merchantId, payoutsPage],
+    queryFn: () => getMerchantPayouts(merchantId, payoutsPage),
+    enabled: tab === "payouts",
+  });
 
-  const loadSessions = useCallback(async (p: number) => {
-    setSessionsLoading(true);
-    try {
-      const res = await getMerchantSessions(merchantId, p);
-      setSessions(res);
-      setSessionsPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load sessions");
-    } finally {
-      setSessionsLoading(false);
-    }
-  }, [merchantId]);
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ["merchantSessions", merchantId, sessionsPage],
+    queryFn: () => getMerchantSessions(merchantId, sessionsPage),
+    enabled: tab === "sessions",
+  });
 
-  const loadInvoices = useCallback(async (p: number) => {
-    setInvoicesLoading(true);
-    try {
-      const res = await getMerchantInvoices(merchantId, p);
-      setInvoices(res);
-      setInvoicesPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load invoices");
-    } finally {
-      setInvoicesLoading(false);
-    }
-  }, [merchantId]);
+  const { data: invoices, isLoading: invoicesLoading } = useQuery({
+    queryKey: ["merchantInvoices", merchantId, invoicesPage],
+    queryFn: () => getMerchantInvoices(merchantId, invoicesPage),
+    enabled: tab === "invoices",
+  });
 
-  const loadSettlements = useCallback(async (p: number) => {
-    setSettlementsLoading(true);
-    try {
-      const res = await getMerchantSettlements(merchantId, p);
-      setSettlements(res);
-      setSettlementsPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load settlements");
-    } finally {
-      setSettlementsLoading(false);
-    }
-  }, [merchantId]);
+  const { data: settlements, isLoading: settlementsLoading } = useQuery({
+    queryKey: ["merchantSettlements", merchantId, settlementsPage],
+    queryFn: () => getMerchantSettlements(merchantId, settlementsPage),
+    enabled: tab === "settlements",
+  });
 
-  const loadCustomers = useCallback(async (p: number) => {
-    setCustomersLoading(true);
-    try {
-      const res = await getMerchantCustomers(merchantId, p);
-      setCustomers(res);
-      setCustomersPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load customers");
-    } finally {
-      setCustomersLoading(false);
-    }
-  }, [merchantId]);
+  const { data: customers, isLoading: customersLoading } = useQuery({
+    queryKey: ["merchantCustomers", merchantId, customersPage],
+    queryFn: () => getMerchantCustomers(merchantId, customersPage),
+    enabled: tab === "customers",
+  });
 
-  const loadMerchantDisputes = useCallback(async (p: number) => {
-    setMerchantDisputesLoading(true);
-    try {
-      const res = await getMerchantDisputesByMerchant(merchantId, p);
-      setMerchantDisputes(res);
-      setMerchantDisputesPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load disputes");
-    } finally {
-      setMerchantDisputesLoading(false);
-    }
-  }, [merchantId]);
+  const { data: merchantDisputes, isLoading: merchantDisputesLoading } = useQuery({
+    queryKey: ["merchantDisputes", merchantId, merchantDisputesPage],
+    queryFn: () => getMerchantDisputesByMerchant(merchantId, merchantDisputesPage),
+    enabled: tab === "disputes",
+  });
 
-  const loadBulkTransfers = useCallback(async (p: number) => {
-    setBulkTransfersLoading(true);
-    try {
-      const res = await getMerchantBulkTransfers(merchantId, p);
-      setBulkTransfers(res);
-      setBulkTransfersPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load bulk transfers");
-    } finally {
-      setBulkTransfersLoading(false);
-    }
-  }, [merchantId]);
+  const { data: bulkTransfers, isLoading: bulkTransfersLoading } = useQuery({
+    queryKey: ["merchantBulkTransfers", merchantId, bulkTransfersPage],
+    queryFn: () => getMerchantBulkTransfers(merchantId, bulkTransfersPage),
+    enabled: tab === "bulk-transfers",
+  });
 
-  const loadAuditLog = useCallback(async (p: number) => {
-    setAuditLogLoading(true);
-    try {
-      const res = await getMerchantAuditLogByMerchant(merchantId, p);
-      setAuditLog(res);
-      setAuditLogPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load audit log");
-    } finally {
-      setAuditLogLoading(false);
-    }
-  }, [merchantId]);
+  const { data: auditLog, isLoading: auditLogLoading } = useQuery({
+    queryKey: ["merchantAuditLog", merchantId, auditLogPage],
+    queryFn: () => getMerchantAuditLogByMerchant(merchantId, auditLogPage),
+    enabled: tab === "audit-log",
+  });
 
-  useEffect(() => {
-    if (tab === "payouts" && !payouts) loadPayouts(0);
-    if (tab === "sessions" && !sessions) loadSessions(0);
-    if (tab === "invoices" && !invoices) loadInvoices(0);
-    if (tab === "settlements" && !settlements) loadSettlements(0);
-    if (tab === "customers" && !customers) loadCustomers(0);
-    if (tab === "disputes" && !merchantDisputes) loadMerchantDisputes(0);
-    if (tab === "bulk-transfers" && !bulkTransfers) loadBulkTransfers(0);
-    if (tab === "audit-log" && !auditLog) loadAuditLog(0);
-  }, [tab, payouts, sessions, invoices, settlements, customers, merchantDisputes, bulkTransfers, auditLog,
-      loadPayouts, loadSessions, loadInvoices, loadSettlements, loadCustomers, loadMerchantDisputes, loadBulkTransfers, loadAuditLog]);
-
-  const handleKybReview = async (approve: boolean, rejectionReason?: string, moreInfoRequest?: string) => {
-    setActionLoading(true);
-    try {
-      const updated = await reviewMerchantKyb(merchantId, approve, rejectionReason, moreInfoRequest);
-      setKyb(updated);
+  // Mutations
+  const kybMutation = useMutation({
+    mutationFn: ({ approve, rejectionReason, moreInfoRequest }: { approve: boolean; rejectionReason?: string; moreInfoRequest?: string }) =>
+      reviewMerchantKyb(merchantId, approve, rejectionReason, moreInfoRequest),
+    onSuccess: (updated, { approve }) => {
+      queryClient.setQueryData(["merchantKyb", merchantId], updated);
+      queryClient.invalidateQueries({ queryKey: ["merchant", merchantId] });
       setModal(null);
       setInputText("");
       showToast(approve ? "KYB approved — merchant activated" : "KYB decision saved");
-      load();
-    } catch (e: any) {
-      setError(e.message ?? "KYB review failed");
-    } finally {
-      setActionLoading(false);
-    }
-  };
+    },
+    onError: (e: Error) => setError(e.message ?? "KYB review failed"),
+  });
 
-  const handleStatusChange = async (status: string) => {
-    setActionLoading(true);
-    try {
-      const updated = await setMerchantStatus(merchantId, status);
-      setMerchant(updated);
+  const statusMutation = useMutation({
+    mutationFn: (status: string) => setMerchantStatus(merchantId, status),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["merchant", merchantId], updated);
       setModal(null);
       setInputText("");
-      showToast(`Merchant status set to ${status.toLowerCase()}`);
-    } catch (e: any) {
-      setError(e.message ?? "Status change failed");
-    } finally {
-      setActionLoading(false);
-    }
+      showToast(`Merchant status set to ${updated.status.toLowerCase()}`);
+    },
+    onError: (e: Error) => setError(e.message ?? "Status change failed"),
+  });
+
+  const feeMutation = useMutation({
+    mutationFn: (bps: number) => updateMerchantFeeRate(merchantId, bps),
+    onSuccess: (updated, bps) => {
+      queryClient.setQueryData(["merchant", merchantId], updated);
+      setModal(null);
+      setFeeInput("");
+      showToast(`Fee rate updated to ${fmtFee(bps)}`);
+    },
+    onError: (e: Error) => setError(e.message ?? "Fee rate update failed"),
+  });
+
+  const rateLimitMutation = useMutation({
+    mutationFn: () => resetUserRateLimit(merchant!.userId),
+    onSuccess: () => showToast("Rate limits cleared for merchant's user account"),
+    onError: (e: Error) => setError(e.message ?? "Failed to reset rate limits"),
+  });
+
+  const actionLoading = kybMutation.isPending || statusMutation.isPending || feeMutation.isPending;
+
+  const handleKybReview = (approve: boolean, rejectionReason?: string, moreInfoRequest?: string) => {
+    kybMutation.mutate({ approve, rejectionReason, moreInfoRequest });
   };
 
-  const handleFeeRateUpdate = async () => {
+  const handleStatusChange = (status: string) => statusMutation.mutate(status);
+
+  const handleFeeRateUpdate = () => {
     const bps = Math.round(parseFloat(feeInput) * 100);
     if (isNaN(bps) || bps < 0 || bps > 10000) {
       setError("Enter a valid fee rate between 0% and 100%");
       return;
     }
-    setActionLoading(true);
-    try {
-      const updated = await updateMerchantFeeRate(merchantId, bps);
-      setMerchant(updated);
-      setModal(null);
-      setFeeInput("");
-      showToast(`Fee rate updated to ${fmtFee(bps)}`);
-    } catch (e: any) {
-      setError(e.message ?? "Fee rate update failed");
-    } finally {
-      setActionLoading(false);
-    }
+    feeMutation.mutate(bps);
   };
 
-  const handleResetRateLimit = async () => {
-    if (!merchant) return;
-    try {
-      await resetUserRateLimit(merchant.userId);
-      showToast("Rate limits cleared for merchant's user account");
-    } catch (e: any) {
-      setError(e.message ?? "Failed to reset rate limits");
-    }
-  };
+  const handleResetRateLimit = () => rateLimitMutation.mutate();
 
   if (loading) {
     return (
@@ -451,11 +345,11 @@ export default function MerchantDetailPage() {
     );
   }
 
-  if (error && !merchant) {
+  if (loadError && !merchant) {
     return (
       <div className="max-w-2xl mx-auto mt-10">
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
-          <AlertCircle size={16} />{error}
+          <AlertCircle size={16} />{(loadError as Error).message}
         </div>
       </div>
     );
@@ -843,11 +737,11 @@ export default function MerchantDetailPage() {
 
               {payouts && payouts.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadPayouts(payoutsPage - 1)} disabled={payoutsPage === 0 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <button onClick={() => setPayoutsPage(p => p - 1)} disabled={payoutsPage === 0 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
                     <ChevronLeft size={14} />
                   </button>
                   <span className="text-xs text-white/40">{payoutsPage + 1} / {payouts.totalPages}</span>
-                  <button onClick={() => loadPayouts(payoutsPage + 1)} disabled={payoutsPage >= payouts.totalPages - 1 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <button onClick={() => setPayoutsPage(p => p + 1)} disabled={payoutsPage >= payouts.totalPages - 1 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -907,11 +801,11 @@ export default function MerchantDetailPage() {
 
               {sessions && sessions.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadSessions(sessionsPage - 1)} disabled={sessionsPage === 0 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <button onClick={() => setSessionsPage(p => p - 1)} disabled={sessionsPage === 0 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
                     <ChevronLeft size={14} />
                   </button>
                   <span className="text-xs text-white/40">{sessionsPage + 1} / {sessions.totalPages}</span>
-                  <button onClick={() => loadSessions(sessionsPage + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <button onClick={() => setSessionsPage(p => p + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -968,9 +862,9 @@ export default function MerchantDetailPage() {
               </table>
               {invoices && invoices.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadInvoices(invoicesPage - 1)} disabled={invoicesPage === 0 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setInvoicesPage(p => p - 1)} disabled={invoicesPage === 0 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{invoicesPage + 1} / {invoices.totalPages}</span>
-                  <button onClick={() => loadInvoices(invoicesPage + 1)} disabled={invoicesPage >= invoices.totalPages - 1 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setInvoicesPage(p => p + 1)} disabled={invoicesPage >= invoices.totalPages - 1 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1026,9 +920,9 @@ export default function MerchantDetailPage() {
               </table>
               {settlements && settlements.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadSettlements(settlementsPage - 1)} disabled={settlementsPage === 0 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setSettlementsPage(p => p - 1)} disabled={settlementsPage === 0 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{settlementsPage + 1} / {settlements.totalPages}</span>
-                  <button onClick={() => loadSettlements(settlementsPage + 1)} disabled={settlementsPage >= settlements.totalPages - 1 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setSettlementsPage(p => p + 1)} disabled={settlementsPage >= settlements.totalPages - 1 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1080,9 +974,9 @@ export default function MerchantDetailPage() {
               </table>
               {customers && customers.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadCustomers(customersPage - 1)} disabled={customersPage === 0 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setCustomersPage(p => p - 1)} disabled={customersPage === 0 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{customersPage + 1} / {customers.totalPages}</span>
-                  <button onClick={() => loadCustomers(customersPage + 1)} disabled={customersPage >= customers.totalPages - 1 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setCustomersPage(p => p + 1)} disabled={customersPage >= customers.totalPages - 1 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1134,9 +1028,9 @@ export default function MerchantDetailPage() {
               </table>
               {merchantDisputes && merchantDisputes.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadMerchantDisputes(merchantDisputesPage - 1)} disabled={merchantDisputesPage === 0 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setMerchantDisputesPage(p => p - 1)} disabled={merchantDisputesPage === 0 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{merchantDisputesPage + 1} / {merchantDisputes.totalPages}</span>
-                  <button onClick={() => loadMerchantDisputes(merchantDisputesPage + 1)} disabled={merchantDisputesPage >= merchantDisputes.totalPages - 1 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setMerchantDisputesPage(p => p + 1)} disabled={merchantDisputesPage >= merchantDisputes.totalPages - 1 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1192,9 +1086,9 @@ export default function MerchantDetailPage() {
               </table>
               {bulkTransfers && bulkTransfers.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadBulkTransfers(bulkTransfersPage - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setBulkTransfersPage(p => p - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{bulkTransfersPage + 1} / {bulkTransfers.totalPages}</span>
-                  <button onClick={() => loadBulkTransfers(bulkTransfersPage + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setBulkTransfersPage(p => p + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1236,9 +1130,9 @@ export default function MerchantDetailPage() {
               </div>
               {auditLog && auditLog.totalPages > 1 && (
                 <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => loadAuditLog(auditLogPage - 1)} disabled={auditLogPage === 0 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <button onClick={() => setAuditLogPage(p => p - 1)} disabled={auditLogPage === 0 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-white/40">{auditLogPage + 1} / {auditLog.totalPages}</span>
-                  <button onClick={() => loadAuditLog(auditLogPage + 1)} disabled={auditLogPage >= auditLog.totalPages - 1 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                  <button onClick={() => setAuditLogPage(p => p + 1)} disabled={auditLogPage >= auditLog.totalPages - 1 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>

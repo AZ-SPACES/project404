@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getPlatformReport, getStats, PlatformReport, AdminStats } from "@/lib/admin-api";
 import { FileBarChart2, TrendingUp, Users, DollarSign, Coins, Loader2, AlertCircle, Download } from "lucide-react";
 
@@ -51,26 +52,16 @@ function SummaryRow({ label, value, sub }: { label: string; value: string; sub?:
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>("MONTH");
-  const [report, setReport] = useState<PlatformReport | null>(null);
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      getPlatformReport(period).catch(() => null),
-      getStats().catch(() => null),
-    ]).then(([r, s]) => {
-      setReport(r);
-      setStats(s);
-      setLoading(false);
-    }).catch((e) => {
-      setError(e.message);
-      setLoading(false);
-    });
-  }, [period]);
+  const { data: report, error: reportError } = useQuery<PlatformReport | null>({
+    queryKey: ["platformReport", period],
+    queryFn: () => getPlatformReport(period).catch(() => null),
+  });
+
+  const { data: stats, isLoading } = useQuery<AdminStats | null>({
+    queryKey: ["stats"],
+    queryFn: () => getStats().catch(() => null),
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -85,7 +76,6 @@ export default function ReportsPage() {
         </button>
       </div>
 
-      {/* Period selector */}
       <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
         {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
           <button
@@ -100,20 +90,19 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {error && (
+      {reportError && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-400 text-sm flex items-center gap-2">
           <AlertCircle size={16} />
           Report endpoint not yet connected — showing available platform stats below.
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-white/30" size={28} />
         </div>
       ) : (
         <>
-          {/* Report metrics — use report data if available, else fall back to stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <MetricCard
               label="Transaction Volume"
@@ -143,7 +132,6 @@ export default function ReportsPage() {
             />
           </div>
 
-          {/* Detailed summary table */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
               <h3 className="text-sm font-semibold text-white/70 mb-4 flex items-center gap-2">
@@ -192,7 +180,6 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* KYC breakdown bar */}
           {stats && (
             <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
               <h3 className="text-sm font-semibold text-white/70 mb-4">KYC Funnel</h3>

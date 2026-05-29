@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getSupportAnalytics, getSupportStats, SupportAnalytics, SupportStats } from "@/lib/admin-api";
 import { Headset, Clock, CheckCircle2, TrendingUp, AlertCircle, Loader2, BarChart3 } from "lucide-react";
 
@@ -53,26 +53,17 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function SupportAnalyticsPage() {
-  const [analytics, setAnalytics] = useState<SupportAnalytics | null>(null);
-  const [stats, setStats] = useState<SupportStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: analytics, isLoading, error: analyticsError } = useQuery<SupportAnalytics | null>({
+    queryKey: ["supportAnalytics"],
+    queryFn: () => getSupportAnalytics().catch(() => null),
+  });
 
-  useEffect(() => {
-    Promise.all([
-      getSupportAnalytics().catch(() => null),
-      getSupportStats().catch(() => null),
-    ]).then(([a, s]) => {
-      setAnalytics(a);
-      setStats(s);
-      setLoading(false);
-    }).catch((e) => {
-      setError(e.message ?? "Failed to load analytics");
-      setLoading(false);
-    });
-  }, []);
+  const { data: stats } = useQuery<SupportStats | null>({
+    queryKey: ["supportStats"],
+    queryFn: () => getSupportStats().catch(() => null),
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="animate-spin text-white/30" size={28} />
@@ -80,7 +71,6 @@ export default function SupportAnalyticsPage() {
     );
   }
 
-  // Show placeholder UI if analytics endpoint not yet available
   const data: SupportAnalytics = analytics ?? {
     totalTickets: stats ? (stats.open + stats.resolved) : 0,
     openTickets: stats?.open ?? 0,
@@ -109,34 +99,19 @@ export default function SupportAnalyticsPage() {
         <p className="text-white/40 text-sm mt-0.5">Performance metrics and ticket insights</p>
       </div>
 
-      {error && (
+      {analyticsError && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-400 text-sm flex items-center gap-2">
           <AlertCircle size={16} />
           Some metrics may be unavailable — analytics endpoint not yet connected.
         </div>
       )}
 
-      {/* Key metrics */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-white/25 font-semibold mb-4">Key Metrics</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <MetricCard
-            label="Total Tickets"
-            value={data.totalTickets.toLocaleString()}
-            icon={Headset}
-          />
-          <MetricCard
-            label="Open Tickets"
-            value={data.openTickets.toLocaleString()}
-            icon={AlertCircle}
-            color="text-amber-400"
-          />
-          <MetricCard
-            label="Resolved Today"
-            value={data.resolvedToday.toLocaleString()}
-            icon={CheckCircle2}
-            color="text-emerald-400"
-          />
+          <MetricCard label="Total Tickets" value={data.totalTickets.toLocaleString()} icon={Headset} />
+          <MetricCard label="Open Tickets" value={data.openTickets.toLocaleString()} icon={AlertCircle} color="text-amber-400" />
+          <MetricCard label="Resolved Today" value={data.resolvedToday.toLocaleString()} icon={CheckCircle2} color="text-emerald-400" />
           <MetricCard
             label="SLA Compliance"
             value={data.slaComplianceRate ? `${data.slaComplianceRate.toFixed(0)}%` : "—"}
@@ -146,7 +121,6 @@ export default function SupportAnalyticsPage() {
         </div>
       </section>
 
-      {/* Response times */}
       <section>
         <h2 className="text-xs uppercase tracking-widest text-white/25 font-semibold mb-4">Response Times</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -188,9 +162,7 @@ export default function SupportAnalyticsPage() {
         </div>
       </section>
 
-      {/* Breakdowns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* By Category */}
         <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 size={16} className="text-white/30" />
@@ -213,7 +185,6 @@ export default function SupportAnalyticsPage() {
           )}
         </div>
 
-        {/* By Priority */}
         <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-5">
             <AlertCircle size={16} className="text-white/30" />
@@ -237,7 +208,6 @@ export default function SupportAnalyticsPage() {
         </div>
       </div>
 
-      {/* Recent trend */}
       {data.recentTrend.length > 0 && (
         <section>
           <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
@@ -248,16 +218,8 @@ export default function SupportAnalyticsPage() {
                 return (
                   <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full flex gap-0.5 items-end" style={{ height: "72px" }}>
-                      <div
-                        className="flex-1 bg-[#B7EE7A]/60 rounded-t"
-                        style={{ height: `${(d.opened / maxVal) * 100}%` }}
-                        title={`Opened: ${d.opened}`}
-                      />
-                      <div
-                        className="flex-1 bg-emerald-500/50 rounded-t"
-                        style={{ height: `${(d.resolved / maxVal) * 100}%` }}
-                        title={`Resolved: ${d.resolved}`}
-                      />
+                      <div className="flex-1 bg-[#B7EE7A]/60 rounded-t" style={{ height: `${(d.opened / maxVal) * 100}%` }} title={`Opened: ${d.opened}`} />
+                      <div className="flex-1 bg-emerald-500/50 rounded-t" style={{ height: `${(d.resolved / maxVal) * 100}%` }} title={`Resolved: ${d.resolved}`} />
                     </div>
                     <span className="text-[9px] text-white/20">{d.date.slice(5)}</span>
                   </div>

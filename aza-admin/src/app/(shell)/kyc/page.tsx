@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getPendingKyc, type KycRecord } from "@/lib/admin-api";
 import Link from "next/link";
 import { Loader2, ChevronRight, ShieldAlert } from "lucide-react";
@@ -20,15 +20,12 @@ function KycBadge({ status }: { status: string }) {
 }
 
 export default function KycQueuePage() {
-  const [records, setRecords] = useState<KycRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: records = [], isLoading, error } = useQuery<KycRecord[]>({
+    queryKey: ["kycQueue"],
+    queryFn: getPendingKyc,
+  });
 
-  useEffect(() => {
-    getPendingKyc().then(setRecords).catch(e => setError(e.message)).finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="animate-spin text-white/40" size={28} />
     </div>
@@ -43,7 +40,7 @@ export default function KycQueuePage() {
         </p>
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-400 text-sm">{(error as Error).message}</p>}
 
       {records.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center h-48 text-white/30 gap-3">
