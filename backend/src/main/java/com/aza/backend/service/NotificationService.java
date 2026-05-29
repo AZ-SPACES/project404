@@ -125,10 +125,13 @@ public class NotificationService {
 
     //CONVENIENCE METHODS
 
-    public void sendNewMessageNotification(UUID recipientId, String senderName, String chatId) {
+    public void sendNewMessageNotification(UUID recipientId, String senderName, UUID senderId, String chatId, String senderAvatar) {
         Map<String, Object> data = new HashMap<>();
-        data.put("chatId", chatId);
         data.put("type", "NEW_MESSAGE");
+        data.put("senderId", senderId.toString());
+        data.put("senderName", senderName);
+        data.put("chatId", chatId);
+        if (senderAvatar != null) data.put("senderAvatar", senderAvatar);
 
         sendNotification(
                 recipientId,
@@ -138,10 +141,24 @@ public class NotificationService {
                 data);
     }
 
+    public void sendSupportMessageNotification(UUID recipientId, String agentName) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", "SUPPORT_MESSAGE");
+
+        sendNotification(
+                recipientId,
+                Notification.NotificationType.NEW_MESSAGE,
+                agentName,
+                "Sent you a message",
+                data);
+    }
+
     public void sendIncomingCallNotification(UUID recipientId, String callerName,
                                               String callId, boolean isVideo) {
         Map<String, Object> data = new HashMap<>();
+        data.put("type", "INCOMING_CALL");
         data.put("callId", callId);
+        data.put("callerName", callerName);
         data.put("isVideo", isVideo);
 
         sendNotification(
@@ -155,7 +172,9 @@ public class NotificationService {
     public void sendMissedCallNotification(UUID recipientId, String callerName,
                                            String callId, boolean isVideo) {
         Map<String, Object> data = new HashMap<>();
+        data.put("type", "MISSED_CALL");
         data.put("callId", callId);
+        data.put("callerName", callerName);
         data.put("isVideo", isVideo);
 
         sendNotification(

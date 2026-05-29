@@ -169,7 +169,9 @@ public class ChatService {
         notificationService.sendNewMessageNotification(
                 recipientId,
                 sender.getFirstName() + " " + sender.getLastName(),
-                chat.getId().toString());
+                sender.getId(),
+                chat.getId().toString(),
+                sender.getProfileImageUrl());
 
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
