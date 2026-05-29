@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAdminWallets,
   freezeWallet,
@@ -21,90 +22,53 @@ function fmt(iso: string | null) {
 }
 
 export default function WalletsPage() {
-  const [data, setData] = useState<Page<AdminWallet> | null>(null);
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [freezingIds, setFreezingIds] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
-  const load = useCallback(async (p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getAdminWallets(p, 20);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load wallets");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading, error } = useQuery<Page<AdminWallet>>({
+    queryKey: ["wallets", page],
+    queryFn: () => getAdminWallets(page, 20),
+  });
 
-  useEffect(() => {
-    load(0);
-  }, [load]);
-
-  async function handleFreeze(wallet: AdminWallet) {
-    setFreezingIds((prev) => new Set(prev).add(wallet.userId));
-    // Optimistic update
-    setData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        content: prev.content.map((w) =>
-          w.userId === wallet.userId ? { ...w, frozen: !w.frozen } : w
-        ),
-      };
-    });
-    try {
-      const updated = await freezeWallet(wallet.userId, !wallet.frozen);
-      setData((prev) => {
+  const freezeMutation = useMutation({
+    mutationFn: ({ userId, frozen }: { userId: string; frozen: boolean }) =>
+      freezeWallet(userId, frozen),
+    onMutate: async ({ userId, frozen }) => {
+      // Optimistic update
+      queryClient.setQueryData<Page<AdminWallet>>(["wallets", page], (prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          content: prev.content.map((w) =>
-            w.userId === updated.userId ? updated : w
-          ),
-        };
+        return { ...prev, content: prev.content.map(w => w.userId === userId ? { ...w, frozen } : w) };
       });
-    } catch (e: any) {
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Page<AdminWallet>>(["wallets", page], (prev) => {
+        if (!prev) return prev;
+        return { ...prev, content: prev.content.map(w => w.userId === updated.userId ? updated : w) };
+      });
+    },
+    onError: (_err, { userId, frozen }) => {
       // Revert on failure
-      setData((prev) => {
+      queryClient.setQueryData<Page<AdminWallet>>(["wallets", page], (prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          content: prev.content.map((w) =>
-            w.userId === wallet.userId ? { ...w, frozen: wallet.frozen } : w
-          ),
-        };
+        return { ...prev, content: prev.content.map(w => w.userId === userId ? { ...w, frozen: !frozen } : w) };
       });
-      setError(e.message ?? "Failed to update wallet status");
-    } finally {
-      setFreezingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(wallet.userId);
-        return next;
-      });
-    }
-  }
+    },
+  });
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-white mb-1">Wallets</h1>
-        <p className="text-white/50 text-sm">
-          All user wallets — freeze or unfreeze to restrict transactions
-        </p>
+        <p className="text-white/50 text-sm">All user wallets — freeze or unfreeze to restrict transactions</p>
       </div>
 
-      {error && (
+      {(error || freezeMutation.error) && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">
-          {error}
+          {((error || freezeMutation.error) as Error).message}
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
@@ -141,9 +105,7 @@ export default function WalletsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-white/70 text-sm">{wallet.userEmail}</div>
-                    {wallet.userHandle && (
-                      <div className="text-white/30 text-xs">@{wallet.userHandle}</div>
-                    )}
+                    {wallet.userHandle && <div className="text-white/30 text-xs">@{wallet.userHandle}</div>}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="text-white font-semibold">
@@ -153,13 +115,11 @@ export default function WalletsPage() {
                   <td className="px-4 py-3 text-center">
                     {wallet.frozen ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                        <Snowflake size={11} />
-                        Frozen
+                        <Snowflake size={11} /> Frozen
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-                        <CheckCircle2 size={11} />
-                        Active
+                        <CheckCircle2 size={11} /> Active
                       </span>
                     )}
                   </td>
@@ -168,15 +128,15 @@ export default function WalletsPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => handleFreeze(wallet)}
-                      disabled={freezingIds.has(wallet.userId)}
+                      onClick={() => freezeMutation.mutate({ userId: wallet.userId, frozen: !wallet.frozen })}
+                      disabled={freezeMutation.isPending && freezeMutation.variables?.userId === wallet.userId}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40 ${
                         wallet.frozen
                           ? "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20"
                           : "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20"
                       }`}
                     >
-                      {freezingIds.has(wallet.userId)
+                      {freezeMutation.isPending && freezeMutation.variables?.userId === wallet.userId
                         ? "..."
                         : wallet.frozen
                         ? "Unfreeze"
@@ -193,18 +153,16 @@ export default function WalletsPage() {
       {data && data.totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-white/50 mt-8">
           <button
-            onClick={() => load(page - 1)}
-            disabled={page === 0 || loading}
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 0 || isLoading}
             className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={14} /> Previous
           </button>
-          <span>
-            Page {page + 1} of {data.totalPages}
-          </span>
+          <span>Page {page + 1} of {data.totalPages}</span>
           <button
-            onClick={() => load(page + 1)}
-            disabled={page >= data.totalPages - 1 || loading}
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= data.totalPages - 1 || isLoading}
             className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
           >
             Next <ChevronRight size={14} />

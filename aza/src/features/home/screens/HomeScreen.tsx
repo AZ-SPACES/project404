@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Animated,
+  ScrollView,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,6 +33,8 @@ import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
 import { cancelTransfer } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
+import { queryClient } from "../../../lib/queryClient";
+import { queryKeys } from "../../../lib/queryKeys";
 
 const { height } = Dimensions.get("window");
 
@@ -57,12 +60,19 @@ export default function HomeScreen() {
   const bannerGrad = homeBannerGradient === 'accent'
     ? [accentPalette.primary, accentPalette.gradientEnd]
     : (BANNER_GRADIENTS.find(g => g.id === homeBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
-  const { handle, profileImageUri } = useProfile();
+  const { handle, firstName, profileImageUri } = useProfile();
+  const displayName = firstName || handle;
 
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
   const { wallet, recentTransactions, loading, refreshing, refresh, error } = useWallet();
   const { data: unreadCount = 0 } = useNotificationCountQuery();
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
+    }, [])
+  );
 
   const incompleteTransfer = React.useMemo(() => {
     return recentTransactions.find(
@@ -162,7 +172,7 @@ export default function HomeScreen() {
   const headerRow = (
     <View style={styles.header}>
       <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
-        {`${greeting}${handle ? `, ${handle}` : ""}`}
+        {`${greeting}${displayName ? `, ${displayName}` : ""}`}
       </Text>
       <View style={styles.headerRight}>
         <TouchableOpacity style={styles.profilePicContainer} onPress={() => navigation.navigate("Profile")} accessibilityLabel="Open profile">
@@ -209,13 +219,13 @@ export default function HomeScreen() {
             {headerRow}
             <View style={styles.minimalBalanceRow}>
               <View>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • {wallet?.currency}</Text>
                 <View style={styles.balanceRow}>
                   {loading && !wallet ? (
                     <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
                     <Text style={[Typography.h2, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
-                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                      {isBalanceVisible ? (wallet?.formattedBalance || formatCurrency(0, wallet?.currency)) : "••••"}
                     </Text>
                   )}
                   <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -251,13 +261,13 @@ export default function HomeScreen() {
               )}
 
               <View style={styles.balanceSection}>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Main • GHS</Text>
+                <Text style={[Typography.bodyLg, styles.accountType]}>Main • {wallet?.currency}</Text>
                 <View style={styles.balanceRow}>
                   {loading && !wallet ? (
                     <ActivityIndicator size="small" color={Colors.white} />
                   ) : (
                     <Text style={[Typography.h1, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
-                      {isBalanceVisible ? (wallet?.formattedBalance || "GH₵ 0.00") : "••••"}
+                      {isBalanceVisible ? (wallet?.formattedBalance || formatCurrency(0, wallet?.currency)) : "••••"}
                     </Text>
                   )}
                   <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility" onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -285,7 +295,7 @@ export default function HomeScreen() {
           <Text style={[Typography.h3, styles.transactionsTitle]}>
             Transactions
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || "GH₵ 0.00" })}>
+          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })}>
             <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -337,11 +347,11 @@ export default function HomeScreen() {
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         ) : displayTransactions.length > 0 ? (
-          <View style={styles.recentTransactionsList}>
+          <ScrollView style={styles.recentTransactionsList} showsVerticalScrollIndicator={false}>
             {displayTransactions.map((item) => (
               <TransactionItem key={item.id} item={item} />
             ))}
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyStateCard}>
             <View style={styles.clockIconContainer}>

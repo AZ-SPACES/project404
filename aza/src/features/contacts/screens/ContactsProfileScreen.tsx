@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -19,6 +19,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
 import { getContactDetails } from "../../../services/api";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../../../lib/queryClient";
+import { queryKeys } from "../../../lib/queryKeys";
 import { Contact } from "../types";
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -47,21 +50,15 @@ export default function ContactsProfileScreen() {
 
   const { blockUser, toggleFavorite } = useContactStore();
 
-  const [contact, setContact] = useState<Contact | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) { setLoading(false); return; }
-    getContactDetails(id)
-      .then(({ data }) => {
-        const c: Contact = data.data ?? data;
-        setContact(c);
-      })
-      .catch(() => {
-        // Fall back to route params — contact still usable for navigation
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data: contact, isLoading: loading } = useQuery({
+    queryKey: queryKeys.contactDetails(id!),
+    queryFn: async () => {
+      const { data } = await getContactDetails(id!);
+      return (data.data ?? data) as Contact;
+    },
+    enabled: !!id,
+    staleTime: 60_000,
+  });
 
   const displayName = contact?.displayName ?? name;
   const displayHandle = contact?.handle ? `@${contact.handle}` : username;
@@ -114,7 +111,7 @@ export default function ContactsProfileScreen() {
     if (!id) return;
     try {
       await toggleFavorite(id, isFavorite);
-      setContact((prev) => prev ? { ...prev, isFavorite: !isFavorite } : prev);
+      queryClient.invalidateQueries({ queryKey: queryKeys.contactDetails(id) });
     } catch {
       Alert.alert("Error", "Could not update favorite status.");
     }

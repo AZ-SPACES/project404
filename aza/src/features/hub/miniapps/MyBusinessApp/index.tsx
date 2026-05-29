@@ -1,15 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ActivityIndicator,} from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../../navigation/types';
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { useAppTheme, Spacing } from '../../../../theme';
 import { getMerchant } from '../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../lib/queryKeys';
 
 import { Page, MerchantData, NavProps } from './types';
-import { createStyles } from './styles';
 import { extractData } from './helpers';
+import { createStyles } from './styles';
 
 import IntroPage from './pages/IntroPage';
 import UnderReviewPage from './pages/UnderReviewPage';
@@ -38,7 +40,6 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [pageStack, setPageStack] = useState<Page[]>(['loading']);
-  const [merchant, setMerchant] = useState<MerchantData | null>(null);
 
   const navigate = useCallback((page: Page) => {
     setPageStack(prev => [...prev, page]);
@@ -48,42 +49,38 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
     setPageStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }, []);
 
-  const handleMerchantUpdate = useCallback((m: MerchantData) => {
-    setMerchant(m);
+  const { data: merchantData, isLoading, isError } = useQuery({
+    queryKey: queryKeys.merchant(),
+    queryFn: getMerchant,
+    staleTime: 5 * 60_000,
+    retry: (failureCount, error: any) =>
+      error?.response?.status !== 404 && failureCount < 1,
+  });
+
+  const merchant: MerchantData | null = merchantData ? extractData(merchantData) : null;
+
+  const handleMerchantUpdate = useCallback((_m: MerchantData) => {
+    // Invalidation handled by React Query; query auto-refetches
   }, []);
 
-  const loadMerchant = useCallback(() => {
-    setPageStack(['loading']);
-    getMerchant()
-      .then((res: any) => {
-        const m = extractData(res);
-        setMerchant(m);
-        if (!m || !m.status) { setPageStack(['intro']); return; }
-        switch (m.status) {
-          case 'ACTIVE': setPageStack(['dashboard']); break;
-          case 'PENDING':
-          case 'PENDING_KYB':
-            navigation.navigate('MerchantKYBIntro', { merchantId: m.id });
-            setPageStack(['intro']);
-            break;
-          case 'KYB_SUBMITTED':
-          case 'KYB_UNDER_REVIEW':
-          case 'MORE_INFO_REQUIRED': setPageStack(['under_review']); break;
-          case 'SUSPENDED': setPageStack(['suspended']); break;
-          case 'REJECTED': setPageStack(['rejected']); break;
-          default: setPageStack(['under_review']);
-        }
-      })
-      .catch(() => {
+  useEffect(() => {
+    if (isLoading) { setPageStack(['loading']); return; }
+    if (isError || !merchant || !merchant.status) { setPageStack(['intro']); return; }
+    switch (merchant.status) {
+      case 'ACTIVE': setPageStack(['dashboard']); break;
+      case 'PENDING':
+      case 'PENDING_KYB':
+        navigation.navigate('MerchantKYBIntro', { merchantId: merchant.id });
         setPageStack(['intro']);
-      });
-  }, [navigation]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadMerchant();
-    }, [loadMerchant])
-  );
+        break;
+      case 'KYB_SUBMITTED':
+      case 'KYB_UNDER_REVIEW':
+      case 'MORE_INFO_REQUIRED': setPageStack(['under_review']); break;
+      case 'SUSPENDED': setPageStack(['suspended']); break;
+      case 'REJECTED': setPageStack(['rejected']); break;
+      default: setPageStack(['under_review']);
+    }
+  }, [merchant, isLoading, isError, navigation]);
 
   const currentPage = pageStack[pageStack.length - 1];
 

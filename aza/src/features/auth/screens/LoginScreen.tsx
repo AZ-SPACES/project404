@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  StatusBar,
-} from 'react-native';
+import {View,Text,TextInput,TouchableOpacity,StyleSheet,KeyboardAvoidingView,Platform,TouchableWithoutFeedback,Keyboard,StatusBar,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from '../../../theme';
@@ -54,6 +43,15 @@ const LoginScreen: React.FC = () => {
     });
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setPhoneNumber('');
+      setEmail('');
+      setPassword('');
+      setTouched(false);
+    }, [])
+  );
+
   const credentialValid = useEmail ? isValidEmail(email) : isValidPhone(phoneNumber);
   const credentialError = touched && !credentialValid
     ? useEmail ? 'Enter a valid email address' : 'Enter a valid phone number'
@@ -67,7 +65,7 @@ const LoginScreen: React.FC = () => {
     setIsLoading(true);
     try {
       const identifier = useEmail ? email : phoneNumber;
-      await api.post('/api/v1/auth/login', { 
+      const response = await api.post('/api/v1/auth/login', { 
         identifier, 
         password,
         deviceName: Device.modelName ?? undefined,
@@ -75,8 +73,27 @@ const LoginScreen: React.FC = () => {
         deviceId: await getDeviceId(),
       });
       
-      // On success, navigate to OTP
-      navigation.navigate('OTP', { isLogin: true, phoneNumber: identifier });
+      const payload = response.data?.data ?? response.data;
+      if (payload?.preAuthToken) {
+        navigation.navigate('TotpLogin', {
+          preAuthToken: payload.preAuthToken,
+          methods: payload.methods,
+          defaultMethod: payload.defaultMethod,
+        });
+      } else if (payload?.accessToken) {
+        await SecureStore.setItemAsync('aza_access_token', payload.accessToken);
+        await SecureStore.setItemAsync('aza_refresh_token', payload.refreshToken);
+        login(
+          payload.accessToken,
+          payload.user?.passcodeSet ?? false,
+          payload.user?.kycStatus === 'VERIFIED',
+          payload.user?.forcePasswordReset ?? false,
+          payload.user?.requireSelfieVerification ?? false,
+          false
+        );
+      } else {
+        navigation.navigate('TotpLogin', { loginIdentifier: identifier, methods: ['SMS'], defaultMethod: 'SMS' });
+      }
     } catch (error: any) {
       console.error('Login failed', error);
       const errorMsg = error.response?.data?.message || 'Invalid credentials. Please try again.';

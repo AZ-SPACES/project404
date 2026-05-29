@@ -20,7 +20,7 @@ function fmtDate(s: string | null) {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  COMPLETED: "bg-[#10b981]/10 text-[#10b981]",
+  COMPLETED: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   PARTIALLY_COMPLETED: "bg-amber-400/10 text-amber-400",
   FAILED: "bg-red-400/10 text-red-400",
   PROCESSING: "bg-blue-400/10 text-blue-400",
@@ -58,14 +58,14 @@ function DetailModal({ id, onClose }: { id: string; onClose: () => void }) {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-48"><Loader2 className="animate-spin text-[#10b981]" size={22} /></div>
+          <div className="flex items-center justify-center h-48"><Loader2 className="animate-spin text-[#B7EE7A]" size={22} /></div>
         ) : !detail ? (
           <div className="flex items-center justify-center h-48"><p className="text-white/40 text-sm">Failed to load</p></div>
         ) : (
           <div className="overflow-y-auto flex-1">
             <div className="px-6 py-5 grid grid-cols-3 gap-4 border-b border-white/5">
               <div><p className="text-xs text-white/30 mb-1">Total</p><p className="text-base font-bold text-white">{fmt(detail.totalAmount)}</p></div>
-              <div><p className="text-xs text-white/30 mb-1">Succeeded</p><p className="text-base font-bold text-[#10b981]">{detail.successCount}</p></div>
+              <div><p className="text-xs text-white/30 mb-1">Succeeded</p><p className="text-base font-bold text-[#B7EE7A]">{detail.successCount}</p></div>
               <div><p className="text-xs text-white/30 mb-1">Failed</p><p className="text-base font-bold text-red-400">{detail.failureCount}</p></div>
             </div>
             <div className="px-6 py-4 space-y-2 text-sm border-b border-white/5">
@@ -78,7 +78,7 @@ function DetailModal({ id, onClose }: { id: string; onClose: () => void }) {
                 const Icon = ITEM_STATUS_ICON[item.status] ?? Clock;
                 return (
                   <div key={item.id} className="px-6 py-3 flex items-center gap-3">
-                    <Icon size={14} className={item.status === "COMPLETED" ? "text-[#10b981]" : item.status === "FAILED" ? "text-red-400" : "text-white/30"} />
+                    <Icon size={14} className={item.status === "COMPLETED" ? "text-[#B7EE7A]" : item.status === "FAILED" ? "text-red-400" : "text-white/30"} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{item.recipientIdentifier}</p>
                       {item.failureReason && <p className="text-xs text-red-400/70 mt-0.5">{item.failureReason}</p>}
@@ -143,7 +143,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (bt
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
               placeholder="May payroll, vendor payments…"
             />
           </div>
@@ -162,7 +162,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (bt
                     required
                     value={row.identifier}
                     onChange={(e) => updateRow(row.id, "identifier", e.target.value)}
-                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                     placeholder="user@email.com"
                   />
                   <input
@@ -172,13 +172,13 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (bt
                     step="0.01"
                     value={row.amount}
                     onChange={(e) => updateRow(row.id, "amount", e.target.value)}
-                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                     placeholder="0.00"
                   />
                   <input
                     value={row.note}
                     onChange={(e) => updateRow(row.id, "note", e.target.value)}
-                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                    className="bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                     placeholder="Optional"
                   />
                   <button
@@ -197,7 +197,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (bt
               type="button"
               onClick={addRow}
               disabled={rows.length >= 100}
-              className="mt-3 flex items-center gap-2 text-xs text-[#10b981]/70 hover:text-[#10b981] transition-colors disabled:opacity-30"
+              className="mt-3 flex items-center gap-2 text-xs text-[#B7EE7A]/70 hover:text-[#B7EE7A] transition-colors disabled:opacity-30"
             >
               <Plus size={13} />
               Add recipient ({rows.length}/100)
@@ -218,7 +218,7 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (bt
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50"
                 >
                   {loading ? <Loader2 size={14} className="animate-spin" /> : <SendHorizonal size={14} />}
                   Send transfers
@@ -267,7 +267,7 @@ export default function BulkTransfersPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#0ea472] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
         >
           <Plus size={15} />
           New Bulk Transfer
@@ -276,14 +276,14 @@ export default function BulkTransfersPage() {
 
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-48"><Loader2 className="animate-spin text-[#10b981]" size={22} /></div>
+          <div className="flex items-center justify-center h-48"><Loader2 className="animate-spin text-[#B7EE7A]" size={22} /></div>
         ) : error ? (
           <div className="flex items-center justify-center h-48"><p className="text-red-400 text-sm">{error}</p></div>
         ) : !page || page.content.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <SendHorizonal size={32} className="text-white/15" />
             <p className="text-white/40 text-sm">No bulk transfers yet</p>
-            <button onClick={() => setShowCreate(true)} className="text-sm text-[#10b981] hover:underline">Send your first batch</button>
+            <button onClick={() => setShowCreate(true)} className="text-sm text-[#B7EE7A] hover:underline">Send your first batch</button>
           </div>
         ) : (
           <>
@@ -308,7 +308,7 @@ export default function BulkTransfersPage() {
                       </td>
                       <td className="px-5 py-3.5 text-right text-sm font-semibold text-white">{fmt(bt.totalAmount)}</td>
                       <td className="px-5 py-3.5 text-center text-xs text-white/50 hidden md:table-cell">
-                        <span className="text-[#10b981]">{bt.successCount}</span>
+                        <span className="text-[#B7EE7A]">{bt.successCount}</span>
                         {bt.failureCount > 0 && <span className="text-red-400"> / {bt.failureCount} failed</span>}
                         <span className="text-white/30"> of {bt.recipientCount}</span>
                       </td>

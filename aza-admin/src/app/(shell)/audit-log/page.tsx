@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getAuditLog, AuditLogEntry, Page } from "@/lib/admin-api";
 import { ScrollText, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -30,37 +31,19 @@ function ActionBadge({ action }: { action: string }) {
   const cls = ACTION_STYLES[action] ?? "bg-white/10 text-white/50 border-white/10";
   const label = action.replace(/_/g, " ");
   return (
-    <span
-      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${cls}`}
-    >
+    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${cls}`}>
       {label}
     </span>
   );
 }
 
 export default function AuditLogPage() {
-  const [data, setData] = useState<Page<AuditLogEntry> | null>(null);
   const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (p: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getAuditLog(p, 20);
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load audit log");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load(0);
-  }, [load]);
+  const { data, isLoading, error } = useQuery<Page<AuditLogEntry>>({
+    queryKey: ["auditLog", page],
+    queryFn: () => getAuditLog(page, 20),
+  });
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -71,11 +54,11 @@ export default function AuditLogPage() {
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">
-          {error}
+          {(error as Error).message}
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
@@ -136,18 +119,16 @@ export default function AuditLogPage() {
       {data && data.totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-white/50 mt-8">
           <button
-            onClick={() => load(page - 1)}
-            disabled={page === 0 || loading}
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0 || isLoading}
             className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={14} /> Previous
           </button>
-          <span>
-            Page {page + 1} of {data.totalPages}
-          </span>
+          <span>Page {page + 1} of {data.totalPages}</span>
           <button
-            onClick={() => load(page + 1)}
-            disabled={page >= data.totalPages - 1 || loading}
+            onClick={() => setPage(p => Math.min(data.totalPages - 1, p + 1))}
+            disabled={page >= data.totalPages - 1 || isLoading}
             className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
           >
             Next <ChevronRight size={14} />

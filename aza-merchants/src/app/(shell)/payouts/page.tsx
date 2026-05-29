@@ -101,7 +101,7 @@ function PayoutModal({
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit" disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {submitting && <Loader2 size={14} className="animate-spin" />}
             {submitting ? "Submitting…" : "Submit request"}
@@ -159,7 +159,7 @@ function AutoPayoutPanel() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#10b981]" size={18} /></div>;
+  if (loading) return <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#B7EE7A]" size={18} /></div>;
   if (!settings) return null;
 
   const scheduleLabel = {
@@ -178,7 +178,7 @@ function AutoPayoutPanel() {
         <button
           type="button"
           onClick={() => set("autoPayoutEnabled", !settings.autoPayoutEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoPayoutEnabled ? "bg-[#10b981]" : "bg-white/15"}`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoPayoutEnabled ? "bg-[#174717]" : "bg-white/15"}`}
         >
           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.autoPayoutEnabled ? "translate-x-6" : "translate-x-1"}`} />
         </button>
@@ -193,7 +193,7 @@ function AutoPayoutPanel() {
                 <button
                   key={s}
                   onClick={() => { set("autoPayoutSchedule", s); setDay(""); }}
-                  className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${settings.autoPayoutSchedule === s ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
+                  className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${settings.autoPayoutSchedule === s ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
                 >
                   {s}
                 </button>
@@ -212,7 +212,7 @@ function AutoPayoutPanel() {
                   <button
                     key={d}
                     onClick={() => setDay(String(i + 1))}
-                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${day === String(i + 1) ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]" : "border-white/8 text-white/40 hover:border-white/15"}`}
+                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${day === String(i + 1) ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/40 hover:border-white/15"}`}
                   >
                     {d}
                   </button>
@@ -257,12 +257,12 @@ function AutoPayoutPanel() {
         <button
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           {saving ? "Saving…" : "Save"}
         </button>
-        {saved && <span className="text-xs text-[#10b981] flex items-center gap-1"><CheckCircle2 size={13} />Saved</span>}
+        {saved && <span className="text-xs text-[#B7EE7A] flex items-center gap-1"><CheckCircle2 size={13} />Saved</span>}
       </div>
     </div>
   );
@@ -295,7 +295,7 @@ export default function PayoutsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <Loader2 className="animate-spin text-[#10b981]" size={24} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={24} />
       </div>
     );
   }
@@ -340,7 +340,7 @@ export default function PayoutsPage() {
           <button
             onClick={() => setShowModal(true)}
             disabled={!balance || balance.balance <= 0}
-            className="mt-4 w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="mt-4 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             <ArrowDownToLine size={15} />
             Request payout
@@ -411,4 +411,4 @@ export default function PayoutsPage() {
   );
 }
 
-const inputCls = "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all";
+const inputCls = "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all";

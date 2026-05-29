@@ -25,10 +25,10 @@ function BusinessAvatar({ merchant, size = 64 }: { merchant: Merchant; size?: nu
     .split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   return (
     <div
-      className="rounded-xl bg-[#10b981]/15 border border-[#10b981]/25 flex items-center justify-center"
+      className="rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 flex items-center justify-center"
       style={{ width: size, height: size }}
     >
-      <span className="text-xl font-bold text-[#10b981]">{initials}</span>
+      <span className="text-xl font-bold text-[#B7EE7A]">{initials}</span>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessDescription, setBusinessDescription] = useState("");
   // Branding
-  const [brandColor, setBrandColor] = useState("#10b981");
+  const [brandColor, setBrandColor] = useState("#B7EE7A");
   const [checkoutTagline, setCheckoutTagline] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   // Tax
@@ -64,7 +64,7 @@ export default function SettingsPage() {
         setBusinessEmail(me.businessEmail ?? "");
         setBusinessPhone(me.businessPhone ?? "");
         setBusinessDescription(me.businessDescription ?? "");
-        setBrandColor(me.brandColor ?? "#10b981");
+        setBrandColor(me.brandColor ?? "#B7EE7A");
         setCheckoutTagline(me.checkoutTagline ?? "");
         setSupportEmail(me.supportEmail ?? "");
         setTaxEnabled(me.taxEnabled ?? false);
@@ -119,7 +119,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <Loader2 className="animate-spin text-[#10b981]" size={24} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={24} />
       </div>
     );
   }
@@ -207,7 +207,7 @@ export default function SettingsPage() {
             </div>
           )}
           {success && (
-            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 text-[#10b981] text-sm">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#B7EE7A]/10 border border-[#B7EE7A]/20 text-[#B7EE7A] text-sm">
               <CheckCircle2 size={15} />Settings saved
             </div>
           )}
@@ -215,7 +215,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? "Saving…" : "Save changes"}
@@ -244,7 +244,7 @@ export default function SettingsPage() {
                 type="text"
                 value={brandColor}
                 onChange={(e) => setBrandColor(e.target.value)}
-                placeholder="#10b981"
+                placeholder="#B7EE7A"
                 className={inputCls + " font-mono w-36"}
               />
               <div
@@ -287,7 +287,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setTaxEnabled((v) => !v)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${taxEnabled ? "bg-[#10b981]" : "bg-white/15"}`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${taxEnabled ? "bg-[#174717]" : "bg-white/15"}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${taxEnabled ? "translate-x-6" : "translate-x-1"}`} />
           </button>
@@ -325,13 +325,13 @@ export default function SettingsPage() {
         <button
           onClick={handleSave as unknown as React.MouseEventHandler}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? "Saving…" : "Save all settings"}
         </button>
         {success && (
-          <span className="flex items-center gap-1.5 text-sm text-[#10b981]">
+          <span className="flex items-center gap-1.5 text-sm text-[#B7EE7A]">
             <CheckCircle2 size={15} />Saved
           </span>
         )}
@@ -344,7 +344,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <InfoRow label="Business handle" value={`@${merchant.businessHandle}`} mono />
             <InfoRow label="Merchant ID" value={merchant.id} mono />
-            <InfoRow label="Status" value={merchant.status.replace(/_/g, " ")} cls={merchant.status === "ACTIVE" ? "text-[#10b981]" : "text-amber-400"} />
+            <InfoRow label="Status" value={merchant.status.replace(/_/g, " ")} cls={merchant.status === "ACTIVE" ? "text-[#B7EE7A]" : "text-amber-400"} />
             <InfoRow label="Currency" value={merchant.currency} />
             {merchant.feeRateBps > 0 && (
               <InfoRow label="Platform fee" value={`${(merchant.feeRateBps / 100).toFixed(2)}%`} />
@@ -353,7 +353,7 @@ export default function SettingsPage() {
           <div className="mt-4 pt-4 border-t border-white/5">
             <p className="text-xs text-white/25">
               To close your business account, please{" "}
-              <a href="mailto:support@aza.systems" className="text-[#10b981] hover:underline">
+              <a href="mailto:support@aza.systems" className="text-[#B7EE7A] hover:underline">
                 contact support
               </a>
               .
@@ -366,7 +366,7 @@ export default function SettingsPage() {
 }
 
 const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 focus:bg-white/8 transition-all text-sm";
+  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

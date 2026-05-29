@@ -34,14 +34,19 @@ export default function ChatWithUsScreen() {
   const isDark = Colors.isDark;
   const navigation = useNavigation<NavigationProp>();
   const [inputText, setInputText] = useState("");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ uri: string; mimeType: string } | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const { messages, loading, sendMessage, isOtherTyping, sendTypingStatus, loadHistory } = useSupportChat();
+  const { messages, loading, sendMessage, sendAttachment, isOtherTyping, sendTypingStatus, loadHistory } = useSupportChat();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialFocus = useRef(true);
 
   useFocusEffect(
     useCallback(() => {
+      if (isInitialFocus.current) {
+        isInitialFocus.current = false;
+        return;
+      }
       loadHistory();
     }, [loadHistory])
   );
@@ -89,21 +94,26 @@ export default function ChatWithUsScreen() {
       quality: 1 });
 
     if (!result.canceled && result.assets?.[0]?.uri) {
-      setSelectedImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      setSelectedImage({
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? 'image/jpeg',
+      });
     }
   };
 
   const handleSend = async () => {
     if (!inputText.trim() && !selectedImage) return;
 
-    try {
-      const textToSend = inputText.trim();
-      setInputText("");
-      setSelectedImage(null);
-      
-      await sendMessage(textToSend);
-    } catch (err) {
-      alert("Failed to send message");
+    const image = selectedImage;
+    const text = inputText.trim();
+    setInputText("");
+    setSelectedImage(null);
+
+    if (image) {
+      sendAttachment(image.uri, image.mimeType, text || undefined).catch(() => {});
+    } else {
+      sendMessage(text).catch(() => {});
     }
   };
 
@@ -139,35 +149,46 @@ export default function ChatWithUsScreen() {
               )}
             </TouchableOpacity>
           </View>
-          <Text style={styles.title}>Paapa</Text>
+          <Text style={styles.title}>AZA Support</Text>
           <Text style={styles.subtitle}>Typically replies within a minute.</Text>
         </View>
 
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
+          {loading && messages.length === 0 && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+            </View>
+          )}
           {messages.map((msg: any) => (
-            <View 
-              key={msg.id} 
-              style={[
-                styles.messageBubble, 
-                msg.isSender ? styles.senderBubble : styles.receiverBubble,
-                msg.imageUri ? styles.imageBubble : null
-              ]}
-            >
-              {msg.imageUri ? (
-                <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
-              ) : null}
-              {!!msg.text && (
-                <Text style={[
-                  styles.messageText,
-                  msg.isSender ? styles.senderText : styles.receiverText,
-                  msg.imageUri ? styles.textWithImage : null
-                ]}>
-                  {msg.text}
-                </Text>
+            <View key={msg.id} style={[styles.messageRow, msg.isSender ? styles.senderRow : styles.receiverRow]}>
+              <View
+                style={[
+                  styles.messageBubble,
+                  msg.isSender ? styles.senderBubble : styles.receiverBubble,
+                  msg.imageUri ? styles.imageBubble : null,
+                  msg.status === 'sending' && styles.messagePending,
+                  msg.status === 'failed' && styles.messageFailed,
+                ]}
+              >
+                {msg.imageUri ? (
+                  <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
+                ) : null}
+                {!!msg.text && (
+                  <Text style={[
+                    styles.messageText,
+                    msg.isSender ? styles.senderText : styles.receiverText,
+                    msg.imageUri ? styles.textWithImage : null,
+                  ]}>
+                    {msg.text}
+                  </Text>
+                )}
+              </View>
+              {msg.status === 'failed' && (
+                <Text style={styles.failedLabel}>Not delivered · tap to retry</Text>
               )}
             </View>
           ))}
@@ -185,7 +206,7 @@ export default function ChatWithUsScreen() {
           <View style={styles.inputWrapper}>
             {selectedImage && (
               <View style={styles.previewContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+                <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
                 <TouchableOpacity 
                   style={styles.removeImageButton} 
                   onPress={() => setSelectedImage(null)}
@@ -277,11 +298,9 @@ function createStyles(Colors: any) {
     paddingHorizontal: 8 },
   senderBubble: {
     backgroundColor: Colors.primary, 
-    alignSelf: 'flex-end',
     borderTopRightRadius: 4 },
   receiverBubble: {
     backgroundColor: isDark ? Colors.surface : Colors.secondary, 
-    alignSelf: 'flex-start',
     borderTopLeftRadius: 4 },
   messageText: {
     fontSize: 16,
@@ -360,5 +379,27 @@ function createStyles(Colors: any) {
   typingText: {
     fontSize: 12,
     color: Colors.textSecondary,
-    fontStyle: 'italic' } });
+    fontStyle: 'italic' },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 24 },
+  messageRow: {
+    width: '100%',
+    marginBottom: 4 },
+  senderRow: {
+    alignItems: 'flex-end' },
+  receiverRow: {
+    alignItems: 'flex-start' },
+  messagePending: {
+    opacity: 0.55 },
+  messageFailed: {
+    opacity: 0.8,
+    borderWidth: 1,
+    borderColor: '#EF4444' },
+  failedLabel: {
+    fontSize: 11,
+    color: '#EF4444',
+    alignSelf: 'flex-end',
+    marginTop: 2,
+    marginRight: 4 } });
 }

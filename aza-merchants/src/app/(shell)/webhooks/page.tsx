@@ -88,7 +88,7 @@ function EndpointModal({
               type="url" required
               value={url} onChange={(e) => setUrl(e.target.value)}
               placeholder="https://yoursite.com/webhooks/aza"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
             <p className="text-[10px] text-white/25 mt-1">Must be HTTPS</p>
           </div>
@@ -101,7 +101,7 @@ function EndpointModal({
                     type="checkbox"
                     checked={events.includes(ev)}
                     onChange={() => toggleEvent(ev)}
-                    className="accent-[#10b981] w-3.5 h-3.5"
+                    className="accent-[#B7EE7A] w-3.5 h-3.5"
                   />
                   <span className="text-xs text-white/70 font-mono">{ev}</span>
                 </label>
@@ -109,7 +109,7 @@ function EndpointModal({
             </div>
           </div>
           {error && <p className="text-red-400 text-xs">{error}</p>}
-          <button type="submit" disabled={saving} className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+          <button type="submit" disabled={saving} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Saving…" : initial ? "Save changes" : "Add endpoint"}
           </button>
@@ -202,7 +202,7 @@ function EndpointCard({
       )}
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         <div className="flex items-start gap-3 p-4">
-          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${endpoint.isActive ? "bg-[#10b981]" : "bg-white/20"}`} />
+          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${endpoint.isActive ? "bg-[#174717]" : "bg-white/20"}`} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white font-mono truncate">{endpoint.url}</p>
             <div className="flex flex-wrap gap-1 mt-2">
@@ -213,7 +213,7 @@ function EndpointCard({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <button onClick={handleToggle} disabled={toggling} title={endpoint.isActive ? "Disable" : "Enable"} className="p-1.5 rounded-lg text-white/25 hover:text-white/70 transition-colors">
-              {toggling ? <Loader2 size={14} className="animate-spin" /> : endpoint.isActive ? <ToggleRight size={14} className="text-[#10b981]" /> : <ToggleLeft size={14} />}
+              {toggling ? <Loader2 size={14} className="animate-spin" /> : endpoint.isActive ? <ToggleRight size={14} className="text-[#B7EE7A]" /> : <ToggleLeft size={14} />}
             </button>
             <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/8 transition-colors text-xs font-medium">
               Edit
@@ -302,7 +302,7 @@ export default function WebhooksPage() {
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors"
           >
             <Plus size={15} />
             Add endpoint

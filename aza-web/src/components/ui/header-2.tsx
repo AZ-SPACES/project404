@@ -69,16 +69,9 @@ export function Header() {
           {/* Logo */}
           <a
             href="#"
-            className="flex items-center gap-2 text-white font-extrabold shrink-0 mr-2"
-            style={{ letterSpacing: '-0.04em', fontSize: '1.15rem' }}
+            className="flex items-center shrink-0 mr-2"
           >
-            <span
-              className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[0.85rem] font-black shrink-0"
-              style={{ background: '#B7EE7A', color: '#174717' }}
-            >
-              A
-            </span>
-            <span>aza</span>
+            <img src="/logo.png" alt="AZA" className="h-6 w-auto" />
           </a>
 
           {/* Desktop nav */}

@@ -59,7 +59,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
         }
 
-        if (type === 'MONEY_RECEIVED' || type === 'MONEY_REQUESTED' || type === 'PAYMENT_REQUEST_ACCEPTED') {
+        if (type === 'NEW_MESSAGE') {
+          queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+        }
+
+        if (type === 'MONEY_RECEIVED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
           queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
@@ -79,9 +83,48 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               ipAddress: data.ipAddress ?? 'Unknown',
             },
           });
+        } else if (data?.type === 'RECOVERY_CONTACT_INVITE') {
+          navigate('App', { screen: 'AccountRecoveryContacts' });
+        } else if (data?.type === 'RECOVERY_CONTACT_REQUEST') {
+          navigate('App', {
+            screen: 'GenerateRecoveryCode',
+            params: {
+              requestId: data.requestId,
+              requesterName: data.requesterName ?? 'Someone',
+              requesterHandle: data.requesterHandle,
+            },
+          });
         } else if (data?.type === 'KYB_APPROVED' || data?.type === 'KYB_REJECTED' || data?.type === 'KYB_MORE_INFO_REQUIRED') {
           navigate('App', { screen: 'Hub' });
-        } else if (data?.type === 'MONEY_RECEIVED' || data?.type === 'MONEY_REQUESTED') {
+        } else if (data?.type === 'KYC_REJECTED') {
+          navigate('App', { screen: 'VerifyIdentity', params: {} });
+        } else if (data?.type === 'INCOMING_CALL') {
+          const screen = data.isVideo ? 'VideoCall' : 'AudioCall';
+          navigate('App', {
+            screen,
+            params: { name: data.callerName ?? 'Unknown', avatar: '' },
+          });
+        } else if (data?.type === 'MISSED_CALL') {
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+        } else if (data?.type === 'SECURITY_ALERT') {
+          navigate('App', { screen: 'SecurityAndPrivacy' });
+        } else if (data?.type === 'SUPPORT_MESSAGE') {
+          navigate('App', { screen: 'ChatWithUs' });
+        } else if (data?.type === 'NEW_MESSAGE') {
+          if (data.senderId) {
+            navigate('App', {
+              screen: 'ChatScreen',
+              params: {
+                id: data.senderId,
+                name: data.senderName ?? 'Unknown',
+                avatar: data.senderAvatar ?? '',
+                online: false,
+              },
+            });
+          } else {
+            navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
+          }
+        } else if (data?.type === 'MONEY_RECEIVED') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
         } else if (data?.type?.includes('PAYMENT_REQUEST')) {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });

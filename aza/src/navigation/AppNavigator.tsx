@@ -50,6 +50,7 @@ import {
   AppearanceScreen,
   NotificationSettingsScreen,
   SecurityAndPrivacyScreen,
+  AppSecurityScreen,
   SecureAccountScreen,
   LogoutEverywhereScreen,
   DevicesScreen,
@@ -57,6 +58,8 @@ import {
   TotpSetupScreen,
   DisableTotpScreen,
   RecoveryCodesScreen,
+  ManageRecoveryCodesScreen,
+  AccountRecoveryContactsScreen,
   SmsSetupScreen,
   DisableSmsScreen,
   PasskeySetupScreen,
@@ -72,6 +75,8 @@ import {
   ChangePhoneScreen,
   DeleteAccountScreen
 } from '../features/profile';
+import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
+import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
 import {
   ReasonScreen,
   RefundScreen,
@@ -79,11 +84,14 @@ import {
   TermsOfServiceScreen,
   PrivacyPolicyScreen,
   AppLoginApprovalScreen,
+  GenerateRecoveryCodeScreen,
 } from '../features/auth';
 import { InboxScreen } from '../features/notifications';
 
 
 import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
+import CreatePasscodeScreen from '../features/security/screens/CreatePasscodeScreen';
+import ConfirmPasscodeScreen from '../features/auth/signup/ConfirmPasscodeScreen';
 import MerchantBusinessNameScreen from '../features/hub/miniapps/merchant/MerchantBusinessNameScreen';
 import MerchantBusinessCategoryScreen from '../features/hub/miniapps/merchant/MerchantBusinessCategoryScreen';
 import MerchantBusinessContactScreen from '../features/hub/miniapps/merchant/MerchantBusinessContactScreen';
@@ -155,6 +163,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TotpSetup" component={TotpSetupScreen} />
       <Stack.Screen name="DisableTotp" component={DisableTotpScreen} />
       <Stack.Screen name="RecoveryCodes" component={RecoveryCodesScreen} />
+      <Stack.Screen name="ManageRecoveryCodes" component={ManageRecoveryCodesScreen} />
       <Stack.Screen name="SmsSetup" component={SmsSetupScreen} />
       <Stack.Screen name="DisableSms" component={DisableSmsScreen} />
       <Stack.Screen name="PasskeySetup" component={PasskeySetupScreen} />
@@ -165,11 +174,18 @@ export default function AppNavigator() {
       <Stack.Screen name="BillForwardingDetails" component={BillForwardingDetailsScreen} />
       <Stack.Screen name="PersonalDetails" component={PersonalDetailsScreen} />
       <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+      <Stack.Screen name="LimitsAndUsage" component={LimitsAndUsageScreen} />
+      <Stack.Screen name="LimitIncreaseRequest" component={LimitIncreaseRequestScreen} />
+      <Stack.Screen name="AppSecurity" component={AppSecurityScreen} />
       <Stack.Screen name="VerifyPasscode" component={VerifyPasscodeScreen}/>
+      <Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen} />
+      <Stack.Screen name="ConfirmPasscode" component={ConfirmPasscodeScreen} />
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
+      <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
+      <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
       <Stack.Screen name="Refund" component={RefundScreen} />
       <Stack.Screen name="Statement" component={StatementScreen}/>

@@ -3,10 +3,9 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   TroubleLogin: undefined;
-  OTP: { isLogin?: boolean; phoneNumber?: string } | undefined;
   ForgotPassword: undefined;
   TwoStepVerificationIssue: undefined;
-  TotpLogin: { preAuthToken: string; methods?: string[]; defaultMethod?: string };
+  TotpLogin: { preAuthToken?: string; loginIdentifier?: string; methods?: string[]; defaultMethod?: string };
   RecoveryCodeLogin: { preAuthToken: string };
   AppLoginApproval: { requestId: string; deviceName: string; ipAddress: string };
   ChangePhoneNumber: undefined;
@@ -56,6 +55,8 @@ export type RootStackParamList = {
   EnableBiometrics: undefined;
   Send: undefined;
   Profile: undefined;
+  LimitsAndUsage: undefined;
+  LimitIncreaseRequest: undefined;
   Appearance: undefined;
   Receive: undefined;
   HelpAndSupport: undefined;
@@ -73,9 +74,14 @@ export type RootStackParamList = {
   LogoutEverywhere: undefined;
   Devices: undefined;
   TwoStepVerification: undefined;
+  AppSecurity: { disableAppLock?: boolean } | undefined;
   TotpSetup: undefined;
   DisableTotp: undefined;
   RecoveryCodes: { codes: string[] };
+  ManageRecoveryCodes: undefined;
+  AccountRecoveryContacts: undefined;
+  GenerateRecoveryCode: { requestId: string; requesterName: string; requesterHandle?: string };
+  ContactRecoveryLogin: { preAuthToken: string };
   SmsSetup: undefined;
   DisableSms: undefined;
   PasskeySetup: undefined;

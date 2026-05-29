@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { broadcastNotification } from "@/lib/admin-api";
 import { Bell, Users, ShieldCheck, Zap, CheckCircle2, Send } from "lucide-react";
 
@@ -37,27 +38,23 @@ export default function NotificationsPage() {
   const [body, setBody] = useState("");
   const [audience, setAudience] = useState<Audience>("ALL");
   const [imageUrl, setImageUrl] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<number | null>(null);
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim() || !body.trim()) return;
-    setSending(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await broadcastNotification(title.trim(), body.trim(), audience, imageUrl.trim() || undefined);
+  const sendMutation = useMutation({
+    mutationFn: () => broadcastNotification(title.trim(), body.trim(), audience, imageUrl.trim() || undefined),
+    onSuccess: (res) => {
       setResult(res.sent);
       setTitle("");
       setBody("");
       setImageUrl("");
-    } catch (e: any) {
-      setError(e.message ?? "Failed to send notification");
-    } finally {
-      setSending(false);
-    }
+    },
+  });
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !body.trim()) return;
+    setResult(null);
+    sendMutation.mutate();
   }
 
   return (
@@ -69,9 +66,9 @@ export default function NotificationsPage() {
         </p>
       </div>
 
-      {error && (
+      {sendMutation.error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">
-          {error}
+          {(sendMutation.error as Error).message}
         </div>
       )}
 
@@ -83,7 +80,6 @@ export default function NotificationsPage() {
       )}
 
       <form onSubmit={handleSend} className="space-y-6">
-        {/* Audience selector */}
         <div>
           <label className="block text-sm font-medium text-white/70 mb-3">Audience</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -94,15 +90,11 @@ export default function NotificationsPage() {
                 onClick={() => setAudience(a.value)}
                 className={`p-4 rounded-xl border text-left transition-all ${
                   audience === a.value
-                    ? "bg-[#F5A623]/10 border-[#F5A623]/40 text-white"
+                    ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-white"
                     : "bg-[#1a1a1a] border-white/5 text-white/60 hover:border-white/15 hover:text-white"
                 }`}
               >
-                <div
-                  className={`mb-2 ${
-                    audience === a.value ? "text-[#F5A623]" : "text-white/40"
-                  }`}
-                >
+                <div className={`mb-2 ${audience === a.value ? "text-[#B7EE7A]" : "text-white/40"}`}>
                   {a.icon}
                 </div>
                 <div className="text-sm font-medium">{a.label}</div>
@@ -112,7 +104,6 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Title */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-sm font-medium text-white/70">Title</label>
@@ -123,12 +114,11 @@ export default function NotificationsPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value.slice(0, 100))}
             placeholder="Notification title"
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm transition-colors"
             required
           />
         </div>
 
-        {/* Body */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-sm font-medium text-white/70">Message</label>
@@ -139,12 +129,11 @@ export default function NotificationsPage() {
             onChange={(e) => setBody(e.target.value.slice(0, 500))}
             placeholder="Notification message body"
             rows={4}
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm resize-none transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm resize-none transition-colors"
             required
           />
         </div>
 
-        {/* Image URL */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-sm font-medium text-white/70">Image URL (Optional)</label>
@@ -154,29 +143,26 @@ export default function NotificationsPage() {
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
             placeholder="https://example.com/image.png"
-            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#F5A623]/50 text-sm transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/50 text-sm transition-colors"
           />
         </div>
 
-        {/* Preview */}
         {(title || body) && (
           <div>
             <label className="block text-sm font-medium text-white/70 mb-3">Preview</label>
             <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-5 flex items-start gap-4">
-              {/* Phone-like notification card */}
               <div className="flex-1 max-w-sm mx-auto bg-white/5 rounded-2xl p-4 border border-white/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-md bg-[#F5A623]/20 flex items-center justify-center flex-shrink-0">
-                    <Bell size={12} className="text-[#F5A623]" />
+                  <div className="w-6 h-6 rounded-md bg-[#B7EE7A]/20 flex items-center justify-center flex-shrink-0">
+                    <Bell size={12} className="text-[#B7EE7A]" />
                   </div>
                   <span className="text-xs text-white/40 font-medium">aza · now</span>
                 </div>
                 {imageUrl && (
                   <div className="mb-2 w-full h-32 rounded-lg bg-black/20 overflow-hidden relative border border-white/5">
-                    {/* We use standard img for simple admin preview to avoid Next.js Image host config issues */}
-                    <img 
-                      src={imageUrl} 
-                      alt="Notification preview" 
+                    <img
+                      src={imageUrl}
+                      alt="Notification preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "https://via.placeholder.com/400x200/1a1a1a/F5A623?text=Invalid+Image+URL";
@@ -195,13 +181,12 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* Submit */}
         <button
           type="submit"
-          disabled={sending || !title.trim() || !body.trim()}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#F5A623] hover:bg-[#F5A623]/90 text-black font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={sendMutation.isPending || !title.trim() || !body.trim()}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {sending ? (
+          {sendMutation.isPending ? (
             <>
               <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
               Sending…

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@react-native-vector-icons/feather";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { getTransactions, createDispute } from "../../../services/api";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys";
 import { mapBackendTransaction, formatCurrency } from "../../../utils/transactionUtils";
 import { Transaction } from "./TransactionsScreen";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
@@ -37,41 +39,23 @@ export function ReversalRequestScreen() {
   // Screen states: 'select_tx' | 'fill_form' | 'success'
   const [step, setStep] = useState<"select_tx" | "fill_form" | "success">("select_tx");
 
-  // Data states
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loadingTxs, setLoadingTxs] = useState(true);
-  const [txError, setTxError] = useState<string | null>(null);
-
   // Selection/form states
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const { data: transactions = [], isLoading: loadingTxs, error: txError } = useQuery({
+    queryKey: queryKeys.transactions('COMPLETED'),
+    queryFn: async () => {
+      const res = await getTransactions(0, 50, undefined, "COMPLETED");
+      const content: any[] = res.data?.data?.content || res.data?.content || [];
+      return content.map(mapBackendTransaction).filter((tx) => !tx.isCredit);
+    },
+    staleTime: 30_000,
+  });
+
   const [category, setCategory] = useState<string>("OTHER");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const fetchCompletedTxs = useCallback(async () => {
-    setLoadingTxs(true);
-    setTxError(null);
-    try {
-      // Fetch completed transactions
-      const res = await getTransactions(0, 50, undefined, "COMPLETED");
-      const content: any[] = res.data?.data?.content || res.data?.content || [];
-      const mapped = content.map(mapBackendTransaction);
-      
-      // Filter for outgoing transactions that can be reversed
-      const outgoing = mapped.filter((tx) => !tx.isCredit);
-      setTransactions(outgoing);
-    } catch (err: any) {
-      console.error("Failed to load completed transactions", err);
-      setTxError(err.response?.data?.message || "Failed to load transactions. Please try again.");
-    } finally {
-      setLoadingTxs(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCompletedTxs();
-  }, [fetchCompletedTxs]);
 
   const handleSubmit = async () => {
     if (!selectedTx || !description.trim()) return;

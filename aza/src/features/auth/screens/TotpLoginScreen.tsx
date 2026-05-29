@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { BackButton } from '../../../components/ui/BackButton';
 import {
+  api,
   totpLogin,
   requestSms2fa,
   requestEmail2fa,
@@ -40,6 +41,7 @@ import {
   BIOMETRIC_TOKEN_KEY,
 } from '../../../services/api';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Device from 'expo-device';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TotpLogin'>;
 type TotpLoginRouteProp = RouteProp<RootStackParamList, 'TotpLogin'>;
@@ -53,11 +55,13 @@ const TotpLoginScreen: React.FC = () => {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<TotpLoginRouteProp>();
-  const { preAuthToken, methods = ['TOTP'], defaultMethod = 'TOTP' } = route.params;
+  const { preAuthToken, loginIdentifier, methods = ['TOTP'], defaultMethod = 'TOTP' } = route.params ?? {};
+  const isLoginOtpMode = !preAuthToken && !!loginIdentifier;
 
   const [currentMethod, setCurrentMethod] = useState<VerificationMethod>(
     defaultMethod as VerificationMethod
   );
+  const [loginOtpCountdown, setLoginOtpCountdown] = useState(57);
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const inputRefs = useRef<Array<TextInput | null>>([]);
@@ -74,9 +78,20 @@ const TotpLoginScreen: React.FC = () => {
     return () => { stopPolling(); };
   }, []);
 
+  // Countdown timer for login-OTP mode
+  useEffect(() => {
+    if (!isLoginOtpMode) return;
+    if (loginOtpCountdown <= 0) return;
+    const t = setTimeout(() => setLoginOtpCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [isLoginOtpMode, loginOtpCountdown]);
+
   useEffect(() => {
     // When method changes away from APP, stop any active poll
     if (currentMethod !== 'APP') stopPolling();
+
+    // In login-OTP mode, the SMS was already sent by /auth/login — don't re-trigger
+    if (isLoginOtpMode) return;
 
     if (currentMethod === 'SMS') triggerSms2fa();
     else if (currentMethod === 'EMAIL') triggerEmail2fa();
@@ -240,12 +255,35 @@ const TotpLoginScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
+      if (isLoginOtpMode) {
+        const { data } = await api.post('/api/v1/auth/verify-otp', {
+          identifier: loginIdentifier,
+          code,
+          purpose: 'login',
+          deviceName: Device.modelName ?? undefined,
+          deviceOs: Device.osName ?? undefined,
+          deviceId: await getDeviceId(),
+        });
+        const payload = data?.data ?? data;
+        if (payload?.preAuthToken) {
+          // 2FA is required — replace this screen with the 2FA step
+          navigation.replace('TotpLogin', {
+            preAuthToken: payload.preAuthToken,
+            methods: payload.methods,
+            defaultMethod: payload.defaultMethod,
+          });
+        } else {
+          await finalizeLogin(payload);
+        }
+        return;
+      }
+
       let data;
       if (currentMethod === 'TOTP') {
-        const res = await totpLogin(preAuthToken, code);
+        const res = await totpLogin(preAuthToken!, code);
         data = res.data;
       } else {
-        const res = await verify2faOtp(preAuthToken, code, currentMethod);
+        const res = await verify2faOtp(preAuthToken!, code, currentMethod);
         data = res.data;
       }
       await finalizeLogin(data?.data ?? data);
@@ -311,6 +349,9 @@ const TotpLoginScreen: React.FC = () => {
   };
 
   const getSubTitleText = () => {
+    if (isLoginOtpMode) {
+      return `Enter the 6-digit code we sent to\n${loginIdentifier}`;
+    }
     switch (currentMethod) {
       case 'TOTP': return 'Enter the 6-digit code from your\nauthenticator app.';
       case 'SMS': return 'Enter the 6-digit code we sent to\nyour phone number.';
@@ -379,29 +420,50 @@ const TotpLoginScreen: React.FC = () => {
                 </Text>
 
                 {!isPasskeyMethod && (
-                  <View style={styles.otpInputWrapper}>
-                    {otp.map((digit, index) => (
-                      <View key={index} style={styles.otpSlot}>
-                        <TextInput
-                          ref={(ref) => { inputRefs.current[index] = ref; }}
-                          style={styles.otpInput}
-                          value={digit}
-                          onChangeText={(text) => handleOtpChange(text, index)}
-                          onKeyPress={(e) => handleKeyPress(e, index)}
-                          keyboardType="number-pad"
-                          maxLength={1}
-                          autoFocus={index === 0}
-                          cursorColor={Colors.primary}
-                        />
-                        {!digit && <View style={styles.dash} pointerEvents="none" />}
+                  <>
+                    <View style={styles.otpInputWrapper}>
+                      {otp.map((digit, index) => (
+                        <View key={index} style={styles.otpSlot}>
+                          <TextInput
+                            ref={(ref) => { inputRefs.current[index] = ref; }}
+                            style={styles.otpInput}
+                            value={digit}
+                            onChangeText={(text) => handleOtpChange(text, index)}
+                            onKeyPress={(e) => handleKeyPress(e, index)}
+                            keyboardType="number-pad"
+                            maxLength={1}
+                            autoFocus={index === 0}
+                            cursorColor={Colors.primary}
+                            textContentType="oneTimeCode"
+                            autoComplete="one-time-code"
+                          />
+                          {!digit && <View style={styles.dash} pointerEvents="none" />}
+                        </View>
+                      ))}
+                    </View>
+
+                    {isLoginOtpMode && (
+                      <View style={styles.countdownContainer}>
+                        {loginOtpCountdown > 0 ? (
+                          <Text style={styles.countdownText}>
+                            The code should arrive within <Text style={{ fontWeight: '600', color: Colors.textPrimary }}>{loginOtpCountdown}s</Text>
+                          </Text>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.issueButton}
+                            onPress={() => navigation.goBack()}
+                          >
+                            <Text style={styles.issueText}>Resend Code</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
-                    ))}
-                  </View>
+                    )}
+                  </>
                 )}
               </>
             )}
 
-            {methods.length > 1 && !isAppMethod && (
+            {!isLoginOtpMode && methods.length > 1 && !isAppMethod && (
               <TouchableOpacity
                 style={styles.issueButton}
                 onPress={() => setShowMethodSelector(true)}
@@ -456,6 +518,12 @@ const TotpLoginScreen: React.FC = () => {
               onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
             >
               <Text style={styles.recoveryText}>Use a recovery code</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.recoveryButton, { marginTop: 2 }]}
+              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
+            >
+              <Text style={styles.recoveryText}>Contact a recovery person</Text>
             </TouchableOpacity>
           </View>
           
@@ -563,6 +631,15 @@ function createStyles(Colors: ThemeColors) {
       fontSize: 15,
       fontWeight: '600',
       color: Colors.textPrimary,
+    },
+    countdownContainer: {
+      alignItems: 'center',
+      marginTop: Spacing.lg,
+    },
+    countdownText: {
+      fontSize: 13,
+      color: Colors.textSecondary,
+      fontWeight: '500',
     },
     recoveryButton: {
       paddingVertical: Spacing.md,

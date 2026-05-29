@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, View, Text, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
 import { getMerchantPayouts, requestMerchantPayout } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
 import PrimaryButton from '../components/PrimaryButton';
@@ -13,15 +16,11 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
   const [amount, setAmount] = useState('');
   const [passcode, setPasscode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [payouts, setPayouts] = useState<any[]>([]);
-  const [payoutsLoading, setPayoutsLoading] = useState(true);
-
-  useEffect(() => {
-    getMerchantPayouts(0, 20)
-      .then((r: any) => setPayouts(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setPayoutsLoading(false));
-  }, []);
+  const { data: payouts = [], isLoading: payoutsLoading } = useQuery({
+    queryKey: queryKeys.merchantPayouts(),
+    queryFn: async () => { const r = await getMerchantPayouts(0, 20); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
 
   const canSubmit = parseFloat(amount) > 0 && passcode.length === 6;
 
@@ -37,7 +36,8 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
       Alert.alert('Success', `GH₵${amt.toFixed(2)} has been transferred to your Aza wallet.`);
       setAmount('');
       setPasscode('');
-      if (merchant) onMerchantUpdate({ ...merchant, balance: (merchant.balance ?? 0) - amt });
+      queryClient.invalidateQueries({ queryKey: queryKeys.merchantPayouts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.merchant() });
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Payout failed.');
     } finally {

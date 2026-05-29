@@ -247,6 +247,8 @@ export interface AdminUser {
   walletCurrency: string;
   createdAt: string;
   lastLoginAt: string | null;
+  customDailyLimitGhs: number | null;
+  customSingleTransactionLimitGhs: number | null;
 }
 
 export interface Page<T> {
@@ -484,6 +486,19 @@ export function getKycRecord(userId: string): Promise<KycRecord> {
 
 export function getUserTransactions(userId: string, page = 0, size = 10): Promise<Page<AdminTransaction>> {
   return request(`/api/v1/admin/users/${userId}/transactions?page=${page}&size=${size}`);
+}
+
+// ── User transaction limits ───────────────────────────────────────────────────
+
+export function updateUserLimits(
+  userId: string,
+  dailyLimitGhs: number | null,
+  singleTransactionLimitGhs: number | null,
+): Promise<AdminUser> {
+  return request(`/api/v1/admin/users/${userId}/limits`, {
+    method: "PATCH",
+    body: JSON.stringify({ dailyLimitGhs, singleTransactionLimitGhs }),
+  });
 }
 
 // ── Support management ────────────────────────────────────────────────────────
@@ -1074,6 +1089,53 @@ export function resetIpRateLimit(ip: string): Promise<string> {
 
 export function resetAllRateLimits(): Promise<{ keysDeleted: number }> {
   return request("/api/v1/admin/risk/rate-limits", { method: "DELETE" });
+}
+
+// ── Limit Increase Requests ───────────────────────────────────────────────────
+
+export interface LimitRequest {
+  id: string;
+  userId: string;
+  currentDailyLimitGhs: number;
+  currentSingleTransactionLimitGhs: number;
+  requestedDailyLimitGhs: number;
+  requestedSingleTransactionLimitGhs: number;
+  reason: string | null;
+  status: "PENDING" | "APPROVED" | "DENIED";
+  adminNotes: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface LimitRequestStats {
+  pending: number;
+  approved: number;
+  denied: number;
+}
+
+export function getLimitRequests(page = 0, size = 20, status?: string): Promise<Page<LimitRequest>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/limit-requests?${params}`);
+}
+
+export function getLimitRequestStats(): Promise<LimitRequestStats> {
+  return request("/api/v1/admin/limit-requests/stats");
+}
+
+export function approveLimitRequest(id: string, notes: string): Promise<LimitRequest> {
+  return request(`/api/v1/admin/limit-requests/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function denyLimitRequest(id: string, notes: string): Promise<LimitRequest> {
+  return request(`/api/v1/admin/limit-requests/${id}/deny`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
 }
 
 // ── Mini App Reports ──────────────────────────────────────────────────────────

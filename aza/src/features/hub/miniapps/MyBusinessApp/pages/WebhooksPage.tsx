@@ -1,16 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Alert, Clipboard, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
-import { 
-  getMerchantWebhooks, 
-  createMerchantWebhook, 
+import {
+  getMerchantWebhooks,
+  createMerchantWebhook,
   updateMerchantWebhook,
   deleteMerchantWebhook,
   getMerchantWebhookDeliveries
 } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
 
@@ -21,9 +24,13 @@ const ALL_EVENTS = [
 ];
 
 export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+  const { data: webhooks = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantWebhooks(),
+    queryFn: async () => { const r = await getMerchantWebhooks(); return extractData(r) ?? []; },
+    staleTime: 60_000,
+  });
+  const invalidateWebhooks = () => queryClient.invalidateQueries({ queryKey: queryKeys.merchantWebhooks() });
+
   // Creation form states
   const [showForm, setShowForm] = useState(false);
   const [url, setUrl] = useState('');
@@ -43,15 +50,6 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [deliveriesLoading, setDeliveriesLoading] = useState(false);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    getMerchantWebhooks()
-      .then((r: any) => setWebhooks(extractData(r) ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const handleCreate = async () => {
     if (!url.startsWith('https://')) {
@@ -73,7 +71,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       setUrl('');
       setSelectedEvents(['checkout.completed']);
       setShowForm(false);
-      load();
+      invalidateWebhooks();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create webhook.');
     } finally {
@@ -84,7 +82,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
   const handleToggleActive = async (w: any) => {
     try {
       await updateMerchantWebhook(w.id, { isActive: !w.isActive });
-      load();
+      invalidateWebhooks();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update status.');
     }
@@ -106,7 +104,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
         events: editEvents.join(','),
       });
       setEditingWebhookId(null);
-      load();
+      invalidateWebhooks();
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update webhook.');
     } finally {

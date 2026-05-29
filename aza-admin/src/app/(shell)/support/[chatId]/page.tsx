@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSupportChatMessages,
   getSupportChat,
@@ -50,8 +51,6 @@ import SupportCallModal from "@/components/SupportCallModal";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-// ── Built-in canned responses (always available) ──────────────────────────────
-
 const BUILT_IN_CANNED: CannedResponse[] = [
   { id: "bi-1", title: "Greeting", category: "General", usageCount: 0, content: "Hello! Thank you for reaching out to AZA Support. How can I assist you today?" },
   { id: "bi-2", title: "Follow-up", category: "General", usageCount: 0, content: "I wanted to follow up on your recent inquiry. Have you had a chance to try the suggested steps?" },
@@ -65,16 +64,7 @@ const BUILT_IN_CANNED: CannedResponse[] = [
   { id: "bi-10", title: "Report fraud", category: "Fraud", usageCount: 0, content: "We take fraud reports very seriously. Your account has been flagged for review and we've initiated an investigation. Please do not share your OTP or PIN with anyone. We'll contact you shortly." },
 ];
 
-// ── SLA config ────────────────────────────────────────────────────────────────
-
 const SLA_MINUTES: Record<string, number> = { URGENT: 60, HIGH: 240, NORMAL: 1440, LOW: 4320 };
-
-function slaElapsed(lastAt: string | null): { minutes: number; pct: number; status: "ok" | "warning" | "breach" } | null {
-  if (!lastAt) return null;
-  return null; // calculated per-priority in the component
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 type ChatItem =
   | { kind: "message"; ts: number; data: SupportMessage }
@@ -84,8 +74,6 @@ type InputMode = "reply" | "note";
 
 const PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 const CATEGORIES = ["GENERAL", "BILLING", "TECHNICAL", "ACCOUNT", "KYC", "FRAUD"] as const;
-
-// ── Small helpers ─────────────────────────────────────────────────────────────
 
 function fmtTime(iso: string | null) {
   if (!iso) return "";
@@ -111,8 +99,6 @@ function fmtGhs(n: number) {
   return `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
 function SlaIndicator({ priority, lastMessageAt, status }: { priority: string; lastMessageAt: string | null; status: string }) {
   if (status === "RESOLVED" || !lastMessageAt) return null;
   const elapsed = (Date.now() - new Date(lastMessageAt).getTime()) / 60000;
@@ -120,9 +106,7 @@ function SlaIndicator({ priority, lastMessageAt, status }: { priority: string; l
   const pct = Math.min((elapsed / threshold) * 100, 100);
   const slaStatus = pct >= 100 ? "breach" : pct >= 75 ? "warning" : "ok";
   const remaining = Math.max(threshold - elapsed, 0);
-  const remainingStr = remaining < 60
-    ? `${Math.round(remaining)}m`
-    : `${Math.round(remaining / 60)}h`;
+  const remainingStr = remaining < 60 ? `${Math.round(remaining)}m` : `${Math.round(remaining / 60)}h`;
 
   return (
     <div className="p-4 border-b border-white/5">
@@ -131,7 +115,7 @@ function SlaIndicator({ priority, lastMessageAt, status }: { priority: string; l
         <span className={`text-[10px] font-bold uppercase tracking-wider ${
           slaStatus === "breach" ? "text-red-400" : slaStatus === "warning" ? "text-amber-400" : "text-emerald-400"
         }`}>
-          {slaStatus === "breach" ? "Breached" : slaStatus === "warning" ? `${remainingStr} left` : `${remainingStr} left`}
+          {slaStatus === "breach" ? "Breached" : `${remainingStr} left`}
         </span>
       </div>
       <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
@@ -149,6 +133,15 @@ function SlaIndicator({ priority, lastMessageAt, status }: { priority: string; l
   );
 }
 
+function InfoRow({ label, value, valueClass = "text-white/70" }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[11px] text-white/35 flex-shrink-0">{label}</span>
+      <span className={`text-[11px] font-medium truncate ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
 function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; chat: SupportChatSummary | null; recentTxns: AdminTransaction[] }) {
   if (!user) {
     return (
@@ -161,29 +154,17 @@ function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; cha
     );
   }
 
-  const kycColor = user.kycStatus === "VERIFIED"
-    ? "text-emerald-400"
-    : user.kycStatus === "PENDING_REVIEW"
-    ? "text-amber-400"
-    : "text-red-400";
-
-  const statusColor = user.accountStatus === "ACTIVE"
-    ? "text-emerald-400"
-    : user.accountStatus === "SUSPENDED"
-    ? "text-amber-400"
-    : "text-red-400";
+  const kycColor = user.kycStatus === "VERIFIED" ? "text-emerald-400" : user.kycStatus === "PENDING_REVIEW" ? "text-amber-400" : "text-red-400";
+  const statusColor = user.accountStatus === "ACTIVE" ? "text-emerald-400" : user.accountStatus === "SUSPENDED" ? "text-amber-400" : "text-red-400";
 
   return (
     <div className="divide-y divide-white/5">
-      {/* Profile */}
       <div className="p-5 text-center">
         <div className="w-14 h-14 rounded-full bg-white/8 flex items-center justify-center overflow-hidden mx-auto mb-3 border border-white/8">
           {user.profileImageUrl ? (
             <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-xl font-bold text-white/50">
-              {user.firstName?.charAt(0)?.toUpperCase()}
-            </span>
+            <span className="text-xl font-bold text-white/50">{user.firstName?.charAt(0)?.toUpperCase()}</span>
           )}
         </div>
         <p className="text-sm font-semibold text-white">{[user.firstName, user.lastName].filter(Boolean).join(" ") || user.username}</p>
@@ -191,7 +172,6 @@ function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; cha
         <p className="text-xs text-white/30 mt-0.5 truncate">{user.email}</p>
       </div>
 
-      {/* Account status */}
       <div className="px-5 py-4 space-y-2.5">
         <InfoRow label="Status" value={user.accountStatus} valueClass={statusColor} />
         <InfoRow label="KYC" value={user.kycStatus?.replace("_", " ")} valueClass={kycColor} />
@@ -201,7 +181,6 @@ function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; cha
         {user.phone && <InfoRow label="Phone" value={user.phone} />}
       </div>
 
-      {/* Recent transactions */}
       {recentTxns.length > 0 && (
         <div className="px-5 py-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-3">Recent Transactions</p>
@@ -222,15 +201,6 @@ function CustomerPanel({ user, chat, recentTxns }: { user: AdminUser | null; cha
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function InfoRow({ label, value, valueClass = "text-white/70" }: { label: string; value: string; valueClass?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] text-white/35 flex-shrink-0">{label}</span>
-      <span className={`text-[11px] font-medium truncate ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -273,7 +243,7 @@ function CannedPanel({ responses, onSelect }: { responses: CannedResponse[]; onS
               >
                 <div className="flex items-center justify-between mb-0.5">
                   <p className="text-xs font-semibold text-white/80 group-hover:text-white transition-colors">{r.title}</p>
-                  <Zap size={11} className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <Zap size={11} className="text-[#B7EE7A] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </div>
                 <p className="text-[11px] text-white/35 line-clamp-2 leading-relaxed">{r.content}</p>
               </button>
@@ -288,31 +258,24 @@ function CannedPanel({ responses, onSelect }: { responses: CannedResponse[]; onS
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-
 export default function SupportChatPage() {
   const { chatId } = useParams<{ chatId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [chat, setChat] = useState<SupportChatSummary | null>(null);
+  // Local state for real-time data driven by WebSocket
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [notes, setNotes] = useState<InternalNote[]>([]);
-  const [cannedResponses, setCannedResponses] = useState<CannedResponse[]>(BUILT_IN_CANNED);
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [recentTxns, setRecentTxns] = useState<AdminTransaction[]>([]);
+  const [chat, setChat] = useState<SupportChatSummary | null>(null);
 
-  const [loading, setLoading] = useState(true);
   const [inputMode, setInputMode] = useState<InputMode>("reply");
   const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
-
   const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [resolveLoading, setResolveLoading] = useState(false);
   const [callModalOpen, setCallModalOpen] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -322,58 +285,78 @@ export default function SupportChatPage() {
 
   const { addInboxListener, removeInboxListener } = useSupportWs();
 
-  useEffect(() => {
-    const handleInboxEvent = (summary: SupportChatSummary) => {
-      if (summary.chatId === chatId) {
-        // Slight delay to allow the backend transaction to commit before we fetch
-        setTimeout(() => {
-          getSupportChatMessages(chatId, 0, 200).then((res) => {
-            setMessages((prev) => {
-              const fetched = res.content.reverse();
-              const map = new Map(prev.map((m) => [m.id, m]));
-              fetched.forEach((m) => map.set(m.id, m));
-              return Array.from(map.values()).sort((a, b) => 
-                new Date(a.sentAt || 0).getTime() - new Date(b.sentAt || 0).getTime()
-              );
-            });
-          }).catch(() => {});
-        }, 500);
-      }
-    };
-    addInboxListener(handleInboxEvent);
-    return () => removeInboxListener(handleInboxEvent);
-  }, [chatId, addInboxListener, removeInboxListener]);
-
-  // Load all data
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
+  // Initial data via React Query
+  const { isLoading } = useQuery({
+    queryKey: ["supportChat", chatId],
+    queryFn: async () => {
       const [chatData, msgsData] = await Promise.all([
         getSupportChat(chatId),
         getSupportChatMessages(chatId, 0, 60),
       ]);
       setChat(chatData);
       setMessages([...msgsData.content].reverse());
+      return chatData;
+    },
+  });
 
-      // Load user data and notes in background
-      if (chatData.userId) {
-        getUserDetail(chatData.userId).then(setUser).catch(() => {});
-        getUserTransactions(chatData.userId, 0, 5).then((r) => setRecentTxns(r.content)).catch(() => {});
-      }
-      getInternalNotes(chatId).then(setNotes).catch(() => {});
-      getCannedResponses()
-        .then((r) => setCannedResponses([...BUILT_IN_CANNED, ...r]))
-        .catch(() => {}); // fall back to built-in
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load chat");
-    } finally {
-      setLoading(false);
-    }
-  }, [chatId]);
+  useQuery({
+    queryKey: ["supportChatNotes", chatId],
+    queryFn: async () => {
+      const n = await getInternalNotes(chatId);
+      setNotes(n);
+      return n;
+    },
+    enabled: !!chatId,
+    retry: false,
+  });
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const { data: chatUser } = useQuery<AdminUser | null>({
+    queryKey: ["supportChatUser", chatId, chat?.userId],
+    queryFn: () => chat?.userId ? getUserDetail(chat.userId) : Promise.resolve(null),
+    enabled: !!chat?.userId,
+    retry: false,
+  });
 
-  // WebSocket
+  const { data: recentTxnsPage } = useQuery({
+    queryKey: ["supportChatTxns", chat?.userId],
+    queryFn: () => getUserTransactions(chat!.userId!, 0, 5),
+    enabled: !!chat?.userId,
+    retry: false,
+  });
+
+  const { data: cannedResponses } = useQuery({
+    queryKey: ["cannedResponses"],
+    queryFn: async () => {
+      const r = await getCannedResponses().catch(() => [] as CannedResponse[]);
+      return [...BUILT_IN_CANNED, ...r];
+    },
+  });
+
+  const recentTxns: AdminTransaction[] = recentTxnsPage?.content ?? [];
+  const allCanned = cannedResponses ?? BUILT_IN_CANNED;
+
+  // Inbox WebSocket listener — refresh messages when this chat gets an update
+  useEffect(() => {
+    const handleInboxEvent = (summary: SupportChatSummary) => {
+      if (summary.chatId !== chatId) return;
+      setTimeout(() => {
+        getSupportChatMessages(chatId, 0, 200).then((res) => {
+          setMessages((prev) => {
+            const fetched = res.content.reverse();
+            const map = new Map(prev.map((m) => [m.id, m]));
+            fetched.forEach((m) => map.set(m.id, m));
+            return Array.from(map.values()).sort((a, b) =>
+              new Date(a.sentAt || 0).getTime() - new Date(b.sentAt || 0).getTime()
+            );
+          });
+        }).catch(() => {});
+      }, 500);
+    };
+    addInboxListener(handleInboxEvent);
+    return () => removeInboxListener(handleInboxEvent);
+  }, [chatId, addInboxListener, removeInboxListener]);
+
+  // Chat-specific WebSocket
   useEffect(() => {
     const token = getToken();
     if (!token) return;
@@ -413,58 +396,88 @@ export default function SupportChatPage() {
     }
   }, [replyText]);
 
-  // Merge messages + notes into one sorted stream
+  // Mutations
+  const resolveMutation = useMutation({
+    mutationFn: () => chat?.status === "RESOLVED" ? reopenChat(chatId) : resolveChat(chatId),
+    onSuccess: (updated) => {
+      setChat(updated);
+      queryClient.setQueryData(["supportChat", chatId], updated);
+    },
+    onError: (e: Error) => setError(e.message ?? "Failed to update status"),
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: (p: string) => updateChatPriority(chatId, p),
+    onSuccess: (updated) => {
+      setChat(updated);
+      setPriorityOpen(false);
+    },
+    onError: (e: Error) => setError(e.message ?? "Failed to update priority"),
+  });
+
+  const categoryMutation = useMutation({
+    mutationFn: (c: string) => updateChatCategory(chatId, c),
+    onSuccess: (updated) => {
+      setChat(updated);
+      setCategoryOpen(false);
+    },
+    onError: (e: Error) => setError(e.message ?? "Failed to update category"),
+  });
+
   const chatItems: ChatItem[] = [
     ...messages.map((m) => ({ kind: "message" as const, ts: m.sentAt ? new Date(m.sentAt).getTime() : 0, data: m })),
     ...notes.map((n) => ({ kind: "note" as const, ts: new Date(n.createdAt).getTime(), data: n })),
   ].sort((a, b) => a.ts - b.ts);
 
-  const handleAutoSend = async (text: string, mode: InputMode) => {
-    if (!text.trim() || sending) return;
-    const content = text.trim();
-    setSending(true);
-    setError(null);
-    try {
-      if (mode === "reply") {
-        if (chat?.status === "RESOLVED") {
-          setError("Cannot send reply to a resolved chat. Please reopen it first.");
-          setSending(false);
-          return;
-        }
-        const msg = await sendSupportReply(chatId, content);
-        setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        sendTypingIndicator(chatId, false).catch(() => {});
-      } else {
-        const note = await addInternalNote(chatId, content);
-        setNotes((prev) => [...prev, note]);
-      }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to send quick reply");
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleSend = async () => {
-    if (!replyText.trim() || sending) return;
+    if (!replyText.trim()) return;
     const content = replyText.trim();
     setReplyText("");
-    setSending(true);
     setError(null);
-    try {
-      if (inputMode === "reply") {
-        const msg = await sendSupportReply(chatId, content);
-        setMessages((prev) => prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]);
-        sendTypingIndicator(chatId, false).catch(() => {});
-      } else {
-        const note = await addInternalNote(chatId, content);
-        setNotes((prev) => [...prev, note]);
+
+    if (inputMode === "reply") {
+      if (chat?.status === "RESOLVED") {
+        setError("Cannot reply to a resolved chat. Reopen it first.");
+        setReplyText(content);
+        return;
       }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to send");
-      setReplyText(content);
-    } finally {
-      setSending(false);
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: SupportMessage = {
+        id: tempId, chatId, senderId: "me", content,
+        type: "TEXT", status: "SENT",
+        sentAt: new Date().toISOString(), isDeleted: false, isSelf: true,
+      };
+      setMessages(prev => [...prev, optimistic]);
+      sendTypingIndicator(chatId, false).catch(() => {});
+      try {
+        const msg = await sendSupportReply(chatId, content);
+        setMessages(prev => {
+          const without = prev.filter(m => m.id !== tempId);
+          return without.some(m => m.id === msg.id) ? without : [...without, msg];
+        });
+      } catch (e: any) {
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setError(e.message ?? "Failed to send");
+        setReplyText(content);
+      }
+    } else {
+      const tempId = `temp-note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: InternalNote = {
+        id: tempId, chatId, authorId: "", authorName: "You",
+        content, createdAt: new Date().toISOString(),
+      };
+      setNotes(prev => [...prev, optimistic]);
+      try {
+        const note = await addInternalNote(chatId, content);
+        setNotes(prev => {
+          const without = prev.filter(n => n.id !== tempId);
+          return without.some(n => n.id === note.id) ? without : [...without, note];
+        });
+      } catch (e: any) {
+        setNotes(prev => prev.filter(n => n.id !== tempId));
+        setError(e.message ?? "Failed to add note");
+        setReplyText(content);
+      }
     }
   };
 
@@ -479,58 +492,21 @@ export default function SupportChatPage() {
     }
   };
 
-  const handleResolveToggle = async () => {
-    if (!chat || resolveLoading) return;
-    setResolveLoading(true);
-    try {
-      const updated = chat.status === "RESOLVED" ? await reopenChat(chatId) : await resolveChat(chatId);
-      setChat(updated);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to update status");
-    } finally {
-      setResolveLoading(false);
-    }
-  };
-
-  const handlePriorityChange = async (p: string) => {
-    setPriorityOpen(false);
-    if (!chat || p === chat.priority) return;
-    try {
-      const updated = await updateChatPriority(chatId, p);
-      setChat(updated);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to update priority");
-    }
-  };
-
-  const handleCategoryChange = async (c: string) => {
-    setCategoryOpen(false);
-    if (!chat) return;
-    try {
-      const updated = await updateChatCategory(chatId, c);
-      setChat(updated);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to update category");
-    }
-  };
-
   const isResolved = chat?.status === "RESOLVED";
   const isConnected = stompRef.current?.connected ?? false;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] lg:h-[calc(100vh-0rem)] max-w-[1440px] mx-auto -mx-6 lg:-mx-8 -my-6 lg:-my-8 overflow-hidden">
 
-      {/* ── Left Panel – Customer Profile ─────────────────────────────────────── */}
+      {/* Left Panel – Customer Profile */}
       <>
-        {/* Desktop */}
         <div className="hidden xl:flex flex-col w-72 border-r border-white/5 bg-[#0d0d0d] overflow-y-auto flex-shrink-0">
           <div className="px-5 pt-5 pb-3 border-b border-white/5 flex-shrink-0">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Customer Profile</p>
           </div>
-          <CustomerPanel user={user} chat={chat} recentTxns={recentTxns} />
+          <CustomerPanel user={chatUser ?? null} chat={chat} recentTxns={recentTxns} />
         </div>
 
-        {/* Mobile slide-over */}
         {showLeftPanel && (
           <>
             <div className="fixed inset-0 z-40 bg-black/60 xl:hidden" onClick={() => setShowLeftPanel(false)} />
@@ -539,13 +515,13 @@ export default function SupportChatPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30">Customer Profile</p>
                 <button onClick={() => setShowLeftPanel(false)} className="text-white/40 hover:text-white"><X size={16} /></button>
               </div>
-              <CustomerPanel user={user} chat={chat} recentTxns={recentTxns} />
+              <CustomerPanel user={chatUser ?? null} chat={chat} recentTxns={recentTxns} />
             </div>
           </>
         )}
       </>
 
-      {/* ── Center – Chat ─────────────────────────────────────────────────────── */}
+      {/* Center – Chat */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#0a0a0a]">
 
         {/* Header */}
@@ -557,7 +533,6 @@ export default function SupportChatPage() {
             <ArrowLeft size={18} />
           </button>
 
-          {/* Mobile panel toggles */}
           <button
             onClick={() => setShowLeftPanel(true)}
             className="xl:hidden p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-white transition-all flex-shrink-0"
@@ -565,7 +540,6 @@ export default function SupportChatPage() {
             <PanelLeftOpen size={16} />
           </button>
 
-          {/* User info */}
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <div className="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center overflow-hidden flex-shrink-0 border border-white/8">
               {chat?.userAvatar
@@ -578,13 +552,10 @@ export default function SupportChatPage() {
                 {chat?.userName ?? "Loading..."}
                 {chat?.userHandle && <span className="text-white/35 font-normal ml-1.5 text-xs">@{chat.userHandle}</span>}
               </p>
-              {chat?.category && (
-                <span className="text-[10px] text-white/35">{chat.category}</span>
-              )}
+              {chat?.category && <span className="text-[10px] text-white/35">{chat.category}</span>}
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Category dropdown */}
             <div className="relative">
@@ -600,9 +571,9 @@ export default function SupportChatPage() {
                   {CATEGORIES.map((c) => (
                     <button
                       key={c}
-                      onClick={() => handleCategoryChange(c)}
+                      onClick={() => categoryMutation.mutate(c)}
                       className={`w-full text-left px-4 py-2 text-xs transition-colors ${
-                        chat?.category === c ? "text-[#F5A623] bg-[#F5A623]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                        chat?.category === c ? "text-[#B7EE7A] bg-[#B7EE7A]/10" : "text-white/60 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       {c.charAt(0) + c.slice(1).toLowerCase()}
@@ -630,9 +601,9 @@ export default function SupportChatPage() {
                   {PRIORITIES.map((p) => (
                     <button
                       key={p}
-                      onClick={() => handlePriorityChange(p)}
+                      onClick={() => priorityMutation.mutate(p)}
                       className={`w-full text-left px-4 py-2 text-xs transition-colors ${
-                        chat?.priority === p ? "text-[#F5A623] bg-[#F5A623]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                        chat?.priority === p ? "text-[#B7EE7A] bg-[#B7EE7A]/10" : "text-white/60 hover:text-white hover:bg-white/5"
                       }`}
                     >
                       {p.charAt(0) + p.slice(1).toLowerCase()}
@@ -642,7 +613,6 @@ export default function SupportChatPage() {
               )}
             </div>
 
-            {/* Call Action */}
             <button
               onClick={() => {
                 if (chat?.userId) {
@@ -655,10 +625,9 @@ export default function SupportChatPage() {
               <Phone size={14} />
             </button>
 
-            {/* Resolve / Reopen */}
             <button
-              onClick={handleResolveToggle}
-              disabled={resolveLoading}
+              onClick={() => resolveMutation.mutate()}
+              disabled={resolveMutation.isPending}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                 isResolved
                   ? "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
@@ -669,7 +638,6 @@ export default function SupportChatPage() {
               <span className="hidden sm:inline">{isResolved ? "Reopen" : "Resolve"}</span>
             </button>
 
-            {/* Mobile canned responses toggle */}
             <button
               onClick={() => setShowRightPanel(true)}
               className="lg:hidden p-1.5 rounded-lg hover:bg-white/5 text-white/30 hover:text-white transition-all"
@@ -684,7 +652,7 @@ export default function SupportChatPage() {
           className="flex-1 overflow-y-auto px-4 py-5 space-y-3"
           onClick={() => { setPriorityOpen(false); setCategoryOpen(false); }}
         >
-          {loading ? (
+          {isLoading ? (
             <div className="space-y-4 pt-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className={`flex ${i % 2 === 1 ? "justify-end" : "justify-start"}`}>
@@ -723,7 +691,7 @@ export default function SupportChatPage() {
                   <div className={`flex flex-col ${isAgent ? "items-end" : "items-start"} max-w-[80%] lg:max-w-[72%]`}>
                     <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       isAgent
-                        ? "bg-[#F5A623] text-black rounded-br-sm font-medium"
+                        ? "bg-[#B7EE7A] text-black rounded-br-sm font-medium"
                         : "bg-[#1e1e1e] text-white/85 border border-white/6 rounded-bl-sm"
                     }`}>
                       {msg.isDeleted
@@ -764,13 +732,12 @@ export default function SupportChatPage() {
             </div>
           )}
 
-          {/* Mode tabs */}
           <div className="flex gap-1 mb-2.5">
             <button
               onClick={() => setInputMode("reply")}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 inputMode === "reply"
-                  ? "bg-[#F5A623]/15 text-[#F5A623] border border-[#F5A623]/25"
+                  ? "bg-[#B7EE7A]/15 text-[#B7EE7A] border border-[#B7EE7A]/25"
                   : "text-white/40 hover:text-white/70"
               }`}
             >
@@ -817,13 +784,13 @@ export default function SupportChatPage() {
             />
             <button
               onClick={handleSend}
-              disabled={!replyText.trim() || sending || (isResolved && inputMode === "reply")}
+              disabled={!replyText.trim() || (isResolved && inputMode === "reply")}
               className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
-                !replyText.trim() || sending || (isResolved && inputMode === "reply")
+                !replyText.trim() || (isResolved && inputMode === "reply")
                   ? "bg-white/5 text-white/20"
                   : inputMode === "note"
                   ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-                  : "bg-[#F5A623] text-black hover:scale-105 active:scale-95 shadow-lg shadow-[#F5A623]/15"
+                  : "bg-[#B7EE7A] text-black hover:scale-105 active:scale-95 shadow-lg shadow-[#B7EE7A]/15"
               }`}
             >
               <Send size={16} />
@@ -840,17 +807,15 @@ export default function SupportChatPage() {
         </div>
       </div>
 
-      {/* ── Right Panel – Tools ───────────────────────────────────────────────── */}
+      {/* Right Panel – Tools */}
       <>
-        {/* Desktop */}
         <div className="hidden lg:flex flex-col w-72 border-l border-white/5 bg-[#0d0d0d] flex-shrink-0 overflow-hidden">
           <SlaIndicator priority={chat?.priority ?? "NORMAL"} lastMessageAt={chat?.lastMessageAt ?? null} status={chat?.status ?? "OPEN"} />
           <div className="flex-1 overflow-hidden">
-            <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); handleAutoSend(text, "reply"); }} />
+            <CannedPanel responses={allCanned} onSelect={(text) => { setInputMode("reply"); setReplyText(text); textareaRef.current?.focus(); }} />
           </div>
         </div>
 
-        {/* Mobile slide-over */}
         {showRightPanel && (
           <>
             <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setShowRightPanel(false)} />
@@ -861,13 +826,13 @@ export default function SupportChatPage() {
               </div>
               <SlaIndicator priority={chat?.priority ?? "NORMAL"} lastMessageAt={chat?.lastMessageAt ?? null} status={chat?.status ?? "OPEN"} />
               <div className="flex-1 overflow-hidden">
-                <CannedPanel responses={cannedResponses} onSelect={(text) => { setInputMode("reply"); handleAutoSend(text, "reply"); setShowRightPanel(false); }} />
+                <CannedPanel responses={allCanned} onSelect={(text) => { setInputMode("reply"); setReplyText(text); setShowRightPanel(false); textareaRef.current?.focus(); }} />
               </div>
             </div>
           </>
         )}
       </>
-      
+
       <SupportCallModal
         isOpen={callModalOpen}
         onClose={() => setCallModalOpen(false)}
