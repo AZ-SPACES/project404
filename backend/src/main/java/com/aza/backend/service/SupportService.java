@@ -100,7 +100,9 @@ public class SupportService {
         notificationService.sendNewMessageNotification(
                 chat.getParticipantTwoId(),
                 user.getFirstName() + " " + user.getLastName(),
-                chat.getId().toString());
+                user.getId(),
+                chat.getId().toString(),
+                user.getProfileImageUrl());
 
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
@@ -230,10 +232,9 @@ public class SupportService {
         // For broadcast, send without isSelf so each subscriber sees their own perspective
         MessageResponse broadcastResponse = toMessageResponse(message);
 
-        notificationService.sendNewMessageNotification(
+        notificationService.sendSupportMessageNotification(
                 chat.getParticipantOneId(),
-                "AZA Support",
-                chat.getId().toString());
+                "AZA Support");
 
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
@@ -333,7 +334,9 @@ public class SupportService {
         notificationService.sendNewMessageNotification(
                 chat.getParticipantTwoId(),
                 user.getFirstName() + " " + user.getLastName(),
-                chat.getId().toString());
+                user.getId(),
+                chat.getId().toString(),
+                user.getProfileImageUrl());
 
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
