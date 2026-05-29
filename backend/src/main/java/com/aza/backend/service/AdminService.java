@@ -395,6 +395,8 @@ public class AdminService {
                 .walletCurrency(wallet != null ? wallet.getCurrency() : "GHS")
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
+                .customDailyLimitGhs(user.getCustomDailyLimitGhs())
+                .customSingleTransactionLimitGhs(user.getCustomSingleTransactionLimitGhs())
                 .build();
     }
 }

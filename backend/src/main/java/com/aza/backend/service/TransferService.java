@@ -93,6 +93,12 @@ public class TransferService {
                 .build();
     }
 
+    public BigDecimal getTodaySent(UUID userId) {
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        return transactionRepository.getTotalSentToday(userId, startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
+    }
+
     public YearlySpendingResponse getYearlySpendingSummary(UUID userId, int year) {
         String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
         java.util.Map<String, YearlySpendingResponse.MonthSpending> monthsMap = new java.util.LinkedHashMap<>();
@@ -149,8 +155,13 @@ public class TransferService {
             throw new AppException("KYC verification required before transfer");
         }
 
-        if(request.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new AppException("Amount exceeds max single transfer limit of GHS " + maxSingleAmount);
+        BigDecimal effectiveSingleLimit = sender.getCustomSingleTransactionLimitGhs() != null
+                ? sender.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
+        BigDecimal effectiveDailyLimit = sender.getCustomDailyLimitGhs() != null
+                ? sender.getCustomDailyLimitGhs() : maxDailyAmount;
+
+        if(request.getAmount().compareTo(effectiveSingleLimit) > 0) {
+            throw new AppException("Amount exceeds max single transfer limit of GHS " + effectiveSingleLimit);
         }
 
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
@@ -158,8 +169,8 @@ public class TransferService {
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
                 sender.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ)
         );
-        if (todayTotal.add(request.getAmount()).compareTo(maxDailyAmount) > 0) {
-            BigDecimal remaining = maxDailyAmount.subtract(todayTotal);
+        if (todayTotal.add(request.getAmount()).compareTo(effectiveDailyLimit) > 0) {
+            BigDecimal remaining = effectiveDailyLimit.subtract(todayTotal);
             throw new AppException("Transfer would exceed your daily limit. Remaining: GHS " + remaining);
         }
 
@@ -436,8 +447,10 @@ public class TransferService {
         }
         rateLimitService.enforceRateLimit("request:" + requester.getId(), 20, Duration.ofHours(1));
 
-        if (request.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new AppException("Requested amount exceeds the single transfer limit of GHS " + maxSingleAmount);
+        BigDecimal requesterSingleLimit = requester.getCustomSingleTransactionLimitGhs() != null
+                ? requester.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
+        if (request.getAmount().compareTo(requesterSingleLimit) > 0) {
+            throw new AppException("Requested amount exceeds the single transfer limit of GHS " + requesterSingleLimit);
         }
 
         // Find the user to request from — try email/phone first, then handle
@@ -502,16 +515,21 @@ public class TransferService {
             throw new AppException("Request is no longer pending");
         }
 
-        if (transaction.getAmount().compareTo(maxSingleAmount) > 0) {
-            throw new AppException("Amount exceeds your single transfer limit of GHS " + maxSingleAmount);
+        BigDecimal payerSingleLimit = payer.getCustomSingleTransactionLimitGhs() != null
+                ? payer.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
+        BigDecimal payerDailyLimit = payer.getCustomDailyLimitGhs() != null
+                ? payer.getCustomDailyLimitGhs() : maxDailyAmount;
+
+        if (transaction.getAmount().compareTo(payerSingleLimit) > 0) {
+            throw new AppException("Amount exceeds your single transfer limit of GHS " + payerSingleLimit);
         }
 
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
                 payer.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
-        if (todayTotal.add(transaction.getAmount()).compareTo(maxDailyAmount) > 0) {
-            throw new AppException("Accepting this request would exceed your daily transfer limit of GHS " + maxDailyAmount);
+        if (todayTotal.add(transaction.getAmount()).compareTo(payerDailyLimit) > 0) {
+            throw new AppException("Accepting this request would exceed your daily transfer limit of GHS " + payerDailyLimit);
         }
 
         // Execute transfer

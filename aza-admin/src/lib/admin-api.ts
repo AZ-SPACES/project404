@@ -247,6 +247,8 @@ export interface AdminUser {
   walletCurrency: string;
   createdAt: string;
   lastLoginAt: string | null;
+  customDailyLimitGhs: number | null;
+  customSingleTransactionLimitGhs: number | null;
 }
 
 export interface Page<T> {
@@ -484,6 +486,19 @@ export function getKycRecord(userId: string): Promise<KycRecord> {
 
 export function getUserTransactions(userId: string, page = 0, size = 10): Promise<Page<AdminTransaction>> {
   return request(`/api/v1/admin/users/${userId}/transactions?page=${page}&size=${size}`);
+}
+
+// ── User transaction limits ───────────────────────────────────────────────────
+
+export function updateUserLimits(
+  userId: string,
+  dailyLimitGhs: number | null,
+  singleTransactionLimitGhs: number | null,
+): Promise<AdminUser> {
+  return request(`/api/v1/admin/users/${userId}/limits`, {
+    method: "PATCH",
+    body: JSON.stringify({ dailyLimitGhs, singleTransactionLimitGhs }),
+  });
 }
 
 // ── Support management ────────────────────────────────────────────────────────

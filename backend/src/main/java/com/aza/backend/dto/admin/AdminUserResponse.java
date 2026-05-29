@@ -31,4 +31,6 @@ public class AdminUserResponse {
     private String walletCurrency;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
+    private BigDecimal customDailyLimitGhs;
+    private BigDecimal customSingleTransactionLimitGhs;
 }

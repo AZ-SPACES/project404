@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -9,6 +9,7 @@ import {
   updateUserRole,
   getKycRecord,
   getUserTransactions,
+  updateUserLimits,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
@@ -94,6 +95,9 @@ export default function UserDetailPage() {
   const [newStatus, setNewStatus] = useState("");
   const [reason, setReason] = useState("");
 
+  const [dailyLimit, setDailyLimit] = useState<string>("");
+  const [singleLimit, setSingleLimit] = useState<string>("");
+
   const { data: user, isLoading, error } = useQuery<AdminUser>({
     queryKey: ["user", userId],
     queryFn: () => getUserDetail(userId),
@@ -133,6 +137,25 @@ export default function UserDetailPage() {
       queryClient.setQueryData(["user", userId], updated);
     },
   });
+
+  const limitsMutation = useMutation({
+    mutationFn: () => updateUserLimits(
+      userId,
+      dailyLimit !== "" ? Number(dailyLimit) : null,
+      singleLimit !== "" ? Number(singleLimit) : null,
+    ),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      setDailyLimit(user.customDailyLimitGhs != null ? String(user.customDailyLimitGhs) : "");
+      setSingleLimit(user.customSingleTransactionLimitGhs != null ? String(user.customSingleTransactionLimitGhs) : "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
   if (error && !user) return (
@@ -278,6 +301,59 @@ export default function UserDetailPage() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Transaction Limits</p>
+        <p className="text-white/30 text-xs mb-4">Leave blank to use the platform default.</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-white/80">Max Daily Transfer</p>
+              <p className="text-xs text-white/35 mt-0.5">Maximum total transfers per day</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-white/40 font-medium">GHS</span>
+              <input
+                type="number"
+                value={dailyLimit}
+                onChange={(e) => setDailyLimit(e.target.value)}
+                placeholder="default"
+                className="w-28 bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white text-right focus:outline-none focus:border-white/20 transition-colors placeholder-white/20"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+            <div>
+              <p className="text-sm font-medium text-white/80">Max Single Transaction</p>
+              <p className="text-xs text-white/35 mt-0.5">Maximum amount per transaction</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-white/40 font-medium">GHS</span>
+              <input
+                type="number"
+                value={singleLimit}
+                onChange={(e) => setSingleLimit(e.target.value)}
+                placeholder="default"
+                className="w-28 bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white text-right focus:outline-none focus:border-white/20 transition-colors placeholder-white/20"
+              />
+            </div>
+          </div>
+        </div>
+        {limitsMutation.error && (
+          <p className="text-red-400 text-xs mt-3">{(limitsMutation.error as Error).message}</p>
+        )}
+        {limitsMutation.isSuccess && (
+          <p className="text-emerald-400 text-xs mt-3">Limits saved.</p>
+        )}
+        <button
+          onClick={() => limitsMutation.mutate()}
+          disabled={limitsMutation.isPending}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 text-sm font-medium hover:bg-[#B7EE7A]/20 disabled:opacity-50 transition-colors"
+        >
+          {limitsMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+          Save Limits
+        </button>
       </div>
 
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">

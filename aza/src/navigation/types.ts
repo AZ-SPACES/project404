@@ -55,6 +55,8 @@ export type RootStackParamList = {
   EnableBiometrics: undefined;
   Send: undefined;
   Profile: undefined;
+  LimitsAndUsage: undefined;
+  LimitIncreaseRequest: undefined;
   Appearance: undefined;
   Receive: undefined;
   HelpAndSupport: undefined;

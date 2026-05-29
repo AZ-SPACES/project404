@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
-import { getWalletBalance } from '../../../services/api';
+import { getWalletBalance, getUserLimits } from '../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { formatCurrency } from '../../../utils/transactionUtils';
@@ -39,13 +39,20 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
       queryFn: async () => { const res = await getWalletBalance(); return res.data?.data || res.data; },
       staleTime: 30_000,
     });
+    const { data: limitsData } = useQuery({
+      queryKey: queryKeys.userLimits(),
+      queryFn: async () => { const res = await getUserLimits(); return res.data?.data || res.data; },
+      staleTime: 5 * 60_000,
+    });
     const balance: number | null = walletData?.balance ?? null;
     const balanceCurrency: string = walletData?.currency ?? 'GHS';
+    const singleLimit: number | null = limitsData?.singleTransactionLimitGhs ?? null;
 
     const numericAmount = amount === '' || amount === '.' ? 0 : (parseFloat(amount) || 0);
     const displayAmount = numericAmount > 0 ? numericAmount.toFixed(2) : '0.00';
     const isOverBalance = balance !== null && numericAmount > balance;
-    const canSend = numericAmount > 0 && !isLoading && !isOverBalance;
+    const isOverSingleLimit = singleLimit !== null && numericAmount > singleLimit;
+    const canSend = numericAmount > 0 && !isLoading && !isOverBalance && !isOverSingleLimit;
 
     const handleAmountChange = (text: string) => {
         // Allow only digits and a single decimal point
@@ -174,12 +181,20 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                 </Text>
                             </View>
 
-                            {/* Over-limit warning */}
+                            {/* Over-balance / over-limit warnings */}
                             {isOverBalance && (
                                 <View style={styles.warningRow}>
                                     <Feather name="alert-circle" size={13} color={Colors.error || '#EF4444'} />
                                     <Text style={[styles.feeText, { color: Colors.error || '#EF4444', marginLeft: 4 }]}>
                                         Amount exceeds your balance
+                                    </Text>
+                                </View>
+                            )}
+                            {isOverSingleLimit && !isOverBalance && (
+                                <View style={styles.warningRow}>
+                                    <Feather name="alert-circle" size={13} color={Colors.error || '#EF4444'} />
+                                    <Text style={[styles.feeText, { color: Colors.error || '#EF4444', marginLeft: 4 }]}>
+                                        Exceeds your single transfer limit of {formatCurrency(singleLimit!, balanceCurrency)}
                                     </Text>
                                 </View>
                             )}

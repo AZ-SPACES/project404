@@ -30,12 +30,26 @@ public class UserController {
     private final ContactService contactService;
     private final PresenceService presenceService;
     private final ObjectMapper objectMapper;
+    private final com.aza.backend.service.SystemSettingService settingService;
 
     // ==================== CURRENT USER ====================
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Object>> getMe(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(userService.getProfile(user)));
+    }
+
+    @GetMapping("/me/limits")
+    public ResponseEntity<ApiResponse<Map<String, java.math.BigDecimal>>> getMyLimits(
+            @AuthenticationPrincipal User user) {
+        com.aza.backend.dto.admin.SystemSettingsResponse settings = settingService.getSettings();
+        java.math.BigDecimal daily = user.getCustomDailyLimitGhs() != null
+                ? user.getCustomDailyLimitGhs() : settings.getMaxDailyTransferGhs();
+        java.math.BigDecimal single = user.getCustomSingleTransactionLimitGhs() != null
+                ? user.getCustomSingleTransactionLimitGhs() : settings.getMaxSingleTransactionGhs();
+        return ResponseEntity.ok(ApiResponse.success(Map.of(
+                "dailyLimitGhs", daily,
+                "singleTransactionLimitGhs", single)));
     }
 
     @PutMapping("/me")
