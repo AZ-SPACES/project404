@@ -65,8 +65,19 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                     // App-push 2FA approval must be authenticated — the responding device already has a JWT.
-                    // This rule must precede the /api/v1/auth/** permitAll wildcard.
+                    // These rules must precede the /api/v1/auth/** permitAll wildcard.
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/app/respond").authenticated();
+                    // Recovery contact management — requires full auth (these are not pre-auth flows)
+                    auth.requestMatchers(
+                            "/api/v1/auth/recovery-contact",
+                            "/api/v1/auth/recovery-contact/invite",
+                            "/api/v1/auth/recovery-contact/pending-invitations",
+                            "/api/v1/auth/recovery-contact/generate",
+                            "/api/v1/auth/recovery-contact/*/accept",
+                            "/api/v1/auth/recovery-contact/*/decline",
+                            "/api/v1/auth/recovery-contact/*/as-contact"
+                    ).authenticated();
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/auth/recovery-contact/*").authenticated();
                     auth.requestMatchers(
                             "/api/v1/auth/**",
                             "/api/v1/waitlist",
@@ -87,6 +98,8 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/merchant/team/accept/*").permitAll();
                     // Public merchant profile by handle — for customer payment pages
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/merchant/public/*").permitAll();
+                    // Statement verification — publicly accessible so employers/banks can verify
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(

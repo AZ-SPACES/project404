@@ -107,8 +107,8 @@ function MerchantAvatar({ merchant }: { merchant: Merchant }) {
     .join("")
     .toUpperCase();
   return (
-    <div className="w-7 h-7 rounded-lg bg-[#10b981]/20 border border-[#10b981]/30 flex items-center justify-center flex-shrink-0">
-      <span className="text-[10px] font-bold text-[#10b981]">{initials}</span>
+    <div className="w-7 h-7 rounded-lg bg-[#B7EE7A]/20 border border-[#B7EE7A]/30 flex items-center justify-center flex-shrink-0">
+      <span className="text-[10px] font-bold text-[#B7EE7A]">{initials}</span>
     </div>
   );
 }
@@ -155,14 +155,11 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
     <aside className="flex flex-col h-full bg-[#161616] border-r border-white/5">
       {/* Logo + business name */}
       <div className="h-16 flex items-center px-4 border-b border-white/5 flex-shrink-0 gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-[#10b981] flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-xs">A</span>
-        </div>
+        <img src="/logo.png" alt="Aza Merchants" className="h-6 w-auto flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate leading-tight">
             {merchant?.businessName}
           </p>
-          <p className="text-[10px] text-[#10b981] font-medium">merchants</p>
         </div>
       </div>
 
@@ -184,7 +181,7 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                       ${active
-                        ? "bg-[#10b981]/12 text-[#10b981]"
+                        ? "bg-[#B7EE7A]/12 text-[#B7EE7A]"
                         : "text-white/55 hover:text-white hover:bg-white/5"
                       }
                     `}
@@ -206,7 +203,7 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
             <MerchantAvatar merchant={merchant} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-white truncate">@{merchant.businessHandle}</p>
-              <p className={`text-[10px] font-medium ${merchant.status === "ACTIVE" ? "text-[#10b981]" : "text-amber-400"}`}>
+              <p className={`text-[10px] font-medium ${merchant.status === "ACTIVE" ? "text-[#B7EE7A]" : "text-amber-400"}`}>
                 {merchant.status === "ACTIVE" ? "Live" : "Suspended"}
               </p>
             </div>
@@ -253,9 +250,7 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
           >
             <Menu size={20} />
           </button>
-          <span className="text-sm font-semibold">
-            aza <span className="text-[#10b981] text-xs font-normal">merchants</span>
-          </span>
+          <img src="/logo.png" alt="Aza Merchants" className="h-6 w-auto" />
           <div className="w-8" />
         </header>
 

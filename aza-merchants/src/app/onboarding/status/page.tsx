@@ -52,7 +52,7 @@ export default function OnboardingStatusPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f]">
-        <Loader2 className="animate-spin text-[#10b981]" size={28} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={28} />
       </div>
     );
   }
@@ -63,11 +63,11 @@ export default function OnboardingStatusPage() {
     <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
       <header className="h-14 border-b border-white/5 flex items-center justify-between px-6">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#10b981] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-[#174717] flex items-center justify-center">
             <span className="text-white font-bold text-xs">A</span>
           </div>
           <span className="text-base font-semibold">
-            aza <span className="text-[#10b981] text-xs font-normal">merchants</span>
+            aza <span className="text-[#B7EE7A] text-xs font-normal">merchants</span>
           </span>
         </div>
         <button
@@ -155,7 +155,7 @@ function MoreInfoContent({ adminNote, onResubmit }: { adminNote?: string | null;
       )}
       <button
         onClick={onResubmit}
-        className="w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
       >
         <Upload size={15} />
         Update &amp; resubmit
@@ -195,7 +195,7 @@ function TimelineStep({ done, active, label, detail }: { done: boolean; active?:
   return (
     <div className="flex items-start gap-3">
       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-        done ? "bg-[#10b981] text-white" : active ? "bg-amber-500/20 border border-amber-500" : "bg-white/8 border border-white/15"
+        done ? "bg-[#174717] text-white" : active ? "bg-amber-500/20 border border-amber-500" : "bg-white/8 border border-white/15"
       }`}>
         {done ? <CheckCircle2 size={14} /> : active ? <Clock size={12} className="text-amber-400" /> : null}
       </div>

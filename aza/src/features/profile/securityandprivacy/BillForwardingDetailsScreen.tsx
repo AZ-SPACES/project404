@@ -32,7 +32,7 @@ export function BillForwardingDetailsScreen() {
   const [enabled, setEnabled] = useState(billForwardingEnabled);
   const [copied, setCopied] = useState(false);
   // Using user-specific billing address from backend (e.g. bills+{handle}@aza.app)
-  const emailAddress = handle ? `bills+${handle}@aza.app` : 'Pending account setup';
+  const emailAddress = handle ? `bills+${handle}@aza.systems` : 'Pending account setup';
 
   const handleToggle = async (value: boolean) => {
     setEnabled(value);
@@ -105,21 +105,16 @@ export function BillForwardingDetailsScreen() {
               <View style={styles.emailContainer}>
                 <Text style={styles.label}>Send bills or invoices to</Text>
                 <Text style={styles.emailText}>
-                  bills@azapay.com
+                  {emailAddress}
                 </Text>
                 <Text style={[Typography.caption, { color: Colors.primary, marginTop: 8, fontWeight: '600' }]}>
                   Important: Must be forwarded from {email}
                 </Text>
               </View>
-              <TouchableOpacity 
-                style={[styles.copyButton, copied && { backgroundColor: "#DCFCE7" }]} 
+              <TouchableOpacity
+                style={[styles.copyButton, copied && { backgroundColor: "#DCFCE7" }]}
                 activeOpacity={0.7}
-                onPress={() => {
-                  Clipboard.setString('bills@azapay.com');
-                  setCopied(true);
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  setTimeout(() => setCopied(false), 3000);
-                }}
+                onPress={handleCopy}
               >
                 <Text style={[styles.copyButtonText, copied && { color: "#166534" }]}>
                   {copied ? "Copied" : "Copy"}

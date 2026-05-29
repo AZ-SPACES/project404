@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getUserDetail,
   updateUserStatus,
   updateUserRole,
   getKycRecord,
   getUserTransactions,
+  updateUserLimits,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
@@ -87,68 +89,78 @@ function DocImage({ url, label }: { url: string | null; label: string }) {
 export default function UserDetailPage() {
   const params = useParams();
   const userId = params.id as string;
-
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [kycRecord, setKycRecord] = useState<KycRecord | null>(null);
-  const [userTxs, setUserTxs] = useState<AdminTransaction[]>([]);
+  const queryClient = useQueryClient();
 
   const [statusModal, setStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [reason, setReason] = useState("");
-  const [updating, setUpdating] = useState(false);
-  const [roleUpdating, setRoleUpdating] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [userResult] = await Promise.all([
-        getUserDetail(userId),
-        getKycRecord(userId)
-          .then(setKycRecord)
-          .catch(() => { /* silently ignore — no KYC submission yet */ }),
-        getUserTransactions(userId, 0, 5)
-          .then(page => setUserTxs(page.content))
-          .catch(() => { /* silently ignore */ }),
-      ]);
-      setUser(userResult);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load user");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+  const [dailyLimit, setDailyLimit] = useState<string>("");
+  const [singleLimit, setSingleLimit] = useState<string>("");
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data: user, isLoading, error } = useQuery<AdminUser>({
+    queryKey: ["user", userId],
+    queryFn: () => getUserDetail(userId),
+  });
 
-  async function applyStatus() {
-    if (!newStatus) return;
-    setUpdating(true);
-    try {
-      setUser(await updateUserStatus(userId, newStatus, reason));
+  const { data: kycRecord } = useQuery<KycRecord>({
+    queryKey: ["kycRecord", userId],
+    queryFn: () => getKycRecord(userId),
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const { data: txPage } = useQuery({
+    queryKey: ["userTxs", userId],
+    queryFn: () => getUserTransactions(userId, 0, 5),
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const userTxs: AdminTransaction[] = txPage?.content ?? [];
+
+  const statusMutation = useMutation({
+    mutationFn: () => updateUserStatus(userId, newStatus, reason),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
       setStatusModal(false);
       setReason("");
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setUpdating(false); }
-  }
+    },
+  });
 
-  async function toggleRole() {
-    if (!user) return;
-    const next = user.role === "ADMIN" ? "USER" : "ADMIN";
-    setRoleUpdating(true);
-    try { setUser(await updateUserRole(userId, next)); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setRoleUpdating(false); }
-  }
+  const roleMutation = useMutation({
+    mutationFn: () => {
+      const next = user?.role === "ADMIN" ? "USER" : "ADMIN";
+      return updateUserRole(userId, next);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
+    },
+  });
 
-  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
+  const limitsMutation = useMutation({
+    mutationFn: () => updateUserLimits(
+      userId,
+      dailyLimit !== "" ? Number(dailyLimit) : null,
+      singleLimit !== "" ? Number(singleLimit) : null,
+    ),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["user", userId], updated);
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      setDailyLimit(user.customDailyLimitGhs != null ? String(user.customDailyLimitGhs) : "");
+      setSingleLimit(user.customSingleTransactionLimitGhs != null ? String(user.customSingleTransactionLimitGhs) : "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  if (isLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="animate-spin text-white/40" size={28} /></div>;
   if (error && !user) return (
     <div className="space-y-4">
-      <p className="text-red-400">{error}</p>
+      <p className="text-red-400">{(error as Error).message}</p>
       <Link href="/users" className="text-white/50 text-sm hover:text-white flex items-center gap-1"><ArrowLeft size={14} /> Back</Link>
     </div>
   );
@@ -159,7 +171,6 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/users" className="text-white/40 hover:text-white transition-colors"><ArrowLeft size={20} /></Link>
         <div className="flex-1">
@@ -172,7 +183,6 @@ export default function UserDetailPage() {
         </button>
       </div>
 
-      {/* Status chips */}
       <div className="flex flex-wrap gap-2">
         <span className={`text-xs px-3 py-1 rounded-full font-medium border ${STATUS_COLORS[user.accountStatus] ?? "bg-white/10 text-white/40"}`}>
           {user.accountStatus}
@@ -180,12 +190,11 @@ export default function UserDetailPage() {
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${KYC_COLORS[user.kycStatus] ?? "bg-white/10 text-white/40"}`}>
           KYC: {user.kycStatus.replace(/_/g, " ")}
         </span>
-        <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${isAdmin ? "bg-[#F5A623]/15 text-[#F5A623]" : "bg-white/10 text-white/40"}`}>
+        <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${isAdmin ? "bg-[#B7EE7A]/15 text-[#B7EE7A]" : "bg-white/10 text-white/40"}`}>
           {isAdmin && <Crown size={11} />} {user.role}
         </span>
       </div>
 
-      {/* Wallet */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Wallet</p>
         <p className="text-3xl font-semibold text-white">
@@ -193,7 +202,6 @@ export default function UserDetailPage() {
         </p>
       </div>
 
-      {/* Profile */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Profile</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -209,7 +217,6 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* Security */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Security</p>
         <div className="flex flex-wrap gap-4">
@@ -224,7 +231,6 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* KYC Documents */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">KYC Documents</p>
         {!kycRecord ? (
@@ -254,7 +260,6 @@ export default function UserDetailPage() {
         )}
       </div>
 
-      {/* Transaction History */}
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Recent Transactions</p>
         {userTxs.length === 0 ? (
@@ -298,7 +303,59 @@ export default function UserDetailPage() {
         )}
       </div>
 
-      {/* Admin role toggle */}
+      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <p className="text-white/30 text-xs uppercase tracking-wider mb-4">Transaction Limits</p>
+        <p className="text-white/30 text-xs mb-4">Leave blank to use the platform default.</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-white/80">Max Daily Transfer</p>
+              <p className="text-xs text-white/35 mt-0.5">Maximum total transfers per day</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-white/40 font-medium">GHS</span>
+              <input
+                type="number"
+                value={dailyLimit}
+                onChange={(e) => setDailyLimit(e.target.value)}
+                placeholder="default"
+                className="w-28 bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white text-right focus:outline-none focus:border-white/20 transition-colors placeholder-white/20"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+            <div>
+              <p className="text-sm font-medium text-white/80">Max Single Transaction</p>
+              <p className="text-xs text-white/35 mt-0.5">Maximum amount per transaction</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-white/40 font-medium">GHS</span>
+              <input
+                type="number"
+                value={singleLimit}
+                onChange={(e) => setSingleLimit(e.target.value)}
+                placeholder="default"
+                className="w-28 bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white text-right focus:outline-none focus:border-white/20 transition-colors placeholder-white/20"
+              />
+            </div>
+          </div>
+        </div>
+        {limitsMutation.error && (
+          <p className="text-red-400 text-xs mt-3">{(limitsMutation.error as Error).message}</p>
+        )}
+        {limitsMutation.isSuccess && (
+          <p className="text-emerald-400 text-xs mt-3">Limits saved.</p>
+        )}
+        <button
+          onClick={() => limitsMutation.mutate()}
+          disabled={limitsMutation.isPending}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 text-sm font-medium hover:bg-[#B7EE7A]/20 disabled:opacity-50 transition-colors"
+        >
+          {limitsMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+          Save Limits
+        </button>
+      </div>
+
       <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
         <p className="text-white/30 text-xs uppercase tracking-wider mb-3">Admin Access</p>
         <div className="flex items-center justify-between">
@@ -309,21 +366,20 @@ export default function UserDetailPage() {
             </p>
           </div>
           <button
-            onClick={toggleRole}
-            disabled={roleUpdating}
+            onClick={() => roleMutation.mutate()}
+            disabled={roleMutation.isPending}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${
               isAdmin
                 ? "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
-                : "bg-[#F5A623]/10 text-[#F5A623] border border-[#F5A623]/20 hover:bg-[#F5A623]/20"
+                : "bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 hover:bg-[#B7EE7A]/20"
             }`}
           >
-            {roleUpdating && <Loader2 size={14} className="animate-spin" />}
+            {roleMutation.isPending && <Loader2 size={14} className="animate-spin" />}
             {isAdmin ? "Revoke Admin" : "Make Admin"}
           </button>
         </div>
       </div>
 
-      {/* KYC review link */}
       {user.kycStatus === "UNDER_REVIEW" && (
         <Link href={`/kyc/${user.id}`}
           className="flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400 text-sm font-medium hover:bg-amber-400/15 transition-colors">
@@ -331,9 +387,10 @@ export default function UserDetailPage() {
         </Link>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {(statusMutation.error || roleMutation.error) && (
+        <p className="text-red-400 text-sm">{((statusMutation.error || roleMutation.error) as Error).message}</p>
+      )}
 
-      {/* Status modal */}
       {statusModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
@@ -346,9 +403,9 @@ export default function UserDetailPage() {
               placeholder="Reason (optional)" rows={2}
               className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none resize-none" />
             <div className="flex gap-3">
-              <button onClick={applyStatus} disabled={updating || !newStatus}
-                className="flex-1 py-2.5 rounded-xl bg-[#F5A623] text-black font-semibold text-sm hover:bg-[#F5A623]/90 disabled:opacity-50 flex items-center justify-center gap-2">
-                {updating && <Loader2 size={14} className="animate-spin" />} Apply
+              <button onClick={() => statusMutation.mutate()} disabled={statusMutation.isPending || !newStatus}
+                className="flex-1 py-2.5 rounded-xl bg-[#B7EE7A] text-black font-semibold text-sm hover:bg-[#B7EE7A]/90 disabled:opacity-50 flex items-center justify-center gap-2">
+                {statusMutation.isPending && <Loader2 size={14} className="animate-spin" />} Apply
               </button>
               <button onClick={() => setStatusModal(false)}
                 className="px-4 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white">

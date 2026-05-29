@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity,
   Modal, Alert, KeyboardAvoidingView, Platform, TextInput,
@@ -13,6 +13,9 @@ import {
   sendMerchantInvoice,
   cancelMerchantInvoice,
 } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import StatusBadge from '../components/StatusBadge';
 
@@ -105,26 +108,21 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
 }
 
 export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: invoices = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantInvoices(),
+    queryFn: async () => { const r = await getMerchantInvoices(0, 30); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const load = () => {
-    setLoading(true);
-    getMerchantInvoices(0, 30)
-      .then((r: any) => setInvoices(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
+  const invalidateInvoices = () => queryClient.invalidateQueries({ queryKey: queryKeys.merchantInvoices() });
 
   const handleSend = async (inv: any) => {
     setActionLoading(inv.id);
     try {
       await sendMerchantInvoice(inv.id);
-      load();
+      invalidateInvoices();
     } catch {
       Alert.alert('Error', 'Failed to send invoice.');
     } finally {
@@ -140,7 +138,7 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
           setActionLoading(inv.id);
           try {
             await cancelMerchantInvoice(inv.id);
-            load();
+            invalidateInvoices();
           } catch {
             Alert.alert('Error', 'Failed to cancel invoice.');
           } finally {
@@ -250,7 +248,7 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
       <CreateModal
         visible={creating}
         onClose={() => setCreating(false)}
-        onCreated={load}
+        onCreated={invalidateInvoices}
         Colors={Colors}
       />
     </View>

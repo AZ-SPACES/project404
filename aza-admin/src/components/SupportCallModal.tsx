@@ -44,8 +44,8 @@ export default function SupportCallModal({ isOpen, onClose, chatId, userName }: 
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm bg-[#1c1c1c] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
         <div className="p-8 flex flex-col items-center text-center">
-          <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 ring-4 ring-[#F5A623]/20">
-            <User size={48} className="text-[#F5A623]" />
+          <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 ring-4 ring-[#B7EE7A]/20">
+            <User size={48} className="text-[#B7EE7A]" />
           </div>
           
           <h2 className="text-xl font-semibold mb-1">{userName}</h2>

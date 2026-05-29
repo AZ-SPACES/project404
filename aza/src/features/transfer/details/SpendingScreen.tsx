@@ -17,6 +17,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../
 import { RootStackParamList } from "../../../navigation/types";
 import { getYearlySpendingSummary } from "../../../services/api";
 import { BackButton } from "../../../components/ui/BackButton";
+import { queryKeys } from "../../../lib/queryKeys";
 
 const { width } = Dimensions.get("window");
 
@@ -32,12 +33,12 @@ export default function SpendingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { data: yearlyData, isLoading: loading } = useQuery({
-    queryKey: ['spending-yearly'],
+    queryKey: queryKeys.spendingYearly(),
     queryFn: async () => {
       const response = await getYearlySpendingSummary();
       return response.data?.data ?? { months: {}, currency: 'GHS' };
     },
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
   });
 
   const spendingData: Record<string, MonthData> = yearlyData?.months ?? {};

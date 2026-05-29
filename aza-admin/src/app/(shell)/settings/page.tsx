@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSystemSettings, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
 import { Settings, AlertCircle, CheckCircle2, Loader2, Save, AlertTriangle } from "lucide-react";
 
@@ -20,25 +21,17 @@ function Toggle({ enabled, onChange, label, description, danger }: {
       <button
         onClick={() => onChange(!enabled)}
         className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-          enabled
-            ? danger ? "bg-red-500" : "bg-[#F5A623]"
-            : "bg-white/10"
+          enabled ? danger ? "bg-red-500" : "bg-[#B7EE7A]" : "bg-white/10"
         }`}
       >
-        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-          enabled ? "translate-x-7" : "translate-x-1"
-        }`} />
+        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
       </button>
     </div>
   );
 }
 
 function NumberInput({ label, description, value, onChange, prefix }: {
-  label: string;
-  description?: string;
-  value: number;
-  onChange: (v: number) => void;
-  prefix?: string;
+  label: string; description?: string; value: number; onChange: (v: number) => void; prefix?: string;
 }) {
   return (
     <div className="flex items-center justify-between py-4 border-b border-white/5 last:border-0">
@@ -60,10 +53,7 @@ function NumberInput({ label, description, value, onChange, prefix }: {
 }
 
 function TextInput({ label, description, value, onChange }: {
-  label: string;
-  description?: string;
-  value: string;
-  onChange: (v: string) => void;
+  label: string; description?: string; value: string; onChange: (v: string) => void;
 }) {
   return (
     <div className="py-4 border-b border-white/5 last:border-0">
@@ -82,37 +72,28 @@ function TextInput({ label, description, value, onChange }: {
 }
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const queryClient = useQueryClient();
   const [draft, setDraft] = useState<SystemSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    getSystemSettings()
-      .then((s) => { setSettings(s); setDraft(s); })
-      .catch((e) => setError(e.message ?? "Failed to load settings"))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: settings, isLoading, error } = useQuery<SystemSettings>({
+    queryKey: ["systemSettings"],
+    queryFn: getSystemSettings,
+  });
 
-  const handleSave = async () => {
-    if (!draft) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(false);
-    try {
-      const updated = await updateSystemSettings(draft);
-      setSettings(updated);
+  useEffect(() => {
+    if (settings) setDraft(settings);
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: () => updateSystemSettings(draft!),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["systemSettings"], updated);
       setDraft(updated);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to save settings");
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+  });
 
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(settings);
 
@@ -121,13 +102,10 @@ export default function SettingsPage() {
   };
 
   const setFlag = (key: keyof SystemSettings["featureFlags"], value: boolean) => {
-    setDraft((prev) => prev ? {
-      ...prev,
-      featureFlags: { ...prev.featureFlags, [key]: value },
-    } : prev);
+    setDraft((prev) => prev ? { ...prev, featureFlags: { ...prev.featureFlags, [key]: value } } : prev);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="animate-spin text-white/30" size={28} />
@@ -151,13 +129,19 @@ export default function SettingsPage() {
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
-          <AlertCircle size={16} />{error}
+          <AlertCircle size={16} />{(error as Error).message}
         </div>
       )}
 
       {success && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-emerald-400 text-sm flex items-center gap-2">
           <CheckCircle2 size={16} />Settings saved successfully.
+        </div>
+      )}
+
+      {saveMutation.error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle size={16} />{(saveMutation.error as Error).message}
         </div>
       )}
 
@@ -171,7 +155,6 @@ export default function SettingsPage() {
         </div>
       ) : draft && (
         <>
-          {/* Platform operations */}
           <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
             <div className="py-4 border-b border-white/5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 flex items-center gap-2">
@@ -210,28 +193,27 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Transaction limits */}
           <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
             <div className="py-4 border-b border-white/5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Transaction Limits</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Default Transaction Limits</h3>
             </div>
+            <p className="text-xs text-white/30 pt-4 pb-1">Platform-wide defaults. Individual users can have custom limits set on their profile page.</p>
             <NumberInput
-              label="Max Daily Transfer"
-              description="Maximum total transfer amount per user per day"
+              label="Default Max Daily Transfer"
+              description="Applies to users without a custom daily limit"
               value={draft.maxDailyTransferGhs}
               onChange={(v) => set("maxDailyTransferGhs", v)}
               prefix="GHS"
             />
             <NumberInput
-              label="Max Single Transaction"
-              description="Maximum amount for a single transaction"
+              label="Default Max Single Transaction"
+              description="Applies to users without a custom single-transaction limit"
               value={draft.maxSingleTransactionGhs}
               onChange={(v) => set("maxSingleTransactionGhs", v)}
               prefix="GHS"
             />
           </div>
 
-          {/* Feature flags */}
           <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
             <div className="py-4 border-b border-white/5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Feature Flags</h3>
@@ -256,7 +238,6 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Contact info */}
           <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
             <div className="py-4 border-b border-white/5">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Contact Information</h3>
@@ -275,15 +256,14 @@ export default function SettingsPage() {
             />
           </div>
 
-          {/* Save */}
           <div className="flex justify-end">
             <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#F5A623] text-black text-sm font-semibold hover:bg-[#F5A623]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              onClick={() => saveMutation.mutate()}
+              disabled={!hasChanges || saveMutation.isPending}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#B7EE7A] text-black text-sm font-semibold hover:bg-[#B7EE7A]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? "Saving..." : "Save Changes"}
+              {saveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {saveMutation.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </>

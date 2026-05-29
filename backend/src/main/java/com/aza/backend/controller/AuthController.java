@@ -38,10 +38,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<String>> login(
+    public ResponseEntity<ApiResponse<Object>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ipAddress = getClientIp(httpRequest);
-        authService.preLogin(request, ipAddress);
+        Object response = authService.preLogin(request, ipAddress);
+        if (response != null) {
+            return ResponseEntity.ok(ApiResponse.success(response));
+        }
         return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone. Please verify to complete login."));
     }
 
@@ -109,6 +112,14 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
         return ResponseEntity.ok(ApiResponse.success("OTP sent to your email/phone"));
+    }
+
+    @PostMapping("/account-recovery/init")
+    public ResponseEntity<ApiResponse<String>> initAccountRecovery(
+            @RequestParam String email, HttpServletRequest httpRequest) {
+        String ip = getClientIp(httpRequest);
+        String preAuthToken = authService.initAccountRecovery(email, ip);
+        return ResponseEntity.ok(ApiResponse.success(preAuthToken));
     }
 
     @PostMapping("/reset-password")
@@ -204,16 +215,37 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/2fa/recovery/count")
+    public ResponseEntity<ApiResponse<Long>> getRecoveryCodeCount(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(authService.getRecoveryCodeCount(user)));
+    }
+
+    @PostMapping("/2fa/recovery/sms/request")
+    public ResponseEntity<ApiResponse<String>> requestRecoveryRegenSms(
+            @AuthenticationPrincipal User user) {
+        authService.requestRecoveryCodeRegenSms(user);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to your phone"));
+    }
+
     /**
-     * Regenerates all recovery codes for the account.
-     * Old codes are invalidated immediately. Requires a valid TOTP code.
+     * Regenerates all recovery codes. Accepts TOTP or SMS verification depending on what the user has enabled.
      */
     @PostMapping("/2fa/recovery/regenerate")
     public ResponseEntity<ApiResponse<RecoveryCodesResponse>> regenerateRecoveryCodes(
             @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "TOTP") String method,
             @Valid @RequestBody TotpToggleRequest request) {
-        RecoveryCodesResponse codes = authService.regenerateRecoveryCodes(user, request.getCode());
+        RecoveryCodesResponse codes = authService.regenerateRecoveryCodes(user, request.getCode(), method);
         return ResponseEntity.ok(ApiResponse.success(codes));
+    }
+
+    @PutMapping("/2fa/default-method")
+    public ResponseEntity<ApiResponse<String>> setDefault2faMethod(
+            @AuthenticationPrincipal User user,
+            @RequestParam String method) {
+        authService.setDefaultTwoFactorMethod(user, method);
+        return ResponseEntity.ok(ApiResponse.success("Default method updated"));
     }
 
     @PostMapping("/2fa/sms/setup")

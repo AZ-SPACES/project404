@@ -417,6 +417,24 @@ public class UserService {
         }
         if (request.getPasskeysEnabled() != null) {
             user.setPasskeysEnabled(request.getPasskeysEnabled());
+            if (Boolean.TRUE.equals(request.getPasskeysEnabled())) {
+                user.setTwoFactorEnabled(true);
+                if (user.getDefaultTwoFactorMethod() == null) {
+                    user.setDefaultTwoFactorMethod(com.aza.backend.entity.User.TwoFactorMethod.PASSKEY);
+                }
+            } else {
+                // Only turn off twoFactorEnabled if no other method is still active
+                boolean anyOtherEnabled = user.getTwoFactorSecret() != null
+                        || Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())
+                        || Boolean.TRUE.equals(user.getEmailTwoFactorEnabled())
+                        || Boolean.TRUE.equals(user.getAppTwoFactorEnabled());
+                if (!anyOtherEnabled) {
+                    user.setTwoFactorEnabled(false);
+                }
+                if (com.aza.backend.entity.User.TwoFactorMethod.PASSKEY.equals(user.getDefaultTwoFactorMethod())) {
+                    user.setDefaultTwoFactorMethod(null);
+                }
+            }
         }
         userRepository.save(user);
     }

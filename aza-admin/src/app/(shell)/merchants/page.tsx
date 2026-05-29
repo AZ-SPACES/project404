@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   getMerchants,
   getMerchantStats,
@@ -84,42 +85,30 @@ function MerchantAvatar({ merchant }: { merchant: AdminMerchant }) {
 
 export default function MerchantsPage() {
   const router = useRouter();
-  const [data, setData] = useState<Page<AdminMerchant> | null>(null);
-  const [stats, setStats] = useState<MerchantStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(0);
 
-  // Load global stats once (accurate totals independent of current page)
   useEffect(() => {
-    getMerchantStats().then(setStats).catch(() => null);
-  }, []);
-
-  const load = useCallback(async (p: number, q: string, st: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getMerchants({
-        query: q || undefined,
-        status: st !== "ALL" ? st : undefined,
-        page: p,
-        size: 20,
-      });
-      setData(res);
-      setPage(p);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load merchants");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => load(0, query, statusFilter), query ? 300 : 0);
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(t);
-  }, [load, query, statusFilter]);
+  }, [query]);
+
+  const { data: stats } = useQuery<MerchantStats>({
+    queryKey: ["merchantStats"],
+    queryFn: getMerchantStats,
+  });
+
+  const { data, isLoading, error } = useQuery<Page<AdminMerchant>>({
+    queryKey: ["merchants", { query: debouncedQuery, statusFilter, page }],
+    queryFn: () => getMerchants({
+      query: debouncedQuery || undefined,
+      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      page,
+      size: 20,
+    }),
+  });
 
   const reviewQueue = (stats?.kybUnderReview ?? 0) + (stats?.kybSubmitted ?? 0) + (stats?.moreInfoRequired ?? 0);
 
@@ -132,7 +121,6 @@ export default function MerchantsPage() {
         </div>
       </div>
 
-      {/* KYB review queue alert */}
       {reviewQueue > 0 && (
         <div
           onClick={() => setStatusFilter("KYB_UNDER_REVIEW")}
@@ -153,33 +141,12 @@ export default function MerchantsPage() {
         </div>
       )}
 
-      {/* Summary cards — sourced from stats endpoint, not current page */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          {
-            label: "Total",
-            value: stats?.total ?? data?.totalElements ?? "—",
-            color: "text-white",
-            icon: Store,
-          },
-          {
-            label: "Active",
-            value: stats?.active ?? "—",
-            color: "text-emerald-400",
-            icon: Store,
-          },
-          {
-            label: "Awaiting KYB",
-            value: reviewQueue || "—",
-            color: reviewQueue > 0 ? "text-amber-400" : "text-white/40",
-            icon: ShieldCheck,
-          },
-          {
-            label: "Total Volume",
-            value: stats ? fmtAmount(stats.totalVolume) : "—",
-            color: "text-[#F5A623]",
-            icon: TrendingUp,
-          },
+          { label: "Total", value: stats?.total ?? data?.totalElements ?? "—", color: "text-white", icon: Store },
+          { label: "Active", value: stats?.active ?? "—", color: "text-emerald-400", icon: Store },
+          { label: "Awaiting KYB", value: reviewQueue || "—", color: reviewQueue > 0 ? "text-amber-400" : "text-white/40", icon: ShieldCheck },
+          { label: "Total Volume", value: stats ? fmtAmount(stats.totalVolume) : "—", color: "text-[#B7EE7A]", icon: TrendingUp },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
@@ -191,7 +158,6 @@ export default function MerchantsPage() {
         ))}
       </div>
 
-      {/* Balance breakdown */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-[#161616] border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -211,7 +177,6 @@ export default function MerchantsPage() {
         </div>
       )}
 
-      {/* Search + filters */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 max-w-xs">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
@@ -219,7 +184,7 @@ export default function MerchantsPage() {
             type="text"
             placeholder="Search name or handle…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setPage(0); }}
             className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/8 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20"
           />
         </div>
@@ -228,9 +193,9 @@ export default function MerchantsPage() {
           {STATUS_FILTERS.slice(0, 5).map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setPage(0); }}
               className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+                statusFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
               }`}
             >
               {STATUS_FILTER_LABELS[s]}
@@ -245,9 +210,9 @@ export default function MerchantsPage() {
           {STATUS_FILTERS.slice(5).map((s) => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => { setStatusFilter(s); setPage(0); }}
               className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#F5A623] text-black" : "text-white/50 hover:text-white"
+                statusFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
               }`}
             >
               {STATUS_FILTER_LABELS[s]}
@@ -261,11 +226,11 @@ export default function MerchantsPage() {
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
-          <AlertCircle size={16} />{error}
+          <AlertCircle size={16} />{(error as Error).message}
         </div>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="animate-spin text-white/30" size={24} />
         </div>
@@ -309,9 +274,7 @@ export default function MerchantsPage() {
                       {m.category ? m.category.replace(/_/g, " ").toLowerCase() : "—"}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5">
-                    <StatusBadge status={m.status} />
-                  </td>
+                  <td className="px-5 py-3.5"><StatusBadge status={m.status} /></td>
                   <td className="px-5 py-3.5 text-right hidden lg:table-cell">
                     <span className="text-white/70 font-mono text-xs">{fmtAmount(m.balance, m.currency)}</span>
                   </td>
@@ -334,16 +297,16 @@ export default function MerchantsPage() {
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
           <button
-            onClick={() => load(page - 1, query, statusFilter)}
-            disabled={page === 0 || loading}
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 0 || isLoading}
             className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5"
           >
             Previous
           </button>
           <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
           <button
-            onClick={() => load(page + 1, query, statusFilter)}
-            disabled={page >= data.totalPages - 1 || loading}
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= data.totalPages - 1 || isLoading}
             className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5"
           >
             Next

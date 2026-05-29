@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -38,24 +37,20 @@ public class EmailService {
     @Value("${brevo.sender-email:noreply@aza.systems}")
     private String senderEmail;
 
-    private String logoBase64;
-
-    private String getLogoBase64() {
-        if (logoBase64 == null) {
-            try {
-                byte[] bytes = new ClassPathResource("static/images/paper-plane.png")
-                        .getInputStream().readAllBytes();
-                logoBase64 = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
-            } catch (Exception e) {
-                log.warn("Could not load paper-plane logo: {}", e.getMessage());
-                logoBase64 = "";
-            }
-        }
-        return logoBase64;
-    }
+    @Value("${app.base-url:https://aza.systems}")
+    private String appBaseUrl;
 
     private String inlineImages(String html) {
-        return html.replace("src=\"cid:paperplane\"", "src=\"" + getLogoBase64() + "\"");
+        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + appBaseUrl + "/images/aza.png\"");
+        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + appBaseUrl + "/images/Aza_Merchant.png\"");
+        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + appBaseUrl + "/images/Aza-admin.png\"");
+        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + appBaseUrl + "/images/Aza-Pay.png\"");
+        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + appBaseUrl + "/images/aza.png\"");
+        return result;
+    }
+
+    public String getSupportEmail() {
+        return senderEmail;
     }
 
     public boolean sendEmail(String to, String subject, String htmlBody) {
@@ -112,6 +107,21 @@ public class EmailService {
             String html = inlineImages(templateEngine.process("email/login-notification", ctx));
             sendViaBrevo("AZA Security", senderEmail, email,
                     "Security Alert: New Login to your AZA Account", html, null, null);
+        });
+    }
+
+    public void sendLimitIncreaseEmail(String email, String firstName,
+                                       boolean dailyIncreased, java.math.BigDecimal newDaily,
+                                       boolean singleIncreased, java.math.BigDecimal newSingle) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", firstName);
+            ctx.setVariable("dailyIncreased", dailyIncreased);
+            ctx.setVariable("newDaily", newDaily);
+            ctx.setVariable("singleIncreased", singleIncreased);
+            ctx.setVariable("newSingle", newSingle);
+            String html = inlineImages(templateEngine.process("email/limit-increase", ctx));
+            sendViaBrevo("AZA", senderEmail, email, "Your AZA transaction limits have been increased", html, null, null);
         });
     }
 

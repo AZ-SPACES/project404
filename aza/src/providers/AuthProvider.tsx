@@ -47,7 +47,6 @@ type AuthContextType = AuthState & {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STATE_KEY = "aza_auth_state";
-export const PASSCODE_VALUE_KEY = "aza_passcode";
 const PIN_ATTEMPTS_KEY = "aza_pin_attempts";
 const MAX_PIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
@@ -81,12 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       let hasPasscodeResolved = stateFromStorage?.hasPasscode || false;
-      if (!hasPasscodeResolved && stateFromStorage?.userToken) {
-        try {
-          const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
-          hasPasscodeResolved = stored !== null;
-        } catch (_) {}
-      }
 
       // If the user has a token but isKYCVerified is false locally, check the
       // backend before rendering — this prevents routing to KYC when the admin
@@ -180,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Clear all persisted secrets in the background
     Promise.all([
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),
-      SecureStore.deleteItemAsync(PASSCODE_VALUE_KEY),
       SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
     ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
   }, []);
@@ -200,30 +192,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [saveState]);
 
   const getPasscodeValue = useCallback(async (): Promise<string | null> => {
-    try {
-      return await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
-    } catch (e) {
-      console.error("Failed to read passcode value", e);
-      return null;
-    }
+    return null; // Disabled: we no longer store passcodes locally
   }, []);
 
   const savePasscodeValue = useCallback(async (code: string): Promise<void> => {
-    try {
-      await SecureStore.setItemAsync(PASSCODE_VALUE_KEY, code);
-    } catch (e) {
-      console.error("Failed to save passcode value", e);
-      Alert.alert(
-        "Passcode Error",
-        "We couldn't save your passcode. Please try again.",
-      );
-    }
+    // Disabled: we no longer store passcodes locally
   }, []);
 
   const verifyPasscode = useCallback(async (code: string): Promise<boolean> => {
     try {
-      const stored = await SecureStore.getItemAsync(PASSCODE_VALUE_KEY);
-      return stored !== null && stored === code;
+      const { api } = await import("../services/api");
+      const response = await api.post("/api/v1/auth/passcode/verify", { passcode: code });
+      return response.status === 200 || response.status === 201;
     } catch (e) {
       console.error("Failed to verify passcode", e);
       return false;

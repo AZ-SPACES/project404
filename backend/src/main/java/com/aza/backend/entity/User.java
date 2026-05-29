@@ -170,6 +170,13 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String oneTimePreKeysJson;
 
+    // --- Per-user transaction limit overrides (null = use global default) ---
+    @Column(precision = 15, scale = 2)
+    private java.math.BigDecimal customDailyLimitGhs;
+
+    @Column(precision = 15, scale = 2)
+    private java.math.BigDecimal customSingleTransactionLimitGhs;
+
     // --- Metadata ---
     @CreationTimestamp
     private LocalDateTime createdAt;

@@ -59,7 +59,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-[#10b981]" : "bg-white/15"}`}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${enabled ? "bg-[#174717]" : "bg-white/15"}`}
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
     </button>
@@ -124,7 +124,7 @@ export default function NotificationPreferencesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48">
-        <Loader2 className="animate-spin text-[#10b981]" size={22} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
       </div>
     );
   }
@@ -161,7 +161,7 @@ export default function NotificationPreferencesPage() {
                         step="0.01"
                         value={lowBalanceThreshold}
                         onChange={(e) => setLowBalanceThreshold(e.target.value)}
-                        className="w-28 bg-black/30 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-[#10b981]/50"
+                        className="w-28 bg-black/30 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
                         placeholder="50.00"
                       />
                     </div>
@@ -181,13 +181,13 @@ export default function NotificationPreferencesPage() {
         <button
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
           {saving ? "Saving…" : "Save preferences"}
         </button>
         {saved && (
-          <span className="flex items-center gap-1.5 text-sm text-[#10b981]">
+          <span className="flex items-center gap-1.5 text-sm text-[#B7EE7A]">
             <CheckCircle2 size={15} />Saved
           </span>
         )}
@@ -198,7 +198,7 @@ export default function NotificationPreferencesPage() {
           <Bell size={15} className="text-white/30 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-white/30">
             Emails are sent to your business email address on file. Update it in{" "}
-            <a href="/settings" className="text-[#10b981] hover:underline">Settings</a>.
+            <a href="/settings" className="text-[#B7EE7A] hover:underline">Settings</a>.
           </p>
         </div>
       </div>

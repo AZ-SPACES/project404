@@ -218,7 +218,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f]">
-        <Loader2 className="animate-spin text-[#10b981]" size={28} />
+        <Loader2 className="animate-spin text-[#B7EE7A]" size={28} />
       </div>
     );
   }
@@ -229,11 +229,11 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
       <header className="h-14 border-b border-white/5 flex items-center px-6 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#10b981] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-[#174717] flex items-center justify-center">
             <span className="text-white font-bold text-xs">A</span>
           </div>
           <span className="text-base font-semibold">
-            aza <span className="text-[#10b981] text-xs font-normal">merchants</span>
+            aza <span className="text-[#B7EE7A] text-xs font-normal">merchants</span>
           </span>
         </div>
       </header>
@@ -247,16 +247,16 @@ export default function OnboardingPage() {
                 <div className={`flex items-center gap-2 ${i <= stepIndex ? "opacity-100" : "opacity-30"}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     i < stepIndex
-                      ? "bg-[#10b981] text-white"
+                      ? "bg-[#174717] text-white"
                       : i === stepIndex
-                      ? "bg-[#10b981]/20 border border-[#10b981] text-[#10b981]"
+                      ? "bg-[#B7EE7A]/20 border border-[#B7EE7A] text-[#B7EE7A]"
                       : "bg-white/10 text-white/40"
                   }`}>
                     {i < stepIndex ? <CheckCircle2 size={14} /> : i + 1}
                   </div>
                   <span className="text-xs font-medium text-white/60 hidden sm:block">{label}</span>
                 </div>
-                {i < 2 && <div className={`h-px flex-1 ${i < stepIndex ? "bg-[#10b981]/40" : "bg-white/10"}`} />}
+                {i < 2 && <div className={`h-px flex-1 ${i < stepIndex ? "bg-[#B7EE7A]/40" : "bg-white/10"}`} />}
               </div>
             ))}
           </div>
@@ -298,7 +298,7 @@ export default function OnboardingPage() {
                         {handleChecking ? (
                           <Loader2 size={13} className="animate-spin text-white/30" />
                         ) : handleAvailable === true ? (
-                          <CheckCircle2 size={13} className="text-[#10b981]" />
+                          <CheckCircle2 size={13} className="text-[#B7EE7A]" />
                         ) : handleAvailable === false ? (
                           <X size={13} className="text-red-400" />
                         ) : null}
@@ -421,8 +421,8 @@ export default function OnboardingPage() {
                   const isUploading = uploading === slot.type;
                   return (
                     <div key={slot.type} className="bg-white/4 border border-white/8 rounded-xl p-4 flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${uploaded ? "bg-[#10b981]/15" : "bg-white/6"}`}>
-                        {uploaded ? <CheckCircle2 size={18} className="text-[#10b981]" /> : <FileText size={18} className="text-white/30" />}
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${uploaded ? "bg-[#B7EE7A]/15" : "bg-white/6"}`}>
+                        {uploaded ? <CheckCircle2 size={18} className="text-[#B7EE7A]" /> : <FileText size={18} className="text-white/30" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white">{slot.label}</p>
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
                         )}
                       </div>
                       {uploaded ? (
-                        <span className="text-xs text-[#10b981] font-medium">Done</span>
+                        <span className="text-xs text-[#B7EE7A] font-medium">Done</span>
                       ) : (
                         <>
                           <input
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={!allDocsUploaded || saving}
-                  className="flex-1 py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
                   {saving ? "Submitting…" : "Submit for review"}
@@ -496,7 +496,7 @@ export default function OnboardingPage() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#10b981]/60 focus:bg-white/8 transition-all text-sm";
+  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
 
 function Field({
   label,
@@ -513,7 +513,7 @@ function Field({
     <div>
       <div className="flex items-center gap-1.5 mb-1.5">
         <label className="text-sm font-medium text-white/70">{label}</label>
-        {required && <span className="text-[#10b981] text-xs">*</span>}
+        {required && <span className="text-[#B7EE7A] text-xs">*</span>}
         {hint && <span className="text-white/30 text-xs ml-auto">{hint}</span>}
       </div>
       {children}
@@ -536,7 +536,7 @@ function PrimaryBtn({
     <button
       type="submit"
       disabled={loading || disabled}
-      className={`w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#0ea472] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${className}`}
+      className={`w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${className}`}
     >
       {loading && <Loader2 size={16} className="animate-spin" />}
       {loading ? "Saving…" : children}

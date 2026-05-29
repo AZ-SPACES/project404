@@ -40,13 +40,13 @@ export function BillForwardingIntroScreen() {
             FORWARD A BILL.{"\n"}WE'LL DO THE REST.
           </Text>
           <Text style={styles.description}>
-            Got a bill or invoice in your inbox? Forward it to your unique Wise email address. We'll grab the details and prepare a draft payment for you to review and send.
+            Got a bill or invoice in your inbox? Forward it to your unique AZA email address. We'll grab the details and prepare a draft payment for you to review and send.
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Button
-          title ='Get my email addresss'
+          title='Get my email address'
           backgroundColor= {Colors.primary}
           textColor={Colors.secondary}
           borderRadius={24}

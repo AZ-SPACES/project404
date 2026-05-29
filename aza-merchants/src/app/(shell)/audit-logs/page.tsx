@@ -45,7 +45,7 @@ export default function AuditLogsPage() {
       <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-[#10b981]" size={22} />
+            <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-48">
@@ -61,7 +61,7 @@ export default function AuditLogsPage() {
             <div className="divide-y divide-white/[0.04]">
               {page.content.map((log) => (
                 <div key={log.id} className="px-5 py-4 flex items-start gap-4 hover:bg-white/[0.02] transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-[#10b981]/60 mt-1.5 flex-shrink-0" />
+                  <div className="w-2 h-2 rounded-full bg-[#B7EE7A]/60 mt-1.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <p className="text-sm font-medium text-white">{formatAction(log.action)}</p>

@@ -30,6 +30,7 @@ type ProfileData = {
   emailTwoFactorEnabled: boolean;
   appTwoFactorEnabled: boolean;
   passkeysEnabled: boolean;
+  defaultTwoFactorMethod: string | null;
   notificationPreferences: Record<string, any> | null;
   findMeByPhone: boolean;
   findMeByEmail: boolean;
@@ -63,6 +64,7 @@ const INITIAL_PROFILE: ProfileData = {
   emailTwoFactorEnabled: false,
   appTwoFactorEnabled: false,
   passkeysEnabled: false,
+  defaultTwoFactorMethod: null,
   notificationPreferences: null,
   findMeByPhone: true,
   findMeByEmail: true,
@@ -118,6 +120,7 @@ function mapUserData(userData: any): ProfileData {
     emailTwoFactorEnabled: userData.emailTwoFactorEnabled ?? false,
     appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
     passkeysEnabled: userData.passkeysEnabled ?? false,
+    defaultTwoFactorMethod: userData.defaultTwoFactorMethod ?? null,
     notificationPreferences: userData.notificationPreferences ? JSON.parse(userData.notificationPreferences) : null,
     findMeByPhone: userData.findMeByPhone ?? true,
     findMeByEmail: userData.findMeByEmail ?? true,

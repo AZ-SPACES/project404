@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFeeRules, getFeeStats, updateFeeRule, FeeRule, FeeStats } from "@/lib/admin-api";
 import { Coins, AlertCircle, CheckCircle2, Loader2, Pencil, X, Save } from "lucide-react";
 
@@ -29,51 +30,39 @@ function FeeTypeBadge({ type }: { type: "FLAT" | "PERCENTAGE" }) {
 }
 
 export default function FeesPage() {
-  const [rules, setRules] = useState<FeeRule[]>([]);
-  const [feeStats, setFeeStats] = useState<FeeStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState<FeeRule | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<FeeRule>>({});
-  const [saveLoading, setSaveLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    Promise.all([
-      getFeeRules().catch(() => [] as FeeRule[]),
-      getFeeStats().catch(() => null),
-    ]).then(([r, s]) => {
-      setRules(r);
-      setFeeStats(s);
-      setLoading(false);
-    }).catch((e) => {
-      setError(e.message ?? "Failed to load fee rules");
-      setLoading(false);
-    });
-  }, []);
+  const { data: rules = [], isLoading, error } = useQuery<FeeRule[]>({
+    queryKey: ["feeRules"],
+    queryFn: getFeeRules,
+  });
 
-  const handleSave = async () => {
-    if (!editing) return;
-    setSaveLoading(true);
-    try {
-      const updated = await updateFeeRule(editing.id, {
-        amount: editDraft.amount,
-        active: editDraft.active,
-        minFee: editDraft.minFee ?? null,
-        maxFee: editDraft.maxFee ?? null,
-      });
-      setRules((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+  const { data: feeStats } = useQuery<FeeStats>({
+    queryKey: ["feeStats"],
+    queryFn: getFeeStats,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () => updateFeeRule(editing!.id, {
+      amount: editDraft.amount,
+      active: editDraft.active,
+      minFee: editDraft.minFee ?? null,
+      maxFee: editDraft.maxFee ?? null,
+    }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<FeeRule[]>(["feeRules"], (prev) =>
+        prev ? prev.map(r => r.id === updated.id ? updated : r) : prev
+      );
       setEditing(null);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (e: any) {
-      setError(e.message ?? "Failed to update fee rule");
-    } finally {
-      setSaveLoading(false);
-    }
-  };
+    },
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="animate-spin text-white/30" size={28} />
@@ -91,8 +80,8 @@ export default function FeesPage() {
       {feeStats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Revenue Today", value: fmtGhs(feeStats.totalFeeRevenueToday), color: "text-[#F5A623]" },
-            { label: "Revenue This Month", value: fmtGhs(feeStats.totalFeeRevenueMonth), color: "text-[#F5A623]" },
+            { label: "Revenue Today", value: fmtGhs(feeStats.totalFeeRevenueToday), color: "text-[#B7EE7A]" },
+            { label: "Revenue This Month", value: fmtGhs(feeStats.totalFeeRevenueMonth), color: "text-[#B7EE7A]" },
             { label: "Avg Fee / Transaction", value: fmtGhs(feeStats.averageFeePerTransaction), color: "text-white" },
             { label: "Active Fee Rules", value: feeStats.activeFeeRules.toString(), color: "text-emerald-400" },
           ].map(({ label, value, color }) => (
@@ -150,9 +139,7 @@ export default function FeesPage() {
                       {TX_TYPE_LABELS[rule.transactionType] ?? rule.transactionType}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
-                    <FeeTypeBadge type={rule.feeType} />
-                  </td>
+                  <td className="px-5 py-4"><FeeTypeBadge type={rule.feeType} /></td>
                   <td className="px-5 py-4 text-right">
                     <p className="text-sm font-semibold text-white">
                       {rule.feeType === "PERCENTAGE" ? `${rule.amount}%` : fmtGhs(rule.amount)}
@@ -200,7 +187,6 @@ export default function FeesPage() {
         </div>
       )}
 
-      {/* Edit modal */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setEditing(null)} />
@@ -253,19 +239,23 @@ export default function FeesPage() {
                 <span className="text-sm text-white/70">Rule Active</span>
                 <button
                   onClick={() => setEditDraft((d) => ({ ...d, active: !d.active }))}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${editDraft.active ? "bg-[#F5A623]" : "bg-white/10"}`}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${editDraft.active ? "bg-[#B7EE7A]" : "bg-white/10"}`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${editDraft.active ? "translate-x-5" : "translate-x-0.5"}`} />
                 </button>
               </div>
             </div>
 
+            {saveMutation.error && (
+              <p className="text-red-400 text-sm mt-3">{(saveMutation.error as Error).message}</p>
+            )}
+
             <button
-              onClick={handleSave}
-              disabled={saveLoading}
-              className="w-full mt-5 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#F5A623] text-black text-sm font-semibold hover:bg-[#F5A623]/90 disabled:opacity-50 transition-all"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              className="w-full mt-5 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#B7EE7A] text-black text-sm font-semibold hover:bg-[#B7EE7A]/90 disabled:opacity-50 transition-all"
             >
-              {saveLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {saveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Save Changes
             </button>
           </div>

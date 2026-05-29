@@ -125,10 +125,13 @@ public class NotificationService {
 
     //CONVENIENCE METHODS
 
-    public void sendNewMessageNotification(UUID recipientId, String senderName, String chatId) {
+    public void sendNewMessageNotification(UUID recipientId, String senderName, UUID senderId, String chatId, String senderAvatar) {
         Map<String, Object> data = new HashMap<>();
-        data.put("chatId", chatId);
         data.put("type", "NEW_MESSAGE");
+        data.put("senderId", senderId.toString());
+        data.put("senderName", senderName);
+        data.put("chatId", chatId);
+        if (senderAvatar != null) data.put("senderAvatar", senderAvatar);
 
         sendNotification(
                 recipientId,
@@ -138,10 +141,24 @@ public class NotificationService {
                 data);
     }
 
+    public void sendSupportMessageNotification(UUID recipientId, String agentName) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", "SUPPORT_MESSAGE");
+
+        sendNotification(
+                recipientId,
+                Notification.NotificationType.NEW_MESSAGE,
+                agentName,
+                "Sent you a message",
+                data);
+    }
+
     public void sendIncomingCallNotification(UUID recipientId, String callerName,
                                               String callId, boolean isVideo) {
         Map<String, Object> data = new HashMap<>();
+        data.put("type", "INCOMING_CALL");
         data.put("callId", callId);
+        data.put("callerName", callerName);
         data.put("isVideo", isVideo);
 
         sendNotification(
@@ -155,7 +172,9 @@ public class NotificationService {
     public void sendMissedCallNotification(UUID recipientId, String callerName,
                                            String callId, boolean isVideo) {
         Map<String, Object> data = new HashMap<>();
+        data.put("type", "MISSED_CALL");
         data.put("callId", callId);
+        data.put("callerName", callerName);
         data.put("isVideo", isVideo);
 
         sendNotification(
@@ -261,6 +280,36 @@ public class NotificationService {
                 Notification.NotificationType.SECURITY_ALERT,
                 title,
                 body,
+                data);
+    }
+
+    public void sendRecoveryContactInvite(UUID contactUserId, java.util.UUID entryId, String senderName, String senderHandle) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("type", "RECOVERY_CONTACT_INVITE");
+        data.put("entryId", entryId.toString());
+        data.put("senderName", senderName);
+        data.put("senderHandle", senderHandle != null ? "@" + senderHandle : senderName);
+
+        sendNotification(
+                contactUserId,
+                Notification.NotificationType.RECOVERY_CONTACT_INVITE,
+                "Recovery contact request",
+                senderName + " wants to add you as their account recovery contact",
+                data);
+    }
+
+    public void sendRecoveryContactRequest(UUID contactUserId, String requestId, String requesterName, String requesterHandle) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("type", "RECOVERY_CONTACT_REQUEST");
+        data.put("requestId", requestId);
+        data.put("requesterName", requesterName);
+        data.put("requesterHandle", requesterHandle != null ? "@" + requesterHandle : requesterName);
+
+        sendNotification(
+                contactUserId,
+                Notification.NotificationType.RECOVERY_CONTACT_REQUEST,
+                "Account recovery needed",
+                requesterName + " needs your help to recover their account",
                 data);
     }
 

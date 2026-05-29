@@ -1,71 +1,38 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Login Notification</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>New Login Notification</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #111827; margin: 0; padding: 0; background-color: #f9fafb;">
-    <div class="container" style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-        
-        <!-- Header with Table -->
-        <div class="header" style="padding: 32px 32px 0; text-align: left;">
-            <table border="0" cellpadding="0" cellspacing="0">
-                <tr>
-                    <td style="vertical-align: middle; padding-right: 12px;">
-                        <img src="cid:paperplane" alt="Logo" width="32" height="32" style="display: block; border: 0;" />
-                    </td>
-                    <td style="vertical-align: middle;">
-                        <span style="font-size: 24px; font-weight: 700; color: #111827; letter-spacing: -0.025em;">AZA</span>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="content" style="padding: 32px;">
-            <h1 style="font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">New login detected</h1>
-            <p style="font-size: 16px; color: #4b5563; margin: 0 0 24px 0;">Hi <span th:text="${name}">User</span>, we noticed a new login to your Aza account. If this was you, you can safely ignore this email.</p>
-            
-            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                    <tr>
-                        <td style="padding-bottom: 8px; font-size: 14px; color: #6b7280; width: 100px;">Device</td>
-                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;" th:text="${deviceName}">Unknown Device</td>
-                    </tr>
-                
-                    <tr>
-                        <td style="padding-bottom: 8px; font-size: 14px; color: #6b7280;">OS</td>
-                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;" th:text="${deviceOs}">Unknown OS</td>
-                    </tr>
-                    <tr>
-                        <td style="padding-bottom: 8px; font-size: 14px; color: #6b7280;">IP Address</td>
-                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;" th:text="${ipAddress}">0.0.0.0</td>
-                    </tr>
-                    <tr>
-                        <td style="padding-bottom: 8px; font-size: 14px; color: #6b7280;">Location</td>
-                        <td style="padding-bottom: 8px; font-size: 14px; font-weight: 500; color: #111827;">
-                            <span th:text="${location}">Unknown Location</span>
-                            <a th:if="${mapUrl != null}" th:href="${mapUrl}" style="margin-left: 8px; font-size: 12px; color: #2563eb; text-decoration: none;">(View on Map)</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-size: 14px; color: #6b7280;">Time</td>
-                        <td style="font-size: 14px; font-weight: 500; color: #111827;" th:text="${loginTime}">Recently</td>
-                    </tr>
-                </table>
-            </div>
-            
-            <div style="margin-top: 32px; padding: 20px; border: 1px solid #fee2e2; border-radius: 8px; background-color: #fef2f2;">
-                <h3 style="font-size: 16px; font-weight: 600; color: #991b1b; margin: 0 0 8px 0;">Wasn't you?</h3>
-                <p style="font-size: 14px; color: #b91c1c; margin: 0 0 16px 0;">If you don't recognize this activity, your account may be at risk. We recommend changing your password immediately.</p>
-                <a href="#" style="display: inline-block; padding: 10px 16px; background-color: #dc2626; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">Secure my account</a>
-            </div>
-        </div>
-
-        <div class="footer" style="padding: 24px 32px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
-            <p style="margin: 0;">&copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> Aza Inc. All rights reserved.</p>
-            <p style="margin: 16px 0 0 0; font-size: 12px; color: #9ca3af;">This is a security notification for your Aza account.</p>
-        </div>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0E0F0C;margin:0;padding:0;background-color:#E6ECE1;">
+<div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #DADCE0;border-radius:12px;overflow:hidden;">
+  <div style="padding:28px 40px;border-bottom:1px solid #EAECEF;">
+    <table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;"><img src="cid:aza_default" alt="AZA" width="28" height="28" style="display:block;border:0;"></td>
+      
+    </tr></table>
+  </div>
+  <div style="padding:40px;">
+    <h1 style="font-size:32px;font-weight:800;color:#0E0F0C;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.2;">New login detected</h1>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 16px 0;line-height:1.6;">Hi <span th:text="${name}">User</span>, we noticed a new login to your AZA account. If this was you, you can safely ignore this email.</p>
+    <div style="background:#F8F9FA;border:1px solid #EAECEF;border-radius:10px;overflow:hidden;margin:24px 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Device</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${deviceName}">Unknown Device</td></tr>
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">OS</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${deviceOs}">Unknown OS</td></tr>
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">IP Address</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${ipAddress}">0.0.0.0</td></tr>
+        <tr style="border-bottom:1px solid #EAECEF;"><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Location</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;"><span th:text="${location}">Unknown Location</span><a th:if="${mapUrl != null}" th:href="${mapUrl}" style="margin-left:8px;font-size:12px;color:#174717;text-decoration:none;">(Map)</a></td></tr>
+        <tr><td style="padding:14px 20px;font-size:14px;color:#5F6368;">Time</td><td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;" th:text="${loginTime}">Recently</td></tr>
+      </table>
     </div>
+    <div style="background:#FFF5F5;border:1px solid #FED7D7;border-radius:8px;padding:20px;margin:24px 0;">
+      <p style="font-size:16px;font-weight:700;color:#742A2A;margin:0 0 8px 0;">Wasn&apos;t you?</p>
+      <p style="font-size:14px;color:#C53030;margin:0 0 16px 0;">If you don&apos;t recognise this activity, your account may be at risk. We recommend changing your password immediately.</p>
+      <a href="#" style="display:inline-block;padding:12px 20px;background:#EA4335;color:#fff !important;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Secure my account</a>
+    </div>
+  </div>
+  <div style="padding:28px 40px;background:#F8F9FA;border-top:1px solid #EAECEF;">
+    <p style="margin:0;font-size:13px;color:#9AA0A6;">&copy; 2026 AZA. All rights reserved.</p>
+  </div>
+</div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getStats, getLiveStats, type AdminStats, type LiveStats } from "@/lib/admin-api";
 import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity, Store, Banknote } from "lucide-react";
 
@@ -50,24 +50,18 @@ const fmtGhs = (n: number) =>
   `GHS ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
-  const [error, setError] = useState("");
+  const { data: stats, error: statsError } = useQuery<AdminStats>({
+    queryKey: ["stats"],
+    queryFn: getStats,
+  });
 
-  useEffect(() => {
-    getStats().then(setStats).catch(e => setError(e.message));
-  }, []);
+  const { data: liveStats } = useQuery<LiveStats>({
+    queryKey: ["liveStats"],
+    queryFn: getLiveStats,
+    refetchInterval: 30_000,
+  });
 
-  useEffect(() => {
-    function fetchLive() {
-      getLiveStats().then(setLiveStats).catch(() => { /* silently ignore live stat errors */ });
-    }
-    fetchLive();
-    const interval = setInterval(fetchLive, 30_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (error) return <p className="text-red-400">{error}</p>;
+  if (statsError) return <p className="text-red-400">{(statsError as Error).message}</p>;
   if (!stats) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="animate-spin text-white/40" size={28} />
@@ -107,7 +101,7 @@ export default function DashboardPage() {
           <StatCard label="Total" value={fmt(stats.totalTransactions)} icon={TrendingUp} />
           <StatCard label="Completed" value={fmt(stats.completedTransactions)} icon={TrendingUp} color="text-emerald-400" />
           <StatCard label="Total Volume" value={fmtGhs(stats.totalTransactionVolume)} icon={DollarSign} />
-          <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#F5A623]" />
+          <StatCard label="Today" value={fmt(stats.transactionsToday)} sub={fmtGhs(stats.volumeToday)} icon={TrendingUp} color="text-[#B7EE7A]" />
         </div>
       </section>
 
@@ -117,7 +111,7 @@ export default function DashboardPage() {
           <StatCard label="Total Merchants" value={fmt(stats.totalMerchants)} icon={Store} />
           <StatCard label="Active" value={fmt(stats.activeMerchants)} icon={Store} color="text-emerald-400" />
           <StatCard label="Pending KYB" value={fmt(stats.pendingKybMerchants)} icon={ShieldAlert} color="text-amber-400" />
-          <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#F5A623]" />
+          <StatCard label="Merchant Volume" value={fmtGhs(stats.totalMerchantVolume)} icon={DollarSign} color="text-[#B7EE7A]" />
         </div>
       </section>
 
@@ -137,7 +131,7 @@ export default function DashboardPage() {
             value={fmtGhs(stats.totalMerchantBalance)}
             sub="Pending payouts across all merchants"
             icon={Store}
-            color="text-[#F5A623]"
+            color="text-[#B7EE7A]"
           />
           <StatCard
             label="Total on Platform"

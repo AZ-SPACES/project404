@@ -177,6 +177,17 @@ export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
 export const getMe = () => api.get("/api/v1/users/me");
 
+export const getUserLimits = (): Promise<{ data: { data: { dailyLimitGhs: number; singleTransactionLimitGhs: number } } }> =>
+  api.get("/api/v1/users/me/limits");
+
+export const getTodaySent = () => api.get("/api/v1/wallet/today-sent");
+
+export const requestLimitIncrease = (data: {
+  requestedDailyLimitGhs: number;
+  requestedSingleTransactionLimitGhs: number;
+  reason: string;
+}) => api.post("/api/v1/users/me/limits/request", data);
+
 export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
 
 export const uploadProfileImage = (file: any) => {
@@ -244,6 +255,15 @@ export const getSupportMessages = (page = 0, size = 50) =>
 
 export const sendSupportMessage = (content: string) =>
   api.post("/api/v1/support/chat/message", { content });
+
+export const sendSupportAttachment = (fileUri: string, mimeType: string, caption?: string) => {
+  const form = new FormData();
+  form.append('file', { uri: fileUri, type: mimeType, name: 'attachment' } as any);
+  if (caption) form.append('caption', caption);
+  return api.post('/api/v1/support/chat/message/attachment', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 
 export const getAvailableSupportAgents = () =>
   api.get("/api/v1/support/agents/available");
@@ -366,6 +386,9 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
 export const forgotPassword = (identifier: string) =>
   api.post("/api/v1/auth/forgot-password", { identifier });
 
+export const initAccountRecovery = (email: string) =>
+  api.post(`/api/v1/auth/account-recovery/init?email=${encodeURIComponent(email)}`);
+
 export const resetPassword = (identifier: string, code: string, newPassword: string) =>
   api.post("/api/v1/auth/reset-password", { identifier, code, newPassword });
 
@@ -411,8 +434,14 @@ export const confirmTotpSetup = (code: string) =>
 export const disableTotp = (code: string) =>
   api.delete("/api/v1/auth/2fa", { data: { code } });
 
-export const regenerateRecoveryCodes = (code: string) =>
-  api.post("/api/v1/auth/2fa/recovery/regenerate", { code });
+export const getRecoveryCodeCount = () =>
+  api.get('/api/v1/auth/2fa/recovery/count');
+
+export const requestRecoveryRegenSms = () =>
+  api.post('/api/v1/auth/2fa/recovery/sms/request');
+
+export const regenerateRecoveryCodes = (code: string, method: 'TOTP' | 'SMS' = 'TOTP') =>
+  api.post(`/api/v1/auth/2fa/recovery/regenerate?method=${method}`, { code });
 
 export const redeemRecoveryCode = (preAuthToken: string, recoveryCode: string) =>
   api.post("/api/v1/auth/2fa/recovery", { preAuthToken, recoveryCode });
@@ -455,6 +484,44 @@ export const requestEmail2fa = (preAuthToken: string) =>
 
 export const verify2faOtp = (preAuthToken: string, code: string, method: string) =>
   api.post(`/api/v1/auth/2fa/otp/verify?preAuthToken=${preAuthToken}&code=${code}&method=${method}`);
+
+export const setDefault2faMethod = (method: string) =>
+  api.put(`/api/v1/auth/2fa/default-method?method=${method}`);
+
+// --- Account Recovery Contacts ---
+
+export const getMyRecoveryContacts = () =>
+  api.get('/api/v1/auth/recovery-contact');
+
+export const getPendingRecoveryInvitations = () =>
+  api.get('/api/v1/auth/recovery-contact/pending-invitations');
+
+export const inviteRecoveryContact = (contactUserId: string) =>
+  api.post('/api/v1/auth/recovery-contact/invite', { contactUserId });
+
+export const acceptRecoveryInvite = (entryId: string) =>
+  api.post(`/api/v1/auth/recovery-contact/${entryId}/accept`);
+
+export const declineRecoveryInvite = (entryId: string) =>
+  api.post(`/api/v1/auth/recovery-contact/${entryId}/decline`);
+
+export const removeRecoveryContact = (entryId: string) =>
+  api.delete(`/api/v1/auth/recovery-contact/${entryId}`);
+
+export const removeAsRecoveryContact = (entryId: string) =>
+  api.delete(`/api/v1/auth/recovery-contact/${entryId}/as-contact`);
+
+export const generateRecoveryContactCode = (requestId: string) =>
+  api.post(`/api/v1/auth/recovery-contact/generate?requestId=${requestId}`);
+
+export const getAvailableRecoveryContacts = (preAuthToken: string) =>
+  api.get(`/api/v1/auth/recovery-contact/available?preAuthToken=${preAuthToken}`);
+
+export const requestContactRecovery = (preAuthToken: string, entryId: string) =>
+  api.post(`/api/v1/auth/recovery-contact/request?preAuthToken=${preAuthToken}&entryId=${entryId}`);
+
+export const redeemContactRecoveryCode = (preAuthToken: string, requestId: string, code: string) =>
+  api.post(`/api/v1/auth/recovery-contact/redeem?preAuthToken=${preAuthToken}&requestId=${requestId}`, { code });
 
 // --- Rate limit challenge ---
 

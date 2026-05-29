@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import KYCProgressBar from "../../../../components/ui/KYCProgressBar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 import { submitMerchantKyb, getKycStatus } from "../../../../services/api";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../../lib/queryKeys";
 import { useProfile } from "../../../../providers/ProfileProvider";
 import { BackButton } from '../../../../components/ui/BackButton';
 
@@ -59,18 +61,13 @@ export default function MerchantKYBOwnerScreen() {
   const [isPrimaryOwner, setIsPrimaryOwner] = useState<"yes" | "no" | null>(null);
 
   const { displayName } = useProfile();
-  const [kycIdType, setKycIdType] = useState<string | null>(null);
-  const [kycIdNumber, setKycIdNumber] = useState("");
-
-  useEffect(() => {
-    getKycStatus()
-      .then((res: any) => {
-        const d = res.data?.data ?? res.data;
-        setKycIdType(d?.idType ?? null);
-        setKycIdNumber(d?.idNumber ?? "");
-      })
-      .catch(() => {});
-  }, []);
+  const { data: kycStatusData } = useQuery({
+    queryKey: queryKeys.kycStatus(),
+    queryFn: async () => { const res = await getKycStatus(); return res.data?.data ?? res.data; },
+    staleTime: 5 * 60_000,
+  });
+  const kycIdType: string | null = kycStatusData?.idType ?? null;
+  const kycIdNumber: string = kycStatusData?.idNumber ?? "";
 
   const handlePrimaryOwnerSelect = (value: "yes" | "no") => {
     setIsPrimaryOwner(value);

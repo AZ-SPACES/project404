@@ -25,6 +25,7 @@ import {
   MessageSquare,
   Store,
   Flag,
+  TrendingUp,
   X,
 } from "lucide-react";
 
@@ -65,6 +66,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag },
       { href: "/disputes", label: "Disputes", icon: Scale },
+      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp },
       { href: "/fees", label: "Fee Management", icon: Coins },
       { href: "/reports", label: "Reports", icon: FileBarChart2 },
     ],
@@ -127,10 +129,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <aside className="flex flex-col h-full bg-[#161616] border-r border-white/5">
       <div className="h-16 flex items-center px-6 border-b border-white/5 flex-shrink-0">
-        <span className="text-xl font-semibold tracking-tight">
-          aza{" "}
-          <span className="text-[#F5A623] text-xs font-normal ml-1">admin</span>
-        </span>
+        <img src="/logo.png" alt="Aza Admin" className="h-6 w-auto" />
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
@@ -151,7 +150,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                       ${active
-                        ? "bg-[#F5A623]/15 text-[#F5A623]"
+                        ? "bg-[#B7EE7A]/15 text-[#B7EE7A]"
                         : "text-white/55 hover:text-white hover:bg-white/5"
                       }
                     `}
@@ -159,7 +158,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                     <Icon size={16} className="flex-shrink-0" />
                     <span className="flex-1">{label}</span>
                     {showBadge && (
-                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#F5A623] text-black text-[10px] font-bold flex items-center justify-center">
+                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#B7EE7A] text-black text-[10px] font-bold flex items-center justify-center">
                         {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
@@ -217,12 +216,10 @@ function ShellContent({ children }: { children: React.ReactNode }) {
           >
             <Menu size={20} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#F5A623]" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#B7EE7A]" />
             )}
           </button>
-          <span className="text-sm font-semibold tracking-tight">
-            aza <span className="text-[#F5A623]">admin</span>
-          </span>
+          <img src="/logo.png" alt="Aza Admin" className="h-6 w-auto" />
           <div className="w-8" />
         </header>
 

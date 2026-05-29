@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getUsers, type AdminUser, type Page } from "@/lib/admin-api";
 import Link from "next/link";
 import { Search, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
@@ -27,22 +28,15 @@ function Badge({ value, map }: { value: string; map: Record<string, string> }) {
 }
 
 export default function UsersPage() {
-  const [result, setResult] = useState<Page<AdminUser> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [kycStatus, setKycStatus] = useState("");
   const [page, setPage] = useState(0);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError("");
-    getUsers({ query: query || undefined, status: status || undefined, kycStatus: kycStatus || undefined, page, size: 20 })
-      .then(setResult).catch(e => setError(e.message)).finally(() => setLoading(false));
-  }, [query, status, kycStatus, page]);
-
-  useEffect(() => { load(); }, [load]);
+  const { data: result, isLoading, error } = useQuery<Page<AdminUser>>({
+    queryKey: ["users", { query, status, kycStatus, page }],
+    queryFn: () => getUsers({ query: query || undefined, status: status || undefined, kycStatus: kycStatus || undefined, page, size: 20 }),
+  });
 
   return (
     <div className="space-y-6">
@@ -51,7 +45,7 @@ export default function UsersPage() {
         <p className="text-white/40 text-sm mt-1">{result ? `${result.totalElements.toLocaleString()} total` : ""}</p>
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); setPage(0); load(); }} className="flex flex-wrap gap-3">
+      <form onSubmit={e => { e.preventDefault(); setPage(0); }} className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
           <input type="text" value={query} onChange={e => setQuery(e.target.value)}
@@ -71,10 +65,10 @@ export default function UsersPage() {
         </select>
       </form>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-400 text-sm">{(error as Error).message}</p>}
 
       <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-48"><Loader2 className="animate-spin text-white/40" size={24} /></div>
         ) : (
           <div className="overflow-x-auto">

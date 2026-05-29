@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   StatusBar,
   Share,
@@ -16,7 +15,7 @@ import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vec
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
+import { useAppTheme, ThemeColors, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import { useToast } from "../../../providers/ToastProvider";
 

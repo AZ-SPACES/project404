@@ -1,20 +1,16 @@
-import React, { ComponentProps, useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Dimensions } from 'react-native';
+import React, { ComponentProps } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
-import { AntDesign } from '@react-native-vector-icons/ant-design';
+
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
-import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
-import { CloseButton } from '../../../components/ui/CloseButton';
-
-const { height } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SecurityAndPrivacy">;
 
@@ -76,41 +72,9 @@ export function SecurityAndPrivacyScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { isBiometricsEnabled, toggleBiometrics } = useAuth();
   const profile = useProfile();
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
-
-  // State for bottom sheet
-  const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
-  const bottomSheetAnim = useRef(new Animated.Value(height)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (isBottomSheetVisible) {
-      Animated.parallel([
-        Animated.timing(bottomSheetAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true }),
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(bottomSheetAnim, {
-          toValue: height,
-          duration: 300,
-          useNativeDriver: true }),
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true }),
-      ]).start();
-    }
-  }, [isBottomSheetVisible]);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -165,28 +129,36 @@ export function SecurityAndPrivacyScreen() {
             onPress={() => navigation.navigate("ChangePassword")}
           />
           
-          <SettingRow 
-            iconType="MaterialCommunityIcons" 
-            iconName="fingerprint" 
-            title="2-step verification" 
+          <SettingRow
+            iconType="MaterialCommunityIcons"
+            iconName="fingerprint"
+            title="2-step verification"
             subtitle={profile.twoFactorEnabled ? "Status: On" : "Status: Off"}
             onPress={() => navigation.navigate("TwoStepVerification")}
           />
-          
-          <SettingRow 
-            iconType="Feather" 
-            iconName="smartphone" 
-            title="Devices" 
+
+          <SettingRow
+            iconType="Feather"
+            iconName="users"
+            title="Recovery contacts"
+            subtitle="Up to 3 trusted people who can help you"
+            onPress={() => navigation.navigate("AccountRecoveryContacts")}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="smartphone"
+            title="Devices"
             subtitle="Manage your devices"
             onPress={() => navigation.navigate("Devices")}
           />
           
-          <SettingRow 
-            iconType="MaterialCommunityIcons" 
-            iconName="face-recognition" 
-            title="App security" 
-            subtitle={isBiometricsEnabled ? "Require Face ID for login, transactions and after 5 minutes of inactivity" : "Require Passcode for login, transactions and after 5 minutes of inactivity"}
-            onPress={() => setBottomSheetVisible(true)}
+          <SettingRow
+            iconType="MaterialCommunityIcons"
+            iconName="face-recognition"
+            title="App security"
+            subtitle="Passcode, biometrics and auto-lock settings"
+            onPress={() => navigation.navigate("AppSecurity")}
           />
           
           <SettingRow 
@@ -257,45 +229,6 @@ export function SecurityAndPrivacyScreen() {
         <View style={styles.spacer} />
       </Animated.ScrollView>
 
-      {/* App Security Bottom Sheet */}
-      <View
-        style={StyleSheet.absoluteFill}
-        pointerEvents={isBottomSheetVisible ? "auto" : "none"}
-      >
-        <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: backdropAnim, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)' }]}
-        >
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={() => setBottomSheetVisible(false)}
-          />
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.bottomSheetContainer,
-            {
-              zIndex: 1001,
-              transform: [{ translateY: bottomSheetAnim }] },
-          ]}
-        >
-          <View style={styles.bottomSheetHeader}>
-            <Text style={[Typography.h2, styles.bottomSheetTitle]}>App security</Text>
-            <CloseButton onPress={() => setBottomSheetVisible(false)} />
-          </View>
-          
-          <TouchableOpacity style={styles.bottomSheetItem} activeOpacity={0.7} onPress={() => { toggleBiometrics(!isBiometricsEnabled); setBottomSheetVisible(false); }}>
-            <View style={styles.bottomSheetIconContainer}>
-              <Ionicons name="grid-outline" size={24} color={Colors.textPrimary} />
-            </View>
-            <View style={styles.bottomSheetTextContainer}>
-              <Text style={[Typography.bodyLg, styles.bottomSheetItemTitle]}>{isBiometricsEnabled ? "Switch to passcode" : "Switch to biometrics"}</Text>
-              <Text style={[Typography.body, styles.bottomSheetItemSubtitle]}>For unlocking this app when you haven't used it for 5 minutes</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
     </SafeAreaView>
   );
 }
@@ -374,61 +307,7 @@ function createStyles(Colors: ThemeColors) {
     lineHeight: 20 },
   spacer: {
     height: Spacing.xl },
-  bottomSheetContainer: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    backgroundColor: isDark ? Colors.surface : Colors.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 48,
-    shadowColor: Colors.black,
-    shadowOffset: {
-      width: 0,
-      height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5 },
-  bottomSheetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24 },
-  bottomSheetTitle: {
-    color: Colors.textPrimary },
-  closeButton: {
-    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center" },
-  bottomSheetItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md },
-  bottomSheetIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: isDark ? Colors.white10 : "rgba(22, 51, 0, 0.04)",
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md },
-  bottomSheetTextContainer: {
-    flex: 1 },
-  bottomSheetItemTitle: {
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4 },
-  bottomSheetItemSubtitle: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20 } });
+  });
 }
 
 

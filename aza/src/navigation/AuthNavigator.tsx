@@ -5,9 +5,9 @@ import {
 } from '../features/onboarding';
 import {
   LoginScreen,
-  OTPScreen,
   TotpLoginScreen,
   RecoveryCodeLoginScreen,
+  ContactRecoveryLoginScreen,
   TroubleLoginScreen,
   ForgotPasswordScreen,
   TwoStepVerificationIssueScreen,
@@ -49,9 +49,9 @@ export default function AuthNavigator() {
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="TroubleLogin" component={TroubleLoginScreen} />
-      <Stack.Screen name="OTP" component={OTPScreen} />
       <Stack.Screen name="TotpLogin" component={TotpLoginScreen} />
       <Stack.Screen name="RecoveryCodeLogin" component={RecoveryCodeLoginScreen} />
+      <Stack.Screen name="ContactRecoveryLogin" component={ContactRecoveryLoginScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="TwoStepVerificationIssue" component={TwoStepVerificationIssueScreen} />
       <Stack.Screen name="ChangePhoneNumber" component={ChangePhoneNumberScreen} />

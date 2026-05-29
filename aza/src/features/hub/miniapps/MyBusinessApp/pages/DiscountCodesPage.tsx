@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity,
   Modal, Alert, KeyboardAvoidingView, Platform, TextInput, Clipboard,
@@ -8,6 +8,9 @@ import { Typography, Spacing, Radius } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
 import { getMerchantDiscountCodes, createMerchantDiscountCode } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
+import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 
 function CreateModal({ visible, onClose, onCreated, Colors }: any) {
@@ -112,20 +115,13 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
 }
 
 export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) {
-  const [codes, setCodes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: codes = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.merchantDiscounts(),
+    queryFn: async () => { const r = await getMerchantDiscountCodes(0, 40); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-
-  const load = () => {
-    setLoading(true);
-    getMerchantDiscountCodes(0, 40)
-      .then((r: any) => setCodes(extractData(r)?.content ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
 
   const handleCopy = (code: string) => {
     Clipboard.setString(code);
@@ -206,7 +202,12 @@ export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) 
         </ScrollView>
       )}
 
-      <CreateModal visible={creating} onClose={() => setCreating(false)} onCreated={load} Colors={Colors} />
+      <CreateModal
+        visible={creating}
+        onClose={() => setCreating(false)}
+        onCreated={() => queryClient.invalidateQueries({ queryKey: queryKeys.merchantDiscounts() })}
+        Colors={Colors}
+      />
     </View>
   );
 }

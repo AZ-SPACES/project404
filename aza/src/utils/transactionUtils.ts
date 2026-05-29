@@ -23,6 +23,7 @@ export const mapBackendTransaction = (tx: any): Transaction => {
     senderId: tx.senderId || '',
     recipientId: tx.recipientId || '',
     completedAt: tx.completedAt || null,
+    currency: tx.currency,
   };
 };
 
