@@ -138,6 +138,22 @@ public class AiService {
         return callClaude(systemPrompt, messages, 400);
     }
 
+    public String supportBotReply(String userContext, List<Map<String, String>> history, int maxTokens) {
+        if (apiKey == null || apiKey.isBlank()) return null;
+        String system = """
+                You are Aza AI, AZA's friendly and professional customer support assistant.
+                AZA is a peer-to-peer payment app used in Ghana (GHS currency).
+
+                Respond ONLY with valid JSON in this exact format:
+                {"reply": "your response here", "escalate": false}
+
+                Set escalate=true ONLY when: user reports fraud, unauthorized access, account locked,
+                urgent account issues, or asks to speak to a human. Be concise (under 80 words).
+
+                """ + userContext;
+        return callClaude(system, history, maxTokens);
+    }
+
     @SuppressWarnings("unchecked")
     private String buildCatSummary(Map<String, Object> catData) {
         List<Map<String, Object>> cats = (List<Map<String, Object>>) catData.get("categories");

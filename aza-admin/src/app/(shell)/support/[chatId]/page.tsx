@@ -17,6 +17,8 @@ import {
   getCannedResponses,
   getUserDetail,
   getUserTransactions,
+  takeoverChat,
+  enableSupportBot,
   SupportMessage,
   SupportChatSummary,
   InternalNote,
@@ -43,6 +45,8 @@ import {
   PanelRightOpen,
   Zap,
   Phone,
+  Cpu,
+  UserCheck,
 } from "lucide-react";
 import * as SockJS from "sockjs-client";
 import { useSupportWs } from "@/lib/support-ws-context";
@@ -375,6 +379,11 @@ export default function SupportChatPage() {
               setIsOtherTyping(false);
             } else if (event.type === "CHAT_TYPING" && !event.payload.isSelf) {
               setIsOtherTyping(event.payload.isTyping);
+            } else if (event.type === "SUPPORT_BOT_TYPING" && !event.payload.isSelf) {
+              setIsOtherTyping(event.payload.isTyping);
+            } else if (event.type === "SUPPORT_CHAT_UPDATED") {
+              const updated = event.payload as SupportChatSummary;
+              if (updated.chatId === chatId) setChat(updated);
             }
           } catch { /* ignore */ }
         });
@@ -422,6 +431,18 @@ export default function SupportChatPage() {
       setCategoryOpen(false);
     },
     onError: (e: Error) => setError(e.message ?? "Failed to update category"),
+  });
+
+  const takeoverMutation = useMutation({
+    mutationFn: () => takeoverChat(chatId),
+    onSuccess: (updated) => setChat(updated),
+    onError: (e: Error) => setError(e.message ?? "Failed to take over"),
+  });
+
+  const enableBotMutation = useMutation({
+    mutationFn: () => enableSupportBot(chatId),
+    onSuccess: (updated) => setChat(updated),
+    onError: (e: Error) => setError(e.message ?? "Failed to enable bot"),
   });
 
   const chatItems: ChatItem[] = [
@@ -523,6 +544,41 @@ export default function SupportChatPage() {
 
       {/* Center – Chat */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#0a0a0a]">
+
+        {/* Bot status banner */}
+        {chat && !isResolved && (
+          chat.botActive ? (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#B7EE7A]/8 border-b border-[#B7EE7A]/15 flex-shrink-0">
+              <div className="flex items-center gap-2 text-[#B7EE7A]">
+                <Cpu size={14} />
+                <span className="text-xs font-semibold">AI Bot is handling this conversation</span>
+              </div>
+              <button
+                onClick={() => takeoverMutation.mutate()}
+                disabled={takeoverMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#B7EE7A] text-black hover:bg-[#a0d85a] transition-colors disabled:opacity-50"
+              >
+                <UserCheck size={13} />
+                {takeoverMutation.isPending ? "Taking over…" : "Take Over"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 px-4 py-2 bg-white/3 border-b border-white/5 flex-shrink-0">
+              <div className="flex items-center gap-2 text-white/50">
+                <UserCheck size={13} />
+                <span className="text-xs">Human agent handling · AI bot is off</span>
+              </div>
+              <button
+                onClick={() => enableBotMutation.mutate()}
+                disabled={enableBotMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+              >
+                <Cpu size={12} />
+                {enableBotMutation.isPending ? "Enabling…" : "Hand to Bot"}
+              </button>
+            </div>
+          )
+        )}
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#0d0d0d] flex-shrink-0">
@@ -686,13 +742,22 @@ export default function SupportChatPage() {
 
               const msg = item.data;
               const isAgent = msg.isSelf;
+              const isBot = msg.isBot;
               return (
                 <div key={msg.id} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
                   <div className={`flex flex-col ${isAgent ? "items-end" : "items-start"} max-w-[80%] lg:max-w-[72%]`}>
+                    {isBot && (
+                      <div className="flex items-center gap-1 mb-1 ml-1">
+                        <Cpu size={10} className="text-[#B7EE7A]/60" />
+                        <span className="text-[10px] text-[#B7EE7A]/60 font-semibold">AZA AI</span>
+                      </div>
+                    )}
                     <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       isAgent
                         ? "bg-[#B7EE7A] text-black rounded-br-sm font-medium"
-                        : "bg-[#1e1e1e] text-white/85 border border-white/6 rounded-bl-sm"
+                        : isBot
+                          ? "bg-[#B7EE7A]/8 border border-[#B7EE7A]/15 text-white/85 rounded-bl-sm"
+                          : "bg-[#1e1e1e] text-white/85 border border-white/6 rounded-bl-sm"
                     }`}>
                       {msg.isDeleted
                         ? <span className="italic opacity-40 text-xs">This message was deleted</span>
@@ -716,7 +781,9 @@ export default function SupportChatPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-white/20 animate-bounce [animation-delay:-0.15s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-white/20 animate-bounce" />
                 </div>
-                <span className="text-[10px] text-white/35 font-medium uppercase tracking-wider">User is typing</span>
+                <span className="text-[10px] text-white/35 font-medium uppercase tracking-wider">
+                  {chat?.botActive ? "AI Bot is thinking…" : "User is typing"}
+                </span>
               </div>
             </div>
           )}

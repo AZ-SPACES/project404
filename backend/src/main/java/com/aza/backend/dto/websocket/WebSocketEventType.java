@@ -47,6 +47,8 @@ public enum WebSocketEventType {
     // Admin support inbox
     SUPPORT_NEW_MESSAGE("support.new_message"),
     SUPPORT_CHAT_UPDATED("support.chat_updated"),
+    SUPPORT_BOT_TYPING("support.bot_typing"),
+    SUPPORT_HANDOFF("support.handoff"),
 
     // System
     TRANSFER_UPDATE("transfer.update"),

@@ -150,7 +150,7 @@ export default function ChatWithUsScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.title}>AZA Support</Text>
-          <Text style={styles.subtitle}>Typically replies within a minute.</Text>
+          <Text style={styles.subtitle}>AI-powered · Replies instantly</Text>
         </View>
 
         <ScrollView
@@ -163,38 +163,52 @@ export default function ChatWithUsScreen() {
               <ActivityIndicator size="small" color={Colors.primary} />
             </View>
           )}
-          {messages.map((msg: any) => (
-            <View key={msg.id} style={[styles.messageRow, msg.isSender ? styles.senderRow : styles.receiverRow]}>
-              <View
-                style={[
-                  styles.messageBubble,
-                  msg.isSender ? styles.senderBubble : styles.receiverBubble,
-                  msg.imageUri ? styles.imageBubble : null,
-                  msg.status === 'sending' && styles.messagePending,
-                  msg.status === 'failed' && styles.messageFailed,
-                ]}
-              >
-                {msg.imageUri ? (
-                  <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
-                ) : null}
-                {!!msg.text && (
-                  <Text style={[
-                    styles.messageText,
-                    msg.isSender ? styles.senderText : styles.receiverText,
-                    msg.imageUri ? styles.textWithImage : null,
-                  ]}>
-                    {msg.text}
-                  </Text>
+          {messages.map((msg: any) => {
+            if (msg.isSystem) {
+              return (
+                <View key={msg.id} style={styles.systemRow}>
+                  <View style={styles.systemBubble}>
+                    <Text style={styles.systemText}>{msg.text}</Text>
+                  </View>
+                </View>
+              );
+            }
+            return (
+              <View key={msg.id} style={[styles.messageRow, msg.isSender ? styles.senderRow : styles.receiverRow]}>
+                {msg.isBot && !msg.isSender && (
+                  <Text style={styles.botLabel}>AZA AI</Text>
+                )}
+                <View
+                  style={[
+                    styles.messageBubble,
+                    msg.isSender ? styles.senderBubble : msg.isBot ? styles.botBubble : styles.receiverBubble,
+                    msg.imageUri ? styles.imageBubble : null,
+                    msg.status === 'sending' && styles.messagePending,
+                    msg.status === 'failed' && styles.messageFailed,
+                  ]}
+                >
+                  {msg.imageUri ? (
+                    <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
+                  ) : null}
+                  {!!msg.text && (
+                    <Text style={[
+                      styles.messageText,
+                      msg.isSender ? styles.senderText : styles.receiverText,
+                      msg.imageUri ? styles.textWithImage : null,
+                    ]}>
+                      {msg.text}
+                    </Text>
+                  )}
+                </View>
+                {msg.status === 'failed' && (
+                  <Text style={styles.failedLabel}>Not delivered · tap to retry</Text>
                 )}
               </View>
-              {msg.status === 'failed' && (
-                <Text style={styles.failedLabel}>Not delivered · tap to retry</Text>
-              )}
-            </View>
-          ))}
+            );
+          })}
           {isOtherTyping && (
             <View style={styles.typingIndicator}>
-              <Text style={styles.typingText}>Agent is typing...</Text>
+              <Text style={styles.typingText}>AZA Support is typing…</Text>
             </View>
           )}
         </ScrollView>
@@ -401,5 +415,29 @@ function createStyles(Colors: any) {
     color: '#EF4444',
     alignSelf: 'flex-end',
     marginTop: 2,
-    marginRight: 4 } });
+    marginRight: 4 },
+  botBubble: {
+    backgroundColor: isDark ? 'rgba(183,238,122,0.10)' : 'rgba(183,238,122,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(183,238,122,0.25)',
+    borderTopLeftRadius: 4 },
+  botLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#7ab83a',
+    marginBottom: 2,
+    marginLeft: 2,
+    letterSpacing: 0.4 },
+  systemRow: {
+    alignItems: 'center',
+    marginVertical: 4 },
+  systemBubble: {
+    backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6 },
+  systemText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center' } });
 }

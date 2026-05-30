@@ -37,6 +37,7 @@ public class SupportService {
     private final NotificationService notificationService;
     private final PresenceService presenceService;
     private final CloudinaryService cloudinaryService;
+    private final SupportBotProcessor botProcessor;
 
     // ==================== USER-FACING ====================
 
@@ -96,22 +97,26 @@ public class SupportService {
 
         MessageResponse response = toMessageResponse(message);
 
-        // Notify the assigned support agent
-        notificationService.sendNewMessageNotification(
-                chat.getParticipantTwoId(),
-                user.getFirstName() + " " + user.getLastName(),
-                user.getId(),
-                chat.getId().toString(),
-                user.getProfileImageUrl());
-
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE, response);
 
-        // Push inbox update to all admins watching the support dashboard
         webSocketPublisher.publishToAdminSupport(
                 WebSocketEventType.SUPPORT_NEW_MESSAGE,
                 getSupportChatSummary(chat.getId()));
+
+        if (Boolean.TRUE.equals(chat.getBotActive())) {
+            // AI bot handles this chat — generate async response
+            botProcessor.generateAndReply(chat.getId(), user.getId());
+        } else {
+            // Human agent owns the chat — send push notification
+            notificationService.sendNewMessageNotification(
+                    chat.getParticipantTwoId(),
+                    user.getFirstName() + " " + user.getLastName(),
+                    user.getId(),
+                    chat.getId().toString(),
+                    user.getProfileImageUrl());
+        }
 
         return response;
     }
@@ -148,7 +153,9 @@ public class SupportService {
                 chat.getStatus() != null ? chat.getStatus().name() : Chat.ChatStatus.OPEN.name(),
                 chat.getPriority() != null ? chat.getPriority().name() : Chat.Priority.NORMAL.name(),
                 chat.getCategory(),
-                unreadCount
+                unreadCount,
+                Boolean.TRUE.equals(chat.getBotActive()),
+                chat.getActiveAgentId() != null ? chat.getActiveAgentId().toString() : null
         );
     }
 
@@ -260,6 +267,49 @@ public class SupportService {
         chat.setResolvedAt(LocalDateTime.now());
         chat.setResolvedByName(agent.getFirstName() + " " + agent.getLastName());
         chatRepository.save(chat);
+        return getSupportChatSummary(chatId);
+    }
+
+    @Transactional
+    public SupportChatSummary takeoverChat(UUID chatId, User agent) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Support chat not found", HttpStatus.NOT_FOUND));
+        chat.setBotActive(false);
+        chat.setActiveAgentId(agent.getId());
+        chat.setHandedOverAt(LocalDateTime.now());
+        if (chat.getStatus() == Chat.ChatStatus.PENDING) {
+            chat.setStatus(Chat.ChatStatus.OPEN);
+        }
+        chatRepository.save(chat);
+
+        // Send handoff message to user via WebSocket
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.SUPPORT_HANDOFF,
+                Map.of(
+                        "chatId", chatId.toString(),
+                        "agentName", agent.getFirstName() + " " + agent.getLastName(),
+                        "message", "You've been connected with " + agent.getFirstName() + ", a member of the AZA support team."
+                ));
+
+        webSocketPublisher.publishToAdminSupport(
+                WebSocketEventType.SUPPORT_CHAT_UPDATED,
+                getSupportChatSummary(chatId));
+
+        return getSupportChatSummary(chatId);
+    }
+
+    @Transactional
+    public SupportChatSummary enableBot(UUID chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("CHAT_NOT_FOUND", "Support chat not found", HttpStatus.NOT_FOUND));
+        chat.setBotActive(true);
+        chat.setActiveAgentId(null);
+        chat.setHandedOverAt(null);
+        chatRepository.save(chat);
+        webSocketPublisher.publishToAdminSupport(
+                WebSocketEventType.SUPPORT_CHAT_UPDATED,
+                getSupportChatSummary(chatId));
         return getSupportChatSummary(chatId);
     }
 
@@ -378,6 +428,7 @@ public class SupportService {
                 .isDeleted(deleted)
                 .isSelf(currentUserId != null ? message.getSenderId().equals(currentUserId) : null)
                 .mediaKey(message.getMediaKey())
+                .isBot(message.getIsBot())
                 .build();
     }
 
@@ -392,7 +443,9 @@ public class SupportService {
             String status,
             String priority,
             String category,
-            int unreadCount
+            int unreadCount,
+            boolean botActive,
+            String activeAgentId
     ) {}
 
     public record AgentStatus(

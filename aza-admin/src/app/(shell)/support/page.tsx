@@ -11,7 +11,7 @@ import {
   Page,
 } from "@/lib/admin-api";
 import { useSupportWs } from "@/lib/support-ws-context";
-import { MessageCircle, User, Clock, Search, AlertCircle, Filter } from "lucide-react";
+import { MessageCircle, User, Clock, Search, AlertCircle, Filter, Cpu } from "lucide-react";
 
 function timeAgo(iso: string | null) {
   if (!iso) return "—";
@@ -295,6 +295,11 @@ export default function SupportPage() {
                         </span>
                         <PriorityBadge priority={chat.priority} />
                         <SlaBadge priority={chat.priority} lastMessageAt={chat.lastMessageAt} status={chat.status} />
+                        {chat.botActive && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20">
+                            <Cpu size={9} />AI
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2.5 flex-shrink-0">
                         <StatusBadge status={chat.status} />

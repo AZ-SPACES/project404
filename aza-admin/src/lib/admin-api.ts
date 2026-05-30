@@ -307,6 +307,8 @@ export interface SupportChatSummary {
   priority: "LOW" | "NORMAL" | "HIGH" | "URGENT";
   category: string | null;
   unreadCount: number;
+  botActive: boolean;
+  activeAgentId: string | null;
 }
 
 export interface SupportMessage {
@@ -319,6 +321,7 @@ export interface SupportMessage {
   sentAt: string | null;
   isDeleted: boolean;
   isSelf?: boolean;
+  isBot?: boolean;
 }
 
 export function getSupportChats(page = 0, size = 20, status?: string): Promise<Page<SupportChatSummary>> {
@@ -513,6 +516,14 @@ export interface SupportStats {
 
 export function getSupportStats(): Promise<SupportStats> {
   return request("/api/v1/admin/support/stats");
+}
+
+export function takeoverChat(chatId: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/takeover`, { method: "POST" });
+}
+
+export function enableSupportBot(chatId: string): Promise<SupportChatSummary> {
+  return request(`/api/v1/admin/support/chats/${chatId}/bot/enable`, { method: "POST" });
 }
 
 export function resolveChat(chatId: string): Promise<SupportChatSummary> {

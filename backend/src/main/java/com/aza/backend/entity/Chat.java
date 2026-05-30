@@ -60,6 +60,15 @@ public class Chat {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    /** True while the AI bot is handling this chat; false after admin takeover. */
+    @Builder.Default
+    private Boolean botActive = true;
+
+    /** UUID of the admin who took over from the bot. Null while bot is active. */
+    private UUID activeAgentId;
+
+    private LocalDateTime handedOverAt;
+
     public enum ChatStatus { OPEN, PENDING, RESOLVED }
     public enum Priority { LOW, NORMAL, HIGH, URGENT }
 }
