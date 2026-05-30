@@ -169,7 +169,7 @@ public class SupportService {
             Chat.ChatStatus chatStatus = Chat.ChatStatus.valueOf(status.toUpperCase());
             chats = chatRepository.findAllSupportChatsByStatus(
                     chatStatus,
-                    PageRequest.of(page, size));
+                    PageRequest.of(page, size, Sort.by("lastMessageAt").descending()));
         } else {
             chats = chatRepository.findAllSupportChats(
                     PageRequest.of(page, size, Sort.by("lastMessageAt").descending()));
@@ -231,6 +231,7 @@ public class SupportService {
                 .content(content.strip())
                 .type(ChatMessage.MessageType.TEXT)
                 .status(ChatMessage.MessageStatus.SENT)
+                .isAdminReply(true)
                 .build();
 
         message = chatMessageRepository.save(message);
@@ -383,13 +384,6 @@ public class SupportService {
 
         MessageResponse response = toMessageResponse(message, user.getId());
 
-        notificationService.sendNewMessageNotification(
-                chat.getParticipantTwoId(),
-                user.getFirstName() + " " + user.getLastName(),
-                user.getId(),
-                chat.getId().toString(),
-                user.getProfileImageUrl());
-
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE, toMessageResponse(message));
@@ -397,6 +391,17 @@ public class SupportService {
         webSocketPublisher.publishToAdminSupport(
                 WebSocketEventType.SUPPORT_NEW_MESSAGE,
                 getSupportChatSummary(chat.getId()));
+
+        if (Boolean.TRUE.equals(chat.getBotActive())) {
+            botProcessor.generateAndReply(chat.getId(), user.getId());
+        } else {
+            notificationService.sendNewMessageNotification(
+                    chat.getParticipantTwoId(),
+                    user.getFirstName() + " " + user.getLastName(),
+                    user.getId(),
+                    chat.getId().toString(),
+                    user.getProfileImageUrl());
+        }
 
         return response;
     }
@@ -431,6 +436,7 @@ public class SupportService {
                 .isSelf(currentUserId != null ? message.getSenderId().equals(currentUserId) : null)
                 .mediaKey(message.getMediaKey())
                 .isBot(message.getIsBot())
+                .isAdminReply(message.getIsAdminReply())
                 .build();
     }
 

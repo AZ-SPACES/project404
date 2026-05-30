@@ -23,6 +23,7 @@ public class MessageResponse {
     private boolean isDeleted;
     private Boolean isSelf;
     private Boolean isBot;
+    private Boolean isAdminReply;
     private String mediaKey;
     private boolean viewOnce;
     private String viewedAt;   // non-null = media has been consumed, mediaKey is gone
