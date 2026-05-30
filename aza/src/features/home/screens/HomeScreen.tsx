@@ -295,9 +295,14 @@ export default function HomeScreen() {
           <Text style={[Typography.h3, styles.transactionsTitle]}>
             Transactions
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })}>
-            <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity onPress={() => navigation.navigate("SpendingCategories" as any)}>
+              <Text style={[Typography.body, styles.seeAllText, { fontSize: 13 }]}>By category</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })}>
+              <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Resume Incomplete Transfer Card */}

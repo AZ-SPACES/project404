@@ -26,6 +26,7 @@ import {
   Store,
   Flag,
   TrendingUp,
+  Users2,
   X,
 } from "lucide-react";
 
@@ -76,6 +77,13 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck },
       { href: "/risk", label: "Risk Management", icon: AlertTriangle },
+    ],
+  },
+  {
+    label: "Analytics",
+    items: [
+      { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp },
+      { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2 },
     ],
   },
   {

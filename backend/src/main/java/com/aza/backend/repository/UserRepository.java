@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -69,5 +71,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email) OR u.username = :username")
     Optional<User> findByEmailIgnoreCaseOrUsername(@Param("email") String email, @Param("username") String username);
+
+    /* Task 4: Find users who signed up in a date range (for cohort analytics) */
+    @Query("SELECT u FROM User u WHERE u.createdAt >= :start AND u.createdAt < :end AND u.deletedAt IS NULL")
+    List<User> findSignupsInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
 

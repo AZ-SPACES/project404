@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -15,4 +16,7 @@ public interface RecurringTransferRepository extends JpaRepository<RecurringTran
 
     List<RecurringTransfer> findAllByStatusAndNextRunAtBefore(
             RecurringTransfer.Status status, LocalDateTime cutoff);
+
+    /* Task 6: Idempotency check for recurring transfers */
+    Optional<RecurringTransfer> findByIdempotencyKey(String idempotencyKey);
 }
