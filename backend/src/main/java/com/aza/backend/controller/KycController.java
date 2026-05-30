@@ -96,6 +96,12 @@ public class KycController {
         return ResponseEntity.ok(ApiResponse.success(kycService.submitKyc(user)));
     }
 
+    @PostMapping("/resubmit")
+    public ResponseEntity<ApiResponse<KycStatusResponse>> resubmit(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(kycService.resubmit(user)));
+    }
+
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {

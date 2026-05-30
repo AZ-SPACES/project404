@@ -200,7 +200,9 @@ public class SupportService {
                     chat.getStatus() != null ? chat.getStatus().name() : Chat.ChatStatus.OPEN.name(),
                     chat.getPriority() != null ? chat.getPriority().name() : Chat.Priority.NORMAL.name(),
                     chat.getCategory(),
-                    unreadCount
+                    unreadCount,
+                    Boolean.TRUE.equals(chat.getBotActive()),
+                    chat.getActiveAgentId() != null ? chat.getActiveAgentId().toString() : null
             );
         });
     }

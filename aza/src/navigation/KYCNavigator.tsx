@@ -19,6 +19,7 @@ import {
   PEPProofOfWealthScreen,
   PEPUnderReviewScreen,
   KYCSuccessScreen,
+  KYCRejectedScreen,
 } from '../features/kyc';
 import {
   CreatingAccountScreen,
@@ -45,6 +46,8 @@ function KYCStatusGate({ children }: { children: React.ReactNode }) {
             completeKYC();
           } else if (status === 'UNDER_REVIEW' && isInitial) {
             navigate('PEPUnderReview');
+          } else if (status === 'REJECTED' && isInitial) {
+            navigate('KYCRejected');
           }
         })
         .catch(() => {});
@@ -82,6 +85,7 @@ export default function KYCNavigator() {
         <Stack.Screen name="PEPAccountPurpose" component={PEPAccountPurposeScreen} />
         <Stack.Screen name="PEPProofOfWealth" component={PEPProofOfWealthScreen} />
         <Stack.Screen name="PEPUnderReview" component={PEPUnderReviewScreen} />
+        <Stack.Screen name="KYCRejected" component={KYCRejectedScreen} />
         <Stack.Screen name="KYCSuccess" component={KYCSuccessScreen} />
         <Stack.Screen name="CreatingAccount" component={CreatingAccountScreen} />
         <Stack.Screen name="FeesAndLimits" component={FeesAndLimitsScreen} />
