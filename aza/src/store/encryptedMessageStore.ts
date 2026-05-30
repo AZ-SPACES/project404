@@ -65,7 +65,14 @@ async function decryptBlob(userId: string, blob: string): Promise<string | null>
   }
 }
 
-/** Load all cached messages for a chat. Returns [] on cache miss or decryption failure. */
+function isExpired(m: LocalMessage, now: number): boolean {
+  return typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now;
+}
+
+/** Load all cached messages for a chat. Returns [] on cache miss or decryption failure.
+ *  Expired disappearing messages are filtered out — we trust the local clock as a
+ *  defense-in-depth measure when the server tombstone WS frame hasn't arrived yet.
+ */
 export async function loadCachedThread(
   userId: string,
   chatId: string,
@@ -75,20 +82,27 @@ export async function loadCachedThread(
   const json = await decryptBlob(userId, blob);
   if (!json) return [];
   try {
-    return JSON.parse(json) as LocalMessage[];
+    const parsed = JSON.parse(json) as LocalMessage[];
+    const now = Date.now();
+    return parsed.filter((m) => !isExpired(m, now));
   } catch {
     return [];
   }
 }
 
-/** Persist (overwrite) a chat thread. Drops any messages older than 90 days. */
+/** Persist (overwrite) a chat thread. Drops messages older than 90 days *and*
+ *  any disappearing messages whose expiresAt is in the past.
+ */
 export async function saveCachedThread(
   userId: string,
   chatId: string,
   messages: LocalMessage[],
 ): Promise<void> {
-  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  const trimmed = messages.filter((m) => m.timestamp >= cutoff);
+  const now = Date.now();
+  const ageCutoff = now - 90 * 24 * 60 * 60 * 1000;
+  const trimmed = messages.filter(
+    (m) => m.timestamp >= ageCutoff && !isExpired(m, now),
+  );
   const blob = await encryptBlob(userId, JSON.stringify(trimmed));
   await AsyncStorage.setItem(THREAD_KEY(userId, chatId), blob);
 }
