@@ -163,46 +163,75 @@ export default function ChatWithUsScreen() {
               <ActivityIndicator size="small" color={Colors.primary} />
             </View>
           )}
-          {messages.map((msg: any) => {
+          {messages.map((msg: any, index: number) => {
+            const prevMsg = messages[index - 1];
+            const showTimestamp = !prevMsg || (msg.timestamp - prevMsg.timestamp) > 5 * 60 * 1000;
+            const timeLabel = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             if (msg.isSystem) {
               return (
-                <View key={msg.id} style={styles.systemRow}>
-                  <View style={styles.systemBubble}>
-                    <Text style={styles.systemText}>{msg.text}</Text>
+                <View key={msg.id}>
+                  {showTimestamp && (
+                    <View style={styles.timestampRow}>
+                      <Text style={styles.timestampText}>{timeLabel}</Text>
+                    </View>
+                  )}
+                  <View style={styles.systemRow}>
+                    <View style={styles.systemBubble}>
+                      <Text style={styles.systemText}>{msg.text}</Text>
+                    </View>
                   </View>
                 </View>
               );
             }
+
+            const isSender = msg.isSender === true && !msg.isBot && !msg.isAdminReply;
+
             return (
-              <View key={msg.id} style={[styles.messageRow, msg.isSender ? styles.senderRow : styles.receiverRow]}>
-                {msg.isBot && !msg.isSender && (
-                  <Text style={styles.botLabel}>AZA AI</Text>
+              <View key={msg.id}>
+                {showTimestamp && (
+                  <View style={styles.timestampRow}>
+                    <Text style={styles.timestampText}>{timeLabel}</Text>
+                  </View>
                 )}
-                <View
-                  style={[
-                    styles.messageBubble,
-                    msg.isSender ? styles.senderBubble : msg.isBot ? styles.botBubble : styles.receiverBubble,
-                    msg.imageUri ? styles.imageBubble : null,
-                    msg.status === 'sending' && styles.messagePending,
-                    msg.status === 'failed' && styles.messageFailed,
-                  ]}
-                >
-                  {msg.imageUri ? (
-                    <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
-                  ) : null}
-                  {!!msg.text && (
-                    <Text style={[
-                      styles.messageText,
-                      msg.isSender ? styles.senderText : styles.receiverText,
-                      msg.imageUri ? styles.textWithImage : null,
-                    ]}>
-                      {msg.text}
-                    </Text>
-                  )}
+                {/* Outer row: pushes the bubble group to right (sender) or left (receiver) */}
+                <View style={[styles.messageOuter, isSender ? styles.senderOuter : styles.receiverOuter]}>
+                  {/* Inner column: stacks label → bubble → timestamp */}
+                  <View style={[styles.messageInner, isSender ? styles.senderInner : styles.receiverInner]}>
+                    {msg.isBot && !isSender && (
+                      <Text style={styles.botLabel}>AZA AI</Text>
+                    )}
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        isSender ? styles.senderBubble : msg.isBot ? styles.botBubble : styles.receiverBubble,
+                        msg.imageUri ? styles.imageBubble : null,
+                        msg.status === 'sending' && styles.messagePending,
+                        msg.status === 'failed' && styles.messageFailed,
+                      ]}
+                    >
+                      {msg.imageUri ? (
+                        <Image source={{ uri: msg.imageUri }} style={styles.messageImage} />
+                      ) : null}
+                      {!!msg.text && (
+                        <Text style={[
+                          styles.messageText,
+                          isSender ? styles.senderText : styles.receiverText,
+                          msg.imageUri ? styles.textWithImage : null,
+                        ]}>
+                          {msg.text}
+                        </Text>
+                      )}
+                    </View>
+                    {msg.status === 'failed' ? (
+                      <Text style={styles.failedLabel}>Not delivered · tap to retry</Text>
+                    ) : (
+                      <Text style={[styles.msgTime, isSender ? styles.msgTimeSender : styles.msgTimeReceiver]}>
+                        {timeLabel}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-                {msg.status === 'failed' && (
-                  <Text style={styles.failedLabel}>Not delivered · tap to retry</Text>
-                )}
               </View>
             );
           })}
@@ -397,12 +426,19 @@ function createStyles(Colors: any) {
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 24 },
-  messageRow: {
-    width: '100%',
+  messageOuter: {
+    flexDirection: 'row',
     marginBottom: 4 },
-  senderRow: {
+  senderOuter: {
+    justifyContent: 'flex-end' },
+  receiverOuter: {
+    justifyContent: 'flex-start' },
+  messageInner: {
+    maxWidth: '80%',
+    flexDirection: 'column' },
+  senderInner: {
     alignItems: 'flex-end' },
-  receiverRow: {
+  receiverInner: {
     alignItems: 'flex-start' },
   messagePending: {
     opacity: 0.55 },
@@ -439,5 +475,22 @@ function createStyles(Colors: any) {
   systemText: {
     fontSize: 12,
     color: Colors.textSecondary,
-    textAlign: 'center' } });
+    textAlign: 'center' },
+  timestampRow: {
+    alignItems: 'center',
+    marginVertical: 6 },
+  timestampText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    opacity: 0.6 },
+  msgTime: {
+    fontSize: 10,
+    marginTop: 2,
+    opacity: 0.5 },
+  msgTimeSender: {
+    color: Colors.textPrimary,
+    marginRight: 2 },
+  msgTimeReceiver: {
+    color: Colors.textSecondary,
+    marginLeft: 2 } });
 }

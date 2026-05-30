@@ -87,6 +87,7 @@ public class SupportBotProcessor {
                     .type(ChatMessage.MessageType.TEXT)
                     .status(ChatMessage.MessageStatus.SENT)
                     .isBot(true)
+                    .isAdminReply(true)
                     .build();
             botMsg = chatMessageRepository.save(botMsg);
             chat.setLastMessageAt(LocalDateTime.now());

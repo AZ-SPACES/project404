@@ -76,6 +76,10 @@ public class ChatMessage {
     @Builder.Default
     private Boolean isBot = false;
 
+    /** True if this message was sent by the admin/agent in a support chat. */
+    @Builder.Default
+    private Boolean isAdminReply = false;
+
     public enum MessageType {
         TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE, PAYMENT_REQUEST
     }

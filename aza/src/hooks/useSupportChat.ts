@@ -13,6 +13,7 @@ export interface Message {
   status?: 'sending' | 'sent' | 'failed';
   isBot?: boolean;
   isSystem?: boolean;
+  isAdminReply?: boolean;
 }
 
 export const useSupportChat = () => {
@@ -33,6 +34,7 @@ export const useSupportChat = () => {
         timestamp: m.sentAt ? new Date(m.sentAt).getTime() : Date.now(),
         imageUri: m.mediaKey ?? undefined,
         isBot: m.isBot ?? false,
+        isAdminReply: m.isAdminReply ?? false,
       })).reverse();
       
       setMessages((prev) => {
@@ -84,6 +86,7 @@ export const useSupportChat = () => {
                       timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
                       imageUri: p.mediaKey ?? undefined,
                       isBot: p.isBot ?? false,
+                      isAdminReply: p.isAdminReply ?? false,
                     },
                   ];
                 });
@@ -163,8 +166,10 @@ export const useSupportChat = () => {
         status: 'sent',
       };
       setMessages(prev => {
-        const without = prev.filter(m => m.id !== tempId);
-        return without.some(m => m.id === confirmed.id) ? without : [...without, confirmed];
+        // Always replace both the optimistic temp entry and any WebSocket-delivered
+        // copy (which has isSelf: null → isSender: false) with the REST-confirmed version.
+        const without = prev.filter(m => m.id !== tempId && m.id !== confirmed.id);
+        return [...without, confirmed];
       });
       setIsOtherTyping(false);
     } catch (err) {
@@ -190,8 +195,8 @@ export const useSupportChat = () => {
         status: 'sent',
       };
       setMessages(prev => {
-        const without = prev.filter(m => m.id !== tempId);
-        return without.some(m => m.id === confirmed.id) ? without : [...without, confirmed];
+        const without = prev.filter(m => m.id !== tempId && m.id !== confirmed.id);
+        return [...without, confirmed];
       });
     } catch (err) {
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
