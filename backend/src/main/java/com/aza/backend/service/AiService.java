@@ -36,7 +36,7 @@ public class AiService {
     @Value("${anthropic.api-key:}")
     private String apiKey;
 
-    @Value("${anthropic.model:claude-sonnet-4-6}")
+    @Value("${anthropic.model:claude-3-5-sonnet}")
     private String model;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -178,10 +178,10 @@ public class AiService {
             String requestJson = objectMapper.writeValueAsString(body);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.anthropic.com/v1/messages"))
+                    .uri(URI.create("https://claude-3-5-sonnet.p.rapidapi.com/"))
                     .timeout(Duration.ofSeconds(20))
-                    .header("x-api-key", apiKey)
-                    .header("anthropic-version", "2023-06-01")
+                    .header("x-rapidapi-key", apiKey)
+                    .header("x-rapidapi-host", "claude-3-5-sonnet.p.rapidapi.com")
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                     .build();
