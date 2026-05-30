@@ -67,7 +67,9 @@ public class KycService {
     public KycStatusResponse recordConsent(User user, String ipAddress) {
         KycRecord record = getOrCreateRecord(user);
 
-        if (Boolean.TRUE.equals(record.getBiometricConsent())) {
+        // Allow re-consent during a resubmission (status reset to PENDING after rejection)
+        if (Boolean.TRUE.equals(record.getBiometricConsent())
+                && record.getStatus() != KycRecord.KycStatus.PENDING) {
             throw new AppException("Consent already recorded");
         }
         record.setBiometricConsent(true);
@@ -299,6 +301,31 @@ public class KycService {
         return getStatus(user);
     }
 
+    // ==================== RESUBMISSION ====================
+
+    @Transactional
+    public KycStatusResponse resubmit(User user) {
+        KycRecord record = kycRecordRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new AppException("No KYC record found"));
+
+        if (record.getStatus() != KycRecord.KycStatus.REJECTED) {
+            throw new AppException("Resubmission only allowed for rejected applications. Current status: "
+                    + record.getStatus().name());
+        }
+
+        record.setStatus(KycRecord.KycStatus.PENDING);
+        record.setSubmittedAt(null);
+        record.setRejectionReason(null);
+        record.setVerifiedAt(null);
+        record.setVerificationProvider(null);
+        record.setVerificationReference(null);
+        kycRecordRepository.save(record);
+
+        updateUserKycStatus(user, User.KycStatus.PENDING);
+        log.info("KYC resubmission initiated for user {}", user.getId());
+        return getStatus(user);
+    }
+
     // ==================== ADMIN METHODS ====================
 
     public List<KycStatusResponse> getPendingReviews() {
@@ -410,6 +437,7 @@ public class KycService {
                 .idNumber(record.getIdNumber())
                 .fundsSource(record.getFundsSource())
                 .isPep(record.getIsPep())
+                .resubmissionAllowed(record.getStatus() == KycRecord.KycStatus.REJECTED)
                 .build();
     }
 

@@ -144,6 +144,8 @@ type KYCContextType = {
   reset: () => void;
   isSubmitting: boolean;
 
+  resubmit: () => Promise<void>;
+
   // Step-by-step methods
   recordConsent: () => Promise<void>;
   submitFundsSource: (funds: FundsSource[], otherText?: string) => Promise<void>;
@@ -170,6 +172,16 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
   const reset = useCallback(() => {
     setData(INITIAL_DATA);
   }, []);
+
+  const resubmit = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      await api.resubmitKyc();
+      update({ status: 'PENDING', rejectionReason: undefined });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [update]);
 
   const recordConsent = useCallback(async () => {
     setIsSubmitting(true);
@@ -355,9 +367,9 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
   }, [update]);
 
   return (
-    <KYCContext.Provider value={{ 
+    <KYCContext.Provider value={{
       data, update, submit, reset, isSubmitting,
-      recordConsent, submitFundsSource, submitIdentity,
+      resubmit, recordConsent, submitFundsSource, submitIdentity,
       submitSelfie, submitPepStatus, submitPepDetails, submitProofOfWealth,
       refreshStatus
     }}>

@@ -174,6 +174,8 @@ export const submitProofOfWealth = (document: any) => {
 
 export const submitKycFinal = () => api.post("/api/v1/kyc/submit");
 
+export const resubmitKyc = () => api.post("/api/v1/kyc/resubmit");
+
 // --- User Endpoints ---
 
 export const getMe = () => api.get("/api/v1/users/me");

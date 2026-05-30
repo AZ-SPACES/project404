@@ -34,4 +34,6 @@ public class KycStatusResponse {
     private String userId;
     private String displayName;
     private String email;
+
+    private boolean resubmissionAllowed;
 }

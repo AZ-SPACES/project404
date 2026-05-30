@@ -6,4 +6,5 @@ export { default as VerifyFaceIdScreen } from './screens/VerifyFaceIdScreen';
 export { default as SelfieScanScreen } from './screens/SelfieScanScreen';
 export { default as SourceofFundsScreen } from './screens/SourceofFundsScreen';
 export { default as KYCSuccessScreen } from './screens/KYCSuccessScreen';
+export { default as KYCRejectedScreen } from './screens/KYCRejectedScreen';
 export * from './pep';
