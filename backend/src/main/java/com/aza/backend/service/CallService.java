@@ -104,7 +104,9 @@ public class CallService {
                         callee.getId(),
                         caller.getFirstName() + " " + caller.getLastName(),
                         session.getId().toString(),
-                        callType == CallSession.CallType.VIDEO);
+                        callType == CallSession.CallType.VIDEO,
+                        caller.getId(),
+                        caller.getProfileImageUrl());
             }
         }
 
@@ -218,19 +220,18 @@ public class CallService {
     // RELAY SDP OFFER / ANSWER / ICE CANDIDATE
 
     public void relaySdpOffer(User sender, CallSignalRequest request) {
-        relaySignal(sender, request, WebSocketEventType.SDP_OFFER, "sdp");
+        relaySignal(sender, request, WebSocketEventType.SDP_OFFER);
     }
 
     public void relaySdpAnswer(User sender, CallSignalRequest request) {
-        relaySignal(sender, request, WebSocketEventType.SDP_ANSWER, "sdp");
+        relaySignal(sender, request, WebSocketEventType.SDP_ANSWER);
     }
 
     public void relayIceCandidate(User sender, CallSignalRequest request) {
-        relaySignal(sender, request, WebSocketEventType.ICE_CANDIDATE, "candidate");
+        relaySignal(sender, request, WebSocketEventType.ICE_CANDIDATE);
     }
 
-    private void relaySignal(User sender, CallSignalRequest request,
-                              WebSocketEventType type, String dataKey) {
+    private void relaySignal(User sender, CallSignalRequest request, WebSocketEventType type) {
         CallSession session = callSessionRepository.findById(request.getCallId())
                 .orElseThrow(() -> new AppException("Call not found"));
         if (!session.getCallerId().equals(sender.getId()) &&
@@ -241,7 +242,7 @@ public class CallService {
         webSocketPublisher.publishCallEvent(targetId, type, Map.of(
                 "callId", request.getCallId().toString(),
                 "from", sender.getId().toString(),
-                dataKey, request.getData()
+                "data", request.getData()
         ));
     }
 
@@ -474,6 +475,10 @@ public class CallService {
 
                     webSocketPublisher.publishCallEvent(
                             session.getCallerId(), WebSocketEventType.CALL_MISSED, payload);
+                    // Also tell the callee so their ringing screen tears down
+                    // instead of being stuck until the app is killed.
+                    webSocketPublisher.publishCallEvent(
+                            session.getCalleeId(), WebSocketEventType.CALL_MISSED, payload);
 
                     // Send push notification to callee
                     userRepository.findById(session.getCallerId()).ifPresent(caller ->
@@ -519,6 +524,7 @@ public class CallService {
         payload.put("callerAvatar", caller.getProfileImageUrl());
         payload.put("calleeId", session.getCalleeId().toString());
         payload.put("calleeName", callee.getFirstName() + " " + callee.getLastName());
+        payload.put("calleeAvatar", callee.getProfileImageUrl());
         payload.put("type", session.getType().name());
         payload.put("status", session.getStatus().name());
         return payload;
