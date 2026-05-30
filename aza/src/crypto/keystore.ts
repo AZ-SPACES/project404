@@ -106,6 +106,17 @@ export async function ensureSignedPreKey(userId: string): Promise<{
   return { publicKey: pair.publicKey, signature: signEd25519(pair.publicKey, ed.privateKey) };
 }
 
+/**
+ * Read the SPK PRIVATE half. Used by the recipient X3DH path to derive
+ * DH1 and DH3 against the sender's identity and ephemeral public keys.
+ * Returns null if no SPK has been provisioned yet.
+ */
+export async function getSignedPreKeyPrivate(userId: string): Promise<Uint8Array | null> {
+  const existing = await readPair(SIGNED_PREKEY_KEY(userId));
+  if (!existing) return null;
+  return base64ToBytes(existing.priv);
+}
+
 export type OtpkPublic = { keyId: number; publicKey: Uint8Array };
 
 /**

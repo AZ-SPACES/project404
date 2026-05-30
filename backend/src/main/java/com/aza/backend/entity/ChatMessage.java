@@ -26,6 +26,15 @@ public class ChatMessage {
     @Column(nullable = false)
     private UUID senderId;
 
+    /**
+     * Opaque sender-supplied correlation id. Persisted as-is so the same
+     * value appears in every MessageResponse derived from this row.
+     * Length-capped (128 chars) to bound storage; sender-generated UUID
+     * or short random string is the expected shape.
+     */
+    @Column(length = 128)
+    private String clientId;
+
     @Column(columnDefinition = "TEXT")
     private String ciphertext;
 
@@ -36,6 +45,14 @@ public class ChatMessage {
     private String ephemeralKey;
 
     private String preKeyId;
+
+    /**
+     * Sender's identity X25519 public key, base64-encoded.
+     * Populated only on the first message of a new E2EE session so the
+     * recipient can perform X3DH without fetching the sender's key bundle.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String senderIdentityPublicKey;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default

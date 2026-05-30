@@ -13,7 +13,7 @@ import {
 } from '../features/customercare';
 import { 
   ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, 
-  AudioCallScreen, VideoCallScreen, StarredMessagesScreen, 
+  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen, 
   SharedMediaScreen, ManageStorageScreen, MessageInfoScreen 
 } from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
@@ -210,6 +210,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
       <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
       <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
+      <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen

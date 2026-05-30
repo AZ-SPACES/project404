@@ -73,6 +73,10 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bootstrappedFor = useRef<string | null>(null);
+  // Bumped after an explicit reset() so the bootstrap effect re-runs even
+  // though userToken hasn't changed. Without this, the user is left with
+  // no identity until they fully log out and back in.
+  const [bootstrapNonce, setBootstrapNonce] = useState(0);
 
   // Bootstrap on login; teardown on logout.
   useEffect(() => {
@@ -185,7 +189,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       cancelled = true;
     };
-  }, [userToken]);
+  }, [userToken, bootstrapNonce]);
 
   const computeSafetyNumber = useCallback(
     (peerPublicKey: Uint8Array) => {
@@ -208,6 +212,10 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIdentity(null);
     setReady(false);
     bootstrappedFor.current = null;
+    // If the user is still logged in, kick the bootstrap effect to mint
+    // a fresh identity + bundle. On logout the userToken effect branch
+    // takes over and tears everything down instead.
+    setBootstrapNonce((n) => n + 1);
   }, [identity]);
 
   // Subscribe to global logout so AuthProvider doesn't need to call us
@@ -215,11 +223,23 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsub = subscribeAuthEvents((e) => {
       if (e.type === 'logout') {
-        reset();
+        // On logout we don't want the bootstrap nonce bump (no userToken
+        // means the bootstrap effect's early-return branch wins anyway).
+        const uid = identity?.userId;
+        Promise.resolve()
+          .then(() => useChatStore.getState().resetForLogout())
+          .catch(() => {})
+          .then(() => (uid ? wipeIdentity(uid) : null))
+          .catch(() => {})
+          .finally(() => {
+            setIdentity(null);
+            setReady(false);
+            bootstrappedFor.current = null;
+          });
       }
     });
     return unsub;
-  }, [reset]);
+  }, [identity]);
 
   const value = useMemo<E2EEContextValue>(
     () => ({ ready, error, identity, computeSafetyNumber, reset }),

@@ -272,6 +272,19 @@ export const getAvailableSupportAgents = () =>
 export const initiateCall = (calleeId: string, type: "VOICE" | "VIDEO") =>
   api.post("/api/v1/calls", { calleeId, type });
 
+export const ringCall = (callId: string) => api.post(`/api/v1/calls/${callId}/ring`);
+export const acceptCall = (callId: string) => api.post(`/api/v1/calls/${callId}/accept`);
+export const declineCall = (callId: string) => api.post(`/api/v1/calls/${callId}/decline`);
+export const endCall = (callId: string) => api.post(`/api/v1/calls/${callId}/end`);
+export const relaySdpOffer = (callId: string, data: string) => api.post('/api/v1/calls/sdp-offer', { callId, data });
+export const relaySdpAnswer = (callId: string, data: string) => api.post('/api/v1/calls/sdp-answer', { callId, data });
+export const relayIceCandidate = (callId: string, data: string) => api.post('/api/v1/calls/ice-candidate', { callId, data });
+export const getTurnCredentials = () => api.get('/api/v1/calls/turn-credentials');
+export const getCallHistory = (page = 0, size = 50) => api.get(`/api/v1/calls/history?page=${page}&size=${size}`);
+export const getMissedCalls = () => api.get('/api/v1/calls/missed');
+export const reconnectCall = (callId: string) => api.post(`/api/v1/calls/${callId}/reconnect`);
+export const confirmReconnected = (callId: string) => api.post(`/api/v1/calls/${callId}/reconnected`);
+
 // --- Contact Endpoints ---
 
 export const getContacts = (page = 0, size = 50) =>
@@ -716,6 +729,8 @@ export type SendMessagePayload = {
   type?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "VOICE_NOTE" | "PAYMENT_REQUEST";
   mediaKey?: string;
   viewOnce?: boolean;
+  /** Opaque sender-side correlation id; echoed back unchanged by the server. */
+  clientId?: string;
 };
 
 export const listChats = () => api.get("/api/v1/chats");

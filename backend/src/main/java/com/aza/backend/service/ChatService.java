@@ -139,10 +139,19 @@ public class ChatService {
             expiresAt = LocalDateTime.now().plusSeconds(chat.getDisappearingMessagesTtl());
         }
 
+        // Cap clientId length defensively. Caller is expected to send a
+        // short random identifier; longer values are truncated rather than
+        // rejected so a malformed client doesn't block sending.
+        String clientId = request.getClientId();
+        if (clientId != null && clientId.length() > 128) {
+            clientId = clientId.substring(0, 128);
+        }
+
         // Save message
         ChatMessage.ChatMessageBuilder messageBuilder = ChatMessage.builder()
                 .chatId(chat.getId())
                 .senderId(sender.getId())
+                .clientId(clientId)
                 .type(messageType)
                 .status(ChatMessage.MessageStatus.SENT)
                 .mediaKey(request.getMediaKey())
@@ -154,7 +163,8 @@ public class ChatService {
         } else {
             messageBuilder.ciphertext(request.getCiphertext())
                     .ephemeralKey(request.getEphemeralKey())
-                    .preKeyId(request.getPreKeyId());
+                    .preKeyId(request.getPreKeyId())
+                    .senderIdentityPublicKey(request.getSenderIdentityPublicKey());
         }
 
         ChatMessage message = messageBuilder.build();
@@ -275,6 +285,7 @@ public class ChatService {
         message.setCiphertext("[deleted]");
         message.setEphemeralKey(null);
         message.setPreKeyId(null);
+        message.setSenderIdentityPublicKey(null);
         message.setMediaKey(null);
         chatMessageRepository.save(message);
     }
@@ -392,6 +403,7 @@ public class ChatService {
             msg.setCiphertext("[expired]");
             msg.setEphemeralKey(null);
             msg.setPreKeyId(null);
+            msg.setSenderIdentityPublicKey(null);
             msg.setMediaKey(null);
             chatMessageRepository.save(msg);
 
@@ -632,11 +644,13 @@ public class ChatService {
                 .id(message.getId().toString())
                 .chatId(message.getChatId().toString())
                 .senderId(message.getSenderId().toString())
+                .clientId(message.getClientId())
                 .ciphertext(Boolean.TRUE.equals(message.getIsDeleted())
                         ? null : message.getCiphertext())
                 .content(message.getContent())
                 .ephemeralKey(message.getEphemeralKey())
                 .preKeyId(message.getPreKeyId())
+                .senderIdentityPublicKey(message.getSenderIdentityPublicKey())
                 .type(message.getType().name())
                 .status(message.getStatus().name())
                 .sentAt(message.getSentAt() != null ? message.getSentAt().toString() : null)
