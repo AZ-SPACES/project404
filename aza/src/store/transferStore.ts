@@ -21,6 +21,7 @@ interface TransferState {
     recipientIdentifier: string;
     amount: number;
     note: string;
+    category?: string;
   }) => Promise<string>;
 
   confirmTransfer: (txId: string, passcode: string) => Promise<void>;
@@ -85,7 +86,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   pendingTransactionId: null,
   error: null,
 
-  initiateTransfer: async ({ recipientIdentifier, amount, note }) => {
+  initiateTransfer: async ({ recipientIdentifier, amount, note, category }) => {
     set({ status: 'initiating', error: null });
     try {
       const idempotencyKey = generateIdempotencyKey();
@@ -94,6 +95,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
         amount,
         note,
         idempotencyKey,
+        ...(category ? { category } : {}),
       });
       const txId: string = res.data?.data?.id || res.data?.id;
       if (!txId) throw new Error('No transaction ID in response');

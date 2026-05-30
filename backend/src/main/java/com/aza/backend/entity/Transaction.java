@@ -65,4 +65,12 @@ public class Transaction {
     public enum TransactionStatus {
         DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED, REVERSED
     }
+
+    public enum TransactionCategory {
+        BILLS, TRANSPORT, FOOD, EDUCATION, ENTERTAINMENT, SHOPPING, HEALTHCARE, SAVINGS, OTHERS
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private TransactionCategory category;
 }

@@ -262,6 +262,24 @@ public class TransferController {
         return ResponseEntity.ok(ApiResponse.success(transferService.getWalletStatus(user.getId())));
     }
 
+    // ==================== FINANCIAL SUMMARY ====================
+
+    @GetMapping("/wallet/financial-summary")
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.transfer.FinancialSummaryResponse>> getFinancialSummary(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("Africa/Accra"));
+        java.time.LocalDateTime start = startDate != null
+                ? LocalDate.parse(startDate).atStartOfDay()
+                : now.withDayOfMonth(1).toLocalDate().atStartOfDay();
+        java.time.LocalDateTime end = endDate != null
+                ? LocalDate.parse(endDate).plusDays(1).atStartOfDay()
+                : now.plusDays(1).toLocalDate().atStartOfDay();
+        return ResponseEntity.ok(ApiResponse.success(
+                transferService.getFinancialSummary(user.getId(), start, end)));
+    }
+
     // ==================== TASK 3: SPENDING CATEGORIES ====================
 
     @GetMapping("/wallet/spending/categories")

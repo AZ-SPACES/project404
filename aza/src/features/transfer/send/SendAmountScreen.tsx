@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,7 +11,10 @@ import {
     Keyboard,
     Pressable,
     ScrollView,
-    StatusBar } from 'react-native';
+    StatusBar,
+    Animated,
+    Dimensions
+} from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
@@ -22,6 +25,11 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { formatCurrency } from '../../../utils/transactionUtils';
 import { BackButton } from '../../../components/ui/BackButton';
+import { CloseButton } from '../../../components/ui/CloseButton';
+
+const { height } = Dimensions.get('window');
+
+import { CATEGORIES, CategoryKey } from '../../../utils/categories';
 
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
@@ -33,7 +41,27 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const [amount, setAmount] = useState('0.00');
     const [note, setNote] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
     const amountInputRef = useRef<TextInput>(null);
+
+    const bottomSheetAnim = useRef(new Animated.Value(height)).current;
+    const backdropAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (showCategoryModal) {
+            Keyboard.dismiss();
+            Animated.parallel([
+                Animated.timing(bottomSheetAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true })
+            ]).start();
+        } else {
+            Animated.parallel([
+                Animated.timing(bottomSheetAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+                Animated.timing(backdropAnim, { toValue: 0, duration: 300, useNativeDriver: true })
+            ]).start();
+        }
+    }, [showCategoryModal, bottomSheetAnim, backdropAnim]);
     const { data: walletData } = useQuery({
       queryKey: queryKeys.wallet(),
       queryFn: async () => { const res = await getWalletBalance(); return res.data?.data || res.data; },
@@ -96,14 +124,14 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
         if (!canSend) return;
         setIsLoading(true);
         navigation.navigate('SendConfirm', {
-            name,
-            username,
-            avatar,
+            name: name ?? '',
+            username: username ?? '',
+            avatar: avatar ?? '',
             amount: numericAmount,
             note,
             identifier,
+            ...(selectedCategory ? { category: selectedCategory } : {}),
         });
-        // Reset after navigation so button is re-enabled if user goes back
         setTimeout(() => setIsLoading(false), 500);
     };
 
@@ -225,6 +253,32 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             </View>
                         </View>
 
+                        {/* Category Picker */}
+                        <TouchableOpacity
+                            style={styles.categoryRow}
+                            activeOpacity={0.7}
+                            onPress={() => setShowCategoryModal(true)}
+                        >
+                            {selectedCategory ? (
+                                <>
+                                    <View style={[styles.categoryIconBadge, { backgroundColor: CATEGORIES.find(c => c.key === selectedCategory)!.color + '1A' }]}>
+                                        <Feather name={CATEGORIES.find(c => c.key === selectedCategory)!.icon as any} size={16} color={CATEGORIES.find(c => c.key === selectedCategory)!.color} />
+                                    </View>
+                                    <Text style={[styles.categorySelectedText, { color: Colors.textPrimary }]}>
+                                        {CATEGORIES.find(c => c.key === selectedCategory)!.name}
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Feather name="tag" size={16} color={Colors.textSecondary} style={{ marginRight: 8 }} />
+                                    <Text style={styles.categoryPlaceholder}>Add a purpose</Text>
+                                </>
+                            )}
+                            <View style={{ flex: 1 }} />
+                            <Feather name="chevron-right" size={16} color={Colors.textSecondary} />
+                        </TouchableOpacity>
+
+                        {/* Categories have been moved to the Bottom Sheet below KeyboardAvoidingView */}
                         {/* Send Button */}
                         <TouchableOpacity
                             style={[
@@ -256,6 +310,72 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                   </ScrollView>
                 </Pressable>
             </KeyboardAvoidingView>
+
+            {/* Bottom Sheet Overlay */}
+            <View
+                style={StyleSheet.absoluteFill}
+                pointerEvents={showCategoryModal ? "auto" : "none"}
+            >
+                <Animated.View
+                    style={[StyleSheet.absoluteFill, { opacity: backdropAnim, zIndex: 1000 }]}
+                >
+                    <TouchableOpacity
+                        style={styles.bottomSheetBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setShowCategoryModal(false)}
+                    />
+                </Animated.View>
+                <Animated.View
+                    style={[
+                        styles.bottomSheetContainer,
+                        {
+                            zIndex: 1001,
+                            transform: [{ translateY: bottomSheetAnim }]
+                        },
+                    ]}
+                >
+                    <View style={styles.bottomSheetHeader}>
+                        <CloseButton onPress={() => setShowCategoryModal(false)} />
+                    </View>
+                    
+                    <Text style={styles.bottomSheetTitle}>What's this for?</Text>
+                    
+                    <ScrollView 
+                        style={{ maxHeight: height * 0.55 }}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: Spacing.xl }}
+                    >
+                        {CATEGORIES.map(cat => {
+                            const isSelected = selectedCategory === cat.key;
+                            return (
+                                <TouchableOpacity
+                                    key={cat.key}
+                                    style={[
+                                        styles.categoryListCell,
+                                        isSelected && { backgroundColor: isDark ? Colors.surface : '#F8FAFC' }
+                                    ]}
+                                    activeOpacity={0.7}
+                                    onPress={() => { setSelectedCategory(cat.key); setShowCategoryModal(false); }}
+                                >
+                                    <View style={[styles.categoryListIcon, { backgroundColor: cat.color + '1A' }]}>
+                                        <Feather name={cat.icon as any} size={20} color={cat.color} />
+                                    </View>
+                                    <Text style={[styles.categoryListText, isSelected && { fontWeight: '700' }]}>{cat.name}</Text>
+                                    {isSelected && (
+                                        <Feather name="check" size={20} color={Colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
+
+                        {selectedCategory && (
+                            <TouchableOpacity style={styles.clearCategoryBtn} onPress={() => { setSelectedCategory(null); setShowCategoryModal(false); }}>
+                                <Text style={styles.clearCategoryText}>Clear purpose</Text>
+                            </TouchableOpacity>
+                        )}
+                    </ScrollView>
+                </Animated.View>
+            </View>
         </SafeAreaView>
     );
 }
@@ -413,6 +533,91 @@ function createStyles(Colors: ThemeColors) {
         ...Typography.body,
         color: Colors.textPrimary,
         padding: 0 },
+
+    // Category
+    categoryRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: Spacing.lg,
+        marginBottom: Spacing.md,
+        backgroundColor: isDark ? Colors.surface : Colors.white,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 14 },
+    categoryIconBadge: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8 },
+    categorySelectedText: {
+        ...Typography.body,
+        fontWeight: '600' },
+    categoryPlaceholder: {
+        ...Typography.body,
+        color: Colors.textSecondary },
+    categoryListCell: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: Spacing.sm,
+        borderRadius: 12,
+        marginBottom: 4,
+    },
+    categoryListIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: Spacing.md
+    },
+    categoryListText: {
+        ...Typography.body,
+        fontWeight: '500',
+        color: Colors.textPrimary,
+        flex: 1
+    },
+    bottomSheetBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)" },
+    bottomSheetContainer: {
+        position: "absolute",
+        bottom: 0,
+        width: "100%",
+        backgroundColor: isDark ? Colors.background : '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 48,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5 },
+    bottomSheetHeader: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        marginBottom: 16 },
+    bottomSheetTitle: {
+        ...Typography.h3,
+        fontWeight: "700",
+        color: Colors.textPrimary,
+        marginBottom: Spacing.xl },
+    clearCategoryBtn: {
+        alignItems: 'center',
+        paddingVertical: Spacing.md,
+        marginTop: Spacing.sm },
+    clearCategoryText: {
+        ...Typography.body,
+        color: Colors.error || '#EF4444',
+        fontWeight: '600' },
 
     // Send
     sendButton: {

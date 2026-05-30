@@ -23,4 +23,5 @@ public class TransferResponse {
     private String direction; // INCOMING or OUTGOING
     private String initiatedAt;
     private String completedAt;
+    private String category;
 }

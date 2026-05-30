@@ -216,6 +216,12 @@ public class TransferService {
         validateBalance(senderWallet, request.getAmount());
 
         // 4. Create a pending transaction
+        Transaction.TransactionCategory txCategory = null;
+        if (request.getCategory() != null && !request.getCategory().isBlank()) {
+            try { txCategory = Transaction.TransactionCategory.valueOf(request.getCategory().toUpperCase()); }
+            catch (IllegalArgumentException ignored) { txCategory = Transaction.TransactionCategory.OTHERS; }
+        }
+
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipientId)
@@ -225,6 +231,7 @@ public class TransferService {
                 .status(Transaction.TransactionStatus.PENDING)
                 .idempotencyKey(request.getIdempotencyKey())
                 .expiresAt(LocalDateTime.now().plusMinutes(10))
+                .category(txCategory)
                 .build();
 
         transaction = transactionRepository.save(transaction);
@@ -333,10 +340,11 @@ public class TransferService {
 
             String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
             emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
-                    merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef, senderWallet.getBalance());
+                    merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef);
             if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
                 smsService.sendTransferSentSms(sender.getPhoneNumber(), merchant.getBusinessName(),
-                        transaction.getAmount(), merchantTxnRef);
+                        transaction.getAmount(), merchantTxnRef, senderWallet.getBalance(),
+                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
             }
 
             boolean emailPaymentReceived = merchantNotificationPrefRepository
@@ -397,14 +405,16 @@ public class TransferService {
             String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
 
             emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
-                    recipientFullName, transaction.getAmount(), txnRef, senderWallet.getBalance());
+                    recipientFullName, transaction.getAmount(), txnRef);
             if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
                 smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
-                        transaction.getAmount(), txnRef);
+                        transaction.getAmount(), txnRef, senderWallet.getBalance(),
+                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
             }
             if (recipient.getPhoneNumber() != null && !recipient.getPhoneNumber().isBlank()) {
                 smsService.sendTransferReceivedSms(recipient.getPhoneNumber(), senderFullName,
-                        transaction.getAmount(), txnRef);
+                        transaction.getAmount(), txnRef, recipientWallet.getBalance(),
+                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO);
             }
 
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
@@ -693,6 +703,7 @@ public class TransferService {
                 .direction(direction)
                 .initiatedAt(t.getInitiatedAt() != null ? t.getInitiatedAt().toString() : null)
                 .completedAt(t.getCompletedAt() != null ? t.getCompletedAt().toString() : null)
+                .category(t.getCategory() != null ? t.getCategory().name() : null)
                 .build();
     }
 
@@ -785,48 +796,75 @@ public class TransferService {
 
     // ==================== TASK 3: SPENDING CATEGORIES ====================
 
+    private static final java.util.Map<Transaction.TransactionCategory, String[]> CATEGORY_META;
+    static {
+        CATEGORY_META = new java.util.EnumMap<>(Transaction.TransactionCategory.class);
+        CATEGORY_META.put(Transaction.TransactionCategory.BILLS,         new String[]{"Bills & Utilities", "#60A5FA"});
+        CATEGORY_META.put(Transaction.TransactionCategory.TRANSPORT,     new String[]{"Transport",          "#34D399"});
+        CATEGORY_META.put(Transaction.TransactionCategory.FOOD,          new String[]{"Food & Drinks",      "#F59E0B"});
+        CATEGORY_META.put(Transaction.TransactionCategory.EDUCATION,     new String[]{"Education",          "#A78BFA"});
+        CATEGORY_META.put(Transaction.TransactionCategory.ENTERTAINMENT, new String[]{"Entertainment",      "#F472B6"});
+        CATEGORY_META.put(Transaction.TransactionCategory.SHOPPING,      new String[]{"Shopping",           "#FB923C"});
+        CATEGORY_META.put(Transaction.TransactionCategory.HEALTHCARE,    new String[]{"Healthcare",         "#EF4444"});
+        CATEGORY_META.put(Transaction.TransactionCategory.SAVINGS,       new String[]{"Savings",            "#10B981"});
+        CATEGORY_META.put(Transaction.TransactionCategory.OTHERS,        new String[]{"Others",             "#94A3B8"});
+    }
+
     public java.util.Map<String, Object> getSpendingCategories(UUID userId, LocalDateTime start, LocalDateTime end) {
         java.util.List<Transaction> debits = transactionRepository.findDebitsByUserIdAndDateRange(userId, start, end);
 
-        BigDecimal p2pTotal = BigDecimal.ZERO;
-        int p2pCount = 0;
-        BigDecimal merchantTotal = BigDecimal.ZERO;
-        int merchantCount = 0;
-        BigDecimal requestTotal = BigDecimal.ZERO;
-        int requestCount = 0;
-
-        for (Transaction t : debits) {
-            if (t.getType() == Transaction.TransactionType.REQUEST) {
-                requestTotal = requestTotal.add(t.getAmount());
-                requestCount++;
-            } else {
-                // TRANSFER — determine if recipient is a user or merchant
-                boolean isUser = userRepository.existsById(t.getRecipientId());
-                if (isUser) {
-                    p2pTotal = p2pTotal.add(t.getAmount());
-                    p2pCount++;
-                } else {
-                    merchantTotal = merchantTotal.add(t.getAmount());
-                    merchantCount++;
-                }
-            }
+        java.util.Map<Transaction.TransactionCategory, BigDecimal> totals = new java.util.EnumMap<>(Transaction.TransactionCategory.class);
+        java.util.Map<Transaction.TransactionCategory, Integer> counts = new java.util.EnumMap<>(Transaction.TransactionCategory.class);
+        for (Transaction.TransactionCategory cat : Transaction.TransactionCategory.values()) {
+            totals.put(cat, BigDecimal.ZERO);
+            counts.put(cat, 0);
         }
 
-        BigDecimal totalSpent = p2pTotal.add(merchantTotal).add(requestTotal);
+        for (Transaction t : debits) {
+            Transaction.TransactionCategory cat = t.getCategory() != null ? t.getCategory() : Transaction.TransactionCategory.OTHERS;
+            totals.put(cat, totals.get(cat).add(t.getAmount()));
+            counts.put(cat, counts.get(cat) + 1);
+        }
 
-        java.util.List<java.util.Map<String, Object>> categories = java.util.List.of(
-                java.util.Map.of("name", "P2P Transfer", "key", "P2P_TRANSFER",
-                        "total", p2pTotal, "count", p2pCount, "color", "#B7EE7A"),
-                java.util.Map.of("name", "Merchant Payment", "key", "MERCHANT_PAYMENT",
-                        "total", merchantTotal, "count", merchantCount, "color", "#60A5FA"),
-                java.util.Map.of("name", "Money Request", "key", "MONEY_REQUEST",
-                        "total", requestTotal, "count", requestCount, "color", "#F59E0B")
-        );
+        BigDecimal totalSpent = totals.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        java.util.List<java.util.Map<String, Object>> categories = new java.util.ArrayList<>();
+        for (Transaction.TransactionCategory cat : Transaction.TransactionCategory.values()) {
+            BigDecimal catTotal = totals.get(cat);
+            if (catTotal.compareTo(BigDecimal.ZERO) > 0) {
+                String[] meta = CATEGORY_META.get(cat);
+                categories.add(java.util.Map.of(
+                        "name", meta[0],
+                        "key", cat.name(),
+                        "total", catTotal,
+                        "count", counts.get(cat),
+                        "color", meta[1]));
+            }
+        }
 
         return java.util.Map.of(
                 "categories", categories,
                 "totalSpent", totalSpent,
                 "period", java.util.Map.of("start", start.toString(), "end", end.toString()));
+    }
+
+    // ==================== FINANCIAL SUMMARY ====================
+
+    public FinancialSummaryResponse getFinancialSummary(UUID userId, LocalDateTime start, LocalDateTime end) {
+        BigDecimal totalIncome = transactionRepository.getTotalReceivedBetween(userId, start, end);
+        BigDecimal totalSpent  = transactionRepository.getTotalSpentBetween(userId, start, end);
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("Wallet not found"));
+        long txCount = transactionRepository.countCompletedTransactionsForUser(userId, start, end);
+
+        return FinancialSummaryResponse.builder()
+                .totalIncome(totalIncome)
+                .totalSpent(totalSpent)
+                .netChange(totalIncome.subtract(totalSpent))
+                .balance(wallet.getBalance())
+                .currency("GHS")
+                .transactionCount(txCount)
+                .build();
     }
 
     // ==================== TASK 7: USER-FACING BULK TRANSFER ====================

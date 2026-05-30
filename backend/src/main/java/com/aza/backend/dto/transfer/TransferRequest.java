@@ -25,4 +25,6 @@ public class TransferRequest {
 
     @NotBlank(message = "Idempotency key is required")
     private String idempotencyKey;
+
+    private String category;
 }

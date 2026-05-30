@@ -31,4 +31,8 @@ export const queryKeys = {
   recurringTransfers:  () => ['recurring-transfers'] as const,
   spendingCategories:  (start: string, end: string) => ['spending-categories', start, end] as const,
   walletStatus:        () => ['wallet-status'] as const,
+  financialSummary:    (start: string, end: string) => ['financial-summary', start, end] as const,
+  budgets:             () => ['budgets'] as const,
+  budgetStatus:        (start: string, end: string) => ['budget-status', start, end] as const,
+  transactionInsight:  (id: string) => ['transaction-insight', id] as const,
 } as const;

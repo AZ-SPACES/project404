@@ -92,7 +92,7 @@ export default function SendPinScreen({
       try {
         await confirmTransfer(pendingTransactionId, enteredPin);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        navigation.replace("SendSuccess", route.params);
+        navigation.replace("SendSuccess", { ...route.params, transactionId: pendingTransactionId });
       } catch (err: any) {
         startShake();
         setPin("");

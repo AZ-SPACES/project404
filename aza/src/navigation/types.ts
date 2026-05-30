@@ -64,9 +64,9 @@ export type RootStackParamList = {
   Inbox: undefined;
   NotificationSettings: undefined;
   SendAmount: { id?: string; name?: string; username?: string; avatar?: string; identifier: string };
-  SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string };
-  SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; id?: string };
-  SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string };
+  SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string; category?: string };
+  SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; id?: string; category?: string };
+  SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; category?: string; transactionId?: string };
   RequestAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
   SecurityAndPrivacy: undefined;
   ChangePassword: undefined;
@@ -135,4 +135,7 @@ export type RootStackParamList = {
   BulkTransfer: undefined;
   SpendingCategories: undefined;
   WalletFreeze: undefined;
+  FinancialDashboard: undefined;
+  BudgetManagement: undefined;
+  AiAssistant: undefined;
 };
