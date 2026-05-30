@@ -23,12 +23,25 @@
  *   3) Derive same AES key (same salt/info).
  *   4) Decrypt; reject on AEAD failure or AAD mismatch.
  *
- * Forward secrecy: ePriv is discarded immediately after send. A future
- * compromise of the long-term identity key still cannot decrypt past
- * messages without also recovering each ephemeral (which never leaves
- * the sender's memory). This is weaker than the full Double Ratchet
- * (no post-compromise recovery, since recipient identity priv stays
- * static) but is the standard "per-message ECDH" tier.
+ * Forward secrecy — what this scheme actually provides:
+ *   - SENDER side: ePriv is zeroed before the envelope leaves memory, so an
+ *     attacker who later compromises the sender's device cannot replay the
+ *     sender's stored material to decrypt past outgoing messages. There is
+ *     no sender ratchet state to recover.
+ *   - RECIPIENT side: decryption uses the long-term identity private key
+ *     against the sender's ephemeral public key (which IS stored on the
+ *     server inside each envelope). If the recipient's identity private key
+ *     is ever compromised, every past message they received remains
+ *     decryptable from server-stored ciphertext. There is NO recipient-side
+ *     forward secrecy.
+ *
+ * NOTE on the bundle: the backend stores signedPreKey + one-time pre-keys
+ * for X3DH-style session init, but this implementation does not currently
+ * mix the SPK or OPK into the HKDF input. The `preKeyId` field is sent
+ * once per new session purely as an opaque pop signal so the server can
+ * retire the OPK from the peer's supply. Upgrading to true X3DH (mix
+ * IK·SPK + EK·SPK + EK·OPK + EK·IK into the root key) would close the
+ * recipient-side FS gap; that's tracked as a follow-up.
  */
 
 import './random';

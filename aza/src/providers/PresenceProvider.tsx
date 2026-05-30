@@ -4,6 +4,7 @@ import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { BASE_URL, TOKEN_KEY } from '../services/api';
 import { useAuth } from './AuthProvider';
+import { subscribeAuthEvents } from './authEvents';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
@@ -84,6 +85,24 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [userToken]);
+
+  // When the access token rotates, drop the current STOMP client so the
+  // next reconnect uses the fresh bearer. Without this, the heartbeat
+  // would silently keep talking to the broker with the stale token until
+  // it got booted.
+  useEffect(() => {
+    const unsub = subscribeAuthEvents((e) => {
+      if (e.type !== 'tokenRotated') return;
+      const c = clientRef.current;
+      if (!c) return;
+      clientRef.current = null;
+      c.deactivate().catch(() => {});
+      // The outer effect will re-run on the next state change and rebuild
+      // a client; presence's heartbeat cadence is generous enough to absorb
+      // the brief gap.
+    });
+    return unsub;
+  }, []);
 
   return <>{children}</>;
 }

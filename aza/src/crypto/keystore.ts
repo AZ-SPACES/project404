@@ -27,7 +27,15 @@ import {
 const IDENTITY_X25519_KEY = (uid: string) => `aza_e2ee_id_x_${uid}`;
 const IDENTITY_ED25519_KEY = (uid: string) => `aza_e2ee_id_e_${uid}`;
 const SIGNED_PREKEY_KEY = (uid: string) => `aza_e2ee_spk_${uid}`;
-const OTPK_PRIVATES_KEY = (uid: string) => `aza_e2ee_otpk_priv_${uid}`;
+// The index lists keyIds that are still available locally. Each OPK private
+// is stored under its own SecureStore key so the per-entry size stays small
+// (~50 base64 bytes) on Android, where the single-blob approach is borderline
+// for 50+ keys.
+const OTPK_INDEX_KEY = (uid: string) => `aza_e2ee_otpk_idx_${uid}`;
+const OTPK_PRIV_KEY = (uid: string, keyId: number) =>
+  `aza_e2ee_otpk_priv_${uid}_${keyId}`;
+// Legacy single-blob key — read on migration only.
+const OTPK_LEGACY_BLOB_KEY = (uid: string) => `aza_e2ee_otpk_priv_${uid}`;
 
 const INITIAL_OTPK_COUNT = 50;
 const SECURE_OPTS: SecureStore.SecureStoreOptions = {
@@ -37,7 +45,6 @@ const SECURE_OPTS: SecureStore.SecureStoreOptions = {
 };
 
 type StoredPair = { pub: string; priv: string };
-type OtpkPrivate = { keyId: number; priv: string };
 
 async function readPair(key: string): Promise<StoredPair | null> {
   const raw = await SecureStore.getItemAsync(key, SECURE_OPTS);
@@ -102,29 +109,35 @@ export async function ensureSignedPreKey(userId: string): Promise<{
 export type OtpkPublic = { keyId: number; publicKey: Uint8Array };
 
 /**
- * Generate `count` fresh one-time pre-keys, append their *private* halves to
- * SecureStore, and return the public halves ready for upload to the server.
+ * Generate `count` fresh one-time pre-keys, persist each private half under
+ * its own SecureStore key, and return the public halves ready for upload.
  */
 export async function generateOneTimePreKeys(userId: string, count: number): Promise<OtpkPublic[]> {
-  const existing = await readOtpkPrivates(userId);
-  const startId = existing.reduce((m, k) => Math.max(m, k.keyId), 0) + 1;
+  await migrateLegacyOtpkBlob(userId);
+  const index = await readOtpkIndex(userId);
+  const startId = (index.reduce((m, id) => Math.max(m, id), 0) || 0) + 1;
 
-  const newPrivates: OtpkPrivate[] = [];
   const publics: OtpkPublic[] = [];
+  const nextIndex = index.slice();
   for (let i = 0; i < count; i++) {
     const pair = generateX25519();
     const keyId = startId + i;
-    newPrivates.push({ keyId, priv: bytesToBase64(pair.privateKey) });
+    await SecureStore.setItemAsync(
+      OTPK_PRIV_KEY(userId, keyId),
+      bytesToBase64(pair.privateKey),
+      SECURE_OPTS,
+    );
+    nextIndex.push(keyId);
     publics.push({ keyId, publicKey: pair.publicKey });
   }
-
-  await writeOtpkPrivates(userId, existing.concat(newPrivates));
+  await writeOtpkIndex(userId, nextIndex);
   return publics;
 }
 
 /** Number of locally-stored OTPK private halves available. */
 export async function otpkPrivateCount(userId: string): Promise<number> {
-  return (await readOtpkPrivates(userId)).length;
+  await migrateLegacyOtpkBlob(userId);
+  return (await readOtpkIndex(userId)).length;
 }
 
 /**
@@ -135,27 +148,81 @@ export async function consumeOneTimePreKey(
   userId: string,
   keyId: number,
 ): Promise<Uint8Array | null> {
-  const existing = await readOtpkPrivates(userId);
-  const idx = existing.findIndex((k) => k.keyId === keyId);
-  if (idx === -1) return null;
-  const consumed = existing[idx]!;
-  existing.splice(idx, 1);
-  await writeOtpkPrivates(userId, existing);
-  return base64ToBytes(consumed.priv);
+  await migrateLegacyOtpkBlob(userId);
+  const raw = await SecureStore.getItemAsync(OTPK_PRIV_KEY(userId, keyId), SECURE_OPTS);
+  if (!raw) return null;
+  await SecureStore.deleteItemAsync(OTPK_PRIV_KEY(userId, keyId), SECURE_OPTS);
+  const index = await readOtpkIndex(userId);
+  await writeOtpkIndex(userId, index.filter((id) => id !== keyId));
+  return base64ToBytes(raw);
 }
 
-async function readOtpkPrivates(userId: string): Promise<OtpkPrivate[]> {
-  const raw = await SecureStore.getItemAsync(OTPK_PRIVATES_KEY(userId), SECURE_OPTS);
+/** Drop every OPK private — used during full bundle rotation. */
+export async function purgeAllOneTimePreKeys(userId: string): Promise<void> {
+  await migrateLegacyOtpkBlob(userId);
+  const index = await readOtpkIndex(userId);
+  await Promise.all(
+    index.map((id) =>
+      SecureStore.deleteItemAsync(OTPK_PRIV_KEY(userId, id), SECURE_OPTS),
+    ),
+  );
+  await SecureStore.deleteItemAsync(OTPK_INDEX_KEY(userId), SECURE_OPTS);
+}
+
+async function readOtpkIndex(userId: string): Promise<number[]> {
+  const raw = await SecureStore.getItemAsync(OTPK_INDEX_KEY(userId), SECURE_OPTS);
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as OtpkPrivate[];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((n) => typeof n === 'number') : [];
   } catch {
     return [];
   }
 }
 
-async function writeOtpkPrivates(userId: string, items: OtpkPrivate[]) {
-  await SecureStore.setItemAsync(OTPK_PRIVATES_KEY(userId), JSON.stringify(items), SECURE_OPTS);
+async function writeOtpkIndex(userId: string, ids: number[]) {
+  await SecureStore.setItemAsync(OTPK_INDEX_KEY(userId), JSON.stringify(ids), SECURE_OPTS);
+}
+
+/**
+ * One-shot migration from the old single-blob JSON format to per-key entries.
+ * Runs idempotently; subsequent calls are no-ops because the blob is deleted
+ * after a successful migration.
+ */
+let migrationRunFor: Set<string> = new Set();
+async function migrateLegacyOtpkBlob(userId: string): Promise<void> {
+  if (migrationRunFor.has(userId)) return;
+  migrationRunFor.add(userId);
+  try {
+    const raw = await SecureStore.getItemAsync(
+      OTPK_LEGACY_BLOB_KEY(userId),
+      SECURE_OPTS,
+    );
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Array<{ keyId: number; priv: string }>;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      await SecureStore.deleteItemAsync(OTPK_LEGACY_BLOB_KEY(userId), SECURE_OPTS);
+      return;
+    }
+    const index = await readOtpkIndex(userId);
+    const seen = new Set(index);
+    for (const e of parsed) {
+      if (typeof e?.keyId !== 'number' || typeof e?.priv !== 'string') continue;
+      if (seen.has(e.keyId)) continue;
+      await SecureStore.setItemAsync(
+        OTPK_PRIV_KEY(userId, e.keyId),
+        e.priv,
+        SECURE_OPTS,
+      );
+      index.push(e.keyId);
+    }
+    await writeOtpkIndex(userId, index);
+    await SecureStore.deleteItemAsync(OTPK_LEGACY_BLOB_KEY(userId), SECURE_OPTS);
+  } catch (e) {
+    // Migration is best-effort; if it fails we'll fall back to generating
+    // a fresh batch on next rotation.
+    console.warn('[E2EE] OTPK migration failed', e);
+  }
 }
 
 /**
@@ -163,12 +230,15 @@ async function writeOtpkPrivates(userId: string, items: OtpkPrivate[]) {
  * when the user explicitly resets E2EE.
  */
 export async function wipeIdentity(userId: string): Promise<void> {
+  // Make sure per-key OPKs are cleared too, not just the index.
+  await purgeAllOneTimePreKeys(userId).catch(() => {});
   await Promise.all([
     SecureStore.deleteItemAsync(IDENTITY_X25519_KEY(userId), SECURE_OPTS),
     SecureStore.deleteItemAsync(IDENTITY_ED25519_KEY(userId), SECURE_OPTS),
     SecureStore.deleteItemAsync(SIGNED_PREKEY_KEY(userId), SECURE_OPTS),
-    SecureStore.deleteItemAsync(OTPK_PRIVATES_KEY(userId), SECURE_OPTS),
+    SecureStore.deleteItemAsync(OTPK_LEGACY_BLOB_KEY(userId), SECURE_OPTS),
   ]);
+  migrationRunFor.delete(userId);
 }
 
 export const KEYSTORE_INITIAL_OTPK_COUNT = INITIAL_OTPK_COUNT;
