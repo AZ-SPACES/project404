@@ -194,14 +194,22 @@ export default function ChatInfoScreen() {
       );
       return;
     }
+    const sigLine = peer?.spkSignatureValid
+      ? "Signed pre-key signature: VALID."
+      : "Signed pre-key signature: NOT VERIFIED — proceed with caution.";
+    const rotationLine =
+      peer?.identityChange === 'changed'
+        ? "\n\n⚠️ " + name + "'s encryption key has changed since you last contacted them. " +
+          "This can happen if they reinstalled the app, but it can also mean someone is impersonating them. " +
+          "Re-verify the safety number before sending anything sensitive."
+        : peer?.identityChange === 'first-seen'
+          ? "\n\nFirst time contacting this peer — keys recorded for future comparison."
+          : "";
     Alert.alert(
       "Verify safety number",
       `Compare these numbers with ${name} in person or over a call you trust. ` +
         `If they match, your conversation is end-to-end encrypted and the keys ` +
-        `haven't changed.\n\n${safetyNumberValue}\n\n` +
-        (peer?.verifiedOnce
-          ? "Signed pre-key signature: VALID."
-          : "Signed pre-key signature: NOT VERIFIED — proceed with caution."),
+        `haven't changed.\n\n${safetyNumberValue}\n\n${sigLine}${rotationLine}`,
       [
         { text: "Copy", onPress: () => Clipboard.setStringAsync(safetyNumberValue) },
         { text: "Close", style: "cancel" },
@@ -395,7 +403,13 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Feather name="shield" size={20} color={Colors.textPrimary} />}
             label="Encryption"
-            value={peer?.verifiedOnce ? "Verified" : "End-to-end"}
+            value={
+              peer?.identityChange === 'changed'
+                ? "Key changed — review"
+                : peer?.spkSignatureValid
+                  ? "End-to-end · Verified"
+                  : "End-to-end"
+            }
             Colors={Colors}
             onPress={handleVerifySafetyNumber}
           />

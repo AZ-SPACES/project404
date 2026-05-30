@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { emitAuthEvent } from "../providers/authEvents";
 
 const getBaseUrl = (): string => {
   return "https://api.aza.systems";
@@ -920,6 +921,11 @@ api.interceptors.response.use(
           api.defaults.headers.common["Authorization"] =
             `Bearer ${newAccessToken}`;
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+          // Notify long-lived WebSocket connections that the access token
+          // has rotated, so they can reconnect with the new credential
+          // before the broker drops them.
+          emitAuthEvent({ type: 'tokenRotated', accessToken: newAccessToken });
 
           processQueue(null, newAccessToken);
           return api(originalRequest);
