@@ -8,6 +8,7 @@ import { registerFcmToken, unregisterFcmToken, getDeviceId } from '../services/a
 import { navigate } from '../navigation/navigationRef';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
+import { useCallStore } from '../store/callStore';
 
 type NotificationContextType = {
   checkPermissions: () => Promise<any>;
@@ -17,6 +18,33 @@ type NotificationContextType = {
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+/**
+ * Push notifications carry less detail than the WS event (no callerId,
+ * no avatars, no calleeId). Synthesize a payload good enough for the
+ * IncomingCall UI; subsequent SDP/ICE traffic keys off callId only.
+ */
+function handleIncomingCallPush(data: any) {
+  if (!data?.callId) return;
+  const existing = useCallStore.getState().activeCall;
+  // Dedupe against WS — both channels can fire while in foreground.
+  if (existing && existing.callId === data.callId) return;
+  // If a different call is already active, ignore the push; the busy /
+  // call-waiting logic lives server-side.
+  if (existing) return;
+
+  useCallStore.getState().setIncomingCall({
+    callId: data.callId,
+    callerId: data.callerId ?? null,
+    callerName: data.callerName ?? 'Unknown',
+    callerAvatar: data.callerAvatar ?? null,
+    calleeId: data.calleeId ?? null,
+    calleeName: data.calleeName ?? '',
+    calleeAvatar: data.calleeAvatar ?? null,
+    type: data.isVideo ? 'VIDEO' : 'VOICE',
+    status: 'RINGING',
+  });
+}
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userToken, completeKYC } = useAuth();
@@ -63,6 +91,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
         }
 
+        if (type === 'INCOMING_CALL') {
+          // Foreground push for an incoming call — usually we already
+          // received the WS event, in which case handleIncomingCallPush
+          // is a no-op. When push beats WS (or WS is down), this is what
+          // surfaces the incoming-call UI.
+          handleIncomingCallPush(data);
+        }
+
         if (type === 'MONEY_RECEIVED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
           queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -99,11 +135,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } else if (data?.type === 'KYC_REJECTED') {
           navigate('App', { screen: 'VerifyIdentity', params: {} });
         } else if (data?.type === 'INCOMING_CALL') {
-          const screen = data.isVideo ? 'VideoCall' : 'AudioCall';
-          navigate('App', {
-            screen,
-            params: { name: data.callerName ?? 'Unknown', avatar: '' },
-          });
+          // Route through the store so we land on IncomingCallScreen with
+          // working accept/decline, not directly on the in-call screen
+          // (which previously rendered blank because activeCall was null).
+          handleIncomingCallPush(data);
         } else if (data?.type === 'MISSED_CALL') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
         } else if (data?.type === 'SECURITY_ALERT') {

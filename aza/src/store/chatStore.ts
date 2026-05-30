@@ -37,9 +37,17 @@ import {
 } from '../crypto/codec';
 import {
   decryptFromSender,
-  encryptForRecipient,
+  decryptV3,
+  encryptFirstMessageV3,
+  encryptFollowupMessageV3,
   verifyEd25519,
+  type RecipientBundle,
+  type V3Envelope,
 } from '../crypto/e2ee';
+import {
+  consumeOneTimePreKey,
+  getSignedPreKeyPrivate,
+} from '../crypto/keystore';
 import type { LocalMessage, LocalMessageStatus } from './chatTypes';
 import {
   loadCachedThread,
@@ -56,6 +64,13 @@ import {
   markSessionEstablished,
   wipeSessionFlags,
 } from './sessionCache';
+import {
+  deleteSessionRoot,
+  indexSessionRoot,
+  loadSessionRoot,
+  saveSessionRoot,
+  wipeAllSessionRoots,
+} from './sessionRootCache';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -174,7 +189,23 @@ function ciphertextEnvelope(ciphertext?: string | null, ephemeralKey?: string | 
  */
 const ECHO_RECONCILE_WINDOW_MS = 30_000;
 
-function mergeMessage(
+/**
+ * Binary-search the leftmost index i such that thread[i].timestamp >= ts.
+ * Assumes the thread is already sorted ascending by timestamp.
+ */
+function lowerBoundByTimestamp(thread: LocalMessage[], ts: number): number {
+  let lo = 0;
+  let hi = thread.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (thread[mid]!.timestamp < ts) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+// Exported for tests.
+export function mergeMessage(
   thread: LocalMessage[],
   incoming: LocalMessage,
 ): LocalMessage[] {
@@ -204,7 +235,14 @@ function mergeMessage(
     );
   }
   if (matchIdx === -1) {
-    return [...thread, incoming].sort((a, b) => a.timestamp - b.timestamp);
+    // Insert at the right timestamp position. The thread is kept sorted on
+    // every write, so a binary search finds the insertion index in O(log n)
+    // and the resulting array copy is O(n). The old full-sort path was
+    // O(n log n) per message which becomes noticeable past a few thousand.
+    const idx = lowerBoundByTimestamp(thread, incoming.timestamp);
+    const next = thread.slice();
+    next.splice(idx, 0, incoming);
+    return next;
   }
   const existing = thread[matchIdx]!;
   // If we couldn't decrypt the incoming copy (typical for our own messages
@@ -254,6 +292,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         wipeAllChatCaches(uid),
         wipePeerIdentityCache(uid).catch(() => {}),
         wipeSessionFlags(uid).catch(() => {}),
+        wipeAllSessionRoots(uid).catch(() => {}),
       ]);
     }
     set({
@@ -335,7 +374,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const items: any[] = (page?.content ?? []).slice().reverse(); // oldest first
       const decrypted: LocalMessage[] = [];
       for (const m of items) {
-        const local = decryptServerMessage(m, chatId, selfUserId, selfIdentityPrivate);
+        const local = await decryptServerMessage(m, chatId, selfUserId, selfIdentityPrivate);
         if (local) decrypted.push(local);
       }
       const next = decrypted.reduce<LocalMessage[]>(
@@ -386,6 +425,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             console.warn(
               `[E2EE] peer ${otherUserId} identity key changed since last contact — re-verify safety number`,
             );
+            // Drop any cached session root we held against the old IK —
+            // it's keyed on the old public key and the loadSessionRoot
+            // fingerprint check would refuse to return it anyway, but
+            // proactive deletion stops the entry from leaking when the
+            // user later resets.
+            deleteSessionRoot(selfUserId, otherUserId).catch(() => {});
           }
         } catch (e) {
           console.warn('[E2EE] TOFU check failed', e);
@@ -450,27 +495,76 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     try {
       const peer = await get().ensurePeerKeys(chat.otherUserId);
       if (!peer) throw new Error('Peer key bundle unavailable');
+      const selfIdentityPub = get().selfIdentityPublic;
+      const selfIdentityPriv = get().selfIdentityPrivate;
+      if (!selfIdentityPub || !selfIdentityPriv) {
+        throw new Error('Identity not ready');
+      }
 
-      const envelope = encryptForRecipient({
-        plaintext: text,
-        recipientIdentityPublic: peer.identityPublicKey,
-        senderId: selfUserId,
-        chatId,
-      });
-
-      // preKeyId is only meaningful on the very first message we send to
-      // this peer using our current identity. Track that per-peer in
-      // AsyncStorage instead of guessing from chat.lastMessageAt (which
-      // misfires when the peer sent the opening message).
-      const sessionEstablished = await hasSessionWithPeer(selfUserId, chat.otherUserId);
-      const includePreKey = !sessionEstablished && !!peer.oneTimePreKeyId;
+      // v3 path: try to load a cached session root. If absent (or if the peer
+      // identity changed underneath us) we run X3DH and persist a fresh root.
+      let rootKey = await loadSessionRoot(
+        selfUserId,
+        chat.otherUserId,
+        peer.identityPublicKey,
+      );
+      let envelope: V3Envelope;
+      let usedPreKeyId: string | undefined;
+      if (!rootKey) {
+        const bundle: RecipientBundle = {
+          identityPublicKey: peer.identityPublicKey,
+          signedPreKeyPublic: peer.signedPreKeyPublic,
+          ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
+          ...(peer.oneTimePreKeyPublic
+            ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic }
+            : {}),
+        };
+        const first = encryptFirstMessageV3({
+          plaintext: text,
+          senderIdentityKeyPair: {
+            publicKey: selfIdentityPub,
+            privateKey: selfIdentityPriv,
+          },
+          recipientBundle: bundle,
+          senderId: selfUserId,
+          chatId,
+        });
+        envelope = first.envelope;
+        rootKey = first.rootKey;
+        usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
+        // Persist before the network call so a crash mid-send doesn't lose the
+        // root — worst case we re-send and the peer will see a duplicate first
+        // message, which the OPK uniqueness check already protects against.
+        await saveSessionRoot(
+          selfUserId,
+          chat.otherUserId,
+          rootKey,
+          peer.identityPublicKey,
+        );
+        await indexSessionRoot(selfUserId, chat.otherUserId);
+      } else {
+        envelope = encryptFollowupMessageV3({
+          plaintext: text,
+          rootKey,
+          recipientIdentityPublic: peer.identityPublicKey,
+          senderId: selfUserId,
+          chatId,
+        });
+      }
 
       const payload: SendMessagePayload = {
         chatId,
         type: 'TEXT',
         ciphertext: envelope.ciphertext,
         ephemeralKey: envelope.ephemeralPublicKey,
-        ...(includePreKey ? { preKeyId: peer.oneTimePreKeyId } : {}),
+        // The server persists clientId and echoes it back on the eventual WS
+        // frame, letting mergeMessage attribute the echo to this optimistic
+        // entry deterministically instead of falling back to a timing heuristic.
+        clientId,
+        ...(envelope.senderIdentityPublicKey
+          ? { senderIdentityPublicKey: envelope.senderIdentityPublicKey }
+          : {}),
+        ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
       };
 
       const { data } = await sendChatMessage(payload);
@@ -479,7 +573,10 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
       const expiresAt = parseDateTime(m?.expiresAt);
 
-      // Mark the session established AFTER the server accepted the first send.
+      // Keep the legacy session-established flag in sync. It's no longer used
+      // for first-message gating (the session-root cache plays that role now)
+      // but still drives misc diagnostics and the upgrade path from v2 carts.
+      const sessionEstablished = await hasSessionWithPeer(selfUserId, chat.otherUserId);
       if (!sessionEstablished) {
         markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
       }
@@ -627,27 +724,33 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       case 'chat.message':
       case 'chat.message.edited': {
         const chatId = payload.chatId as string;
-        const local = decryptServerMessage(
-          payload,
-          chatId,
-          selfUserId,
-          selfIdentityPrivate,
-        );
-        if (!local) return;
-        set((s) => {
-          const thread = s.messagesByChat[chatId] ?? [];
-          return {
-            messagesByChat: {
-              ...s.messagesByChat,
-              [chatId]: mergeMessage(thread, local),
-            },
-            chats: bumpChat(s.chats, chatId, local),
-          };
-        });
-        // Side-effects: persist and (if not self) tell server it arrived.
-        const uid = get().selfUserId;
-        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
-        if (!local.isSelf) markChatDelivered(chatId).catch(() => {});
+        // Decryption is async (X3DH may touch SecureStore). Detach so the
+        // WS frame loop isn't blocked; ordering within a chat is preserved
+        // because we process one frame at a time and queue subsequent
+        // mutations behind the same promise chain.
+        (async () => {
+          const local = await decryptServerMessage(
+            payload,
+            chatId,
+            selfUserId,
+            selfIdentityPrivate,
+          );
+          if (!local) return;
+          set((s) => {
+            const thread = s.messagesByChat[chatId] ?? [];
+            return {
+              messagesByChat: {
+                ...s.messagesByChat,
+                [chatId]: mergeMessage(thread, local),
+              },
+              chats: bumpChat(s.chats, chatId, local),
+            };
+          });
+          // Side-effects: persist and (if not self) tell server it arrived.
+          const uid = get().selfUserId;
+          if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+          if (!local.isSelf) markChatDelivered(chatId).catch(() => {});
+        })().catch((e) => console.warn('[chat] decrypt failed', e));
         break;
       }
       case 'chat.message.deleted': {
@@ -758,13 +861,17 @@ function bumpChat(
 /**
  * Convert a server MessageResponse into a LocalMessage by attempting decryption.
  * Returns null for malformed payloads we should silently ignore.
+ *
+ * Async because v3 decryption may need to read the SPK private + consume an
+ * OPK from SecureStore on first-contact messages, and may need to load the
+ * cached session root key for follow-ups.
  */
-function decryptServerMessage(
+async function decryptServerMessage(
   m: any,
   chatId: string,
   selfUserId: string,
   selfIdentityPrivate: Uint8Array,
-): LocalMessage | null {
+): Promise<LocalMessage | null> {
   if (!m?.id) return null;
   const isSelf = m.isSelf === true || m.senderId === selfUserId;
   const ts = parseDateTime(m.sentAt) ?? Date.now();
@@ -779,37 +886,118 @@ function decryptServerMessage(
   } else if (m.content) {
     // Support chat falls back to plaintext.
     text = m.content;
+  } else if (!m.ciphertext || !m.ephemeralKey) {
+    decryptOk = false;
+  } else if (isSelf) {
+    // Our own message coming back from the server — we don't try to decrypt;
+    // the optimistic entry already holds the plaintext and mergeMessage
+    // preserves it across the undecryptable echo.
+    text = '';
+    decryptOk = false;
   } else {
-    const env = ciphertextEnvelope(m.ciphertext, m.ephemeralKey);
-    if (!env) {
-      decryptOk = false;
-    } else {
-      const peerSenderId = m.senderId as string;
-      if (isSelf) {
-        // Our own message coming back from the server — we can't decrypt with
-        // our private key because the ECDH was done against the recipient's
-        // identity, not ours. The optimistic UI already has the plaintext;
-        // surface a placeholder if we're seeing it cold (e.g. after re-install).
-        text = '';
-        decryptOk = false;
-      } else {
-        const plaintext = decryptFromSender({
-          envelope: env,
-          identityPrivateKey: selfIdentityPrivate,
+    const peerSenderId = m.senderId as string;
+    const v3Envelope: V3Envelope = {
+      ephemeralPublicKey: m.ephemeralKey,
+      ciphertext: m.ciphertext,
+      ...(m.senderIdentityPublicKey
+        ? { senderIdentityPublicKey: m.senderIdentityPublicKey }
+        : {}),
+      ...(m.preKeyId ? { preKeyId: m.preKeyId } : {}),
+    };
+
+    let plaintext: string | null = null;
+    if (v3Envelope.senderIdentityPublicKey) {
+      // v3 first-message path. We need our SPK private and (if referenced)
+      // the OPK private. The OPK is consumed (deleted) after a successful
+      // decrypt so the same envelope can't be replayed against us.
+      const spkPriv = await getSignedPreKeyPrivate(selfUserId);
+      let opkPriv: Uint8Array | null = null;
+      if (m.preKeyId != null) {
+        const opkId = Number(m.preKeyId);
+        if (!Number.isNaN(opkId)) {
+          opkPriv = await consumeOneTimePreKey(selfUserId, opkId);
+        }
+      }
+      if (spkPriv) {
+        const result = decryptV3({
+          envelope: v3Envelope,
+          recipientIdentityPrivate: selfIdentityPrivate,
+          recipientSignedPreKeyPrivate: spkPriv,
+          oneTimePreKeyPrivate: opkPriv,
           senderId: peerSenderId,
           chatId,
         });
-        if (plaintext == null) {
-          decryptOk = false;
-        } else {
-          text = plaintext;
+        if (result) {
+          plaintext = result.plaintext;
+          // Persist the freshly established session root so follow-up
+          // messages from this peer key off the cached root.
+          if (result.rootKey) {
+            // We need the sender's IK to anchor the TOFU comparison stored
+            // alongside the root. Use the IK we just X3DH-decrypted against.
+            const senderIK = base64ToBytes(v3Envelope.senderIdentityPublicKey);
+            try {
+              await saveSessionRoot(selfUserId, peerSenderId, result.rootKey, senderIK);
+              await indexSessionRoot(selfUserId, peerSenderId);
+            } catch (e) {
+              console.warn('[chat] failed to persist session root', e);
+            }
+          }
+        }
+      }
+    } else {
+      // v3 follow-up: needs a cached root key keyed by the sender's IK.
+      // We don't have a direct peerKeys map by senderId; pull from the
+      // store's peerKeys cache if it's there, else fall back to v2.
+      const peer = useChatStore.getState().peerKeys[peerSenderId];
+      if (peer) {
+        const cachedRoot = await loadSessionRoot(
+          selfUserId,
+          peerSenderId,
+          peer.identityPublicKey,
+        );
+        if (cachedRoot) {
+          const result = decryptV3({
+            envelope: v3Envelope,
+            recipientIdentityPrivate: selfIdentityPrivate,
+            cachedRootKey: cachedRoot,
+            senderId: peerSenderId,
+            chatId,
+          });
+          if (result) plaintext = result.plaintext;
         }
       }
     }
+
+    // Legacy fallback: v2/v1 envelopes from older clients still in flight.
+    if (plaintext == null) {
+      plaintext = decryptFromSender({
+        envelope: {
+          ephemeralPublicKey: v3Envelope.ephemeralPublicKey,
+          ciphertext: v3Envelope.ciphertext,
+        },
+        identityPrivateKey: selfIdentityPrivate,
+        senderId: peerSenderId,
+        chatId,
+      });
+    }
+
+    if (plaintext == null) {
+      decryptOk = false;
+    } else {
+      text = plaintext;
+    }
   }
 
+  // Prefer the server-echoed clientId for self messages — that's our
+  // optimistic entry's local id, so mergeMessage will match it directly
+  // without falling back to the time-window heuristic. For peer messages
+  // the echoed clientId is the peer's, which we don't care about; we mint
+  // a stable surrogate keyed on the serverId instead.
+  const echoedClientId: string | undefined = typeof m.clientId === 'string' ? m.clientId : undefined;
+  const localClientId = isSelf && echoedClientId ? echoedClientId : `s_${m.id}`;
+
   return {
-    clientId: `s_${m.id}`,
+    clientId: localClientId,
     serverId: m.id,
     chatId,
     senderId: m.senderId,

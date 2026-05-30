@@ -1,5 +1,5 @@
 import React, { ComponentProps } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Switch, Animated, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -9,6 +9,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useProfile } from '../../../providers/ProfileProvider';
+import { useE2EE } from '../../../providers/E2EEProvider';
+import { useToast } from '../../../providers/ToastProvider';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -75,6 +77,43 @@ export function SecurityAndPrivacyScreen() {
   const profile = useProfile();
   const navigation = useNavigation<NavigationProp>();
   const scrollY = React.useRef(new Animated.Value(0)).current;
+  const { reset: resetE2EE, identity } = useE2EE();
+  const { showToast } = useToast();
+  const [isResettingE2EE, setIsResettingE2EE] = React.useState(false);
+
+  const handleResetEncryption = React.useCallback(() => {
+    if (isResettingE2EE) return;
+    Alert.alert(
+      'Reset encryption keys?',
+      'This will delete your chat identity keys from this device and clear all locally cached conversations. ' +
+        'Your past message history will become unreadable on this device. ' +
+        "New keys will be generated and published on your next chat send.\n\n" +
+        'Tell your contacts to expect a "key changed" warning the next time they message you. ' +
+        'Continue only if you suspect your device or keys have been compromised.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            if (!identity) {
+              showToast('Encryption is still initializing. Try again in a moment.', 'error');
+              return;
+            }
+            setIsResettingE2EE(true);
+            try {
+              await resetE2EE();
+              showToast('Encryption keys reset.', 'success');
+            } catch (e: any) {
+              showToast(e?.message ?? 'Could not reset keys.', 'error');
+            } finally {
+              setIsResettingE2EE(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [identity, isResettingE2EE, resetE2EE, showToast]);
 
   const headerTitleOpacity = scrollY.interpolate({
     inputRange: [40, 70],
@@ -183,6 +222,14 @@ export function SecurityAndPrivacyScreen() {
             title="Freeze Wallet"
             subtitle="Temporarily block all transfers"
             onPress={() => navigation.navigate("WalletFreeze")}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="refresh-cw"
+            title="Reset encryption keys"
+            subtitle="Replace your chat identity keys and clear cached conversations. Use if you suspect a compromise."
+            onPress={handleResetEncryption}
           />
         </View>
 

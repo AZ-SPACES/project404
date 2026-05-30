@@ -15,9 +15,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { RTCView } from 'react-native-webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { CloseButton } from '../../../components/ui/CloseButton';
+import { useCallStore } from '../../../store/callStore';
 
 const { width } = Dimensions.get('window');
 const PIP_WIDTH = 100;
@@ -30,26 +31,43 @@ export default function VideoCallScreen() {
   const { name, avatar } = route.params;
   const insets = useSafeAreaInsets();
 
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSpeaker, setIsSpeaker] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const [facing, setFacing] = useState<'front' | 'back'>('front');
+  const {
+    activeCall,
+    isMuted,
+    isSpeakerOn,
+    isLocalVideoEnabled,
+    cameraFacing,
+    toggleMute,
+    toggleSpeaker,
+    toggleVideo,
+    flipCamera,
+    endCurrentCall
+  } = useCallStore();
+
   const [duration, setDuration] = useState(0);
 
-  const [permission, requestPermission] = useCameraPermissions();
-
-  // Request camera permission on mount
+  // If the call ends while we are on this screen, close it
   useEffect(() => {
-    if (!permission?.granted) {
-      requestPermission();
+    if (!activeCall) {
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.navigate('MainTabs');
     }
-  }, [permission, requestPermission]);
+  }, [activeCall, navigation]);
 
   // Duration timer
   useEffect(() => {
-    const interval = setInterval(() => setDuration(prev => prev + 1), 1000);
-    return () => clearInterval(interval);
-  }, []);
+    let interval: NodeJS.Timeout;
+    if (activeCall?.status === 'ACTIVE') {
+      interval = setInterval(() => {
+        if (activeCall.startedAt) {
+          setDuration(Math.floor((Date.now() - activeCall.startedAt) / 1000));
+        }
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeCall?.status, activeCall?.startedAt]);
 
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60).toString().padStart(2, '0');
@@ -57,18 +75,26 @@ export default function VideoCallScreen() {
     return `${m}:${sec}`;
   };
 
-  const toggleCameraFacing = () => {
-    setFacing(prev => (prev === 'front' ? 'back' : 'front'));
+  const handleEndCall = async () => {
+    await endCurrentCall();
   };
 
-  const cameraReady = permission?.granted && !isVideoOff;
+  if (!activeCall) return null;
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Full-screen remote video (simulated with avatar) */}
-      <Image source={{ uri: avatar }} style={styles.remoteVideo} resizeMode="cover" />
+      {/* Full-screen remote video */}
+      {activeCall.remoteStream ? (
+        <RTCView
+          streamURL={activeCall.remoteStream.toURL()}
+          style={styles.remoteVideo}
+          objectFit="cover"
+        />
+      ) : (
+        <Image source={{ uri: avatar }} style={styles.remoteVideo} resizeMode="cover" />
+      )}
 
       {/* Top gradient overlay for header readability */}
       <LinearGradient
@@ -79,11 +105,14 @@ export default function VideoCallScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <CloseButton onPress={() => navigation.goBack()} />
+        <CloseButton onPress={handleEndCall} />
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerName} numberOfLines={1}>{name}</Text>
-          <Text style={styles.headerDuration}>{formatDuration(duration)}</Text>
+          <Text style={styles.headerDuration}>
+            {activeCall.status === 'ACTIVE' ? formatDuration(duration) : 
+             activeCall.status === 'RINGING' ? 'Ringing...' : 'Connecting...'}
+          </Text>
         </View>
 
         <TouchableOpacity hitSlop={12}>
@@ -93,15 +122,17 @@ export default function VideoCallScreen() {
 
       {/* PiP self view — live camera */}
       <View style={[styles.pipContainer, { bottom: 140 + Math.max(insets.bottom, 16) }]}>
-        {cameraReady ? (
-          <CameraView
+        {activeCall.localStream && isLocalVideoEnabled ? (
+          <RTCView
+            streamURL={activeCall.localStream.toURL()}
             style={styles.pipCamera}
-            facing={facing}
+            objectFit="cover"
+            mirror={cameraFacing === 'front'}
           />
         ) : (
           <View style={styles.pipPlaceholder}>
             <Feather
-              name={isVideoOff ? 'video-off' : 'camera-off'}
+              name={!isLocalVideoEnabled ? 'video-off' : 'camera-off'}
               size={22}
               color="rgba(255,255,255,0.5)"
             />
@@ -109,7 +140,7 @@ export default function VideoCallScreen() {
         )}
         <TouchableOpacity
           style={styles.pipFlipButton}
-          onPress={toggleCameraFacing}
+          onPress={flipCamera}
           activeOpacity={0.7}
         >
           <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
@@ -126,8 +157,8 @@ export default function VideoCallScreen() {
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <View style={styles.controlRow}>
           <TouchableOpacity
-            style={[styles.controlButton, isSpeaker && styles.controlButtonActive]}
-            onPress={() => setIsSpeaker(prev => !prev)}
+            style={[styles.controlButton, isSpeakerOn && styles.controlButtonActive]}
+            onPress={toggleSpeaker}
             activeOpacity={0.7}
           >
             <Feather name="volume-2" size={22} color="#fff" />
@@ -135,21 +166,21 @@ export default function VideoCallScreen() {
 
           <TouchableOpacity
             style={[styles.controlButton, isMuted && styles.controlButtonActive]}
-            onPress={() => setIsMuted(prev => !prev)}
+            onPress={toggleMute}
             activeOpacity={0.7}
           >
             <Feather name={isMuted ? 'mic-off' : 'mic'} size={22} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.controlButton, isVideoOff && styles.controlButtonActive]}
-            onPress={() => setIsVideoOff(prev => !prev)}
+            style={[styles.controlButton, !isLocalVideoEnabled && styles.controlButtonActive]}
+            onPress={toggleVideo}
             activeOpacity={0.7}
           >
-            <Feather name={isVideoOff ? 'video-off' : 'video'} size={22} color="#fff" />
+            <Feather name={!isLocalVideoEnabled ? 'video-off' : 'video'} size={22} color="#fff" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.endCallButton} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.endCallButton} onPress={handleEndCall} activeOpacity={0.8}>
             <MaterialIcons name="call-end" size={28} color="#fff" />
           </TouchableOpacity>
         </View>

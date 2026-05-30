@@ -11,10 +11,14 @@ public class MessageResponse {
     private String id;
     private String chatId;
     private String senderId;
+    /** Echo of SendMessageRequest.clientId — sender uses it to dedup its echo. */
+    private String clientId;
     private String ciphertext;
     private String content;
     private String ephemeralKey;
     private String preKeyId;
+    /** Sender's identity public key on the first message of a session; null otherwise. */
+    private String senderIdentityPublicKey;
     private String type;
     private String status;
     private String sentAt;
