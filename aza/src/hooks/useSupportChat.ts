@@ -11,6 +11,8 @@ export interface Message {
   timestamp: number;
   imageUri?: string;
   status?: 'sending' | 'sent' | 'failed';
+  isBot?: boolean;
+  isSystem?: boolean;
 }
 
 export const useSupportChat = () => {
@@ -30,6 +32,7 @@ export const useSupportChat = () => {
         isSender: m.isSelf ?? false,
         timestamp: m.sentAt ? new Date(m.sentAt).getTime() : Date.now(),
         imageUri: m.mediaKey ?? undefined,
+        isBot: m.isBot ?? false,
       })).reverse();
       
       setMessages((prev) => {
@@ -80,14 +83,25 @@ export const useSupportChat = () => {
                       isSender: p.isSelf ?? false,
                       timestamp: p.sentAt ? new Date(p.sentAt).getTime() : Date.now(),
                       imageUri: p.mediaKey ?? undefined,
+                      isBot: p.isBot ?? false,
                     },
                   ];
                 });
                 setIsOtherTyping(false);
-              } else if (msg.type === "CHAT_TYPING") {
+              } else if (msg.type === "CHAT_TYPING" || msg.type === "SUPPORT_BOT_TYPING") {
                 if (!msg.payload.isSelf) {
                   setIsOtherTyping(msg.payload.isTyping);
                 }
+              } else if (msg.type === "SUPPORT_HANDOFF") {
+                const systemMsg: Message = {
+                  id: `system-${Date.now()}`,
+                  text: msg.payload.message ?? "A human agent has joined the chat.",
+                  isSender: false,
+                  timestamp: Date.now(),
+                  isSystem: true,
+                };
+                setMessages((prev) => [...prev, systemMsg]);
+                setIsOtherTyping(false);
               }
             } catch (e) {
               console.error("Failed to parse WS message", e);

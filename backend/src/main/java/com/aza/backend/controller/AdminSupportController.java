@@ -66,6 +66,19 @@ public class AdminSupportController {
                 supportService.replyToChat(agent, chatId, request.getContent())));
     }
 
+    @PostMapping("/chats/{chatId}/takeover")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> takeoverChat(
+            @AuthenticationPrincipal User agent,
+            @PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.takeoverChat(chatId, agent)));
+    }
+
+    @PostMapping("/chats/{chatId}/bot/enable")
+    public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> enableBot(
+            @PathVariable UUID chatId) {
+        return ResponseEntity.ok(ApiResponse.success(supportService.enableBot(chatId)));
+    }
+
     @PostMapping("/chats/{chatId}/resolve")
     public ResponseEntity<ApiResponse<SupportService.SupportChatSummary>> resolveChat(
             @PathVariable UUID chatId,
