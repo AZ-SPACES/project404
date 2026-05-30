@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
-import { getWalletBalance, getUserLimits } from '../../../services/api';
+import { getWalletBalance, getUserLimits, suggestTransferCategory } from '../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../lib/queryKeys';
 import { formatCurrency } from '../../../utils/transactionUtils';
@@ -43,6 +43,8 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [suggestedCategory, setSuggestedCategory] = useState<CategoryKey | null>(null);
+    const [userOverrodeCategory, setUserOverrodeCategory] = useState(false);
     const amountInputRef = useRef<TextInput>(null);
 
     const bottomSheetAnim = useRef(new Animated.Value(height)).current;
@@ -62,6 +64,22 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             ]).start();
         }
     }, [showCategoryModal, bottomSheetAnim, backdropAnim]);
+    // Debounced category suggestion when note changes
+    useEffect(() => {
+        if (userOverrodeCategory) return;
+        const timer = setTimeout(async () => {
+            if (!note.trim() && !name) return;
+            try {
+                const res = await suggestTransferCategory(identifier, note);
+                const cat = res.data?.data?.suggestedCategory ?? res.data?.suggestedCategory;
+                if (cat && !selectedCategory) {
+                    setSuggestedCategory(cat as CategoryKey);
+                }
+            } catch { /* silent */ }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [note, identifier, name, selectedCategory, userOverrodeCategory]);
+
     const { data: walletData } = useQuery({
       queryKey: queryKeys.wallet(),
       queryFn: async () => { const res = await getWalletBalance(); return res.data?.data || res.data; },
@@ -123,6 +141,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
     const handleSend = () => {
         if (!canSend) return;
         setIsLoading(true);
+        const effectiveCategory = selectedCategory ?? suggestedCategory;
         navigation.navigate('SendConfirm', {
             name: name ?? '',
             username: username ?? '',
@@ -130,7 +149,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             amount: numericAmount,
             note,
             identifier,
-            ...(selectedCategory ? { category: selectedCategory } : {}),
+            ...(effectiveCategory ? { category: effectiveCategory } : {}),
         });
         setTimeout(() => setIsLoading(false), 500);
     };
@@ -268,6 +287,19 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                         {CATEGORIES.find(c => c.key === selectedCategory)!.name}
                                     </Text>
                                 </>
+                            ) : suggestedCategory ? (
+                                <>
+                                    <View style={[styles.categoryIconBadge, { backgroundColor: CATEGORIES.find(c => c.key === suggestedCategory)!.color + '1A' }]}>
+                                        <Feather name={CATEGORIES.find(c => c.key === suggestedCategory)!.icon as any} size={16} color={CATEGORIES.find(c => c.key === suggestedCategory)!.color} />
+                                    </View>
+                                    <Text style={[styles.categorySelectedText, { color: Colors.textSecondary }]}>
+                                        {CATEGORIES.find(c => c.key === suggestedCategory)!.name}
+                                    </Text>
+                                    <View style={styles.aiSuggestBadge}>
+                                        <Feather name="zap" size={10} color={Colors.primary} />
+                                        <Text style={styles.aiSuggestText}>AI</Text>
+                                    </View>
+                                </>
                             ) : (
                                 <>
                                     <Feather name="tag" size={16} color={Colors.textSecondary} style={{ marginRight: 8 }} />
@@ -355,7 +387,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                         isSelected && { backgroundColor: isDark ? Colors.surface : '#F8FAFC' }
                                     ]}
                                     activeOpacity={0.7}
-                                    onPress={() => { setSelectedCategory(cat.key); setShowCategoryModal(false); }}
+                                    onPress={() => { setSelectedCategory(cat.key); setUserOverrodeCategory(true); setSuggestedCategory(null); setShowCategoryModal(false); }}
                                 >
                                     <View style={[styles.categoryListIcon, { backgroundColor: cat.color + '1A' }]}>
                                         <Feather name={cat.icon as any} size={20} color={cat.color} />
@@ -369,7 +401,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                         })}
 
                         {selectedCategory && (
-                            <TouchableOpacity style={styles.clearCategoryBtn} onPress={() => { setSelectedCategory(null); setShowCategoryModal(false); }}>
+                            <TouchableOpacity style={styles.clearCategoryBtn} onPress={() => { setSelectedCategory(null); setSuggestedCategory(null); setUserOverrodeCategory(false); setShowCategoryModal(false); }}>
                                 <Text style={styles.clearCategoryText}>Clear purpose</Text>
                             </TouchableOpacity>
                         )}
@@ -559,6 +591,14 @@ function createStyles(Colors: ThemeColors) {
     categoryPlaceholder: {
         ...Typography.body,
         color: Colors.textSecondary },
+    aiSuggestBadge: {
+        flexDirection: 'row', alignItems: 'center', gap: 3,
+        backgroundColor: Colors.primary + '18',
+        borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3,
+        marginLeft: 6,
+    },
+    aiSuggestText: {
+        fontSize: 10, fontWeight: '700', color: Colors.primary },
     categoryListCell: {
         flexDirection: 'row',
         alignItems: 'center',

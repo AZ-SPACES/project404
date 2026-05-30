@@ -52,6 +52,7 @@ public class TransferService {
     private final EmailService emailService;
     private final SmsService smsService;
     private final MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
+    private final AnomalyDetectionService anomalyDetectionService;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -60,6 +61,26 @@ public class TransferService {
     private BigDecimal maxDailyAmount;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
+
+    // ── Recipient resolution helpers (used by anomaly + category endpoints) ────
+
+    public Optional<UUID> resolveRecipientId(String rawIdentifier) {
+        String candidate = rawIdentifier.startsWith("@") ? rawIdentifier.substring(1) : rawIdentifier;
+        return userRepository.findByEmailOrPhoneNumber(rawIdentifier, rawIdentifier)
+                .map(User::getId)
+                .or(() -> userRepository.findByUsername(candidate).map(User::getId))
+                .or(() -> merchantRepository.findByBusinessHandle(candidate).map(Merchant::getId));
+    }
+
+    public Optional<String> resolveRecipientName(String rawIdentifier) {
+        String candidate = rawIdentifier.startsWith("@") ? rawIdentifier.substring(1) : rawIdentifier;
+        return userRepository.findByEmailOrPhoneNumber(rawIdentifier, rawIdentifier)
+                .map(u -> u.getFirstName() + " " + u.getLastName())
+                .or(() -> userRepository.findByUsername(candidate)
+                        .map(u -> u.getFirstName() + " " + u.getLastName()))
+                .or(() -> merchantRepository.findByBusinessHandle(candidate)
+                        .map(Merchant::getBusinessName));
+    }
 
     // WALLET
 
@@ -222,6 +243,13 @@ public class TransferService {
             catch (IllegalArgumentException ignored) { txCategory = Transaction.TransactionCategory.OTHERS; }
         }
 
+        AnomalyDetectionService.Result anomaly;
+        try {
+            anomaly = anomalyDetectionService.score(sender.getId(), recipientId, request.getAmount(), LocalDateTime.now());
+        } catch (Exception e) {
+            anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
+        }
+
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipientId)
@@ -232,6 +260,8 @@ public class TransferService {
                 .idempotencyKey(request.getIdempotencyKey())
                 .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .category(txCategory)
+                .anomalyScore(anomaly.score())
+                .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
 
         transaction = transactionRepository.save(transaction);
@@ -761,6 +791,9 @@ public class TransferService {
                     .initiatedAt(t.getInitiatedAt())
                     .completedAt(t.getCompletedAt())
                     .cancelledAt(t.getCancelledAt())
+                    .category(t.getCategory() != null ? t.getCategory().name() : null)
+                    .anomalyScore(t.getAnomalyScore())
+                    .anomalyRiskLevel(t.getAnomalyRiskLevel())
                     .build();
         });
     }

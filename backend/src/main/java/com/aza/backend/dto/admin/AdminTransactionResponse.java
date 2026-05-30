@@ -23,4 +23,7 @@ public class AdminTransactionResponse {
     private LocalDateTime initiatedAt;
     private LocalDateTime completedAt;
     private LocalDateTime cancelledAt;
+    private String category;
+    private Double anomalyScore;
+    private String anomalyRiskLevel;
 }

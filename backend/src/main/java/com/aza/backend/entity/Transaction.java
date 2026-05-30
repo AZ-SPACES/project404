@@ -73,4 +73,10 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = true)
     private TransactionCategory category;
+
+    @Column(nullable = true)
+    private Double anomalyScore;
+
+    @Column(length = 10, nullable = true)
+    private String anomalyRiskLevel;
 }

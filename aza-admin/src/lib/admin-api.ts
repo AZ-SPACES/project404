@@ -373,6 +373,9 @@ export interface AdminTransaction {
   initiatedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  category: string | null;
+  anomalyScore: number | null;
+  anomalyRiskLevel: string | null;
 }
 
 export function getAdminTransactions(page = 0, size = 20): Promise<Page<AdminTransaction>> {
@@ -1209,4 +1212,29 @@ export function resolveMiniAppReport(
     method: "POST",
     body: JSON.stringify({ action, resolution }),
   });
+}
+
+// ── AI: Fraud Detection ───────────────────────────────────────────────────────
+
+export function getAnomalyFlaggedTransactions(
+  page = 0,
+  size = 20,
+  riskLevel?: string,
+): Promise<Page<AdminTransaction>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (riskLevel) params.set("riskLevel", riskLevel);
+  return request(`/api/v1/admin/fraud/flagged?${params}`);
+}
+
+// ── AI: Spending Category Analytics ──────────────────────────────────────────
+
+export interface CategoryBreakdown {
+  category: string;
+  count: number;
+  total: number;
+  percentage: number;
+}
+
+export function getAdminCategoryBreakdown(days = 30): Promise<CategoryBreakdown[]> {
+  return request(`/api/v1/admin/analytics/categories?days=${days}`);
 }
