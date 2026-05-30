@@ -61,7 +61,6 @@ export default function ChatScreen() {
   } = useChat(id);
 
   const flatListRef = useRef<FlatList>(null);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isPickingRef = useRef(false);
 
   const [message, setMessage] = useState('');
@@ -106,9 +105,6 @@ export default function ChatScreen() {
     markRead().catch(() => {});
     return unsub;
   }, [navigation, chatId, markRead]);
-
-  // Cleanup all timers on unmount
-  useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
   // Scroll to bottom when a new message arrives
   const prevMsgCountRef = useRef(messages.length);

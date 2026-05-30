@@ -35,8 +35,10 @@ export type UseChatResult = {
   setDisappearingTtl: (seconds: number) => Promise<void>;
   /** Delete a message (server tombstone + local update). */
   deleteMessage: (serverId: string) => Promise<void>;
-  /** Verification helpers for the safety-number UI. */
-  peerVerified: boolean;
+  /** Did the peer's SPK signature validate against their identity key? */
+  spkSignatureValid: boolean;
+  /** TOFU state for the peer's identity key — UI uses 'changed' to warn. */
+  peerIdentityChange: 'first-seen' | 'unchanged' | 'changed' | null;
   refresh: () => Promise<void>;
 };
 
@@ -91,19 +93,8 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const setDisappearingTtlStore = useChatStore((s) => s.setDisappearingTtl);
   const deleteMessageStore = useChatStore((s) => s.deleteMessage);
   const ensurePeerKeys = useChatStore((s) => s.ensurePeerKeys);
-  const setSelfIdentity = useChatStore((s) => s.setSelfIdentity);
-
-  // Push the identity into the store every time it changes, so the store
-  // can decrypt incoming messages even if no screen has called sendText yet.
-  useEffect(() => {
-    if (identity) {
-      setSelfIdentity(
-        identity.userId,
-        identity.identityPublicKey,
-        identity.identityPrivateKey,
-      );
-    }
-  }, [identity, setSelfIdentity]);
+  // Note: setSelfIdentity is invoked by E2EEProvider as part of bootstrap,
+  // so the store already has the keypair before any screen mounts.
 
   // Resolve/create the chat resource once otherUserId + identity are known.
   useEffect(() => {
@@ -133,10 +124,18 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const isOtherTyping = useChatStore((s) => (chatId ? !!s.typingByChat[chatId] : false));
   const peerKeys = useChatStore((s) => (otherUserId ? s.peerKeys[otherUserId] : undefined));
 
-  const messages = useMemo<Message[]>(
-    () => (thread ?? []).filter((m) => !m.isDeleted || true).map(toMessage),
-    [thread],
-  );
+  const messages = useMemo<Message[]>(() => {
+    if (!thread) return [];
+    const now = Date.now();
+    return thread
+      // Hide disappearing messages whose TTL has elapsed even if the server
+      // tombstone WS frame hasn't reached us yet.
+      .filter(
+        (m) =>
+          !(typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now),
+      )
+      .map(toMessage);
+  }, [thread]);
 
   const sendText = useCallback(
     async (text: string) => {
@@ -227,7 +226,10 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     markRead,
     setDisappearingTtl,
     deleteMessage,
-    peerVerified: !!peerKeys?.verifiedOnce,
+    /** Cryptographic signature on the peer's SPK validated against their identity. */
+    spkSignatureValid: !!peerKeys?.spkSignatureValid,
+    /** TOFU result from the peer-identity cache; 'changed' means the user should be warned. */
+    peerIdentityChange: peerKeys?.identityChange ?? null,
     refresh,
   };
 }

@@ -9,6 +9,7 @@ import React, {
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { setForceLogoutHandler, getKycStatus } from "../services/api";
+import { emitAuthEvent } from "./authEvents";
 import { queryClient } from "../lib/queryClient";
 
 type AuthState = {
@@ -170,6 +171,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
     // Wipe all server-state cache so stale data never bleeds into the next session
     queryClient.clear();
+    // Fan out to providers that hold sensitive in-memory state (E2EE identity,
+    // chat caches, peer key cache) so they can wipe.
+    emitAuthEvent({ type: 'logout' });
     // Clear all persisted secrets in the background
     Promise.all([
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),

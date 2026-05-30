@@ -47,6 +47,15 @@ import {
   clearCachedThread,
   wipeAllChatCaches,
 } from './encryptedMessageStore';
+import {
+  recordPeerIdentity,
+  wipePeerIdentityCache,
+} from './peerIdentityCache';
+import {
+  hasSessionWithPeer,
+  markSessionEstablished,
+  wipeSessionFlags,
+} from './sessionCache';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -71,8 +80,20 @@ type PeerKeys = {
   signedPreKeySignature: Uint8Array;
   oneTimePreKeyId?: string;
   oneTimePreKeyPublic?: Uint8Array;
-  /** Once verified, the value sticks for the session. Used as TOFU. */
-  verifiedOnce: boolean;
+  /**
+   * True iff the signed-pre-key signature validated against the peer's
+   * identity key. Does NOT mean the user has out-of-band verified the
+   * safety number — for that, layer additional state on top.
+   */
+  spkSignatureValid: boolean;
+  /**
+   * TOFU state. `null` until we've checked the peer-identity cache.
+   *  - 'first-seen': peer not seen before; cache now seeded.
+   *  - 'unchanged': identity matches our last record.
+   *  - 'changed':   identity differs from what we saw last time. UI
+   *                 should warn loudly until the user acknowledges.
+   */
+  identityChange: 'first-seen' | 'unchanged' | 'changed' | null;
 };
 
 type ChatStoreState = {
@@ -146,16 +167,42 @@ function ciphertextEnvelope(ciphertext?: string | null, ephemeralKey?: string | 
   return { ciphertext, ephemeralPublicKey: ephemeralKey };
 }
 
+/**
+ * Window inside which an unmatched server echo can be attributed to a
+ * pending optimistic entry. Tight enough to avoid false positives even
+ * under bad clock skew, wide enough to absorb the typical request-round-trip.
+ */
+const ECHO_RECONCILE_WINDOW_MS = 30_000;
+
 function mergeMessage(
   thread: LocalMessage[],
   incoming: LocalMessage,
 ): LocalMessage[] {
   // De-dup by serverId first, fall back to clientId.
-  const matchIdx = thread.findIndex(
+  let matchIdx = thread.findIndex(
     (m) =>
       (incoming.serverId && m.serverId === incoming.serverId) ||
       (incoming.clientId && m.clientId === incoming.clientId),
   );
+  // Second pass: a WS echo can arrive before the REST response has stamped
+  // the optimistic entry with its serverId. In that case neither id matches
+  // but we can still attribute the echo by (isSelf, senderId, type, time).
+  // This prevents double-insertion of our own message.
+  if (
+    matchIdx === -1 &&
+    incoming.serverId &&
+    incoming.isSelf &&
+    incoming.senderId
+  ) {
+    matchIdx = thread.findIndex(
+      (m) =>
+        m.isSelf &&
+        !m.serverId &&
+        m.senderId === incoming.senderId &&
+        m.type === incoming.type &&
+        Math.abs(m.timestamp - incoming.timestamp) <= ECHO_RECONCILE_WINDOW_MS,
+    );
+  }
   if (matchIdx === -1) {
     return [...thread, incoming].sort((a, b) => a.timestamp - b.timestamp);
   }
@@ -202,7 +249,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
   resetForLogout: async () => {
     const uid = get().selfUserId;
-    if (uid) await wipeAllChatCaches(uid);
+    if (uid) {
+      await Promise.all([
+        wipeAllChatCaches(uid),
+        wipePeerIdentityCache(uid).catch(() => {}),
+        wipeSessionFlags(uid).catch(() => {}),
+      ]);
+    }
     set({
       selfUserId: null,
       selfIdentityPrivate: null,
@@ -300,6 +353,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const cached = get().peerKeys[otherUserId];
     if (cached) return cached;
 
+    const { selfUserId } = get();
     try {
       const { data } = await fetchUserKeyBundle(otherUserId);
       const bundle = data?.data;
@@ -314,17 +368,36 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const spkSig = spkSigB64 ? base64ToBytes(spkSigB64) : new Uint8Array();
 
       // Verify the SPK signature against the peer's identity. If it doesn't
-      // validate, we still cache the identity (used for ECDH) but flag the
-      // peer as unverified — UI should warn the user.
-      const verifiedOnce = spkPub.length > 0 && spkSig.length > 0
+      // validate, we still cache the identity (used for ECDH) but mark the
+      // signature as untrusted — UI should warn the user.
+      const spkSignatureValid = spkPub.length > 0 && spkSig.length > 0
         ? verifyEd25519(spkSig, spkPub, identityPub)
         : false;
+
+      // TOFU check: compare against the persisted identity public key for
+      // this peer. A `changed` result means either legitimate rotation or
+      // server-side impersonation — either way, alert the UI.
+      let identityChange: PeerKeys['identityChange'] = null;
+      if (selfUserId) {
+        try {
+          const state = await recordPeerIdentity(selfUserId, otherUserId, identityPub);
+          identityChange = state.kind;
+          if (state.kind === 'changed') {
+            console.warn(
+              `[E2EE] peer ${otherUserId} identity key changed since last contact — re-verify safety number`,
+            );
+          }
+        } catch (e) {
+          console.warn('[E2EE] TOFU check failed', e);
+        }
+      }
 
       const peer: PeerKeys = {
         identityPublicKey: identityPub,
         signedPreKeyPublic: spkPub,
         signedPreKeySignature: spkSig,
-        verifiedOnce,
+        spkSignatureValid,
+        identityChange,
         ...(bundle.oneTimePreKeyId ? { oneTimePreKeyId: bundle.oneTimePreKeyId } : {}),
         ...(bundle.oneTimePreKeyPublic
           ? { oneTimePreKeyPublic: base64ToBytes(bundle.oneTimePreKeyPublic) }
@@ -385,16 +458,19 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         chatId,
       });
 
+      // preKeyId is only meaningful on the very first message we send to
+      // this peer using our current identity. Track that per-peer in
+      // AsyncStorage instead of guessing from chat.lastMessageAt (which
+      // misfires when the peer sent the opening message).
+      const sessionEstablished = await hasSessionWithPeer(selfUserId, chat.otherUserId);
+      const includePreKey = !sessionEstablished && !!peer.oneTimePreKeyId;
+
       const payload: SendMessagePayload = {
         chatId,
         type: 'TEXT',
         ciphertext: envelope.ciphertext,
         ephemeralKey: envelope.ephemeralPublicKey,
-        // preKeyId is only meaningful on first contact; we include it once if
-        // the server handed one back. Subsequent messages omit it.
-        ...(peer.oneTimePreKeyId && !chat.lastMessageAt
-          ? { preKeyId: peer.oneTimePreKeyId }
-          : {}),
+        ...(includePreKey ? { preKeyId: peer.oneTimePreKeyId } : {}),
       };
 
       const { data } = await sendChatMessage(payload);
@@ -402,6 +478,11 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const serverId = m?.id;
       const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
       const expiresAt = parseDateTime(m?.expiresAt);
+
+      // Mark the session established AFTER the server accepted the first send.
+      if (!sessionEstablished) {
+        markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
+      }
 
       set((s) => {
         const thread = s.messagesByChat[chatId] ?? [];

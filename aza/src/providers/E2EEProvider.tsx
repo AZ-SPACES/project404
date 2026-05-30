@@ -25,6 +25,7 @@ import {
   getOrCreateIdentityX25519,
   KEYSTORE_INITIAL_OTPK_COUNT,
   otpkPrivateCount,
+  purgeAllOneTimePreKeys,
   wipeIdentity,
 } from '../crypto/keystore';
 import {
@@ -38,6 +39,8 @@ import {
 } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { safetyNumber } from '../crypto/e2ee';
+import { useChatStore } from '../store/chatStore';
+import { subscribeAuthEvents } from './authEvents';
 
 type Identity = {
   userId: string;
@@ -109,7 +112,25 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status = { hasKeyBundle: false, opkCount: 0 };
         }
 
-        if (!status.hasKeyBundle) {
+        const localOpkCount = await otpkPrivateCount(userId);
+        // If the server thinks we have OPKs we no longer have locally
+        // (typical after a reinstall or SecureStore wipe), peers might be
+        // handed OPK public keys whose private halves we've lost — first
+        // messages from them would fail to decrypt silently. The safe
+        // remedy is a full bundle rotation: drop any remaining local OPKs,
+        // mint a fresh batch + a new SPK, and re-publish the bundle. The
+        // identity X25519/Ed25519 keypairs stay the same.
+        const driftDetected =
+          status.hasKeyBundle && localOpkCount < status.opkCount;
+
+        if (!status.hasKeyBundle || driftDetected) {
+          if (driftDetected) {
+            console.warn(
+              '[E2EE] Local OPK supply drifted below server-reported count — ' +
+                'rotating the bundle to recover.',
+            );
+            await purgeAllOneTimePreKeys(userId);
+          }
           const spk = await ensureSignedPreKey(userId);
           const otpks = await generateOneTimePreKeys(userId, KEYSTORE_INITIAL_OTPK_COUNT);
           await uploadKeyBundle({
@@ -122,11 +143,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
             })),
           });
         } else if (status.opkCount < OTPK_REPLENISH_THRESHOLD) {
-          // Top up only — bundle already exists.
-          const localCount = await otpkPrivateCount(userId);
-          // Only generate as many as needed to refill to a healthy supply.
-          // If local supply is lower than server's reported supply (e.g. fresh
-          // reinstall), we'll regenerate the full batch.
+          // Top up only — bundle already exists and local supply matches.
           const need = Math.max(OTPK_REPLENISH_BATCH - status.opkCount, 0);
           if (need > 0) {
             const otpks = await generateOneTimePreKeys(userId, need);
@@ -135,14 +152,6 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 keyId: k.keyId,
                 publicKey: bytesToBase64(k.publicKey),
               })),
-            );
-          }
-          // Surface a soft warning if local private supply drifts below server's count.
-          if (localCount < status.opkCount) {
-            console.warn(
-              '[E2EE] Local OTPK private supply lower than server-reported count — ' +
-                'private halves may have been lost on a reinstall. New sessions to this ' +
-                'device may fail to derive keys until the bundle is rotated.',
             );
           }
         }
@@ -154,6 +163,13 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
           identityPrivateKey: idX.privateKey,
           signingPublicKey: idE.publicKey,
         });
+        // Push the keypair into the chat store so the ChatSocketProvider can
+        // decrypt incoming frames even before any chat screen mounts. Without
+        // this, push-notification wake-ups would drop messages until a screen
+        // wired up useChat for the first time.
+        useChatStore
+          .getState()
+          .setSelfIdentity(userId, idX.publicKey, idX.privateKey);
         bootstrappedFor.current = userId;
         setReady(true);
       } catch (e: any) {
@@ -180,11 +196,30 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const reset = useCallback(async () => {
-    if (identity) await wipeIdentity(identity.userId);
+    const uid = identity?.userId;
+    // Tear down chat-store state first so the reducer doesn't try to use a
+    // partially-wiped identity from the next decrypt call.
+    try {
+      await useChatStore.getState().resetForLogout();
+    } catch (e) {
+      console.warn('[E2EE] chat store reset failed', e);
+    }
+    if (uid) await wipeIdentity(uid);
     setIdentity(null);
     setReady(false);
     bootstrappedFor.current = null;
   }, [identity]);
+
+  // Subscribe to global logout so AuthProvider doesn't need to call us
+  // directly. Identity material is wiped from SecureStore + memory.
+  useEffect(() => {
+    const unsub = subscribeAuthEvents((e) => {
+      if (e.type === 'logout') {
+        reset();
+      }
+    });
+    return unsub;
+  }, [reset]);
 
   const value = useMemo<E2EEContextValue>(
     () => ({ ready, error, identity, computeSafetyNumber, reset }),
