@@ -170,18 +170,20 @@ export default function FinancialDashboardScreen() {
 
       {/* Period Tabs */}
       <View style={styles.periodRow}>
-        {PERIODS.map(p => (
-          <TouchableOpacity
-            key={p.key}
-            style={[styles.periodTab, period === p.key && styles.periodTabActive]}
-            onPress={() => setPeriod(p.key)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.periodTabText, period === p.key && styles.periodTabTextActive]}>
-              {p.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.periodContainer}>
+          {PERIODS.map(p => (
+            <TouchableOpacity
+              key={p.key}
+              style={[styles.periodTab, period === p.key && styles.periodTabActive]}
+              onPress={() => setPeriod(p.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.periodTabText, period === p.key && styles.periodTabTextActive]}>
+                {p.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {isLoading ? (
@@ -193,32 +195,32 @@ export default function FinancialDashboardScreen() {
 
           {/* Overview Cards */}
           <View style={styles.cardsRow}>
-            <View style={[styles.overviewCard, { borderColor: '#34D39933' }]}>
+            <View style={styles.overviewCard}>
               <View style={[styles.overviewIcon, { backgroundColor: '#34D39920' }]}>
                 <Feather name="arrow-down-left" size={16} color="#34D399" />
               </View>
               <Text style={styles.overviewLabel}>Income</Text>
-              <Text style={[styles.overviewAmount, { color: '#34D399' }]} numberOfLines={1}>
+              <Text style={styles.overviewAmount} numberOfLines={1}>
                 {formatCurrency(totalIncome, currency)}
               </Text>
             </View>
 
-            <View style={[styles.overviewCard, { borderColor: '#EF444433' }]}>
+            <View style={styles.overviewCard}>
               <View style={[styles.overviewIcon, { backgroundColor: '#EF444420' }]}>
                 <Feather name="arrow-up-right" size={16} color="#EF4444" />
               </View>
               <Text style={styles.overviewLabel}>Spent</Text>
-              <Text style={[styles.overviewAmount, { color: '#EF4444' }]} numberOfLines={1}>
+              <Text style={styles.overviewAmount} numberOfLines={1}>
                 {formatCurrency(totalSpent, currency)}
               </Text>
             </View>
 
-            <View style={[styles.overviewCard, { borderColor: Colors.primary + '33' }]}>
+            <View style={styles.overviewCard}>
               <View style={[styles.overviewIcon, { backgroundColor: Colors.primary + '20' }]}>
                 <Feather name="credit-card" size={16} color={Colors.primary} />
               </View>
               <Text style={styles.overviewLabel}>Balance</Text>
-              <Text style={[styles.overviewAmount, { color: Colors.primary }]} numberOfLines={1}>
+              <Text style={styles.overviewAmount} numberOfLines={1}>
                 {formatCurrency(balance, currency)}
               </Text>
             </View>
@@ -231,18 +233,18 @@ export default function FinancialDashboardScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.aiIconWrap}>
-              <Feather name="cpu" size={16} color={Colors.primary} />
+              <Feather name="cpu" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.aiBannerTitle}>Ask Aza AI</Text>
               <Text style={styles.aiBannerSub}>Get insights about your spending</Text>
             </View>
-            <Feather name="chevron-right" size={16} color={Colors.textSecondary} />
+            <Feather name="chevron-right" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
           </TouchableOpacity>
 
           {/* Donut Chart */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Spending Breakdown</Text>
+            <Text style={[styles.sectionTitle, { marginBottom: Spacing.md }]}>Spending Breakdown</Text>
             {totalSpent === 0 ? (
               <View style={styles.emptyChart}>
                 <Text style={styles.emptyText}>No spending data for this period</Text>
@@ -291,7 +293,7 @@ export default function FinancialDashboardScreen() {
           {/* Category Breakdown with Budget */}
           {categories.length > 0 && (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Category Detail</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: Spacing.md }]}>Category Detail</Text>
               {categories.map((cat, i) => {
                 const pct = totalSpent > 0 ? (cat.total / totalSpent) * 100 : 0;
                 const budget = budgetData?.find(b => b.category === cat.key);
@@ -299,8 +301,8 @@ export default function FinancialDashboardScreen() {
                 const isLast = i === categories.length - 1;
                 return (
                   <View key={cat.key} style={[styles.catRow, !isLast && styles.catRowBorder]}>
-                    <View style={[styles.catIconWrap, { backgroundColor: cat.color + '20' }]}>
-                      <Feather name={(CATEGORY_ICON[cat.key] ?? 'grid') as any} size={16} color={cat.color} />
+                    <View style={[styles.catIconWrap, { backgroundColor: cat.color + '15' }]}>
+                      <Feather name={(CATEGORY_ICON[cat.key] ?? 'grid') as any} size={18} color={cat.color} />
                     </View>
                     <View style={styles.catInfo}>
                       <View style={styles.catNameRow}>
@@ -358,8 +360,8 @@ export default function FinancialDashboardScreen() {
                 const barColor = pct > 90 ? '#EF4444' : pct > 70 ? '#F59E0B' : '#34D399';
                 return (
                   <View key={b.category} style={[styles.budgetRow, i < budgetItems.filter(x => !!x.budgetAmount).length - 1 && styles.catRowBorder]}>
-                    <View style={[styles.catIconWrap, { backgroundColor: b.color + '20' }]}>
-                      <Feather name={(CATEGORY_ICON[b.category] ?? 'grid') as any} size={16} color={b.color} />
+                    <View style={[styles.catIconWrap, { backgroundColor: b.color + '15' }]}>
+                      <Feather name={(CATEGORY_ICON[b.category] ?? 'grid') as any} size={18} color={b.color} />
                     </View>
                     <View style={styles.catInfo}>
                       <View style={styles.catNameRow}>
@@ -369,7 +371,7 @@ export default function FinancialDashboardScreen() {
                       <View style={styles.budgetBarTrack}>
                         <View style={[styles.budgetBarFill, { width: `${Math.min(pct, 100)}%` as any, backgroundColor: barColor }]} />
                       </View>
-                      <Text style={[styles.budgetHint, { color: barColor }]}>
+                      <Text style={[styles.budgetHint, { color: barColor, marginTop: 4 }]}>
                         {pct.toFixed(0)}% used · {formatCurrency(b.remaining ?? 0, currency)} left
                       </Text>
                     </View>
@@ -393,25 +395,36 @@ function createStyles(Colors: ThemeColors) {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
     },
-    headerTitle: { ...Typography.body, fontWeight: '600', color: Colors.textPrimary },
+    headerTitle: { ...Typography.h3, fontWeight: '700', color: Colors.textPrimary },
     headerBtn: {
-      width: 44, height: 44, borderRadius: 22,
+      width: 40, height: 40, borderRadius: 20,
       backgroundColor: isDark ? Colors.surface : Colors.white,
       borderWidth: 1, borderColor: Colors.border,
       alignItems: 'center', justifyContent: 'center',
     },
+    
+    // Period Tabs
     periodRow: {
-      flexDirection: 'row', gap: Spacing.xs,
-      paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg,
+    },
+    periodContainer: {
+      flexDirection: 'row', flex: 1,
+      backgroundColor: isDark ? Colors.surface : '#F3F4F6',
+      borderRadius: Radius.lg,
+      padding: 4,
     },
     periodTab: {
-      flex: 1, paddingVertical: 8, borderRadius: Radius.lg,
-      backgroundColor: isDark ? Colors.surface : '#F3F4F6',
-      alignItems: 'center', borderWidth: 1, borderColor: Colors.border,
+      flex: 1, paddingVertical: 8, borderRadius: Radius.md,
+      alignItems: 'center',
     },
-    periodTabActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    periodTabText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-    periodTabTextActive: { color: isDark ? Colors.textPrimary : '#fff' },
+    periodTabActive: {
+      backgroundColor: isDark ? '#374151' : Colors.white,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
+    },
+    periodTabText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
+    periodTabTextActive: { fontWeight: '600', color: Colors.textPrimary },
+    
     loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     content: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl * 2 },
 
@@ -419,80 +432,81 @@ function createStyles(Colors: ThemeColors) {
     cardsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
     overviewCard: {
       flex: 1, backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: Radius.sm, borderWidth: 1, padding: Spacing.sm,
+      borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border,
+      padding: Spacing.md,
     },
-    overviewIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-    overviewLabel: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary, marginBottom: 2 },
-    overviewAmount: { fontSize: 13, fontWeight: '700' },
+    overviewIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    overviewLabel: { fontSize: 12, fontWeight: '500', color: Colors.textSecondary, marginBottom: 4 },
+    overviewAmount: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
 
     // AI Banner
     aiBanner: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
-      backgroundColor: Colors.primary + '12',
-      borderRadius: 14, borderWidth: 1, borderColor: Colors.primary + '28',
-      paddingHorizontal: Spacing.md, paddingVertical: 12,
+      backgroundColor: isDark ? '#1e1b4b' : '#eef2ff',
+      borderRadius: Radius.lg, borderWidth: 1, borderColor: isDark ? '#3730a3' : '#c7d2fe',
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
       marginBottom: Spacing.lg,
     },
     aiIconWrap: {
-      width: 36, height: 36, borderRadius: 18,
-      backgroundColor: Colors.primary + '20',
+      width: 40, height: 40, borderRadius: 12,
+      backgroundColor: isDark ? '#3730a3' : '#e0e7ff',
       alignItems: 'center', justifyContent: 'center',
     },
-    aiBannerTitle: { ...Typography.body, fontWeight: '700', color: Colors.textPrimary },
-    aiBannerSub: { ...Typography.caption, color: Colors.textSecondary, marginTop: 1 },
+    aiBannerTitle: { fontSize: 15, fontWeight: '600', color: isDark ? '#c7d2fe' : '#3730a3' },
+    aiBannerSub: { fontSize: 13, color: isDark ? '#818cf8' : '#4f46e5', marginTop: 2 },
 
     // Section cards
     sectionCard: {
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border,
+      borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border,
       padding: Spacing.md, marginBottom: Spacing.lg,
     },
     sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-    sectionTitle: { ...Typography.body, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
-    manageLink: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+    sectionTitle: { fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
+    manageLink: { fontSize: 14, fontWeight: '500', color: Colors.primary },
 
     // Chart
-    chartWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.md, position: 'relative' },
+    chartWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.lg, position: 'relative' },
     chartCenter: {
       position: 'absolute', alignItems: 'center', justifyContent: 'center',
-      width: INNER_R * 2 - 12, height: INNER_R * 2 - 12,
     },
-    chartCenterLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
-    chartCenterAmount: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginTop: 2 },
-    emptyChart: { height: 100, alignItems: 'center', justifyContent: 'center' },
-    emptyText: { ...Typography.body, color: Colors.textSecondary },
+    chartCenterLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+    chartCenterAmount: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginTop: 4 },
+    emptyChart: { height: 120, alignItems: 'center', justifyContent: 'center' },
+    emptyText: { fontSize: 14, color: Colors.textSecondary },
 
     // Legend
-    legendGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    legendItem: { flexDirection: 'row', alignItems: 'center', width: '47%', gap: 6 },
+    legendGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', width: '47%', gap: 8 },
     legendDot: { width: 8, height: 8, borderRadius: 4 },
-    legendName: { flex: 1, fontSize: 12, color: Colors.textSecondary },
-    legendPct: { fontSize: 12, fontWeight: '600', color: Colors.textPrimary },
+    legendName: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+    legendPct: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
 
     // Category rows
-    catRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: Spacing.sm },
-    catRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border },
-    catIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.sm },
+    catRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md },
+    catRowBorder: { borderBottomWidth: 1, borderBottomColor: isDark ? '#374151' : '#F3F4F6' },
+    catIconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
     catInfo: { flex: 1 },
-    catNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-    catName: { ...Typography.body, fontWeight: '600', color: Colors.textPrimary, fontSize: 13 },
-    catAmount: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
-    catMetaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-    catCount: { fontSize: 11, color: Colors.textSecondary },
-    budgetHint: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
-    barTrack: { height: 6, backgroundColor: isDark ? Colors.border : '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
+    catNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    catName: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+    catAmount: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+    catMetaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+    catCount: { fontSize: 12, color: Colors.textSecondary },
+    budgetHint: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+    barTrack: { height: 6, backgroundColor: isDark ? '#374151' : '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
     barFill: { height: 6, borderRadius: 3, minWidth: 4 },
-    budgetBarTrack: { height: 4, backgroundColor: isDark ? Colors.border : '#E5E7EB', borderRadius: 2, overflow: 'hidden', marginTop: 6 },
+    budgetBarTrack: { height: 4, backgroundColor: isDark ? '#374151' : '#F3F4F6', borderRadius: 2, overflow: 'hidden', marginTop: 8 },
     budgetBarFill: { height: 4, borderRadius: 2 },
 
     // Budget
-    budgetRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: Spacing.sm },
-    noBudget: { alignItems: 'center', paddingVertical: Spacing.lg },
-    noBudgetText: { ...Typography.body, color: Colors.textSecondary, marginBottom: Spacing.md },
+    budgetRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: Spacing.md },
+    noBudget: { alignItems: 'center', paddingVertical: Spacing.xl },
+    noBudgetText: { fontSize: 14, color: Colors.textSecondary, marginBottom: Spacing.lg },
     setBudgetBtn: {
-      backgroundColor: Colors.primary, borderRadius: 10,
-      paddingHorizontal: Spacing.xl, paddingVertical: 10,
+      backgroundColor: isDark ? Colors.surface : Colors.white, borderRadius: Radius.md,
+      borderWidth: 1, borderColor: Colors.border,
+      paddingHorizontal: Spacing.lg, paddingVertical: 12,
     },
-    setBudgetText: { ...Typography.button, color: '#fff', fontWeight: '600' },
+    setBudgetText: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
   });
 }

@@ -4,6 +4,8 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.transfer.*;
 import com.aza.backend.entity.User;
+import com.aza.backend.service.AnomalyDetectionService;
+import com.aza.backend.service.CategorySuggestionService;
 import com.aza.backend.service.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class TransferController {
     private final com.aza.backend.service.NotificationService notificationService;
     private final com.aza.backend.service.SystemSettingService settingService;
     private final com.aza.backend.repository.LimitIncreaseRequestRepository limitRequestRepo;
+    private final AnomalyDetectionService anomalyDetectionService;
+    private final CategorySuggestionService categorySuggestionService;
 
     // ==================== WALLET ====================
 
@@ -99,6 +103,46 @@ public class TransferController {
         int targetYear = year != null ? year : java.time.Year.now().getValue();
         return ResponseEntity.ok(ApiResponse.success(
                 transferService.getYearlySpendingSummary(user.getId(), targetYear)));
+    }
+
+    // ==================== AI: ANOMALY CHECK + CATEGORY SUGGESTION ====================
+
+    @PostMapping("/transfers/check-anomaly")
+    public ResponseEntity<ApiResponse<AnomalyCheckResponse>> checkAnomaly(
+            @AuthenticationPrincipal User user,
+            @RequestBody AnomalyCheckRequest request) {
+        if (request.getRecipientIdentifier() == null || request.getAmount() == null) {
+            return ResponseEntity.ok(ApiResponse.success(new AnomalyCheckResponse(0.0, "LOW", null)));
+        }
+        java.util.Optional<UUID> recipientId = transferService.resolveRecipientId(request.getRecipientIdentifier());
+        if (recipientId.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success(new AnomalyCheckResponse(0.0, "LOW", null)));
+        }
+        AnomalyDetectionService.Result result = anomalyDetectionService.score(
+                user.getId(), recipientId.get(), request.getAmount(), java.time.LocalDateTime.now());
+        return ResponseEntity.ok(ApiResponse.success(
+                new AnomalyCheckResponse(result.score(), result.riskLevel(), result.reason())));
+    }
+
+    @PostMapping("/transfers/suggest-category")
+    public ResponseEntity<ApiResponse<CategorySuggestResponse>> suggestCategory(
+            @AuthenticationPrincipal User user,
+            @RequestBody CategorySuggestRequest request) {
+        if (request.getRecipientIdentifier() == null) {
+            return ResponseEntity.ok(ApiResponse.success(new CategorySuggestResponse(null, 0.0, null)));
+        }
+        java.util.Optional<UUID> recipientId = transferService.resolveRecipientId(request.getRecipientIdentifier());
+        String recipientName = transferService.resolveRecipientName(request.getRecipientIdentifier()).orElse("");
+
+        CategorySuggestionService.Result result;
+        if (recipientId.isPresent()) {
+            result = categorySuggestionService.suggest(
+                    user.getId(), recipientId.get(), request.getNote(), recipientName);
+        } else {
+            result = categorySuggestionService.suggestByKeywords(request.getNote(), recipientName);
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+                new CategorySuggestResponse(result.suggestedCategory(), result.confidence(), result.reason())));
     }
 
     // ==================== TRANSFERS ====================

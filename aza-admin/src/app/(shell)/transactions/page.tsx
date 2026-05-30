@@ -179,6 +179,24 @@ function TransactionDrawer({
                   <DetailRow label="Note">
                     {tx.note ? <span className="text-white/70">{tx.note}</span> : <span className="text-white/25">No note</span>}
                   </DetailRow>
+                  <DetailRow label="Category">
+                    {tx.category ? (
+                      <span className="text-xs text-[#B7EE7A] bg-[#B7EE7A]/10 border border-[#B7EE7A]/20 px-2 py-0.5 rounded-full">
+                        {tx.category}
+                      </span>
+                    ) : <span className="text-white/25">Uncategorised</span>}
+                  </DetailRow>
+                  {tx.anomalyRiskLevel && tx.anomalyRiskLevel !== "LOW" && (
+                    <DetailRow label="Risk">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                        tx.anomalyRiskLevel === "HIGH"
+                          ? "bg-red-500/10 text-red-400 border-red-500/20"
+                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      }`}>
+                        {tx.anomalyRiskLevel} · {tx.anomalyScore != null ? `${Math.round(tx.anomalyScore * 100)}%` : ""}
+                      </span>
+                    </DetailRow>
+                  )}
                   <DetailRow label="Initiated">{fmt(tx.initiatedAt)}</DetailRow>
                   <DetailRow label="Completed">{fmt(tx.completedAt)}</DetailRow>
                   {tx.cancelledAt && <DetailRow label="Cancelled">{fmt(tx.cancelledAt)}</DetailRow>}

@@ -35,4 +35,6 @@ export const queryKeys = {
   budgets:             () => ['budgets'] as const,
   budgetStatus:        (start: string, end: string) => ['budget-status', start, end] as const,
   transactionInsight:  (id: string) => ['transaction-insight', id] as const,
+  anomalyCheck:        (identifier: string, amount: number) => ['anomaly-check', identifier, amount] as const,
+  categorysuggestion:  (identifier: string, note: string) => ['category-suggestion', identifier, note] as const,
 } as const;

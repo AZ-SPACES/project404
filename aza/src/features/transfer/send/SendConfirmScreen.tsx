@@ -11,6 +11,7 @@ import {
 import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
@@ -19,6 +20,8 @@ import { useToast } from '../../../providers/ToastProvider';
 import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
 import { CATEGORY_META, CategoryKey } from '../../../utils/categories';
+import { checkTransferAnomaly } from '../../../services/api';
+import { queryKeys } from '../../../lib/queryKeys';
 
 type SendConfirmScreenProps = NativeStackScreenProps<RootStackParamList, 'SendConfirm'>;
 
@@ -35,6 +38,20 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
   const [editedNote, setEditedNote] = useState(note || '');
 
   const { initiateTransfer } = useTransferStore();
+
+  const { data: anomalyData } = useQuery({
+    queryKey: queryKeys.anomalyCheck(identifier, amount),
+    queryFn: async () => {
+      const res = await checkTransferAnomaly(identifier, amount);
+      return res.data?.data || res.data;
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const anomalyRisk: string = anomalyData?.riskLevel ?? 'LOW';
+  const anomalyReason: string | null = anomalyData?.reason ?? null;
+  const showAnomalyWarning = anomalyRisk === 'MEDIUM' || anomalyRisk === 'HIGH';
 
   const handleConfirmSend = async () => {
     if (isLoading) return;
@@ -125,7 +142,27 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
           </View>
         </View>
 
-        {/* Warning Banner */}
+        {/* Anomaly Warning Banner */}
+        {showAnomalyWarning && (
+          <View style={[styles.anomalyBanner, anomalyRisk === 'HIGH' && styles.anomalyBannerHigh]}>
+            <Feather
+              name="alert-triangle"
+              size={16}
+              color={anomalyRisk === 'HIGH' ? '#EF4444' : '#F59E0B'}
+              style={{ marginTop: 2, flexShrink: 0 }}
+            />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.anomalyBannerTitle, anomalyRisk === 'HIGH' && { color: '#EF4444' }]}>
+                {anomalyRisk === 'HIGH' ? 'Unusual transfer detected' : 'Transfer looks unusual'}
+              </Text>
+              {anomalyReason ? (
+                <Text style={styles.anomalyBannerBody}>{anomalyReason}</Text>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        {/* Standard Warning Banner */}
         <View style={styles.warningBanner}>
           <Feather name="shield" size={16} color={Colors.textSecondary} style={{ marginTop: 2 }} />
           <Text style={styles.warningBannerText}>
@@ -277,6 +314,30 @@ function createStyles(Colors: ThemeColors) {
     editBtn: {
       marginLeft: 8,
       padding: 4,
+    },
+    anomalyBanner: {
+      flexDirection: 'row',
+      backgroundColor: '#FEF3C7',
+      padding: Spacing.md,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#F59E0B',
+      gap: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    anomalyBannerHigh: {
+      backgroundColor: '#FEE2E2',
+      borderColor: '#EF4444',
+    },
+    anomalyBannerTitle: {
+      ...Typography.caption,
+      fontWeight: '700',
+      color: '#B45309',
+    },
+    anomalyBannerBody: {
+      ...Typography.caption,
+      color: '#78350F',
+      lineHeight: 16,
     },
     warningBanner: {
       flexDirection: 'row',

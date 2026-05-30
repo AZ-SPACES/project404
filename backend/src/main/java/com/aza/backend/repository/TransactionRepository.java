@@ -132,6 +132,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                            @Param("start") LocalDateTime start,
                                            @Param("end") LocalDateTime end);
 
+    // ── Anomaly detection queries ─────────────────────────────────────────────
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.recipientId = :recipientId AND t.status = 'COMPLETED'")
+    long countCompletedDebitsByUserAndRecipient(@Param("userId") UUID userId, @Param("recipientId") UUID recipientId);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    long countCompletedDebitsByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COALESCE(AVG(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    BigDecimal getAverageAmountByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT COALESCE(MAX(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    BigDecimal getMaxAmountByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
+
+    // ── Category suggestion queries ───────────────────────────────────────────
+
+    @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId AND t.recipientId = :recipientId AND t.status = 'COMPLETED' ORDER BY t.completedAt DESC")
+    List<Transaction> findCompletedDebitsByUserAndRecipient(@Param("userId") UUID userId, @Param("recipientId") UUID recipientId, org.springframework.data.domain.Pageable pageable);
+
     /* Task 4: Active users for cohort retention */
     @Query("SELECT DISTINCT t.senderId FROM Transaction t WHERE t.senderId IN :userIds AND t.initiatedAt >= :start AND t.initiatedAt < :end AND t.status = 'COMPLETED'")
     List<UUID> findActiveUserIds(@Param("userIds") List<UUID> userIds,
@@ -142,4 +161,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT COUNT(DISTINCT t.senderId) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end")
     long countActiveUsersBetween(@Param("start") LocalDateTime start,
                                   @Param("end") LocalDateTime end);
+
+    // ── Admin AI: Fraud + Category Analytics ──────────────────────────────────
+
+    @Query("SELECT t FROM Transaction t WHERE t.anomalyRiskLevel = :riskLevel ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findByAnomalyRiskLevel(@Param("riskLevel") String riskLevel, Pageable pageable);
+
+    @Query("SELECT t FROM Transaction t WHERE t.anomalyRiskLevel IN ('MEDIUM', 'HIGH') ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findFlaggedTransactions(Pageable pageable);
+
+    @Query("SELECT t.category, COUNT(t), SUM(t.amount) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.category IS NOT NULL AND t.initiatedAt >= :since GROUP BY t.category ORDER BY SUM(t.amount) DESC")
+    List<Object[]> getCategoryBreakdown(@Param("since") LocalDateTime since);
 }

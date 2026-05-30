@@ -26,9 +26,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -112,6 +117,9 @@ public class AdminService {
                             .initiatedAt(tx.getInitiatedAt())
                             .completedAt(tx.getCompletedAt())
                             .cancelledAt(tx.getCancelledAt())
+                            .category(tx.getCategory() != null ? tx.getCategory().name() : null)
+                            .anomalyScore(tx.getAnomalyScore())
+                            .anomalyRiskLevel(tx.getAnomalyRiskLevel())
                             .build();
                 });
     }
@@ -137,6 +145,9 @@ public class AdminService {
                             .initiatedAt(tx.getInitiatedAt())
                             .completedAt(tx.getCompletedAt())
                             .cancelledAt(tx.getCancelledAt())
+                            .category(tx.getCategory() != null ? tx.getCategory().name() : null)
+                            .anomalyScore(tx.getAnomalyScore())
+                            .anomalyRiskLevel(tx.getAnomalyRiskLevel())
                             .build();
                 });
     }
@@ -398,5 +409,67 @@ public class AdminService {
                 .customDailyLimitGhs(user.getCustomDailyLimitGhs())
                 .customSingleTransactionLimitGhs(user.getCustomSingleTransactionLimitGhs())
                 .build();
+    }
+
+    // ── AI Admin: Fraud Detection ─────────────────────────────────────────────
+
+    public Page<AdminTransactionResponse> getFlaggedTransactions(String riskLevel, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<Transaction> txPage = (riskLevel != null && !riskLevel.isBlank())
+                ? transactionRepository.findByAnomalyRiskLevel(riskLevel.toUpperCase(), pageable)
+                : transactionRepository.findFlaggedTransactions(pageable);
+
+        return txPage.map(tx -> {
+            User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+            User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+            return AdminTransactionResponse.builder()
+                    .id(tx.getId().toString())
+                    .senderId(tx.getSenderId().toString())
+                    .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                    .senderHandle(sender != null ? sender.getUsername() : null)
+                    .recipientId(tx.getRecipientId().toString())
+                    .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                    .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                    .amount(tx.getAmount())
+                    .note(tx.getNote())
+                    .type(tx.getType().name())
+                    .status(tx.getStatus().name())
+                    .initiatedAt(tx.getInitiatedAt())
+                    .completedAt(tx.getCompletedAt())
+                    .cancelledAt(tx.getCancelledAt())
+                    .category(tx.getCategory() != null ? tx.getCategory().name() : null)
+                    .anomalyScore(tx.getAnomalyScore())
+                    .anomalyRiskLevel(tx.getAnomalyRiskLevel())
+                    .build();
+        });
+    }
+
+    // ── AI Admin: Spending Category Analytics ─────────────────────────────────
+
+    public List<Map<String, Object>> getCategoryBreakdown(int days) {
+        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        List<Object[]> rows = transactionRepository.getCategoryBreakdown(since);
+
+        BigDecimal grandTotal = rows.stream()
+                .map(r -> (BigDecimal) r[2])
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object[] row : rows) {
+            String category = ((Transaction.TransactionCategory) row[0]).name();
+            long count = (long) row[1];
+            BigDecimal total = (BigDecimal) row[2];
+            double pct = grandTotal.compareTo(BigDecimal.ZERO) > 0
+                    ? total.divide(grandTotal, 4, RoundingMode.HALF_UP).doubleValue() * 100
+                    : 0.0;
+
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("category", category);
+            item.put("count", count);
+            item.put("total", total);
+            item.put("percentage", Math.round(pct * 10.0) / 10.0);
+            result.add(item);
+        }
+        return result;
     }
 }

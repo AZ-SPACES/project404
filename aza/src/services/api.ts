@@ -1009,3 +1009,9 @@ export const getTransactionInsight = (transactionId: string) =>
 
 export const sendAiMessage = (message: string, history: { role: string; content: string }[]) =>
   api.post('/api/v1/ai/chat', { message, history });
+
+export const checkTransferAnomaly = (recipientIdentifier: string, amount: number) =>
+  api.post('/api/v1/transfers/check-anomaly', { recipientIdentifier, amount });
+
+export const suggestTransferCategory = (recipientIdentifier: string, note: string) =>
+  api.post('/api/v1/transfers/suggest-category', { recipientIdentifier, note });

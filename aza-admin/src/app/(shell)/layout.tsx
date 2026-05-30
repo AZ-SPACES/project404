@@ -18,6 +18,8 @@ import {
   ScrollText,
   Bell,
   AlertTriangle,
+  ShieldAlert,
+  PieChart,
   Scale,
   FileBarChart2,
   Settings,
@@ -77,6 +79,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck },
       { href: "/risk", label: "Risk Management", icon: AlertTriangle },
+      { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert },
     ],
   },
   {
@@ -84,6 +87,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp },
       { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2 },
+      { href: "/analytics/spending", label: "Spending", icon: PieChart },
     ],
   },
   {
