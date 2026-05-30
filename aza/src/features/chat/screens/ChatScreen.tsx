@@ -36,6 +36,7 @@ import {
   calculateStorageAsync,
 } from '../../../components/chat/chatTypes';
 import { useChat } from '../../../hooks/useChat';
+import { useCallStore } from '../../../store/callStore';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -199,15 +200,19 @@ export default function ChatScreen() {
   const handleCloseMoreMenu = useCallback(() => setShowMoreMenu(false), []);
   const handleCloseCallMenu = useCallback(() => setShowCallMenu(false), []);
 
-  const handleAudioCall = useCallback(() => {
-    setShowCallMenu(false);
-    navigation.navigate('AudioCall', { name, avatar });
-  }, [navigation, name, avatar]);
+  const initiateOutgoingCall = useCallStore(state => state.initiateOutgoingCall);
 
-  const handleVideoCall = useCallback(() => {
+  const handleAudioCall = useCallback(async () => {
     setShowCallMenu(false);
+    await initiateOutgoingCall(id, 'VOICE');
+    navigation.navigate('AudioCall', { name, avatar });
+  }, [id, navigation, name, avatar, initiateOutgoingCall]);
+
+  const handleVideoCall = useCallback(async () => {
+    setShowCallMenu(false);
+    await initiateOutgoingCall(id, 'VIDEO');
     navigation.navigate('VideoCall', { name, avatar });
-  }, [navigation, name, avatar]);
+  }, [id, navigation, name, avatar, initiateOutgoingCall]);
 
   const handleAddPress = useCallback((anchor: AttachmentAnchor) => {
     setAttachmentAnchor(anchor);

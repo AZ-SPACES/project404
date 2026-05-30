@@ -9,3 +9,4 @@ export { default as StarredMessagesScreen } from './screens/StarredMessagesScree
 export { default as SharedMediaScreen } from './screens/SharedMediaScreen';
 export { default as ManageStorageScreen } from './screens/ManageStorageScreen';
 export { default as MessageInfoScreen } from './screens/MessageInfoScreen';
+export { default as IncomingCallScreen } from './screens/IncomingCallScreen';

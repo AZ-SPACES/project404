@@ -116,8 +116,9 @@ export type RootStackParamList = {
   AddFriends: undefined;
   RequestPending: undefined;
   ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
-  AudioCall: { name: string; avatar: string };
-  VideoCall: { name: string; avatar: string };
+  AudioCall: { callId?: string; name: string; avatar: string };
+  VideoCall: { callId?: string; name: string; avatar: string };
+  IncomingCall: undefined;
   StarredMessages: undefined;
   SharedMedia: undefined;
   ManageStorage: { storageStats?: any } | undefined;

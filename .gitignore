@@ -6,6 +6,8 @@
 **/node_modules/
 **/target/
 **/*.env
+turnserver.conf
+test_calls.js
 !**/.env.example
 backend/src/main/resources/firebase-service-account.json
 *.pdf
