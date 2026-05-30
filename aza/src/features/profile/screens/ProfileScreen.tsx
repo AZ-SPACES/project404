@@ -381,6 +381,7 @@ export default function ProfileScreen() {
             subtitle="View usage, limits and request an increase"
             onPress={() => navigation.navigate("LimitsAndUsage")}
           />
+          <SectionItem iconFamily="Feather" iconName="repeat" title="Scheduled Transfers" subtitle="Set up recurring payments" onPress={() => navigation.navigate("RecurringTransfers")} />
           <SectionItem iconFamily="Feather" iconName="shield" title="Security and Privacy" subtitle="Change your security and privacy settings" onPress={() => navigation.navigate("SecurityAndPrivacy")} />
           <SectionItem 
             iconFamily="Feather" 

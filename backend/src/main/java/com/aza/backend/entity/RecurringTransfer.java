@@ -59,6 +59,10 @@ public class RecurringTransfer {
     @Column
     private String lastFailureReason;
 
+    /* Nullable; set once at creation for idempotency (Task 6) */
+    @Column(unique = true)
+    private String idempotencyKey;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -28,4 +28,7 @@ export const queryKeys = {
   merchantWebhooks:    () => ['merchant', 'webhooks'] as const,
   merchantApiKeys:     () => ['merchant', 'api-keys'] as const,
   merchantApiLogs:     (page?: number) => ['merchant', 'api-logs', page ?? 0] as const,
+  recurringTransfers:  () => ['recurring-transfers'] as const,
+  spendingCategories:  (start: string, end: string) => ['spending-categories', start, end] as const,
+  walletStatus:        () => ['wallet-status'] as const,
 } as const;

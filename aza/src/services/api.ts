@@ -955,3 +955,33 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+// --- Recurring Transfers ---
+
+export const getRecurringTransfers = () => api.get('/api/v1/recurring-transfers');
+export const createRecurringTransfer = (data: { recipientIdentifier: string; amount: number; note?: string; frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY'; startDate: string }) => api.post('/api/v1/recurring-transfers', data);
+export const pauseRecurringTransfer = (id: string) => api.put(`/api/v1/recurring-transfers/${id}/pause`);
+export const resumeRecurringTransfer = (id: string) => api.put(`/api/v1/recurring-transfers/${id}/resume`);
+export const cancelRecurringTransfer = (id: string) => api.delete(`/api/v1/recurring-transfers/${id}`);
+
+// --- Bulk Transfer ---
+
+export const bulkTransfer = (data: { transfers: { recipientIdentifier: string; amount: number; note?: string }[] }) => api.post('/api/v1/transfers/bulk', data);
+
+// --- Transaction Search ---
+
+export const searchTransactions = (params: { q?: string; status?: string; type?: string; minAmount?: number; maxAmount?: number; startDate?: string; endDate?: string; page?: number; size?: number }) => {
+  const p = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') p.set(k, String(v)); });
+  return api.get(`/api/v1/transfers/search?${p}`);
+};
+
+// --- Spending Categories ---
+
+export const getSpendingCategories = (startDate: string, endDate: string) => api.get(`/api/v1/wallet/spending/categories?startDate=${startDate}&endDate=${endDate}`);
+
+// --- Wallet Freeze ---
+
+export const getWalletStatus = () => api.get('/api/v1/users/me/wallet/status');
+export const freezeWallet = () => api.post('/api/v1/users/me/wallet/freeze');
+export const unfreezeWallet = () => api.post('/api/v1/users/me/wallet/unfreeze');
