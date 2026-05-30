@@ -12,6 +12,8 @@ import {
   Pressable,
   ActivityIndicator,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from '@react-native-vector-icons/feather';
@@ -185,8 +187,24 @@ export function TransactionsScreen() {
   const balance = route.params?.balance || formatCurrency(0);
   const { transactionGrouping } = useDisplayContext();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const { sections, loading, refreshing, refresh, loadMore, error, filter, setFilter } =
+  // Advanced filter state
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [txType, setTxType] = useState('All');
+  const [txStatus, setTxStatus] = useState('All');
+  const [pendingMin, setPendingMin] = useState('');
+  const [pendingMax, setPendingMax] = useState('');
+  const [pendingFrom, setPendingFrom] = useState('');
+  const [pendingTo, setPendingTo] = useState('');
+  const [pendingType, setPendingType] = useState('All');
+  const [pendingStatus, setPendingStatus] = useState('All');
+
+  const hasActiveFilters = minAmount || maxAmount || fromDate || toDate || txType !== 'All' || txStatus !== 'All';
+
+  const { sections, loading, refreshing, refresh, loadMore, error, filter, setFilter, searchQuery, setSearchQuery } =
     useTransactions();
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
@@ -259,24 +277,11 @@ export function TransactionsScreen() {
   }, [declineMoneyRequest, closeSheet, refresh]);
 
   const filteredSections = useMemo(() => {
-    const filtered = !searchQuery
-      ? sections
-      : sections
-          .map(s => ({
-            ...s,
-            data: s.data.filter(
-              tx =>
-                tx.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                tx.type.toLowerCase().includes(searchQuery.toLowerCase()),
-            ),
-          }))
-          .filter(s => s.data.length > 0);
-
     if (transactionGrouping === "flat") {
-      return [{ title: "", data: filtered.flatMap(s => s.data) }];
+      return [{ title: "", data: sections.flatMap(s => s.data) }];
     }
-    return filtered;
-  }, [sections, searchQuery, transactionGrouping]);
+    return sections;
+  }, [sections, transactionGrouping]);
 
   const renderItem = ({ item }: { item: Transaction }) => (
     <View style={{ paddingHorizontal: Spacing.lg }}>
@@ -501,7 +506,7 @@ export function TransactionsScreen() {
               </Text>
             </View>
 
-            {/* Search + statement */}
+            {/* Search + filters + statement */}
             <View style={styles.searchRow}>
               <View style={styles.searchBox}>
                 <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: Spacing.sm }} />
@@ -518,6 +523,22 @@ export function TransactionsScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              <TouchableOpacity
+                style={[styles.statementBtn, hasActiveFilters && styles.statementBtnActive]}
+                onPress={() => {
+                  setPendingMin(minAmount);
+                  setPendingMax(maxAmount);
+                  setPendingFrom(fromDate);
+                  setPendingTo(toDate);
+                  setPendingType(txType);
+                  setPendingStatus(txStatus);
+                  setFilterModalVisible(true);
+                }}
+                accessibilityLabel="Advanced filter"
+              >
+                <Feather name="sliders" size={18} color={hasActiveFilters ? Colors.primary : Colors.textSecondary} />
+                {hasActiveFilters && <View style={styles.filterActiveDot} />}
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.statementBtn}
                 onPress={() => navigation.navigate("StatementDownload")}
@@ -565,6 +586,130 @@ export function TransactionsScreen() {
           <View style={styles.sheetHandle} />
           {renderDetailSheet()}
         </View>
+      </Modal>
+
+      {/* Advanced filter modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={styles.overlay} onPress={() => setFilterModalVisible(false)} />
+          <View style={styles.filterSheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.filterSheetTitle}>Advanced Filter</Text>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={styles.filterLabel}>Amount range</Text>
+              <View style={styles.filterRow2}>
+                <TextInput
+                  style={[styles.filterInput, { flex: 1 }]}
+                  placeholder="Min"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={pendingMin}
+                  onChangeText={setPendingMin}
+                  keyboardType="decimal-pad"
+                />
+                <Text style={{ color: Colors.textSecondary, marginHorizontal: Spacing.sm }}>–</Text>
+                <TextInput
+                  style={[styles.filterInput, { flex: 1 }]}
+                  placeholder="Max"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={pendingMax}
+                  onChangeText={setPendingMax}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <Text style={styles.filterLabel}>Date range</Text>
+              <View style={styles.filterRow2}>
+                <TextInput
+                  style={[styles.filterInput, { flex: 1 }]}
+                  placeholder="From (YYYY-MM-DD)"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={pendingFrom}
+                  onChangeText={setPendingFrom}
+                />
+                <Text style={{ color: Colors.textSecondary, marginHorizontal: Spacing.sm }}>–</Text>
+                <TextInput
+                  style={[styles.filterInput, { flex: 1 }]}
+                  placeholder="To (YYYY-MM-DD)"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={pendingTo}
+                  onChangeText={setPendingTo}
+                />
+              </View>
+
+              <Text style={styles.filterLabel}>Type</Text>
+              <View style={styles.filterChipRow}>
+                {['All', 'Transfer', 'Request'].map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.chip, pendingType === t && styles.chipActive]}
+                    onPress={() => setPendingType(t)}
+                  >
+                    <Text style={[styles.chipText, pendingType === t && styles.chipTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.filterLabel}>Status</Text>
+              <View style={styles.filterChipRow}>
+                {['All', 'Completed', 'Pending', 'Failed'].map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.chip, pendingStatus === s && styles.chipActive]}
+                    onPress={() => setPendingStatus(s)}
+                  >
+                    <Text style={[styles.chipText, pendingStatus === s && styles.chipTextActive]}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.filterActions}>
+                <TouchableOpacity
+                  style={[styles.filterBtn, styles.filterBtnClear]}
+                  onPress={() => {
+                    setPendingMin('');
+                    setPendingMax('');
+                    setPendingFrom('');
+                    setPendingTo('');
+                    setPendingType('All');
+                    setPendingStatus('All');
+                    setMinAmount('');
+                    setMaxAmount('');
+                    setFromDate('');
+                    setToDate('');
+                    setTxType('All');
+                    setTxStatus('All');
+                    setFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.filterBtnText, { color: Colors.textSecondary }]}>Clear</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterBtn, { backgroundColor: Colors.primary, flex: 2 }]}
+                  onPress={() => {
+                    setMinAmount(pendingMin);
+                    setMaxAmount(pendingMax);
+                    setFromDate(pendingFrom);
+                    setToDate(pendingTo);
+                    setTxType(pendingType);
+                    setTxStatus(pendingStatus);
+                    setFilterModalVisible(false);
+                    // Trigger search with advanced params
+                    if (pendingMin || pendingMax || pendingFrom || pendingTo || pendingType !== 'All' || pendingStatus !== 'All') {
+                      setSearchQuery(searchQuery || ' ');
+                    }
+                  }}
+                >
+                  <Text style={[styles.filterBtnText, { color: Colors.white }]}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -787,6 +932,90 @@ function createStyles(Colors: ThemeColors) {
       textAlign: "center",
     },
     retryBtn: { marginTop: Spacing.sm },
+
+    statementBtnActive: {
+      borderColor: Colors.primary,
+    },
+    filterActiveDot: {
+      position: 'absolute' as const,
+      top: 8,
+      right: 8,
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: Colors.primary,
+    },
+
+    // Advanced filter sheet
+    filterSheet: {
+      position: "absolute" as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: Spacing.xl,
+      paddingBottom: 40,
+      paddingTop: Spacing.lg,
+      maxHeight: '85%' as any,
+    },
+    filterSheetTitle: {
+      ...Typography.h3,
+      color: Colors.textPrimary,
+      marginBottom: Spacing.lg,
+      textAlign: "center" as const,
+    },
+    filterLabel: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: Colors.textSecondary,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.5,
+      marginBottom: Spacing.sm,
+      marginTop: Spacing.md,
+    },
+    filterRow2: {
+      flexDirection: 'row' as const,
+      alignItems: 'center',
+    },
+    filterInput: {
+      backgroundColor: isDark ? Colors.background : '#F9FAFB',
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 10,
+      ...Typography.body,
+      color: Colors.textPrimary,
+      fontSize: 14,
+    },
+    filterChipRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: Spacing.sm,
+    },
+    filterActions: {
+      flexDirection: 'row' as const,
+      gap: Spacing.sm,
+      marginTop: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    filterBtn: {
+      flex: 1,
+      borderRadius: Radius.lg,
+      paddingVertical: 14,
+      alignItems: 'center' as const,
+    },
+    filterBtnClear: {
+      backgroundColor: isDark ? Colors.background : '#F3F4F6',
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    filterBtnText: {
+      ...Typography.body,
+      fontWeight: '600' as const,
+    },
 
     // Bottom sheet
     overlay: {

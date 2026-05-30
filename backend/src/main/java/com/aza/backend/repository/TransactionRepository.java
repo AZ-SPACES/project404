@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -100,4 +101,40 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     long countReceivedBetween(@Param("userId") UUID userId,
                                @Param("start") LocalDateTime start,
                                @Param("end") LocalDateTime end);
+
+    /* Task 1: Full-text search with optional filters */
+    @Query("SELECT t FROM Transaction t WHERE (t.senderId = :userId OR t.recipientId = :userId) " +
+            "AND (:status IS NULL OR t.status = :status) " +
+            "AND (:type IS NULL OR t.type = :type) " +
+            "AND (:minAmount IS NULL OR t.amount >= :minAmount) " +
+            "AND (:maxAmount IS NULL OR t.amount <= :maxAmount) " +
+            "AND (:start IS NULL OR t.initiatedAt >= :start) " +
+            "AND (:end IS NULL OR t.initiatedAt < :end) " +
+            "ORDER BY t.initiatedAt DESC")
+    Page<Transaction> searchTransactions(
+            @Param("userId") UUID userId,
+            @Param("status") Transaction.TransactionStatus status,
+            @Param("type") Transaction.TransactionType type,
+            @Param("minAmount") BigDecimal minAmount,
+            @Param("maxAmount") BigDecimal maxAmount,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            Pageable pageable);
+
+    /* Task 3: Debit-side completed transactions for spending categories */
+    @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end ORDER BY t.initiatedAt ASC")
+    List<Transaction> findDebitsByUserIdAndDateRange(@Param("userId") UUID userId,
+                                                     @Param("start") LocalDateTime start,
+                                                     @Param("end") LocalDateTime end);
+
+    /* Task 4: Active users for cohort retention */
+    @Query("SELECT DISTINCT t.senderId FROM Transaction t WHERE t.senderId IN :userIds AND t.initiatedAt >= :start AND t.initiatedAt < :end AND t.status = 'COMPLETED'")
+    List<UUID> findActiveUserIds(@Param("userIds") List<UUID> userIds,
+                                  @Param("start") LocalDateTime start,
+                                  @Param("end") LocalDateTime end);
+
+    /* Task 5: Count distinct active senders for revenue dashboard */
+    @Query("SELECT COUNT(DISTINCT t.senderId) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end")
+    long countActiveUsersBetween(@Param("start") LocalDateTime start,
+                                  @Param("end") LocalDateTime end);
 }

@@ -4,6 +4,7 @@ import Snake from './Snakegame';
 import Connect4 from './Connect4';
 import Radio from './Radio';
 import Notepad from './Notepad';
+import CediratesApp from './CediratesApp';
 import { MiniAppEntry } from './types';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
@@ -54,6 +55,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/notepad.png'),
     category: 'Productivity',
     component: Notepad,
+  },
+  {
+    id: 'cedirates',
+    name: 'CediRates',
+    description: 'Live exchange rates and fuel prices',
+    icon: require('../../../assets/cedirates.png'),
+    category: 'Finance',
+    component: CediratesApp,
   }
 ];
 

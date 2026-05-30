@@ -465,6 +465,18 @@ public class TransferService {
             throw new AppException("Cannot request money from yourself");
         }
 
+        // Idempotency: if key was already used and request is PENDING/COMPLETED, return existing
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(request.getIdempotencyKey());
+            if (existing.isPresent()) {
+                Transaction t = existing.get();
+                if (t.getStatus() == Transaction.TransactionStatus.PENDING
+                        || t.getStatus() == Transaction.TransactionStatus.COMPLETED) {
+                    return buildTransferResponse(t, fromUser, requester, requester.getId());
+                }
+            }
+        }
+
         Transaction transaction = Transaction.builder()
                 .senderId(fromUser.getId())
                 .recipientId(requester.getId())
@@ -474,6 +486,8 @@ public class TransferService {
                 .status(Transaction.TransactionStatus.PENDING)
                 .isRequest(true)
                 .requestedAt(LocalDateTime.now())
+                .idempotencyKey(request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()
+                        ? request.getIdempotencyKey() : null)
                 .build();
 
         transaction = transactionRepository.save(transaction);
@@ -686,5 +700,206 @@ public class TransferService {
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    // ==================== TASK 1: TRANSACTION SEARCH ====================
+
+    public org.springframework.data.domain.Page<com.aza.backend.dto.admin.AdminTransactionResponse> searchTransactions(
+            UUID userId,
+            String status,
+            String type,
+            BigDecimal minAmount,
+            BigDecimal maxAmount,
+            LocalDateTime start,
+            LocalDateTime end,
+            int page,
+            int size) {
+
+        Transaction.TransactionStatus statusEnum = null;
+        if (status != null && !status.isBlank()) {
+            try { statusEnum = Transaction.TransactionStatus.valueOf(status.toUpperCase()); }
+            catch (IllegalArgumentException e) { throw new AppException("Invalid status value"); }
+        }
+        Transaction.TransactionType typeEnum = null;
+        if (type != null && !type.isBlank()) {
+            try { typeEnum = Transaction.TransactionType.valueOf(type.toUpperCase()); }
+            catch (IllegalArgumentException e) { throw new AppException("Invalid type value"); }
+        }
+
+        org.springframework.data.domain.Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        org.springframework.data.domain.Page<Transaction> results = transactionRepository.searchTransactions(
+                userId, statusEnum, typeEnum, minAmount, maxAmount, start, end, pageable);
+
+        return results.map(t -> {
+            User sender = userRepository.findById(t.getSenderId()).orElse(null);
+            User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
+            String senderName = sender != null ? sender.getFirstName() + " " + sender.getLastName()
+                    : merchantRepository.findById(t.getSenderId()).map(Merchant::getBusinessName).orElse("Unknown");
+            String recipientName = recipient != null ? recipient.getFirstName() + " " + recipient.getLastName()
+                    : merchantRepository.findById(t.getRecipientId()).map(Merchant::getBusinessName).orElse("Unknown");
+            return com.aza.backend.dto.admin.AdminTransactionResponse.builder()
+                    .id(t.getId().toString())
+                    .senderId(t.getSenderId().toString())
+                    .senderName(senderName)
+                    .recipientId(t.getRecipientId().toString())
+                    .recipientName(recipientName)
+                    .amount(t.getAmount())
+                    .note(t.getNote())
+                    .type(t.getType().name())
+                    .status(t.getStatus().name())
+                    .initiatedAt(t.getInitiatedAt())
+                    .completedAt(t.getCompletedAt())
+                    .cancelledAt(t.getCancelledAt())
+                    .build();
+        });
+    }
+
+    // ==================== TASK 2: WALLET FREEZE/UNFREEZE ====================
+
+    @Transactional
+    public java.util.Map<String, Object> freezeWallet(UUID userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("Wallet not found"));
+        wallet.setFrozen(true);
+        walletRepository.save(wallet);
+        return java.util.Map.of("frozen", true);
+    }
+
+    @Transactional
+    public java.util.Map<String, Object> unfreezeWallet(UUID userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("Wallet not found"));
+        wallet.setFrozen(false);
+        walletRepository.save(wallet);
+        return java.util.Map.of("frozen", false);
+    }
+
+    public java.util.Map<String, Object> getWalletStatus(UUID userId) {
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException("Wallet not found"));
+        return java.util.Map.of(
+                "frozen", Boolean.TRUE.equals(wallet.getFrozen()),
+                "balance", wallet.getBalance(),
+                "currency", wallet.getCurrency());
+    }
+
+    // ==================== TASK 3: SPENDING CATEGORIES ====================
+
+    public java.util.Map<String, Object> getSpendingCategories(UUID userId, LocalDateTime start, LocalDateTime end) {
+        java.util.List<Transaction> debits = transactionRepository.findDebitsByUserIdAndDateRange(userId, start, end);
+
+        BigDecimal p2pTotal = BigDecimal.ZERO;
+        int p2pCount = 0;
+        BigDecimal merchantTotal = BigDecimal.ZERO;
+        int merchantCount = 0;
+        BigDecimal requestTotal = BigDecimal.ZERO;
+        int requestCount = 0;
+
+        for (Transaction t : debits) {
+            if (t.getType() == Transaction.TransactionType.REQUEST) {
+                requestTotal = requestTotal.add(t.getAmount());
+                requestCount++;
+            } else {
+                // TRANSFER — determine if recipient is a user or merchant
+                boolean isUser = userRepository.existsById(t.getRecipientId());
+                if (isUser) {
+                    p2pTotal = p2pTotal.add(t.getAmount());
+                    p2pCount++;
+                } else {
+                    merchantTotal = merchantTotal.add(t.getAmount());
+                    merchantCount++;
+                }
+            }
+        }
+
+        BigDecimal totalSpent = p2pTotal.add(merchantTotal).add(requestTotal);
+
+        java.util.List<java.util.Map<String, Object>> categories = java.util.List.of(
+                java.util.Map.of("name", "P2P Transfer", "key", "P2P_TRANSFER",
+                        "total", p2pTotal, "count", p2pCount, "color", "#B7EE7A"),
+                java.util.Map.of("name", "Merchant Payment", "key", "MERCHANT_PAYMENT",
+                        "total", merchantTotal, "count", merchantCount, "color", "#60A5FA"),
+                java.util.Map.of("name", "Money Request", "key", "MONEY_REQUEST",
+                        "total", requestTotal, "count", requestCount, "color", "#F59E0B")
+        );
+
+        return java.util.Map.of(
+                "categories", categories,
+                "totalSpent", totalSpent,
+                "period", java.util.Map.of("start", start.toString(), "end", end.toString()));
+    }
+
+    // ==================== TASK 7: USER-FACING BULK TRANSFER ====================
+
+    /**
+     * Execute a single transfer item for bulk flow. Each call runs in its own transaction
+     * so a failure on one item does not roll back the others.
+     */
+    @Transactional
+    public TransferResponse executeSingleBulkItem(User sender, String recipientIdentifier,
+                                                    BigDecimal amount, String note) {
+        // Resolve recipient
+        String usernameCandidate = recipientIdentifier.startsWith("@")
+                ? recipientIdentifier.substring(1) : recipientIdentifier;
+        User recipient = userRepository
+                .findByEmailOrPhoneNumber(recipientIdentifier, recipientIdentifier)
+                .or(() -> userRepository.findByUsername(usernameCandidate))
+                .orElse(null);
+
+        UUID recipientId;
+        if (recipient != null) {
+            if (recipient.getId().equals(sender.getId()))
+                throw new AppException("Cannot transfer to yourself");
+            if (recipient.getStatus() != User.AccountStatus.ACTIVE)
+                throw new AppException("Recipient account is not available");
+            recipientId = recipient.getId();
+        } else {
+            Merchant merchant = merchantRepository.findByBusinessHandle(usernameCandidate)
+                    .orElseThrow(() -> new AppException("Recipient not found"));
+            if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE)
+                throw new AppException("Recipient account is not available");
+            if (merchant.getUserId().equals(sender.getId()))
+                throw new AppException("Cannot transfer to yourself");
+            recipientId = merchant.getId();
+        }
+
+        // Lock and debit sender
+        Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
+                .orElseThrow(() -> new AppException("Wallet not found"));
+        if (Boolean.TRUE.equals(senderWallet.getFrozen()))
+            throw new AppException("WALLET_FROZEN", "Your wallet has been frozen.", HttpStatus.FORBIDDEN);
+        if (senderWallet.getBalance().compareTo(amount) < 0)
+            throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
+
+        senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
+        walletRepository.save(senderWallet);
+        sender.setBalance(senderWallet.getBalance());
+        userRepository.save(sender);
+
+        if (recipient != null) {
+            Wallet recipientWallet = walletRepository.findByUserIdForUpdate(recipientId)
+                    .orElseThrow(() -> new AppException("Recipient wallet not found"));
+            recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
+            walletRepository.save(recipientWallet);
+            recipient.setBalance(recipientWallet.getBalance());
+            userRepository.save(recipient);
+        } else {
+            Merchant merchant = merchantRepository.findById(recipientId).orElseThrow();
+            merchant.setBalance(merchant.getBalance().add(amount));
+            merchant.setTotalVolume(merchant.getTotalVolume().add(amount));
+            merchantRepository.save(merchant);
+        }
+
+        Transaction transaction = Transaction.builder()
+                .senderId(sender.getId())
+                .recipientId(recipientId)
+                .amount(amount)
+                .note(note)
+                .type(Transaction.TransactionType.TRANSFER)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .completedAt(LocalDateTime.now())
+                .build();
+        transaction = transactionRepository.save(transaction);
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 }

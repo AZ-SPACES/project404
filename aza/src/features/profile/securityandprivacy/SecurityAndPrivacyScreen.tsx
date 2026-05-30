@@ -169,12 +169,20 @@ export function SecurityAndPrivacyScreen() {
             onPress={() => navigation.navigate("LogoutEverywhere")}
           />
           
-          <SettingRow 
-            iconType="Feather" 
-            iconName="lock" 
-            title="Secure your account" 
+          <SettingRow
+            iconType="Feather"
+            iconName="lock"
+            title="Secure your account"
             subtitle="Use in the case of a stolen phone or suspicious transactions"
             onPress={() => navigation.navigate("SecureAccount")}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="lock"
+            title="Freeze Wallet"
+            subtitle="Temporarily block all transfers"
+            onPress={() => navigation.navigate("WalletFreeze")}
           />
         </View>
 

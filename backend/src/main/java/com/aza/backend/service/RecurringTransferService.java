@@ -30,6 +30,15 @@ public class RecurringTransferService {
 
     @Transactional
     public RecurringTransferResponse create(UUID userId, CreateRecurringTransferRequest req) {
+        // Idempotency: return existing record if key already used
+        if (req.getIdempotencyKey() != null && !req.getIdempotencyKey().isBlank()) {
+            java.util.Optional<RecurringTransfer> existing =
+                    recurringTransferRepository.findByIdempotencyKey(req.getIdempotencyKey());
+            if (existing.isPresent()) {
+                return toResponse(existing.get());
+            }
+        }
+
         String identifier = req.getRecipientIdentifier().trim();
         User recipient = userRepository.findByEmailIgnoreCaseOrUsername(identifier, identifier)
                 .orElseThrow(() -> new AppException("RECIPIENT_NOT_FOUND",
@@ -55,6 +64,8 @@ public class RecurringTransferService {
                 .note(req.getNote())
                 .frequency(req.getFrequency())
                 .nextRunAt(nextRunAt)
+                .idempotencyKey(req.getIdempotencyKey() != null && !req.getIdempotencyKey().isBlank()
+                        ? req.getIdempotencyKey() : null)
                 .build();
 
         recurringTransferRepository.save(rt);

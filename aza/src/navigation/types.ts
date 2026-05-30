@@ -130,4 +130,9 @@ export type RootStackParamList = {
   MerchantKYBOwner: { merchantId: string; businessType: string; registrationNumber?: string; registeredAddress?: string; city?: string; taxIdNumber?: string; website?: string };
   MerchantKYBDocuments: { merchantId: string; isPrimaryOwner: boolean };
   MerchantKYBSubmitted: undefined;
+  RecurringTransfers: undefined;
+  CreateRecurringTransfer: undefined;
+  BulkTransfer: undefined;
+  SpendingCategories: undefined;
+  WalletFreeze: undefined;
 };

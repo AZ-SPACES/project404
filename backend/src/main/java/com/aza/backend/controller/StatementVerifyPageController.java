@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Controller
-@RequestMapping("/verify/statement")
+@RequestMapping("/api/v1/public/statements/verify/page")
 @RequiredArgsConstructor
 public class StatementVerifyPageController {
 
