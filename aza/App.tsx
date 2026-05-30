@@ -42,6 +42,7 @@ import { ToastProvider } from "./src/providers/ToastProvider";
 import { PresenceProvider } from "./src/providers/PresenceProvider";
 import { E2EEProvider } from "./src/providers/E2EEProvider";
 import { ChatSocketProvider } from "./src/providers/ChatSocketProvider";
+import { CallSocketProvider } from "./src/providers/CallSocketProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 import { navigationRef, processNavigationQueue } from "./src/navigation/navigationRef";
@@ -167,19 +168,21 @@ export default function App() {
               <PresenceProvider>
                 <E2EEProvider>
                   <ChatSocketProvider>
-                    <SecurityProvider>
-                      <ProfileProvider>
-                        <NotificationProvider>
-                          <DisplayProvider>
-                            <ToastProvider>
-                              <AnimatedSplashScreen>
-                                <AppContent />
-                              </AnimatedSplashScreen>
-                            </ToastProvider>
-                          </DisplayProvider>
-                        </NotificationProvider>
-                      </ProfileProvider>
-                    </SecurityProvider>
+                    <CallSocketProvider>
+                      <SecurityProvider>
+                        <ProfileProvider>
+                          <NotificationProvider>
+                            <DisplayProvider>
+                              <ToastProvider>
+                                <AnimatedSplashScreen>
+                                  <AppContent />
+                                </AnimatedSplashScreen>
+                              </ToastProvider>
+                            </DisplayProvider>
+                          </NotificationProvider>
+                        </ProfileProvider>
+                      </SecurityProvider>
+                    </CallSocketProvider>
                   </ChatSocketProvider>
                 </E2EEProvider>
               </PresenceProvider>
