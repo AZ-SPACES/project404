@@ -53,7 +53,17 @@ export default function SpendingScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.title}>Spending</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md, marginBottom: Spacing.xl }}>
+            <Text style={styles.title}>Spending</Text>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primary + '18', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 }}
+              onPress={() => navigation.navigate('FinancialDashboard')}
+              activeOpacity={0.8}
+            >
+              <Feather name="bar-chart-2" size={14} color={Colors.primary} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.primary }}>Dashboard</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Bar Chart Area */}
           <View style={styles.chartContainer}>

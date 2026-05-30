@@ -72,31 +72,26 @@ public class SmsService {
     }
 
     public void sendTransferSentSms(String phoneNumber, String recipientName,
-                                    BigDecimal amount, String txnRef) {
-        sendTransferSentSms(phoneNumber, recipientName, amount, txnRef, null);
-    }
-
-    public void sendTransferSentSms(String phoneNumber, String recipientName,
-                                    BigDecimal amount, String txnRef, BigDecimal newBalance) {
+                                    BigDecimal amount, String txnRef, BigDecimal newBalance, 
+                                    String reference, String transactionId, BigDecimal fee, BigDecimal tax) {
         CompletableFuture.runAsync(() -> {
-            String msg = "AZA: Debit GHS " + fmt(amount) + " to " + recipientName
-                    + ". Ref: " + txnRef + "."
-                    + (newBalance != null ? " Avail bal: GHS " + fmt(newBalance) + "." : "");
+            String bal = newBalance != null ? fmt(newBalance) : "0.00";
+            String msg = "Payment made for GHS " + fmt(amount) + " to " + recipientName + " Current Balance: GHS " + bal 
+                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "") 
+                    + ". Transaction ID: " + transactionId + ". Fee charged: GHS" + (fee != null ? fmt(fee) : "0.00") 
+                    + " Tax charged: " + (tax != null ? fmt(tax) : "0") + ".";
             sendSms(phoneNumber, msg);
         });
     }
 
     public void sendTransferReceivedSms(String phoneNumber, String senderName,
-                                        BigDecimal amount, String txnRef) {
-        sendTransferReceivedSms(phoneNumber, senderName, amount, txnRef, null);
-    }
-
-    public void sendTransferReceivedSms(String phoneNumber, String senderName,
-                                        BigDecimal amount, String txnRef, BigDecimal newBalance) {
+                                        BigDecimal amount, String txnRef, BigDecimal newBalance, 
+                                        String reference, String transactionId, BigDecimal fee) {
         CompletableFuture.runAsync(() -> {
-            String msg = "AZA: Credit GHS " + fmt(amount) + " from " + senderName
-                    + ". Ref: " + txnRef + "."
-                    + (newBalance != null ? " Avail bal: GHS " + fmt(newBalance) + "." : "");
+            String bal = newBalance != null ? fmt(newBalance) : "0.00";
+            String msg = "Payment received for GHS " + fmt(amount) + " from " + senderName + "  Current Balance: GHS " + bal 
+                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "00") 
+                    + ". Transaction ID: " + transactionId + ". TRANSACTION FEE: " + (fee != null ? fmt(fee) : "0.00");
             sendSms(phoneNumber, msg);
         });
     }

@@ -355,6 +355,7 @@ export const initiateTransfer = (payload: {
   amount: number;
   note: string;
   idempotencyKey: string;
+  category?: string;
 }) => api.post("/api/v1/transfers", payload);
 
 export const confirmTransfer = (id: string, passcode: string) =>
@@ -985,3 +986,26 @@ export const getSpendingCategories = (startDate: string, endDate: string) => api
 export const getWalletStatus = () => api.get('/api/v1/users/me/wallet/status');
 export const freezeWallet = () => api.post('/api/v1/users/me/wallet/freeze');
 export const unfreezeWallet = () => api.post('/api/v1/users/me/wallet/unfreeze');
+
+// --- Financial Summary ---
+
+export const getFinancialSummary = (startDate: string, endDate: string) =>
+  api.get(`/api/v1/wallet/financial-summary?startDate=${startDate}&endDate=${endDate}`);
+
+// --- Budget Management ---
+
+export const getBudgets = () => api.get('/api/v1/budgets');
+
+export const createOrUpdateBudget = (data: { category: string; budgetAmount: number; period?: string }) =>
+  api.post('/api/v1/budgets', data);
+
+export const deleteBudget = (id: string) => api.delete(`/api/v1/budgets/${id}`);
+
+export const getBudgetStatus = (startDate: string, endDate: string) =>
+  api.get(`/api/v1/budgets/status?startDate=${startDate}&endDate=${endDate}`);
+
+export const getTransactionInsight = (transactionId: string) =>
+  api.post('/api/v1/ai/insight', { transactionId });
+
+export const sendAiMessage = (message: string, history: { role: string; content: string }[]) =>
+  api.post('/api/v1/ai/chat', { message, history });

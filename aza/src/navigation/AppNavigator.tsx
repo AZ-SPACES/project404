@@ -27,7 +27,10 @@ import {
   RequestContactScreen,
   RequestAmountScreen,
   DetailsScreen,
-  SpendingScreen
+  SpendingScreen,
+  FinancialDashboardScreen,
+  BudgetManagementScreen,
+  AiAssistantScreen,
 } from '../features/transfer';
 import { 
   WithdrawScreen, 
@@ -227,6 +230,9 @@ export default function AppNavigator() {
       <Stack.Screen name="BulkTransfer" component={BulkTransferScreen} />
       <Stack.Screen name="SpendingCategories" component={SpendingCategoriesScreen} />
       <Stack.Screen name="WalletFreeze" component={WalletFreezeScreen} />
+      <Stack.Screen name="FinancialDashboard" component={FinancialDashboardScreen} />
+      <Stack.Screen name="BudgetManagement" component={BudgetManagementScreen} />
+      <Stack.Screen name="AiAssistant" component={AiAssistantScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

@@ -127,6 +127,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                                      @Param("start") LocalDateTime start,
                                                      @Param("end") LocalDateTime end);
 
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE (t.senderId = :userId OR t.recipientId = :userId) AND t.status = 'COMPLETED' AND t.initiatedAt >= :start AND t.initiatedAt < :end")
+    long countCompletedTransactionsForUser(@Param("userId") UUID userId,
+                                           @Param("start") LocalDateTime start,
+                                           @Param("end") LocalDateTime end);
+
     /* Task 4: Active users for cohort retention */
     @Query("SELECT DISTINCT t.senderId FROM Transaction t WHERE t.senderId IN :userIds AND t.initiatedAt >= :start AND t.initiatedAt < :end AND t.status = 'COMPLETED'")
     List<UUID> findActiveUserIds(@Param("userIds") List<UUID> userIds,

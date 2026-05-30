@@ -7,3 +7,6 @@ export { default as RequestContactScreen } from './request/RequestContactScreen'
 export { default as RequestAmountScreen } from './request/RequestAmountScreen';
 export { default as DetailsScreen } from './details/DetailsScreen';
 export { default as SpendingScreen } from './details/SpendingScreen';
+export { default as FinancialDashboardScreen } from './details/FinancialDashboardScreen';
+export { default as BudgetManagementScreen } from './details/BudgetManagementScreen';
+export { default as AiAssistantScreen } from './details/AiAssistantScreen';

@@ -395,14 +395,13 @@ public class EmailService {
     }
 
     public void sendTransferSentEmail(String email, String name, String recipientName,
-                                       BigDecimal amount, String txnRef, BigDecimal newBalance) {
+                                       BigDecimal amount, String txnRef) {
         CompletableFuture.runAsync(() -> {
             Context ctx = new Context();
             ctx.setVariable("name", name);
             ctx.setVariable("recipientName", recipientName);
             ctx.setVariable("amount", amount);
             ctx.setVariable("txnRef", txnRef);
-            ctx.setVariable("newBalance", newBalance);
             ctx.setVariable("completedAt", java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
             String html = inlineImages(templateEngine.process("email/transfer-sent", ctx));
