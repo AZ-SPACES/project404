@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { RTCPeerConnection, MediaStream, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
 import { webrtcService } from '../services/webrtcService';
+import { callAudioService } from '../services/callAudioService';
+import { ensureCallPermissions } from '../services/callPermissions';
+import { navigate } from '../navigation/navigationRef';
 import {
   initiateCall,
   ringCall,
@@ -89,14 +92,29 @@ export const useCallStore = create<CallState>((set, get) => ({
 
     // Notify backend that we are ringing
     ringCall(payload.callId).catch(console.error);
+
+    // Surface the incoming-call UI. Without this the call arrives silently
+    // unless the user already happens to be on a screen subscribed to
+    // activeCall.
+    navigate('IncomingCall');
+
+    // Ringtone + vibration. Audio session is started on accept, not here,
+    // so we don't grab the mic while just ringing.
+    callAudioService.startIncoming();
   },
 
   initiateOutgoingCall: async (calleeId: string, type: CallType) => {
     try {
+      // Ask for mic/camera up front so we can bail before talking to the
+      // server if the user denies. ensureCallPermissions shows its own UI
+      // when something is blocked.
+      const ok = await ensureCallPermissions(type);
+      if (!ok) return null;
+
       // 1. Call API
       const res = await initiateCall(calleeId, type);
       const data = res.data?.data || res.data;
-      
+
       if (!data?.callId) {
         throw new Error("No callId returned from server");
       }
@@ -135,6 +153,10 @@ export const useCallStore = create<CallState>((set, get) => ({
         });
       }
 
+      // Outgoing ringback + audio session. The ringback stops automatically
+      // when the call transitions to ACTIVE via call.accept.
+      callAudioService.startOutgoing(type);
+
       return data.callId;
     } catch (error) {
       console.error('Failed to initiate call:', error);
@@ -147,18 +169,29 @@ export const useCallStore = create<CallState>((set, get) => ({
     if (!activeCall) return;
 
     try {
-      await acceptCall(activeCall.callId);
-      
-      set((state) => ({
-        activeCall: state.activeCall ? { ...state.activeCall, status: 'ACTIVE', startedAt: Date.now() } : null
-      }));
+      const ok = await ensureCallPermissions(activeCall.type);
+      if (!ok) {
+        await get().declineIncomingCall();
+        return;
+      }
 
-      // Set up peer connection but DO NOT send offer (caller sends offer)
+      // Acquire the mic/camera BEFORE telling the backend we accepted.
+      // Otherwise the caller's CALL_ACCEPT-triggered SDP offer can land on
+      // this side before localStream exists, and we'd answer with no tracks
+      // (→ one-way audio/video).
       const stream = await webrtcService.acquireLocalMedia(activeCall.type);
       set((state) => ({
         activeCall: state.activeCall ? { ...state.activeCall, localStream: stream } : null
       }));
-      
+
+      await acceptCall(activeCall.callId);
+
+      // Stop the ringtone, start the audio session, lock in routing.
+      callAudioService.connected(activeCall.type);
+
+      set((state) => ({
+        activeCall: state.activeCall ? { ...state.activeCall, status: 'ACTIVE', startedAt: Date.now() } : null
+      }));
     } catch (error) {
       console.error('Failed to accept call:', error);
       await get().endCurrentCall();
@@ -186,6 +219,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       }
     } catch (e) {}
 
+    callAudioService.stop();
     webrtcService.teardown(activeCall.peerConnection, activeCall.localStream);
     webrtcService.teardown(null, activeCall.remoteStream);
 
@@ -215,6 +249,8 @@ export const useCallStore = create<CallState>((set, get) => ({
 
       case 'call.accept':
         if (activeCall && activeCall.isCaller) {
+          // Callee picked up — stop the ringback, lock in audio routing.
+          callAudioService.connected(activeCall.type);
           set({ activeCall: { ...activeCall, status: 'ACTIVE', startedAt: Date.now() } });
           
           // Caller creates the offer after the callee accepts
@@ -263,6 +299,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       case 'call.end':
       case 'call.missed':
         if (activeCall) {
+          callAudioService.stop();
           webrtcService.teardown(activeCall.peerConnection, activeCall.localStream);
           webrtcService.teardown(null, activeCall.remoteStream);
           set({ activeCall: null });
@@ -348,10 +385,11 @@ export const useCallStore = create<CallState>((set, get) => ({
   },
 
   toggleSpeaker: () => {
-    // In React Native WebRTC, speaker routing is typically handled via third party libraries
-    // (like react-native-incall-manager), but WebRTC handles default routing pretty well.
-    // We'll update the state, but actual hardware routing might need IncallManager.
-    set((state) => ({ isSpeakerOn: !state.isSpeakerOn }));
+    set((state) => {
+      const next = !state.isSpeakerOn;
+      callAudioService.setSpeaker(next);
+      return { isSpeakerOn: next };
+    });
   },
 
   toggleVideo: () => {
@@ -371,9 +409,10 @@ export const useCallStore = create<CallState>((set, get) => ({
       const newFacing = state.cameraFacing === 'front' ? 'back' : 'front';
       if (state.activeCall?.localStream) {
         state.activeCall.localStream.getVideoTracks().forEach((track: any) => {
-          if (track._switchCamera) {
-            track._switchCamera();
-          }
+          // Public API since react-native-webrtc 1.84. Fall back to the
+          // older underscore variant for safety on legacy versions.
+          const fn = track.switchCamera ?? track._switchCamera;
+          if (typeof fn === 'function') fn.call(track);
         });
       }
       return { cameraFacing: newFacing };

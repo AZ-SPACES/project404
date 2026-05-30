@@ -155,11 +155,19 @@ public class NotificationService {
 
     public void sendIncomingCallNotification(UUID recipientId, String callerName,
                                               String callId, boolean isVideo) {
+        sendIncomingCallNotification(recipientId, callerName, callId, isVideo, null, null);
+    }
+
+    public void sendIncomingCallNotification(UUID recipientId, String callerName,
+                                              String callId, boolean isVideo,
+                                              UUID callerId, String callerAvatar) {
         Map<String, Object> data = new HashMap<>();
         data.put("type", "INCOMING_CALL");
         data.put("callId", callId);
         data.put("callerName", callerName);
         data.put("isVideo", isVideo);
+        if (callerId != null) data.put("callerId", callerId.toString());
+        if (callerAvatar != null) data.put("callerAvatar", callerAvatar);
 
         sendNotification(
                 recipientId,
@@ -474,11 +482,30 @@ public class NotificationService {
                                 .setImage(imageUrl)
                                 .build();
 
-                Message message = Message.builder()
+                boolean isCall = "INCOMING_CALL".equals(fcmData.get("type"));
+
+                Message.Builder builder = Message.builder()
                         .setToken(fcmToken.getToken())
                         .setNotification(fcmNotification)
-                        .putAllData(fcmData)
-                        .build();
+                        .putAllData(fcmData);
+
+                // For call pushes we need to wake the JS layer immediately even
+                // when the app is in Doze / killed, so the client can show the
+                // CallKit/Telecom incoming-call UI. Bump priority to HIGH on
+                // Android and apns-priority 10 (immediate) on iOS.
+                if (isCall) {
+                    builder.setAndroidConfig(
+                            com.google.firebase.messaging.AndroidConfig.builder()
+                                    .setPriority(com.google.firebase.messaging.AndroidConfig.Priority.HIGH)
+                                    .build());
+                    builder.setApnsConfig(
+                            com.google.firebase.messaging.ApnsConfig.builder()
+                                    .putHeader("apns-priority", "10")
+                                    .putHeader("apns-push-type", "alert")
+                                    .build());
+                }
+
+                Message message = builder.build();
 
                 String response = FirebaseMessaging.getInstance().send(message);
                 log.debug("FCM push sent to device {}: {}", fcmToken.getDeviceId(), response);

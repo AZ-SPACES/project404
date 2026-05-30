@@ -48,12 +48,9 @@ export default function IncomingCallScreen() {
   };
 
   const handleDecline = async () => {
+    // declineIncomingCall clears activeCall → the effect above handles
+    // navigation. Calling goBack() here too races and pops the wrong screen.
     await declineIncomingCall();
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('MainTabs');
-    }
   };
 
   // Derived initials for fallback avatar
