@@ -22,4 +22,7 @@ public class MoneyRequestDto {
 
     @Size(max = 500, message = "Note cannot exceed 500 characters")
     private String note;
+
+    /* Optional idempotency key — if set, duplicate requests with same key are deduplicated */
+    private String idempotencyKey;
 }

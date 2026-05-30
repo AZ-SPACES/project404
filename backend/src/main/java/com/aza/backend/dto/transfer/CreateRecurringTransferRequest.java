@@ -26,4 +26,7 @@ public class CreateRecurringTransferRequest {
 
     @NotNull
     private LocalDate startDate;
+
+    /* Optional — if provided, duplicate calls with the same key return the existing record */
+    private String idempotencyKey;
 }

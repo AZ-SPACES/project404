@@ -1138,6 +1138,36 @@ export function denyLimitRequest(id: string, notes: string): Promise<LimitReques
   });
 }
 
+// ── Analytics: Cohorts ───────────────────────────────────────────────────────
+
+export interface CohortData {
+  month: string;
+  cohortSize: number;
+  retention: number[];
+}
+
+export function getCohortAnalytics(months = 6): Promise<{ cohorts: CohortData[] }> {
+  return request(`/api/v1/admin/analytics/cohorts?months=${months}`);
+}
+
+// ── Analytics: Revenue ────────────────────────────────────────────────────────
+
+export interface MonthlyRevenue {
+  month: string;
+  volume: number;
+  count: number;
+  avgTransaction: number;
+}
+
+export interface RevenueData {
+  monthly: MonthlyRevenue[];
+  totals: { volume: number; count: number; avgTransaction: number; activeUsers: number };
+}
+
+export function getRevenueAnalytics(months = 12): Promise<RevenueData> {
+  return request(`/api/v1/admin/analytics/revenue?months=${months}`);
+}
+
 // ── Mini App Reports ──────────────────────────────────────────────────────────
 
 export interface MiniAppReport {

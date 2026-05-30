@@ -77,6 +77,11 @@ import {
 } from '../features/profile';
 import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
 import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
+import WalletFreezeScreen from '../features/profile/screens/WalletFreezeScreen';
+import RecurringTransfersScreen from '../features/transfer/recurring/RecurringTransfersScreen';
+import CreateRecurringTransferScreen from '../features/transfer/recurring/CreateRecurringTransferScreen';
+import BulkTransferScreen from '../features/transfer/send/BulkTransferScreen';
+import SpendingCategoriesScreen from '../features/home/screens/SpendingCategoriesScreen';
 import {
   ReasonScreen,
   RefundScreen,
@@ -217,6 +222,11 @@ export default function AppNavigator() {
       <Stack.Screen name="MerchantKYBOwner" component={MerchantKYBOwnerScreen} />
       <Stack.Screen name="MerchantKYBDocuments" component={MerchantKYBDocumentsScreen} />
       <Stack.Screen name="MerchantKYBSubmitted" component={MerchantKYBSubmittedScreen} />
+      <Stack.Screen name="RecurringTransfers" component={RecurringTransfersScreen} />
+      <Stack.Screen name="CreateRecurringTransfer" component={CreateRecurringTransferScreen} />
+      <Stack.Screen name="BulkTransfer" component={BulkTransferScreen} />
+      <Stack.Screen name="SpendingCategories" component={SpendingCategoriesScreen} />
+      <Stack.Screen name="WalletFreeze" component={WalletFreezeScreen} />
     </Stack.Navigator>
   );
 }

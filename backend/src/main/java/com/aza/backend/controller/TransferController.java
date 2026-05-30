@@ -1,6 +1,7 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.transfer.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.TransferService;
@@ -12,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -217,5 +221,113 @@ public class TransferController {
             @PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(
                 transferService.declineMoneyRequest(user, id)));
+    }
+
+    // ==================== TASK 1: TRANSACTION SEARCH ====================
+
+    @GetMapping("/transfers/search")
+    public ResponseEntity<ApiResponse<Page<AdminTransactionResponse>>> searchTransactions(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) BigDecimal minAmount,
+            @RequestParam(required = false) BigDecimal maxAmount,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        java.time.LocalDateTime start = startDate != null ? LocalDate.parse(startDate).atStartOfDay() : null;
+        java.time.LocalDateTime end = endDate != null ? LocalDate.parse(endDate).plusDays(1).atStartOfDay() : null;
+        return ResponseEntity.ok(ApiResponse.success(
+                transferService.searchTransactions(user.getId(), status, type, minAmount, maxAmount, start, end, page, size)));
+    }
+
+    // ==================== TASK 2: WALLET FREEZE/UNFREEZE ====================
+
+    @PostMapping("/users/me/wallet/freeze")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> freezeWallet(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(transferService.freezeWallet(user.getId())));
+    }
+
+    @PostMapping("/users/me/wallet/unfreeze")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> unfreezeWallet(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(transferService.unfreezeWallet(user.getId())));
+    }
+
+    @GetMapping("/users/me/wallet/status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getWalletStatus(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(transferService.getWalletStatus(user.getId())));
+    }
+
+    // ==================== TASK 3: SPENDING CATEGORIES ====================
+
+    @GetMapping("/wallet/spending/categories")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSpendingCategories(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        java.time.LocalDateTime start = startDate != null
+                ? LocalDate.parse(startDate).atStartOfDay()
+                : java.time.LocalDateTime.now().withDayOfMonth(1).toLocalDate().atStartOfDay();
+        java.time.LocalDateTime end = endDate != null
+                ? LocalDate.parse(endDate).plusDays(1).atStartOfDay()
+                : start.plusMonths(1);
+        return ResponseEntity.ok(ApiResponse.success(
+                transferService.getSpendingCategories(user.getId(), start, end)));
+    }
+
+    // ==================== TASK 7: USER-FACING BULK TRANSFER ====================
+
+    @lombok.Data
+    static class BulkTransferItem {
+        private String recipientIdentifier;
+        private BigDecimal amount;
+        private String note;
+    }
+
+    @lombok.Data
+    static class BulkTransferRequest {
+        private java.util.List<BulkTransferItem> transfers;
+        private String idempotencyKey;
+    }
+
+    @PostMapping("/transfers/bulk")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> bulkTransfer(
+            @AuthenticationPrincipal User user,
+            @RequestBody BulkTransferRequest body) {
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+        BigDecimal totalDebited = BigDecimal.ZERO;
+
+        for (BulkTransferItem item : body.getTransfers()) {
+            try {
+                TransferResponse resp = transferService.executeSingleBulkItem(
+                        user, item.getRecipientIdentifier(), item.getAmount(), item.getNote());
+                results.add(java.util.Map.of(
+                        "recipientIdentifier", item.getRecipientIdentifier(),
+                        "amount", item.getAmount(),
+                        "status", "SUCCESS",
+                        "transactionId", resp.getId()));
+                successCount++;
+                totalDebited = totalDebited.add(item.getAmount());
+            } catch (Exception e) {
+                results.add(java.util.Map.of(
+                        "recipientIdentifier", item.getRecipientIdentifier(),
+                        "amount", item.getAmount(),
+                        "status", "FAILED",
+                        "error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
+                failureCount++;
+            }
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(java.util.Map.of(
+                "results", results,
+                "successCount", successCount,
+                "failureCount", failureCount,
+                "totalDebited", totalDebited)));
     }
 }
