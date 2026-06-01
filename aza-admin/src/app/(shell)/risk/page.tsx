@@ -39,7 +39,7 @@ const STATUS_MAP = {
   OPEN: { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20", label: "Open" },
   INVESTIGATING: { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20", label: "Investigating" },
   RESOLVED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Resolved" },
-  FALSE_POSITIVE: { cls: "text-white/40 bg-white/5 border-white/10", label: "False Positive" },
+  FALSE_POSITIVE: { cls: "text-foreground/40 bg-muted/30 border-border", label: "False Positive" },
 };
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
@@ -144,8 +144,8 @@ export default function RiskPage() {
       )}
 
       <div>
-        <h1 className="text-2xl font-semibold text-white">Risk Management</h1>
-        <p className="text-white/40 text-sm mt-0.5">Fraud detection and real-time risk monitoring</p>
+        <h1 className="text-2xl font-semibold text-foreground">Risk Management</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Fraud detection and real-time risk monitoring</p>
       </div>
 
       {riskStats && (
@@ -155,10 +155,10 @@ export default function RiskPage() {
             { label: "Critical", value: riskStats.criticalAlerts, color: "text-red-400" },
             { label: "Investigating", value: riskStats.investigatingAlerts, color: "text-blue-400" },
             { label: "Resolved Today", value: riskStats.resolvedToday, color: "text-emerald-400" },
-            { label: "Avg Risk Score", value: riskStats.averageRiskScore.toFixed(0), color: "text-white" },
+            { label: "Avg Risk Score", value: riskStats.averageRiskScore.toFixed(0), color: "text-foreground" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
-              <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium mb-1">{label}</p>
+            <div key={label} className="bg-card border border-border rounded-xl p-4">
+              <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium mb-1">{label}</p>
               <p className={`text-2xl font-semibold ${color}`}>{value}</p>
             </div>
           ))}
@@ -166,18 +166,18 @@ export default function RiskPage() {
       )}
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
           {(["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"] as SeverityFilter[]).map((s) => (
             <button key={s} onClick={() => { setSeverityFilter(s); setPage(0); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${severityFilter === s ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${severityFilter === s ? "bg-[#B7EE7A] text-black" : "text-foreground/50 hover:text-foreground"}`}>
               {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
           {(["ALL", "OPEN", "INVESTIGATING", "RESOLVED"] as StatusFilter[]).map((s) => (
             <button key={s} onClick={() => { setStatusFilter(s); setPage(0); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? "bg-muted/50 text-foreground" : "text-foreground/50 hover:text-foreground"}`}>
               {s === "ALL" ? "All Status" : s.charAt(0) + s.slice(1).toLowerCase()}
             </button>
           ))}
@@ -192,25 +192,25 @@ export default function RiskPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-foreground/30" size={24} />
         </div>
       ) : data?.content.length === 0 ? (
-        <div className="text-center py-20 text-white/25">
+        <div className="text-center py-20 text-foreground/25">
           <ShieldAlert size={36} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">No risk alerts found</p>
         </div>
       ) : (
         <div className="space-y-2">
           {data?.content.map((alert) => (
-            <div key={alert.id} className={`bg-[#161616] border rounded-xl px-5 py-4 ${
+            <div key={alert.id} className={`bg-card border rounded-xl px-5 py-4 ${
               alert.severity === "CRITICAL" ? "border-red-500/15" :
-              alert.severity === "HIGH" ? "border-orange-500/10" : "border-white/5"
+              alert.severity === "HIGH" ? "border-orange-500/10" : "border-border"
             }`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <SeverityBadge severity={alert.severity} />
-                    <span className="px-2 py-0.5 rounded text-xs border border-white/8 text-white/50">
+                    <span className="px-2 py-0.5 rounded text-xs border border-border text-foreground/50">
                       {ALERT_TYPE_LABELS[alert.alertType] ?? alert.alertType}
                     </span>
                     <StatusBadge status={alert.status} />
@@ -218,25 +218,25 @@ export default function RiskPage() {
                       <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
                         alert.riskScore >= 80 ? "bg-red-500/10 text-red-400 border-red-500/20" :
                         alert.riskScore >= 60 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                        "bg-white/5 text-white/40 border-white/10"
+                        "bg-muted/30 text-foreground/40 border-border"
                       }`}>Score: {alert.riskScore}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mb-1.5">
-                    <p className="text-sm font-semibold text-white">{alert.userName}</p>
-                    {alert.userHandle && <p className="text-xs text-white/35">@{alert.userHandle}</p>}
+                    <p className="text-sm font-semibold text-foreground">{alert.userName}</p>
+                    {alert.userHandle && <p className="text-xs text-foreground/35">@{alert.userHandle}</p>}
                   </div>
-                  <p className="text-sm text-white/55 leading-relaxed">{alert.description}</p>
+                  <p className="text-sm text-foreground/55 leading-relaxed">{alert.description}</p>
                   {alert.transactionId && (
-                    <p className="text-xs text-white/30 mt-1 font-mono">Txn: {alert.transactionId}</p>
+                    <p className="text-xs text-foreground/30 mt-1 font-mono">Txn: {alert.transactionId}</p>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <p className="text-xs text-white/30">{fmtDate(alert.triggeredAt)}</p>
+                  <p className="text-xs text-foreground/30">{fmtDate(alert.triggeredAt)}</p>
                   {alert.status !== "RESOLVED" && alert.status !== "FALSE_POSITIVE" && (
                     <button
                       onClick={() => { setActioning(alert); setActionNotes(""); }}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white/60 hover:text-white transition-all font-medium"
+                      className="px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted border border-border text-xs text-foreground/60 hover:text-foreground transition-all font-medium"
                     >
                       Action
                     </button>
@@ -250,20 +250,20 @@ export default function RiskPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
-          <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Previous</button>
+          <span className="text-sm text-foreground/40">{page + 1} / {data.totalPages}</span>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Next</button>
         </div>
       )}
 
-      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+      <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <RefreshCw size={15} className="text-white/40" />
-          <h2 className="text-sm font-semibold text-white">Rate Limit Management</h2>
+          <RefreshCw size={15} className="text-foreground/40" />
+          <h2 className="text-sm font-semibold text-foreground">Rate Limit Management</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <p className="text-xs text-white/40 font-medium">By User ID</p>
+            <p className="text-xs text-foreground/40 font-medium">By User ID</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -271,7 +271,7 @@ export default function RiskPage() {
                 value={rlUserId}
                 onChange={(e) => setRlUserId(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && rlUserId.trim() && resetUserMutation.mutate(rlUserId.trim())}
-                className="flex-1 min-w-0 bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 font-mono"
+                className="flex-1 min-w-0 bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 font-mono"
               />
               <button
                 onClick={() => resetUserMutation.mutate(rlUserId.trim())}
@@ -284,7 +284,7 @@ export default function RiskPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs text-white/40 font-medium">By IP Address</p>
+            <p className="text-xs text-foreground/40 font-medium">By IP Address</p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -292,7 +292,7 @@ export default function RiskPage() {
                 value={rlIp}
                 onChange={(e) => setRlIp(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && rlIp.trim() && resetIpMutation.mutate(rlIp.trim())}
-                className="flex-1 min-w-0 bg-white/5 border border-white/8 rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 font-mono"
+                className="flex-1 min-w-0 bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 font-mono"
               />
               <button
                 onClick={() => resetIpMutation.mutate(rlIp.trim())}
@@ -305,7 +305,7 @@ export default function RiskPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs text-white/40 font-medium">Nuclear Option</p>
+            <p className="text-xs text-foreground/40 font-medium">Nuclear Option</p>
             <button
               onClick={() => {
                 if (confirm("This will flush ALL rate-limit counters for every user and IP. Continue?")) {
@@ -318,7 +318,7 @@ export default function RiskPage() {
               {rlLoading === "all" ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
               Reset All Rate Limits
             </button>
-            <p className="text-[10px] text-white/20">Clears every counter for every user and IP</p>
+            <p className="text-[10px] text-foreground/20">Clears every counter for every user and IP</p>
           </div>
         </div>
       </div>
@@ -326,35 +326,35 @@ export default function RiskPage() {
       {actioning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setActioning(null)} />
-          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-white">Action Risk Alert</h3>
-              <button onClick={() => setActioning(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
+              <h3 className="text-base font-semibold text-foreground">Action Risk Alert</h3>
+              <button onClick={() => setActioning(null)} className="text-foreground/40 hover:text-foreground"><X size={18} /></button>
             </div>
 
-            <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4 space-y-1.5">
+            <div className="bg-muted/20 border border-border rounded-xl p-4 mb-4 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-sm text-white/40">User</span>
-                <span className="text-sm text-white font-medium">{actioning.userName}</span>
+                <span className="text-sm text-foreground/40">User</span>
+                <span className="text-sm text-foreground font-medium">{actioning.userName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-white/40">Alert Type</span>
-                <span className="text-sm text-white/70">{ALERT_TYPE_LABELS[actioning.alertType]}</span>
+                <span className="text-sm text-foreground/40">Alert Type</span>
+                <span className="text-sm text-foreground/70">{ALERT_TYPE_LABELS[actioning.alertType]}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-white/40">Severity</span>
+                <span className="text-sm text-foreground/40">Severity</span>
                 <SeverityBadge severity={actioning.severity} />
               </div>
             </div>
 
             <div className="mb-5">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Notes</label>
+              <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider mb-2 block">Notes</label>
               <textarea
                 value={actionNotes}
                 onChange={(e) => setActionNotes(e.target.value)}
                 placeholder="Add investigation notes..."
                 rows={3}
-                className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 resize-none"
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 resize-none"
               />
             </div>
 
@@ -381,7 +381,7 @@ export default function RiskPage() {
               <button
                 onClick={() => actionMutation.mutate({ id: actioning.id, newStatus: "FALSE_POSITIVE" })}
                 disabled={actionMutation.isPending}
-                className="py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 text-xs font-semibold hover:bg-white/10 disabled:opacity-50 transition-all"
+                className="py-2.5 rounded-xl bg-muted/30 border border-border text-foreground/40 text-xs font-semibold hover:bg-muted disabled:opacity-50 transition-all"
               >
                 False +
               </button>

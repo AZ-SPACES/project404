@@ -92,7 +92,7 @@ const STATUS_CFG: Record<string, { cls: string; label: string }> = {
 };
 
 const KYB_STATUS_CFG: Record<string, { cls: string; label: string }> = {
-  PENDING:            { cls: "text-white/40 bg-white/5 border-white/10",                 label: "Pending" },
+  PENDING:            { cls: "text-foreground/40 bg-muted/30 border-border",               label: "Pending" },
   SUBMITTED:          { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Submitted" },
   UNDER_REVIEW:       { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Under Review" },
   APPROVED:           { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Approved" },
@@ -103,7 +103,7 @@ const KYB_STATUS_CFG: Record<string, { cls: string; label: string }> = {
 const SESSION_STATUS_CFG: Record<string, { cls: string; label: string }> = {
   PENDING:   { cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",      label: "Pending" },
   COMPLETED: { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",label: "Completed" },
-  EXPIRED:   { cls: "text-white/35 bg-white/5 border-white/10",                label: "Expired" },
+  EXPIRED:   { cls: "text-foreground/35 bg-muted/30 border-border",             label: "Expired" },
   CANCELLED: { cls: "text-red-400 bg-red-500/10 border-red-500/20",            label: "Cancelled" },
 };
 
@@ -114,7 +114,7 @@ const PAYOUT_STATUS_CFG: Record<string, { cls: string; label: string }> = {
 };
 
 const INVOICE_STATUS_CFG: Record<string, { cls: string; label: string }> = {
-  DRAFT:     { cls: "text-white/40 bg-white/5 border-white/10",                 label: "Draft" },
+  DRAFT:     { cls: "text-foreground/40 bg-muted/30 border-border",               label: "Draft" },
   SENT:      { cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",          label: "Sent" },
   PAID:      { cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Paid" },
   CANCELLED: { cls: "text-red-400 bg-red-500/10 border-red-500/20",             label: "Cancelled" },
@@ -151,9 +151,9 @@ function SmBadge({ cfg }: { cfg: { cls: string; label: string } }) {
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between items-start gap-4 py-2.5 border-b border-white/4 last:border-0">
-      <span className="text-sm text-white/40 flex-shrink-0">{label}</span>
-      <span className="text-sm text-white text-right">{value ?? "—"}</span>
+    <div className="flex justify-between items-start gap-4 py-2.5 border-b border-border last:border-0">
+      <span className="text-sm text-foreground/40 flex-shrink-0">{label}</span>
+      <span className="text-sm text-foreground text-right">{value ?? "—"}</span>
     </div>
   );
 }
@@ -166,11 +166,11 @@ function CopyField({ label, value }: { label: string; value: string }) {
     setTimeout(() => setCopied(false), 1500);
   };
   return (
-    <div className="flex justify-between items-center gap-4 py-2.5 border-b border-white/4 last:border-0">
-      <span className="text-sm text-white/40 flex-shrink-0">{label}</span>
+    <div className="flex justify-between items-center gap-4 py-2.5 border-b border-border last:border-0">
+      <span className="text-sm text-foreground/40 flex-shrink-0">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-mono text-white/50 truncate max-w-[180px]">{value}</span>
-        <button onClick={copy} className="text-white/25 hover:text-white/60 transition-colors flex-shrink-0">
+        <span className="text-xs font-mono text-foreground/50 truncate max-w-[180px]">{value}</span>
+        <button onClick={copy} className="text-foreground/25 hover:text-foreground/60 transition-colors flex-shrink-0">
           {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
         </button>
       </div>
@@ -340,7 +340,7 @@ export default function MerchantDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-white/30" size={24} />
+        <Loader2 className="animate-spin text-foreground/30" size={24} />
       </div>
     );
   }
@@ -357,7 +357,7 @@ export default function MerchantDetailPage() {
 
   if (!merchant) return null;
 
-  const statusCfg = STATUS_CFG[merchant.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: merchant.status };
+  const statusCfg = STATUS_CFG[merchant.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: merchant.status };
   const kybReviewable = kyb && !["APPROVED", "PENDING"].includes(kyb.status) && kyb.ownerFullName != null;
   const canSuspend = merchant.status === "ACTIVE";
   const canActivate = merchant.status === "SUSPENDED";
@@ -388,7 +388,7 @@ export default function MerchantDetailPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 rounded-xl text-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <ArrowLeft size={18} />
         </button>
@@ -397,15 +397,15 @@ export default function MerchantDetailPage() {
             <img
               src={merchant.logoUrl}
               alt={merchant.businessName}
-              className="w-10 h-10 rounded-xl object-cover border border-white/10 flex-shrink-0"
+              className="w-10 h-10 rounded-xl object-cover border border-border flex-shrink-0"
             />
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-semibold text-white truncate">{merchant.businessName}</h1>
+              <h1 className="text-xl font-semibold text-foreground truncate">{merchant.businessName}</h1>
               <Badge cfg={statusCfg} />
             </div>
-            <p className="text-white/35 text-sm mt-0.5 font-mono">@{merchant.businessHandle}</p>
+            <p className="text-foreground/35 text-sm mt-0.5 font-mono">@{merchant.businessHandle}</p>
           </div>
         </div>
       </div>
@@ -420,13 +420,13 @@ export default function MerchantDetailPage() {
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Balance", value: fmtAmount(merchant.balance, merchant.currency), color: "text-white" },
+          { label: "Balance", value: fmtAmount(merchant.balance, merchant.currency), color: "text-foreground" },
           { label: "Total Volume", value: fmtAmount(merchant.totalVolume, merchant.currency), color: "text-emerald-400" },
           { label: "Platform Fee", value: fmtFee(merchant.feeRateBps), color: "text-[#B7EE7A]" },
-          { label: "Created", value: fmtDate(merchant.createdAt).split(",")[0], color: "text-white/60" },
+          { label: "Created", value: fmtDate(merchant.createdAt).split(",")[0], color: "text-foreground/60" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
-            <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium mb-1">{label}</p>
+          <div key={label} className="bg-card border border-border rounded-xl p-4">
+            <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium mb-1">{label}</p>
             <p className={`text-lg font-semibold ${color} truncate`}>{value}</p>
           </div>
         ))}
@@ -452,13 +452,13 @@ export default function MerchantDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === id ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
+              tab === id ? "bg-[#B7EE7A] text-black" : "text-foreground/50 hover:text-foreground"
             }`}
           >
             <Icon size={14} />
@@ -475,14 +475,14 @@ export default function MerchantDetailPage() {
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Business Info */}
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+            <div className="bg-card border border-border rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Store size={16} className="text-white/40" />
-                <h2 className="text-sm font-semibold text-white">Business Details</h2>
+                <Store size={16} className="text-foreground/40" />
+                <h2 className="text-sm font-semibold text-foreground">Business Details</h2>
               </div>
               <CopyField label="Merchant ID" value={merchant.id} />
-              <div className="flex justify-between items-center gap-4 py-2.5 border-b border-white/4">
-                <span className="text-sm text-white/40 flex-shrink-0">Owner</span>
+              <div className="flex justify-between items-center gap-4 py-2.5 border-b border-border">
+                <span className="text-sm text-foreground/40 flex-shrink-0">Owner</span>
                 <button
                   onClick={() => router.push(`/users/${merchant.userId}`)}
                   className="flex items-center gap-1.5 text-xs text-[#B7EE7A] hover:underline font-mono"
@@ -499,16 +499,16 @@ export default function MerchantDetailPage() {
 
               {/* API Keys & Webhooks */}
               {(merchant.activeApiKeyCount != null || merchant.activeWebhookCount != null) && (
-                <div className="mt-3 pt-3 border-t border-white/4 grid grid-cols-2 gap-2">
-                  <div className="bg-white/4 rounded-xl px-3 py-2.5 text-center">
-                    <Key size={13} className="text-white/30 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-white">{merchant.activeApiKeyCount ?? 0}</p>
-                    <p className="text-[10px] text-white/30 uppercase tracking-wider">API Keys</p>
+                <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 gap-2">
+                  <div className="bg-muted/20 rounded-xl px-3 py-2.5 text-center">
+                    <Key size={13} className="text-foreground/30 mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-foreground">{merchant.activeApiKeyCount ?? 0}</p>
+                    <p className="text-[10px] text-foreground/30 uppercase tracking-wider">API Keys</p>
                   </div>
-                  <div className="bg-white/4 rounded-xl px-3 py-2.5 text-center">
-                    <Webhook size={13} className="text-white/30 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-white">{merchant.activeWebhookCount ?? 0}</p>
-                    <p className="text-[10px] text-white/30 uppercase tracking-wider">Webhooks</p>
+                  <div className="bg-muted/20 rounded-xl px-3 py-2.5 text-center">
+                    <Webhook size={13} className="text-foreground/30 mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-foreground">{merchant.activeWebhookCount ?? 0}</p>
+                    <p className="text-[10px] text-foreground/30 uppercase tracking-wider">Webhooks</p>
                   </div>
                 </div>
               )}
@@ -528,9 +528,9 @@ export default function MerchantDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5 space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
               <div>
-                <h2 className="text-sm font-semibold text-white mb-3">Account Actions</h2>
+                <h2 className="text-sm font-semibold text-foreground mb-3">Account Actions</h2>
                 <div className="flex flex-wrap gap-2">
                   {canSuspend && (
                     <button
@@ -558,18 +558,18 @@ export default function MerchantDetailPage() {
                   )}
                   <button
                     onClick={handleResetRateLimit}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 text-sm font-medium hover:bg-white/10 hover:text-white transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-border text-foreground/50 text-sm font-medium hover:bg-muted hover:text-foreground transition-all"
                   >
                     <RefreshCw size={14} /> Reset Rate Limits
                   </button>
                 </div>
               </div>
 
-              <div className="border-t border-white/5 pt-4">
-                <h2 className="text-sm font-semibold text-white mb-3">Fee Rate</h2>
-                <div className="flex items-center justify-between bg-white/4 rounded-xl px-4 py-3">
+              <div className="border-t border-border pt-4">
+                <h2 className="text-sm font-semibold text-foreground mb-3">Fee Rate</h2>
+                <div className="flex items-center justify-between bg-muted/20 rounded-xl px-4 py-3">
                   <div>
-                    <p className="text-xs text-white/35 mb-0.5">Current rate</p>
+                    <p className="text-xs text-foreground/35 mb-0.5">Current rate</p>
                     <p className="text-lg font-semibold text-[#B7EE7A]">{fmtFee(merchant.feeRateBps)}</p>
                   </div>
                   <button
@@ -587,21 +587,21 @@ export default function MerchantDetailPage() {
 
       {/* ── KYB TAB ── */}
       {tab === "kyb" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-5">
-            <ShieldCheck size={16} className="text-white/40" />
-            <h2 className="text-sm font-semibold text-white">KYB Verification</h2>
+            <ShieldCheck size={16} className="text-foreground/40" />
+            <h2 className="text-sm font-semibold text-foreground">KYB Verification</h2>
             {kyb && (
-              <Badge cfg={KYB_STATUS_CFG[kyb.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: kyb.status }} />
+              <Badge cfg={KYB_STATUS_CFG[kyb.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: kyb.status }} />
             )}
           </div>
 
           {!kyb ? (
-            <p className="text-sm text-white/30 py-8 text-center">No KYB data submitted yet</p>
+            <p className="text-sm text-foreground/30 py-8 text-center">No KYB data submitted yet</p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Business Information</p>
+                <p className="text-[11px] text-foreground/30 uppercase tracking-wider font-medium mb-2">Business Information</p>
                 <Field label="Business Type" value={kyb.businessType?.replace(/_/g, " ")} />
                 <Field label="Registration No." value={kyb.registrationNumber} />
                 <Field label="Tax ID" value={kyb.taxIdNumber} />
@@ -625,25 +625,25 @@ export default function MerchantDetailPage() {
               </div>
 
               <div>
-                <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Owner / Director</p>
+                <p className="text-[11px] text-foreground/30 uppercase tracking-wider font-medium mb-2">Owner / Director</p>
                 <Field label="Full Name" value={kyb.ownerFullName} />
                 <Field label="ID Type" value={kyb.ownerIdType?.replace(/_/g, " ")} />
 
                 {kyb.documents && kyb.documents.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-[11px] text-white/30 uppercase tracking-wider font-medium mb-2">Documents</p>
+                    <p className="text-[11px] text-foreground/30 uppercase tracking-wider font-medium mb-2">Documents</p>
                     <div className="space-y-2">
                       {kyb.documents.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between bg-white/4 rounded-xl px-3 py-2.5">
+                        <div key={doc.id} className="flex items-center justify-between bg-muted/20 rounded-xl px-3 py-2.5">
                           <div className="flex items-center gap-2 min-w-0">
                             {doc.mimeType === "application/pdf"
-                              ? <FileText size={14} className="text-white/40 flex-shrink-0" />
-                              : <ImageIcon size={14} className="text-white/40 flex-shrink-0" />
+                              ? <FileText size={14} className="text-foreground/40 flex-shrink-0" />
+                              : <ImageIcon size={14} className="text-foreground/40 flex-shrink-0" />
                             }
                             <div className="min-w-0">
-                              <p className="text-xs text-white/70 font-medium">{doc.type.replace(/_/g, " ")}</p>
-                              {doc.fileName && <p className="text-[10px] text-white/30 truncate">{doc.fileName}</p>}
-                              {doc.fileSizeBytes && <p className="text-[10px] text-white/25">{fmtBytes(doc.fileSizeBytes)}</p>}
+                              <p className="text-xs text-foreground/70 font-medium">{doc.type.replace(/_/g, " ")}</p>
+                              {doc.fileName && <p className="text-[10px] text-foreground/30 truncate">{doc.fileName}</p>}
+                              {doc.fileSizeBytes && <p className="text-[10px] text-foreground/25">{fmtBytes(doc.fileSizeBytes)}</p>}
                             </div>
                           </div>
                           <a
@@ -665,7 +665,7 @@ export default function MerchantDetailPage() {
           )}
 
           {kybReviewable && (
-            <div className="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-white/5">
+            <div className="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-border">
               <button
                 onClick={() => { setModal("kyb_approve"); setInputText(""); }}
                 className="py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-all flex items-center justify-center gap-1.5"
@@ -691,44 +691,44 @@ export default function MerchantDetailPage() {
 
       {/* ── PAYOUTS TAB ── */}
       {tab === "payouts" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ArrowDownToLine size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Payout History</h2>
-              {payouts && <span className="text-xs text-white/30">{payouts.totalElements} total</span>}
+              <ArrowDownToLine size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Payout History</h2>
+              {payouts && <span className="text-xs text-foreground/30">{payouts.totalElements} total</span>}
             </div>
-            {payoutsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {payoutsLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
 
           {!payouts && payoutsLoading ? (
             <div className="flex items-center justify-center h-40">
-              <Loader2 className="animate-spin text-white/30" size={20} />
+              <Loader2 className="animate-spin text-foreground/30" size={20} />
             </div>
           ) : payouts?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No payouts yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No payouts yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Note</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Requested</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Completed</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">Note</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Requested</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden lg:table-cell">Completed</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {payouts?.content.map((p) => {
-                    const sc = PAYOUT_STATUS_CFG[p.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: p.status };
+                    const sc = PAYOUT_STATUS_CFG[p.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: p.status };
                     return (
-                      <tr key={p.id} className="hover:bg-white/2">
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(p.amount, p.currency)}</td>
+                      <tr key={p.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(p.amount, p.currency)}</td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-white/45 text-xs hidden md:table-cell">{p.note ?? "—"}</td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(p.requestedAt)}</td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden lg:table-cell">{fmtDate(p.completedAt)}</td>
+                        <td className="px-5 py-3.5 text-foreground/45 text-xs hidden md:table-cell">{p.note ?? "—"}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">{fmtDate(p.requestedAt)}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs hidden lg:table-cell">{fmtDate(p.completedAt)}</td>
                       </tr>
                     );
                   })}
@@ -736,12 +736,12 @@ export default function MerchantDetailPage() {
               </table>
 
               {payouts && payouts.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setPayoutsPage(p => p - 1)} disabled={payoutsPage === 0 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setPayoutsPage(p => p - 1)} disabled={payoutsPage === 0 || payoutsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
                     <ChevronLeft size={14} />
                   </button>
-                  <span className="text-xs text-white/40">{payoutsPage + 1} / {payouts.totalPages}</span>
-                  <button onClick={() => setPayoutsPage(p => p + 1)} disabled={payoutsPage >= payouts.totalPages - 1 || payoutsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <span className="text-xs text-foreground/40">{payoutsPage + 1} / {payouts.totalPages}</span>
+                  <button onClick={() => setPayoutsPage(p => p + 1)} disabled={payoutsPage >= payouts.totalPages - 1 || payoutsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -753,46 +753,46 @@ export default function MerchantDetailPage() {
 
       {/* ── SESSIONS TAB ── */}
       {tab === "sessions" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CreditCard size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Checkout Sessions</h2>
-              {sessions && <span className="text-xs text-white/30">{sessions.totalElements} total</span>}
+              <CreditCard size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Checkout Sessions</h2>
+              {sessions && <span className="text-xs text-foreground/30">{sessions.totalElements} total</span>}
             </div>
-            {sessionsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {sessionsLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
 
           {!sessions && sessionsLoading ? (
             <div className="flex items-center justify-center h-40">
-              <Loader2 className="animate-spin text-white/30" size={20} />
+              <Loader2 className="animate-spin text-foreground/30" size={20} />
             </div>
           ) : sessions?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No checkout sessions yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No checkout sessions yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Description</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Fee</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">Description</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden lg:table-cell">Fee</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {sessions?.content.map((s) => {
-                    const sc = SESSION_STATUS_CFG[s.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: s.status };
+                    const sc = SESSION_STATUS_CFG[s.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: s.status };
                     return (
-                      <tr key={s.id} className="hover:bg-white/2">
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(s.amount, s.currency)}</td>
+                      <tr key={s.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(s.amount, s.currency)}</td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-white/45 text-xs hidden md:table-cell max-w-[200px] truncate">{s.description ?? "—"}</td>
-                        <td className="px-5 py-3.5 text-right font-mono text-xs text-white/40 hidden lg:table-cell">
+                        <td className="px-5 py-3.5 text-foreground/45 text-xs hidden md:table-cell max-w-[200px] truncate">{s.description ?? "—"}</td>
+                        <td className="px-5 py-3.5 text-right font-mono text-xs text-foreground/40 hidden lg:table-cell">
                           {s.platformFee != null ? fmtAmount(s.platformFee, s.currency) : "—"}
                         </td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(s.createdAt)}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">{fmtDate(s.createdAt)}</td>
                       </tr>
                     );
                   })}
@@ -800,12 +800,12 @@ export default function MerchantDetailPage() {
               </table>
 
               {sessions && sessions.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setSessionsPage(p => p - 1)} disabled={sessionsPage === 0 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setSessionsPage(p => p - 1)} disabled={sessionsPage === 0 || sessionsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
                     <ChevronLeft size={14} />
                   </button>
-                  <span className="text-xs text-white/40">{sessionsPage + 1} / {sessions.totalPages}</span>
-                  <button onClick={() => setSessionsPage(p => p + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30">
+                  <span className="text-xs text-foreground/40">{sessionsPage + 1} / {sessions.totalPages}</span>
+                  <button onClick={() => setSessionsPage(p => p + 1)} disabled={sessionsPage >= sessions.totalPages - 1 || sessionsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -817,54 +817,54 @@ export default function MerchantDetailPage() {
 
       {/* ── INVOICES TAB ── */}
       {tab === "invoices" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileText size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Invoices</h2>
-              {invoices && <span className="text-xs text-white/30">{invoices.totalElements} total</span>}
+              <FileText size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Invoices</h2>
+              {invoices && <span className="text-xs text-foreground/30">{invoices.totalElements} total</span>}
             </div>
-            {invoicesLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {invoicesLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!invoices && invoicesLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : invoices?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No invoices yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No invoices yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Customer</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Due</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">Due</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {invoices?.content.map((inv) => {
-                    const sc = INVOICE_STATUS_CFG[inv.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: inv.status };
+                    const sc = INVOICE_STATUS_CFG[inv.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: inv.status };
                     return (
-                      <tr key={inv.id} className="hover:bg-white/2">
+                      <tr key={inv.id} className="hover:bg-muted/20">
                         <td className="px-5 py-3.5">
-                          <p className="text-sm text-white font-medium">{inv.customerName}</p>
-                          <p className="text-xs text-white/35">{inv.customerEmail}</p>
+                          <p className="text-sm text-foreground font-medium">{inv.customerName}</p>
+                          <p className="text-xs text-foreground/35">{inv.customerEmail}</p>
                         </td>
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(inv.amount, inv.currency)}</td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(inv.amount, inv.currency)}</td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-white/35 text-xs hidden md:table-cell">{fmtDate(inv.dueDate)}</td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(inv.createdAt)}</td>
+                        <td className="px-5 py-3.5 text-foreground/35 text-xs hidden md:table-cell">{fmtDate(inv.dueDate)}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">{fmtDate(inv.createdAt)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               {invoices && invoices.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setInvoicesPage(p => p - 1)} disabled={invoicesPage === 0 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{invoicesPage + 1} / {invoices.totalPages}</span>
-                  <button onClick={() => setInvoicesPage(p => p + 1)} disabled={invoicesPage >= invoices.totalPages - 1 || invoicesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setInvoicesPage(p => p - 1)} disabled={invoicesPage === 0 || invoicesLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{invoicesPage + 1} / {invoices.totalPages}</span>
+                  <button onClick={() => setInvoicesPage(p => p + 1)} disabled={invoicesPage >= invoices.totalPages - 1 || invoicesLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -874,43 +874,43 @@ export default function MerchantDetailPage() {
 
       {/* ── SETTLEMENTS TAB ── */}
       {tab === "settlements" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Settlements</h2>
-              {settlements && <span className="text-xs text-white/30">{settlements.totalElements} total</span>}
+              <TrendingUp size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Settlements</h2>
+              {settlements && <span className="text-xs text-foreground/30">{settlements.totalElements} total</span>}
             </div>
-            {settlementsLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {settlementsLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!settlements && settlementsLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : settlements?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No settlements yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No settlements yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Gross</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Fees</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Net</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Txns</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Period</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Gross</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">Fees</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Net</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden lg:table-cell">Txns</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Period</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {settlements?.content.map((s) => {
-                    const sc = SETTLEMENT_STATUS_CFG[s.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: s.status };
+                    const sc = SETTLEMENT_STATUS_CFG[s.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: s.status };
                     return (
-                      <tr key={s.id} className="hover:bg-white/2">
-                        <td className="px-5 py-3.5 font-mono text-white/60 text-xs">{fmtAmount(s.grossAmount)}</td>
+                      <tr key={s.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-3.5 font-mono text-foreground/60 text-xs">{fmtAmount(s.grossAmount)}</td>
                         <td className="px-5 py-3.5 font-mono text-red-400/60 text-xs hidden md:table-cell">-{fmtAmount(s.feeTotal)}</td>
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(s.netAmount)}</td>
-                        <td className="px-5 py-3.5 text-white/40 text-xs hidden lg:table-cell">{s.transactionCount}</td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(s.netAmount)}</td>
+                        <td className="px-5 py-3.5 text-foreground/40 text-xs hidden lg:table-cell">{s.transactionCount}</td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">
                           {s.periodStart ? `${fmtDate(s.periodStart).split(",")[0]} – ${fmtDate(s.periodEnd).split(",")[0]}` : "—"}
                         </td>
                       </tr>
@@ -919,10 +919,10 @@ export default function MerchantDetailPage() {
                 </tbody>
               </table>
               {settlements && settlements.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setSettlementsPage(p => p - 1)} disabled={settlementsPage === 0 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{settlementsPage + 1} / {settlements.totalPages}</span>
-                  <button onClick={() => setSettlementsPage(p => p + 1)} disabled={settlementsPage >= settlements.totalPages - 1 || settlementsLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setSettlementsPage(p => p - 1)} disabled={settlementsPage === 0 || settlementsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{settlementsPage + 1} / {settlements.totalPages}</span>
+                  <button onClick={() => setSettlementsPage(p => p + 1)} disabled={settlementsPage >= settlements.totalPages - 1 || settlementsLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -932,51 +932,51 @@ export default function MerchantDetailPage() {
 
       {/* ── CUSTOMERS TAB ── */}
       {tab === "customers" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Customers</h2>
-              {customers && <span className="text-xs text-white/30">{customers.totalElements} total</span>}
+              <Users size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Customers</h2>
+              {customers && <span className="text-xs text-foreground/30">{customers.totalElements} total</span>}
             </div>
-            {customersLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {customersLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!customers && customersLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : customers?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No customers yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No customers yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Customer</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Payments</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Total Spend</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">First Payment</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden lg:table-cell">Last Payment</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Payments</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Total Spend</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">First Payment</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden lg:table-cell">Last Payment</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {customers?.content.map((c) => (
-                    <tr key={c.id} className="hover:bg-white/2">
+                    <tr key={c.id} className="hover:bg-muted/20">
                       <td className="px-5 py-3.5">
-                        <p className="text-sm text-white font-medium">{c.name}</p>
-                        <p className="text-xs text-white/35">{c.email ?? c.phone ?? "—"}</p>
+                        <p className="text-sm text-foreground font-medium">{c.name}</p>
+                        <p className="text-xs text-foreground/35">{c.email ?? c.phone ?? "—"}</p>
                       </td>
-                      <td className="px-5 py-3.5 text-white/60 text-sm">{c.totalPayments}</td>
-                      <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(c.totalSpend)}</td>
-                      <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden md:table-cell">{fmtDate(c.firstPaymentAt)}</td>
-                      <td className="px-5 py-3.5 text-right text-white/35 text-xs hidden lg:table-cell">{fmtDate(c.lastPaymentAt)}</td>
+                      <td className="px-5 py-3.5 text-foreground/60 text-sm">{c.totalPayments}</td>
+                      <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(c.totalSpend)}</td>
+                      <td className="px-5 py-3.5 text-right text-foreground/35 text-xs hidden md:table-cell">{fmtDate(c.firstPaymentAt)}</td>
+                      <td className="px-5 py-3.5 text-right text-foreground/35 text-xs hidden lg:table-cell">{fmtDate(c.lastPaymentAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {customers && customers.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setCustomersPage(p => p - 1)} disabled={customersPage === 0 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{customersPage + 1} / {customers.totalPages}</span>
-                  <button onClick={() => setCustomersPage(p => p + 1)} disabled={customersPage >= customers.totalPages - 1 || customersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setCustomersPage(p => p - 1)} disabled={customersPage === 0 || customersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{customersPage + 1} / {customers.totalPages}</span>
+                  <button onClick={() => setCustomersPage(p => p + 1)} disabled={customersPage >= customers.totalPages - 1 || customersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -986,51 +986,51 @@ export default function MerchantDetailPage() {
 
       {/* ── DISPUTES TAB ── */}
       {tab === "disputes" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Scale size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Disputes</h2>
-              {merchantDisputes && <span className="text-xs text-white/30">{merchantDisputes.totalElements} total</span>}
+              <Scale size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Disputes</h2>
+              {merchantDisputes && <span className="text-xs text-foreground/30">{merchantDisputes.totalElements} total</span>}
             </div>
-            {merchantDisputesLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {merchantDisputesLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!merchantDisputes && merchantDisputesLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : merchantDisputes?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No disputes</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No disputes</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Ref</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Amount</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Category</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Filed</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Ref</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Category</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Filed</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {merchantDisputes?.content.map((d) => {
-                    const sc = DISPUTE_STATUS_CFG[d.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: d.status };
+                    const sc = DISPUTE_STATUS_CFG[d.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: d.status };
                     return (
-                      <tr key={d.id} className="hover:bg-white/2">
-                        <td className="px-5 py-3.5 font-mono text-xs text-white/50">{d.referenceId}</td>
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(d.amount, d.currency)}</td>
-                        <td className="px-5 py-3.5 text-white/50 text-xs">{d.category.replace(/_/g, " ")}</td>
+                      <tr key={d.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-3.5 font-mono text-xs text-foreground/50">{d.referenceId}</td>
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(d.amount, d.currency)}</td>
+                        <td className="px-5 py-3.5 text-foreground/50 text-xs">{d.category.replace(/_/g, " ")}</td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(d.createdAt)}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">{fmtDate(d.createdAt)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               {merchantDisputes && merchantDisputes.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setMerchantDisputesPage(p => p - 1)} disabled={merchantDisputesPage === 0 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{merchantDisputesPage + 1} / {merchantDisputes.totalPages}</span>
-                  <button onClick={() => setMerchantDisputesPage(p => p + 1)} disabled={merchantDisputesPage >= merchantDisputes.totalPages - 1 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setMerchantDisputesPage(p => p - 1)} disabled={merchantDisputesPage === 0 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{merchantDisputesPage + 1} / {merchantDisputes.totalPages}</span>
+                  <button onClick={() => setMerchantDisputesPage(p => p + 1)} disabled={merchantDisputesPage >= merchantDisputes.totalPages - 1 || merchantDisputesLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1040,55 +1040,55 @@ export default function MerchantDetailPage() {
 
       {/* ── BULK TRANSFERS TAB ── */}
       {tab === "bulk-transfers" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ArrowLeftRight size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Bulk Transfers</h2>
-              {bulkTransfers && <span className="text-xs text-white/30">{bulkTransfers.totalElements} total</span>}
+              <ArrowLeftRight size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Bulk Transfers</h2>
+              {bulkTransfers && <span className="text-xs text-foreground/30">{bulkTransfers.totalElements} total</span>}
             </div>
-            {bulkTransfersLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {bulkTransfersLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!bulkTransfers && bulkTransfersLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : bulkTransfers?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No bulk transfers yet</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No bulk transfers yet</p>
           ) : (
             <>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Total Amount</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Recipients</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider hidden md:table-cell">Success / Fail</th>
-                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Status</th>
-                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-white/30 uppercase tracking-wider">Created</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Total Amount</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Recipients</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider hidden md:table-cell">Success / Fail</th>
+                    <th className="text-left px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Status</th>
+                    <th className="text-right px-5 py-3 text-[11px] font-semibold text-foreground/30 uppercase tracking-wider">Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/4">
+                <tbody className="divide-y divide-border">
                   {bulkTransfers?.content.map((bt) => {
-                    const sc = BULK_STATUS_CFG[bt.status] ?? { cls: "text-white/40 bg-white/5 border-white/10", label: bt.status };
+                    const sc = BULK_STATUS_CFG[bt.status] ?? { cls: "text-foreground/40 bg-muted/30 border-border", label: bt.status };
                     return (
-                      <tr key={bt.id} className="hover:bg-white/2">
-                        <td className="px-5 py-3.5 font-mono font-semibold text-white">{fmtAmount(bt.totalAmount)}</td>
-                        <td className="px-5 py-3.5 text-white/60 text-sm">{bt.recipientCount}</td>
+                      <tr key={bt.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-3.5 font-mono font-semibold text-foreground">{fmtAmount(bt.totalAmount)}</td>
+                        <td className="px-5 py-3.5 text-foreground/60 text-sm">{bt.recipientCount}</td>
                         <td className="px-5 py-3.5 text-xs hidden md:table-cell">
                           <span className="text-emerald-400">{bt.successCount}</span>
-                          <span className="text-white/25 mx-1">/</span>
+                          <span className="text-foreground/25 mx-1">/</span>
                           <span className="text-red-400">{bt.failureCount}</span>
                         </td>
                         <td className="px-5 py-3.5"><SmBadge cfg={sc} /></td>
-                        <td className="px-5 py-3.5 text-right text-white/35 text-xs">{fmtDate(bt.createdAt)}</td>
+                        <td className="px-5 py-3.5 text-right text-foreground/35 text-xs">{fmtDate(bt.createdAt)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               {bulkTransfers && bulkTransfers.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setBulkTransfersPage(p => p - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{bulkTransfersPage + 1} / {bulkTransfers.totalPages}</span>
-                  <button onClick={() => setBulkTransfersPage(p => p + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setBulkTransfersPage(p => p - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{bulkTransfersPage + 1} / {bulkTransfers.totalPages}</span>
+                  <button onClick={() => setBulkTransfersPage(p => p + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1098,41 +1098,41 @@ export default function MerchantDetailPage() {
 
       {/* ── AUDIT LOG TAB ── */}
       {tab === "audit-log" && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ScrollText size={15} className="text-white/40" />
-              <h2 className="text-sm font-semibold text-white">Audit Log</h2>
-              {auditLog && <span className="text-xs text-white/30">{auditLog.totalElements} entries</span>}
+              <ScrollText size={15} className="text-foreground/40" />
+              <h2 className="text-sm font-semibold text-foreground">Audit Log</h2>
+              {auditLog && <span className="text-xs text-foreground/30">{auditLog.totalElements} entries</span>}
             </div>
-            {auditLogLoading && <Loader2 size={14} className="animate-spin text-white/30" />}
+            {auditLogLoading && <Loader2 size={14} className="animate-spin text-foreground/30" />}
           </div>
           {!auditLog && auditLogLoading ? (
-            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-white/30" size={20} /></div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="animate-spin text-foreground/30" size={20} /></div>
           ) : auditLog?.content.length === 0 ? (
-            <p className="text-center text-white/25 text-sm py-16">No audit entries</p>
+            <p className="text-center text-foreground/25 text-sm py-16">No audit entries</p>
           ) : (
             <>
-              <div className="divide-y divide-white/4">
+              <div className="divide-y divide-border">
                 {auditLog?.content.map((entry) => (
-                  <div key={entry.id} className="px-5 py-3.5 hover:bg-white/2 flex items-start gap-4">
+                  <div key={entry.id} className="px-5 py-3.5 hover:bg-muted/20 flex items-start gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-white/70 font-mono bg-white/5 px-2 py-0.5 rounded">{entry.action}</span>
-                        {entry.actorEmail && <span className="text-xs text-white/35">{entry.actorEmail}</span>}
-                        {entry.ipAddress && <span className="text-[10px] text-white/20 font-mono">{entry.ipAddress}</span>}
+                        <span className="text-xs font-semibold text-foreground/70 font-mono bg-muted/30 px-2 py-0.5 rounded">{entry.action}</span>
+                        {entry.actorEmail && <span className="text-xs text-foreground/35">{entry.actorEmail}</span>}
+                        {entry.ipAddress && <span className="text-[10px] text-foreground/20 font-mono">{entry.ipAddress}</span>}
                       </div>
-                      {entry.details && <p className="text-xs text-white/40 mt-1 truncate">{entry.details}</p>}
+                      {entry.details && <p className="text-xs text-foreground/40 mt-1 truncate">{entry.details}</p>}
                     </div>
-                    <span className="text-[11px] text-white/25 flex-shrink-0">{fmtDate(entry.createdAt)}</span>
+                    <span className="text-[11px] text-foreground/25 flex-shrink-0">{fmtDate(entry.createdAt)}</span>
                   </div>
                 ))}
               </div>
               {auditLog && auditLog.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-white/5">
-                  <button onClick={() => setAuditLogPage(p => p - 1)} disabled={auditLogPage === 0 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronLeft size={14} /></button>
-                  <span className="text-xs text-white/40">{auditLogPage + 1} / {auditLog.totalPages}</span>
-                  <button onClick={() => setAuditLogPage(p => p + 1)} disabled={auditLogPage >= auditLog.totalPages - 1 || auditLogLoading} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30"><ChevronRight size={14} /></button>
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setAuditLogPage(p => p - 1)} disabled={auditLogPage === 0 || auditLogLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
+                  <span className="text-xs text-foreground/40">{auditLogPage + 1} / {auditLog.totalPages}</span>
+                  <button onClick={() => setAuditLogPage(p => p + 1)} disabled={auditLogPage >= auditLog.totalPages - 1 || auditLogLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
                 </div>
               )}
             </>
@@ -1144,9 +1144,9 @@ export default function MerchantDetailPage() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setModal(null)} />
-          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold text-foreground">
                 {modal === "kyb_approve" && "Approve KYB"}
                 {modal === "kyb_reject" && "Reject KYB"}
                 {modal === "kyb_more_info" && "Request More Information"}
@@ -1155,12 +1155,12 @@ export default function MerchantDetailPage() {
                 {modal === "reject_merchant" && "Reject Merchant Account"}
                 {modal === "fee_rate" && "Update Fee Rate"}
               </h3>
-              <button onClick={() => setModal(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
+              <button onClick={() => setModal(null)} className="text-foreground/40 hover:text-foreground"><X size={18} /></button>
             </div>
 
             {modal === "kyb_approve" && (
               <>
-                <p className="text-sm text-white/50 mb-6">
+                <p className="text-sm text-foreground/50 mb-6">
                   This will approve the KYB application and activate the merchant's business account.
                 </p>
                 <button
@@ -1176,11 +1176,11 @@ export default function MerchantDetailPage() {
 
             {modal === "fee_rate" && (
               <>
-                <p className="text-sm text-white/50 mb-4">
+                <p className="text-sm text-foreground/50 mb-4">
                   Current rate: <span className="text-[#B7EE7A] font-semibold">{fmtFee(merchant.feeRateBps)}</span>
                 </p>
                 <div className="mb-5">
-                  <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">New Rate (%)</label>
+                  <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider mb-2 block">New Rate (%)</label>
                   <div className="relative">
                     <input
                       type="number"
@@ -1190,11 +1190,11 @@ export default function MerchantDetailPage() {
                       value={feeInput}
                       onChange={(e) => setFeeInput(e.target.value)}
                       placeholder="e.g. 1.50"
-                      className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 pr-8"
+                      className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 pr-8"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/30 text-sm">%</span>
                   </div>
-                  <p className="text-[11px] text-white/25 mt-1.5">
+                  <p className="text-[11px] text-foreground/25 mt-1.5">
                     {feeInput && !isNaN(parseFloat(feeInput)) ? `= ${Math.round(parseFloat(feeInput) * 100)} bps` : "Enter a value between 0 and 100"}
                   </p>
                 </div>
@@ -1212,7 +1212,7 @@ export default function MerchantDetailPage() {
             {(modal === "kyb_reject" || modal === "kyb_more_info" || modal === "suspend" || modal === "activate" || modal === "reject_merchant") && (
               <>
                 <div className="mb-5">
-                  <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">
+                  <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider mb-2 block">
                     {modal === "kyb_more_info" ? "What information is needed?" : "Reason"}
                     {modal !== "activate" && <span className="text-red-400 ml-1">*</span>}
                   </label>
@@ -1227,7 +1227,7 @@ export default function MerchantDetailPage() {
                         : "Provide a reason…"
                     }
                     rows={3}
-                    className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 resize-none"
+                    className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 resize-none"
                   />
                 </div>
 

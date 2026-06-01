@@ -32,7 +32,7 @@ function DocViewer({ doc }: { doc: KybDocument }) {
 
   return (
     <>
-      <div className="bg-white/4 border border-white/8 rounded-xl overflow-hidden">
+      <div className="bg-muted/20 border border-border rounded-xl overflow-hidden">
         {isImage ? (
           <div
             className="relative aspect-video cursor-pointer group"
@@ -41,23 +41,23 @@ function DocViewer({ doc }: { doc: KybDocument }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={doc.url} alt={doc.type} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-              <ZoomIn size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ZoomIn size={22} className="text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
         ) : isPdf ? (
-          <div className="aspect-video flex flex-col items-center justify-center gap-2 text-white/30">
+          <div className="aspect-video flex flex-col items-center justify-center gap-2 text-foreground/30">
             <FileText size={28} />
             <p className="text-xs">PDF document</p>
           </div>
         ) : (
-          <div className="aspect-video flex items-center justify-center text-white/20 text-xs">
+          <div className="aspect-video flex items-center justify-center text-foreground/20 text-xs">
             Unknown format
           </div>
         )}
-        <div className="px-3 py-2.5 flex items-center justify-between border-t border-white/6">
+        <div className="px-3 py-2.5 flex items-center justify-between border-t border-border">
           <div>
-            <p className="text-xs font-medium text-white/70">{doc.type.replace(/_/g, " ")}</p>
-            {doc.fileName && <p className="text-[10px] text-white/30 mt-0.5 truncate max-w-[150px]">{doc.fileName}</p>}
+            <p className="text-xs font-medium text-foreground/70">{doc.type.replace(/_/g, " ")}</p>
+            {doc.fileName && <p className="text-[10px] text-foreground/30 mt-0.5 truncate max-w-[150px]">{doc.fileName}</p>}
           </div>
           <a
             href={doc.url}
@@ -86,8 +86,8 @@ function DocViewer({ doc }: { doc: KybDocument }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-white/30 text-xs mb-0.5">{label}</p>
-      <p className="text-white text-sm font-medium">{value ?? <span className="text-white/25">—</span>}</p>
+      <p className="text-foreground/30 text-xs mb-0.5">{label}</p>
+      <p className="text-foreground text-sm font-medium">{value ?? <span className="text-foreground/25">—</span>}</p>
     </div>
   );
 }
@@ -136,7 +136,7 @@ export default function KybReviewPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-white/40" size={28} />
+        <Loader2 className="animate-spin text-foreground/40" size={28} />
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function KybReviewPage() {
         <div className={`w-16 h-16 rounded-full flex items-center justify-center ${cfg.bg}`}>
           <Icon size={28} className={cfg.color} />
         </div>
-        <p className="text-white font-medium">{cfg.msg}</p>
+        <p className="text-foreground font-medium">{cfg.msg}</p>
         <Link href="/kyb-review" className="text-[#B7EE7A] text-sm hover:underline">← Back to KYB queue</Link>
       </div>
     );
@@ -165,41 +165,41 @@ export default function KybReviewPage() {
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
           <AlertCircle size={15} /> {error ? (error as Error).message : "Failed to load merchant"}
         </div>
-        <Link href="/kyb-review" className="text-white/50 text-sm hover:text-white flex items-center gap-1">
+        <Link href="/kyb-review" className="text-foreground/50 text-sm hover:text-foreground flex items-center gap-1">
           <ArrowLeft size={14} /> Back to queue
         </Link>
       </div>
     );
   }
 
-  const statusCls = MERCHANT_STATUS_CFG[merchant.status] ?? "bg-white/10 text-white/50";
+  const statusCls = MERCHANT_STATUS_CFG[merchant.status] ?? "bg-muted/50 text-foreground/50";
   const hasData = kyb?.ownerFullName || kyb?.registrationNumber || kyb?.businessType;
   const canReview = hasData && kyb && !["APPROVED", "REJECTED"].includes(kyb.status);
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link href="/kyb-review" className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+        <Link href="/kyb-review" className="p-2 rounded-xl text-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors">
           <ArrowLeft size={18} />
         </Link>
         <div className="flex items-center gap-3 flex-1">
           {merchant.logoUrl && (
             <img src={merchant.logoUrl} alt={merchant.businessName}
-              className="w-9 h-9 rounded-lg object-cover border border-white/10 flex-shrink-0" />
+              className="w-9 h-9 rounded-lg object-cover border border-border flex-shrink-0" />
           )}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-semibold text-white">{merchant.businessName}</h1>
+              <h1 className="text-xl font-semibold text-foreground">{merchant.businessName}</h1>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusCls}`}>
                 {merchant.status.replace(/_/g, " ")}
               </span>
             </div>
-            <p className="text-white/40 text-sm font-mono">@{merchant.businessHandle}</p>
+            <p className="text-foreground/40 text-sm font-mono">@{merchant.businessHandle}</p>
           </div>
         </div>
         <Link
           href={`/merchants/${merchantId}`}
-          className="text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"
+          className="text-xs text-foreground/30 hover:text-foreground/60 transition-colors flex items-center gap-1"
         >
           <Store size={12} /> Full profile
         </Link>
@@ -218,8 +218,8 @@ export default function KybReviewPage() {
         </div>
       )}
 
-      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-        <p className="text-[11px] text-white/30 uppercase tracking-widest font-medium mb-4">Business Information</p>
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <p className="text-[11px] text-foreground/30 uppercase tracking-widest font-medium mb-4">Business Information</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
           <Row label="Business Type"     value={kyb?.businessType?.replace(/_/g, " ")} />
           <Row label="Registration No."  value={kyb?.registrationNumber} />
@@ -240,8 +240,8 @@ export default function KybReviewPage() {
         </div>
       </div>
 
-      <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-        <p className="text-[11px] text-white/30 uppercase tracking-widest font-medium mb-4">Owner / Director</p>
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <p className="text-[11px] text-foreground/30 uppercase tracking-widest font-medium mb-4">Owner / Director</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
           <Row label="Full Name" value={kyb?.ownerFullName} />
           <Row label="ID Type"   value={kyb?.ownerIdType?.replace(/_/g, " ")} />
@@ -250,7 +250,7 @@ export default function KybReviewPage() {
 
       {kyb?.documents && kyb.documents.length > 0 && (
         <div>
-          <p className="text-[11px] text-white/30 uppercase tracking-widest font-medium mb-3">Documents</p>
+          <p className="text-[11px] text-foreground/30 uppercase tracking-widest font-medium mb-3">Documents</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {kyb.documents.map((doc) => (
               <DocViewer key={doc.id} doc={doc} />
@@ -260,15 +260,15 @@ export default function KybReviewPage() {
       )}
 
       {(kyb?.submittedAt || kyb?.reviewedAt) && (
-        <div className="flex gap-6 text-xs text-white/30">
+        <div className="flex gap-6 text-xs text-foreground/30">
           {kyb.submittedAt && <span>Submitted: {new Date(kyb.submittedAt).toLocaleString()}</span>}
           {kyb.reviewedAt  && <span>Last reviewed: {new Date(kyb.reviewedAt).toLocaleString()}</span>}
         </div>
       )}
 
       {canReview && (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl p-5 space-y-4">
-          <p className="text-[11px] text-white/30 uppercase tracking-widest font-medium">Decision</p>
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <p className="text-[11px] text-foreground/30 uppercase tracking-widest font-medium">Decision</p>
 
           {mode === "idle" && (
             <div className="flex flex-col sm:flex-row gap-3">
@@ -304,7 +304,7 @@ export default function KybReviewPage() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Reason for rejection (required) — this will be shown to the merchant"
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-red-500/50 text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-red-500/50 text-sm resize-none"
               />
               <div className="flex gap-3">
                 <button
@@ -315,7 +315,7 @@ export default function KybReviewPage() {
                   {reviewMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
                   Confirm Rejection
                 </button>
-                <button onClick={() => setMode("idle")} className="px-5 py-3 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white transition-colors">
+                <button onClick={() => setMode("idle")} className="px-5 py-3 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground transition-colors">
                   Cancel
                 </button>
               </div>
@@ -329,7 +329,7 @@ export default function KybReviewPage() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Describe what additional documents or information is needed…"
                 rows={3}
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-orange-500/50 text-sm resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-orange-500/50 text-sm resize-none"
               />
               <div className="flex gap-3">
                 <button
@@ -340,7 +340,7 @@ export default function KybReviewPage() {
                   {reviewMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : null}
                   Send Request
                 </button>
-                <button onClick={() => setMode("idle")} className="px-5 py-3 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white transition-colors">
+                <button onClick={() => setMode("idle")} className="px-5 py-3 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground transition-colors">
                   Cancel
                 </button>
               </div>
@@ -350,7 +350,7 @@ export default function KybReviewPage() {
       )}
 
       {!canReview && kyb && (
-        <div className="bg-white/4 border border-white/8 rounded-xl px-4 py-3 text-sm text-white/40">
+        <div className="bg-muted/20 border border-border rounded-xl px-4 py-3 text-sm text-foreground/40">
           {kyb.status === "APPROVED"
             ? "This KYB has already been approved."
             : kyb.status === "REJECTED"

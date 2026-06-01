@@ -50,7 +50,7 @@ const TX_STATUS: Record<string, { icon: React.ElementType; cls: string; label: s
   COMPLETED: { icon: CheckCircle2, cls: "text-emerald-400", label: "Paid" },
   PENDING:   { icon: Clock,        cls: "text-amber-400",   label: "Pending" },
   CANCELLED: { icon: XCircle,      cls: "text-red-400",     label: "Cancelled" },
-  EXPIRED:   { icon: Ban,          cls: "text-white/30",    label: "Expired" },
+  EXPIRED:   { icon: Ban,          cls: "text-foreground/30",    label: "Expired" },
 };
 
 // ─── Sparkline SVG ────────────────────────────────────────────────────────────
@@ -120,35 +120,35 @@ function PaymentLinkModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="w-full max-w-sm bg-[#161616] border border-white/8 rounded-2xl p-6 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-foreground/30 hover:text-foreground hover:bg-muted/40 transition-colors">
           <X size={16} />
         </button>
-        <h3 className="text-base font-semibold text-white mb-4">Generate payment link</h3>
+        <h3 className="text-base font-semibold text-foreground mb-4">Generate payment link</h3>
         {!result ? (
           <form onSubmit={handleGenerate} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-1.5">Amount (GHS)</label>
+              <label className="block text-xs font-medium text-foreground/50 mb-1.5">Amount (GHS)</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-sm font-medium">GH₵</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40 text-sm font-medium">GH₵</span>
                 <input
                   type="number" step="0.01" min="0.01" required
                   value={amount} onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+                  className="w-full pl-10 pr-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-1.5">Description <span className="text-white/25 font-normal">(optional)</span></label>
+              <label className="block text-xs font-medium text-foreground/50 mb-1.5">Description <span className="text-foreground/25 font-normal">(optional)</span></label>
               <input
                 type="text" value={description} onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Order #1234"
-                className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+                className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
               />
             </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2">
               {loading && <Loader2 size={14} className="animate-spin" />}
               {loading ? "Generating…" : "Generate link"}
             </button>
@@ -159,15 +159,15 @@ function PaymentLinkModal({ onClose }: { onClose: () => void }) {
               <CheckCircle2 size={16} className="text-[#B7EE7A] flex-shrink-0" />
               <p className="text-sm text-[#B7EE7A] font-medium">Payment link created</p>
             </div>
-            <div className="bg-black/30 border border-white/8 rounded-xl p-3">
-              <p className="text-[10px] text-white/35 mb-1.5 uppercase tracking-wider font-medium">Checkout URL</p>
-              <p className="text-xs text-white/70 font-mono break-all">{result.checkoutUrl}</p>
+            <div className="bg-black/30 border border-border rounded-xl p-3">
+              <p className="text-[10px] text-foreground/35 mb-1.5 uppercase tracking-wider font-medium">Checkout URL</p>
+              <p className="text-xs text-foreground/70 font-mono break-all">{result.checkoutUrl}</p>
             </div>
-            <button onClick={copyLink} className="w-full py-2.5 rounded-xl bg-white/6 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 font-medium text-sm transition-colors flex items-center justify-center gap-2">
+            <button onClick={copyLink} className="w-full py-2.5 rounded-xl bg-muted/30 border border-border text-foreground/70 hover:text-foreground hover:bg-muted transition-colors font-medium text-sm transition-colors flex items-center justify-center gap-2">
               {copied ? <Check size={14} className="text-[#B7EE7A]" /> : <Copy size={14} />}
               {copied ? "Copied!" : "Copy link"}
             </button>
-            <button onClick={onClose} className="w-full py-2 text-sm text-white/35 hover:text-white/60 transition-colors">Done</button>
+            <button onClick={onClose} className="w-full py-2 text-sm text-foreground/35 hover:text-foreground/60 transition-colors">Done</button>
           </div>
         )}
       </div>
@@ -248,8 +248,8 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">{merchant?.businessName ?? "Dashboard"}</h1>
-            <p className="text-white/40 text-sm mt-0.5">
+            <h1 className="text-xl font-bold text-foreground">{merchant?.businessName ?? "Dashboard"}</h1>
+            <p className="text-foreground/40 text-sm mt-0.5">
               @{merchant?.businessHandle} ·{" "}
               <span className={merchant?.status === "ACTIVE" ? "text-[#B7EE7A]" : "text-amber-400"}>
                 {merchant?.status === "ACTIVE" ? "Live" : merchant?.status?.replace(/_/g, " ") ?? ""}
@@ -258,7 +258,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => setShowLinkModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-foreground font-semibold text-sm transition-colors"
           >
             <Link2 size={15} />
             <span className="hidden sm:block">Generate payment link</span>
@@ -269,13 +269,13 @@ export default function DashboardPage() {
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {metricCards.map(({ label, value, sub, icon: Icon, color }) => (
-            <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
+            <div key={label} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium">{label}</p>
-                <Icon size={13} className="text-white/20" />
+                <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium">{label}</p>
+                <Icon size={13} className="text-foreground/20" />
               </div>
               <p className={`text-xl font-bold ${color}`}>{value}</p>
-              <p className="text-xs text-white/30 mt-1">{sub}</p>
+              <p className="text-xs text-foreground/30 mt-1">{sub}</p>
             </div>
           ))}
         </div>
@@ -283,10 +283,10 @@ export default function DashboardPage() {
         {/* Revenue chart + balance side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Chart */}
-          <div className="lg:col-span-2 bg-[#161616] border border-white/5 rounded-xl p-5">
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold text-white">Revenue — last 30 days</p>
+                <p className="text-sm font-semibold text-foreground">Revenue — last 30 days</p>
                 <p className="text-2xl font-bold text-[#B7EE7A] mt-0.5">
                   {summary ? fmtGHS(Number(summary.thirtyDayRevenue)) : "—"}
                 </p>
@@ -302,15 +302,15 @@ export default function DashboardPage() {
               <Sparkline data={summary.dailySeries.map(d => ({ revenue: Number(d.revenue) }))} />
             ) : (
               <div className="h-14 flex items-center justify-center">
-                <p className="text-xs text-white/20">No revenue data yet</p>
+                <p className="text-xs text-foreground/20">No revenue data yet</p>
               </div>
             )}
             {summary?.dailySeries && summary.dailySeries.length > 1 && (
               <div className="flex justify-between mt-2">
-                <span className="text-[10px] text-white/25">
+                <span className="text-[10px] text-foreground/25">
                   {summary.dailySeries[0]?.date ? format(parseISO(summary.dailySeries[0].date), "MMM d") : ""}
                 </span>
-                <span className="text-[10px] text-white/25">
+                <span className="text-[10px] text-foreground/25">
                   {summary.dailySeries.at(-1)?.date ? format(parseISO(summary.dailySeries.at(-1)!.date), "MMM d") : ""}
                 </span>
               </div>
@@ -318,20 +318,20 @@ export default function DashboardPage() {
           </div>
 
           {/* Balance card */}
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5 flex flex-col">
-            <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium mb-3">Available balance</p>
-            <p className="text-2xl font-bold text-white">{merchant ? fmtGHS(Number(merchant.balance)) : "—"}</p>
-            <p className="text-xs text-white/30 mt-1 mb-4">{merchant?.currency ?? "GHS"} · Merchant wallet</p>
+          <div className="bg-card border border-border rounded-xl p-5 flex flex-col">
+            <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium mb-3">Available balance</p>
+            <p className="text-2xl font-bold text-foreground">{merchant ? fmtGHS(Number(merchant.balance)) : "—"}</p>
+            <p className="text-xs text-foreground/30 mt-1 mb-4">{merchant?.currency ?? "GHS"} · Merchant wallet</p>
             {merchant && Number(merchant.totalVolume) > 0 && (
-              <div className="bg-white/4 rounded-lg px-3 py-2 mb-4">
-                <p className="text-[10px] text-white/30 mb-0.5">Total processed</p>
-                <p className="text-sm font-semibold text-white/50">{fmtGHS(Number(merchant.totalVolume))}</p>
+              <div className="bg-muted/10 rounded-lg px-3 py-2 mb-4">
+                <p className="text-[10px] text-foreground/30 mb-0.5">Total processed</p>
+                <p className="text-sm font-semibold text-foreground/50">{fmtGHS(Number(merchant.totalVolume))}</p>
               </div>
             )}
             <div className="mt-auto">
               <button
                 onClick={() => router.push("/payouts")}
-                className="w-full py-2 rounded-lg bg-white/5 border border-white/8 text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors font-medium"
+                className="w-full py-2 rounded-lg bg-muted/30 border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted transition-colors font-medium"
               >
                 View payouts
               </button>
@@ -340,30 +340,30 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent sessions */}
-        <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-            <p className="text-sm font-semibold text-white">Recent transactions</p>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">Recent transactions</p>
             <button
               onClick={() => router.push("/transactions")}
-              className="flex items-center gap-1 text-xs text-white/40 hover:text-[#B7EE7A] transition-colors"
+              className="flex items-center gap-1 text-xs text-foreground/40 hover:text-[#B7EE7A] transition-colors"
             >
               View all <ArrowRight size={12} />
             </button>
           </div>
           {sessions.length === 0 ? (
             <div className="py-12 text-center">
-              <CreditCard size={28} className="mx-auto mb-3 text-white/15" />
-              <p className="text-sm text-white/30">No transactions yet</p>
-              <p className="text-xs text-white/20 mt-1">Generate a payment link to start accepting payments</p>
+              <CreditCard size={28} className="mx-auto mb-3 text-foreground/15" />
+              <p className="text-sm text-foreground/30">No transactions yet</p>
+              <p className="text-xs text-foreground/20 mt-1">Generate a payment link to start accepting payments</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/4">
-                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-white/25 uppercase tracking-wider">Description</th>
-                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-white/25 uppercase tracking-wider hidden sm:table-cell">Date</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold text-white/25 uppercase tracking-wider">Amount</th>
-                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-white/25 uppercase tracking-wider hidden md:table-cell">Status</th>
+                <tr className="border-b border-muted/10">
+                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider">Description</th>
+                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider hidden sm:table-cell">Date</th>
+                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider hidden md:table-cell">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/3">
@@ -371,22 +371,22 @@ export default function DashboardPage() {
                   const cfg = TX_STATUS[session.status] ?? TX_STATUS.PENDING;
                   const StatusIcon = cfg.icon;
                   return (
-                    <tr key={session.id} className="hover:bg-white/2 transition-colors">
+                    <tr key={session.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-5 py-3">
-                        <p className="font-medium text-white/80 text-sm truncate max-w-[150px]">
+                        <p className="font-medium text-foreground/80 text-sm truncate max-w-[150px]">
                           {session.description || "Payment"}
                         </p>
-                        <p className="text-[10px] text-white/30 font-mono truncate max-w-[150px]">{session.id}</p>
+                        <p className="text-[10px] text-foreground/30 font-mono truncate max-w-[150px]">{session.id}</p>
                       </td>
                       <td className="px-5 py-3 hidden sm:table-cell">
-                        <span className="text-xs text-white/35">
+                        <span className="text-xs text-foreground/35">
                           {fmtDate(session.completedAt ?? session.createdAt)}
                         </span>
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <p className="font-semibold text-white">{fmtGHS(Number(session.amount))}</p>
+                        <p className="font-semibold text-foreground">{fmtGHS(Number(session.amount))}</p>
                         {session.netAmount != null && (
-                          <p className="text-[10px] text-white/25">{fmtGHS(Number(session.netAmount))} net</p>
+                          <p className="text-[10px] text-foreground/25">{fmtGHS(Number(session.netAmount))} net</p>
                         )}
                       </td>
                       <td className="px-5 py-3 hidden md:table-cell">

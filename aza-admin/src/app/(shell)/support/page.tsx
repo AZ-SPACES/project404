@@ -66,7 +66,7 @@ function StatusBadge({ status }: { status: SupportChatSummary["status"] }) {
   return (
     <span className="flex items-center gap-1.5">
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">{cfg.label}</span>
+      <span className="text-[10px] font-medium uppercase tracking-wider text-foreground/40">{cfg.label}</span>
     </span>
   );
 }
@@ -92,7 +92,7 @@ function PriorityBadge({ priority }: { priority: SupportChatSummary["priority"] 
 function CategoryBadge({ category }: { category: string | null }) {
   if (!category) return null;
   return (
-    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-white/40 border border-white/10">
+    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/30 text-foreground/40 border border-border">
       {category}
     </span>
   );
@@ -168,8 +168,8 @@ export default function SupportPage() {
     <div className="max-w-5xl mx-auto">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Support Inbox</h1>
-          <p className="text-white/40 text-sm mt-0.5">Customer support conversations</p>
+          <h1 className="text-2xl font-semibold text-foreground">Support Inbox</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Customer support conversations</p>
         </div>
         {stats && (
           <div className="flex items-center gap-3">
@@ -177,8 +177,8 @@ export default function SupportPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-medium text-emerald-400">{stats.open} open</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <span className="text-xs font-medium text-white/50">{stats.resolved} resolved</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/30 border border-border">
+              <span className="text-xs font-medium text-foreground/50">{stats.resolved} resolved</span>
             </div>
           </div>
         )}
@@ -186,22 +186,22 @@ export default function SupportPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30" />
           <input
             type="text"
             placeholder="Search by name, handle or message..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-[#1a1a1a] border border-white/8 rounded-xl text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 transition-colors"
           />
         </div>
 
         <div className="relative">
-          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30 pointer-events-none" />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="pl-8 pr-8 py-2 bg-[#1a1a1a] border border-white/8 rounded-xl text-sm text-white/70 focus:outline-none focus:border-white/20 transition-colors appearance-none cursor-pointer"
+            className="pl-8 pr-8 py-2 bg-card border border-border rounded-xl text-sm text-foreground/70 focus:outline-none focus:border-foreground/20 transition-colors appearance-none cursor-pointer"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c === "All Categories" ? c : c.charAt(0) + c.slice(1).toLowerCase()}</option>
@@ -210,7 +210,7 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 mb-5 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 mb-5 bg-muted/30 p-1 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -218,13 +218,13 @@ export default function SupportPage() {
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
               statusFilter === tab.key
                 ? "bg-[#B7EE7A] text-black"
-                : "text-white/50 hover:text-white"
+                : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {tab.label}
             {tab.count !== undefined && (
               <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                statusFilter === tab.key ? "bg-black/20 text-black/70" : "bg-white/10 text-white/40"
+                statusFilter === tab.key ? "bg-black/20 text-black/70" : "bg-muted/50 text-foreground/40"
               }`}>
                 {tab.count}
               </span>
@@ -242,14 +242,14 @@ export default function SupportPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-[72px] bg-white/4 rounded-xl animate-pulse" />
+            <div key={i} className="h-[72px] bg-muted/20 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-white/25">
+        <div className="text-center py-20 text-foreground/25">
           <MessageCircle size={36} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm font-medium">No conversations found</p>
-          {search && <p className="text-xs mt-1">Try adjusting your search or filters</p>}
+          {search && <p className="text-xs mt-1 text-foreground/20">Try adjusting your search or filters</p>}
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -263,16 +263,16 @@ export default function SupportPage() {
                 className={`w-full text-left rounded-xl px-4 py-3.5 transition-all border ${
                   slaBreach
                     ? "bg-red-500/5 border-red-500/15 hover:bg-red-500/8"
-                    : "bg-[#1a1a1a] border-white/5 hover:bg-[#222] hover:border-white/10"
+                    : "bg-card border-border hover:bg-muted/20 hover:border-foreground/10"
                 }`}
               >
                 <div className="flex items-center gap-3.5">
                   <div className="relative flex-shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center overflow-hidden">
+                    <div className="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center overflow-hidden">
                       {chat.userAvatar ? (
                         <img src={chat.userAvatar} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-semibold text-white/50">
+                        <span className="text-sm font-semibold text-foreground/50">
                           {chat.userName?.charAt(0)?.toUpperCase() ?? <User size={16} />}
                         </span>
                       )}
@@ -287,10 +287,10 @@ export default function SupportPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-semibold text-white truncate">
+                        <span className="text-sm font-semibold text-foreground truncate">
                           {chat.userName}
                           {chat.userHandle && (
-                            <span className="text-white/35 font-normal ml-1.5">@{chat.userHandle}</span>
+                            <span className="text-foreground/35 font-normal ml-1.5">@{chat.userHandle}</span>
                           )}
                         </span>
                         <PriorityBadge priority={chat.priority} />
@@ -303,14 +303,14 @@ export default function SupportPage() {
                       </div>
                       <div className="flex items-center gap-2.5 flex-shrink-0">
                         <StatusBadge status={chat.status} />
-                        <span className="text-[11px] text-white/25 flex items-center gap-1 flex-shrink-0">
+                        <span className="text-[11px] text-foreground/25 flex items-center gap-1 flex-shrink-0">
                           <Clock size={10} />
                           {timeAgo(chat.lastMessageAt)}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs text-white/40 truncate flex-1">
+                      <p className="text-xs text-foreground/40 truncate flex-1">
                         {chat.lastMessage ?? "No messages yet"}
                       </p>
                       <CategoryBadge category={chat.category} />
@@ -328,15 +328,15 @@ export default function SupportPage() {
           <button
             onClick={() => setPage(p => p - 1)}
             disabled={page === 0 || isLoading}
-            className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors border border-white/5"
+            className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors border border-border"
           >
             Previous
           </button>
-          <span className="text-sm text-white/40 tabular-nums">{page + 1} / {data.totalPages}</span>
+          <span className="text-sm text-foreground/40 tabular-nums">{page + 1} / {data.totalPages}</span>
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={page >= data.totalPages - 1 || isLoading}
-            className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors border border-white/5"
+            className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors border border-border"
           >
             Next
           </button>

@@ -56,11 +56,11 @@ export default function SpendingAnalyticsPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold text-white mb-1 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-foreground mb-1 flex items-center gap-2">
             <PieChart size={22} className="text-[#B7EE7A]" />
             Spending Analytics
           </h1>
-          <p className="text-white/50 text-sm">
+          <p className="text-foreground/50 text-sm">
             Platform-wide spending distribution by category
           </p>
         </div>
@@ -73,7 +73,7 @@ export default function SpendingAnalyticsPage() {
               className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                 days === opt.value
                   ? "bg-[#B7EE7A]/15 text-[#B7EE7A] border-[#B7EE7A]/30"
-                  : "bg-white/5 text-white/50 border-white/10 hover:text-white hover:bg-white/10"
+                  : "bg-muted/30 text-foreground/50 border-border hover:text-foreground hover:bg-muted"
               }`}
             >
               {opt.label}
@@ -90,26 +90,26 @@ export default function SpendingAnalyticsPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-wider font-medium mb-1">Total Volume</p>
-          <p className="text-2xl font-bold text-white">{isLoading ? "—" : ghs(grandTotal)}</p>
-          <p className="text-white/30 text-xs mt-1">Last {days} days</p>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-foreground/40 text-xs uppercase tracking-wider font-medium mb-1">Total Volume</p>
+          <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : ghs(grandTotal)}</p>
+          <p className="text-foreground/30 text-xs mt-1">Last {days} days</p>
         </div>
-        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-          <p className="text-white/40 text-xs uppercase tracking-wider font-medium mb-1">Transactions</p>
-          <p className="text-2xl font-bold text-white">{isLoading ? "—" : grandCount.toLocaleString()}</p>
-          <p className="text-white/30 text-xs mt-1">Categorised transfers</p>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-foreground/40 text-xs uppercase tracking-wider font-medium mb-1">Transactions</p>
+          <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : grandCount.toLocaleString()}</p>
+          <p className="text-foreground/30 text-xs mt-1">Categorised transfers</p>
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-20 bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="h-20 bg-muted/30 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : !data || data.length === 0 ? (
-        <div className="text-center py-24 text-white/30">
+        <div className="text-center py-24 text-foreground/30">
           <PieChart size={40} className="mx-auto mb-4 opacity-40" />
           <p>No spending data for this period</p>
         </div>
@@ -122,27 +122,27 @@ export default function SpendingAnalyticsPage() {
             return (
               <div
                 key={cat.category}
-                className="bg-[#161616] border border-white/5 rounded-xl p-5"
+                className="bg-card border border-border rounded-xl p-5"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-white font-medium text-sm">{label}</span>
+                    <span className="text-foreground font-medium text-sm">{label}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-white font-semibold text-sm">{ghs(cat.total)}</div>
-                    <div className="text-white/30 text-xs">{cat.count} txn{cat.count !== 1 ? "s" : ""}</div>
+                    <div className="text-foreground font-semibold text-sm">{ghs(cat.total)}</div>
+                    <div className="text-foreground/30 text-xs">{cat.count} txn{cat.count !== 1 ? "s" : ""}</div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{ width: `${barWidth}%`, backgroundColor: color }}
                     />
                   </div>
-                  <span className="text-xs text-white/40 w-12 text-right shrink-0">
+                  <span className="text-xs text-foreground/40 w-12 text-right shrink-0">
                     {cat.percentage.toFixed(1)}%
                   </span>
                 </div>

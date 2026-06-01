@@ -30,12 +30,12 @@ function CodeBlock({ code, language = "html" }: { code: string; language?: strin
   const { copied, copy } = useCopy(code);
   return (
     <div className="relative group">
-      <pre className="bg-black/40 border border-white/8 rounded-xl p-4 text-xs text-white/60 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+      <pre className="bg-black/40 border border-border rounded-xl p-4 text-xs text-foreground/60 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
         {code}
       </pre>
       <button
         onClick={copy}
-        className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+        className="absolute top-3 right-3 p-1.5 rounded-lg bg-muted/30 border border-border text-foreground/40 hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
       >
         {copied ? <Check size={13} className="text-[#B7EE7A]" /> : <Copy size={13} />}
       </button>
@@ -146,8 +146,8 @@ export default function EmbedPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Payment Embed Widget</h1>
-        <p className="text-white/40 text-sm mt-0.5">
+        <h1 className="text-xl font-bold text-foreground">Payment Embed Widget</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">
           Embed a pay button, QR code, or link on your website
         </p>
       </div>
@@ -156,14 +156,14 @@ export default function EmbedPage() {
         {/* Config panel */}
         <div className="space-y-5">
           {/* Embed type */}
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-semibold text-white mb-3">Widget type</p>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <p className="text-sm font-semibold text-foreground mb-3">Widget type</p>
             <div className="grid grid-cols-2 gap-2">
               {TYPES.map(({ id, label }) => (
                 <button
                   key={id}
                   onClick={() => setEmbedType(id)}
-                  className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors text-left ${embedType === id ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
+                  className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors text-left ${embedType === id ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-border text-foreground/50 hover:border-border hover:text-foreground/70"}`}
                 >
                   {label}
                 </button>
@@ -172,26 +172,26 @@ export default function EmbedPage() {
           </div>
 
           {/* Payment config */}
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5 space-y-4">
-            <p className="text-sm font-semibold text-white">Payment options</p>
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <p className="text-sm font-semibold text-foreground">Payment options</p>
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Amount (GHS) <span className="text-white/20">— leave blank for customer to enter</span></label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Amount (GHS) <span className="text-foreground/20">— leave blank for customer to enter</span></label>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Description <span className="text-white/20">optional</span></label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Description <span className="text-foreground/20">optional</span></label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="Order #1234, Event ticket…"
               />
             </div>
@@ -199,44 +199,44 @@ export default function EmbedPage() {
 
           {/* Style config (only for button/script) */}
           {(embedType === "button" || embedType === "script") && (
-            <div className="bg-[#161616] border border-white/5 rounded-xl p-5 space-y-4">
-              <p className="text-sm font-semibold text-white">Button style</p>
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+              <p className="text-sm font-semibold text-foreground">Button style</p>
               <div>
-                <label className="block text-xs text-white/40 mb-1.5">Button text</label>
+                <label className="block text-xs text-foreground/40 mb-1.5">Button text</label>
                 <input
                   value={buttonText}
                   onChange={(e) => setButtonText(e.target.value)}
-                  className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                  className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                   placeholder="Pay now"
                   maxLength={30}
                 />
               </div>
               <div>
-                <label className="block text-xs text-white/40 mb-1.5">Button color</label>
+                <label className="block text-xs text-foreground/40 mb-1.5">Button color</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
                     value={buttonColor}
                     onChange={(e) => setButtonColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg cursor-pointer border border-white/10 bg-transparent"
+                    className="w-10 h-10 rounded-lg cursor-pointer border border-border bg-transparent"
                   />
                   <input
                     type="text"
                     value={buttonColor}
                     onChange={(e) => setButtonColor(e.target.value)}
-                    className="w-28 bg-black/30 border border-white/8 rounded-xl px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                    className="w-28 bg-black/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground font-mono placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                   />
                 </div>
               </div>
               {embedType === "button" && (
                 <div>
-                  <label className="block text-xs text-white/40 mb-1.5">Size</label>
+                  <label className="block text-xs text-foreground/40 mb-1.5">Size</label>
                   <div className="flex gap-2">
                     {(["sm", "md", "lg"] as const).map((s) => (
                       <button
                         key={s}
                         onClick={() => setButtonSize(s)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${buttonSize === s ? "bg-white/10 border-white/20 text-white" : "border-white/8 text-white/40 hover:border-white/15"}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${buttonSize === s ? "bg-muted/50 border-border text-foreground" : "border-border text-foreground/40 hover:border-border"}`}
                       >
                         {sizeLabel[s]}
                       </button>
@@ -248,12 +248,12 @@ export default function EmbedPage() {
           )}
 
           {/* Generated code */}
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-semibold text-white mb-3">Generated code</p>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <p className="text-sm font-semibold text-foreground mb-3">Generated code</p>
             <CodeBlock code={snippets[embedType]} />
             {embedType === "script" && (
-              <p className="text-xs text-white/30 mt-3">
-                The JS widget script (<code className="text-white/50">embed.js</code>) renders a button that opens an inline checkout modal without leaving your page.
+              <p className="text-xs text-foreground/30 mt-3">
+                The JS widget script (<code className="text-foreground/50">embed.js</code>) renders a button that opens an inline checkout modal without leaving your page.
               </p>
             )}
           </div>
@@ -261,8 +261,8 @@ export default function EmbedPage() {
 
         {/* Live preview */}
         <div className="space-y-5">
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5 sticky top-6">
-            <p className="text-sm font-semibold text-white mb-4">Preview</p>
+          <div className="bg-card border border-border rounded-xl p-5 sticky top-6">
+            <p className="text-sm font-semibold text-foreground mb-4">Preview</p>
 
             {/* Simulated webpage */}
             <div className="bg-white rounded-xl p-6 min-h-40 flex flex-col items-center justify-center gap-4">
@@ -324,9 +324,9 @@ export default function EmbedPage() {
               )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <p className="text-xs text-white/30 mb-2">Payment URL</p>
-              <p className="text-xs font-mono text-white/50 break-all">{payUrl}</p>
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs text-foreground/30 mb-2">Payment URL</p>
+              <p className="text-xs font-mono text-foreground/50 break-all">{payUrl}</p>
               <a
                 href={payUrl}
                 target="_blank"

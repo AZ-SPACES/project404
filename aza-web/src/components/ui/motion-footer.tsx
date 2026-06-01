@@ -5,7 +5,13 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
-import { ChevronUp, Smartphone, Apple } from "lucide-react";
+import { ChevronUp, Apple } from "lucide-react";
+
+const GooglePlayIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M3.18 23.76c.31.17.67.19 1.01.04l12.2-7.05-2.55-2.55-10.66 9.56zm16.84-10.09L17.44 12l2.58-1.67L6.8.28C6.47.1 6.11.09 5.79.26L16.42 10.9l3.6 2.77zm2.16-3.41c-.33-.23-.77-.24-1.11-.03l-2.13 1.38 2.3 2.3 1.94-1.26c.71-.46.71-1.62 0-2.39zm-18.8 1.37l-2.03-2.03c-.29.32-.35.79-.1 1.17l2.13 2.81v-1.95z" />
+  </svg>
+);
 
 // Register ScrollTrigger safely for React
 if (typeof window !== "undefined") {
@@ -289,12 +295,12 @@ export function CinematicFooter() {
               <div className="flex flex-wrap justify-center gap-4 w-full">
                 <MagneticButton as="a" href="#" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
                   <Apple className="w-5 h-5 text-current" />
-                  Download iOS
+                  Download on the App Store
                 </MagneticButton>
-                
+
                 <MagneticButton as="a" href="#" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
-                  <Smartphone className="w-5 h-5 text-current" />
-                  Download Android
+                  <GooglePlayIcon className="w-5 h-5 text-current" />
+                  Get it on Google Play
                 </MagneticButton>
               </div>
 

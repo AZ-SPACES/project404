@@ -65,14 +65,14 @@ function PayoutModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="w-full max-w-sm bg-[#161616] border border-white/8 rounded-2xl p-6 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-foreground/30 hover:text-foreground hover:bg-muted/40 transition-colors">
           <X size={16} />
         </button>
-        <h3 className="text-base font-semibold text-white mb-5">Request payout</h3>
+        <h3 className="text-base font-semibold text-foreground mb-5">Request payout</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Amount (GHS)</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">Amount (GHS)</label>
             <input
               type="number" step="0.01" min="0.01" max={maxAmount} required
               value={amount} onChange={(e) => setAmount(e.target.value)}
@@ -81,7 +81,7 @@ function PayoutModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Passcode *</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">Passcode *</label>
             <input
               type="password" required
               value={passcode} onChange={(e) => setPasscode(e.target.value)}
@@ -90,7 +90,7 @@ function PayoutModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Note <span className="text-white/25 font-normal">optional</span></label>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">Note <span className="text-foreground/25 font-normal">optional</span></label>
             <input
               type="text"
               value={note} onChange={(e) => setNote(e.target.value)}
@@ -101,7 +101,7 @@ function PayoutModal({
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit" disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {submitting && <Loader2 size={14} className="animate-spin" />}
             {submitting ? "Submitting…" : "Submit request"}
@@ -172,13 +172,13 @@ function AutoPayoutPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-white">Automatic payouts</p>
-          <p className="text-xs text-white/35 mt-0.5">Automatically transfer your balance on a schedule</p>
+          <p className="text-sm font-medium text-foreground">Automatic payouts</p>
+          <p className="text-xs text-foreground/35 mt-0.5">Automatically transfer your balance on a schedule</p>
         </div>
         <button
           type="button"
           onClick={() => set("autoPayoutEnabled", !settings.autoPayoutEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoPayoutEnabled ? "bg-[#174717]" : "bg-white/15"}`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoPayoutEnabled ? "bg-[#174717]" : "bg-muted/50"}`}
         >
           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.autoPayoutEnabled ? "translate-x-6" : "translate-x-1"}`} />
         </button>
@@ -187,32 +187,32 @@ function AutoPayoutPanel() {
       {settings.autoPayoutEnabled && (
         <>
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">Schedule</label>
+            <label className="block text-xs text-foreground/40 mb-1.5">Schedule</label>
             <div className="grid grid-cols-3 gap-2">
               {(["DAILY", "WEEKLY", "MONTHLY"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => { set("autoPayoutSchedule", s); setDay(""); }}
-                  className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${settings.autoPayoutSchedule === s ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/50 hover:border-white/15 hover:text-white/70"}`}
+                  className={`py-2.5 rounded-xl text-xs font-medium border transition-colors ${settings.autoPayoutSchedule === s ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-border text-foreground/50 hover:border-border hover:text-foreground/70"}`}
                 >
                   {s}
                 </button>
               ))}
             </div>
             {settings.autoPayoutSchedule && (
-              <p className="text-xs text-white/30 mt-1.5">{scheduleLabel[settings.autoPayoutSchedule]}</p>
+              <p className="text-xs text-foreground/30 mt-1.5">{scheduleLabel[settings.autoPayoutSchedule]}</p>
             )}
           </div>
 
           {settings.autoPayoutSchedule === "WEEKLY" && (
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Day of week</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Day of week</label>
               <div className="grid grid-cols-7 gap-1">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
                   <button
                     key={d}
                     onClick={() => setDay(String(i + 1))}
-                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${day === String(i + 1) ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-white/8 text-white/40 hover:border-white/15"}`}
+                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${day === String(i + 1) ? "bg-[#B7EE7A]/10 border-[#B7EE7A]/40 text-[#B7EE7A]" : "border-border text-foreground/40 hover:border-border"}`}
                   >
                     {d}
                   </button>
@@ -223,7 +223,7 @@ function AutoPayoutPanel() {
 
           {settings.autoPayoutSchedule === "MONTHLY" && (
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Day of month (1–28)</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Day of month (1–28)</label>
               <input
                 type="number"
                 min="1"
@@ -237,7 +237,7 @@ function AutoPayoutPanel() {
           )}
 
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">Minimum balance (GHS)</label>
+            <label className="block text-xs text-foreground/40 mb-1.5">Minimum balance (GHS)</label>
             <input
               type="number"
               min="1"
@@ -257,7 +257,7 @@ function AutoPayoutPanel() {
         <button
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           {saving ? "Saving…" : "Save"}
@@ -312,8 +312,8 @@ export default function PayoutsPage() {
 
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Payouts</h1>
-          <p className="text-white/40 text-sm mt-0.5">Transfer your merchant earnings to your AZA wallet</p>
+          <h1 className="text-xl font-bold text-foreground">Payouts</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Transfer your merchant earnings to your AZA wallet</p>
         </div>
 
         {error && (
@@ -323,24 +323,24 @@ export default function PayoutsPage() {
         )}
 
         {/* Balance card */}
-        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+        <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium">Available balance</p>
-            <DollarSign size={14} className="text-white/20" />
+            <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium">Available balance</p>
+            <DollarSign size={14} className="text-foreground/20" />
           </div>
-          <p className="text-3xl font-bold text-white mb-1">
+          <p className="text-3xl font-bold text-foreground mb-1">
             {balance ? fmtGHS(balance.balance) : "—"}
           </p>
-          <p className="text-xs text-white/30">{balance?.currency ?? "GHS"} · Merchant wallet</p>
+          <p className="text-xs text-foreground/30">{balance?.currency ?? "GHS"} · Merchant wallet</p>
           {balance && balance.totalVolume > 0 && (
-            <p className="text-xs text-white/25 mt-1">
+            <p className="text-xs text-foreground/25 mt-1">
               Total processed: {fmtGHS(balance.totalVolume)}
             </p>
           )}
           <button
             onClick={() => setShowModal(true)}
             disabled={!balance || balance.balance <= 0}
-            className="mt-4 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="mt-4 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-30 disabled:cursor-not-allowed text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             <ArrowDownToLine size={15} />
             Request payout
@@ -348,30 +348,30 @@ export default function PayoutsPage() {
         </div>
 
         {/* Auto-payout schedule */}
-        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+        <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <RefreshCw size={15} className="text-white/40" />
-            <p className="text-sm font-semibold text-white">Auto-payout schedule</p>
+            <RefreshCw size={15} className="text-foreground/40" />
+            <p className="text-sm font-semibold text-foreground">Auto-payout schedule</p>
           </div>
           <AutoPayoutPanel />
         </div>
 
         {/* Payout history */}
-        <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5">
-            <p className="text-sm font-semibold text-white">Payout history</p>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">Payout history</p>
           </div>
           {payouts.length === 0 ? (
             <div className="py-16 text-center">
-              <ArrowDownToLine size={28} className="mx-auto mb-3 text-white/15" />
-              <p className="text-sm text-white/30">No payouts yet</p>
+              <ArrowDownToLine size={28} className="mx-auto mb-3 text-foreground/15" />
+              <p className="text-sm text-foreground/30">No payouts yet</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/4">
+                <tr className="border-b border-muted/40">
                   {["Date", "Amount", "Completed", "Status"].map((h, i) => (
-                    <th key={h} className={`px-5 py-3 text-[10px] font-semibold text-white/25 uppercase tracking-wider text-left ${
+                    <th key={h} className={`px-5 py-3 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider text-left ${
                       i === 2 ? "hidden lg:table-cell" : ""
                     }`}>{h}</th>
                   ))}
@@ -382,16 +382,16 @@ export default function PayoutsPage() {
                   const cfg = STATUS_CFG[p.status] ?? STATUS_CFG.PENDING;
                   const StatusIcon = cfg.icon;
                   return (
-                    <tr key={p.id} className="hover:bg-white/2 transition-colors">
+                    <tr key={p.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-5 py-3.5">
-                        <span className="text-xs text-white/60">{fmtDate(p.requestedAt)}</span>
+                        <span className="text-xs text-foreground/60">{fmtDate(p.requestedAt)}</span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="font-semibold text-white">{fmtGHS(p.amount)}</span>
-                        {p.note && <p className="text-[10px] text-white/30 mt-0.5">{p.note}</p>}
+                        <span className="font-semibold text-foreground">{fmtGHS(p.amount)}</span>
+                        {p.note && <p className="text-[10px] text-foreground/30 mt-0.5">{p.note}</p>}
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
-                        <span className="text-xs text-white/40">{fmtDate(p.completedAt)}</span>
+                        <span className="text-xs text-foreground/40">{fmtDate(p.completedAt)}</span>
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cfg.bgCls}`}>
@@ -411,4 +411,4 @@ export default function PayoutsPage() {
   );
 }
 
-const inputCls = "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all";
+const inputCls = "w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all";

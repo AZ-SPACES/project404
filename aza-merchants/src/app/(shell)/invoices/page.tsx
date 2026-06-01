@@ -20,7 +20,7 @@ function fmtDate(s: string | null) {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  DRAFT: "bg-white/10 text-white/50",
+  DRAFT: "bg-muted/50 text-foreground/50",
   SENT: "bg-blue-400/10 text-blue-400",
   PAID: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
   CANCELLED: "bg-red-400/10 text-red-400",
@@ -67,10 +67,10 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-md p-6">
+      <div className="relative bg-card border border-border rounded-2xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-bold text-white">New Invoice</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+          <h2 className="text-base font-bold text-foreground">New Invoice</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -78,28 +78,28 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="block text-xs text-white/40 mb-1.5">Customer Name</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Customer Name</label>
               <input
                 required
                 value={form.customerName}
                 onChange={(e) => setForm((f) => ({ ...f, customerName: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="John Doe"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-white/40 mb-1.5">Customer Email</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Customer Email</label>
               <input
                 required
                 type="email"
                 value={form.customerEmail}
                 onChange={(e) => setForm((f) => ({ ...f, customerEmail: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="john@example.com"
               />
             </div>
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Amount (GHS)</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Amount (GHS)</label>
               <input
                 required
                 type="number"
@@ -107,25 +107,25 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
                 step="0.01"
                 value={form.amount}
                 onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className="block text-xs text-white/40 mb-1.5">Due Date</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Due Date</label>
               <input
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-white/40 mb-1.5">Description</label>
+              <label className="block text-xs text-foreground/40 mb-1.5">Description</label>
               <input
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+                className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
                 placeholder="Services rendered"
               />
             </div>
@@ -134,13 +134,13 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (in
           {error && <p className="text-xs text-red-400 bg-red-400/5 border border-red-400/20 rounded-xl px-3 py-2">{error}</p>}
 
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted/30 transition-colors">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-foreground transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Create Invoice
@@ -214,19 +214,19 @@ export default function InvoicesPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Invoices</h1>
-          <p className="text-white/40 text-sm mt-0.5">Create and send payment invoices to customers</p>
+          <h1 className="text-xl font-bold text-foreground">Invoices</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Create and send payment invoices to customers</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-foreground rounded-xl transition-colors"
         >
           <Plus size={15} />
           New Invoice
         </button>
       </div>
 
-      <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
@@ -237,8 +237,8 @@ export default function InvoicesPage() {
           </div>
         ) : !page || page.content.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <FileText size={32} className="text-white/15" />
-            <p className="text-white/40 text-sm">No invoices yet</p>
+            <FileText size={32} className="text-foreground/15" />
+            <p className="text-foreground/40 text-sm">No invoices yet</p>
             <button onClick={() => setShowCreate(true)} className="text-sm text-[#B7EE7A] hover:underline">
               Create your first invoice
             </button>
@@ -248,39 +248,39 @@ export default function InvoicesPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-white/30">Invoice</th>
-                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-white/30 hidden md:table-cell">Customer</th>
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-white/30">Amount</th>
-                    <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-white/30">Status</th>
-                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-white/30 hidden md:table-cell">Due</th>
+                  <tr className="border-b border-border">
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/30">Invoice</th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/30 hidden md:table-cell">Customer</th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-foreground/30">Amount</th>
+                    <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-foreground/30">Status</th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-foreground/30 hidden md:table-cell">Due</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
                   {page.content.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={inv.id} className="hover:bg-muted/10 transition-colors">
                       <td className="px-5 py-3.5">
-                        <p className="text-sm font-medium text-white font-mono">
+                        <p className="text-sm font-medium text-foreground font-mono">
                           {inv.referenceId ?? inv.id.slice(0, 8).toUpperCase()}
                         </p>
                         {inv.description && (
-                          <p className="text-xs text-white/40 mt-0.5 truncate max-w-xs">{inv.description}</p>
+                          <p className="text-xs text-foreground/40 mt-0.5 truncate max-w-xs">{inv.description}</p>
                         )}
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
-                        <p className="text-sm text-white">{inv.customerName}</p>
-                        <p className="text-xs text-white/40">{inv.customerEmail}</p>
+                        <p className="text-sm text-foreground">{inv.customerName}</p>
+                        <p className="text-xs text-foreground/40">{inv.customerEmail}</p>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-sm font-medium text-white">
+                      <td className="px-5 py-3.5 text-right text-sm font-medium text-foreground">
                         {fmt(inv.amount, inv.currency)}
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE[inv.status] ?? "bg-white/10 text-white/50"}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE[inv.status] ?? "bg-muted/50 text-foreground/50"}`}>
                           {inv.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-xs text-white/40 hidden md:table-cell">
+                      <td className="px-5 py-3.5 text-right text-xs text-foreground/40 hidden md:table-cell">
                         {fmtDate(inv.dueDate)}
                       </td>
                       <td className="px-5 py-3.5">
@@ -290,7 +290,7 @@ export default function InvoicesPage() {
                               href={inv.checkoutUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                              className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 transition-colors"
                               title="Open payment link"
                             >
                               <ExternalLink size={14} />
@@ -325,22 +325,22 @@ export default function InvoicesPage() {
             </div>
 
             {page.totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
-                <p className="text-xs text-white/30">
+              <div className="flex items-center justify-between px-5 py-3 border-t border-border">
+                <p className="text-xs text-foreground/30">
                   {page.totalElements} invoices · page {page.number + 1} of {page.totalPages}
                 </p>
                 <div className="flex gap-1">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={() => setCurrentPage((p) => p + 1)}
                     disabled={currentPage >= page.totalPages - 1}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight size={16} />
                   </button>

@@ -28,7 +28,7 @@ const ACTION_STYLES: Record<string, string> = {
 };
 
 function ActionBadge({ action }: { action: string }) {
-  const cls = ACTION_STYLES[action] ?? "bg-white/10 text-white/50 border-white/10";
+  const cls = ACTION_STYLES[action] ?? "bg-muted/50 text-foreground/50 border-border";
   const label = action.replace(/_/g, " ");
   return (
     <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${cls}`}>
@@ -48,8 +48,8 @@ export default function AuditLogPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-white mb-1">Audit Log</h1>
-        <p className="text-white/50 text-sm">All admin actions, newest first</p>
+        <h1 className="text-2xl font-semibold text-foreground mb-1">Audit Log</h1>
+        <p className="text-foreground/50 text-sm">All admin actions, newest first</p>
       </div>
 
       {error && (
@@ -61,52 +61,52 @@ export default function AuditLogPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-muted/30 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : data?.content.length === 0 ? (
-        <div className="text-center py-24 text-white/30">
+        <div className="text-center py-24 text-foreground/30">
           <ScrollText size={40} className="mx-auto mb-4 opacity-40" />
           <p>No audit entries yet</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/5 overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.03]">
-                <th className="text-left px-4 py-3 text-white/40 font-medium">Admin</th>
-                <th className="text-left px-4 py-3 text-white/40 font-medium">Action</th>
-                <th className="text-left px-4 py-3 text-white/40 font-medium">Target User</th>
-                <th className="text-left px-4 py-3 text-white/40 font-medium">Details</th>
-                <th className="text-right px-4 py-3 text-white/40 font-medium">Timestamp</th>
+              <tr className="border-b border-border bg-white/[0.03]">
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">Admin</th>
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">Action</th>
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">Target User</th>
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">Details</th>
+                <th className="text-right px-4 py-3 text-foreground/40 font-medium">Timestamp</th>
               </tr>
             </thead>
             <tbody>
               {data?.content.map((entry, i) => (
                 <tr
                   key={entry.id}
-                  className={`border-b border-white/5 transition-colors ${
-                    i % 2 === 0 ? "" : "bg-white/[0.02]"
+                  className={`border-b border-border transition-colors ${
+                    i % 2 === 0 ? "" : "bg-muted/10"
                   }`}
                 >
                   <td className="px-4 py-3">
-                    <div className="text-white font-medium text-sm">{entry.adminName}</div>
-                    <div className="text-white/40 text-xs">{entry.adminEmail}</div>
+                    <div className="text-foreground font-medium text-sm">{entry.adminName}</div>
+                    <div className="text-foreground/40 text-xs">{entry.adminEmail}</div>
                   </td>
                   <td className="px-4 py-3">
                     <ActionBadge action={entry.action} />
                   </td>
-                  <td className="px-4 py-3 text-white/60 text-sm">
+                  <td className="px-4 py-3 text-foreground/60 text-sm">
                     {entry.targetUserEmail ?? (
-                      <span className="text-white/25">—</span>
+                      <span className="text-foreground/25">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-white/50 text-xs max-w-[220px]">
+                  <td className="px-4 py-3 text-foreground/50 text-xs max-w-[220px]">
                     <span className="line-clamp-2">
-                      {entry.details ?? <span className="text-white/25">—</span>}
+                      {entry.details ?? <span className="text-foreground/25">—</span>}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-white/40 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-right text-foreground/40 text-xs whitespace-nowrap">
                     {fmt(entry.timestamp)}
                   </td>
                 </tr>
@@ -117,11 +117,11 @@ export default function AuditLogPage() {
       )}
 
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-white/50 mt-8">
+        <div className="flex items-center justify-between text-sm text-foreground/50 mt-8">
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0 || isLoading}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
+            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={14} /> Previous
           </button>
@@ -129,7 +129,7 @@ export default function AuditLogPage() {
           <button
             onClick={() => setPage(p => Math.min(data.totalPages - 1, p + 1))}
             disabled={page >= data.totalPages - 1 || isLoading}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
+            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
           >
             Next <ChevronRight size={14} />
           </button>

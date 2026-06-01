@@ -36,7 +36,7 @@ export default function StoreQrPage() {
   if (!merchant) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-white/40 text-sm">No merchant account found.</p>
+        <p className="text-foreground/40 text-sm">No merchant account found.</p>
       </div>
     );
   }
@@ -66,21 +66,21 @@ export default function StoreQrPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Store QR Code</h1>
-        <p className="text-white/40 text-sm mt-0.5">
+        <h1 className="text-xl font-bold text-foreground">Store QR Code</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">
           Customers scan this to pay you any amount in person
         </p>
       </div>
 
       {/* Poster Card */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-6 flex flex-col items-center">
+      <div className="bg-card border border-border rounded-xl p-6 flex flex-col items-center">
         {/* Business Identity */}
         <div className="flex items-center gap-3 mb-6">
           {merchant.logoUrl ? (
             <img
               src={merchant.logoUrl}
               alt={merchant.businessName}
-              className="w-12 h-12 rounded-xl object-cover border border-white/10"
+              className="w-12 h-12 rounded-xl object-cover border border-border"
             />
           ) : (
             <div className="w-12 h-12 rounded-xl bg-[#B7EE7A]/15 border border-[#B7EE7A]/25 flex items-center justify-center flex-shrink-0">
@@ -90,8 +90,8 @@ export default function StoreQrPage() {
             </div>
           )}
           <div>
-            <p className="text-base font-bold text-white">{merchant.businessName}</p>
-            <p className="text-sm text-white/40">@{merchant.businessHandle}</p>
+            <p className="text-base font-bold text-foreground">{merchant.businessName}</p>
+            <p className="text-sm text-foreground/40">@{merchant.businessHandle}</p>
           </div>
         </div>
 
@@ -134,14 +134,14 @@ export default function StoreQrPage() {
         <div className="flex flex-col gap-2 w-full max-w-xs mt-5">
           <button
             onClick={copyLink}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/6 border border-white/10 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-muted/30 border border-border text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
           >
             {copied ? <Check size={15} className="text-[#B7EE7A]" /> : <Copy size={15} />}
             {copied ? "Copied!" : "Copy payment link"}
           </button>
           <button
             onClick={share}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white/6 border border-white/10 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-muted/30 border border-border text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
           >
             <Share2 size={15} />
             Share
@@ -150,7 +150,7 @@ export default function StoreQrPage() {
             href={printQrUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-foreground transition-colors"
           >
             <ExternalLink size={15} />
             Save / Print Poster
@@ -159,13 +159,13 @@ export default function StoreQrPage() {
       </div>
 
       {/* Static link info */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-        <p className="text-sm font-semibold text-white mb-3">Your store payment link</p>
-        <div className="bg-black/30 border border-white/8 rounded-xl p-3.5 mb-3">
-          <p className="text-[10px] text-white/30 mb-1.5 uppercase tracking-wider font-medium">Static URL</p>
-          <p className="text-xs font-mono text-white/70 break-all">{staticLink}</p>
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-semibold text-foreground mb-3">Your store payment link</p>
+        <div className="bg-black/30 border border-border rounded-xl p-3.5 mb-3">
+          <p className="text-[10px] text-foreground/30 mb-1.5 uppercase tracking-wider font-medium">Static URL</p>
+          <p className="text-xs font-mono text-foreground/70 break-all">{staticLink}</p>
         </div>
-        <p className="text-xs text-white/30">
+        <p className="text-xs text-foreground/30">
           This link is permanent and tied to your business handle. Customers can open it to pay any amount directly to your merchant account.
         </p>
       </div>

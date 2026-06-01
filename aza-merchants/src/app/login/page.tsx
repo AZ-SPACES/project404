@@ -4,12 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { preLogin, verifyLoginOtp, getMe } from "@/lib/merchant-api";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Phone } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, AtSign, Phone, Lock } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { FloatingPaths } from "@/components/floating-paths";
 
 type Step = "credentials" | "otp";
-
-const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +27,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isPhone = /^\+?[\d\s\-()]{7,}$/.test(identifier.trim()) && !identifier.includes("@");
+  const isPhone =
+    /^\+?[\d\s\-()]{7,}$/.test(identifier.trim()) &&
+    !identifier.includes("@");
 
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -31,8 +38,8 @@ export default function LoginPage() {
     try {
       await preLogin(identifier.trim(), password);
       setStep("otp");
-    } catch (err: any) {
-      setError(err.message ?? "Login failed. Check your credentials.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Login failed. Check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -47,8 +54,9 @@ export default function LoginPage() {
       let merchant = null;
       try {
         merchant = await getMe();
-      } catch (err: any) {
-        if (err.message?.includes("404") || err.message?.includes("not found")) {
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg.includes("404") || msg.includes("not found")) {
           router.replace("/onboarding");
           return;
         }
@@ -66,152 +74,200 @@ export default function LoginPage() {
       } else {
         router.replace("/onboarding/status");
       }
-    } catch (err: any) {
-      setError(err.message ?? "Invalid OTP code. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid OTP code. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-6">
-            <img src="/logo.png" alt="Aza Merchants" className="h-8 w-auto" />
-          </div>
+    <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
+      {/* Left panel */}
+      <div className="relative hidden h-full flex-col border-r border-border bg-secondary dark:bg-secondary/20 p-10 lg:flex">
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background" />
+        <img src="/logo.png" alt="AZA Merchants" className="mr-auto h-7 w-auto relative z-10" />
+        <div className="z-10 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-xl text-foreground">
+              &ldquo;AZA has transformed how we collect payments. Fast, reliable, and built for Ghana.&rdquo;
+            </p>
+            <footer className="font-mono font-semibold text-sm text-muted-foreground">
+              ~ Kwame Asante
+            </footer>
+          </blockquote>
+        </div>
+        <div className="absolute inset-0">
+          <FloatingPaths position={1} />
+          <FloatingPaths position={-1} />
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="relative flex min-h-screen flex-col justify-center px-8">
+        <ThemeToggle className="absolute top-5 right-5 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" />
+        {/* Ambient shades */}
+        <div
+          aria-hidden
+          className="absolute inset-0 isolate -z-10 opacity-60 contain-strict"
+        >
+          <div className="absolute top-0 right-0 h-320 w-140 -translate-y-87.5 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,--theme(--color-foreground/.06)_0,hsla(0,0%,55%,.02)_50%,--theme(--color-foreground/.01)_80%)]" />
+          <div className="absolute top-0 right-0 h-320 w-60 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)] [translate:5%_-50%]" />
+          <div className="absolute top-0 right-0 h-320 w-60 -translate-y-87.5 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)]" />
+        </div>
+
+        <div className="mx-auto space-y-5 sm:w-sm">
+          {/* Mobile logo */}
+          <img
+            src="/logo.png"
+            alt="AZA Merchants"
+            className="h-7 w-auto lg:hidden"
+          />
+
           {step === "credentials" ? (
             <>
-              <h1 className="text-2xl font-bold text-white">Sign in to your account</h1>
-              <p className="text-white/45 text-sm mt-1.5">Use your AZA account credentials</p>
+              <div className="flex flex-col space-y-1">
+                <h1 className="font-bold text-2xl tracking-wide">Sign in to your account</h1>
+                <p className="text-base text-muted-foreground">
+                  Use your AZA account credentials
+                </p>
+              </div>
+
+              <form onSubmit={handleCredentials} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Email or phone number
+                  </label>
+                  <InputGroup>
+                    <InputGroupInput
+                      type="text"
+                      required
+                      autoComplete="username"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="you@example.com or +233 XX XXX XXXX"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      {isPhone ? <Phone size={14} /> : <AtSign size={14} />}
+                    </InputGroupAddon>
+                  </InputGroup>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <InputGroup>
+                    <InputGroupAddon align="inline-start">
+                      <Lock size={14} />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      type={showPw ? "text" : "password"}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowPw((v) => !v)}
+                        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </div>
+
+                {error && (
+                  <div className="px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-9 bg-[#174717] hover:bg-[#1e5e1e] text-white border-0"
+                >
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {loading ? "Sending code…" : "Continue"}
+                </Button>
+              </form>
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-white">Enter your code</h1>
-              <p className="text-white/45 text-sm mt-1.5">
-                We sent a 6-digit code to{" "}
-                <span className="text-white/70 font-medium">{identifier.trim()}</span>
-              </p>
-            </>
-          )}
-        </div>
-
-        {step === "credentials" ? (
-          <form onSubmit={handleCredentials} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">
-                Email or phone number
-              </label>
-              <div className="relative">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25">
-                  {isPhone ? <Phone size={14} /> : <Mail size={14} />}
-                </div>
-                <input
-                  type="text"
-                  required
-                  autoComplete="username"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="you@example.com or +233 XX XXX XXXX"
-                  className={`${inputCls} pl-9`}
-                />
+              <div className="flex flex-col space-y-1">
+                <h1 className="font-bold text-2xl tracking-wide">Enter your code</h1>
+                <p className="text-base text-muted-foreground">
+                  We sent a 6-digit code to{" "}
+                  <span className="text-foreground font-medium">{identifier.trim()}</span>
+                </p>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={`${inputCls} pr-10`}
-                />
+              <form onSubmit={handleOtp} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">
+                    Verification code
+                  </label>
+                  <InputGroup>
+                    <InputGroupInput
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d{6}"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      autoComplete="one-time-code"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="000000"
+                      className="text-center tracking-[0.4em] text-lg font-mono"
+                    />
+                  </InputGroup>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Check your {isPhone ? "SMS" : "email"} for the 6-digit code
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full h-9 bg-[#174717] hover:bg-[#1e5e1e] text-white border-0"
+                >
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {loading ? "Verifying…" : "Sign in"}
+                </Button>
+
                 <button
                   type="button"
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  onClick={() => {
+                    setStep("credentials");
+                    setOtp("");
+                    setError(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                 >
-                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <ArrowLeft size={12} /> Back
                 </button>
-              </div>
-            </div>
+              </form>
+            </>
+          )}
 
-            {error && (
-              <div className="px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-1"
-            >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {loading ? "Sending code…" : "Continue"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">
-                Verification code
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                required
-                autoFocus
-                autoComplete="one-time-code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                placeholder="000000"
-                className={`${inputCls} text-center tracking-[0.4em] text-lg font-mono`}
-              />
-              <p className="text-[11px] text-white/25 mt-1.5 text-center">
-                Check your {isPhone ? "SMS" : "email"} for the 6-digit code
-              </p>
-            </div>
-
-            {error && (
-              <div className="px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || otp.length !== 6}
-              className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-            >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {loading ? "Verifying…" : "Sign in"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { setStep("credentials"); setOtp(""); setError(null); }}
-              className="w-full flex items-center justify-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors py-1"
-            >
-              <ArrowLeft size={12} /> Back
-            </button>
-          </form>
-        )}
-
-        <p className="text-center text-xs text-white/25 mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-[#B7EE7A] hover:underline">
-            Create one
-          </Link>
-        </p>
+          <p className="text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="text-[#B7EE7A] hover:underline">
+              Create one
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

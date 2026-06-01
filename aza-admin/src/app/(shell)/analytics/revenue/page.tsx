@@ -30,7 +30,7 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  color = "text-white",
+  color = "text-foreground",
 }: {
   label: string;
   value: string | number;
@@ -38,14 +38,14 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+    <div className="bg-card border border-border rounded-2xl p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-white/50 text-xs font-medium uppercase tracking-wider">{label}</p>
+          <p className="text-foreground/50 text-xs font-medium uppercase tracking-wider">{label}</p>
           <p className={`text-2xl font-semibold mt-1.5 ${color}`}>{value}</p>
         </div>
-        <div className="p-2 rounded-xl bg-white/5">
-          <Icon size={18} className="text-white/40" />
+        <div className="p-2 rounded-xl bg-muted/30">
+          <Icon size={18} className="text-foreground/40" />
         </div>
       </div>
     </div>
@@ -72,8 +72,8 @@ export default function RevenueDashboardPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Transaction Volume & Revenue</h1>
-        <p className="text-white/40 text-sm mt-0.5">Platform transaction activity and trends</p>
+        <h1 className="text-2xl font-semibold text-foreground">Transaction Volume & Revenue</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Platform transaction activity and trends</p>
       </div>
 
       {/* Stat cards */}
@@ -89,7 +89,7 @@ export default function RevenueDashboardPage() {
             label="Total Transactions"
             value={totals.count.toLocaleString()}
             icon={ArrowLeftRight}
-            color="text-white"
+            color="text-foreground"
           />
           <StatCard
             label="Avg Transaction"
@@ -101,13 +101,13 @@ export default function RevenueDashboardPage() {
             label="Active Users"
             value={totals.activeUsers.toLocaleString()}
             icon={Users}
-            color="text-white"
+            color="text-foreground"
           />
         </div>
       )}
 
       {/* Period selector */}
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
         {PERIOD_OPTIONS.map((opt) => (
           <button
             key={opt.value}
@@ -115,7 +115,7 @@ export default function RevenueDashboardPage() {
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
               months === opt.value
                 ? "bg-[#B7EE7A] text-black"
-                : "text-white/50 hover:text-white"
+                : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {opt.label}
@@ -131,15 +131,15 @@ export default function RevenueDashboardPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-foreground/30" size={24} />
         </div>
       ) : (
         <>
           {/* Bar chart */}
           {chartData.length > 0 && (
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-6">
-              <h2 className="text-sm font-semibold text-white mb-1">Monthly Volume</h2>
-              <p className="text-xs text-white/35 mb-6">Transaction volume by month</p>
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h2 className="text-sm font-semibold text-foreground mb-1">Monthly Volume</h2>
+              <p className="text-xs text-foreground/35 mb-6">Transaction volume by month</p>
               <div className="flex items-end gap-2" style={{ height: "160px" }}>
                 {chartData.map((m) => {
                   const heightPct = (m.volume / maxVolume) * 100;
@@ -156,7 +156,7 @@ export default function RevenueDashboardPage() {
                           title={`${fmtMonth(m.month)}: ${fmtGhs(m.volume)}`}
                         />
                       </div>
-                      <span className="text-[9px] text-white/35 text-center leading-tight whitespace-nowrap">
+                      <span className="text-[9px] text-foreground/35 text-center leading-tight whitespace-nowrap">
                         {fmtMonth(m.month).replace(" ", "\n")}
                       </span>
                     </div>
@@ -168,40 +168,40 @@ export default function RevenueDashboardPage() {
 
           {/* Monthly table */}
           {tableData.length > 0 && (
-            <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                  <tr className="border-b border-border">
+                    <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-foreground/35">
                       Month
                     </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-foreground/35">
                       Volume
                     </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-foreground/35">
                       Transactions
                     </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-foreground/35">
                       Avg Transaction
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border">
                   {tableData.map((m, idx) => (
                     <tr
                       key={m.month}
-                      className={idx % 2 === 0 ? "bg-white/[0.01]" : ""}
+                      className={idx % 2 === 0 ? "bg-muted/5" : ""}
                     >
-                      <td className="px-5 py-3 text-sm font-medium text-white">
+                      <td className="px-5 py-3 text-sm font-medium text-foreground">
                         {fmtMonth(m.month)}
                       </td>
                       <td className="px-5 py-3 text-sm text-right text-[#B7EE7A] font-semibold">
                         {fmtGhs(m.volume)}
                       </td>
-                      <td className="px-5 py-3 text-sm text-right text-white/70">
+                      <td className="px-5 py-3 text-sm text-right text-foreground/70">
                         {m.count.toLocaleString()}
                       </td>
-                      <td className="px-5 py-3 text-sm text-right text-white/70">
+                      <td className="px-5 py-3 text-sm text-right text-foreground/70">
                         {fmtGhs(m.avgTransaction)}
                       </td>
                     </tr>
@@ -212,7 +212,7 @@ export default function RevenueDashboardPage() {
           )}
 
           {tableData.length === 0 && !isLoading && (
-            <div className="text-center py-20 text-white/25">
+            <div className="text-center py-20 text-foreground/25">
               <TrendingUp size={36} className="mx-auto mb-3 opacity-40" />
               <p className="text-sm">No revenue data available</p>
             </div>

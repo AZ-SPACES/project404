@@ -25,7 +25,7 @@ const STATUS_CFG: Record<string, { icon: React.ElementType; cls: string; label: 
   COMPLETED: { icon: CheckCircle2, cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20", label: "Paid" },
   PENDING:   { icon: Clock,        cls: "text-amber-400 bg-amber-500/10 border-amber-500/20",       label: "Pending" },
   CANCELLED: { icon: XCircle,      cls: "text-red-400 bg-red-500/10 border-red-500/20",              label: "Cancelled" },
-  EXPIRED:   { icon: Ban,          cls: "text-white/30 bg-white/5 border-white/10",                  label: "Expired" },
+  EXPIRED:   { icon: Ban,          cls: "text-foreground/30 bg-muted/30 border-border",                  label: "Expired" },
   REFUNDED:  { icon: RotateCcw,    cls: "text-blue-400 bg-blue-500/10 border-blue-500/20",           label: "Refunded" },
 };
 
@@ -62,24 +62,24 @@ function DetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden">
+      <div className="relative bg-card border border-border rounded-2xl w-full max-w-lg overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <p className="text-xs text-white/30 font-mono">{session.id}</p>
-            <p className="text-sm font-semibold text-white mt-0.5">{session.description || "Payment"}</p>
+            <p className="text-xs text-foreground/30 font-mono">{session.id}</p>
+            <p className="text-sm font-semibold text-foreground mt-0.5">{session.description || "Payment"}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 transition-colors">
             <X size={16} />
           </button>
         </div>
 
         {/* Amount + status */}
-        <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold text-white font-mono">{fmtGHS(session.amount)}</p>
+            <p className="text-2xl font-bold text-foreground font-mono">{fmtGHS(session.amount)}</p>
             {session.platformFee != null && (
-              <p className="text-xs text-white/30 mt-1">
+              <p className="text-xs text-foreground/30 mt-1">
                 Fee: {fmtGHS(session.platformFee)} · Net: {fmtGHS(session.netAmount ?? 0)}
               </p>
             )}
@@ -101,27 +101,27 @@ function DetailModal({
             { label: "Currency", value: session.currency },
           ].filter(({ value }) => value !== "—" || true).map(({ label, value }) => value !== "—" && (
             <div key={label} className="flex justify-between text-sm">
-              <span className="text-white/35">{label}</span>
-              <span className="text-white/70">{value}</span>
+              <span className="text-foreground/35">{label}</span>
+              <span className="text-foreground/70">{value}</span>
             </div>
           ))}
 
           {session.successUrl && (
             <div className="flex justify-between text-sm gap-4">
-              <span className="text-white/35 flex-shrink-0">Success URL</span>
-              <span className="text-white/50 text-xs font-mono truncate">{session.successUrl}</span>
+              <span className="text-foreground/35 flex-shrink-0">Success URL</span>
+              <span className="text-foreground/50 text-xs font-mono truncate">{session.successUrl}</span>
             </div>
           )}
           {session.cancelUrl && (
             <div className="flex justify-between text-sm gap-4">
-              <span className="text-white/35 flex-shrink-0">Cancel URL</span>
-              <span className="text-white/50 text-xs font-mono truncate">{session.cancelUrl}</span>
+              <span className="text-foreground/35 flex-shrink-0">Cancel URL</span>
+              <span className="text-foreground/50 text-xs font-mono truncate">{session.cancelUrl}</span>
             </div>
           )}
           {session.metadata && (
             <div className="mt-2">
-              <p className="text-xs text-white/35 mb-1.5">Metadata</p>
-              <pre className="text-[11px] text-white/50 bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 overflow-x-auto whitespace-pre-wrap break-all">
+              <p className="text-xs text-foreground/35 mb-1.5">Metadata</p>
+              <pre className="text-[11px] text-foreground/50 bg-black/30 border border-border rounded-xl px-3.5 py-2.5 overflow-x-auto whitespace-pre-wrap break-all">
                 {(() => { try { return JSON.stringify(JSON.parse(session.metadata), null, 2); } catch { return session.metadata; } })()}
               </pre>
             </div>
@@ -145,7 +145,7 @@ function DetailModal({
               href={session.checkoutUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/8 text-white/60 hover:text-white text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-border text-foreground/60 hover:text-foreground text-sm font-medium transition-colors"
             >
               Open Link
             </a>
@@ -225,15 +225,15 @@ export default function TransactionsPage() {
 
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-white">Transactions</h1>
-          <p className="text-white/40 text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-foreground">Transactions</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">
             {data ? `${data.totalElements.toLocaleString()} total` : "All payment sessions"}
           </p>
         </div>
         {data && data.content.length > 0 && (
           <button
             onClick={() => exportCsv(data.content)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/8 text-sm text-white/60 hover:text-white hover:bg-white/8 transition-colors flex-shrink-0"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-muted/30 border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors flex-shrink-0"
           >
             <Download size={14} />
             Export CSV
@@ -252,22 +252,22 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-white/30" size={22} />
+            <Loader2 className="animate-spin text-foreground/30" size={22} />
           </div>
         ) : data?.content.length === 0 ? (
           <div className="py-16 text-center">
-            <ArrowLeftRight size={28} className="mx-auto mb-3 text-white/15" />
-            <p className="text-sm text-white/30">No transactions found</p>
+            <ArrowLeftRight size={28} className="mx-auto mb-3 text-foreground/15" />
+            <p className="text-sm text-foreground/30">No transactions found</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/5">
+              <tr className="border-b border-border">
                 {["Description", "Date", "Amount", "Fee", "Net", "Status"].map((h, i) => (
-                  <th key={h} className={`px-5 py-3 text-[10px] font-semibold text-white/25 uppercase tracking-wider text-left ${
+                  <th key={h} className={`px-5 py-3 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider text-left ${
                     i === 1 ? "hidden sm:table-cell" : ""
                   } ${i === 3 ? "hidden md:table-cell" : ""}`}>
                     {h}
@@ -283,29 +283,29 @@ export default function TransactionsPage() {
                   <tr
                     key={session.id}
                     onClick={() => setSelected(session)}
-                    className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    className="hover:bg-muted/10 transition-colors cursor-pointer"
                   >
                     <td className="px-5 py-3.5">
-                      <p className="font-medium text-white/80 text-xs truncate max-w-[160px]">
+                      <p className="font-medium text-foreground/80 text-xs truncate max-w-[160px]">
                         {session.description || "Payment"}
                       </p>
-                      <p className="text-[10px] text-white/30 font-mono mt-0.5 truncate max-w-[160px]">{session.id}</p>
+                      <p className="text-[10px] text-foreground/30 font-mono mt-0.5 truncate max-w-[160px]">{session.id}</p>
                     </td>
                     <td className="px-5 py-3.5 hidden sm:table-cell">
-                      <span className="text-xs text-white/40">
+                      <span className="text-xs text-foreground/40">
                         {fmtDate(session.completedAt ?? session.createdAt)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-semibold text-white font-mono">{fmtGHS(session.amount)}</span>
+                      <span className="font-semibold text-foreground font-mono">{fmtGHS(session.amount)}</span>
                     </td>
                     <td className="px-5 py-3.5 hidden md:table-cell">
-                      <span className="text-white/35 font-mono text-xs">
+                      <span className="text-foreground/35 font-mono text-xs">
                         {session.platformFee != null ? `-${fmtGHS(session.platformFee)}` : "—"}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-medium text-white/70 font-mono text-xs">
+                      <span className="font-medium text-foreground/70 font-mono text-xs">
                         {session.netAmount != null ? fmtGHS(session.netAmount) : "—"}
                       </span>
                     </td>
@@ -325,11 +325,11 @@ export default function TransactionsPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => load(page - 1, status)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">
+          <button onClick={() => load(page - 1, status)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Previous
           </button>
-          <span className="text-sm text-white/35">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => load(page + 1, status)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">
+          <span className="text-sm text-foreground/35">{page + 1} / {data.totalPages}</span>
+          <button onClick={() => load(page + 1, status)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Next
           </button>
         </div>
@@ -340,13 +340,13 @@ export default function TransactionsPage() {
 
 function FilterTabs({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex gap-1 bg-white/5 p-1 rounded-xl flex-wrap">
+    <div className="flex gap-1 bg-muted/30 p-1 rounded-xl flex-wrap">
       {options.map((o) => (
         <button
           key={o}
           onClick={() => onChange(o)}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            value === o ? "bg-[#174717] text-white" : "text-white/45 hover:text-white"
+            value === o ? "bg-[#174717] text-foreground" : "text-foreground/45 hover:text-foreground"
           }`}
         >
           {o.charAt(0) + o.slice(1).toLowerCase()}

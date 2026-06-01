@@ -22,13 +22,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, accent, sub }: StatCardProps) {
   return (
-    <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-5">
+    <div className="bg-card border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-white/50 text-sm">{label}</span>
+        <span className="text-foreground/50 text-sm">{label}</span>
         <span className={accent}>{icon}</span>
       </div>
-      <div className="text-2xl font-semibold text-white">{value}</div>
-      {sub && <div className="text-white/30 text-xs mt-1">{sub}</div>}
+      <div className="text-2xl font-semibold text-foreground">{value}</div>
+      {sub && <div className="text-foreground/30 text-xs mt-1">{sub}</div>}
     </div>
   );
 }
@@ -64,10 +64,10 @@ function StackedBar({ data }: { data: KycAnalytics }) {
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
         {segments.map((s) => (
-          <div key={s.key} className="flex items-center gap-2 text-xs text-white/50">
+          <div key={s.key} className="flex items-center gap-2 text-xs text-foreground/50">
             <div className={`w-2.5 h-2.5 rounded-full ${s.bg}`} />
             <span>{s.label}</span>
-            <span className="text-white/30">
+            <span className="text-foreground/30">
               {s.value.toLocaleString()} ({total > 0 ? ((s.value / total) * 100).toFixed(1) : 0}%)
             </span>
           </div>
@@ -86,7 +86,7 @@ export default function KycAnalyticsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-white/40" size={28} />
+        <Loader2 className="animate-spin text-foreground/40" size={28} />
       </div>
     );
   }
@@ -108,8 +108,8 @@ export default function KycAnalyticsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white mb-1">KYC Analytics</h1>
-        <p className="text-white/50 text-sm">Verification funnel and approval rates</p>
+        <h1 className="text-2xl font-semibold text-foreground mb-1">KYC Analytics</h1>
+        <p className="text-foreground/50 text-sm">Verification funnel and approval rates</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -117,7 +117,7 @@ export default function KycAnalyticsPage() {
           label="Not Started"
           value={data.notStarted.toLocaleString()}
           icon={<Circle size={18} />}
-          accent="text-white/30"
+          accent="text-foreground/30"
         />
         <StatCard
           label="Pending"
@@ -152,42 +152,42 @@ export default function KycAnalyticsPage() {
         />
       </div>
 
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6">
-        <h2 className="text-base font-medium text-white mb-5">Last 30 Days</h2>
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h2 className="text-base font-medium text-foreground mb-5">Last 30 Days</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-xl p-4 text-center">
-            <div className="text-2xl font-semibold text-white mb-1">
+          <div className="bg-muted/30 rounded-xl p-4 text-center">
+            <div className="text-2xl font-semibold text-foreground mb-1">
               {data.submittedLast30Days.toLocaleString()}
             </div>
-            <div className="text-xs text-white/40">Submitted</div>
+            <div className="text-xs text-foreground/40">Submitted</div>
           </div>
           <div className="bg-green-500/10 border border-green-500/10 rounded-xl p-4 text-center">
             <div className="text-2xl font-semibold text-green-400 mb-1">
               {data.approvedLast30Days.toLocaleString()}
             </div>
-            <div className="text-xs text-white/40">Approved</div>
+            <div className="text-xs text-foreground/40">Approved</div>
           </div>
           <div className="bg-red-500/10 border border-red-500/10 rounded-xl p-4 text-center">
             <div className="text-2xl font-semibold text-red-400 mb-1">
               {data.rejectedLast30Days.toLocaleString()}
             </div>
-            <div className="text-xs text-white/40">Rejected</div>
+            <div className="text-xs text-foreground/40">Rejected</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6">
-        <h2 className="text-base font-medium text-white mb-5">Status Breakdown</h2>
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h2 className="text-base font-medium text-foreground mb-5">Status Breakdown</h2>
         <StackedBar data={data} />
       </div>
 
-      <div className="bg-[#1a1a1a] border border-white/5 rounded-xl p-6 flex items-center gap-6">
+      <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-6">
         <div className="flex-shrink-0 w-24 h-24 rounded-full border-4 border-[#B7EE7A]/40 flex items-center justify-center bg-[#B7EE7A]/5">
           <span className="text-2xl font-bold text-[#B7EE7A]">{approvalRatePct}%</span>
         </div>
         <div>
-          <div className="text-white font-semibold text-lg mb-1">Overall Approval Rate</div>
-          <div className="text-white/40 text-sm max-w-sm">
+          <div className="text-foreground font-semibold text-lg mb-1">Overall Approval Rate</div>
+          <div className="text-foreground/40 text-sm max-w-sm">
             {data.verified.toLocaleString()} users verified out of{" "}
             {(data.verified + data.rejected).toLocaleString()} completed submissions.
             {data.pending + data.underReview > 0 && (
