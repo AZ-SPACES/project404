@@ -197,14 +197,19 @@ public class TransferController {
             @AuthenticationPrincipal User user,
             @RequestParam String startDate,
             @RequestParam String endDate) {
-        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
-        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+        java.time.LocalDate from = java.time.LocalDate.parse(startDate);
+        java.time.LocalDate to   = java.time.LocalDate.parse(endDate);
+        if (!from.isBefore(to) && !from.isEqual(to))
+            return ResponseEntity.badRequest().build();
+        if (from.isAfter(to))
+            return ResponseEntity.badRequest().build();
 
-        byte[] pdf = statementService.generateStatementPdf(user, start, end);
+        byte[] pdf = statementService.generateStatementPdf(user, from.atStartOfDay(), to.atTime(23, 59, 59));
+        String filename = "aza_statement_" + startDate + "_to_" + endDate + ".pdf";
 
         return ResponseEntity.ok()
                 .header("Content-Type", "application/pdf")
-                .header("Content-Disposition", "attachment; filename=statement.pdf")
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
                 .body(pdf);
     }
 
@@ -213,14 +218,17 @@ public class TransferController {
             @AuthenticationPrincipal User user,
             @RequestParam String startDate,
             @RequestParam String endDate) {
-        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
-        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+        java.time.LocalDate from = java.time.LocalDate.parse(startDate);
+        java.time.LocalDate to   = java.time.LocalDate.parse(endDate);
+        if (from.isAfter(to))
+            return ResponseEntity.badRequest().build();
 
-        byte[] csv = statementService.generateStatementCsv(user, start, end);
+        byte[] csv = statementService.generateStatementCsv(user, from.atStartOfDay(), to.atTime(23, 59, 59));
+        String filename = "aza_statement_" + startDate + "_to_" + endDate + ".csv";
 
         return ResponseEntity.ok()
                 .header("Content-Type", "text/csv; charset=UTF-8")
-                .header("Content-Disposition", "attachment; filename=statement.csv")
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
                 .body(csv);
     }
 
@@ -229,10 +237,12 @@ public class TransferController {
             @AuthenticationPrincipal User user,
             @RequestParam String startDate,
             @RequestParam String endDate) {
-        java.time.LocalDateTime start = java.time.LocalDate.parse(startDate).atStartOfDay();
-        java.time.LocalDateTime end = java.time.LocalDate.parse(endDate).atTime(23, 59, 59);
+        java.time.LocalDate from = java.time.LocalDate.parse(startDate);
+        java.time.LocalDate to   = java.time.LocalDate.parse(endDate);
+        if (from.isAfter(to))
+            return ResponseEntity.badRequest().build();
 
-        byte[] pdf = statementService.generateStatementPdf(user, start, end);
+        byte[] pdf = statementService.generateStatementPdf(user, from.atStartOfDay(), to.atTime(23, 59, 59));
         String period = startDate + " to " + endDate;
 
         emailService.sendStatement(user.getEmail(), user.getFirstName(), pdf, period);

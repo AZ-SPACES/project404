@@ -26,7 +26,8 @@ export function StatementDownloadScreen() {
   const [selectedDuration, setSelectedDuration] = useState('1m');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
 
   const getDateParams = (): { start: string, end: string } | null => {
     const end = new Date();
@@ -66,41 +67,47 @@ export function StatementDownloadScreen() {
     }
 
     const { start, end } = params;
-    setIsLoading(true);
+    setIsDownloading(true);
     try {
       const response = await getTransactionsStatement(start, end);
-      
-      // Convert blob to base64 for FileSystem
-      const reader = new FileReader();
-      reader.readAsDataURL(response.data);
-      reader.onloadend = async () => {
-        const result = reader.result;
-        if (typeof result !== 'string') return;
-        
-        const base64data = result.split(',')[1];
-        if (!base64data) throw new Error("Failed to process PDF data");
 
-        const fileName = `aza_statement_${start}_to_${end}.pdf`;
-        const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
-        if (!baseDir) throw new Error("No available storage directory");
-        
-        const fileUri = baseDir + fileName;
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(response.data);
+        reader.onloadend = async () => {
+          try {
+            const result = reader.result;
+            if (typeof result !== 'string') throw new Error("Failed to process PDF data");
 
-        await FileSystem.writeAsStringAsync(fileUri, base64data, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+            const base64data = result.split(',')[1];
+            if (!base64data) throw new Error("Failed to process PDF data");
 
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(fileUri);
-        } else {
-          Alert.alert("Success", "Statement saved to your device cache.");
-        }
-      };
+            const fileName = `aza_statement_${start}_to_${end}.pdf`;
+            const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+            if (!baseDir) throw new Error("No available storage directory");
+
+            const fileUri = baseDir + fileName;
+            await FileSystem.writeAsStringAsync(fileUri, base64data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(fileUri);
+            } else {
+              Alert.alert("Success", "Statement saved to your device cache.");
+            }
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error("Failed to read PDF data"));
+      });
     } catch (error: any) {
       console.error("Statement download error:", error);
       Alert.alert("Download Failed", error.response?.data?.message || "An unexpected error occurred while generating your statement.");
     } finally {
-      setIsLoading(false);
+      setIsDownloading(false);
     }
   };
 
@@ -112,7 +119,7 @@ export function StatementDownloadScreen() {
     }
 
     const { start, end } = params;
-    setIsLoading(true);
+    setIsEmailing(true);
     try {
       await sendTransactionsStatementEmail(start, end);
       Alert.alert("Email Sent", "Your statement has been sent to your registered email address.");
@@ -120,7 +127,7 @@ export function StatementDownloadScreen() {
       console.error("Statement email error:", error);
       Alert.alert("Email Failed", error.response?.data?.message || "Failed to send statement via email.");
     } finally {
-      setIsLoading(false);
+      setIsEmailing(false);
     }
   };
 
@@ -226,22 +233,22 @@ export function StatementDownloadScreen() {
 
         <View style={styles.actionButtons}>
           <Button
-            title={isLoading ? "Generating..." : "Download PDF"}
+            title={isDownloading ? "Generating..." : "Download PDF"}
             onPress={handleDownload}
             backgroundColor={Colors.primary}
             textColor={Colors.white}
-            disabled={isLoading}
-            leftIcon={isLoading ? <ActivityIndicator size="small" color="white" /> : <Feather name="download" size={20} color={Colors.white} />}
+            disabled={isDownloading || isEmailing}
+            leftIcon={isDownloading ? <ActivityIndicator size="small" color="white" /> : <Feather name="download" size={20} color={Colors.white} />}
           />
 
           <Button
-            title={isLoading ? "Sending..." : "Send via Email"}
+            title={isEmailing ? "Sending..." : "Send via Email"}
             onPress={handleEmail}
             backgroundColor={isDark ? Colors.surface : Colors.white}
             textColor={Colors.textPrimary}
-            disabled={isLoading}
+            disabled={isDownloading || isEmailing}
             style={{ borderWidth: 1, borderColor: Colors.border }}
-            leftIcon={isLoading ? <ActivityIndicator size="small" color={Colors.textPrimary} /> : <Feather name="mail" size={20} color={Colors.textPrimary} />}
+            leftIcon={isEmailing ? <ActivityIndicator size="small" color={Colors.textPrimary} /> : <Feather name="mail" size={20} color={Colors.textPrimary} />}
           />
         </View>
       </ScrollView>
