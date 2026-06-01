@@ -212,6 +212,20 @@
 			<version>3.5.3</version>
 		</dependency>
 
+		<!-- Observability: Sentry error tracking -->
+		<dependency>
+			<groupId>io.sentry</groupId>
+			<artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+			<version>7.22.0</version>
+		</dependency>
+
+		<!-- Observability: structured JSON logging -->
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>8.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

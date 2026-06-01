@@ -137,6 +137,7 @@ type ChatStoreState = {
   openChatWithUser: (otherUserId: string) => Promise<ChatSummary>;
   loadHistory: (chatId: string) => Promise<void>;
   sendText: (chatId: string, plaintext: string) => Promise<void>;
+  sendMedia: (chatId: string, mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => Promise<void>;
   sendTyping: (chatId: string, isTyping: boolean) => Promise<void>;
   markRead: (chatId: string) => Promise<void>;
   deleteMessage: (chatId: string, messageId: string) => Promise<void>;
@@ -610,6 +611,121 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         return {
           messagesByChat: { ...s.messagesByChat, [chatId]: updated },
         };
+      });
+    }
+  },
+
+  sendMedia: async (chatId, mediaKey, mediaType, caption = '') => {
+    const { selfUserId, chats } = get();
+    if (!selfUserId) return;
+
+    const chat = chats[chatId];
+    if (!chat) {
+      console.warn('[chat] sendMedia called for unknown chat', chatId);
+      return;
+    }
+
+    const clientId = makeClientId();
+    const optimistic: LocalMessage = {
+      clientId,
+      chatId,
+      senderId: selfUserId,
+      isSelf: true,
+      type: mediaType,
+      text: caption,
+      timestamp: Date.now(),
+      status: 'pending',
+      decryptOk: true,
+      mediaKey,
+    };
+    set((s) => {
+      const thread = s.messagesByChat[chatId] ?? [];
+      return {
+        messagesByChat: { ...s.messagesByChat, [chatId]: mergeMessage(thread, optimistic) },
+      };
+    });
+
+    try {
+      const peer = await get().ensurePeerKeys(chat.otherUserId);
+      if (!peer) throw new Error('Peer key bundle unavailable');
+      const selfIdentityPub = get().selfIdentityPublic;
+      const selfIdentityPriv = get().selfIdentityPrivate;
+      if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
+
+      const plaintextForEncryption = caption.trim() || ' ';
+
+      let rootKey = await loadSessionRoot(selfUserId, chat.otherUserId, peer.identityPublicKey);
+      let envelope: V3Envelope;
+      let usedPreKeyId: string | undefined;
+
+      if (!rootKey) {
+        const bundle: RecipientBundle = {
+          identityPublicKey: peer.identityPublicKey,
+          signedPreKeyPublic: peer.signedPreKeyPublic,
+          ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
+          ...(peer.oneTimePreKeyPublic ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic } : {}),
+        };
+        const first = encryptFirstMessageV3({
+          plaintext: plaintextForEncryption,
+          senderIdentityKeyPair: { publicKey: selfIdentityPub, privateKey: selfIdentityPriv },
+          recipientBundle: bundle,
+          senderId: selfUserId,
+          chatId,
+        });
+        envelope = first.envelope;
+        rootKey = first.rootKey;
+        usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
+        await saveSessionRoot(selfUserId, chat.otherUserId, rootKey, peer.identityPublicKey);
+        await indexSessionRoot(selfUserId, chat.otherUserId);
+      } else {
+        envelope = encryptFollowupMessageV3({
+          plaintext: plaintextForEncryption,
+          rootKey,
+          recipientIdentityPublic: peer.identityPublicKey,
+          senderId: selfUserId,
+          chatId,
+        });
+      }
+
+      const payload: SendMessagePayload = {
+        chatId,
+        type: mediaType,
+        ciphertext: envelope.ciphertext,
+        ephemeralKey: envelope.ephemeralPublicKey,
+        mediaKey,
+        clientId,
+        ...(envelope.senderIdentityPublicKey
+          ? { senderIdentityPublicKey: envelope.senderIdentityPublicKey }
+          : {}),
+        ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
+      };
+
+      const { data } = await sendChatMessage(payload);
+      const m = data?.data;
+      const serverId = m?.id;
+      const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
+      const expiresAt = parseDateTime(m?.expiresAt);
+
+      set((s) => {
+        const thread = s.messagesByChat[chatId] ?? [];
+        const updated = thread.map((msg) =>
+          msg.clientId === clientId
+            ? { ...msg, serverId, timestamp: serverTs, status: 'sent' as LocalMessageStatus, expiresAt: expiresAt ?? null }
+            : msg,
+        );
+        return { messagesByChat: { ...s.messagesByChat, [chatId]: updated } };
+      });
+
+      const uid = get().selfUserId;
+      if (uid) await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []);
+    } catch (e) {
+      console.warn('[chat] sendMedia failed', e);
+      set((s) => {
+        const thread = s.messagesByChat[chatId] ?? [];
+        const updated = thread.map((msg) =>
+          msg.clientId === clientId ? { ...msg, status: 'failed' as LocalMessageStatus } : msg,
+        );
+        return { messagesByChat: { ...s.messagesByChat, [chatId]: updated } };
       });
     }
   },

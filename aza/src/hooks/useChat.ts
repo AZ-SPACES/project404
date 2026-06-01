@@ -27,6 +27,8 @@ export type UseChatResult = {
   isOtherTyping: boolean;
   /** Send a plaintext text message. Returns when the optimistic insert is in store; ack happens async. */
   sendText: (text: string) => Promise<void>;
+  /** Upload media to the server and send an encrypted message containing the media URL. */
+  sendMedia: (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => Promise<void>;
   /** Inform peer about typing state. Debounce in the caller. */
   setTyping: (isTyping: boolean) => void;
   /** Mark all messages in this chat as read (call when screen mounts / focuses). */
@@ -88,6 +90,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const openChatWithUser = useChatStore((s) => s.openChatWithUser);
   const loadHistory = useChatStore((s) => s.loadHistory);
   const sendTextStore = useChatStore((s) => s.sendText);
+  const sendMediaStore = useChatStore((s) => s.sendMedia);
   const sendTypingStore = useChatStore((s) => s.sendTyping);
   const markReadStore = useChatStore((s) => s.markRead);
   const setDisappearingTtlStore = useChatStore((s) => s.setDisappearingTtl);
@@ -143,6 +146,14 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
       await sendTextStore(chatId, text);
     },
     [chatId, sendTextStore],
+  );
+
+  const sendMedia = useCallback(
+    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => {
+      if (!chatId) return;
+      await sendMediaStore(chatId, mediaKey, mediaType, caption);
+    },
+    [chatId, sendMediaStore],
   );
 
   // Typing indicator with leading + trailing debounce.
@@ -222,6 +233,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     messages,
     isOtherTyping,
     sendText,
+    sendMedia,
     setTyping,
     markRead,
     setDisappearingTtl,

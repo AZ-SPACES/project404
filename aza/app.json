@@ -51,6 +51,7 @@
       "package": "com.semekor.k.aza"
     },
     "plugins": [
+      "@sentry/react-native/expo",
       [
         "expo-splash-screen",
         {

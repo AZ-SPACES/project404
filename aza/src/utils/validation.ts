@@ -8,8 +8,9 @@ export function isValidEmail(value: string): boolean {
 
 // ─── Phone ───────────────────────────────────────────────────────────────────
 // Accepts 7–15 digits (E.164 body), ignoring spaces, dashes, parentheses.
+// An optional leading + is allowed for E.164 international format (+233…).
 
-const PHONE_RE = /^[\d\s\-().]{7,20}$/;
+const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/;
 
 export function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, '');
