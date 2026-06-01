@@ -76,9 +76,10 @@ public class SmsService {
                                     String reference, String transactionId, BigDecimal fee, BigDecimal tax) {
         CompletableFuture.runAsync(() -> {
             String bal = newBalance != null ? fmt(newBalance) : "0.00";
-            String msg = "Payment made for GHS " + fmt(amount) + " to " + recipientName + " Current Balance: GHS " + bal 
-                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "") 
-                    + ". Transaction ID: " + transactionId + ". Fee charged: GHS" + (fee != null ? fmt(fee) : "0.00") 
+            String noteSegment = (reference != null && !reference.isBlank()) ? ". Note: " + reference : "";
+            String msg = "Payment made for GHS " + fmt(amount) + " to " + recipientName + " Current Balance: GHS " + bal
+                    + " . Available Balance: GHS " + bal + noteSegment
+                    + ". Transaction ID: " + transactionId + ". Fee charged: GHS" + (fee != null ? fmt(fee) : "0.00")
                     + " Tax charged: " + (tax != null ? fmt(tax) : "0") + ".";
             sendSms(phoneNumber, msg);
         });
@@ -89,8 +90,9 @@ public class SmsService {
                                         String reference, String transactionId, BigDecimal fee) {
         CompletableFuture.runAsync(() -> {
             String bal = newBalance != null ? fmt(newBalance) : "0.00";
-            String msg = "Payment received for GHS " + fmt(amount) + " from " + senderName + "  Current Balance: GHS " + bal 
-                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "00") 
+            String noteSegment = (reference != null && !reference.isBlank()) ? ". Note: " + reference : "";
+            String msg = "Payment received for GHS " + fmt(amount) + " from " + senderName + "  Current Balance: GHS " + bal
+                    + " . Available Balance: GHS " + bal + noteSegment
                     + ". Transaction ID: " + transactionId + ". TRANSACTION FEE: " + (fee != null ? fmt(fee) : "0.00");
             sendSms(phoneNumber, msg);
         });

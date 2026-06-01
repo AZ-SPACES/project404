@@ -79,7 +79,7 @@ function toMessage(m: LocalMessage): Message {
   };
 }
 
-const TYPING_DEBOUNCE_MS = 1200;
+const TYPING_DEBOUNCE_MS = 400;
 
 export function useChat(otherUserId: string | undefined): UseChatResult {
   const { identity, ready: e2eeReady } = useE2EE();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  Switch,
+  ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from '@react-native-vector-icons/feather';
@@ -15,28 +17,18 @@ import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vec
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
-import { formatBytes, StorageDetails } from "../../../components/chat/chatTypes";
+import { formatBytes } from "../../../components/chat/chatTypes";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
+import { useContactStore } from "../../../store/contactStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
-import { setDisappearingMessages as apiSetDisappearing } from "../../../services/api";
+import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
 
 // ─── Types ──────────────────────────────────────────────────────────
-type ChatInfoParams = {
-  name: string;
-  username: string;
-  avatar: string;
-  phone?: string;
-  status?: string;
-  accountProvider?: string;
-  mediaCount?: number;
-  storageStats?: StorageDetails;
-};
-
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
 
 // ─── Row component for settings-style items ─────────────────────────
@@ -45,10 +37,11 @@ type SettingsRowProps = {
   label: string;
   value?: string;
   onPress?: () => void;
+  rightElement?: React.ReactNode;
   Colors: ThemeColors;
 };
 
-function SettingsRow({ icon, label, value, onPress, Colors }: SettingsRowProps) {
+function SettingsRow({ icon, label, value, onPress, rightElement, Colors }: SettingsRowProps) {
   return (
     <TouchableOpacity
       style={{
@@ -57,7 +50,7 @@ function SettingsRow({ icon, label, value, onPress, Colors }: SettingsRowProps) 
         paddingVertical: 14,
         paddingHorizontal: Spacing.lg,
       }}
-      activeOpacity={0.7}
+      activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
       disabled={!onPress}
     >
@@ -72,18 +65,22 @@ function SettingsRow({ icon, label, value, onPress, Colors }: SettingsRowProps) 
       >
         {label}
       </Text>
-      {value ? (
-        <Text
-          style={{
-            ...Typography.body,
-            color: Colors.textSecondary,
-            marginRight: 4,
-          }}
-        >
-          {value}
-        </Text>
-      ) : null}
-      <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
+      {rightElement ?? (
+        <>
+          {value ? (
+            <Text
+              style={{
+                ...Typography.body,
+                color: Colors.textSecondary,
+                marginRight: 4,
+              }}
+            >
+              {value}
+            </Text>
+          ) : null}
+          {onPress && <Feather name="chevron-right" size={18} color={Colors.textSecondary} />}
+        </>
+      )}
     </TouchableOpacity>
   );
 }
@@ -141,6 +138,21 @@ function DetailRow({ label, value, copyable, Colors }: DetailRowProps) {
   );
 }
 
+// Map TTL seconds → display label
+const LABEL_BY_TTL: Record<number, string> = {
+  0: "Off",
+  86400: "24 hours",
+  604800: "7 days",
+  7776000: "90 days",
+};
+
+const TTL_BY_LABEL: Record<string, number> = {
+  Off: 0,
+  "24 hours": 86400,
+  "7 days": 604800,
+  "90 days": 7776000,
+};
+
 // ─── Main Screen ────────────────────────────────────────────────────
 export default function ChatInfoScreen() {
   const { colors: Colors } = useAppTheme();
@@ -150,36 +162,69 @@ export default function ChatInfoScreen() {
 
   const {
     id: chatIdParam,
-    name,
-    username,
-    avatar,
-    phone = "+233 55 219 4339",
-    status = "Available",
-    accountProvider = "Aza Finance",
+    name: paramName,
+    username: paramUsername,
+    avatar: paramAvatar,
+    phone: paramPhone,
+    status: paramStatus,
     mediaCount = 0,
     storageStats,
   } = route.params;
 
-  const [nickname, setNickname] = useState<string | null>(null);
-  const [showThemeModal, setShowThemeModal] = useState(false);
-  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
-  const [disappearingTimer, setDisappearingTimer] = useState("Off");
-
-  // ── E2EE verification helpers ─────────────────────────────────────────
-  const { computeSafetyNumber, identity } = useE2EE();
+  // ── Store selectors ───────────────────────────────────────────────
   const chats = useChatStore((s) => s.chats);
   const peerKeys = useChatStore((s) => s.peerKeys);
   const ensurePeerKeys = useChatStore((s) => s.ensurePeerKeys);
+  const storeMuteChat = useChatStore((s) => s.muteChat);
+  const storeArchiveChat = useChatStore((s) => s.archiveChat);
+  const storeSetDisappearingTtl = useChatStore((s) => s.setDisappearingTtl);
 
-  // The route param `id` carries chatId (set by ChatScreen.handleProfilePress).
-  // Look it up to recover otherUserId so we can fetch their identity public key.
+  const contacts = useContactStore((s) => s.contacts);
+
+  // The route param `id` carries chatId. Resolve live data from the store.
   const chat = chatIdParam ? chats[chatIdParam] : undefined;
   const otherUserId = chat?.otherUserId;
   const peer = otherUserId ? peerKeys[otherUserId] : undefined;
 
+  // Prefer live store data over the (potentially stale) route params
+  const name = chat?.otherUserName ?? paramName;
+  const username = chat?.otherUserHandle ?? paramUsername;
+  const avatar = chat?.otherUserAvatar ?? paramAvatar;
+  const status = chat?.otherUserStatus ?? paramStatus ?? "Available";
+  const isMuted = chat?.isMuted ?? false;
+  const isArchived = chat?.isArchived ?? false;
+
+  // Phone: look up from local contact store by userId, fall back to route param
+  const phone = React.useMemo(() => {
+    if (paramPhone) return paramPhone;
+    const contact = contacts.find((c) => c.contactUserId === otherUserId);
+    return contact?.phoneNumber ?? null;
+  }, [contacts, otherUserId, paramPhone]);
+
+  // ── UI state ──────────────────────────────────────────────────────
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
+  const [disappearingTimer, setDisappearingTimer] = useState("Off");
+  const [mutePending, setMutePending] = useState(false);
+  const [archivePending, setArchivePending] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
+
+  // ── E2EE verification ─────────────────────────────────────────────
+  const { computeSafetyNumber, identity } = useE2EE();
+
   useEffect(() => {
     if (otherUserId && !peer) ensurePeerKeys(otherUserId).catch(() => {});
   }, [otherUserId, peer, ensurePeerKeys]);
+
+  // Sync disappearing timer label from live store state
+  useEffect(() => {
+    const ttl = chat?.disappearingTtlSeconds;
+    if (ttl === undefined || ttl === null) {
+      setDisappearingTimer("Off");
+      return;
+    }
+    setDisappearingTimer(LABEL_BY_TTL[ttl] ?? `${ttl}s`);
+  }, [chat?.disappearingTtlSeconds]);
 
   const safetyNumberValue = React.useMemo(() => {
     if (!peer || !identity) return null;
@@ -217,15 +262,7 @@ export default function ChatInfoScreen() {
     );
   };
 
-  // Map TTL label → seconds. Reversed in initial state below.
-  const TTL_BY_LABEL: Record<string, number> = {
-    Off: 0,
-    "24 hours": 24 * 60 * 60,
-    "7 days": 7 * 24 * 60 * 60,
-    "90 days": 90 * 24 * 60 * 60,
-  };
-
-  // Derive initials for fallback avatar
+  // ── Actions ───────────────────────────────────────────────────────
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -245,20 +282,75 @@ export default function ChatInfoScreen() {
     Alert.alert("Share", `Share ${name}'s profile`);
   };
 
-  const handleDeleteRecipient = () => {
+  const handleMuteToggle = useCallback(async () => {
+    if (!chatIdParam || mutePending) return;
+    setMutePending(true);
+    try {
+      await storeMuteChat(chatIdParam, !isMuted);
+    } catch {
+      Alert.alert("Error", "Couldn't update notification settings. Please try again.");
+    } finally {
+      setMutePending(false);
+    }
+  }, [chatIdParam, isMuted, mutePending, storeMuteChat]);
+
+  const handleArchiveToggle = useCallback(async () => {
+    if (!chatIdParam || archivePending) return;
+    setArchivePending(true);
+    try {
+      await storeArchiveChat(chatIdParam, !isArchived);
+      if (!isArchived) {
+        Alert.alert("Chat archived", `${name} has been moved to your archive.`);
+        navigation.goBack();
+      }
+    } catch {
+      Alert.alert("Error", "Couldn't update archive. Please try again.");
+    } finally {
+      setArchivePending(false);
+    }
+  }, [chatIdParam, isArchived, archivePending, storeArchiveChat, name, navigation]);
+
+  const handleDisappearingSelect = useCallback(async (val: string) => {
+    setDisappearingTimer(val);
+    setShowDisappearingModal(false);
+    const ttl = TTL_BY_LABEL[val] ?? 0;
+    if (chatIdParam) {
+      try {
+        await storeSetDisappearingTtl(chatIdParam, ttl);
+      } catch {
+        Alert.alert("Couldn't update", "Disappearing message setting failed. Please try again.");
+        // Revert optimistic label
+        const current = chat?.disappearingTtlSeconds;
+        setDisappearingTimer(current ? (LABEL_BY_TTL[current] ?? `${current}s`) : "Off");
+      }
+    }
+  }, [chatIdParam, storeSetDisappearingTtl, chat?.disappearingTtlSeconds]);
+
+  const handleBlockRecipient = useCallback(() => {
+    if (!otherUserId) return;
     Alert.alert(
-      "Delete recipient",
-      `Are you sure you want to remove ${name} from your contacts?`,
+      "Block & remove",
+      `Are you sure you want to block ${name}? They won't be able to message or pay you.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Block",
           style: "destructive",
-          onPress: () => navigation.goBack(),
+          onPress: async () => {
+            setBlockPending(true);
+            try {
+              await blockUser(otherUserId);
+              navigation.goBack();
+            } catch {
+              Alert.alert("Error", "Couldn't block this user. Please try again.");
+            } finally {
+              setBlockPending(false);
+            }
+          },
         },
       ]
     );
-  };
+  }, [otherUserId, name, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -271,9 +363,7 @@ export default function ChatInfoScreen() {
       <View style={styles.headerBar}>
         <BackButton onPress={() => navigation.goBack()} size={22} />
         <Text style={styles.headerTitle}>Contact info</Text>
-        <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.editText}>Edit</Text>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -290,8 +380,8 @@ export default function ChatInfoScreen() {
             </View>
           )}
           <Text style={styles.name}>{name}</Text>
-          <Text style={styles.username}>{username}</Text>
-          <Text style={styles.phoneNumber}>{phone}</Text>
+          {username ? <Text style={styles.username}>@{username}</Text> : null}
+          {phone ? <Text style={styles.phoneNumber}>{phone}</Text> : null}
           {status ? <Text style={styles.status}>{status}</Text> : null}
         </View>
 
@@ -340,12 +430,22 @@ export default function ChatInfoScreen() {
             copyable
             Colors={Colors}
           />
-          <DetailRow
-            label="Username"
-            value={username}
-            copyable
-            Colors={Colors}
-          />
+          {username ? (
+            <DetailRow
+              label="Username"
+              value={`@${username}`}
+              copyable
+              Colors={Colors}
+            />
+          ) : null}
+          {phone ? (
+            <DetailRow
+              label="Phone number"
+              value={phone}
+              copyable
+              Colors={Colors}
+            />
+          ) : null}
         </View>
 
         {/* ── Media & storage section ─────────────────── */}
@@ -379,8 +479,20 @@ export default function ChatInfoScreen() {
         <View style={styles.sectionCard}>
           <SettingsRow
             icon={<Ionicons name="notifications-outline" size={20} color={Colors.textPrimary} />}
-            label="Notifications"
+            label="Mute notifications"
             Colors={Colors}
+            rightElement={
+              mutePending ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Switch
+                  value={isMuted}
+                  onValueChange={handleMuteToggle}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor={Colors.white}
+                />
+              )
+            }
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -430,15 +542,40 @@ export default function ChatInfoScreen() {
           />
         </View>
 
-        {/* ── Account settings / delete ───────────────── */}
+        {/* ── Account settings / dangerous actions ────── */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>Account settings</Text>
+
+          {/* Archive toggle */}
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={styles.dangerRow}
             activeOpacity={0.8}
-            onPress={handleDeleteRecipient}
+            onPress={handleArchiveToggle}
+            disabled={archivePending}
           >
-            <Text style={styles.deleteButtonText}>Delete recipient</Text>
+            {archivePending ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Text style={[styles.dangerRowText, { color: Colors.primary }]}>
+                {isArchived ? "Unarchive chat" : "Archive chat"}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* Block & remove */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            activeOpacity={0.8}
+            onPress={handleBlockRecipient}
+            disabled={blockPending || !otherUserId}
+          >
+            {blockPending ? (
+              <ActivityIndicator size="small" color={Colors.error} />
+            ) : (
+              <Text style={styles.dangerRowText}>Block & remove</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -461,16 +598,7 @@ export default function ChatInfoScreen() {
         isDark={Colors.isDark}
         Colors={Colors}
         onClose={() => setShowDisappearingModal(false)}
-        onSelect={(val) => {
-          setDisappearingTimer(val);
-          setShowDisappearingModal(false);
-          const ttl = TTL_BY_LABEL[val];
-          if (chatIdParam && typeof ttl === "number") {
-            apiSetDisappearing(chatIdParam, ttl).catch((e) =>
-              Alert.alert("Couldn't update", e?.message ?? "Network error"),
-            );
-          }
-        }}
+        onSelect={handleDisappearingSelect}
       />
     </SafeAreaView>
   );
@@ -493,23 +621,10 @@ function createStyles(Colors: ThemeColors) {
       paddingHorizontal: Spacing.lg,
       paddingVertical: 12,
     },
-    backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: isDark ? Colors.surface : Colors.white,
-    },
     headerTitle: {
       ...Typography.bodyLg,
       fontWeight: "600",
       color: Colors.textPrimary,
-    },
-    editText: {
-      ...Typography.bodyLg,
-      fontWeight: "600",
-      color: Colors.primary,
     },
 
     scrollContent: {
@@ -608,32 +723,16 @@ function createStyles(Colors: ThemeColors) {
     rowDivider: {
       height: 1,
       backgroundColor: Colors.border,
-      marginLeft: Spacing.lg + 28 + 12, // icon width + gap
+      marginLeft: Spacing.lg + 28 + 12,
     },
 
-    // Nickname button
-    nicknameButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-      backgroundColor: Colors.primary,
-    },
-    nicknameButtonText: {
-      ...Typography.caption,
-      fontWeight: "600",
-      color: Colors.secondary,
-    },
-
-    // Delete
-    deleteButton: {
-      marginHorizontal: Spacing.md,
-      marginVertical: Spacing.md,
-      paddingVertical: 14,
-      borderRadius: 8,
+    // Dangerous action rows (archive / block)
+    dangerRow: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 16,
       alignItems: "center",
-      backgroundColor: isDark ? "rgba(234,67,53,0.15)" : "rgba(234,67,53,0.1)",
     },
-    deleteButtonText: {
+    dangerRowText: {
       ...Typography.button,
       color: Colors.error,
       fontWeight: "600",
