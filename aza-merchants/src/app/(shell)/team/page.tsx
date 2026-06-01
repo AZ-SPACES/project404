@@ -19,7 +19,7 @@ const ROLE_DESC: Record<string, string> = {
 const STATUS_STYLE: Record<string, string> = {
   INVITED: "bg-amber-400/10 text-amber-400",
   ACTIVE: "bg-[#B7EE7A]/10 text-[#B7EE7A]",
-  REMOVED: "bg-white/10 text-white/30",
+  REMOVED: "bg-muted/50 text-foreground/30",
 };
 
 function fmtDate(s: string | null) {
@@ -54,32 +54,32 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-md p-6">
+      <div className="relative bg-card border border-border rounded-2xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-bold text-white">Invite Team Member</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+          <h2 className="text-base font-bold text-foreground">Invite Team Member</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">Email address</label>
+            <label className="block text-xs text-foreground/40 mb-1.5">Email address</label>
             <input
               required
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-black/30 border border-white/8 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#B7EE7A]/50"
+              className="w-full bg-black/30 border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-[#B7EE7A]/50"
               placeholder="colleague@company.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-white/40 mb-1.5">Role</label>
+            <label className="block text-xs text-foreground/40 mb-1.5">Role</label>
             <div className="space-y-2">
               {ROLES.map((r) => (
-                <label key={r} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${role === r ? "border-[#B7EE7A]/40 bg-[#B7EE7A]/5" : "border-white/8 hover:border-white/15"}`}>
+                <label key={r} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${role === r ? "border-[#B7EE7A]/40 bg-[#B7EE7A]/5" : "border-border hover:border-border"}`}>
                   <input
                     type="radio"
                     name="role"
@@ -89,8 +89,8 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
                     className="mt-0.5 accent-[#B7EE7A]"
                   />
                   <div>
-                    <p className="text-sm font-medium text-white">{r}</p>
-                    <p className="text-xs text-white/40">{ROLE_DESC[r]}</p>
+                    <p className="text-sm font-medium text-foreground">{r}</p>
+                    <p className="text-xs text-foreground/40">{ROLE_DESC[r]}</p>
                   </div>
                 </label>
               ))}
@@ -100,13 +100,13 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (m:
           {error && <p className="text-xs text-red-400 bg-red-400/5 border border-red-400/20 rounded-xl px-3 py-2">{error}</p>}
 
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted/30 transition-colors">
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-foreground transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Send Invite
@@ -181,19 +181,19 @@ export default function TeamPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Team</h1>
-          <p className="text-white/40 text-sm mt-0.5">Manage who has access to your merchant account</p>
+          <h1 className="text-xl font-bold text-foreground">Team</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Manage who has access to your merchant account</p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-white rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#174717] hover:bg-[#1e5e1e] text-sm font-semibold text-foreground rounded-xl transition-colors"
         >
           <UserPlus size={15} />
           Invite
         </button>
       </div>
 
-      <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
@@ -204,8 +204,8 @@ export default function TeamPage() {
           </div>
         ) : !members || members.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <UserCog size={32} className="text-white/15" />
-            <p className="text-white/40 text-sm">No team members yet</p>
+            <UserCog size={32} className="text-foreground/15" />
+            <p className="text-foreground/40 text-sm">No team members yet</p>
             <button onClick={() => setShowInvite(true)} className="text-sm text-[#B7EE7A] hover:underline">
               Invite someone
             </button>
@@ -219,12 +219,12 @@ export default function TeamPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{m.email}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{m.email}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_STYLE[m.status] ?? "bg-white/10 text-white/40"}`}>
+                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_STYLE[m.status] ?? "bg-muted/50 text-foreground/40"}`}>
                       {m.status}
                     </span>
-                    <span className="text-[10px] text-white/30">
+                    <span className="text-[10px] text-foreground/30">
                       {m.status === "ACTIVE" ? `joined ${fmtDate(m.joinedAt)}` : `invited ${fmtDate(m.invitedAt)}`}
                     </span>
                   </div>
@@ -235,19 +235,19 @@ export default function TeamPage() {
                     <div className="relative">
                       <button
                         onClick={() => setEditingRole(editingRole === m.id ? null : m.id)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/8 text-xs text-white/60 hover:text-white hover:border-white/15 transition-colors"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/30 border border-border text-xs text-foreground/60 hover:text-foreground hover:border-border transition-colors"
                       >
                         {m.role}
                         <ChevronDown size={12} />
                       </button>
                       {editingRole === m.id && (
-                        <div className="absolute right-0 top-full mt-1 w-36 bg-[#1a1a1a] border border-white/10 rounded-xl overflow-hidden shadow-xl z-10">
+                        <div className="absolute right-0 top-full mt-1 w-36 bg-card border border-border rounded-xl overflow-hidden shadow-xl z-10">
                           {ROLES.map((r) => (
                             <button
                               key={r}
                               onClick={() => handleRoleChange(m.id, r)}
                               disabled={actionLoading === m.id + ":role"}
-                              className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors ${r === m.role ? "text-[#B7EE7A] bg-[#B7EE7A]/5" : "text-white/70 hover:text-white hover:bg-white/5"}`}
+                              className={`w-full text-left px-3.5 py-2.5 text-xs transition-colors ${r === m.role ? "text-[#B7EE7A] bg-[#B7EE7A]/5" : "text-foreground/70 hover:text-foreground hover:bg-muted/30"}`}
                             >
                               {r}
                             </button>
@@ -274,13 +274,13 @@ export default function TeamPage() {
         )}
       </div>
 
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-        <p className="text-sm font-semibold text-white mb-3">Role permissions</p>
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-semibold text-foreground mb-3">Role permissions</p>
         <div className="space-y-2">
           {ROLES.map((r) => (
             <div key={r} className="flex items-start gap-3">
-              <span className="text-xs font-semibold text-white/50 w-20 flex-shrink-0 mt-0.5">{r}</span>
-              <span className="text-xs text-white/30">{ROLE_DESC[r]}</span>
+              <span className="text-xs font-semibold text-foreground/50 w-20 flex-shrink-0 mt-0.5">{r}</span>
+              <span className="text-xs text-foreground/30">{ROLE_DESC[r]}</span>
             </div>
           ))}
         </div>

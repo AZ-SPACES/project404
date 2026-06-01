@@ -55,32 +55,32 @@ function ReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4">
-        <h3 className="text-white font-semibold capitalize">{action} limit request</h3>
+      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4">
+        <h3 className="text-foreground font-semibold capitalize">{action} limit request</h3>
 
-        <div className="bg-white/5 rounded-xl p-4 space-y-2 text-sm">
+        <div className="bg-muted/30 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-white/40">User</span>
+            <span className="text-foreground/40">User</span>
             <Link href={`/users/${req.userId}`} className="text-[#B7EE7A] hover:underline font-mono text-xs">{req.userId.slice(0, 8)}…</Link>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/40">Daily: current → requested</span>
-            <span className="text-white">{fmtGhs(req.currentDailyLimitGhs)} → <strong>{fmtGhs(req.requestedDailyLimitGhs)}</strong></span>
+            <span className="text-foreground/40">Daily: current → requested</span>
+            <span className="text-foreground">{fmtGhs(req.currentDailyLimitGhs)} → <strong>{fmtGhs(req.requestedDailyLimitGhs)}</strong></span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/40">Single: current → requested</span>
-            <span className="text-white">{fmtGhs(req.currentSingleTransactionLimitGhs)} → <strong>{fmtGhs(req.requestedSingleTransactionLimitGhs)}</strong></span>
+            <span className="text-foreground/40">Single: current → requested</span>
+            <span className="text-foreground">{fmtGhs(req.currentSingleTransactionLimitGhs)} → <strong>{fmtGhs(req.requestedSingleTransactionLimitGhs)}</strong></span>
           </div>
           {req.reason && (
-            <div className="pt-2 border-t border-white/5">
-              <p className="text-white/40 text-xs mb-1">User's reason</p>
-              <p className="text-white/80">{req.reason}</p>
+            <div className="pt-2 border-t border-border">
+              <p className="text-foreground/40 text-xs mb-1">User's reason</p>
+              <p className="text-foreground/80">{req.reason}</p>
             </div>
           )}
         </div>
 
         <div>
-          <label className="text-xs text-white/40 mb-1 block">
+          <label className="text-xs text-foreground/40 mb-1 block">
             Notes {action === "deny" ? "(shown to user)" : "(internal)"}
           </label>
           <textarea
@@ -88,7 +88,7 @@ function ReviewModal({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder={action === "deny" ? "Reason for denial shown to user…" : "Internal notes…"}
-            className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none resize-none"
+            className="w-full px-3 py-2.5 rounded-xl bg-muted/30 border border-border text-foreground placeholder:text-muted-foreground/60 text-sm focus:outline-none resize-none"
           />
         </div>
 
@@ -109,7 +109,7 @@ function ReviewModal({
             {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
             {action === "approve" ? "Approve & notify user" : "Deny & notify user"}
           </button>
-          <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-white/5 text-white/50 text-sm hover:text-white">
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground">
             Cancel
           </button>
         </div>
@@ -152,8 +152,8 @@ export default function LimitRequestsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Limit Increase Requests</h1>
-        <p className="text-white/40 text-sm mt-0.5">Review and action user-submitted requests to raise transaction limits</p>
+        <h1 className="text-2xl font-semibold text-foreground">Limit Increase Requests</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Review and action user-submitted requests to raise transaction limits</p>
       </div>
 
       {/* Stat cards */}
@@ -163,10 +163,10 @@ export default function LimitRequestsPage() {
           { label: "Approved", value: stats?.approved ?? 0, color: "text-emerald-400", icon: CheckCircle2 },
           { label: "Denied", value: stats?.denied ?? 0, color: "text-red-400", icon: XCircle },
         ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+          <div key={label} className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <Icon size={14} className={color} />
-              <p className="text-white/40 text-xs font-medium">{label}</p>
+              <p className="text-foreground/40 text-xs font-medium">{label}</p>
             </div>
             <p className={`text-2xl font-semibold ${color}`}>{value}</p>
           </div>
@@ -174,19 +174,19 @@ export default function LimitRequestsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white/5 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-muted/30 rounded-xl p-1 w-fit">
         {tabs.map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => { setFilter(key); setPage(0); }}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-              filter === key ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+              filter === key ? "bg-muted/50 text-foreground" : "text-foreground/40 hover:text-foreground"
             }`}
           >
             {label}
             {count !== undefined && count > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                filter === key ? "bg-white/15 text-white" : "bg-white/8 text-white/50"
+                filter === key ? "bg-muted/50 text-foreground" : "bg-muted/40 text-foreground/50"
               }`}>{count}</span>
             )}
           </button>
@@ -194,49 +194,49 @@ export default function LimitRequestsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-white/30" size={24} />
+            <Loader2 className="animate-spin text-foreground/30" size={24} />
           </div>
         ) : error ? (
           <div className="flex items-center gap-2 px-6 py-8 text-red-400 text-sm">
             <AlertCircle size={16} />{(error as Error).message}
           </div>
         ) : !data?.content.length ? (
-          <div className="flex flex-col items-center justify-center py-16 text-white/20">
+          <div className="flex flex-col items-center justify-center py-16 text-foreground/20">
             <TrendingUp size={32} className="mb-3" />
             <p className="text-sm">No {filter.toLowerCase()} requests</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/5">
+              <tr className="border-b border-border">
                 {["User", "Current limits", "Requested limits", "Reason", "Submitted", "Status", ""].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-white/30 text-xs font-semibold uppercase tracking-wider">{h}</th>
+                  <th key={h} className="text-left px-5 py-3 text-foreground/30 text-xs font-semibold uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {data.content.map((req) => (
-                <tr key={req.id} className="border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors">
+                <tr key={req.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="px-5 py-4">
                     <Link href={`/users/${req.userId}`} className="font-mono text-xs text-[#B7EE7A] hover:underline">
                       {req.userId.slice(0, 8)}…
                     </Link>
                   </td>
                   <td className="px-5 py-4">
-                    <p className="text-white/70 text-xs">{fmtGhs(req.currentDailyLimitGhs)} / day</p>
-                    <p className="text-white/40 text-xs">{fmtGhs(req.currentSingleTransactionLimitGhs)} / tx</p>
+                    <p className="text-foreground/70 text-xs">{fmtGhs(req.currentDailyLimitGhs)} / day</p>
+                    <p className="text-foreground/40 text-xs">{fmtGhs(req.currentSingleTransactionLimitGhs)} / tx</p>
                   </td>
                   <td className="px-5 py-4">
-                    <p className="text-white text-xs font-semibold">{fmtGhs(req.requestedDailyLimitGhs)} / day</p>
-                    <p className="text-white/60 text-xs">{fmtGhs(req.requestedSingleTransactionLimitGhs)} / tx</p>
+                    <p className="text-foreground text-xs font-semibold">{fmtGhs(req.requestedDailyLimitGhs)} / day</p>
+                    <p className="text-foreground/60 text-xs">{fmtGhs(req.requestedSingleTransactionLimitGhs)} / tx</p>
                   </td>
                   <td className="px-5 py-4 max-w-xs">
-                    <p className="text-white/60 text-xs truncate">{req.reason ?? "—"}</p>
+                    <p className="text-foreground/60 text-xs truncate">{req.reason ?? "—"}</p>
                   </td>
-                  <td className="px-5 py-4 text-white/40 text-xs whitespace-nowrap">{fmtDate(req.createdAt)}</td>
+                  <td className="px-5 py-4 text-foreground/40 text-xs whitespace-nowrap">{fmtDate(req.createdAt)}</td>
                   <td className="px-5 py-4"><StatusBadge status={req.status} /></td>
                   <td className="px-5 py-4">
                     {req.status === "PENDING" && (
@@ -256,7 +256,7 @@ export default function LimitRequestsPage() {
                       </div>
                     )}
                     {req.status !== "PENDING" && req.adminNotes && (
-                      <p className="text-white/30 text-xs max-w-[160px] truncate" title={req.adminNotes}>{req.adminNotes}</p>
+                      <p className="text-foreground/30 text-xs max-w-[160px] truncate" title={req.adminNotes}>{req.adminNotes}</p>
                     )}
                   </td>
                 </tr>
@@ -268,21 +268,21 @@ export default function LimitRequestsPage() {
 
       {/* Pagination */}
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-white/40">
+        <div className="flex items-center justify-between text-sm text-foreground/40">
           <span>{data.totalElements} total</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => p - 1)}
               disabled={page === 0}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted/50 disabled:opacity-30 transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-white/60">Page {page + 1} of {data.totalPages}</span>
+            <span className="text-foreground/60">Page {page + 1} of {data.totalPages}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={page >= data.totalPages - 1}
-              className="p-1.5 rounded-lg hover:bg-white/5 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted/50 disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={16} />
             </button>

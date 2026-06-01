@@ -5,18 +5,18 @@ import { getSupportAnalytics, getSupportStats, SupportAnalytics, SupportStats } 
 import { Headset, Clock, CheckCircle2, TrendingUp, AlertCircle, Loader2, BarChart3 } from "lucide-react";
 
 function MetricCard({
-  label, value, sub, icon: Icon, color = "text-white",
+  label, value, sub, icon: Icon, color = "text-foreground",
 }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string }) {
   return (
-    <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+    <div className="bg-card border border-border rounded-2xl p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-white/40 text-xs font-medium uppercase tracking-wider">{label}</p>
+          <p className="text-foreground/40 text-xs font-medium uppercase tracking-wider">{label}</p>
           <p className={`text-3xl font-semibold mt-1.5 ${color}`}>{value}</p>
-          {sub && <p className="text-white/35 text-xs mt-1">{sub}</p>}
+          {sub && <p className="text-foreground/35 text-xs mt-1">{sub}</p>}
         </div>
-        <div className="p-2 rounded-xl bg-white/5">
-          <Icon size={18} className="text-white/35" />
+        <div className="p-2 rounded-xl bg-muted/30">
+          <Icon size={18} className="text-foreground/35" />
         </div>
       </div>
     </div>
@@ -27,11 +27,11 @@ function BarRow({ label, count, max, color }: { label: string; count: number; ma
   const pct = max > 0 ? (count / max) * 100 : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-white/50 w-24 flex-shrink-0 truncate">{label}</span>
-      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+      <span className="text-xs text-foreground/50 w-24 flex-shrink-0 truncate">{label}</span>
+      <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs font-semibold text-white/70 w-8 text-right flex-shrink-0">{count}</span>
+      <span className="text-xs font-semibold text-foreground/70 w-8 text-right flex-shrink-0">{count}</span>
     </div>
   );
 }
@@ -66,7 +66,7 @@ export default function SupportAnalyticsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-white/30" size={28} />
+        <Loader2 className="animate-spin text-foreground/30" size={28} />
       </div>
     );
   }
@@ -95,8 +95,8 @@ export default function SupportAnalyticsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Support Analytics</h1>
-        <p className="text-white/40 text-sm mt-0.5">Performance metrics and ticket insights</p>
+        <h1 className="text-2xl font-semibold text-foreground">Support Analytics</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Performance metrics and ticket insights</p>
       </div>
 
       {analyticsError && (
@@ -107,7 +107,7 @@ export default function SupportAnalyticsPage() {
       )}
 
       <section>
-        <h2 className="text-xs uppercase tracking-widest text-white/25 font-semibold mb-4">Key Metrics</h2>
+        <h2 className="text-xs uppercase tracking-widest text-foreground/25 font-semibold mb-4">Key Metrics</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <MetricCard label="Total Tickets" value={data.totalTickets.toLocaleString()} icon={Headset} />
           <MetricCard label="Open Tickets" value={data.openTickets.toLocaleString()} icon={AlertCircle} color="text-amber-400" />
@@ -122,15 +122,15 @@ export default function SupportAnalyticsPage() {
       </section>
 
       <section>
-        <h2 className="text-xs uppercase tracking-widest text-white/25 font-semibold mb-4">Response Times</h2>
+        <h2 className="text-xs uppercase tracking-widest text-foreground/25 font-semibold mb-4">Response Times</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+          <div className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Avg First Response</p>
-              <Clock size={16} className="text-white/20" />
+              <p className="text-foreground/40 text-xs font-medium uppercase tracking-wider">Avg First Response</p>
+              <Clock size={16} className="text-foreground/20" />
             </div>
             <p className="text-3xl font-semibold text-[#B7EE7A] mt-1.5">{fmtMinutes(data.avgFirstResponseMinutes)}</p>
-            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="mt-3 h-1.5 bg-muted/30 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full ${
                   data.avgFirstResponseMinutes < 60 ? "bg-emerald-500" :
@@ -139,16 +139,16 @@ export default function SupportAnalyticsPage() {
                 style={{ width: `${Math.min((data.avgFirstResponseMinutes / 480) * 100, 100)}%` }}
               />
             </div>
-            <p className="text-[11px] text-white/25 mt-1.5">Target: &lt;60 minutes</p>
+            <p className="text-[11px] text-foreground/25 mt-1.5">Target: &lt;60 minutes</p>
           </div>
 
-          <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+          <div className="bg-card border border-border rounded-2xl p-5">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-white/40 text-xs font-medium uppercase tracking-wider">Avg Resolution Time</p>
-              <CheckCircle2 size={16} className="text-white/20" />
+              <p className="text-foreground/40 text-xs font-medium uppercase tracking-wider">Avg Resolution Time</p>
+              <CheckCircle2 size={16} className="text-foreground/20" />
             </div>
             <p className="text-3xl font-semibold text-[#B7EE7A] mt-1.5">{fmtMinutes(data.avgResolutionHours * 60)}</p>
-            <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="mt-3 h-1.5 bg-muted/30 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full ${
                   data.avgResolutionHours < 4 ? "bg-emerald-500" :
@@ -157,19 +157,19 @@ export default function SupportAnalyticsPage() {
                 style={{ width: `${Math.min((data.avgResolutionHours / 72) * 100, 100)}%` }}
               />
             </div>
-            <p className="text-[11px] text-white/25 mt-1.5">Target: &lt;4 hours</p>
+            <p className="text-[11px] text-foreground/25 mt-1.5">Target: &lt;4 hours</p>
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-5">
-            <BarChart3 size={16} className="text-white/30" />
-            <h3 className="text-sm font-semibold text-white/70">Tickets by Category</h3>
+            <BarChart3 size={16} className="text-foreground/30" />
+            <h3 className="text-sm font-semibold text-foreground/70">Tickets by Category</h3>
           </div>
           {data.byCategory.length === 0 ? (
-            <div className="py-8 text-center text-white/20 text-sm">No data available</div>
+            <div className="py-8 text-center text-foreground/20 text-sm">No data available</div>
           ) : (
             <div className="space-y-3">
               {data.byCategory.map(({ category, count }) => (
@@ -185,13 +185,13 @@ export default function SupportAnalyticsPage() {
           )}
         </div>
 
-        <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-5">
-            <AlertCircle size={16} className="text-white/30" />
-            <h3 className="text-sm font-semibold text-white/70">Tickets by Priority</h3>
+            <AlertCircle size={16} className="text-foreground/30" />
+            <h3 className="text-sm font-semibold text-foreground/70">Tickets by Priority</h3>
           </div>
           {data.byPriority.length === 0 ? (
-            <div className="py-8 text-center text-white/20 text-sm">No data available</div>
+            <div className="py-8 text-center text-foreground/20 text-sm">No data available</div>
           ) : (
             <div className="space-y-3">
               {data.byPriority.map(({ priority, count }) => (
@@ -210,8 +210,8 @@ export default function SupportAnalyticsPage() {
 
       {data.recentTrend.length > 0 && (
         <section>
-          <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-            <h3 className="text-sm font-semibold text-white/70 mb-5">7-Day Ticket Trend</h3>
+          <div className="bg-card border border-border rounded-2xl p-5">
+            <h3 className="text-sm font-semibold text-foreground/70 mb-5">7-Day Ticket Trend</h3>
             <div className="flex items-end gap-2 h-24">
               {data.recentTrend.map((d) => {
                 const maxVal = Math.max(...data.recentTrend.map((x) => Math.max(x.opened, x.resolved)), 1);
@@ -221,7 +221,7 @@ export default function SupportAnalyticsPage() {
                       <div className="flex-1 bg-[#B7EE7A]/60 rounded-t" style={{ height: `${(d.opened / maxVal) * 100}%` }} title={`Opened: ${d.opened}`} />
                       <div className="flex-1 bg-emerald-500/50 rounded-t" style={{ height: `${(d.resolved / maxVal) * 100}%` }} title={`Resolved: ${d.resolved}`} />
                     </div>
-                    <span className="text-[9px] text-white/20">{d.date.slice(5)}</span>
+                    <span className="text-[9px] text-foreground/20">{d.date.slice(5)}</span>
                   </div>
                 );
               })}
@@ -229,11 +229,11 @@ export default function SupportAnalyticsPage() {
             <div className="flex gap-4 mt-3">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-[#B7EE7A]/60" />
-                <span className="text-[11px] text-white/35">Opened</span>
+                <span className="text-[11px] text-foreground/35">Opened</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/50" />
-                <span className="text-[11px] text-white/35">Resolved</span>
+                <span className="text-[11px] text-foreground/35">Resolved</span>
               </div>
             </div>
           </div>

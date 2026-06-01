@@ -20,7 +20,7 @@ function retentionBg(pct: number): string {
 }
 
 function retentionTextColor(pct: number): string {
-  return pct > 50 ? "text-black" : "text-white/80";
+  return pct > 50 ? "text-black" : "text-foreground/80";
 }
 
 const PERIOD_OPTIONS = [
@@ -56,14 +56,14 @@ export default function CohortRetentionPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Cohort Retention Analysis</h1>
-        <p className="text-white/40 text-sm mt-0.5">
+        <h1 className="text-2xl font-semibold text-foreground">Cohort Retention Analysis</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">
           How well each signup cohort retains users over subsequent months
         </p>
       </div>
 
       {/* Period selector */}
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
         {PERIOD_OPTIONS.map((opt) => (
           <button
             key={opt.value}
@@ -71,7 +71,7 @@ export default function CohortRetentionPage() {
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
               months === opt.value
                 ? "bg-[#B7EE7A] text-black"
-                : "text-white/50 hover:text-white"
+                : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {opt.label}
@@ -87,40 +87,40 @@ export default function CohortRetentionPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-foreground/30" size={24} />
         </div>
       ) : cohorts.length === 0 ? (
-        <div className="text-center py-20 text-white/25">
+        <div className="text-center py-20 text-foreground/25">
           <Users2 size={36} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">No cohort data available</p>
         </div>
       ) : (
         <>
           {/* Heatmap table */}
-          <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-max">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-white/35 min-w-[160px]">
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-foreground/35 min-w-[160px]">
                       Cohort
                     </th>
                     {Array.from({ length: maxCols }, (_, i) => (
                       <th
                         key={i}
-                        className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-white/35 min-w-[64px]"
+                        className="px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-foreground/35 min-w-[64px]"
                       >
                         M+{i}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border">
                   {cohorts.map((cohort, rowIdx) => (
-                    <tr key={cohort.month} className={rowIdx % 2 === 0 ? "" : "bg-white/[0.01]"}>
+                    <tr key={cohort.month} className={rowIdx % 2 === 0 ? "" : "bg-muted/5"}>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <p className="text-sm font-medium text-white">{fmtMonthLabel(cohort.month)}</p>
-                        <p className="text-xs text-white/35 mt-0.5">{cohort.cohortSize.toLocaleString()} users</p>
+                        <p className="text-sm font-medium text-foreground">{fmtMonthLabel(cohort.month)}</p>
+                        <p className="text-xs text-foreground/35 mt-0.5">{cohort.cohortSize.toLocaleString()} users</p>
                       </td>
                       {Array.from({ length: maxCols }, (_, colIdx) => {
                         const pct = cohort.retention[colIdx];
@@ -128,8 +128,8 @@ export default function CohortRetentionPage() {
                         return (
                           <td key={colIdx} className="px-1 py-1">
                             {isFuture ? (
-                              <div className="mx-auto w-14 h-10 rounded-lg bg-white/3 flex items-center justify-center">
-                                <span className="text-xs text-white/20">—</span>
+                              <div className="mx-auto w-14 h-10 rounded-lg bg-muted/10 flex items-center justify-center">
+                                <span className="text-xs text-foreground/20">—</span>
                               </div>
                             ) : (
                               <div
@@ -151,11 +151,11 @@ export default function CohortRetentionPage() {
           </div>
 
           {/* Average retention bar chart */}
-          <div className="bg-[#161616] border border-white/5 rounded-2xl p-6">
-            <h2 className="text-sm font-semibold text-white mb-1">
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <h2 className="text-sm font-semibold text-foreground mb-1">
               Average Retention by Month
             </h2>
-            <p className="text-xs text-white/35 mb-6">
+            <p className="text-xs text-foreground/35 mb-6">
               Average across all {cohorts.length} cohort{cohorts.length !== 1 ? "s" : ""}
             </p>
             <div className="flex items-end gap-2 h-40">
@@ -163,7 +163,7 @@ export default function CohortRetentionPage() {
                 const heightPct = maxAvg > 0 ? (avg / maxAvg) * 100 : 0;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] text-white/50 font-medium">
+                    <span className="text-[10px] text-foreground/50 font-medium">
                       {Math.round(avg)}%
                     </span>
                     <div className="w-full flex items-end" style={{ height: "96px" }}>
@@ -177,7 +177,7 @@ export default function CohortRetentionPage() {
                         title={`M+${i}: ${avg.toFixed(1)}% avg retention`}
                       />
                     </div>
-                    <span className="text-[10px] text-white/35">M+{i}</span>
+                    <span className="text-[10px] text-foreground/35">M+{i}</span>
                   </div>
                 );
               })}

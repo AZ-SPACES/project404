@@ -16,7 +16,7 @@ function BusinessAvatar({ merchant, size = 64 }: { merchant: Merchant; size?: nu
       <img
         src={merchant.logoUrl}
         alt={merchant.businessName}
-        className="rounded-xl object-cover border border-white/10"
+        className="rounded-xl object-cover border border-border"
         style={{ width: size, height: size }}
       />
     );
@@ -127,13 +127,13 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Settings</h1>
-        <p className="text-white/40 text-sm mt-0.5">Business profile and preferences</p>
+        <h1 className="text-xl font-bold text-foreground">Settings</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Business profile and preferences</p>
       </div>
 
       {/* Business logo */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-        <p className="text-sm font-semibold text-white mb-4">Business logo</p>
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-semibold text-foreground mb-4">Business logo</p>
         <div className="flex items-center gap-4">
           {merchant && <BusinessAvatar merchant={merchant} size={64} />}
           <div>
@@ -151,19 +151,19 @@ export default function SettingsPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/6 border border-white/10 text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
             >
               {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
               {uploading ? "Uploading…" : "Change logo"}
             </button>
-            <p className="text-xs text-white/25 mt-1.5">PNG or JPG, max 5MB</p>
+            <p className="text-xs text-foreground/25 mt-1.5">PNG or JPG, max 5MB</p>
           </div>
         </div>
       </div>
 
       {/* Profile form */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-        <p className="text-sm font-semibold text-white mb-5">Business details</p>
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-semibold text-foreground mb-5">Business details</p>
         <form onSubmit={handleSave} className="space-y-4">
           <Field label="Business name">
             <input
@@ -215,7 +215,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? "Saving…" : "Save changes"}
@@ -224,21 +224,21 @@ export default function SettingsPage() {
       </div>
 
       {/* Checkout branding */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-        <p className="text-sm font-semibold text-white mb-1">Checkout branding</p>
-        <p className="text-xs text-white/30 mb-5">Customize how your checkout page looks to customers</p>
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm font-semibold text-foreground mb-1">Checkout branding</p>
+        <p className="text-xs text-foreground/30 mb-5">Customize how your checkout page looks to customers</p>
         <div className="space-y-4">
           <div>
             <div className="flex items-baseline gap-2 mb-1.5">
-              <label className="text-sm font-medium text-white/65">Brand color</label>
-              <span className="text-xs text-white/30">Used for the pay button on checkout</span>
+              <label className="text-sm font-medium text-foreground/65">Brand color</label>
+              <span className="text-xs text-foreground/30">Used for the pay button on checkout</span>
             </div>
             <div className="flex items-center gap-3">
               <input
                 type="color"
                 value={brandColor}
                 onChange={(e) => setBrandColor(e.target.value)}
-                className="w-10 h-10 rounded-lg cursor-pointer border border-white/10 bg-transparent"
+                className="w-10 h-10 rounded-lg cursor-pointer border border-border bg-transparent"
               />
               <input
                 type="text"
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                 className={inputCls + " font-mono w-36"}
               />
               <div
-                className="flex-1 h-10 rounded-xl border border-white/10 flex items-center justify-center text-white text-xs font-semibold"
+                className="flex-1 h-10 rounded-xl border border-border flex items-center justify-center text-foreground text-xs font-semibold"
                 style={{ backgroundColor: brandColor }}
               >
                 Pay now
@@ -278,16 +278,16 @@ export default function SettingsPage() {
       </div>
 
       {/* Tax configuration */}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
+      <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm font-semibold text-white">Tax</p>
-            <p className="text-xs text-white/30 mt-0.5">Automatically calculate tax on invoices and checkouts</p>
+            <p className="text-sm font-semibold text-foreground">Tax</p>
+            <p className="text-xs text-foreground/30 mt-0.5">Automatically calculate tax on invoices and checkouts</p>
           </div>
           <button
             type="button"
             onClick={() => setTaxEnabled((v) => !v)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${taxEnabled ? "bg-[#174717]" : "bg-white/15"}`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${taxEnabled ? "bg-[#174717]" : "bg-muted/50"}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${taxEnabled ? "translate-x-6" : "translate-x-1"}`} />
           </button>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
         <button
           onClick={handleSave as unknown as React.MouseEventHandler}
           disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? "Saving…" : "Save all settings"}
@@ -339,8 +339,8 @@ export default function SettingsPage() {
 
       {/* Account info */}
       {merchant && (
-        <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-          <p className="text-sm font-semibold text-white mb-4">Account info</p>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-sm font-semibold text-foreground mb-4">Account info</p>
           <div className="space-y-3">
             <InfoRow label="Business handle" value={`@${merchant.businessHandle}`} mono />
             <InfoRow label="Merchant ID" value={merchant.id} mono />
@@ -350,8 +350,8 @@ export default function SettingsPage() {
               <InfoRow label="Platform fee" value={`${(merchant.feeRateBps / 100).toFixed(2)}%`} />
             )}
           </div>
-          <div className="mt-4 pt-4 border-t border-white/5">
-            <p className="text-xs text-white/25">
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-foreground/25">
               To close your business account, please{" "}
               <a href="mailto:support@aza.systems" className="text-[#B7EE7A] hover:underline">
                 contact support
@@ -366,14 +366,14 @@ export default function SettingsPage() {
 }
 
 const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
+  "w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-muted/40 transition-all text-sm";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="flex items-baseline gap-2 mb-1.5">
-        <label className="text-sm font-medium text-white/65">{label}</label>
-        {hint && <span className="text-xs text-white/30">{hint}</span>}
+        <label className="text-sm font-medium text-foreground/65">{label}</label>
+        {hint && <span className="text-xs text-foreground/30">{hint}</span>}
       </div>
       {children}
     </div>
@@ -383,8 +383,8 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function InfoRow({ label, value, mono, cls }: { label: string; value: string; mono?: boolean; cls?: string }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-white/35">{label}</span>
-      <span className={`text-xs ${mono ? "font-mono" : ""} ${cls ?? "text-white/65"}`}>{value}</span>
+      <span className="text-xs text-foreground/35">{label}</span>
+      <span className={`text-xs ${mono ? "font-mono" : ""} ${cls ?? "text-foreground/65"}`}>{value}</span>
     </div>
   );
 }

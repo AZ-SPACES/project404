@@ -38,11 +38,11 @@ export default function AuditLogsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Audit Log</h1>
-        <p className="text-white/40 text-sm mt-0.5">Record of important actions taken on your account</p>
+        <h1 className="text-xl font-bold text-foreground">Audit Log</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Record of important actions taken on your account</p>
       </div>
 
-      <div className="bg-[#161616] border border-white/5 rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <Loader2 className="animate-spin text-[#B7EE7A]" size={22} />
@@ -53,25 +53,25 @@ export default function AuditLogsPage() {
           </div>
         ) : !page || page.content.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <ClipboardList size={32} className="text-white/15" />
-            <p className="text-white/40 text-sm">No audit events yet</p>
+            <ClipboardList size={32} className="text-foreground/15" />
+            <p className="text-foreground/40 text-sm">No audit events yet</p>
           </div>
         ) : (
           <>
             <div className="divide-y divide-white/[0.04]">
               {page.content.map((log) => (
-                <div key={log.id} className="px-5 py-4 flex items-start gap-4 hover:bg-white/[0.02] transition-colors">
+                <div key={log.id} className="px-5 py-4 flex items-start gap-4 hover:bg-muted/10 transition-colors">
                   <div className="w-2 h-2 rounded-full bg-[#B7EE7A]/60 mt-1.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <p className="text-sm font-medium text-white">{formatAction(log.action)}</p>
-                      <p className="text-xs text-white/30 flex-shrink-0">{fmtDate(log.createdAt)}</p>
+                      <p className="text-sm font-medium text-foreground">{formatAction(log.action)}</p>
+                      <p className="text-xs text-foreground/30 flex-shrink-0">{fmtDate(log.createdAt)}</p>
                     </div>
                     {log.actorEmail && (
-                      <p className="text-xs text-white/40 mt-0.5">by {log.actorEmail}</p>
+                      <p className="text-xs text-foreground/40 mt-0.5">by {log.actorEmail}</p>
                     )}
                     {log.details && (
-                      <p className="text-xs text-white/30 mt-1 truncate">{log.details}</p>
+                      <p className="text-xs text-foreground/30 mt-1 truncate">{log.details}</p>
                     )}
                   </div>
                 </div>
@@ -79,22 +79,22 @@ export default function AuditLogsPage() {
             </div>
 
             {page.totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
-                <p className="text-xs text-white/30">
+              <div className="flex items-center justify-between px-5 py-3 border-t border-border">
+                <p className="text-xs text-foreground/30">
                   {page.totalElements} events · page {page.number + 1} of {page.totalPages}
                 </p>
                 <div className="flex gap-1">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={() => setCurrentPage((p) => p + 1)}
                     disabled={currentPage >= page.totalPages - 1}
-                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight size={16} />
                   </button>

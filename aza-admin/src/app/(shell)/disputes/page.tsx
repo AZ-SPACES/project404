@@ -84,8 +84,8 @@ export default function DisputesPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Dispute Management</h1>
-        <p className="text-white/40 text-sm mt-0.5">Customer transaction disputes and chargebacks</p>
+        <h1 className="text-2xl font-semibold text-foreground">Dispute Management</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Customer transaction disputes and chargebacks</p>
       </div>
 
       {disputeStats && (
@@ -94,12 +94,12 @@ export default function DisputesPage() {
             { label: "Open", value: disputeStats.open, icon: Clock, color: "text-amber-400" },
             { label: "Under Review", value: disputeStats.underReview, icon: AlertCircle, color: "text-blue-400" },
             { label: "Resolved (Month)", value: disputeStats.resolvedThisMonth, icon: CheckCircle2, color: "text-emerald-400" },
-            { label: "Total Value Disputed", value: fmtGhs(disputeStats.totalValueDisputed), icon: Scale, color: "text-white" },
+            { label: "Total Value Disputed", value: fmtGhs(disputeStats.totalValueDisputed), icon: Scale, color: "text-foreground" },
           ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
+            <div key={label} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium">{label}</p>
-                <Icon size={14} className="text-white/20" />
+                <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium">{label}</p>
+                <Icon size={14} className="text-foreground/20" />
               </div>
               <p className={`text-xl font-semibold ${color} mt-1`}>{value}</p>
             </div>
@@ -107,13 +107,13 @@ export default function DisputesPage() {
         </div>
       )}
 
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit flex-wrap">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit flex-wrap">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => { setFilter(tab.key); setPage(0); }}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
+              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {tab.label}
@@ -127,50 +127,50 @@ export default function DisputesPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-foreground/30" size={24} />
         </div>
       ) : data?.content.length === 0 ? (
-        <div className="text-center py-20 text-white/25">
+        <div className="text-center py-20 text-foreground/25">
           <Scale size={36} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">No disputes found</p>
         </div>
       ) : (
         <div className="space-y-2">
           {data?.content.map((dispute) => (
-            <div key={dispute.id} className="bg-[#161616] border border-white/5 rounded-xl px-5 py-4">
+            <div key={dispute.id} className="bg-card border border-border rounded-xl px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <span className="text-xs font-mono text-white/30">{dispute.referenceId}</span>
+                    <span className="text-xs font-mono text-foreground/30">{dispute.referenceId}</span>
                     <StatusBadge status={dispute.status} />
-                    <span className="px-2 py-0.5 rounded text-xs border border-white/8 text-white/40">
+                    <span className="px-2 py-0.5 rounded text-xs border border-border text-foreground/40">
                       {CATEGORY_LABELS[dispute.category] ?? dispute.category}
                     </span>
                   </div>
                   <div className="flex items-center gap-4 mb-2 flex-wrap">
                     <div>
-                      <p className="text-sm font-semibold text-white">{dispute.userName}</p>
-                      {dispute.userHandle && <p className="text-xs text-white/35">@{dispute.userHandle}</p>}
+                      <p className="text-sm font-semibold text-foreground">{dispute.userName}</p>
+                      {dispute.userHandle && <p className="text-xs text-foreground/35">@{dispute.userHandle}</p>}
                     </div>
                     <div className="text-right sm:text-left">
                       <p className="text-sm font-bold text-[#B7EE7A]">{fmtGhs(dispute.amount)}</p>
-                      <p className="text-xs text-white/35">Disputed amount</p>
+                      <p className="text-xs text-foreground/35">Disputed amount</p>
                     </div>
                   </div>
-                  <p className="text-xs text-white/50 leading-relaxed">{dispute.description}</p>
+                  <p className="text-xs text-foreground/50 leading-relaxed">{dispute.description}</p>
                   {dispute.resolution && (
-                    <div className="mt-2 px-3 py-2 bg-white/3 border border-white/6 rounded-lg">
-                      <p className="text-[11px] text-white/30 font-medium uppercase tracking-wider mb-0.5">Resolution</p>
-                      <p className="text-xs text-white/55">{dispute.resolution}</p>
+                    <div className="mt-2 px-3 py-2 bg-muted/10 border border-border rounded-lg">
+                      <p className="text-[11px] text-foreground/30 font-medium uppercase tracking-wider mb-0.5">Resolution</p>
+                      <p className="text-xs text-foreground/55">{dispute.resolution}</p>
                     </div>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <p className="text-xs text-white/30">{fmtDate(dispute.createdAt)}</p>
+                  <p className="text-xs text-foreground/30">{fmtDate(dispute.createdAt)}</p>
                   {(dispute.status === "OPEN" || dispute.status === "UNDER_REVIEW") && (
                     <button
                       onClick={() => { setResolving(dispute); setResolution(""); }}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white/60 hover:text-white transition-all font-medium"
+                      className="px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted border border-border text-xs text-foreground/60 hover:text-foreground transition-all font-medium"
                     >
                       Resolve
                     </button>
@@ -184,44 +184,44 @@ export default function DisputesPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
-          <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Previous</button>
+          <span className="text-sm text-foreground/40">{page + 1} / {data.totalPages}</span>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Next</button>
         </div>
       )}
 
       {resolving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setResolving(null)} />
-          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-white">Resolve Dispute</h3>
-              <button onClick={() => setResolving(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
+              <h3 className="text-base font-semibold text-foreground">Resolve Dispute</h3>
+              <button onClick={() => setResolving(null)} className="text-foreground/40 hover:text-foreground"><X size={18} /></button>
             </div>
 
-            <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4 space-y-1.5">
+            <div className="bg-muted/20 border border-border rounded-xl p-4 mb-4 space-y-1.5">
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">User</span>
-                <span className="text-white font-medium">{resolving.userName}</span>
+                <span className="text-foreground/40">User</span>
+                <span className="text-foreground font-medium">{resolving.userName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Amount</span>
+                <span className="text-foreground/40">Amount</span>
                 <span className="text-[#B7EE7A] font-bold">{fmtGhs(resolving.amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Type</span>
-                <span className="text-white/70">{CATEGORY_LABELS[resolving.category]}</span>
+                <span className="text-foreground/40">Type</span>
+                <span className="text-foreground/70">{CATEGORY_LABELS[resolving.category]}</span>
               </div>
             </div>
 
             <div className="mb-5">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Resolution Notes</label>
+              <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider mb-2 block">Resolution Notes</label>
               <textarea
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
                 placeholder="Provide resolution details..."
                 rows={3}
-                className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 resize-none"
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 resize-none"
               />
             </div>
 

@@ -88,8 +88,8 @@ export default function CompliancePage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Compliance & AML</h1>
-        <p className="text-white/40 text-sm mt-0.5">Anti-money laundering monitoring and suspicious activity reports</p>
+        <h1 className="text-2xl font-semibold text-foreground">Compliance & AML</h1>
+        <p className="text-foreground/40 text-sm mt-0.5">Anti-money laundering monitoring and suspicious activity reports</p>
       </div>
 
       {compStats && (
@@ -100,12 +100,12 @@ export default function CompliancePage() {
             { label: "Cleared (Month)", value: compStats.clearedThisMonth, color: "text-emerald-400", icon: CheckCircle2 },
             { label: "SARs Filed", value: compStats.reportsFiledThisMonth, color: "text-red-400", icon: FileText },
             { label: "High Risk Users", value: compStats.highRiskUsers, color: "text-amber-400", icon: ShieldAlert },
-            { label: "Avg Risk Score", value: compStats.averageRiskScore.toFixed(0), color: "text-white", icon: AlertCircle },
+            { label: "Avg Risk Score", value: compStats.averageRiskScore.toFixed(0), color: "text-foreground", icon: AlertCircle },
           ].map(({ label, value, color, icon: Icon }) => (
-            <div key={label} className="bg-[#161616] border border-white/5 rounded-xl p-4">
+            <div key={label} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider font-medium">{label}</p>
-                <Icon size={14} className="text-white/20" />
+                <p className="text-[10px] text-foreground/35 uppercase tracking-wider font-medium">{label}</p>
+                <Icon size={14} className="text-foreground/20" />
               </div>
               <p className={`text-2xl font-semibold ${color}`}>{value}</p>
             </div>
@@ -113,13 +113,13 @@ export default function CompliancePage() {
         </div>
       )}
 
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => { setFilter(tab.key); setPage(0); }}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
+              filter === tab.key ? "bg-[#B7EE7A] text-black" : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {tab.label}
@@ -136,39 +136,39 @@ export default function CompliancePage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={24} />
+          <Loader2 className="animate-spin text-foreground/30" size={24} />
         </div>
       ) : data?.content.length === 0 ? (
-        <div className="text-center py-20 text-white/25">
+        <div className="text-center py-20 text-foreground/25">
           <ShieldAlert size={36} className="mx-auto mb-3 opacity-40" />
           <p className="text-sm">No flagged transactions found</p>
         </div>
       ) : (
-        <div className="bg-[#161616] border border-white/5 rounded-2xl overflow-hidden">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">User</th>
-                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Amount</th>
-                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30 hidden md:table-cell">Reason</th>
-                <th className="text-center px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Risk</th>
-                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30 hidden sm:table-cell">Status</th>
-                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30 hidden lg:table-cell">Flagged</th>
+              <tr className="border-b border-border">
+                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">User</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">Amount</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 hidden md:table-cell">Reason</th>
+                <th className="text-center px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">Risk</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 hidden sm:table-cell">Status</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 hidden lg:table-cell">Flagged</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/3">
+            <tbody className="divide-y divide-border">
               {data?.content.map((tx) => (
-                <tr key={tx.id} className="hover:bg-white/2 transition-colors">
+                <tr key={tx.id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-5 py-4">
-                    <p className="text-sm font-medium text-white">{tx.userName}</p>
-                    {tx.userHandle && <p className="text-xs text-white/35">@{tx.userHandle}</p>}
+                    <p className="text-sm font-medium text-foreground">{tx.userName}</p>
+                    {tx.userHandle && <p className="text-xs text-foreground/35">@{tx.userHandle}</p>}
                   </td>
                   <td className="px-5 py-4">
-                    <p className="text-sm font-semibold text-white">{fmtGhs(tx.amount)}</p>
+                    <p className="text-sm font-semibold text-foreground">{fmtGhs(tx.amount)}</p>
                   </td>
                   <td className="px-5 py-4 hidden md:table-cell">
-                    <p className="text-xs text-white/55 max-w-[200px] truncate">{tx.flagReason}</p>
+                    <p className="text-xs text-foreground/55 max-w-[200px] truncate">{tx.flagReason}</p>
                   </td>
                   <td className="px-5 py-4 text-center">
                     <RiskScore score={tx.riskScore} />
@@ -177,13 +177,13 @@ export default function CompliancePage() {
                     <StatusBadge status={tx.status} />
                   </td>
                   <td className="px-5 py-4 hidden lg:table-cell">
-                    <p className="text-xs text-white/35">{fmtDate(tx.flaggedAt)}</p>
+                    <p className="text-xs text-foreground/35">{fmtDate(tx.flaggedAt)}</p>
                   </td>
                   <td className="px-5 py-4">
                     {tx.status === "PENDING_REVIEW" && (
                       <button
                         onClick={() => { setReviewing(tx); setReviewNotes(""); }}
-                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white/60 hover:text-white transition-all font-medium"
+                        className="px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted border border-border text-xs text-foreground/60 hover:text-foreground transition-all font-medium"
                       >
                         Review
                       </button>
@@ -198,48 +198,48 @@ export default function CompliancePage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Previous</button>
-          <span className="text-sm text-white/40">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/5">Next</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page === 0 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Previous</button>
+          <span className="text-sm text-foreground/40">{page + 1} / {data.totalPages}</span>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= data.totalPages - 1 || isLoading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Next</button>
         </div>
       )}
 
       {reviewing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setReviewing(null)} />
-          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="relative bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-white">Review Flagged Transaction</h3>
-              <button onClick={() => setReviewing(null)} className="text-white/40 hover:text-white"><X size={18} /></button>
+              <h3 className="text-base font-semibold text-foreground">Review Flagged Transaction</h3>
+              <button onClick={() => setReviewing(null)} className="text-foreground/40 hover:text-foreground"><X size={18} /></button>
             </div>
 
-            <div className="bg-white/4 border border-white/8 rounded-xl p-4 mb-4 space-y-2">
+            <div className="bg-muted/20 border border-border rounded-xl p-4 mb-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">User</span>
-                <span className="text-white font-medium">{reviewing.userName}</span>
+                <span className="text-foreground/40">User</span>
+                <span className="text-foreground font-medium">{reviewing.userName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Amount</span>
-                <span className="text-white font-semibold">{fmtGhs(reviewing.amount)}</span>
+                <span className="text-foreground/40">Amount</span>
+                <span className="text-foreground font-semibold">{fmtGhs(reviewing.amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Risk Score</span>
+                <span className="text-foreground/40">Risk Score</span>
                 <RiskScore score={reviewing.riskScore} />
               </div>
               <div className="text-sm">
-                <span className="text-white/40 block mb-1">Flag Reason</span>
-                <span className="text-white/70 text-xs">{reviewing.flagReason}</span>
+                <span className="text-foreground/40 block mb-1">Flag Reason</span>
+                <span className="text-foreground/70 text-xs">{reviewing.flagReason}</span>
               </div>
             </div>
 
             <div className="mb-5">
-              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 block">Review Notes</label>
+              <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider mb-2 block">Review Notes</label>
               <textarea
                 value={reviewNotes}
                 onChange={(e) => setReviewNotes(e.target.value)}
                 placeholder="Document your review findings..."
                 rows={3}
-                className="w-full bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 resize-none"
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20 resize-none"
               />
             </div>
 

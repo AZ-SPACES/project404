@@ -13,15 +13,15 @@ function Toggle({ enabled, onChange, label, description, danger }: {
   danger?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-4 border-b border-white/5 last:border-0">
+    <div className="flex items-center justify-between py-4 border-b border-border last:border-0">
       <div className="flex-1 mr-4">
-        <p className={`text-sm font-medium ${danger ? "text-red-300" : "text-white/80"}`}>{label}</p>
-        {description && <p className="text-xs text-white/35 mt-0.5">{description}</p>}
+        <p className={`text-sm font-medium ${danger ? "text-red-300" : "text-foreground/80"}`}>{label}</p>
+        {description && <p className="text-xs text-foreground/35 mt-0.5">{description}</p>}
       </div>
       <button
         onClick={() => onChange(!enabled)}
         className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-          enabled ? danger ? "bg-red-500" : "bg-[#B7EE7A]" : "bg-white/10"
+          enabled ? danger ? "bg-red-500" : "bg-[#B7EE7A]" : "bg-muted/50"
         }`}
       >
         <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-7" : "translate-x-1"}`} />
@@ -34,18 +34,18 @@ function NumberInput({ label, description, value, onChange, prefix }: {
   label: string; description?: string; value: number; onChange: (v: number) => void; prefix?: string;
 }) {
   return (
-    <div className="flex items-center justify-between py-4 border-b border-white/5 last:border-0">
+    <div className="flex items-center justify-between py-4 border-b border-border last:border-0">
       <div className="flex-1 mr-4">
-        <p className="text-sm font-medium text-white/80">{label}</p>
-        {description && <p className="text-xs text-white/35 mt-0.5">{description}</p>}
+        <p className="text-sm font-medium text-foreground/80">{label}</p>
+        {description && <p className="text-xs text-foreground/35 mt-0.5">{description}</p>}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        {prefix && <span className="text-xs text-white/40 font-medium">{prefix}</span>}
+        {prefix && <span className="text-xs text-foreground/40 font-medium">{prefix}</span>}
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-28 bg-white/5 border border-white/8 rounded-lg px-3 py-1.5 text-sm text-white text-right focus:outline-none focus:border-white/20 transition-colors"
+          className="w-28 bg-muted/30 border border-border rounded-lg px-3 py-1.5 text-sm text-foreground text-right focus:outline-none focus:border-border transition-colors"
         />
       </div>
     </div>
@@ -56,16 +56,16 @@ function TextInput({ label, description, value, onChange }: {
   label: string; description?: string; value: string; onChange: (v: string) => void;
 }) {
   return (
-    <div className="py-4 border-b border-white/5 last:border-0">
+    <div className="py-4 border-b border-border last:border-0">
       <div className="mb-2">
-        <p className="text-sm font-medium text-white/80">{label}</p>
-        {description && <p className="text-xs text-white/35 mt-0.5">{description}</p>}
+        <p className="text-sm font-medium text-foreground/80">{label}</p>
+        {description && <p className="text-xs text-foreground/35 mt-0.5">{description}</p>}
       </div>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-white/5 border border-white/8 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors"
+        className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-border transition-colors"
       />
     </div>
   );
@@ -108,7 +108,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-white/30" size={28} />
+        <Loader2 className="animate-spin text-foreground/30" size={28} />
       </div>
     );
   }
@@ -117,11 +117,11 @@ export default function SettingsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">System Settings</h1>
-          <p className="text-white/40 text-sm mt-0.5">Platform configuration and feature management</p>
+          <h1 className="text-2xl font-semibold text-foreground">System Settings</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Platform configuration and feature management</p>
         </div>
         {draft?.platformVersion && (
-          <span className="px-3 py-1.5 rounded-full bg-white/5 border border-white/8 text-xs text-white/40 font-mono">
+          <span className="px-3 py-1.5 rounded-full bg-muted/30 border border-border text-xs text-foreground/40 font-mono">
             v{draft.platformVersion}
           </span>
         )}
@@ -155,9 +155,9 @@ export default function SettingsPage() {
         </div>
       ) : draft && (
         <>
-          <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
-            <div className="py-4 border-b border-white/5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30 flex items-center gap-2">
+          <div className="bg-card border border-border rounded-2xl px-5">
+            <div className="py-4 border-b border-border">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground/30 flex items-center gap-2">
                 <Settings size={13} />
                 Platform Operations
               </h3>
@@ -193,11 +193,11 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
-            <div className="py-4 border-b border-white/5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Default Transaction Limits</h3>
+          <div className="bg-card border border-border rounded-2xl px-5">
+            <div className="py-4 border-b border-border">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground/30">Default Transaction Limits</h3>
             </div>
-            <p className="text-xs text-white/30 pt-4 pb-1">Platform-wide defaults. Individual users can have custom limits set on their profile page.</p>
+            <p className="text-xs text-foreground/30 pt-4 pb-1">Platform-wide defaults. Individual users can have custom limits set on their profile page.</p>
             <NumberInput
               label="Default Max Daily Transfer"
               description="Applies to users without a custom daily limit"
@@ -214,9 +214,9 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
-            <div className="py-4 border-b border-white/5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Feature Flags</h3>
+          <div className="bg-card border border-border rounded-2xl px-5">
+            <div className="py-4 border-b border-border">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground/30">Feature Flags</h3>
             </div>
             <Toggle
               label="Biometric Authentication"
@@ -238,9 +238,9 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="bg-[#161616] border border-white/5 rounded-2xl px-5">
-            <div className="py-4 border-b border-white/5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/30">Contact Information</h3>
+          <div className="bg-card border border-border rounded-2xl px-5">
+            <div className="py-4 border-b border-border">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground/30">Contact Information</h3>
             </div>
             <TextInput
               label="Support Email"

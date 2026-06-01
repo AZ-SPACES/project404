@@ -4,10 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signup } from "@/lib/merchant-api";
-import { Loader2, Eye, EyeOff, Phone, Mail, User } from "lucide-react";
-
-const inputCls =
-  "w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 focus:bg-white/8 transition-all text-sm";
+import { Loader2, Eye, EyeOff, Phone, Mail, User, Lock } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { FloatingPaths } from "@/components/floating-paths";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -23,8 +28,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const passwordsMatch = password === confirmPassword;
   const passwordStrong = password.length >= 8;
+  const passwordsMatch = password === confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,184 +48,223 @@ export default function SignupPage() {
     try {
       await signup({ firstName, lastName, email, phone, password });
       router.replace("/onboarding");
-    } catch (err: any) {
-      setError(err.message ?? "Signup failed. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] px-4 py-10">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-6">
-            <img src="/logo.png" alt="Aza Merchants" className="h-8 w-auto" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="text-white/45 text-sm mt-1.5">
-            Start accepting payments with AZA
-          </p>
+    <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
+      {/* Left panel */}
+      <div className="relative hidden h-full flex-col border-r border-border bg-secondary dark:bg-secondary/20 p-10 lg:flex">
+        <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background" />
+        <img src="/logo.png" alt="AZA Merchants" className="mr-auto h-7 w-auto relative z-10" />
+        <div className="z-10 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-xl text-foreground">
+              &ldquo;Start accepting payments in minutes. No paperwork, no delays — just results.&rdquo;
+            </p>
+            <footer className="font-mono font-semibold text-sm text-muted-foreground">
+              ~ AZA Merchants
+            </footer>
+          </blockquote>
+        </div>
+        <div className="absolute inset-0">
+          <FloatingPaths position={1} />
+          <FloatingPaths position={-1} />
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="relative flex min-h-screen flex-col justify-center px-8 py-10">
+        <ThemeToggle className="absolute top-5 right-5 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" />
+        {/* Ambient shades */}
+        <div
+          aria-hidden
+          className="absolute inset-0 isolate -z-10 opacity-60 contain-strict"
+        >
+          <div className="absolute top-0 right-0 h-320 w-140 -translate-y-87.5 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,--theme(--color-foreground/.06)_0,hsla(0,0%,55%,.02)_50%,--theme(--color-foreground/.01)_80%)]" />
+          <div className="absolute top-0 right-0 h-320 w-60 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)] [translate:5%_-50%]" />
+          <div className="absolute top-0 right-0 h-320 w-60 -translate-y-87.5 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,--theme(--color-foreground/.04)_0,--theme(--color-foreground/.01)_80%,transparent_100%)]" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">
-                First name
-              </label>
-              <div className="relative">
-                <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" />
-                <input
-                  type="text"
-                  required
-                  autoComplete="given-name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Kofi"
-                  className={`${inputCls} pl-9`}
-                />
+        <div className="mx-auto space-y-5 sm:w-sm">
+          {/* Mobile logo */}
+          <img
+            src="/logo.png"
+            alt="AZA Merchants"
+            className="h-7 w-auto lg:hidden"
+          />
+
+          <div className="flex flex-col space-y-1">
+            <h1 className="font-bold text-2xl tracking-wide">Create your account</h1>
+            <p className="text-base text-muted-foreground">
+              Start accepting payments with AZA
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Name row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">First name</label>
+                <InputGroup>
+                  <InputGroupAddon align="inline-start">
+                    <User size={14} />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="text"
+                    required
+                    autoComplete="given-name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Kofi"
+                  />
+                </InputGroup>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Last name</label>
+                <InputGroup>
+                  <InputGroupInput
+                    type="text"
+                    required
+                    autoComplete="family-name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Mensah"
+                  />
+                </InputGroup>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1.5">
-                Last name
-              </label>
-              <input
-                type="text"
-                required
-                autoComplete="family-name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Mensah"
-                className={inputCls}
-              />
-            </div>
-          </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-1.5">
-              Email address
-            </label>
-            <div className="relative">
-              <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" />
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className={`${inputCls} pl-9`}
-              />
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Email address</label>
+              <InputGroup>
+                <InputGroupAddon align="inline-start">
+                  <Mail size={14} />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </InputGroup>
             </div>
-          </div>
 
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-1.5">
-              Phone number
-            </label>
-            <div className="relative">
-              <Phone size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/25" />
-              <input
-                type="tel"
-                required
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+233 XX XXX XXXX"
-                className={`${inputCls} pl-9`}
-              />
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Phone number</label>
+              <InputGroup>
+                <InputGroupAddon align="inline-start">
+                  <Phone size={14} />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+233 XX XXX XXXX"
+                />
+              </InputGroup>
             </div>
-          </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPw ? "text" : "password"}
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters"
-                className={`${inputCls} pr-10`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Password</label>
+              <InputGroup>
+                <InputGroupAddon align="inline-start">
+                  <Lock size={14} />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type={showPw ? "text" : "password"}
+                  required
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                />
+                <InputGroupAddon align="inline-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </InputGroupAddon>
+              </InputGroup>
+              {password.length > 0 && !passwordStrong && (
+                <p className="text-xs text-amber-400">Password must be at least 8 characters</p>
+              )}
             </div>
-            {password.length > 0 && !passwordStrong && (
-              <p className="text-xs text-amber-400 mt-1">Password must be at least 8 characters</p>
-            )}
-          </div>
 
-          {/* Confirm password */}
-          <div>
-            <label className="block text-sm font-medium text-white/70 mb-1.5">
-              Confirm password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirm ? "text" : "password"}
-                required
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                className={`${inputCls} pr-10 ${
+            {/* Confirm password */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Confirm password</label>
+              <InputGroup
+                className={
                   confirmPassword.length > 0 && !passwordsMatch
-                    ? "border-red-500/40 focus:border-red-500/60"
+                    ? "border-destructive/50 focus-within:border-destructive/70"
                     : ""
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                }
               >
-                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+                <InputGroupAddon align="inline-start">
+                  <Lock size={14} />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type={showConfirm ? "text" : "password"}
+                  required
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                />
+                <InputGroupAddon align="inline-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </InputGroupAddon>
+              </InputGroup>
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="text-xs text-destructive">Passwords do not match</p>
+              )}
             </div>
-            {confirmPassword.length > 0 && !passwordsMatch && (
-              <p className="text-xs text-red-400 mt-1">Passwords do not match</p>
+
+            {error && (
+              <div className="px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
             )}
-          </div>
 
-          {error && (
-            <div className="px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {error}
-            </div>
-          )}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-9 bg-[#174717] hover:bg-[#1e5e1e] text-white border-0"
+            >
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              {loading ? "Creating account…" : "Create account"}
+            </Button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mt-1"
-          >
-            {loading && <Loader2 size={16} className="animate-spin" />}
-            {loading ? "Creating account…" : "Create account"}
-          </button>
-        </form>
-
-        <p className="text-center text-xs text-white/25 mt-6">
-          Already have an account?{" "}
-          <Link href="/login" className="text-[#B7EE7A] hover:underline">
-            Sign in
-          </Link>
-        </p>
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="text-[#B7EE7A] hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -58,8 +58,8 @@ export default function WalletsPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-white mb-1">Wallets</h1>
-        <p className="text-white/50 text-sm">All user wallets — freeze or unfreeze to restrict transactions</p>
+        <h1 className="text-2xl font-semibold text-foreground mb-1">Wallets</h1>
+        <p className="text-foreground/50 text-sm">All user wallets — freeze or unfreeze to restrict transactions</p>
       </div>
 
       {(error || freezeMutation.error) && (
@@ -71,44 +71,44 @@ export default function WalletsPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-muted/30 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : data?.content.length === 0 ? (
-        <div className="text-center py-24 text-white/30">
+        <div className="text-center py-24 text-foreground/30">
           <Wallet size={40} className="mx-auto mb-4 opacity-40" />
           <p>No wallets found</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/5 overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.03]">
-                <th className="text-left px-4 py-3 text-white/40 font-medium">User</th>
-                <th className="text-left px-4 py-3 text-white/40 font-medium">Email / Handle</th>
-                <th className="text-right px-4 py-3 text-white/40 font-medium">Balance</th>
-                <th className="text-center px-4 py-3 text-white/40 font-medium">Status</th>
-                <th className="text-right px-4 py-3 text-white/40 font-medium">Last Updated</th>
-                <th className="text-center px-4 py-3 text-white/40 font-medium">Action</th>
+              <tr className="border-b border-border bg-muted/10">
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">User</th>
+                <th className="text-left px-4 py-3 text-foreground/40 font-medium">Email / Handle</th>
+                <th className="text-right px-4 py-3 text-foreground/40 font-medium">Balance</th>
+                <th className="text-center px-4 py-3 text-foreground/40 font-medium">Status</th>
+                <th className="text-right px-4 py-3 text-foreground/40 font-medium">Last Updated</th>
+                <th className="text-center px-4 py-3 text-foreground/40 font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
               {data?.content.map((wallet, i) => (
                 <tr
                   key={wallet.walletId}
-                  className={`border-b border-white/5 transition-colors ${
-                    i % 2 === 0 ? "" : "bg-white/[0.02]"
+                  className={`border-b border-border transition-colors ${
+                    i % 2 === 0 ? "" : "bg-muted/10"
                   } ${wallet.frozen ? "opacity-70" : ""}`}
                 >
                   <td className="px-4 py-3">
-                    <div className="text-white font-medium">{wallet.userName}</div>
+                    <div className="text-foreground font-medium">{wallet.userName}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-white/70 text-sm">{wallet.userEmail}</div>
-                    {wallet.userHandle && <div className="text-white/30 text-xs">@{wallet.userHandle}</div>}
+                    <div className="text-foreground/70 text-sm">{wallet.userEmail}</div>
+                    {wallet.userHandle && <div className="text-foreground/30 text-xs">@{wallet.userHandle}</div>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="text-white font-semibold">
+                    <span className="text-foreground font-semibold">
                       {wallet.currency} {Number(wallet.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </td>
@@ -123,7 +123,7 @@ export default function WalletsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-white/40 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-right text-foreground/40 text-xs whitespace-nowrap">
                     {fmt(wallet.lastUpdatedAt)}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -151,11 +151,11 @@ export default function WalletsPage() {
       )}
 
       {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-white/50 mt-8">
+        <div className="flex items-center justify-between text-sm text-foreground/50 mt-8">
           <button
             onClick={() => setPage(p => p - 1)}
             disabled={page === 0 || isLoading}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
+            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={14} /> Previous
           </button>
@@ -163,7 +163,7 @@ export default function WalletsPage() {
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={page >= data.totalPages - 1 || isLoading}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 transition-colors"
+            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
           >
             Next <ChevronRight size={14} />
           </button>

@@ -59,8 +59,8 @@ function NewKeyModal({
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="w-full max-w-sm bg-[#161616] border border-white/8 rounded-2xl p-6 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-foreground/30 hover:text-foreground hover:bg-muted/40 transition-colors">
           <X size={16} />
         </button>
         <div className="flex items-center gap-2.5 mb-4">
@@ -68,22 +68,22 @@ function NewKeyModal({
             <AlertTriangle size={16} className="text-amber-400" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Save your key</p>
-            <p className="text-xs text-white/40">This is shown once only</p>
+            <p className="text-sm font-semibold text-foreground">Save your key</p>
+            <p className="text-xs text-foreground/40">This is shown once only</p>
           </div>
         </div>
-        <div className="bg-black/40 border border-white/8 rounded-xl p-3.5 mb-4">
-          <p className="text-[10px] text-white/30 mb-1.5 uppercase tracking-wider font-medium">{environment} Secret Key</p>
-          <p className="text-xs font-mono text-white/80 break-all">{fullKey}</p>
+        <div className="bg-black/40 border border-border rounded-xl p-3.5 mb-4">
+          <p className="text-[10px] text-foreground/30 mb-1.5 uppercase tracking-wider font-medium">{environment} Secret Key</p>
+          <p className="text-xs font-mono text-foreground/80 break-all">{fullKey}</p>
         </div>
         <button
           onClick={copy}
-          className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-3"
+          className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-3"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           {copied ? "Copied to clipboard" : "Copy key"}
         </button>
-        <p className="text-xs text-white/25 text-center">
+        <p className="text-xs text-foreground/25 text-center">
           Your secret key is like a password — never put it in client-side code.
         </p>
       </div>
@@ -126,39 +126,39 @@ function EditKeyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="w-full max-w-sm bg-[#161616] border border-white/8 rounded-2xl p-6 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-foreground/30 hover:text-foreground hover:bg-muted/40 transition-colors">
           <X size={16} />
         </button>
-        <h3 className="text-base font-semibold text-white mb-5">Edit API Key</h3>
+        <h3 className="text-base font-semibold text-foreground mb-5">Edit API Key</h3>
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Label</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">Label</label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production Server"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              IP Whitelist <span className="text-white/25 font-normal">optional — comma separated</span>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">
+              IP Whitelist <span className="text-foreground/25 font-normal">optional — comma separated</span>
             </label>
             <input
               type="text"
               value={ipWhitelist}
               onChange={(e) => setIpWhitelist(e.target.value)}
               placeholder="192.168.1.1, 10.0.0.0/24"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Saving…" : "Save changes"}
@@ -222,27 +222,27 @@ function CreateKeyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="w-full max-w-sm bg-[#161616] border border-white/8 rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
-        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+      <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-foreground/30 hover:text-foreground hover:bg-muted/40 transition-colors">
           <X size={16} />
         </button>
-        <h3 className="text-base font-semibold text-white mb-1">New {environment} API Key</h3>
-        <p className="text-xs text-white/35 mb-5">Configure permissions and restrictions for this key.</p>
+        <h3 className="text-base font-semibold text-foreground mb-1">New {environment} API Key</h3>
+        <p className="text-xs text-foreground/35 mb-5">Configure permissions and restrictions for this key.</p>
 
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Label</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">Label</label>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Production Server Key"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-2">Key Type</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-2">Key Type</label>
             <div className="flex gap-2">
               {(["SECRET", "RESTRICTED"] as const).map((t) => (
                 <button
@@ -252,7 +252,7 @@ function CreateKeyModal({
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     keyType === t
                       ? "bg-[#B7EE7A]/15 border-[#B7EE7A]/40 text-[#B7EE7A]"
-                      : "bg-white/4 border-white/10 text-white/50 hover:text-white"
+                      : "bg-muted/10 border-border text-foreground/50 hover:text-foreground"
                   }`}
                 >
                   {t.charAt(0) + t.slice(1).toLowerCase()}
@@ -263,7 +263,7 @@ function CreateKeyModal({
 
           {keyType === "RESTRICTED" && (
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-2">Permissions</label>
+              <label className="block text-xs font-medium text-foreground/50 mb-2">Permissions</label>
               <div className="space-y-2">
                 {Object.keys(scopes).map((scope) => (
                   <label key={scope} className="flex items-center gap-2.5 cursor-pointer">
@@ -273,7 +273,7 @@ function CreateKeyModal({
                       onChange={() => setScopes((prev) => ({ ...prev, [scope]: !prev[scope] }))}
                       className="w-3.5 h-3.5 accent-[#B7EE7A]"
                     />
-                    <span className="text-xs font-mono text-white/65">{scope}</span>
+                    <span className="text-xs font-mono text-foreground/65">{scope}</span>
                   </label>
                 ))}
               </div>
@@ -281,20 +281,20 @@ function CreateKeyModal({
           )}
 
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              IP Whitelist <span className="text-white/25 font-normal">optional</span>
+            <label className="block text-xs font-medium text-foreground/50 mb-1.5">
+              IP Whitelist <span className="text-foreground/25 font-normal">optional</span>
             </label>
             <input
               type="text"
               value={ipWhitelist}
               onChange={(e) => setIpWhitelist(e.target.value)}
               placeholder="192.168.1.1, 10.0.0.0/24"
-              className="w-full px-3.5 py-2.5 bg-white/6 border border-white/10 rounded-xl text-white placeholder-white/25 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+              className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-2">Expiration</label>
+            <label className="block text-xs font-medium text-foreground/50 mb-2">Expiration</label>
             <div className="flex gap-2">
               {[{ label: "Never", val: null }, { label: "30 days", val: 30 }, { label: "90 days", val: 90 }].map((opt) => (
                 <button
@@ -304,7 +304,7 @@ function CreateKeyModal({
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     expirationDays === opt.val
                       ? "bg-[#B7EE7A]/15 border-[#B7EE7A]/40 text-[#B7EE7A]"
-                      : "bg-white/4 border-white/10 text-white/50 hover:text-white"
+                      : "bg-muted/10 border-border text-foreground/50 hover:text-foreground"
                   }`}
                 >
                   {opt.label}
@@ -317,7 +317,7 @@ function CreateKeyModal({
           <button
             type="submit"
             disabled={creating}
-            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {creating && <Loader2 size={14} className="animate-spin" />}
             {creating ? "Creating…" : "Create key"}
@@ -350,27 +350,27 @@ function KeyRow({
   const isRevoked = !!apiKey.revokedAt;
   return (
     <div className={`p-4 rounded-xl border transition-colors ${
-      isRevoked ? "bg-white/2 border-white/5 opacity-50" : "bg-white/4 border-white/8"
+      isRevoked ? "bg-muted/10 border-border opacity-50" : "bg-muted/10 border-border"
     }`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-mono font-medium text-white">
-            {apiKey.keyPrefix}<span className="text-white/30">••••••••••••••••</span>
+          <p className="text-sm font-mono font-medium text-foreground">
+            {apiKey.keyPrefix}<span className="text-foreground/30">••••••••••••••••</span>
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-1">
-            {apiKey.label && <span className="text-xs text-white/45">{apiKey.label}</span>}
-            <span className="text-xs text-white/30">Created {fmtDate(apiKey.createdAt)}</span>
-            <span className="text-xs text-white/20">·</span>
-            <span className="text-xs text-white/30">Last used {fmtDate(apiKey.lastUsedAt)}</span>
+            {apiKey.label && <span className="text-xs text-foreground/45">{apiKey.label}</span>}
+            <span className="text-xs text-foreground/30">Created {fmtDate(apiKey.createdAt)}</span>
+            <span className="text-xs text-foreground/20">·</span>
+            <span className="text-xs text-foreground/30">Last used {fmtDate(apiKey.lastUsedAt)}</span>
             {apiKey.expiresAt && (
               <>
-                <span className="text-xs text-white/20">·</span>
+                <span className="text-xs text-foreground/20">·</span>
                 <span className="text-xs text-amber-400">Expires {fmtDate(apiKey.expiresAt)}</span>
               </>
             )}
           </div>
           {apiKey.ipWhitelist && (
-            <p className="text-[10px] font-mono text-white/30 mt-1 truncate">IP: {apiKey.ipWhitelist}</p>
+            <p className="text-[10px] font-mono text-foreground/30 mt-1 truncate">IP: {apiKey.ipWhitelist}</p>
           )}
         </div>
 
@@ -378,7 +378,7 @@ function KeyRow({
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={() => onEdit(apiKey)}
-              className="p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/8 transition-colors"
+              className="p-1.5 rounded-lg text-foreground/25 hover:text-foreground/70 hover:bg-muted/40 transition-colors"
               title="Edit key"
             >
               <Edit2 size={13} />
@@ -386,14 +386,14 @@ function KeyRow({
             {!confirmRoll ? (
               <button
                 onClick={() => setConfirmRoll(true)}
-                className="p-1.5 rounded-lg text-white/25 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                className="p-1.5 rounded-lg text-foreground/25 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
                 title="Roll key"
               >
                 <RefreshCw size={13} />
               </button>
             ) : (
               <div className="flex items-center gap-1">
-                <span className="text-xs text-white/40">Roll?</span>
+                <span className="text-xs text-foreground/40">Roll?</span>
                 <button
                   onClick={() => { setConfirmRoll(false); onRoll(apiKey.id); }}
                   disabled={rolling}
@@ -401,19 +401,19 @@ function KeyRow({
                 >
                   {rolling ? <Loader2 size={12} className="animate-spin" /> : "Yes"}
                 </button>
-                <button onClick={() => setConfirmRoll(false)} className="px-2 py-1 rounded-lg bg-white/6 text-white/40 text-xs font-medium hover:text-white transition-colors">No</button>
+                <button onClick={() => setConfirmRoll(false)} className="px-2 py-1 rounded-lg bg-muted/30 text-foreground/40 text-xs font-medium hover:text-foreground transition-colors">No</button>
               </div>
             )}
             {confirming ? (
               <div className="flex items-center gap-1">
-                <span className="text-xs text-white/40">Revoke?</span>
+                <span className="text-xs text-foreground/40">Revoke?</span>
                 <button onClick={() => onRevoke(apiKey.id)} disabled={revoking} className="px-2 py-1 rounded-lg bg-red-500/15 border border-red-500/25 text-red-400 text-xs font-medium hover:bg-red-500/25 transition-colors">
                   {revoking ? <Loader2 size={12} className="animate-spin" /> : "Yes"}
                 </button>
-                <button onClick={() => setConfirming(false)} className="px-2 py-1 rounded-lg bg-white/6 text-white/40 text-xs font-medium hover:text-white transition-colors">No</button>
+                <button onClick={() => setConfirming(false)} className="px-2 py-1 rounded-lg bg-muted/30 text-foreground/40 text-xs font-medium hover:text-foreground transition-colors">No</button>
               </div>
             ) : (
-              <button onClick={() => setConfirming(true)} className="p-1.5 rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Revoke key">
+              <button onClick={() => setConfirming(true)} className="p-1.5 rounded-lg text-foreground/25 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Revoke key">
                 <Trash2 size={13} />
               </button>
             )}
@@ -421,7 +421,7 @@ function KeyRow({
         )}
 
         {isRevoked && (
-          <span className="text-xs text-white/30 font-medium flex-shrink-0">Revoked {fmtDate(apiKey.revokedAt)}</span>
+          <span className="text-xs text-foreground/30 font-medium flex-shrink-0">Revoked {fmtDate(apiKey.revokedAt)}</span>
         )}
       </div>
     </div>
@@ -460,7 +460,7 @@ function ApiLogsView() {
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-40">
-        <Loader2 className="animate-spin text-white/30" size={22} />
+        <Loader2 className="animate-spin text-foreground/30" size={22} />
       </div>
     );
   }
@@ -476,9 +476,9 @@ function ApiLogsView() {
   if (logs.length === 0) {
     return (
       <div className="py-16 text-center">
-        <Activity size={28} className="mx-auto mb-3 text-white/15" />
-        <p className="text-sm text-white/30">No API request logs yet</p>
-        <p className="text-xs text-white/20 mt-1">Requests made with your API keys will appear here</p>
+        <Activity size={28} className="mx-auto mb-3 text-foreground/15" />
+        <p className="text-sm text-foreground/30">No API request logs yet</p>
+        <p className="text-xs text-foreground/20 mt-1">Requests made with your API keys will appear here</p>
       </div>
     );
   }
@@ -488,21 +488,21 @@ function ApiLogsView() {
       {logs.map((log) => {
         const isErr = log.statusCode >= 400;
         return (
-          <div key={log.id} className="bg-white/4 border border-white/8 rounded-xl p-4">
+          <div key={log.id} className="bg-muted/10 border border-border rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-bold font-mono ${log.method === "POST" ? "text-blue-400" : "text-white/60"}`}>
+              <span className={`text-xs font-bold font-mono ${log.method === "POST" ? "text-blue-400" : "text-foreground/60"}`}>
                 {log.method}
               </span>
-              <span className="text-sm font-mono text-white/80 flex-1 truncate">{log.path}</span>
+              <span className="text-sm font-mono text-foreground/80 flex-1 truncate">{log.path}</span>
               <span className={`text-sm font-bold font-mono ${isErr ? "text-red-400" : "text-[#B7EE7A]"}`}>
                 {log.statusCode}
               </span>
             </div>
             <div className="flex justify-between mt-2">
               {log.ipAddress && (
-                <span className="text-[10px] text-white/30 font-mono">IP: {log.ipAddress}</span>
+                <span className="text-[10px] text-foreground/30 font-mono">IP: {log.ipAddress}</span>
               )}
-              <span className="text-[10px] text-white/30 ml-auto">{fmtDateTime(log.createdAt)}</span>
+              <span className="text-[10px] text-foreground/30 ml-auto">{fmtDateTime(log.createdAt)}</span>
             </div>
             {log.errorMessage && (
               <p className="text-[11px] text-red-400 font-mono mt-1.5 truncate">Error: {log.errorMessage}</p>
@@ -514,7 +514,7 @@ function ApiLogsView() {
         <button
           onClick={() => load(page + 1)}
           disabled={loading}
-          className="w-full py-2.5 rounded-xl bg-white/5 border border-white/8 text-sm text-white/50 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-2.5 rounded-xl bg-muted/30 border border-border text-sm text-foreground/50 hover:text-foreground hover:bg-muted transition-colors flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 size={14} className="animate-spin" /> : "Load more"}
         </button>
@@ -563,15 +563,15 @@ function KeySection({
           onClose={() => setShowCreateModal(false)}
         />
       )}
-      <div className="bg-[#161616] border border-white/5 rounded-xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <p className={`text-sm font-semibold ${color}`}>{title}</p>
-            <p className="text-xs text-white/35 mt-0.5">{description}</p>
+            <p className="text-xs text-foreground/35 mt-0.5">{description}</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/10 text-xs font-medium text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 border border-border text-xs font-medium text-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
           >
             <Plus size={12} />
             Generate
@@ -579,8 +579,8 @@ function KeySection({
         </div>
         {activeKeys.length === 0 ? (
           <div className="py-6 text-center">
-            <Key size={20} className="mx-auto mb-2 text-white/15" />
-            <p className="text-xs text-white/25">No active {environment.toLowerCase()} keys</p>
+            <Key size={20} className="mx-auto mb-2 text-foreground/15" />
+            <p className="text-xs text-foreground/25">No active {environment.toLowerCase()} keys</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -714,14 +714,14 @@ export default function ApiKeysPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">API Keys</h1>
-            <p className="text-white/40 text-sm mt-0.5">Manage your API credentials for integrations</p>
+            <h1 className="text-xl font-bold text-foreground">API Keys</h1>
+            <p className="text-foreground/40 text-sm mt-0.5">Manage your API credentials for integrations</p>
           </div>
-          <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+          <div className="flex gap-1 bg-muted/30 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab("KEYS")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === "KEYS" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                activeTab === "KEYS" ? "bg-muted/50 text-foreground" : "text-foreground/40 hover:text-foreground"
               }`}
             >
               <List size={13} />Keys
@@ -729,7 +729,7 @@ export default function ApiKeysPage() {
             <button
               onClick={() => setActiveTab("LOGS")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === "LOGS" ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                activeTab === "LOGS" ? "bg-muted/50 text-foreground" : "text-foreground/40 hover:text-foreground"
               }`}
             >
               <Activity size={13} />Logs
@@ -755,7 +755,7 @@ export default function ApiKeysPage() {
 
             {loading ? (
               <div className="flex items-center justify-center h-40">
-                <Loader2 className="animate-spin text-white/30" size={22} />
+                <Loader2 className="animate-spin text-foreground/30" size={22} />
               </div>
             ) : (
               <>
@@ -770,7 +770,7 @@ export default function ApiKeysPage() {
                   onEdit={setEditingKey}
                   onRoll={handleRoll}
                   rolling={rolling}
-                  color="text-white/60"
+                  color="text-foreground/60"
                 />
                 <KeySection
                   title="Live keys"
@@ -789,8 +789,8 @@ export default function ApiKeysPage() {
             )}
           </>
         ) : (
-          <div className="bg-[#161616] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-semibold text-white mb-4">API Request Logs</p>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <p className="text-sm font-semibold text-foreground mb-4">API Request Logs</p>
             <ApiLogsView />
           </div>
         )}

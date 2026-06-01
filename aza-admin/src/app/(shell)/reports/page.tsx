@@ -20,18 +20,18 @@ function fmtGhs(n: number) {
 }
 
 function MetricCard({
-  label, value, sub, icon: Icon, color = "text-white",
+  label, value, sub, icon: Icon, color = "text-foreground",
 }: { label: string; value: string; sub?: string; icon: React.ElementType; color?: string }) {
   return (
-    <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
+    <div className="bg-card border border-border rounded-2xl p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-white/40 text-xs font-medium uppercase tracking-wider">{label}</p>
+          <p className="text-foreground/40 text-xs font-medium uppercase tracking-wider">{label}</p>
           <p className={`text-2xl font-semibold mt-1.5 leading-tight ${color}`}>{value}</p>
-          {sub && <p className="text-white/35 text-xs mt-1">{sub}</p>}
+          {sub && <p className="text-foreground/35 text-xs mt-1">{sub}</p>}
         </div>
-        <div className="p-2 rounded-xl bg-white/5">
-          <Icon size={18} className="text-white/30" />
+        <div className="p-2 rounded-xl bg-muted/30">
+          <Icon size={18} className="text-foreground/30" />
         </div>
       </div>
     </div>
@@ -40,11 +40,11 @@ function MetricCard({
 
 function SummaryRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-      <span className="text-sm text-white/50">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
+      <span className="text-sm text-foreground/50">{label}</span>
       <div className="text-right">
-        <span className="text-sm font-semibold text-white">{value}</span>
-        {sub && <p className="text-xs text-white/30">{sub}</p>}
+        <span className="text-sm font-semibold text-foreground">{value}</span>
+        {sub && <p className="text-xs text-foreground/30">{sub}</p>}
       </div>
     </div>
   );
@@ -67,22 +67,22 @@ export default function ReportsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Reports & Analytics</h1>
-          <p className="text-white/40 text-sm mt-0.5">Platform financial performance and user metrics</p>
+          <h1 className="text-2xl font-semibold text-foreground">Reports & Analytics</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Platform financial performance and user metrics</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-sm text-white/60 hover:text-white transition-all">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted border border-border text-sm text-foreground/60 hover:text-foreground transition-all">
           <Download size={15} />
           Export CSV
         </button>
       </div>
 
-      <div className="flex gap-1 bg-white/5 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">
         {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              period === p ? "bg-[#B7EE7A] text-black" : "text-white/50 hover:text-white"
+              period === p ? "bg-[#B7EE7A] text-black" : "text-foreground/50 hover:text-foreground"
             }`}
           >
             {PERIOD_LABELS[p]}
@@ -99,7 +99,7 @@ export default function ReportsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="animate-spin text-white/30" size={28} />
+          <Loader2 className="animate-spin text-foreground/30" size={28} />
         </div>
       ) : (
         <>
@@ -133,9 +133,9 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-white/70 mb-4 flex items-center gap-2">
-                <FileBarChart2 size={16} className="text-white/30" />
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-foreground/70 mb-4 flex items-center gap-2">
+                <FileBarChart2 size={16} className="text-foreground/30" />
                 Financial Summary — {PERIOD_LABELS[period]}
               </h3>
               {report ? (
@@ -156,13 +156,13 @@ export default function ReportsPage() {
                   <SummaryRow label="Today's Transactions" value={stats.transactionsToday.toLocaleString()} />
                 </>
               ) : (
-                <div className="py-8 text-center text-white/20 text-sm">No data available</div>
+                <div className="py-8 text-center text-foreground/20 text-sm">No data available</div>
               )}
             </div>
 
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-white/70 mb-4 flex items-center gap-2">
-                <Users size={16} className="text-white/30" />
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-foreground/70 mb-4 flex items-center gap-2">
+                <Users size={16} className="text-foreground/30" />
                 User Summary — {PERIOD_LABELS[period]}
               </h3>
               {stats ? (
@@ -175,20 +175,20 @@ export default function ReportsPage() {
                   {report && <SummaryRow label="New This Period" value={report.newUsers.toLocaleString()} />}
                 </>
               ) : (
-                <div className="py-8 text-center text-white/20 text-sm">No data available</div>
+                <div className="py-8 text-center text-foreground/20 text-sm">No data available</div>
               )}
             </div>
           </div>
 
           {stats && (
-            <div className="bg-[#161616] border border-white/5 rounded-2xl p-5">
-              <h3 className="text-sm font-semibold text-white/70 mb-4">KYC Funnel</h3>
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="text-sm font-semibold text-foreground/70 mb-4">KYC Funnel</h3>
               <div className="flex rounded-full overflow-hidden h-3 mb-3">
                 {[
                   { label: "Verified", count: stats.kycVerified, color: "bg-emerald-500" },
                   { label: "Pending", count: stats.kycPendingReview, color: "bg-amber-500" },
                   { label: "Rejected", count: stats.kycRejected, color: "bg-red-500" },
-                  { label: "Not Started", count: stats.kycNotStarted, color: "bg-white/10" },
+                  { label: "Not Started", count: stats.kycNotStarted, color: "bg-muted/50" },
                 ].map(({ label, count, color }) => {
                   const pct = stats.totalUsers > 0 ? (count / stats.totalUsers) * 100 : 0;
                   return pct > 0 ? (
@@ -205,7 +205,7 @@ export default function ReportsPage() {
                 ].map(({ label, count, color }) => (
                   <div key={label} className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
-                    <span className="text-xs text-white/45">{label}: <span className="text-white/70 font-medium">{count.toLocaleString()}</span></span>
+                    <span className="text-xs text-foreground/45">{label}: <span className="text-foreground/70 font-medium">{count.toLocaleString()}</span></span>
                   </div>
                 ))}
               </div>
