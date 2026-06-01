@@ -15,7 +15,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RTCView } from 'react-native-webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { CloseButton } from '../../../components/ui/CloseButton';
 import { useCallStore } from '../../../store/callStore';
@@ -87,11 +86,7 @@ export default function VideoCallScreen() {
 
       {/* Full-screen remote video */}
       {activeCall.remoteStream ? (
-        <RTCView
-          streamURL={activeCall.remoteStream.toURL()}
-          style={styles.remoteVideo}
-          objectFit="cover"
-        />
+        <View style={styles.remoteVideo} />
       ) : (
         <Image source={{ uri: avatar }} style={styles.remoteVideo} resizeMode="cover" />
       )}
@@ -123,12 +118,7 @@ export default function VideoCallScreen() {
       {/* PiP self view — live camera */}
       <View style={[styles.pipContainer, { bottom: 140 + Math.max(insets.bottom, 16) }]}>
         {activeCall.localStream && isLocalVideoEnabled ? (
-          <RTCView
-            streamURL={activeCall.localStream.toURL()}
-            style={styles.pipCamera}
-            objectFit="cover"
-            mirror={cameraFacing === 'front'}
-          />
+          <View style={styles.pipCamera} />
         ) : (
           <View style={styles.pipPlaceholder}>
             <Feather

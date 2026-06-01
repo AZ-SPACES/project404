@@ -1,7 +1,11 @@
 import { create } from 'zustand';
-import { RTCPeerConnection, MediaStream, RTCIceCandidate, RTCSessionDescription } from 'react-native-webrtc';
 import { webrtcService } from '../services/webrtcService';
 import { callAudioService } from '../services/callAudioService';
+
+type RTCPeerConnection = any;
+type MediaStream = any;
+type RTCIceCandidate = any;
+type RTCSessionDescription = any;
 import { ensureCallPermissions } from '../services/callPermissions';
 import { navigate } from '../navigation/navigationRef';
 import {
@@ -338,7 +342,7 @@ export const useCallStore = create<CallState>((set, get) => ({
             
             set((st) => ({ activeCall: st.activeCall ? { ...st.activeCall, peerConnection: pc } : null }));
             
-            const offerDesc = new RTCSessionDescription(JSON.parse(payload.data));
+            const offerDesc = JSON.parse(payload.data);
             const answer = await webrtcService.createAnswer(pc, offerDesc);
             await relaySdpAnswer(activeCall.callId, JSON.stringify(answer));
           } catch (e) {
@@ -351,7 +355,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       case 'sdp.answer':
         if (activeCall?.peerConnection) {
           try {
-            const answerDesc = new RTCSessionDescription(JSON.parse(payload.data));
+            const answerDesc = JSON.parse(payload.data);
             await webrtcService.setRemoteDescription(activeCall.peerConnection, answerDesc);
           } catch (e) {
             console.error("Error handling answer", e);
@@ -362,7 +366,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       case 'ice.candidate':
         if (activeCall?.peerConnection && payload.data) {
           try {
-            const candidate = new RTCIceCandidate(JSON.parse(payload.data));
+            const candidate = JSON.parse(payload.data);
             await webrtcService.addIceCandidate(activeCall.peerConnection, candidate);
           } catch (e) {
             console.error("Error adding ice candidate", e);

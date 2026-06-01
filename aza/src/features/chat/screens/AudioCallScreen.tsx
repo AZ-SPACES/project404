@@ -16,7 +16,6 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RTCView } from 'react-native-webrtc';
 import { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
 import { useCallStore } from '../../../store/callStore';
@@ -147,11 +146,7 @@ export default function AudioCallScreen() {
       {/* Video mode: full-screen remote feed */}
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: remoteVideoOpacity }]} pointerEvents={isVideoMode ? 'auto' : 'none'}>
         {activeCall.remoteStream ? (
-          <RTCView
-            streamURL={activeCall.remoteStream.toURL()}
-            style={StyleSheet.absoluteFill}
-            objectFit="cover"
-          />
+          <View style={StyleSheet.absoluteFill} />
         ) : (
           <Image source={{ uri: avatar }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         )}
@@ -194,12 +189,7 @@ export default function AudioCallScreen() {
       {/* Video mode: PiP self view with camera */}
       <Animated.View style={[styles.pipContainer, { bottom: pipBottom, opacity: pipOpacity }]}>
         {activeCall.localStream && isLocalVideoEnabled ? (
-          <RTCView
-            streamURL={activeCall.localStream.toURL()}
-            style={styles.pipCamera}
-            objectFit="cover"
-            mirror={cameraFacing === 'front'}
-          />
+          <View style={styles.pipCamera} />
         ) : (
           <View style={styles.pipPlaceholder}>
             <Feather name="video-off" size={22} color="rgba(255,255,255,0.5)" />
