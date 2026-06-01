@@ -145,7 +145,7 @@ export default function MediaPreviewScreen() {
       time: formatTime(),
       timestamp: Date.now(),
       status: 'sent' as const,
-      type: 'image' as const,
+      type: (m.type === 'video' ? 'video' : 'image') as 'image' | 'video',
       uri: m.uri,
       caption: m.caption || undefined,
     }));

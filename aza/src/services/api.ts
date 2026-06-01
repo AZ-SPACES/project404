@@ -728,6 +728,8 @@ export type SendMessagePayload = {
   content?: string;
   ephemeralKey?: string;
   preKeyId?: string;
+  /** Present on the first message of a session (X3DH initiator). */
+  senderIdentityPublicKey?: string;
   type?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "VOICE_NOTE" | "PAYMENT_REQUEST";
   mediaKey?: string;
   viewOnce?: boolean;

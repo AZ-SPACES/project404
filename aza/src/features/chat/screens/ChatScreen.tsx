@@ -37,6 +37,7 @@ import {
 } from '../../../components/chat/chatTypes';
 import { useChat } from '../../../hooks/useChat';
 import { useCallStore } from '../../../store/callStore';
+import { uploadChatMedia } from '../../../services/api';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -56,6 +57,7 @@ export default function ChatScreen() {
     messages: liveMessages,
     isOtherTyping,
     sendText,
+    sendMedia,
     setTyping,
     markRead,
     deleteMessage: deleteMessageRemote,
@@ -116,21 +118,35 @@ export default function ChatScreen() {
     }
   }, [messages.length]);
 
-  // Listen for media returned from MediaPreviewScreen.
-  // NOTE: encrypted media upload is a TODO — for now we surface the picked media
-  // locally and send a placeholder text "[Photo]" / "[Video]" through the E2EE
-  // pipeline so the peer at least gets a notification. Wiring the Cloudinary
-  // upload + media-key encryption is a separate task.
+  // Listen for media returned from MediaPreviewScreen — upload to backend then
+  // send an E2EE-encrypted message containing the Cloudinary media URL.
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('chat_media_sent', (sentMedia: Message[]) => {
-      if (sentMedia && sentMedia.length > 0) {
-        setLocalOnlyMessages(prev => [...prev, ...sentMedia]);
+      if (!sentMedia?.length || !chatId) return;
+
+      setLocalOnlyMessages(prev => [...prev, ...sentMedia]);
+
+      (async () => {
         for (const item of sentMedia) {
-          const placeholder =
-            item.type === 'video' ? '[Video]' : item.type === 'document' ? `[Document] ${item.fileName ?? ''}` : '[Photo]';
-          sendText(placeholder).catch(() => {});
+          const mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' =
+            item.type === 'video' ? 'VIDEO' : item.type === 'document' ? 'DOCUMENT' : 'IMAGE';
+          const ext = item.type === 'video' ? 'mp4' : 'jpg';
+          const file = {
+            uri: item.uri!,
+            name: item.fileName ?? `media_${Date.now()}.${ext}`,
+            type: item.mimeType ?? (item.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+          };
+          try {
+            const response = await uploadChatMedia(file, chatId, mediaType);
+            const uploadedKey: string | undefined = response.data?.data?.mediaKey;
+            if (!uploadedKey) throw new Error('No mediaKey in upload response');
+            await sendMedia(uploadedKey, mediaType, item.text ?? '');
+          } catch (e) {
+            console.warn('[chat] media upload/send failed for item', item.id, e);
+            setLocalOnlyMessages(prev => prev.filter(m => m.id !== item.id));
+          }
         }
-      }
+      })();
     });
 
     const clearMediaSub = DeviceEventEmitter.addListener('clear_media_messages', (idsToClear: string[]) => {
@@ -143,7 +159,7 @@ export default function ChatScreen() {
       subscription.remove();
       clearMediaSub.remove();
     };
-  }, [sendText]);
+  }, [sendMedia, chatId]);
 
   // Handle injected forwarded message — keep locally so we can preserve original metadata.
   useEffect(() => {
@@ -360,13 +376,27 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   // Media pickers
   // --------------------------------------------------------------------------
-  const addMediaMessage = useCallback((newMsg: Message) => {
+  const addMediaMessage = useCallback(async (newMsg: Message) => {
+    if (!chatId) return;
     setLocalOnlyMessages(prev => [...prev, newMsg]);
-    // Notify the peer with a placeholder until the encrypted media-upload pipeline is wired.
-    const placeholder =
-      newMsg.type === 'document' ? `[Document] ${newMsg.fileName ?? ''}` : '[Photo]';
-    sendText(placeholder).catch(() => {});
-  }, [sendText]);
+
+    const mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' =
+      newMsg.type === 'video' ? 'VIDEO' : newMsg.type === 'document' ? 'DOCUMENT' : 'IMAGE';
+    const file = {
+      uri: newMsg.uri!,
+      name: newMsg.fileName ?? `media_${Date.now()}`,
+      type: newMsg.mimeType ?? 'application/octet-stream',
+    };
+    try {
+      const response = await uploadChatMedia(file, chatId, mediaType);
+      const uploadedKey: string | undefined = response.data?.data?.mediaKey;
+      if (!uploadedKey) throw new Error('No mediaKey in upload response');
+      await sendMedia(uploadedKey, mediaType, newMsg.text ?? '');
+    } catch (e) {
+      console.warn('[chat] document upload/send failed', e);
+      setLocalOnlyMessages(prev => prev.filter(m => m.id !== newMsg.id));
+    }
+  }, [chatId, sendMedia]);
 
   const handlePickPhoto = useCallback(async () => {
     if (isPickingRef.current) return;

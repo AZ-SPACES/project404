@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <!-- ── Development / test: readable console output ───────────────────────── -->
+  <springProfile name="!production">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Quieten noisy Spring internals in dev -->
+    <logger name="org.hibernate.SQL"                   level="WARN" />
+    <logger name="org.springframework.web"             level="WARN" />
+    <logger name="org.springframework.security"        level="WARN" />
+    <logger name="com.zaxxer.hikari"                   level="WARN" />
+  </springProfile>
+
+  <!-- ── Production: structured JSON to stdout (consumed by your log aggregator) -->
+  <springProfile name="production">
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <!-- Include caller info so you can pinpoint the source file + line -->
+        <includeCallerData>false</includeCallerData>
+        <!-- Add a fixed "service" field to every log line -->
+        <customFields>{"service":"aza-backend"}</customFields>
+        <!-- Shorten logger names: com.aza.backend.service.AuthService → a.b.s.AuthService -->
+        <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+        <!-- Avoid logging sensitive fields even if someone passes them as MDC -->
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <version>[ignore]</version>
+          <levelValue>[ignore]</levelValue>
+        </fieldNames>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="JSON_CONSOLE" />
+    </root>
+
+    <logger name="com.aza.backend" level="INFO" />
+    <logger name="org.springframework"  level="WARN" />
+    <logger name="org.hibernate"        level="WARN" />
+  </springProfile>
+
+</configuration>
