@@ -216,7 +216,7 @@ public class StatementService {
         String fullName  = trim(user.getFirstName()) + " " + trim(user.getLastName());
         String accountNo = formatAccountNo(user.getId());
         String verifyCode = stmtHash(user, start, end, txs.size(), closingBal).substring(0, 16).toUpperCase();
-        String verifyUrl  = appBaseUrl + "/api/v1/public/statements/verify/page?code=" + verifyCode;
+        String verifyUrl  = appBaseUrl + "/verify?code=" + verifyCode;
 
         byte[] logoBytes = loadLogoBytes();
 
