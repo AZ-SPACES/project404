@@ -22,7 +22,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidPhone } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkPhoneAvailability } from "../../../services/api";
-import BackButton from "../../../components/ui/BackButton";
+import { BackButton } from "../../../components/ui/BackButton";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpNumber">;
 
