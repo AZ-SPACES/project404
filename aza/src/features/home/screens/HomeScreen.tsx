@@ -162,7 +162,7 @@ export default function HomeScreen() {
   const actionHandlers = React.useMemo<Record<QuickActionId, { icon: string; label: string; onPress: () => void }>>(() => ({
     send:      { icon: 'arrow-up',    label: 'Send',      onPress: () => navigation.navigate('Send') },
     request:   { icon: 'arrow-down',  label: 'Request',   onPress: () => navigation.navigate('Receive') },
-    details:   { icon: 'credit-card', label: 'Details',   onPress: () => navigation.navigate('Details') },
+    details:   { icon: 'credit-card', label: 'Spending',   onPress: () => navigation.navigate('Details') },
     withdraw:  { icon: 'log-out',     label: 'Withdraw',  onPress: () => navigation.navigate('Withdraw') },
     topup:     { icon: 'plus-circle', label: 'Top Up',    onPress: () => navigation.navigate('Receive') },
     statement: { icon: 'file-text',   label: 'Statement', onPress: () => navigation.navigate('StatementDownload') },
@@ -338,6 +338,7 @@ export default function HomeScreen() {
                     name: incompleteTransfer.name,
                     amount: incompleteTransfer.amount,
                     note: incompleteTransfer.note ?? "",
+                    identifier: incompleteTransfer.recipientId || "",
                   })
                 }
               >
