@@ -10,6 +10,11 @@ import {
   ActivityIndicator,
   Animated,
   ScrollView,
+  TextInput,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,6 +40,7 @@ import { cancelTransfer } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { queryClient } from "../../../lib/queryClient";
 import { queryKeys } from "../../../lib/queryKeys";
+import { useTransferStore } from "../../../store/transferStore";
 
 const { height } = Dimensions.get("window");
 
@@ -47,7 +53,7 @@ function getGreeting() {
 }
 
 export default function HomeScreen() {
-  const { colors: Colors } = useAppTheme();
+  const { colors: Colors, isDark } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -80,10 +86,83 @@ export default function HomeScreen() {
     );
   }, [recentTransactions]);
 
+  const pendingMoneyRequest = React.useMemo(() => {
+    return recentTransactions.find(
+      (tx) => tx.isPending && !tx.isCredit && tx.type === "Money Request"
+    );
+  }, [recentTransactions]);
+
   const displayTransactions = React.useMemo(() => {
-    if (!incompleteTransfer) return recentTransactions;
-    return recentTransactions.filter((tx) => tx.id !== incompleteTransfer.id);
-  }, [recentTransactions, incompleteTransfer]);
+    let filtered = recentTransactions;
+    if (incompleteTransfer) {
+      filtered = filtered.filter((tx) => tx.id !== incompleteTransfer.id);
+    }
+    if (pendingMoneyRequest) {
+      filtered = filtered.filter((tx) => tx.id !== pendingMoneyRequest.id);
+    }
+    return filtered;
+  }, [recentTransactions, incompleteTransfer, pendingMoneyRequest]);
+
+  const { acceptMoneyRequest, declineMoneyRequest } = useTransferStore();
+  const [actionLoading, setActionLoading] = React.useState<"accept" | "decline" | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+
+  const [pinVisible, setPinVisible] = React.useState(false);
+  const [pin, setPin] = React.useState("");
+  const pinInputRef = React.useRef<TextInput>(null);
+  const PIN_LENGTH = 4;
+  const PIN_ARRAY = Array.from({ length: PIN_LENGTH });
+  const scaleAnims = React.useRef(PIN_ARRAY.map(() => new Animated.Value(1))).current;
+
+  React.useEffect(() => {
+    if (pin.length !== PIN_LENGTH || !pinVisible) return;
+    const t = setTimeout(() => handlePayConfirm(pin), 300);
+    return () => clearTimeout(t);
+  }, [pin, pinVisible]);
+
+  const handlePinChange = React.useCallback((text: string) => {
+    if (actionLoading) return;
+    const cleaned = text.replace(/[^0-9]/g, "").slice(0, PIN_LENGTH);
+    if (cleaned.length > pin.length) {
+      const idx = cleaned.length - 1;
+      Animated.sequence([
+        Animated.timing(scaleAnims[idx]!, { toValue: 1.15, duration: 80, useNativeDriver: true }),
+        Animated.timing(scaleAnims[idx]!, { toValue: 1, duration: 80, useNativeDriver: true }),
+      ]).start();
+    }
+    if (actionError) setActionError(null);
+    setPin(cleaned);
+  }, [pin, scaleAnims, actionError, actionLoading]);
+
+  const handlePayConfirm = React.useCallback(async (enteredPin: string) => {
+    if (!pendingMoneyRequest) return;
+    setActionLoading("accept");
+    setActionError(null);
+    try {
+      await acceptMoneyRequest(pendingMoneyRequest.id, enteredPin);
+      setPinVisible(false);
+      setPin("");
+      refresh();
+    } catch (err: any) {
+      setPin("");
+      setActionError(err.message || "Incorrect PIN or payment failed.");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [pendingMoneyRequest, acceptMoneyRequest, refresh]);
+
+  const handleDeclineRequest = React.useCallback(async (txId: string) => {
+    setActionLoading("decline");
+    setActionError(null);
+    try {
+      await declineMoneyRequest(txId);
+      refresh();
+    } catch (err: any) {
+      setActionError(err.message || "Failed to decline. Try again.");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [declineMoneyRequest, refresh]);
 
   const handleCancelIncomplete = React.useCallback(async (txId: string) => {
     try {
@@ -348,6 +427,43 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Pending Money Request Card */}
+        {pendingMoneyRequest && (
+          <View style={[styles.incompleteCard, { borderColor: Colors.border, backgroundColor: isDark ? Colors.surface : Colors.white, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }]}>
+            <View style={[styles.incompleteCardHeader, { alignItems: 'center' }]}>
+              <View style={[styles.clockIconContainer, { backgroundColor: 'rgba(245,158,11,0.12)', borderColor: 'rgba(245,158,11,0.2)', width: 40, height: 40 }]}>
+                <Feather name="arrow-down-left" size={20} color="#D97706" />
+              </View>
+              <View style={styles.incompleteTextContainer}>
+                <Text style={styles.incompleteCardSubtitle}>Request from <Text style={{fontWeight: '600', color: Colors.textPrimary}}>{pendingMoneyRequest.name}</Text></Text>
+                <Text style={[Typography.h3, { color: Colors.textPrimary, marginTop: 2 }]}>{formatCurrency(pendingMoneyRequest.amount)}</Text>
+                {pendingMoneyRequest.note && <Text style={[Typography.caption, { color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' }]}>"{pendingMoneyRequest.note}"</Text>}
+              </View>
+            </View>
+            <View style={[styles.incompleteActionsRow, { marginTop: Spacing.sm }]}>
+              <TouchableOpacity
+                style={[styles.incompleteCancelBtn, { flex: 1, alignItems: 'center' }]}
+                onPress={() => handleDeclineRequest(pendingMoneyRequest.id)}
+                disabled={!!actionLoading}
+              >
+                <Text style={styles.incompleteCancelBtnText}>
+                  {actionLoading === "decline" ? "Declining..." : "Decline"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.incompleteResumeBtn, { flex: 1, alignItems: 'center' }]}
+                onPress={() => {
+                  setActionError(null);
+                  setPinVisible(true);
+                }}
+                disabled={!!actionLoading}
+              >
+                <Text style={styles.incompleteResumeBtnText}>Pay Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {loading && recentTransactions.length === 0 ? (
           <View style={[styles.emptyStateCard, { justifyContent: 'center', padding: Spacing.xl }]}>
             <ActivityIndicator size="small" color={Colors.primary} />
@@ -407,6 +523,84 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </Animated.View>
       </View>
+
+      {/* PIN entry modal */}
+      <Modal
+        visible={pinVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setPinVisible(false); setPin(""); setActionError(null); }}
+      >
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <Pressable style={styles.modalOverlay} onPress={() => { setPinVisible(false); setPin(""); setActionError(null); }} />
+          <View style={[styles.bottomSheet, { position: 'relative' }]}>
+            <View style={styles.bottomSheetHandle} />
+          <Text style={[Typography.h3, styles.bottomSheetTitle]}>Enter PIN</Text>
+          
+          {actionError && (
+             <Text style={{ color: Colors.error, textAlign: 'center', marginBottom: Spacing.md }}>{actionError}</Text>
+          )}
+
+          <TextInput
+            ref={pinInputRef}
+            value={pin}
+            onChangeText={handlePinChange}
+            keyboardType="number-pad"
+            maxLength={PIN_LENGTH}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+            autoFocus
+            secureTextEntry
+            autoCorrect={false}
+            contextMenuHidden
+          />
+          <TouchableOpacity
+            activeOpacity={1}
+            style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: Spacing.xl }}
+            onPress={() => pinInputRef.current?.focus()}
+          >
+            {PIN_ARRAY.map((_, i) => {
+              const filled = pin.length > i;
+              const current = pin.length === i;
+              return (
+                <Animated.View
+                  key={i}
+                  style={[
+                    {
+                      width: 48,
+                      height: 48,
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: filled || current ? Colors.primary : Colors.border,
+                      backgroundColor: isDark ? Colors.background : Colors.surface,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                    { transform: [{ scale: scaleAnims[i]! }] },
+                  ]}
+                >
+                  {filled
+                    ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.textPrimary }} />
+                    : current
+                      ? <View style={{ width: 2, height: 22, backgroundColor: Colors.primary }} />
+                      : null}
+                </Animated.View>
+              );
+            })}
+          </TouchableOpacity>
+
+          {actionLoading === "accept" && (
+            <ActivityIndicator size="small" color={Colors.primary} style={{ marginBottom: Spacing.md }} />
+          )}
+
+          <TouchableOpacity
+            style={{ alignItems: 'center', paddingVertical: Spacing.md }}
+            onPress={() => { setPinVisible(false); setPin(""); setActionError(null); }}
+          >
+            <Text style={{ ...Typography.body, color: Colors.textSecondary }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

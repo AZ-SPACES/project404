@@ -568,15 +568,51 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
       };
 
+      // Prefer WebSocket — the connection is already live so there is no HTTP
+      // handshake overhead. The server persists the message and broadcasts the
+      // echo to both participants; handleSocketEvent picks it up and promotes
+      // the optimistic entry from 'pending' to 'sent' via mergeMessage+clientId.
+      // Fall back to REST when the STOMP client is offline (e.g., reconnecting).
+      const stompClient = get().stompClient;
+      if (stompClient?.connected) {
+        stompClient.publish({
+          destination: '/app/chat.send',
+          body: JSON.stringify(payload),
+        });
+        hasSessionWithPeer(selfUserId, chat.otherUserId).then((established) => {
+          if (!established) markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
+        });
+        const uid = get().selfUserId;
+        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        // Safety net: if the WS echo never arrives (e.g. the connection drops
+        // immediately after publish), mark the message failed so retryFailedSends
+        // can pick it up on reconnect.
+        setTimeout(() => {
+          set((s) => {
+            const thread = s.messagesByChat[chatId] ?? [];
+            const msg = thread.find((m) => m.clientId === clientId);
+            if (!msg || msg.status !== 'pending') return s;
+            return {
+              messagesByChat: {
+                ...s.messagesByChat,
+                [chatId]: thread.map((m) =>
+                  m.clientId === clientId ? { ...m, status: 'failed' as LocalMessageStatus } : m,
+                ),
+              },
+            };
+          });
+        }, 8_000);
+        return;
+      }
+
+      // REST fallback — used when WebSocket is not connected.
       const { data } = await sendChatMessage(payload);
       const m = data?.data;
       const serverId = m?.id;
       const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
       const expiresAt = parseDateTime(m?.expiresAt);
 
-      // Keep the legacy session-established flag in sync. It's no longer used
-      // for first-message gating (the session-root cache plays that role now)
-      // but still drives misc diagnostics and the upgrade path from v2 carts.
+      // Keep the legacy session-established flag in sync.
       const sessionEstablished = await hasSessionWithPeer(selfUserId, chat.otherUserId);
       if (!sessionEstablished) {
         markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
@@ -700,6 +736,32 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
       };
 
+      const stompClient = get().stompClient;
+      if (stompClient?.connected) {
+        stompClient.publish({
+          destination: '/app/chat.send',
+          body: JSON.stringify(payload),
+        });
+        const uid = get().selfUserId;
+        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        setTimeout(() => {
+          set((s) => {
+            const thread = s.messagesByChat[chatId] ?? [];
+            const msg = thread.find((m) => m.clientId === clientId);
+            if (!msg || msg.status !== 'pending') return s;
+            return {
+              messagesByChat: {
+                ...s.messagesByChat,
+                [chatId]: thread.map((m) =>
+                  m.clientId === clientId ? { ...m, status: 'failed' as LocalMessageStatus } : m,
+                ),
+              },
+            };
+          });
+        }, 8_000);
+        return;
+      }
+
       const { data } = await sendChatMessage(payload);
       const m = data?.data;
       const serverId = m?.id;
@@ -730,12 +792,20 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
-  sendTyping: async (chatId, isTyping) => {
-    try {
-      await sendChatTypingIndicator(chatId, isTyping);
-    } catch (e) {
-      // Typing is best-effort; never surface failures.
+  sendTyping: (chatId, isTyping) => {
+    // Prefer the already-open WebSocket connection — no HTTP round-trip, near-instant
+    // delivery to the peer. Falls back to REST only if the STOMP client is offline.
+    const client = get().stompClient;
+    if (client?.connected) {
+      client.publish({
+        destination: '/app/chat.typing',
+        body: JSON.stringify({ chatId, isTyping }),
+      });
+      return Promise.resolve();
     }
+    // REST fallback — best-effort, never throw.
+    sendChatTypingIndicator(chatId, isTyping).catch(() => {});
+    return Promise.resolve();
   },
 
   markRead: async (chatId) => {

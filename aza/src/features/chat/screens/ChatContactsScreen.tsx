@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
 import { useChatStore } from "../../../store/chatStore";
+import { usePresenceStore } from "../../../store/presenceStore";
 import { Contact } from "../../../features/contacts/types";
 import {
   useAppTheme,
@@ -41,6 +42,7 @@ export default function ChatContactsScreen() {
   const { contacts, isLoading, fetchContacts } = useContactStore();
   const chats = useChatStore((s) => s.chats);
   const fetchChats = useChatStore((s) => s.fetchChats);
+  const isOnline = usePresenceStore((s) => s.isOnline);
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -134,7 +136,7 @@ export default function ChatContactsScreen() {
             id: peerId,
             name: item.displayName,
             avatar: item.profileImageUrl ?? "",
-            online: chat?.otherUserStatus === "ONLINE",
+            online: isOnline(peerId),
           })
         }
       >

@@ -37,6 +37,7 @@ import {
 } from '../../../components/chat/chatTypes';
 import { useChat } from '../../../hooks/useChat';
 import { useCallStore } from '../../../store/callStore';
+import { usePresenceStore } from '../../../store/presenceStore';
 import { uploadChatMedia } from '../../../services/api';
 
 // ----------------------------------------------------------------------------
@@ -48,7 +49,8 @@ export default function ChatScreen() {
   const styles = useMemo(() => createScreenStyles(Colors, isDark), [Colors, isDark]);
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
-  const { id, name, avatar, online } = route.params;
+  const { id, name, avatar } = route.params;
+  const online = usePresenceStore((s) => s.isOnline(id));
 
   // `id` from the route is the OTHER user's UUID (set by ChatContactsScreen).
   // The hook resolves the underlying backend chat resource and runs the E2EE pipeline.
