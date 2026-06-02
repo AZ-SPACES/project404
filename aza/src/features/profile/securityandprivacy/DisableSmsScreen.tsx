@@ -23,6 +23,7 @@ import { requestDisableSms2fa, disableSms2fa } from '../../../services/api';
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export default function DisableSmsScreen() {
   const { colors: Colors } = useAppTheme();
@@ -53,8 +54,8 @@ export default function DisableSmsScreen() {
       await requestDisableSms2fa();
       setStep(2);
       setTimeLeft(57);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to send code. Please try again.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to send code. Please try again.');
       showToast(msg, 'error');
     } finally {
       setIsSending(false);
@@ -121,8 +122,8 @@ export default function DisableSmsScreen() {
               await fetchProfile();
               showToast('Text message verification disabled', 'success');
               navigation.navigate('TwoStepVerification');
-            } catch (err: any) {
-              const msg = err.response?.data?.message || 'Invalid code. Please try again.';
+            } catch (err: unknown) {
+              const msg = extractErrorMessage(err, 'Invalid code. Please try again.');
               showToast(msg, 'error');
             } finally {
               setIsLoading(false);

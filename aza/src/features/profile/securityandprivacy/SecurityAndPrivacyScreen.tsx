@@ -15,6 +15,7 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { cancelAccountDeletion } from '../../../services/api';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SecurityAndPrivacy">;
 
@@ -102,8 +103,8 @@ export function SecurityAndPrivacyScreen() {
                 login({ token: userToken, hasPasscode, isKYCVerified, scheduledDeletionAt: null });
               }
               showToast('Deletion cancelled. Your account is active.', 'success');
-            } catch (e: any) {
-              showToast(e?.response?.data?.message || 'Failed to cancel deletion.', 'error');
+            } catch (e: unknown) {
+              showToast(extractErrorMessage(e, 'Failed to cancel deletion.'), 'error');
             } finally {
               setIsCancellingDeletion(false);
             }
@@ -136,8 +137,8 @@ export function SecurityAndPrivacyScreen() {
             try {
               await resetE2EE();
               showToast('Encryption keys reset.', 'success');
-            } catch (e: any) {
-              showToast(e?.message ?? 'Could not reset keys.', 'error');
+            } catch (e: unknown) {
+              showToast(extractErrorMessage(e, 'Could not reset keys.'), 'error');
             } finally {
               setIsResettingE2EE(false);
             }

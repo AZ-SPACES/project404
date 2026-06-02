@@ -25,6 +25,7 @@ import { TransactionItem } from "../../../components/ui/TransactionItem";
 import Button from "../../../components/ui/Button";
 import { RootStackParamList } from "../../../navigation/types";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 const REASON_CATEGORIES = [
   { id: "WRONG_AMOUNT", label: "Wrong Amount" },
@@ -68,9 +69,9 @@ export function ReversalRequestScreen() {
         description: description.trim(),
       });
       setStep("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Dispute submission error:", err);
-      setSubmitError(err.response?.data?.message || "Failed to submit request. Please try again.");
+      setSubmitError(extractErrorMessage(err, "Failed to submit request. Please try again."));
     } finally {
       setSubmitting(false);
     }

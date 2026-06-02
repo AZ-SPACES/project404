@@ -21,6 +21,7 @@ import { isValidPhone } from "../../../utils/validation";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -63,8 +64,8 @@ export function ChangePhoneScreen() {
         showToast('Phone number updated successfully', 'success');
         navigation.goBack();
       }
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.message || 'Something went wrong. Please try again.';
+    } catch (e: unknown) {
+      const errorMsg = extractErrorMessage(e, 'Something went wrong. Please try again.');
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);

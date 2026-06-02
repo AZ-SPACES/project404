@@ -18,6 +18,7 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export default function DisablePasskeyScreen() {
   const { colors: Colors } = useAppTheme();
@@ -47,8 +48,8 @@ export default function DisablePasskeyScreen() {
       await togglePasskeys(false);
       showToast('Passkeys disabled', 'success');
       navigation.navigate('TwoStepVerification');
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to disable passkeys. Please try again.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to disable passkeys. Please try again.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);

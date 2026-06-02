@@ -41,6 +41,7 @@ import { formatCurrency } from "../../../utils/transactionUtils";
 import { queryClient } from "../../../lib/queryClient";
 import { queryKeys } from "../../../lib/queryKeys";
 import { useTransferStore } from "../../../store/transferStore";
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 const { height } = Dimensions.get("window");
 
@@ -143,9 +144,9 @@ export default function HomeScreen() {
       setPinVisible(false);
       setPin("");
       refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPin("");
-      setActionError(err.message || "Incorrect PIN or payment failed.");
+      setActionError(extractErrorMessage(err, "Incorrect PIN or payment failed."));
     } finally {
       setActionLoading(null);
     }
@@ -157,8 +158,8 @@ export default function HomeScreen() {
     try {
       await declineMoneyRequest(txId);
       refresh();
-    } catch (err: any) {
-      setActionError(err.message || "Failed to decline. Try again.");
+    } catch (err: unknown) {
+      setActionError(extractErrorMessage(err, "Failed to decline. Try again."));
     } finally {
       setActionLoading(null);
     }

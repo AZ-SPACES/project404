@@ -23,6 +23,7 @@ import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
@@ -86,8 +87,8 @@ export default function ConsentScreen() {
 
       // hasPasscode=true because we just set it during signup
       login({ token: accessToken, hasPasscode: true, isKYCVerified: false });
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
+    } catch (error: unknown) {
+      showToast(extractErrorMessage(error, 'Signup failed'), 'error');
     }
   };
 

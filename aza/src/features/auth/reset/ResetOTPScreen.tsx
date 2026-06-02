@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useToast } from "../../../providers/ToastProvider";
 import { verifyOtp } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
@@ -96,8 +97,8 @@ const ResetOTPScreen: React.FC = () => {
     try {
       await verifyOtp(email, code, "password_reset");
       navigation.navigate("ResetNewPassword", { email, code });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Invalid or expired code.";
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, "Invalid or expired code.");
       showToast(msg, "error");
     } finally {
       setIsLoading(false);

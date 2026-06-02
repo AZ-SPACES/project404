@@ -43,6 +43,7 @@ import { useAuth } from './AuthProvider';
 import { safetyNumber } from '../crypto/e2ee';
 import { useChatStore } from '../store/chatStore';
 import { subscribeAuthEvents } from './authEvents';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 type Identity = {
   userId: string;
@@ -196,10 +197,10 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .setSelfIdentity(userId, idX.publicKey, idX.privateKey);
         bootstrappedFor.current = userId;
         setReady(true);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
           console.error('[E2EE] bootstrap failed', e);
-          setError(e?.message ?? 'E2EE setup failed');
+          setError(extractErrorMessage(e, 'E2EE setup failed'));
           setReady(false);
         }
       }

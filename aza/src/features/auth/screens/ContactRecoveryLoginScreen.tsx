@@ -22,6 +22,7 @@ import {
 } from '../../../services/api';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ContactRecoveryLogin'>;
 type RouteType = RouteProp<RootStackParamList, 'ContactRecoveryLogin'>;
@@ -69,8 +70,8 @@ export default function ContactRecoveryLoginScreen() {
       const rid: string = res.data?.data ?? res.data;
       setRequestId(rid);
       setStep('waiting');
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to send request', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Failed to send request'), 'error');
     } finally {
       setIsSending(false);
     }
@@ -119,8 +120,8 @@ export default function ContactRecoveryLoginScreen() {
         requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
         isBiometricsEnabled: false,
       });
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Invalid or expired code', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Invalid or expired code'), 'error');
     } finally {
       setIsVerifying(false);
     }

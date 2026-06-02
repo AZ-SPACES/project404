@@ -18,6 +18,7 @@ import { useE2EE } from '../providers/E2EEProvider';
 import type { LocalMessage } from '../store/chatTypes';
 import type { Message } from '../components/chat/chatTypes';
 import { formatTime } from '../components/chat/chatTypes';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export type UseChatResult = {
   ready: boolean;
@@ -113,8 +114,8 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
         // Pre-fetch peer key bundle so the first send is instant and
         // verification UI works on first open.
         await ensurePeerKeys(otherUserId);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Could not open chat');
+      } catch (e: unknown) {
+        if (!cancelled) setError(extractErrorMessage(e, 'Could not open chat'));
       }
     })();
     return () => {

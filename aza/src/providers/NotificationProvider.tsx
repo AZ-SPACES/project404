@@ -11,20 +11,31 @@ import { queryKeys } from '../lib/queryKeys';
 import { useCallStore } from '../store/callStore';
 
 type NotificationContextType = {
-  checkPermissions: () => Promise<any>;
-  requestPermissions: () => Promise<any>;
+  checkPermissions: () => Promise<Notifications.PermissionResponse | { status: string }>;
+  requestPermissions: () => Promise<Notifications.PermissionResponse | { status: string }>;
   registerForNotifications: () => Promise<boolean>;
-  sendLocalNotification: (title: string, body: string, data?: any) => Promise<string | undefined>;
+  sendLocalNotification: (title: string, body: string, data?: Record<string, unknown>) => Promise<string | undefined>;
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+type CallPushData = {
+  callId?: string;
+  callerId?: string | null;
+  callerName?: string | null;
+  callerAvatar?: string | null;
+  calleeId?: string | null;
+  calleeName?: string | null;
+  calleeAvatar?: string | null;
+  isVideo?: boolean;
+};
 
 /**
  * Push notifications carry less detail than the WS event (no callerId,
  * no avatars, no calleeId). Synthesize a payload good enough for the
  * IncomingCall UI; subsequent SDP/ICE traffic keys off callId only.
  */
-function handleIncomingCallPush(data: any) {
+function handleIncomingCallPush(data: CallPushData) {
   if (!data?.callId) return;
   const existing = useCallStore.getState().activeCall;
   // Dedupe against WS — both channels can fire while in foreground.
@@ -64,13 +75,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }),
       });
 
-      subscription = Notifications.addNotificationReceivedListener((notification: any) => {
+      subscription = Notifications.addNotificationReceivedListener((notification) => {
         if (userToken !== null) {
           queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
         }
 
-        const data = notification.request.content.data;
-        const type = data?.type || data?.notification?.type;
+        const data = notification.request.content.data as Record<string, unknown> | undefined;
+        const type = (data?.type as string | undefined) ?? (data?.notification as Record<string, unknown> | undefined)?.type as string | undefined;
 
         if (type === 'KYC_APPROVED') {
           completeKYC();
@@ -96,7 +107,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // received the WS event, in which case handleIncomingCallPush
           // is a no-op. When push beats WS (or WS is down), this is what
           // surfaces the incoming-call UI.
-          handleIncomingCallPush(data);
+          handleIncomingCallPush(data as CallPushData);
         }
 
         if (type === 'MONEY_RECEIVED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
@@ -105,63 +116,64 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       });
 
-      responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
-        const data = response.notification.request.content.data;
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+        const type = data?.type as string | undefined;
 
-        if (data?.type === 'KYC_APPROVED') {
+        if (type === 'KYC_APPROVED') {
           completeKYC();
-        } else if (data?.type === 'LOGIN_APPROVAL') {
+        } else if (type === 'LOGIN_APPROVAL') {
           navigate('App', {
             screen: 'AppLoginApproval',
             params: {
-              requestId: data.requestId,
-              deviceName: data.deviceName ?? 'Unknown device',
-              ipAddress: data.ipAddress ?? 'Unknown',
+              requestId: data?.requestId as string,
+              deviceName: (data?.deviceName as string | undefined) ?? 'Unknown device',
+              ipAddress: (data?.ipAddress as string | undefined) ?? 'Unknown',
             },
           });
-        } else if (data?.type === 'RECOVERY_CONTACT_INVITE') {
+        } else if (type === 'RECOVERY_CONTACT_INVITE') {
           navigate('App', { screen: 'AccountRecoveryContacts' });
-        } else if (data?.type === 'RECOVERY_CONTACT_REQUEST') {
+        } else if (type === 'RECOVERY_CONTACT_REQUEST') {
           navigate('App', {
             screen: 'GenerateRecoveryCode',
             params: {
-              requestId: data.requestId,
-              requesterName: data.requesterName ?? 'Someone',
-              requesterHandle: data.requesterHandle,
+              requestId: data?.requestId as string,
+              requesterName: (data?.requesterName as string | undefined) ?? 'Someone',
+              requesterHandle: data?.requesterHandle as string | undefined,
             },
           });
-        } else if (data?.type === 'KYB_APPROVED' || data?.type === 'KYB_REJECTED' || data?.type === 'KYB_MORE_INFO_REQUIRED') {
+        } else if (type === 'KYB_APPROVED' || type === 'KYB_REJECTED' || type === 'KYB_MORE_INFO_REQUIRED') {
           navigate('App', { screen: 'Hub' });
-        } else if (data?.type === 'KYC_REJECTED') {
+        } else if (type === 'KYC_REJECTED') {
           navigate('App', { screen: 'VerifyIdentity', params: {} });
-        } else if (data?.type === 'INCOMING_CALL') {
+        } else if (type === 'INCOMING_CALL') {
           // Route through the store so we land on IncomingCallScreen with
           // working accept/decline, not directly on the in-call screen
           // (which previously rendered blank because activeCall was null).
-          handleIncomingCallPush(data);
-        } else if (data?.type === 'MISSED_CALL') {
+          handleIncomingCallPush(data as CallPushData);
+        } else if (type === 'MISSED_CALL') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
-        } else if (data?.type === 'SECURITY_ALERT') {
+        } else if (type === 'SECURITY_ALERT') {
           navigate('App', { screen: 'SecurityAndPrivacy' });
-        } else if (data?.type === 'SUPPORT_MESSAGE') {
+        } else if (type === 'SUPPORT_MESSAGE') {
           navigate('App', { screen: 'ChatWithUs' });
-        } else if (data?.type === 'NEW_MESSAGE') {
-          if (data.senderId) {
+        } else if (type === 'NEW_MESSAGE') {
+          if (data?.senderId) {
             navigate('App', {
               screen: 'ChatScreen',
               params: {
-                id: data.senderId,
-                name: data.senderName ?? 'Unknown',
-                avatar: data.senderAvatar ?? '',
+                id: data.senderId as string,
+                name: (data.senderName as string | undefined) ?? 'Unknown',
+                avatar: (data.senderAvatar as string | undefined) ?? '',
                 online: false,
               },
             });
           } else {
             navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
           }
-        } else if (data?.type === 'MONEY_RECEIVED') {
+        } else if (type === 'MONEY_RECEIVED') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
-        } else if (data?.type?.includes('PAYMENT_REQUEST')) {
+        } else if (typeof type === 'string' && type.includes('PAYMENT_REQUEST')) {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
         } else {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
@@ -202,7 +214,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     prevTokenRef.current = userToken;
   }, [userToken]);
 
-  const checkPermissions = async () => {
+  const checkPermissions = async (): Promise<Notifications.PermissionResponse | { status: string }> => {
     try {
       return await Notifications.getPermissionsAsync();
     } catch {
@@ -210,7 +222,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const requestPermissions = async () => {
+  const requestPermissions = async (): Promise<Notifications.PermissionResponse | { status: string }> => {
     try {
       return await Notifications.requestPermissionsAsync();
     } catch {
@@ -218,7 +230,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const registerForNotifications = async () => {
+  const registerForNotifications = async (): Promise<boolean> => {
     try {
       const { status: existingStatus } = await checkPermissions();
       let finalStatus = existingStatus;
@@ -243,9 +255,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       const projectId =
         Constants.expoConfig?.extra?.eas?.projectId ??
-        (Constants as any).easConfig?.projectId;
+        (Constants as Record<string, unknown>).easConfig as string | undefined;
       const { data: pushToken } = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined,
+        projectId ? { projectId: projectId as string } : undefined,
       );
       const deviceId = await getDeviceId();
       const deviceName = Device.modelName ?? 'Unknown Device';
@@ -259,14 +271,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const sendLocalNotification = async (title: string, body: string, data?: any) => {
+  const sendLocalNotification = async (
+    title: string,
+    body: string,
+    data?: Record<string, unknown>,
+  ): Promise<string | undefined> => {
     try {
       const id = await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data: data || {},
-        },
+        content: { title, body, data: data ?? {} },
         trigger: null,
       });
       return id;

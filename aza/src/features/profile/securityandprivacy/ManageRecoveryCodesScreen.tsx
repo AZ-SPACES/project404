@@ -27,6 +27,7 @@ import {
   regenerateRecoveryCodes,
   requestRecoveryRegenSms,
 } from '../../../services/api';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ManageRecoveryCodes'>;
 
@@ -92,8 +93,8 @@ export default function ManageRecoveryCodesScreen() {
       const res = await regenerateRecoveryCodes(totpCode, 'TOTP');
       const codes: string[] = res.data?.data?.codes ?? [];
       navigation.replace('RecoveryCodes', { codes });
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Invalid code. Please try again.', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Invalid code. Please try again.'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -106,8 +107,8 @@ export default function ManageRecoveryCodesScreen() {
       setTimeLeft(57);
       setOtp(Array(6).fill(''));
       setStep('verify-sms-code');
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to send code.', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Failed to send code.'), 'error');
     } finally {
       setIsSending(false);
     }
@@ -162,8 +163,8 @@ export default function ManageRecoveryCodesScreen() {
       const res = await regenerateRecoveryCodes(code, 'SMS');
       const codes: string[] = res.data?.data?.codes ?? [];
       navigation.replace('RecoveryCodes', { codes });
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Invalid code. Please try again.', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Invalid code. Please try again.'), 'error');
     } finally {
       setIsLoading(false);
     }

@@ -27,6 +27,7 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useTransferStore } from "../../../store/transferStore";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -93,11 +94,11 @@ export default function SendPinScreen({
         await confirmTransfer(pendingTransactionId, enteredPin);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         navigation.replace("SendSuccess", { ...route.params, transactionId: pendingTransactionId });
-      } catch (err: any) {
+      } catch (err: unknown) {
         startShake();
         setPin("");
         // Distinguish wrong PIN from network errors
-        const msg: string = err.message || "Transfer failed. Please try again.";
+        const msg: string = extractErrorMessage(err, "Transfer failed. Please try again.");
         const isWrongPin =
           msg.toLowerCase().includes("passcode") ||
           msg.toLowerCase().includes("pin") ||

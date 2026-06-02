@@ -118,7 +118,7 @@ export default function ConfirmPasscodeScreen() {
             index: 0,
             routes: [{ name: "Consent" }],
           });
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.error("Passcode sync error:", e);
           setServerError("Failed to sync passcode. Please try again.");
           isNavigatingRef.current = false;

@@ -23,6 +23,7 @@ import { isValidPassword, getPasswordRules } from "../../../utils/validation";
 import { resetPassword } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetNewPassword">;
 type RouteProps = RouteProp<RootStackParamList, "ResetNewPassword">;
@@ -59,8 +60,8 @@ export default function ResetNewPasswordScreen() {
       await resetPassword(email, code, password);
       showToast("Password reset successfully. Please login with your new password.", "success");
       navigation.navigate("Login");
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Failed to reset password. Please try again.";
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, "Failed to reset password. Please try again.");
       Alert.alert("Error", msg);
     } finally {
       setIsLoading(false);

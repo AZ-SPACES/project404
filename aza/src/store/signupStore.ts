@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import { api } from '../services/api';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export type PronounOption = 'he/his' | 'she/her' | 'they/them' | 'custom' | null;
 export type EmploymentOption =
@@ -131,11 +132,10 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       
       set({ isLoading: false });
       return response.data;
-    } catch (error: any) {
-      console.error('Signup failed:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Signup failed';
+    } catch (error: unknown) {
+      const errorMsg = extractErrorMessage(error, 'Signup failed');
       set({ isLoading: false, error: errorMsg });
-      throw error;
+      throw new Error(errorMsg);
     }
   },
 }));
