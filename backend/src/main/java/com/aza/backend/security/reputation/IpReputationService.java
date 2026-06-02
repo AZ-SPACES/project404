@@ -34,7 +34,11 @@ public class IpReputationService {
     // ── Trust ─────────────────────────────────────────────────────────────────
 
     public boolean isTrusted(String ip) {
-        if (Boolean.TRUE.equals(redis.hasKey(TRUST_PREFIX + ip))) return true;
+        try {
+            if (Boolean.TRUE.equals(redis.hasKey(TRUST_PREFIX + ip))) return true;
+        } catch (Exception e) {
+            // Redis unavailable — fall through to static list
+        }
         return staticTrustedIps().contains(ip);
     }
 
@@ -45,8 +49,12 @@ public class IpReputationService {
     // ── Block ─────────────────────────────────────────────────────────────────
 
     public boolean isBlocked(String ip) {
-        if (isTrusted(ip)) return false;
-        return Boolean.TRUE.equals(redis.hasKey(BLOCK_PREFIX + ip));
+        try {
+            if (isTrusted(ip)) return false;
+            return Boolean.TRUE.equals(redis.hasKey(BLOCK_PREFIX + ip));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void blockIp(String ip, Duration ttl) {

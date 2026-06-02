@@ -37,15 +37,15 @@ public class EmailService {
     @Value("${brevo.sender-email:noreply@aza.systems}")
     private String senderEmail;
 
-    @Value("${app.base-url:https://aza.systems}")
-    private String appBaseUrl;
+    @Value("${app.api-base-url:https://api.aza.systems}")
+    private String apiBaseUrl;
 
     private String inlineImages(String html) {
-        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + appBaseUrl + "/images/aza.png\"");
-        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + appBaseUrl + "/images/Aza_Merchant.png\"");
-        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + appBaseUrl + "/images/Aza-admin.png\"");
-        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + appBaseUrl + "/images/Aza-Pay.png\"");
-        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + appBaseUrl + "/images/aza.png\"");
+        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + apiBaseUrl + "/images/aza.png\"");
+        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + apiBaseUrl + "/images/Aza_Merchant.png\"");
+        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + apiBaseUrl + "/images/Aza-admin.png\"");
+        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + apiBaseUrl + "/images/Aza-Pay.png\"");
+        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + apiBaseUrl + "/images/aza.png\"");
         return result;
     }
 

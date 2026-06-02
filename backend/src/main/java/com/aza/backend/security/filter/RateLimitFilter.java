@@ -99,6 +99,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
+        try {
+            doRateLimitInternal(request, response, chain);
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("Rate-limit infrastructure error — failing open: {}", e.getMessage());
+            chain.doFilter(request, response);
+        }
+    }
+
+    private void doRateLimitInternal(HttpServletRequest request,
+                                     HttpServletResponse response,
+                                     FilterChain chain) throws ServletException, IOException {
         String ip = fingerprinter.getClientIp(request);
         String fingerprint = fingerprinter.getDeviceFingerprint(request);
         String path = request.getRequestURI();
