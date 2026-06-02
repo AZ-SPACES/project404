@@ -241,11 +241,12 @@ describe('v3 envelope round-trip', () => {
       senderId: 'alice',
       chatId: 'chat',
     });
-    expect(followup.senderIdentityPublicKey).toBeUndefined();
-    expect(followup.preKeyId).toBeUndefined();
+    expect(followup.envelope.senderIdentityPublicKey).toBeUndefined();
+    expect(followup.envelope.preKeyId).toBeUndefined();
+    expect(followup.newRootKey).toHaveLength(32);
 
     const decoded = decryptV3({
-      envelope: followup,
+      envelope: followup.envelope,
       recipientIdentityPrivate: bob.privates.identityPriv,
       cachedRootKey: bobRoot,
       senderId: 'alice',
@@ -253,6 +254,10 @@ describe('v3 envelope round-trip', () => {
     });
     expect(decoded).not.toBeNull();
     expect(decoded!.plaintext).toBe('second hi');
+    // Both sides should derive the same ratcheted root key.
+    expect(Buffer.from(decoded!.rootKey!).toString('hex')).toBe(
+      Buffer.from(followup.newRootKey).toString('hex'),
+    );
   });
 
   it('follow-up decryption fails without a cached root', () => {
@@ -265,7 +270,7 @@ describe('v3 envelope round-trip', () => {
       senderId: 'alice',
       chatId: 'chat',
     });
-    const followup = encryptFollowupMessageV3({
+    const { envelope: followupEnvelope } = encryptFollowupMessageV3({
       plaintext: 'second hi',
       rootKey: first.rootKey,
       recipientIdentityPublic: bob.publics.identityPub,
@@ -274,7 +279,7 @@ describe('v3 envelope round-trip', () => {
     });
     expect(
       decryptV3({
-        envelope: followup,
+        envelope: followupEnvelope,
         recipientIdentityPrivate: bob.privates.identityPriv,
         senderId: 'alice',
         chatId: 'chat',
@@ -300,7 +305,7 @@ describe('v3 envelope round-trip', () => {
       senderId: 'alice',
       chatId: 'chatA',
     })!.rootKey!;
-    const followup = encryptFollowupMessageV3({
+    const { envelope: followupEnvelope } = encryptFollowupMessageV3({
       plaintext: 'second hi',
       rootKey: first.rootKey,
       recipientIdentityPublic: bob.publics.identityPub,
@@ -309,7 +314,7 @@ describe('v3 envelope round-trip', () => {
     });
     expect(
       decryptV3({
-        envelope: followup,
+        envelope: followupEnvelope,
         recipientIdentityPrivate: bob.privates.identityPriv,
         cachedRootKey: bobRoot,
         senderId: 'alice',

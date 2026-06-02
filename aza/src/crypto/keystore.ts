@@ -27,6 +27,12 @@ import {
 const IDENTITY_X25519_KEY = (uid: string) => `aza_e2ee_id_x_${uid}`;
 const IDENTITY_ED25519_KEY = (uid: string) => `aza_e2ee_id_e_${uid}`;
 const SIGNED_PREKEY_KEY = (uid: string) => `aza_e2ee_spk_${uid}`;
+// Timestamp of when the current SPK was created. Used to enforce rotation cadence.
+const SIGNED_PREKEY_TS_KEY = (uid: string) => `aza_e2ee_spk_ts_${uid}`;
+// Previous SPK private key — kept for SPK_GRACE_MS after rotation so any
+// first-message envelopes encrypted against the old SPK still decrypt.
+const PREV_SIGNED_PREKEY_PRIV_KEY = (uid: string) => `aza_e2ee_spk_prev_${uid}`;
+const PREV_SIGNED_PREKEY_TS_KEY = (uid: string) => `aza_e2ee_spk_prev_ts_${uid}`;
 // The index lists keyIds that are still available locally. Each OPK private
 // is stored under its own SecureStore key so the per-entry size stays small
 // (~50 base64 bytes) on Android, where the single-blob approach is borderline
@@ -38,6 +44,10 @@ const OTPK_PRIV_KEY = (uid: string, keyId: number) =>
 const OTPK_LEGACY_BLOB_KEY = (uid: string) => `aza_e2ee_otpk_priv_${uid}`;
 
 const INITIAL_OTPK_COUNT = 50;
+/** Rotate the SPK after this interval. */
+const SPK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+/** Keep the previous SPK private for this long after rotation. */
+const SPK_GRACE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SECURE_OPTS: SecureStore.SecureStoreOptions = {
   // Only readable when the device is unlocked — defense against
   // someone pulling a backup off a locked device.
@@ -86,22 +96,62 @@ export async function getOrCreateIdentityEd25519(userId: string): Promise<Ed2551
   return pair;
 }
 
-/** Generate (or rotate) the signed pre-key. Returns the public key + signature. */
+/** Generate (or return) the signed pre-key. Records creation timestamp for rotation. */
 export async function ensureSignedPreKey(userId: string): Promise<{
   publicKey: Uint8Array;
   signature: Uint8Array;
 }> {
   const existing = await readPair(SIGNED_PREKEY_KEY(userId));
   if (existing) {
-    // We don't persist the signature separately; recompute it from the stored pub
-    // and the identity signing key on demand. That keeps the SecureStore footprint
-    // small and lets us re-sign after a key rotation without losing the SPK.
+    // Backfill timestamp for installs that pre-date rotation tracking.
+    const ts = await SecureStore.getItemAsync(SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS);
+    if (!ts) {
+      await SecureStore.setItemAsync(SIGNED_PREKEY_TS_KEY(userId), String(Date.now()), SECURE_OPTS);
+    }
     const ed = await getOrCreateIdentityEd25519(userId);
     const pub = base64ToBytes(existing.pub);
     return { publicKey: pub, signature: signEd25519(pub, ed.privateKey) };
   }
   const pair = generateX25519();
   await writePair(SIGNED_PREKEY_KEY(userId), pair);
+  await SecureStore.setItemAsync(SIGNED_PREKEY_TS_KEY(userId), String(Date.now()), SECURE_OPTS);
+  const ed = await getOrCreateIdentityEd25519(userId);
+  return { publicKey: pair.publicKey, signature: signEd25519(pair.publicKey, ed.privateKey) };
+}
+
+/**
+ * Return true when the current SPK is older than `maxAgeMs`.
+ * Treats a missing timestamp as immediately stale (safe default).
+ */
+export async function isSignedPreKeyStale(
+  userId: string,
+  maxAgeMs = SPK_MAX_AGE_MS,
+): Promise<boolean> {
+  const existing = await readPair(SIGNED_PREKEY_KEY(userId));
+  if (!existing) return true;
+  const tsRaw = await SecureStore.getItemAsync(SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS);
+  if (!tsRaw) return true;
+  return Date.now() - parseInt(tsRaw, 10) > maxAgeMs;
+}
+
+/**
+ * Rotate the signed pre-key. Archives the current private key under the
+ * "previous" slot (kept for SPK_GRACE_MS) so in-flight first-messages that
+ * were encrypted against the old SPK still decrypt during the grace period.
+ */
+export async function rotateSignedPreKey(userId: string): Promise<{
+  publicKey: Uint8Array;
+  signature: Uint8Array;
+}> {
+  // Archive current SPK private key before overwriting.
+  const current = await readPair(SIGNED_PREKEY_KEY(userId));
+  if (current) {
+    await SecureStore.setItemAsync(PREV_SIGNED_PREKEY_PRIV_KEY(userId), current.priv, SECURE_OPTS);
+    await SecureStore.setItemAsync(PREV_SIGNED_PREKEY_TS_KEY(userId), String(Date.now()), SECURE_OPTS);
+  }
+  const pair = generateX25519();
+  await writePair(SIGNED_PREKEY_KEY(userId), pair);
+  await SecureStore.setItemAsync(SIGNED_PREKEY_TS_KEY(userId), String(Date.now()), SECURE_OPTS);
   const ed = await getOrCreateIdentityEd25519(userId);
   return { publicKey: pair.publicKey, signature: signEd25519(pair.publicKey, ed.privateKey) };
 }
@@ -115,6 +165,24 @@ export async function getSignedPreKeyPrivate(userId: string): Promise<Uint8Array
   const existing = await readPair(SIGNED_PREKEY_KEY(userId));
   if (!existing) return null;
   return base64ToBytes(existing.priv);
+}
+
+/**
+ * Return the PREVIOUS SPK private key if it is still within the grace window,
+ * otherwise null. Used as a fallback when decrypting first-messages that were
+ * encrypted against the SPK we just rotated away.
+ * Automatically deletes the previous SPK once the grace period expires.
+ */
+export async function getPreviousSignedPreKeyPrivate(userId: string): Promise<Uint8Array | null> {
+  const tsRaw = await SecureStore.getItemAsync(PREV_SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS);
+  if (!tsRaw) return null;
+  if (Date.now() - parseInt(tsRaw, 10) > SPK_GRACE_MS) {
+    await SecureStore.deleteItemAsync(PREV_SIGNED_PREKEY_PRIV_KEY(userId), SECURE_OPTS);
+    await SecureStore.deleteItemAsync(PREV_SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS);
+    return null;
+  }
+  const raw = await SecureStore.getItemAsync(PREV_SIGNED_PREKEY_PRIV_KEY(userId), SECURE_OPTS);
+  return raw ? base64ToBytes(raw) : null;
 }
 
 export type OtpkPublic = { keyId: number; publicKey: Uint8Array };
@@ -166,6 +234,33 @@ export async function consumeOneTimePreKey(
   const index = await readOtpkIndex(userId);
   await writeOtpkIndex(userId, index.filter((id) => id !== keyId));
   return base64ToBytes(raw);
+}
+
+/**
+ * Read a one-time pre-key's private bytes WITHOUT consuming it.
+ * Use alongside `deleteConsumedOneTimePreKey` when you need to attempt
+ * decryption with multiple SPK candidates before committing to deletion.
+ */
+export async function readOneTimePreKey(
+  userId: string,
+  keyId: number,
+): Promise<Uint8Array | null> {
+  await migrateLegacyOtpkBlob(userId);
+  const raw = await SecureStore.getItemAsync(OTPK_PRIV_KEY(userId, keyId), SECURE_OPTS);
+  return raw ? base64ToBytes(raw) : null;
+}
+
+/**
+ * Delete a one-time pre-key that has already been read and successfully used.
+ * Counterpart to `readOneTimePreKey` — call only after decryption succeeds.
+ */
+export async function deleteConsumedOneTimePreKey(
+  userId: string,
+  keyId: number,
+): Promise<void> {
+  await SecureStore.deleteItemAsync(OTPK_PRIV_KEY(userId, keyId), SECURE_OPTS);
+  const index = await readOtpkIndex(userId);
+  await writeOtpkIndex(userId, index.filter((id) => id !== keyId));
 }
 
 /** Drop every OPK private — used during full bundle rotation. */
@@ -247,6 +342,9 @@ export async function wipeIdentity(userId: string): Promise<void> {
     SecureStore.deleteItemAsync(IDENTITY_X25519_KEY(userId), SECURE_OPTS),
     SecureStore.deleteItemAsync(IDENTITY_ED25519_KEY(userId), SECURE_OPTS),
     SecureStore.deleteItemAsync(SIGNED_PREKEY_KEY(userId), SECURE_OPTS),
+    SecureStore.deleteItemAsync(SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS),
+    SecureStore.deleteItemAsync(PREV_SIGNED_PREKEY_PRIV_KEY(userId), SECURE_OPTS),
+    SecureStore.deleteItemAsync(PREV_SIGNED_PREKEY_TS_KEY(userId), SECURE_OPTS),
     SecureStore.deleteItemAsync(OTPK_LEGACY_BLOB_KEY(userId), SECURE_OPTS),
   ]);
   migrationRunFor.delete(userId);

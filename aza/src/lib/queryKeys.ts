@@ -1,7 +1,7 @@
 export const queryKeys = {
   profile:             () => ['profile'] as const,
   wallet:              () => ['wallet'] as const,
-  transactions:        (status?: string) => ['transactions', status ?? 'all'] as const,
+  transactions:        (status?: string, direction?: string) => ['transactions', status ?? 'all', direction ?? 'all'] as const,
   contacts:            () => ['contacts'] as const,
   contactRequests:     () => ['contact-requests'] as const,
   sentContactRequests: () => ['sent-contact-requests'] as const,

@@ -177,11 +177,12 @@ public class TransferController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String direction,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         int cappedSize = Math.min(size, 100);
         return ResponseEntity.ok(ApiResponse.success(
-                transferService.getTransactionHistory(user.getId(), type, status, page, cappedSize)));
+                transferService.getTransactionHistory(user.getId(), type, status, direction, page, cappedSize)));
     }
 
     @GetMapping("/transfers/{id}")
@@ -284,6 +285,7 @@ public class TransferController {
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
+            @RequestParam(required = false) String direction,
             @RequestParam(required = false) BigDecimal minAmount,
             @RequestParam(required = false) BigDecimal maxAmount,
             @RequestParam(required = false) String startDate,
@@ -293,7 +295,7 @@ public class TransferController {
         java.time.LocalDateTime start = startDate != null ? LocalDate.parse(startDate).atStartOfDay() : null;
         java.time.LocalDateTime end = endDate != null ? LocalDate.parse(endDate).plusDays(1).atStartOfDay() : null;
         return ResponseEntity.ok(ApiResponse.success(
-                transferService.searchTransactions(user.getId(), status, type, minAmount, maxAmount, start, end, page, size)));
+                transferService.searchTransactions(user.getId(), status, type, direction, minAmount, maxAmount, start, end, page, size)));
     }
 
     // ==================== TASK 2: WALLET FREEZE/UNFREEZE ====================

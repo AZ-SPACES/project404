@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { setForceLogoutHandler, getKycStatus } from "../services/api";
+import { setForceLogoutHandler, getKycStatus, logout as apiLogout } from "../services/api";
 import { emitAuthEvent } from "./authEvents";
 import { queryClient } from "../lib/queryClient";
 
@@ -181,8 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Fan out to providers that hold sensitive in-memory state (E2EE identity,
     // chat caches, peer key cache) so they can wipe.
     emitAuthEvent({ type: 'logout' });
-    // Clear all persisted secrets in the background
+    // Invalidate the session token on the server and clear local secrets.
+    // apiLogout is fire-and-forget — local state is already cleared above.
     Promise.all([
+      apiLogout().catch(() => {}),
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),
       SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
     ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
