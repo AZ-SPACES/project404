@@ -19,6 +19,7 @@ type AuthState = {
   isBiometricsEnabled: boolean;
   forcePasswordReset: boolean;
   requireSelfieVerification: boolean;
+  scheduledDeletionAt: string | null;
   isLoading: boolean;
 };
 
@@ -32,6 +33,7 @@ type AuthContextType = AuthState & {
     forcePasswordReset?: boolean,
     requireSelfieVerification?: boolean,
     isBiometricsEnabled?: boolean,
+    scheduledDeletionAt?: string | null,
   ) => void;
   logout: () => void;
   completeKYC: () => void;
@@ -64,6 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isBiometricsEnabled: false,
     forcePasswordReset: false,
     requireSelfieVerification: false,
+    scheduledDeletionAt: null,
     isLoading: true,
   });
 
@@ -106,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
         forcePasswordReset: stateFromStorage?.forcePasswordReset || false,
         requireSelfieVerification: stateFromStorage?.requireSelfieVerification || false,
+        scheduledDeletionAt: stateFromStorage?.scheduledDeletionAt || null,
         isLoading: false,
       });
     };
@@ -147,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     forcePasswordResetArg: boolean = false,
     requireSelfieVerificationArg: boolean = false,
     isBiometricsEnabledArg: boolean = false,
+    scheduledDeletionAtArg: string | null = null,
   ) => {
     saveState({
       userToken: token,
@@ -155,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       forcePasswordReset: forcePasswordResetArg,
       requireSelfieVerification: requireSelfieVerificationArg,
       isBiometricsEnabled: isBiometricsEnabledArg,
+      scheduledDeletionAt: scheduledDeletionAtArg ?? null,
     });
   }, [saveState]);
 
@@ -167,6 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isBiometricsEnabled: false,
       forcePasswordReset: false,
       requireSelfieVerification: false,
+      scheduledDeletionAt: null,
       isLoading: false,
     });
     // Wipe all server-state cache so stale data never bleeds into the next session

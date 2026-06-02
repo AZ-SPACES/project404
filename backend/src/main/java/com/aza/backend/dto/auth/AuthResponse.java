@@ -57,5 +57,7 @@ public class AuthResponse {
         private String theme;
         private String homeBackground;
         private String hubBackground;
+        /** ISO-8601 timestamp; present when status is PENDING_DELETION, null otherwise. */
+        private String scheduledDeletionAt;
     }
 }

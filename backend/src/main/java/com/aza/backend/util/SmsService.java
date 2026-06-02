@@ -132,7 +132,26 @@ public class SmsService {
         if (digits.startsWith("233") && digits.length() == 12) {
             return digits;
         }
-        
+
         return digits;
+    }
+
+    // ── GDPR Account Deletion ──────────────────────────────────────────────────
+
+    public void sendDeletionScheduledSms(String phoneNumber, java.time.LocalDateTime deletionDate) {
+        sendSms(phoneNumber,
+                "AZA: Your account is scheduled for permanent deletion on " +
+                deletionDate.toLocalDate() + ". Log in and go to Settings > Security & Privacy to cancel.");
+    }
+
+    public void sendDeletionCancelledSms(String phoneNumber) {
+        sendSms(phoneNumber,
+                "AZA: Your account deletion has been cancelled. Your account is active again.");
+    }
+
+    public void sendDeletionCompletedSms(String phoneNumber) {
+        sendSms(phoneNumber,
+                "AZA: Your account has been permanently deleted. Financial records are retained " +
+                "as required by Bank of Ghana regulations. Thank you for using AZA.");
     }
 }

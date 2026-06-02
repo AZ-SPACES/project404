@@ -144,14 +144,23 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("Notification preferences updated"));
     }
 
-    // ==================== DELETE (SOFT) ====================
+    // ==================== ACCOUNT DELETION (GDPR 30-day grace period) ====================
 
     @DeleteMapping("/me")
-    public ResponseEntity<ApiResponse<Object>> deleteMe(
+    public ResponseEntity<ApiResponse<Object>> requestDeletion(
             @AuthenticationPrincipal User user,
             HttpServletRequest httpRequest) {
-        userService.softDeleteAccount(user, httpRequest.getHeader("Authorization"));
-        return ResponseEntity.ok(ApiResponse.success("Account deleted"));
+        userService.requestAccountDeletion(user, httpRequest.getHeader("Authorization"));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Deletion scheduled. Your account and personal data will be permanently erased in 30 days. " +
+                "You can cancel via POST /api/v1/users/me/cancel-deletion."));
+    }
+
+    @PostMapping("/me/cancel-deletion")
+    public ResponseEntity<ApiResponse<Object>> cancelDeletion(
+            @AuthenticationPrincipal User user) {
+        userService.cancelAccountDeletion(user);
+        return ResponseEntity.ok(ApiResponse.success("Account deletion cancelled. Your account is active again."));
     }
 
     // ==================== DEACTIVATE ====================
