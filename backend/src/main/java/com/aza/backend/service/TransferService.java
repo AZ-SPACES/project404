@@ -31,9 +31,14 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -674,11 +679,19 @@ public class TransferService {
             transactions = transactionRepository.findAllByUserId(userId, pageRequest);
         }
 
-        return transactions.map(t -> {
-            User sender = userRepository.findById(t.getSenderId()).orElse(null);
-            User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
-            return buildTransferResponse(t, sender, recipient, userId);
-        });
+        // Batch-load all participant names: 2 queries instead of 2N per page
+        Set<UUID> allIds = new HashSet<>();
+        for (Transaction t : transactions.getContent()) {
+            if (t.getSenderId() != null) allIds.add(t.getSenderId());
+            if (t.getRecipientId() != null) allIds.add(t.getRecipientId());
+        }
+        Map<UUID, User> userMap = userRepository.findAllById(allIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        Map<UUID, Merchant> merchantMap = merchantRepository.findAllById(allIds).stream()
+                .collect(Collectors.toMap(Merchant::getId, m -> m));
+
+        return transactions.map(t -> buildTransferResponse(
+                t, userMap.get(t.getSenderId()), userMap.get(t.getRecipientId()), userId, merchantMap));
     }
 
     public TransferResponse getTransaction(UUID transactionId, UUID userId) {
@@ -697,26 +710,31 @@ public class TransferService {
     //  HELPER
 
     private TransferResponse buildTransferResponse(Transaction t, User sender, User recipient, UUID currentUserId) {
+        return buildTransferResponse(t, sender, recipient, currentUserId, null);
+    }
+
+    private TransferResponse buildTransferResponse(Transaction t, User sender, User recipient,
+                                                    UUID currentUserId, Map<UUID, Merchant> preloadedMerchants) {
         String direction = t.getRecipientId().equals(currentUserId) ? "INCOMING" : "OUTGOING";
-        
+
         String recipientName = "Unknown";
         if (recipient != null) {
             recipientName = recipient.getFirstName() + " " + recipient.getLastName();
         } else {
-            Optional<Merchant> merchantOpt = merchantRepository.findById(t.getRecipientId());
-            if (merchantOpt.isPresent()) {
-                recipientName = merchantOpt.get().getBusinessName();
-            }
+            Merchant m = preloadedMerchants != null
+                    ? preloadedMerchants.get(t.getRecipientId())
+                    : merchantRepository.findById(t.getRecipientId()).orElse(null);
+            if (m != null) recipientName = m.getBusinessName();
         }
 
         String senderName = "Unknown";
         if (sender != null) {
             senderName = sender.getFirstName() + " " + sender.getLastName();
         } else {
-            Optional<Merchant> merchantOpt = merchantRepository.findById(t.getSenderId());
-            if (merchantOpt.isPresent()) {
-                senderName = merchantOpt.get().getBusinessName();
-            }
+            Merchant m = preloadedMerchants != null
+                    ? preloadedMerchants.get(t.getSenderId())
+                    : merchantRepository.findById(t.getSenderId()).orElse(null);
+            if (m != null) senderName = m.getBusinessName();
         }
 
         return TransferResponse.builder()
@@ -771,13 +789,24 @@ public class TransferService {
         org.springframework.data.domain.Page<Transaction> results = transactionRepository.searchTransactions(
                 userId, statusEnum, typeEnum, minAmount, maxAmount, start, end, pageable);
 
+        // Batch-load all participant names: 2 queries instead of 2N per page
+        Set<UUID> allIds = new HashSet<>();
+        for (Transaction t : results.getContent()) {
+            if (t.getSenderId() != null) allIds.add(t.getSenderId());
+            if (t.getRecipientId() != null) allIds.add(t.getRecipientId());
+        }
+        Map<UUID, User> userMap = userRepository.findAllById(allIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        Map<UUID, Merchant> merchantMap = merchantRepository.findAllById(allIds).stream()
+                .collect(Collectors.toMap(Merchant::getId, m -> m));
+
         return results.map(t -> {
-            User sender = userRepository.findById(t.getSenderId()).orElse(null);
-            User recipient = userRepository.findById(t.getRecipientId()).orElse(null);
+            User sender = userMap.get(t.getSenderId());
+            User recipient = userMap.get(t.getRecipientId());
             String senderName = sender != null ? sender.getFirstName() + " " + sender.getLastName()
-                    : merchantRepository.findById(t.getSenderId()).map(Merchant::getBusinessName).orElse("Unknown");
+                    : Optional.ofNullable(merchantMap.get(t.getSenderId())).map(Merchant::getBusinessName).orElse("Unknown");
             String recipientName = recipient != null ? recipient.getFirstName() + " " + recipient.getLastName()
-                    : merchantRepository.findById(t.getRecipientId()).map(Merchant::getBusinessName).orElse("Unknown");
+                    : Optional.ofNullable(merchantMap.get(t.getRecipientId())).map(Merchant::getBusinessName).orElse("Unknown");
             return com.aza.backend.dto.admin.AdminTransactionResponse.builder()
                     .id(t.getId().toString())
                     .senderId(t.getSenderId().toString())
