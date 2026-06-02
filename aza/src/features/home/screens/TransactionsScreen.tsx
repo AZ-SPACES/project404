@@ -29,7 +29,7 @@ import {
 } from "../../../theme";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
 import Button from "../../../components/ui/Button";
-import { useTransactions, TransactionFilter } from "../../../hooks/useTransactions";
+import { useTransactions, TransactionFilter, AdvancedFilters } from "../../../hooks/useTransactions";
 import { useDisplayContext } from "../../../providers/DisplayProvider";
 import { useTransferStore } from "../../../store/transferStore";
 import { formatCurrency } from "../../../utils/transactionUtils";
@@ -202,10 +202,30 @@ export function TransactionsScreen() {
   const [pendingType, setPendingType] = useState('All');
   const [pendingStatus, setPendingStatus] = useState('All');
 
-  const hasActiveFilters = minAmount || maxAmount || fromDate || toDate || txType !== 'All' || txStatus !== 'All';
+  const hasActiveFilters = !!(minAmount || maxAmount || fromDate || toDate || txType !== 'All' || txStatus !== 'All');
 
-  const { sections, loading, refreshing, refresh, loadMore, error, filter, setFilter, searchQuery, setSearchQuery } =
-    useTransactions();
+  const advancedFilters: AdvancedFilters = useMemo(() => ({
+    ...(minAmount ? { minAmount } : {}),
+    ...(maxAmount ? { maxAmount } : {}),
+    ...(fromDate ? { startDate: fromDate } : {}),
+    ...(toDate ? { endDate: toDate } : {}),
+    ...(txType !== 'All' ? { txType } : {}),
+    ...(txStatus !== 'All' ? { txStatus } : {}),
+  }), [minAmount, maxAmount, fromDate, toDate, txType, txStatus]);
+
+  const {
+    sections,
+    loading,
+    loadingMore,
+    refreshing,
+    refresh,
+    loadMore,
+    error,
+    filter,
+    setFilter,
+    searchQuery,
+    setSearchQuery,
+  } = useTransactions(undefined, advancedFilters);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [actionLoading, setActionLoading] = useState<"accept" | "decline" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -283,18 +303,19 @@ export function TransactionsScreen() {
     return sections;
   }, [sections, transactionGrouping]);
 
-  const renderItem = ({ item }: { item: Transaction }) => (
+  const renderItem = useCallback(({ item }: { item: Transaction }) => (
     <View style={{ paddingHorizontal: Spacing.lg }}>
       <TransactionItem item={item} onPress={() => setSelectedTx(item)} />
     </View>
-  );
+  ), [styles]);
 
-  const renderSectionHeader = ({ section: { title } }: { section: Section }) =>
+  const renderSectionHeader = useCallback(({ section: { title } }: { section: Section }) =>
     title ? (
       <View style={styles.sectionHeaderWrap}>
         <Text style={styles.sectionHeader}>{title}</Text>
       </View>
-    ) : null;
+    ) : null,
+  [styles]);
 
   const emptyLabel =
     filter === "Pending" ? "No pending transactions" :
@@ -490,7 +511,7 @@ export function TransactionsScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          loading && sections.length > 0 ? (
+          loadingMore ? (
             <View style={{ paddingVertical: Spacing.lg }}>
               <ActivityIndicator size="small" color={Colors.primary} />
             </View>
@@ -698,10 +719,6 @@ export function TransactionsScreen() {
                     setTxType(pendingType);
                     setTxStatus(pendingStatus);
                     setFilterModalVisible(false);
-                    // Trigger search with advanced params
-                    if (pendingMin || pendingMax || pendingFrom || pendingTo || pendingType !== 'All' || pendingStatus !== 'All') {
-                      setSearchQuery(searchQuery || ' ');
-                    }
                   }}
                 >
                   <Text style={[styles.filterBtnText, { color: Colors.white }]}>Apply</Text>

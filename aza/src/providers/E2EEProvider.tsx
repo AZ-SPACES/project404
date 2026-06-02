@@ -23,9 +23,11 @@ import {
   generateOneTimePreKeys,
   getOrCreateIdentityEd25519,
   getOrCreateIdentityX25519,
+  isSignedPreKeyStale,
   KEYSTORE_INITIAL_OTPK_COUNT,
   otpkPrivateCount,
   purgeAllOneTimePreKeys,
+  rotateSignedPreKey,
   wipeIdentity,
 } from '../crypto/keystore';
 import {
@@ -136,6 +138,24 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await purgeAllOneTimePreKeys(userId);
           }
           const spk = await ensureSignedPreKey(userId);
+          const otpks = await generateOneTimePreKeys(userId, KEYSTORE_INITIAL_OTPK_COUNT);
+          await uploadKeyBundle({
+            identityPublicKey: bytesToBase64(idX.publicKey),
+            signedPreKeyPublic: bytesToBase64(spk.publicKey),
+            signedPreKeySignature: bytesToBase64(spk.signature),
+            oneTimePreKeys: otpks.map((k) => ({
+              keyId: k.keyId,
+              publicKey: bytesToBase64(k.publicKey),
+            })),
+          });
+        } else if (await isSignedPreKeyStale(userId)) {
+          // SPK has aged out — rotate it and replenish OPKs in the same upload.
+          // Existing cached session roots continue to work; the previous SPK
+          // private key is archived for SPK_GRACE_MS so in-flight first-messages
+          // encrypted against the old bundle still decrypt.
+          console.warn('[E2EE] SPK is stale — rotating.');
+          await purgeAllOneTimePreKeys(userId);
+          const spk = await rotateSignedPreKey(userId);
           const otpks = await generateOneTimePreKeys(userId, KEYSTORE_INITIAL_OTPK_COUNT);
           await uploadKeyBundle({
             identityPublicKey: bytesToBase64(idX.publicKey),

@@ -661,16 +661,25 @@ public class TransferService {
     // ==================== TRANSACTION HISTORY ====================
 
     public Page<TransferResponse> getTransactionHistory(UUID userId, String type,
-                                                         String status, int page, int size) {
+                                                         String status, String direction, int page, int size) {
         int cappedSize = Math.min(size, 100);
         PageRequest pageRequest = PageRequest.of(page, cappedSize);
         Page<Transaction> transactions;
 
-        if (type != null && !type.isBlank()) {
+        if (direction != null && !direction.isBlank()) {
+            String dir = direction.toUpperCase();
+            if ("INCOMING".equals(dir)) {
+                transactions = transactionRepository.findIncomingByUserId(userId, pageRequest);
+            } else if ("OUTGOING".equals(dir)) {
+                transactions = transactionRepository.findOutgoingByUserId(userId, pageRequest);
+            } else {
+                throw new AppException("Invalid direction. Accepted values: INCOMING, OUTGOING");
+            }
+        } else if (type != null && !type.isBlank()) {
             try {
                 transactions = transactionRepository.findAllByUserIdAndType(
                         userId, Transaction.TransactionType.valueOf(type.toUpperCase()), pageRequest);
-            } catch (IllegalArgumentException e ) {
+            } catch (IllegalArgumentException e) {
                 throw new AppException("Invalid transaction type. Accepted values: TRANSFER, REQUEST");
             }
         } else if (status != null && !status.isBlank()) {
@@ -772,6 +781,7 @@ public class TransferService {
             UUID userId,
             String status,
             String type,
+            String direction,
             BigDecimal minAmount,
             BigDecimal maxAmount,
             LocalDateTime start,
@@ -789,10 +799,12 @@ public class TransferService {
             try { typeEnum = Transaction.TransactionType.valueOf(type.toUpperCase()); }
             catch (IllegalArgumentException e) { throw new AppException("Invalid type value"); }
         }
+        boolean incoming = "INCOMING".equalsIgnoreCase(direction);
+        boolean outgoing = "OUTGOING".equalsIgnoreCase(direction);
 
         org.springframework.data.domain.Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         org.springframework.data.domain.Page<Transaction> results = transactionRepository.searchTransactions(
-                userId, statusEnum, typeEnum, minAmount, maxAmount, start, end, pageable);
+                userId, incoming, outgoing, statusEnum, typeEnum, minAmount, maxAmount, start, end, pageable);
 
         // Batch-load all participant names: 2 queries instead of 2N per page
         Set<UUID> allIds = new HashSet<>();
@@ -828,6 +840,7 @@ public class TransferService {
                     .category(t.getCategory() != null ? t.getCategory().name() : null)
                     .anomalyScore(t.getAnomalyScore())
                     .anomalyRiskLevel(t.getAnomalyRiskLevel())
+                    .direction(t.getRecipientId().equals(userId) ? "INCOMING" : "OUTGOING")
                     .build();
         });
     }

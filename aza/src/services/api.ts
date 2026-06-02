@@ -40,10 +40,12 @@ export const setForceLogoutHandler = (handler: () => void) => {
 export const getDeviceId = async (): Promise<string> => {
   const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
-  const id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40; // UUID v4 version bits
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80; // RFC 4122 variant bits
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  const id = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
   await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
   return id;
 };
@@ -355,8 +357,8 @@ export const getSpendingSummary = () => api.get("/api/v1/wallet/spending");
 export const getYearlySpendingSummary = (year?: number) =>
   api.get(`/api/v1/wallet/spending/yearly${year ? `?year=${year}` : ""}`);
 
-export const getTransactions = (page = 0, size = 20, type?: string, status?: string) =>
-  api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`);
+export const getTransactions = (page = 0, size = 20, type?: string, status?: string, direction?: string) =>
+  api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}${direction ? `&direction=${direction}` : ""}`);
 
 export const getTransactionsStatement = (startDate: string, endDate: string) =>
   api.get(`/api/v1/transfers/statement?startDate=${startDate}&endDate=${endDate}`, {
@@ -411,6 +413,9 @@ export const resetPassword = (identifier: string, code: string, newPassword: str
 
 export const verifyOtp = (identifier: string, code: string, purpose: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
   api.post("/api/v1/auth/verify-otp", { identifier, code, purpose, deviceName, deviceOs, deviceId });
+
+export const logout = () =>
+  api.post("/api/v1/auth/logout");
 
 export const logoutEverywhere = () =>
   api.post("/api/v1/auth/logout-everywhere");
@@ -999,7 +1004,7 @@ export const bulkTransfer = (data: { transfers: { recipientIdentifier: string; a
 
 // --- Transaction Search ---
 
-export const searchTransactions = (params: { q?: string; status?: string; type?: string; minAmount?: number; maxAmount?: number; startDate?: string; endDate?: string; page?: number; size?: number }) => {
+export const searchTransactions = (params: { q?: string; status?: string; type?: string; direction?: string; minAmount?: number; maxAmount?: number; startDate?: string; endDate?: string; page?: number; size?: number }) => {
   const p = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') p.set(k, String(v)); });
   return api.get(`/api/v1/transfers/search?${p}`);

@@ -45,8 +45,10 @@ import {
   type V3Envelope,
 } from '../crypto/e2ee';
 import {
-  consumeOneTimePreKey,
+  deleteConsumedOneTimePreKey,
+  getPreviousSignedPreKeyPrivate,
   getSignedPreKeyPrivate,
+  readOneTimePreKey,
 } from '../crypto/keystore';
 import type { LocalMessage, LocalMessageStatus } from './chatTypes';
 import {
@@ -544,13 +546,18 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         );
         await indexSessionRoot(selfUserId, chat.otherUserId);
       } else {
-        envelope = encryptFollowupMessageV3({
+        const followup = encryptFollowupMessageV3({
           plaintext: text,
           rootKey,
           recipientIdentityPublic: peer.identityPublicKey,
           senderId: selfUserId,
           chatId,
         });
+        envelope = followup.envelope;
+        // Ratchet: persist the new root BEFORE publishing so a mid-send crash
+        // leaves both sides on the same ratchet step.
+        await saveSessionRoot(selfUserId, chat.otherUserId, followup.newRootKey, peer.identityPublicKey);
+        followup.newRootKey.fill(0);
       }
 
       const payload: SendMessagePayload = {
@@ -714,13 +721,16 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         await saveSessionRoot(selfUserId, chat.otherUserId, rootKey, peer.identityPublicKey);
         await indexSessionRoot(selfUserId, chat.otherUserId);
       } else {
-        envelope = encryptFollowupMessageV3({
+        const followup = encryptFollowupMessageV3({
           plaintext: plaintextForEncryption,
           rootKey,
           recipientIdentityPublic: peer.identityPublicKey,
           senderId: selfUserId,
           chatId,
         });
+        envelope = followup.envelope;
+        await saveSessionRoot(selfUserId, chat.otherUserId, followup.newRootKey, peer.identityPublicKey);
+        followup.newRootKey.fill(0);
       }
 
       const payload: SendMessagePayload = {
@@ -1094,41 +1104,53 @@ async function decryptServerMessage(
     let plaintext: string | null = null;
     if (v3Envelope.senderIdentityPublicKey) {
       // v3 first-message path. We need our SPK private and (if referenced)
-      // the OPK private. The OPK is consumed (deleted) after a successful
-      // decrypt so the same envelope can't be replayed against us.
+      // the OPK private.
+      //
+      // OPK is read WITHOUT consuming so we can retry with a fallback SPK if
+      // the current SPK fails. The OPK is deleted only after a successful
+      // decrypt to prevent it being replayed.
       const spkPriv = await getSignedPreKeyPrivate(selfUserId);
       let opkPriv: Uint8Array | null = null;
+      let opkId: number | null = null;
       if (m.preKeyId != null) {
-        const opkId = Number(m.preKeyId);
+        opkId = Number(m.preKeyId);
         if (!Number.isNaN(opkId)) {
-          opkPriv = await consumeOneTimePreKey(selfUserId, opkId);
+          opkPriv = await readOneTimePreKey(selfUserId, opkId);
         }
       }
-      if (spkPriv) {
+
+      const tryDecryptFirst = async (spkPrivKey: Uint8Array) => {
         const result = decryptV3({
           envelope: v3Envelope,
           recipientIdentityPrivate: selfIdentityPrivate,
-          recipientSignedPreKeyPrivate: spkPriv,
+          recipientSignedPreKeyPrivate: spkPrivKey,
           oneTimePreKeyPrivate: opkPriv,
           senderId: peerSenderId,
           chatId,
         });
-        if (result) {
-          plaintext = result.plaintext;
-          // Persist the freshly established session root so follow-up
-          // messages from this peer key off the cached root.
-          if (result.rootKey) {
-            // We need the sender's IK to anchor the TOFU comparison stored
-            // alongside the root. Use the IK we just X3DH-decrypted against.
-            const senderIK = base64ToBytes(v3Envelope.senderIdentityPublicKey);
-            try {
-              await saveSessionRoot(selfUserId, peerSenderId, result.rootKey, senderIK);
-              await indexSessionRoot(selfUserId, peerSenderId);
-            } catch (e) {
-              console.warn('[chat] failed to persist session root', e);
-            }
-          }
+        if (!result) return null;
+        const senderIK = base64ToBytes(v3Envelope.senderIdentityPublicKey!);
+        try {
+          await saveSessionRoot(selfUserId, peerSenderId, result.rootKey!, senderIK);
+          await indexSessionRoot(selfUserId, peerSenderId);
+          result.rootKey!.fill(0);
+        } catch (e) {
+          console.warn('[chat] failed to persist session root', e);
         }
+        return result.plaintext;
+      };
+
+      if (spkPriv) plaintext = await tryDecryptFirst(spkPriv);
+
+      // Fallback: try the previous SPK (within the 30-day grace period after rotation).
+      if (plaintext == null) {
+        const prevSpkPriv = await getPreviousSignedPreKeyPrivate(selfUserId);
+        if (prevSpkPriv) plaintext = await tryDecryptFirst(prevSpkPriv);
+      }
+
+      // Consume OPK only after at least one successful decrypt.
+      if (plaintext != null && opkId != null) {
+        deleteConsumedOneTimePreKey(selfUserId, opkId).catch(() => {});
       }
     } else {
       // v3 follow-up: needs a cached root key keyed by the sender's IK.
@@ -1149,7 +1171,19 @@ async function decryptServerMessage(
             senderId: peerSenderId,
             chatId,
           });
-          if (result) plaintext = result.plaintext;
+          if (result) {
+            plaintext = result.plaintext;
+            // Ratchet: persist the new root so the next follow-up has the
+            // correct starting state.
+            if (result.rootKey) {
+              try {
+                await saveSessionRoot(selfUserId, peerSenderId, result.rootKey, peer.identityPublicKey);
+                result.rootKey.fill(0);
+              } catch (e) {
+                console.warn('[chat] failed to update session root', e);
+              }
+            }
+          }
         }
       }
     }

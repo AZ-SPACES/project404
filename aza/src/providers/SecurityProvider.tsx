@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from './AuthProvider';
 
 const LOCK_TIMEOUT_KEY = 'aza_lock_timeout_ms';
 const APP_LOCK_ENABLED_KEY = 'aza_app_lock_enabled';
+const SECURE_OPTS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
 const DEFAULT_LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export const LOCK_TIMEOUT_OPTIONS: { label: string; value: number }[] = [
@@ -39,8 +42,8 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load saved settings on mount
   useEffect(() => {
     Promise.all([
-      AsyncStorage.getItem(LOCK_TIMEOUT_KEY),
-      AsyncStorage.getItem(APP_LOCK_ENABLED_KEY),
+      SecureStore.getItemAsync(LOCK_TIMEOUT_KEY, SECURE_OPTS),
+      SecureStore.getItemAsync(APP_LOCK_ENABLED_KEY, SECURE_OPTS),
     ]).then(([timeout, lockEnabled]) => {
       if (timeout !== null) setLockTimeoutMs(parseInt(timeout, 10));
       if (lockEnabled !== null) setAppLockEnabledState(lockEnabled !== 'false');
@@ -50,12 +53,12 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setAppLockEnabled = useCallback(async (enabled: boolean) => {
     setAppLockEnabledState(enabled);
     if (!enabled) setIsLocked(false);
-    await AsyncStorage.setItem(APP_LOCK_ENABLED_KEY, String(enabled));
+    await SecureStore.setItemAsync(APP_LOCK_ENABLED_KEY, String(enabled), SECURE_OPTS);
   }, []);
 
   const setLockTimeout = useCallback(async (ms: number) => {
     setLockTimeoutMs(ms);
-    await AsyncStorage.setItem(LOCK_TIMEOUT_KEY, String(ms));
+    await SecureStore.setItemAsync(LOCK_TIMEOUT_KEY, String(ms), SECURE_OPTS);
   }, []);
 
   const unlock = useCallback(async (): Promise<boolean> => {
