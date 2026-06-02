@@ -70,8 +70,10 @@ export default function ConsentScreen() {
       const authPayload = response?.data ?? response;
       const { accessToken, refreshToken } = authPayload;
 
+      if (!accessToken || !refreshToken) throw new Error('Signup did not return tokens');
+
       const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-      
+
       // Save passcode locally for biometrics/verification
       if (data.passcode) {
         await savePasscodeValue(data.passcode);
@@ -81,9 +83,9 @@ export default function ConsentScreen() {
 
       await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
-      
+
       // hasPasscode=true because we just set it during signup
-      login(accessToken, true, false);
+      login({ token: accessToken, hasPasscode: true, isKYCVerified: false });
     } catch (error: any) {
       showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
     }

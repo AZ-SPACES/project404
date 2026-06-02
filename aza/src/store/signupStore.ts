@@ -56,15 +56,25 @@ const INITIAL_DATA: SignupData = {
   handle: '',
 };
 
+export type SignupResult = {
+  data?: {
+    accessToken: string;
+    refreshToken: string;
+    preAuthToken?: string;
+  };
+  accessToken?: string;
+  refreshToken?: string;
+  preAuthToken?: string;
+};
+
 interface SignupState {
   data: SignupData;
   isLoading: boolean;
   error: string | null;
 
-  // Actions
   updateData: (partialData: Partial<SignupData>) => void;
   reset: () => void;
-  submitSignup: () => Promise<any>; // Returns response or throws error
+  submitSignup: () => Promise<SignupResult>;
 }
 
 export const useSignupStore = create<SignupState>((set, get) => ({

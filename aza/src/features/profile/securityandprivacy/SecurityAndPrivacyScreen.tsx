@@ -99,7 +99,7 @@ export function SecurityAndPrivacyScreen() {
               await cancelAccountDeletion();
               // Clear scheduledDeletionAt from local auth state
               if (userToken) {
-                login(userToken, hasPasscode, isKYCVerified, false, false, false, null);
+                login({ token: userToken, hasPasscode, isKYCVerified, scheduledDeletionAt: null });
               }
               showToast('Deletion cancelled. Your account is active.', 'success');
             } catch (e: any) {

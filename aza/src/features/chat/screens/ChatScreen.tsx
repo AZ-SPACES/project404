@@ -171,7 +171,7 @@ export default function ChatScreen() {
         if (prev.some(m => m.id === forwardedMessage.id)) return prev;
         return [...prev, forwardedMessage];
       });
-      navigation.setParams({ forwardedMessage: undefined });
+      navigation.setParams({ forwardedMessage: undefined } as any);
       // Also push the visible text through the E2EE pipeline so the peer receives it.
       if (forwardedMessage.text) sendText(forwardedMessage.text).catch(() => {});
     }
@@ -498,7 +498,7 @@ export default function ChatScreen() {
     { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
     { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
     { icon: 'copy', label: 'Copy', onPress: handleCopy },
-    { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); navigation.navigate('MessageInfo' as any, { message: selectedMessage }); } },
+    { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
     { icon: 'star', label: selectedMessage?.isStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
     { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
   ], [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply]);

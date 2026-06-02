@@ -206,14 +206,14 @@ const TotpLoginScreen: React.FC = () => {
   const finalizeLogin = async (payload: any) => {
     await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
-    login(
-      payload.accessToken,
-      payload.user?.passcodeSet ?? false,
-      payload.user?.kycStatus === 'VERIFIED',
-      payload.user?.forcePasswordReset ?? false,
-      payload.user?.requireSelfieVerification ?? false,
-      false
-    );
+    login({
+      token: payload.accessToken,
+      hasPasscode: payload.user?.passcodeSet ?? false,
+      isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+      forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+      requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+      isBiometricsEnabled: false,
+    });
   };
 
   const handleOtpChange = (text: string, index: number) => {

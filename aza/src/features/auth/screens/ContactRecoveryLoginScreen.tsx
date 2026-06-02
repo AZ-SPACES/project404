@@ -111,14 +111,14 @@ export default function ContactRecoveryLoginScreen() {
       const payload = res.data?.data ?? res.data;
       await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
-      login(
-        payload.accessToken,
-        payload.user?.passcodeSet ?? false,
-        payload.user?.kycStatus === 'VERIFIED',
-        payload.user?.forcePasswordReset ?? false,
-        payload.user?.requireSelfieVerification ?? false,
-        false,
-      );
+      login({
+        token: payload.accessToken,
+        hasPasscode: payload.user?.passcodeSet ?? false,
+        isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+        forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+        requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+        isBiometricsEnabled: false,
+      });
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Invalid or expired code', 'error');
     } finally {
