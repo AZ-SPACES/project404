@@ -17,6 +17,7 @@ import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
 import { CloseButton } from '../../../components/ui/CloseButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -94,9 +95,9 @@ const LoginScreen: React.FC = () => {
       } else {
         navigation.navigate('TotpLogin', { loginIdentifier: identifier, methods: ['SMS'], defaultMethod: 'SMS' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login failed', error);
-      const errorMsg = error.response?.data?.message || 'Invalid credentials. Please try again.';
+      const errorMsg = extractErrorMessage(error, 'Invalid credentials. Please try again.');
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
@@ -151,9 +152,8 @@ const LoginScreen: React.FC = () => {
         requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
         isBiometricsEnabled: true,
       });
-    } catch (e: any) {
-      const msg = e?.response?.data?.message;
-      showToast(msg || 'Biometric authentication failed. Please try again.', 'error');
+    } catch (e: unknown) {
+      showToast(extractErrorMessage(e, 'Biometric authentication failed. Please try again.'), 'error');
     } finally {
       setIsBiometricLoading(false);
     }

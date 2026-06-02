@@ -22,6 +22,7 @@ import Button from '../../../components/ui/Button';
 import { CATEGORY_META, CategoryKey } from '../../../utils/categories';
 import { checkTransferAnomaly } from '../../../services/api';
 import { queryKeys } from '../../../lib/queryKeys';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type SendConfirmScreenProps = NativeStackScreenProps<RootStackParamList, 'SendConfirm'>;
 
@@ -61,9 +62,9 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
       await initiateTransfer({ recipientIdentifier: identifier, amount, note: editedNote, ...(category ? { category } : {}) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate('SendPin', { name, username, avatar, amount, note: editedNote, identifier, ...(category ? { category } : {}) });
-    } catch (err: any) {
+    } catch (err: unknown) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showToast(err.message || 'Could not initiate transfer. Please try again.', 'error');
+      showToast(extractErrorMessage(err, 'Could not initiate transfer. Please try again.'), 'error');
     } finally {
       setIsLoading(false);
     }

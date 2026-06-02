@@ -42,6 +42,7 @@ import {
 } from '../../../services/api';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Device from 'expo-device';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TotpLogin'>;
 type TotpLoginRouteProp = RouteProp<RootStackParamList, 'TotpLogin'>;
@@ -104,7 +105,7 @@ const TotpLoginScreen: React.FC = () => {
     try {
       await requestSms2fa(preAuthToken);
       showToast('A verification code has been sent to your phone.', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showToast('Failed to send SMS. Please try again.', 'error');
     } finally {
       setIsLoading(false);
@@ -116,7 +117,7 @@ const TotpLoginScreen: React.FC = () => {
     try {
       await requestEmail2fa(preAuthToken);
       showToast('A verification code has been sent to your email.', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showToast('Failed to send email. Please try again.', 'error');
     } finally {
       setIsLoading(false);
@@ -148,8 +149,8 @@ const TotpLoginScreen: React.FC = () => {
       const deviceId = await getDeviceId();
       const res = await verifyPasskeys2fa(preAuthToken, biometricToken, deviceId);
       await finalizeLogin(res.data?.data ?? res.data);
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Passkey verification failed. Please try another method.';
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Passkey verification failed. Please try another method.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);
@@ -174,9 +175,9 @@ const TotpLoginScreen: React.FC = () => {
           await finalizeLogin(payload);
         }
         // null means still PENDING — keep polling
-      } catch (err: any) {
+      } catch (err: unknown) {
         stopPolling();
-        const msg = err.response?.data?.message || 'Login request expired or was denied.';
+        const msg = extractErrorMessage(err, 'Login request expired or was denied.');
         showToast(msg, 'error');
         const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
         setCurrentMethod(fallback);
@@ -193,8 +194,8 @@ const TotpLoginScreen: React.FC = () => {
       const requestId: string = res.data?.data ?? res.data;
       setAppRequestId(requestId);
       startPolling(preAuthToken, requestId);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to send approval request. Please try another method.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to send approval request. Please try another method.');
       showToast(msg, 'error');
       const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
       setCurrentMethod(fallback);
@@ -203,7 +204,13 @@ const TotpLoginScreen: React.FC = () => {
     }
   };
 
-  const finalizeLogin = async (payload: any) => {
+  type AuthPayload = {
+    accessToken: string;
+    refreshToken: string;
+    user?: { passcodeSet?: boolean; kycStatus?: string; forcePasswordReset?: boolean; requireSelfieVerification?: boolean };
+  };
+
+  const finalizeLogin = async (payload: AuthPayload) => {
     await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
     login({
@@ -287,8 +294,8 @@ const TotpLoginScreen: React.FC = () => {
         data = res.data;
       }
       await finalizeLogin(data?.data ?? data);
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';
+    } catch (error: unknown) {
+      const errorMsg = extractErrorMessage(error, 'Invalid code. Please try again.');
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);

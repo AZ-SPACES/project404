@@ -34,6 +34,7 @@ import { useDisplayContext } from "../../../providers/DisplayProvider";
 import { useTransferStore } from "../../../store/transferStore";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export type Transaction = {
   id: string;
@@ -274,9 +275,9 @@ export function TransactionsScreen() {
       await acceptMoneyRequest(selectedTx.id, enteredPin);
       closeSheet();
       refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPin("");
-      setActionError(err.message || "Incorrect PIN or payment failed.");
+      setActionError(extractErrorMessage(err, "Incorrect PIN or payment failed."));
     } finally {
       setActionLoading(null);
     }
@@ -289,8 +290,8 @@ export function TransactionsScreen() {
       await declineMoneyRequest(tx.id);
       closeSheet();
       refresh();
-    } catch (err: any) {
-      setActionError(err.message || "Failed to decline. Try again.");
+    } catch (err: unknown) {
+      setActionError(extractErrorMessage(err, "Failed to decline. Try again."));
     } finally {
       setActionLoading(null);
     }

@@ -23,6 +23,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 import { registerMerchant } from "../../../../services/api";
 import { BackButton } from '../../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantBusinessContact">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantBusinessContact">;
@@ -69,9 +70,9 @@ export default function MerchantBusinessContactScreen() {
       const response = await registerMerchant(payload);
       const merchant = response.data.data ?? response.data;
       navigation.navigate("MerchantKYBIntro", { merchantId: merchant.id });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message =
-        err?.response?.data?.message ?? err?.message ?? "Something went wrong. Please try again.";
+        extractErrorMessage(err, "Something went wrong. Please try again.");
       Alert.alert("Error", message);
     } finally {
       setLoading(false);

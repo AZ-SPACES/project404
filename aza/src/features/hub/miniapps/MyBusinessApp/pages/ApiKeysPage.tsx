@@ -125,7 +125,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setNewKeyScopes({ 'sessions:read': false, 'sessions:write': false });
       setShowForm(false);
       invalidateKeys();
-    } catch (e: any) {
+    } catch (e: unknown) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create key.');
     } finally {
       setCreating(false);
@@ -146,7 +146,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       await updateMerchantApiKey(keyId, payload);
       setEditingKeyId(null);
       invalidateKeys();
-    } catch (e: any) {
+    } catch (e: unknown) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update key.');
     } finally {
       setUpdating(false);
@@ -163,7 +163,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       }
       setRollingKeyId(null);
       invalidateKeys();
-    } catch (e: any) {
+    } catch (e: unknown) {
       Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to roll key.');
     } finally {
       setRolling(false);

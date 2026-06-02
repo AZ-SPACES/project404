@@ -23,6 +23,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../../navigation/types";
 import { uploadKybDocument, submitKybFinal } from "../../../../services/api";
 import { BackButton } from '../../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantKYBDocuments">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantKYBDocuments">;
@@ -83,9 +84,9 @@ export default function MerchantKYBDocumentsScreen() {
     try {
       await uploadKybDocument(file, docType);
       setUploaded((prev) => new Set(prev).add(docType));
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message =
-        err?.response?.data?.message ?? err?.message ?? "Upload failed. Please try again.";
+        extractErrorMessage(err, "Upload failed. Please try again.");
       Alert.alert("Upload Failed", message);
     } finally {
       setUploading((prev) => {
@@ -183,9 +184,9 @@ export default function MerchantKYBDocumentsScreen() {
     try {
       await submitKybFinal();
       navigation.navigate("MerchantKYBSubmitted");
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message =
-        err?.response?.data?.message ?? err?.message ?? "Something went wrong. Please try again.";
+        extractErrorMessage(err, "Something went wrong. Please try again.");
       Alert.alert("Error", message);
     } finally {
       setSubmitting(false);

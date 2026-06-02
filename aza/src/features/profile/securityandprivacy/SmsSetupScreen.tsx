@@ -22,6 +22,7 @@ import { initiateSms2faSetup, confirmSms2faSetup } from '../../../services/api';
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export default function SmsSetupScreen() {
   const { colors: Colors } = useAppTheme();
@@ -52,8 +53,8 @@ export default function SmsSetupScreen() {
       await initiateSms2faSetup();
       setStep(2);
       setTimeLeft(57);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to send code. Please try again.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to send code. Please try again.');
       showToast(msg, 'error');
     } finally {
       setIsSending(false);
@@ -68,7 +69,7 @@ export default function SmsSetupScreen() {
       setTimeLeft(57);
       setOtp(Array(6).fill(''));
       showToast('A new code was sent to your phone.', 'success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       showToast('Failed to resend code.', 'error');
     } finally {
       setIsSending(false);
@@ -115,8 +116,8 @@ export default function SmsSetupScreen() {
         showToast('Text message verification enabled', 'success');
         navigation.navigate('TwoStepVerification');
       }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Invalid code. Please try again.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Invalid code. Please try again.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);

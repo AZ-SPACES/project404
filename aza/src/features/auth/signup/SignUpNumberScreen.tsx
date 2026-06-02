@@ -22,7 +22,8 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidPhone } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkPhoneAvailability } from "../../../services/api";
-import { BackButton } from "../../../components/ui/BackButton";
+import { BackButton } from '../../../components/ui/BackButton';
+import { getErrorStatus } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpNumber">;
 
@@ -59,8 +60,8 @@ export default function SignUpNumberScreen() {
         } else {
           setError(null);
         }
-      } catch (err: any) {
-        if (err.response?.status === 409) {
+      } catch (err: unknown) {
+        if (getErrorStatus(err) === 409) {
           setIsAvailable(false);
           setError("This phone number is already linked to an account.");
         } else {
@@ -88,8 +89,8 @@ export default function SignUpNumberScreen() {
         setIsAvailable(false);
         setError("This phone number is already linked to an account.");
       }
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 409) {
         setIsAvailable(false);
         setError("This phone number is already linked to an account.");
       } else {

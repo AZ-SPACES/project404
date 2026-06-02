@@ -22,6 +22,7 @@ import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { getErrorStatus } from "../../../utils/errorUtils";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkEmailAvailability } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
@@ -61,8 +62,8 @@ export default function SignUpEmailScreen() {
         } else {
           setError(null);
         }
-      } catch (err: any) {
-        if (err.response?.status === 409) {
+      } catch (err: unknown) {
+        if (getErrorStatus(err) === 409) {
           setIsAvailable(false);
           setError("This email address is already linked to an account.");
         } else {
@@ -90,8 +91,8 @@ export default function SignUpEmailScreen() {
         setIsAvailable(false);
         setError("This email address is already linked to an account.");
       }
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 409) {
         setIsAvailable(false);
         setError("This email address is already linked to an account.");
       } else {

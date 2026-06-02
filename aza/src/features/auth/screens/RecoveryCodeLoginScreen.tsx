@@ -23,6 +23,7 @@ import { redeemRecoveryCode, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../servi
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'RecoveryCodeLogin'>;
 type RoutePropType = RouteProp<RootStackParamList, 'RecoveryCodeLogin'>;
@@ -68,8 +69,8 @@ export default function RecoveryCodeLoginScreen() {
         requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
         isBiometricsEnabled: false,
       });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Invalid or already-used recovery code.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Invalid or already-used recovery code.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);

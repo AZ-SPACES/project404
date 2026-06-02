@@ -31,7 +31,7 @@ type ProfileData = {
   appTwoFactorEnabled: boolean;
   passkeysEnabled: boolean;
   defaultTwoFactorMethod: string | null;
-  notificationPreferences: Record<string, any> | null;
+  notificationPreferences: Record<string, boolean> | null;
   findMeByPhone: boolean;
   findMeByEmail: boolean;
   findMeByHandle: boolean;
@@ -91,27 +91,61 @@ type ProfileContextType = ProfileData & {
   toggleSms2fa: (enabled: boolean) => Promise<void>;
   togglePasskeys: (enabled: boolean) => Promise<void>;
   updateProfile: (data: Partial<ProfileData>) => Promise<void>;
-  updateNotificationPreferences: (prefs: Record<string, any>) => Promise<void>;
+  updateNotificationPreferences: (prefs: Record<string, boolean>) => Promise<void>;
   fetchProfile: () => void;
 };
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
-function mapUserData(userData: any): ProfileData {
+/** Shape of the object returned inside `data.data` by GET /api/v1/users/me. */
+type UserApiResponse = {
+  firstName?: string | null;
+  lastName?: string | null;
+  dateOfBirth?: string | null;
+  homeAddress?: string | null;
+  city?: string | null;
+  nationality?: string | null;
+  kycStatus?: string | null;
+  profileImageUrl?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  handle?: string | null;
+  pronouns?: string | null;
+  syncContacts?: boolean | null;
+  billForwardingEnabled?: boolean | null;
+  twoFactorEnabled?: boolean | null;
+  totpEnabled?: boolean | null;
+  smsTwoFactorEnabled?: boolean | null;
+  emailTwoFactorEnabled?: boolean | null;
+  appTwoFactorEnabled?: boolean | null;
+  passkeysEnabled?: boolean | null;
+  defaultTwoFactorMethod?: string | null;
+  notificationPreferences?: string | Record<string, boolean> | null;
+  findMeByPhone?: boolean | null;
+  findMeByEmail?: boolean | null;
+  findMeByHandle?: boolean | null;
+  biometricData?: boolean | null;
+  language?: string | null;
+  theme?: string | null;
+  homeBackground?: string | null;
+  hubBackground?: string | null;
+};
+
+function mapUserData(userData: UserApiResponse): ProfileData {
   return {
     displayName: `${userData.firstName ?? ''} ${userData.lastName ?? ''}`.trim() || '',
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    dateOfBirth: userData.dateOfBirth,
-    homeAddress: userData.homeAddress,
-    city: userData.city,
-    nationality: userData.nationality,
-    kycStatus: userData.kycStatus,
-    profileImageUri: userData.profileImageUrl,
-    email: userData.email,
-    phone: userData.phone,
-    handle: userData.handle,
-    pronouns: userData.pronouns,
+    firstName: userData.firstName ?? null,
+    lastName: userData.lastName ?? null,
+    dateOfBirth: userData.dateOfBirth ?? null,
+    homeAddress: userData.homeAddress ?? null,
+    city: userData.city ?? null,
+    nationality: userData.nationality ?? null,
+    kycStatus: userData.kycStatus ?? null,
+    profileImageUri: userData.profileImageUrl ?? null,
+    email: userData.email ?? null,
+    phone: userData.phone ?? null,
+    handle: userData.handle ?? null,
+    pronouns: userData.pronouns ?? null,
     syncContacts: userData.syncContacts ?? true,
     billForwardingEnabled: userData.billForwardingEnabled ?? false,
     twoFactorEnabled: userData.twoFactorEnabled ?? false,
@@ -121,15 +155,19 @@ function mapUserData(userData: any): ProfileData {
     appTwoFactorEnabled: userData.appTwoFactorEnabled ?? false,
     passkeysEnabled: userData.passkeysEnabled ?? false,
     defaultTwoFactorMethod: userData.defaultTwoFactorMethod ?? null,
-    notificationPreferences: userData.notificationPreferences ? JSON.parse(userData.notificationPreferences) : null,
+    notificationPreferences: userData.notificationPreferences
+      ? (typeof userData.notificationPreferences === 'string'
+          ? JSON.parse(userData.notificationPreferences)
+          : userData.notificationPreferences)
+      : null,
     findMeByPhone: userData.findMeByPhone ?? true,
     findMeByEmail: userData.findMeByEmail ?? true,
     findMeByHandle: userData.findMeByHandle ?? true,
     biometricData: userData.biometricData ?? true,
     language: userData.language ?? 'English (US)',
     theme: userData.theme ?? 'System Default',
-    homeBackground: userData.homeBackground,
-    hubBackground: userData.hubBackground,
+    homeBackground: userData.homeBackground ?? null,
+    hubBackground: userData.hubBackground ?? null,
   };
 }
 
@@ -288,7 +326,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         requests.push(api.put('/api/v1/users/me/privacy', privacyData));
       }
       if (Object.keys(profileData).length > 0) {
-        requests.push(updateMe(profileData));
+        requests.push(updateMe(profileData as Parameters<typeof updateMe>[0]));
       }
 
       await Promise.all(requests);
@@ -299,7 +337,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  const updateNotificationPreferencesInProvider = useCallback(async (prefs: Record<string, any>) => {
+  const updateNotificationPreferencesInProvider = useCallback(async (prefs: Record<string, boolean>) => {
     try {
       await api.put("/api/v1/users/me/notifications", prefs);
       if (userToken) {
