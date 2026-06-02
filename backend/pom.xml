@@ -187,16 +187,6 @@
 			<version>3.5.3</version>
 		</dependency>
 
-		<!-- Database migrations -->
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>
-		</dependency>
-
 		<!-- Observability: structured JSON logging -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
