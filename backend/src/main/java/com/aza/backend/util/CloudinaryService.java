@@ -86,6 +86,29 @@ public class CloudinaryService {
     }
 
     /**
+     * Delete a Cloudinary asset by its secure URL.
+     * Extracts the public_id from the URL and calls destroy().
+     * Silently skips null URLs or non-Cloudinary URLs.
+     */
+    public void deleteByUrl(String url) {
+        if (url == null || !url.contains("res.cloudinary.com")) return;
+        try {
+            int uploadIdx = url.indexOf("/upload/");
+            if (uploadIdx == -1) return;
+            String path = url.substring(uploadIdx + 8);
+            if (path.matches("^v\\d+/.*")) {
+                path = path.substring(path.indexOf('/') + 1);
+            }
+            int dotIdx = path.lastIndexOf('.');
+            String publicId = dotIdx > 0 ? path.substring(0, dotIdx) : path;
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            log.info("Cloudinary asset deleted: {}", publicId);
+        } catch (Exception e) {
+            log.warn("Failed to delete Cloudinary asset {}: {}", url, e.getMessage());
+        }
+    }
+
+    /**
      * Core upload method used by all upload types
      */
     private String upload(MultipartFile file, String folder, String transformation) {

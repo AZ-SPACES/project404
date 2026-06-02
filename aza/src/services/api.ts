@@ -426,6 +426,9 @@ export const removeSelfEverywhere = () =>
 export const deleteAccount = () =>
   api.delete("/api/v1/users/me");
 
+export const cancelAccountDeletion = () =>
+  api.post("/api/v1/users/me/cancel-deletion");
+
 export const removeDevice = (deviceId: string) =>
   api.delete(`/api/v1/users/me/devices/${encodeURIComponent(deviceId)}`);
 

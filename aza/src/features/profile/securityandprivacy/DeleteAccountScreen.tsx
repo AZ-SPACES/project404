@@ -107,7 +107,7 @@ export function DeleteAccountScreen() {
           </Text>
           
           <Text style={[Typography.bodyLg, styles.description, { color: Colors.textSecondary }]}>
-            this deletes every account, every transaction, every category — and there's no bringing them back.
+            you'll have 30 days to change your mind. after that, your personal data is gone for good. financial records stay — Bank of Ghana requires it.
           </Text>
         </View>
 
@@ -124,7 +124,7 @@ export function DeleteAccountScreen() {
             {/* Button text */}
             <View style={styles.buttonTextContainer}>
               <Text style={[Typography.bodyLg, styles.buttonText, { color: isDeleting ? Colors.white : '#EF4444' }]}>
-                {isDeleting ? "almost gone... 😭" : "hold to delete 🥺"}
+                {isDeleting ? "scheduling deletion..." : "hold to schedule deletion"}
               </Text>
             </View>
           </View>

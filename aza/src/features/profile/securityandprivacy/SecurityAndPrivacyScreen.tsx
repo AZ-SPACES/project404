@@ -11,6 +11,8 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useE2EE } from '../../../providers/E2EEProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import { useAuth } from '../../../providers/AuthProvider';
+import { cancelAccountDeletion } from '../../../services/api';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
 
@@ -79,7 +81,37 @@ export function SecurityAndPrivacyScreen() {
   const scrollY = React.useRef(new Animated.Value(0)).current;
   const { reset: resetE2EE, identity } = useE2EE();
   const { showToast } = useToast();
+  const { scheduledDeletionAt, login, userToken, hasPasscode, isKYCVerified } = useAuth();
   const [isResettingE2EE, setIsResettingE2EE] = React.useState(false);
+  const [isCancellingDeletion, setIsCancellingDeletion] = React.useState(false);
+
+  const handleCancelDeletion = React.useCallback(() => {
+    Alert.alert(
+      'Cancel account deletion?',
+      'Your account will remain active and no data will be deleted.',
+      [
+        { text: 'Go back', style: 'cancel' },
+        {
+          text: 'Cancel deletion',
+          onPress: async () => {
+            setIsCancellingDeletion(true);
+            try {
+              await cancelAccountDeletion();
+              // Clear scheduledDeletionAt from local auth state
+              if (userToken) {
+                login(userToken, hasPasscode, isKYCVerified, false, false, false, null);
+              }
+              showToast('Deletion cancelled. Your account is active.', 'success');
+            } catch (e: any) {
+              showToast(e?.response?.data?.message || 'Failed to cancel deletion.', 'error');
+            } finally {
+              setIsCancellingDeletion(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [userToken, hasPasscode, isKYCVerified, login, showToast]);
 
   const handleResetEncryption = React.useCallback(() => {
     if (isResettingE2EE) return;
@@ -160,11 +192,30 @@ export function SecurityAndPrivacyScreen() {
 
         <View style={styles.section}>
           <Text style={[Typography.h3, styles.sectionTitle]}>Security</Text>
-          
-          <SettingRow 
-            iconType="Feather" 
-            iconName="shield" 
-            title="Password" 
+
+          {scheduledDeletionAt && (
+            <TouchableOpacity
+              style={[styles.deletionBanner, { borderColor: Colors.error }]}
+              onPress={handleCancelDeletion}
+              disabled={isCancellingDeletion}
+              activeOpacity={0.8}
+            >
+              <Feather name="alert-triangle" size={18} color={Colors.error} style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={[Typography.body, { color: Colors.error, fontWeight: '700' }]}>
+                  Account deletion scheduled
+                </Text>
+                <Text style={[Typography.caption, { color: Colors.error, marginTop: 2 }]}>
+                  Deletes on {new Date(scheduledDeletionAt).toLocaleDateString()}. Tap to cancel.
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          <SettingRow
+            iconType="Feather"
+            iconName="shield"
+            title="Password"
             onPress={() => navigation.navigate("ChangePassword")}
           />
           
@@ -362,6 +413,15 @@ function createStyles(Colors: ThemeColors) {
     lineHeight: 20 },
   spacer: {
     height: Spacing.xl },
+  deletionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
+    backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#FFF5F5',
+  },
   });
 }
 

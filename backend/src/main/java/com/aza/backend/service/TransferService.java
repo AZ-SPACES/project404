@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.transfer.*;
+import com.aza.backend.entity.AuditLog;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
@@ -58,6 +59,7 @@ public class TransferService {
     private final SmsService smsService;
     private final MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
     private final AnomalyDetectionService anomalyDetectionService;
+    private final AuditService auditService;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -452,6 +454,9 @@ public class TransferService {
                         transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO);
             }
 
+            auditService.logWithResource(AuditLog.TRANSFER_COMPLETED, AuditLog.SUCCESS,
+                    sender.getId(), sender.getEmail(), null,
+                    transaction.getId(), "Transaction");
             return buildTransferResponse(transaction, sender, recipient, sender.getId());
         }
     }
@@ -835,6 +840,8 @@ public class TransferService {
                 .orElseThrow(() -> new AppException("Wallet not found"));
         wallet.setFrozen(true);
         walletRepository.save(wallet);
+        auditService.logWithResource(AuditLog.WALLET_FROZEN, AuditLog.SUCCESS,
+                userId, null, null, wallet.getId(), "Wallet");
         return java.util.Map.of("frozen", true);
     }
 
@@ -844,6 +851,8 @@ public class TransferService {
                 .orElseThrow(() -> new AppException("Wallet not found"));
         wallet.setFrozen(false);
         walletRepository.save(wallet);
+        auditService.logWithResource(AuditLog.WALLET_UNFROZEN, AuditLog.SUCCESS,
+                userId, null, null, wallet.getId(), "Wallet");
         return java.util.Map.of("frozen", false);
     }
 

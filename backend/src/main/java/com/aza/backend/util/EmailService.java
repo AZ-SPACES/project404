@@ -528,4 +528,43 @@ public class EmailService {
         String description;
         String mapUrl;
     }
+
+    // ── GDPR Account Deletion ──────────────────────────────────────────────────
+
+    public void sendDeletionScheduledEmail(String email, String name, java.time.LocalDateTime deletionDate) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("deletionDate", deletionDate.toLocalDate().toString());
+            String html = inlineImages(templateEngine.process("email/account-deletion-scheduled", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account is scheduled for deletion", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-scheduled email to {}: {}", email, e.getMessage());
+        }
+    }
+
+    public void sendDeletionCancelledEmail(String email, String name) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name);
+            String html = inlineImages(templateEngine.process("email/account-deletion-cancelled", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account deletion has been cancelled", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-cancelled email to {}: {}", email, e.getMessage());
+        }
+    }
+
+    public void sendDeletionCompletedEmail(String email, String name) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name != null ? name : "there");
+            String html = inlineImages(templateEngine.process("email/account-deletion-completed", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account has been deleted", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-completed email to {}: {}", email, e.getMessage());
+        }
+    }
 }
