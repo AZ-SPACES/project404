@@ -23,18 +23,21 @@ type AuthState = {
   isLoading: boolean;
 };
 
+/** Named-parameter bag for the login() action. All fields except `token` are optional. */
+export type LoginSession = {
+  token: string;
+  hasPasscode?: boolean;
+  isKYCVerified?: boolean;
+  forcePasswordReset?: boolean;
+  requireSelfieVerification?: boolean;
+  isBiometricsEnabled?: boolean;
+  scheduledDeletionAt?: string | null;
+};
+
 type PinLockoutResult = { isLocked: boolean; secondsRemaining: number };
 
 type AuthContextType = AuthState & {
-  login: (
-    token: string,
-    hasPasscodeArg?: boolean,
-    isKYCVerifiedArg?: boolean,
-    forcePasswordReset?: boolean,
-    requireSelfieVerification?: boolean,
-    isBiometricsEnabled?: boolean,
-    scheduledDeletionAt?: string | null,
-  ) => void;
+  login: (session: LoginSession) => void;
   logout: () => void;
   completeKYC: () => void;
   setPasscode: () => void;
@@ -144,23 +147,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const login = useCallback((
-    token: string,
-    hasPasscodeArg: boolean = false,
-    isKYCVerifiedArg: boolean = false,
-    forcePasswordResetArg: boolean = false,
-    requireSelfieVerificationArg: boolean = false,
-    isBiometricsEnabledArg: boolean = false,
-    scheduledDeletionAtArg: string | null = null,
-  ) => {
+  const login = useCallback(({
+    token,
+    hasPasscode = false,
+    isKYCVerified = false,
+    forcePasswordReset = false,
+    requireSelfieVerification = false,
+    isBiometricsEnabled = false,
+    scheduledDeletionAt = null,
+  }: LoginSession) => {
     saveState({
       userToken: token,
-      hasPasscode: hasPasscodeArg,
-      isKYCVerified: isKYCVerifiedArg,
-      forcePasswordReset: forcePasswordResetArg,
-      requireSelfieVerification: requireSelfieVerificationArg,
-      isBiometricsEnabled: isBiometricsEnabledArg,
-      scheduledDeletionAt: scheduledDeletionAtArg ?? null,
+      hasPasscode,
+      isKYCVerified,
+      forcePasswordReset,
+      requireSelfieVerification,
+      isBiometricsEnabled,
+      scheduledDeletionAt: scheduledDeletionAt ?? null,
     });
   }, [saveState]);
 

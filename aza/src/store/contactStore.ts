@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   getContacts,
+  getContactRequests,
   searchContacts,
   markContactFavorite,
   unmarkContactFavorite,
@@ -231,7 +232,6 @@ export const useContactStore = create<ContactState>((set, get) => ({
       const data = await queryClient.fetchQuery({
         queryKey: queryKeys.contactRequests(),
         queryFn: async () => {
-          const { getContactRequests } = require('../services/api');
           const { data } = await getContactRequests();
           return data.data || [];
         },

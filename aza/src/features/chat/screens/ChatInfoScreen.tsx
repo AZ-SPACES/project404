@@ -463,7 +463,7 @@ export default function ChatInfoScreen() {
             label="Manage storage"
             value={storageStats?.totalSize ? formatBytes(storageStats.totalSize) : "0 B"}
             Colors={Colors}
-            onPress={() => navigation.navigate("ManageStorage" as any, { storageStats })}
+            onPress={() => navigation.navigate("ManageStorage", storageStats ? { storageStats } : undefined)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow

@@ -83,14 +83,14 @@ const LoginScreen: React.FC = () => {
       } else if (payload?.accessToken) {
         await SecureStore.setItemAsync('aza_access_token', payload.accessToken);
         await SecureStore.setItemAsync('aza_refresh_token', payload.refreshToken);
-        login(
-          payload.accessToken,
-          payload.user?.passcodeSet ?? false,
-          payload.user?.kycStatus === 'VERIFIED',
-          payload.user?.forcePasswordReset ?? false,
-          payload.user?.requireSelfieVerification ?? false,
-          false
-        );
+        login({
+          token: payload.accessToken,
+          hasPasscode: payload.user?.passcodeSet ?? false,
+          isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+          forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+          requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+          isBiometricsEnabled: false,
+        });
       } else {
         navigation.navigate('TotpLogin', { loginIdentifier: identifier, methods: ['SMS'], defaultMethod: 'SMS' });
       }
@@ -143,14 +143,14 @@ const LoginScreen: React.FC = () => {
       const { accessToken, refreshToken } = payload;
       await SecureStore.setItemAsync('aza_access_token', accessToken);
       await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
-      login(
-        accessToken, 
-        payload.user?.passcodeSet ?? true, 
-        payload.user?.kycStatus === 'VERIFIED',
-        payload.user?.forcePasswordReset ?? false,
-        payload.user?.requireSelfieVerification ?? false,
-        true // isBiometricsEnabled is true for biometric login path
-      );
+      login({
+        token: accessToken,
+        hasPasscode: payload.user?.passcodeSet ?? true,
+        isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+        forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+        requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+        isBiometricsEnabled: true,
+      });
     } catch (e: any) {
       const msg = e?.response?.data?.message;
       showToast(msg || 'Biometric authentication failed. Please try again.', 'error');

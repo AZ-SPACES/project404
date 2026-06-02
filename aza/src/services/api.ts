@@ -3,6 +3,37 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
 
+/**
+ * File payload shape required by React Native's FormData for binary uploads.
+ * Matches the object accepted by expo-image-picker and expo-document-picker results.
+ */
+export type RNFile = {
+  uri: string;
+  type: string;
+  name: string;
+};
+
+/** Subset of user profile fields the PUT /users/me endpoint accepts. */
+export type UserUpdateRequest = {
+  handle?: string;
+  profileImageUrl?: string;
+  theme?: string;
+  language?: string;
+  homeBackground?: string;
+  hubBackground?: string;
+  quickActions?: string;
+  transactionGrouping?: string;
+  transactionDensity?: string;
+  balanceHiddenByDefault?: boolean;
+  homeDim?: number;
+  homeBlur?: number;
+  homeLayout?: string;
+  homeBannerGradient?: string;
+  accentId?: string;
+  balanceCardStyle?: string;
+  reducedMotion?: boolean;
+};
+
 const getBaseUrl = (): string => {
   return "https://api.aza.systems";
 };
@@ -114,30 +145,26 @@ export const submitFundsSource = (
 export const submitIdentity = (
   idType: string,
   idNumber: string,
-  frontImage: any,
-  backImage: any,
+  frontImage: RNFile,
+  backImage: RNFile,
 ) => {
   const formData = new FormData();
   formData.append("idType", idType);
   formData.append("idNumber", idNumber);
-  formData.append("frontImage", frontImage);
-  formData.append("backImage", backImage);
+  formData.append("frontImage", frontImage as any);
+  formData.append("backImage", backImage as any);
 
   return api.post("/api/v1/kyc/identity", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const submitSelfie = (selfie: any) => {
+export const submitSelfie = (selfie: RNFile) => {
   const formData = new FormData();
-  formData.append("selfie", selfie);
+  formData.append("selfie", selfie as any);
 
   return api.post("/api/v1/kyc/selfie", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -163,14 +190,12 @@ export const submitPepDetails = (
     wealthSource,
   });
 
-export const submitProofOfWealth = (document: any) => {
+export const submitProofOfWealth = (document: RNFile) => {
   const formData = new FormData();
-  formData.append("document", document);
+  formData.append("document", document as any);
 
   return api.post("/api/v1/kyc/proof-of-wealth", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -193,35 +218,29 @@ export const requestLimitIncrease = (data: {
   reason: string;
 }) => api.post("/api/v1/users/me/limits/request", data);
 
-export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
+export const updateMe = (data: UserUpdateRequest) => api.put("/api/v1/users/me", data);
 
-export const uploadProfileImage = (file: any) => {
+export const uploadProfileImage = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/profile-image", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const uploadHomeBackground = (file: any) => {
+export const uploadHomeBackground = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/home-background", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const uploadHubBackground = (file: any) => {
+export const uploadHubBackground = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/hub-background", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -578,9 +597,9 @@ export const registerMerchant = (data: {
   category?: string;
 }) => api.post('/api/v1/merchant/register', data);
 
-export const uploadMerchantLogo = (file: any) => {
+export const uploadMerchantLogo = (file: RNFile) => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', file as any);
   return api.post('/api/v1/merchant/logo', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -600,9 +619,9 @@ export const submitMerchantKyb = (data: {
   ownerIdNumber?: string;
 }) => api.post('/api/v1/merchant/kyb', data);
 
-export const uploadKybDocument = (file: any, type: string) => {
+export const uploadKybDocument = (file: RNFile, type: string) => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', file as any);
   formData.append('type', type);
   return api.post('/api/v1/merchant/kyb/document', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -788,9 +807,9 @@ export const markChatMediaViewed = (messageId: string) =>
 export const editChatMessage = (messageId: string, ciphertext: string) =>
   api.put(`/api/v1/chats/messages/${messageId}`, { ciphertext });
 
-export const uploadChatMedia = (file: any, chatId: string, type: string) => {
+export const uploadChatMedia = (file: RNFile, chatId: string, type: string) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   formData.append("chatId", chatId);
   formData.append("type", type);
   return api.post("/api/v1/chats/media/upload", formData, {

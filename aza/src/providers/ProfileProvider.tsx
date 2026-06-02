@@ -239,7 +239,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setHandle = useCallback(async (handle: string | null) => {
     try {
-      await updateMe({ handle });
+      await updateMe({ ...(handle != null ? { handle } : {}) });
       invalidateProfile();
     } catch (e) {
       console.error('Failed to save handle', e);
