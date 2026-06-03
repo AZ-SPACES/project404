@@ -287,6 +287,123 @@ describe('v3 envelope round-trip', () => {
     ).toBeNull();
   });
 
+  it('ratchets the root key forward: both sides derive the same newRootKey', () => {
+    const senderIK = generateX25519();
+    const bob = buildBundle();
+
+    // Establish session
+    const first = encryptFirstMessageV3({
+      plaintext: 'msg0',
+      senderIdentityKeyPair: senderIK,
+      recipientBundle: bob.bundleForSender,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+    const bobDecrypt0 = decryptV3({
+      envelope: first.envelope,
+      recipientIdentityPrivate: bob.privates.identityPriv,
+      recipientSignedPreKeyPrivate: bob.privates.spkPriv,
+      oneTimePreKeyPrivate: bob.privates.opkPriv,
+      senderId: 'alice',
+      chatId: 'chat',
+    })!;
+    let aliceRoot = first.rootKey;
+    let bobRoot   = bobDecrypt0.rootKey!;
+
+    // Alice sends follow-up #1
+    const fu1 = encryptFollowupMessageV3({
+      plaintext: 'msg1',
+      rootKey: aliceRoot,
+      recipientIdentityPublic: bob.publics.identityPub,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+    const bobDecrypt1 = decryptV3({
+      envelope: fu1.envelope,
+      recipientIdentityPrivate: bob.privates.identityPriv,
+      cachedRootKey: bobRoot,
+      senderId: 'alice',
+      chatId: 'chat',
+    })!;
+    expect(bobDecrypt1.plaintext).toBe('msg1');
+    // Both sides derive the same ratcheted root
+    expect(Buffer.from(fu1.newRootKey).toString('hex')).toBe(
+      Buffer.from(bobDecrypt1.rootKey!).toString('hex'),
+    );
+
+    // Advance both ratchets
+    aliceRoot = fu1.newRootKey;
+    bobRoot   = bobDecrypt1.rootKey!;
+
+    // Alice sends follow-up #2 using the ratcheted root
+    const fu2 = encryptFollowupMessageV3({
+      plaintext: 'msg2',
+      rootKey: aliceRoot,
+      recipientIdentityPublic: bob.publics.identityPub,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+    const bobDecrypt2 = decryptV3({
+      envelope: fu2.envelope,
+      recipientIdentityPrivate: bob.privates.identityPriv,
+      cachedRootKey: bobRoot,
+      senderId: 'alice',
+      chatId: 'chat',
+    })!;
+    expect(bobDecrypt2.plaintext).toBe('msg2');
+    expect(Buffer.from(fu2.newRootKey).toString('hex')).toBe(
+      Buffer.from(bobDecrypt2.rootKey!).toString('hex'),
+    );
+  });
+
+  it('old root key cannot decrypt a message encrypted under the ratcheted root', () => {
+    const senderIK = generateX25519();
+    const bob = buildBundle();
+    const first = encryptFirstMessageV3({
+      plaintext: 'init',
+      senderIdentityKeyPair: senderIK,
+      recipientBundle: bob.bundleForSender,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+    const bobRoot0 = decryptV3({
+      envelope: first.envelope,
+      recipientIdentityPrivate: bob.privates.identityPriv,
+      recipientSignedPreKeyPrivate: bob.privates.spkPriv,
+      oneTimePreKeyPrivate: bob.privates.opkPriv,
+      senderId: 'alice',
+      chatId: 'chat',
+    })!.rootKey!;
+
+    // Alice sends a follow-up and advances the ratchet
+    const fu1 = encryptFollowupMessageV3({
+      plaintext: 'next',
+      rootKey: first.rootKey,
+      recipientIdentityPublic: bob.publics.identityPub,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+
+    // Alice sends a second follow-up using the ratcheted key
+    const fu2 = encryptFollowupMessageV3({
+      plaintext: 'after ratchet',
+      rootKey: fu1.newRootKey,
+      recipientIdentityPublic: bob.publics.identityPub,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+
+    // Bob tries to decrypt fu2 using the original root (before any ratchet)
+    const attempt = decryptV3({
+      envelope: fu2.envelope,
+      recipientIdentityPrivate: bob.privates.identityPriv,
+      cachedRootKey: bobRoot0,
+      senderId: 'alice',
+      chatId: 'chat',
+    });
+    expect(attempt).toBeNull();
+  });
+
   it('rejects AAD tampering — chat id swap on follow-up', () => {
     const senderIK = generateX25519();
     const bob = buildBundle();

@@ -62,7 +62,6 @@ export type Recipient = {
   userId?: string;
 };
 
-// Mock data is no longer needed but kept for reference if needed
 export const INITIAL_RECIPIENTS: Recipient[] = [];
 
 export default function ContactsScreen() {
@@ -524,11 +523,21 @@ export default function ContactsScreen() {
             <CloseButton onPress={() => setShowInviteModal(false)} />
           </View>
           <View style={styles.inviteContent}>
-            <View style={styles.stackedAvatars}>
-              <Image source={{ uri: INITIAL_RECIPIENTS[0]?.avatar }} style={[styles.stackedAvatar, { zIndex: 3 }]} />
-              <Image source={{ uri: INITIAL_RECIPIENTS[1]?.avatar }} style={[styles.stackedAvatar, { zIndex: 2, marginLeft: -12 }]} />
-              <Image source={{ uri: INITIAL_RECIPIENTS[2]?.avatar }} style={[styles.stackedAvatar, { zIndex: 1, marginLeft: -12 }]} />
-            </View>
+            {contactsList.length > 0 && (
+              <View style={styles.stackedAvatars}>
+                {contactsList.slice(0, 3).map((contact, index) => (
+                  <Image
+                    key={`invite-avatar-${contact.id}`}
+                    source={{ uri: contact.avatar }}
+                    style={[
+                      styles.stackedAvatar,
+                      { zIndex: 3 - index },
+                      index > 0 ? { marginLeft: -12 } : undefined,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
             <Text style={[Typography.h1, styles.inviteTitle]}>Invite friends</Text>
             <Text style={[Typography.body, styles.inviteDescription]}>
               Let's grow our community together! Every friend you invite helps make Aza better.
