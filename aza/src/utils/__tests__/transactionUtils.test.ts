@@ -172,4 +172,39 @@ describe('groupTransactionsByDate', () => {
     expect(groups[0]?.data[0]?.id).toBe('late');
     expect(groups[0]?.data[1]?.id).toBe('early');
   });
+
+  it('labels older dates with a long weekday+month label (same year)', () => {
+    const txs = [makeTx('1', '2026-05-15T10:00:00.000Z')];
+    const groups = groupTransactionsByDate(txs);
+    // Should contain day-of-week and month (not "Today" or "Yesterday")
+    expect(groups[0]?.title).toMatch(/Friday|May|15/);
+  });
+
+  it('labels cross-year dates with a year-including label', () => {
+    const txs = [makeTx('1', '2025-03-20T10:00:00.000Z')];
+    const groups = groupTransactionsByDate(txs);
+    expect(groups[0]?.title).toContain('2025');
+  });
+
+  it('orders three distinct dates: today → yesterday → older', () => {
+    const txs = [
+      makeTx('old', '2026-05-10T10:00:00.000Z'),
+      makeTx('yst', '2026-05-31T10:00:00.000Z'),
+      makeTx('tdy', '2026-06-01T10:00:00.000Z'),
+    ];
+    const groups = groupTransactionsByDate(txs);
+    expect(groups[0]?.title).toBe('Today');
+    expect(groups[1]?.title).toBe('Yesterday');
+    expect(groups[2]?.title).toMatch(/May/);
+  });
+
+  it('orders two older dates newest-first when neither is today or yesterday', () => {
+    const txs = [
+      makeTx('older',  '2026-05-10T10:00:00.000Z'),
+      makeTx('newer',  '2026-05-20T10:00:00.000Z'),
+    ];
+    const groups = groupTransactionsByDate(txs);
+    expect(groups[0]?.title).toMatch(/May 20/);
+    expect(groups[1]?.title).toMatch(/May 10/);
+  });
 });

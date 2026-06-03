@@ -5,6 +5,7 @@ import Connect4 from './Connect4';
 import Radio from './Radio';
 import Notepad from './Notepad';
 import CediratesApp from './CediratesApp';
+import SalifuAndMaster from './Salifuandmaster';
 import { MiniAppEntry } from './types';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
@@ -63,6 +64,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/cedirates.png'),
     category: 'Finance',
     component: CediratesApp,
+  },
+    {
+    id: 'salifu_and_master',
+    name: 'Salifu and Master',
+    description: 'Play Salifu and Master',
+    icon: require('../../../assets/s&m.png'),
+    category: 'Games',
+    component: SalifuAndMaster,
   }
 ];
 

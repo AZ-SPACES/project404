@@ -209,29 +209,31 @@ export default function HomeScreen() {
     }
   }, [loading, refreshing]);
 
-  React.useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date();
-      const diffInSeconds = Math.floor(
-        (now.getTime() - lastUpdated.getTime()) / 1000
-      );
+  useFocusEffect(
+    React.useCallback(() => {
+      const updateTimer = () => {
+        const now = new Date();
+        const diffInSeconds = Math.floor(
+          (now.getTime() - lastUpdated.getTime()) / 1000
+        );
 
-      if (diffInSeconds < 5) {
-        setUpdateText("Updated just now");
-      } else if (diffInSeconds < 60) {
-        setUpdateText(`Updated ${diffInSeconds}s ago`);
-      } else if (diffInSeconds < 3600) {
-        setUpdateText(`Updated ${Math.floor(diffInSeconds / 60)}m ago`);
-      } else {
-        setUpdateText(`Updated ${Math.floor(diffInSeconds / 3600)}h ago`);
-      }
-    };
+        if (diffInSeconds < 5) {
+          setUpdateText("Updated just now");
+        } else if (diffInSeconds < 60) {
+          setUpdateText(`Updated ${diffInSeconds}s ago`);
+        } else if (diffInSeconds < 3600) {
+          setUpdateText(`Updated ${Math.floor(diffInSeconds / 60)}m ago`);
+        } else {
+          setUpdateText(`Updated ${Math.floor(diffInSeconds / 3600)}h ago`);
+        }
+      };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 5000);
+      updateTimer();
+      const interval = setInterval(updateTimer, 5000);
 
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
+      return () => clearInterval(interval);
+    }, [lastUpdated])
+  );
 
   const onRefresh = React.useCallback(() => {
     refresh();
@@ -376,10 +378,10 @@ export default function HomeScreen() {
             Transactions
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <TouchableOpacity onPress={() => navigation.navigate("SpendingCategories" as any)}>
+            <TouchableOpacity onPress={() => navigation.navigate("SpendingCategories" as any)} accessibilityLabel="View spending by category" accessibilityRole="button">
               <Text style={[Typography.body, styles.seeAllText, { fontSize: 13 }]}>By category</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })}>
+            <TouchableOpacity onPress={() => navigation.navigate("Transactions", { balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency) })} accessibilityLabel="See all transactions" accessibilityRole="button">
               <Text style={[Typography.body, styles.seeAllText]}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -472,7 +474,13 @@ export default function HomeScreen() {
         ) : displayTransactions.length > 0 ? (
           <ScrollView style={styles.recentTransactionsList} showsVerticalScrollIndicator={false}>
             {displayTransactions.map((item) => (
-              <TransactionItem key={item.id} item={item} />
+              <TransactionItem
+                key={item.id}
+                item={item}
+                onPress={() => navigation.navigate("Transactions", {
+                  balance: wallet?.formattedBalance || formatCurrency(0, wallet?.currency),
+                })}
+              />
             ))}
           </ScrollView>
         ) : (

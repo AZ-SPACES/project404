@@ -18,7 +18,7 @@ export type AdvancedFilters = {
   txStatus?: string; // 'Completed' | 'Pending' | 'Failed' | 'All'
 };
 
-function filterToParams(filter: TransactionFilter): { status?: string; direction?: string } {
+export function filterToParams(filter: TransactionFilter): { status?: string; direction?: string } {
   switch (filter) {
     case 'Pending':   return { status: 'PENDING' };
     case 'Failed':    return { status: 'FAILED' };
@@ -28,7 +28,7 @@ function filterToParams(filter: TransactionFilter): { status?: string; direction
   }
 }
 
-function advancedStatusToApi(s: string | undefined): string | undefined {
+export function advancedStatusToApi(s: string | undefined): string | undefined {
   switch (s) {
     case 'Completed': return 'COMPLETED';
     case 'Pending':   return 'PENDING';
@@ -37,7 +37,7 @@ function advancedStatusToApi(s: string | undefined): string | undefined {
   }
 }
 
-function advancedTypeToApi(t: string | undefined): string | undefined {
+export function advancedTypeToApi(t: string | undefined): string | undefined {
   switch (t) {
     case 'Request':  return 'REQUEST';
     case 'Transfer': return 'TRANSFER';
@@ -45,7 +45,7 @@ function advancedTypeToApi(t: string | undefined): string | undefined {
   }
 }
 
-function isAdvancedActive(f: AdvancedFilters | undefined): boolean {
+export function isAdvancedActive(f: AdvancedFilters | undefined): boolean {
   if (!f) return false;
   return !!(
     f.minAmount ||
