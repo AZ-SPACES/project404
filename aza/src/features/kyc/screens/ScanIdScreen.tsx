@@ -116,7 +116,7 @@ export default function ScanIdScreen() {
     try {
       if (cameraRef.current) {
         setFeedback("Processing...");
-        const photo = await cameraRef.current.takePictureAsync({ quality: 1 });
+        const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
         if (photo) {
           setCapturedImage(photo.uri);
           setIsModalVisible(true);

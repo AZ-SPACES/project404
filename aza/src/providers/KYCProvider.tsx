@@ -14,7 +14,7 @@ export type IdType =
   | 'ghana_card'
   | 'passport'
   | 'voter_id'
-  | 'drivers_license';
+  | 'drivers_licence';
 
 export type PEPStatus = 'self' | 'family_associate';
 

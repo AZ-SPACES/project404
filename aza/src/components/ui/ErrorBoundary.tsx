@@ -1,5 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
-import * as Sentry from '@sentry/react-native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platform, useColorScheme } from 'react-native';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,8 +24,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+    // errors are displayed in the ErrorScreen below
   }
 
   handleReset = () => {

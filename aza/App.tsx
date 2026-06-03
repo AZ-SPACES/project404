@@ -1,15 +1,5 @@
 import { StatusBar, View, LogBox } from "react-native";
 import React, { useEffect, useState } from "react";
-import * as Sentry from "@sentry/react-native";
-
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  // Capture 20 % of transactions for performance monitoring
-  tracesSampleRate: 0.2,
-  // Disable in development so local runs don't pollute the Sentry project
-  enabled: !__DEV__,
-  environment: __DEV__ ? "development" : "production",
-});
 
 // ─── Silence terminal noise ───────────────────────────────────────────────────
 // Suppress the yellow-box overlay entirely in dev.
@@ -205,4 +195,4 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+export default App;
