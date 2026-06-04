@@ -172,7 +172,7 @@ public class AuthService {
         }
 
         if (user.getRole() == User.UserRole.ADMIN) {
-            otpService.sendOtp(user.getEmail(), "login");
+            otpService.sendOtp(identifier, "login");
             return null;
         }
 
