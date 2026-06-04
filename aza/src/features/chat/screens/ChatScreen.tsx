@@ -698,18 +698,8 @@ export default function ChatScreen() {
         onClose={() => setPaymentSheet(s => ({ ...s, visible: false }))}
         onSuccess={(amount, paidMode) => {
           setPaymentSheet(s => ({ ...s, visible: false }));
-          setLocalOnlyMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            text: paidMode === 'send' ? `Sent GH¢ ${amount.toFixed(2)}` : `Requested GH¢ ${amount.toFixed(2)}`,
-            sender: 'me',
-            time: formatTime(),
-            timestamp: Date.now(),
-            status: 'sent' as const,
-            type: 'payment' as const,
-            paymentAmount: amount,
-            paymentMode: paidMode,
-            paymentStatus: paidMode === 'send' ? 'paid' as const : 'pending' as const,
-          }]);
+          // Send through the E2EE pipeline so the card persists across navigation
+          sendText(JSON.stringify({ __payment: true, amount, mode: paidMode })).catch(() => {});
         }}
       />
 
