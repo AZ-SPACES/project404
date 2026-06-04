@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect, } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
@@ -23,6 +23,7 @@ import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
 import { ForwardModal } from '../../../components/chat/ForwardModal';
 import { BlockContactModal, ReportModal } from '../../../components/chat/ChatSettingsModals';
+import { ChatPaymentSheet } from '../../../components/chat/ChatPaymentSheet';
 import {
   Message,
   Contact,
@@ -49,7 +50,7 @@ export default function ChatScreen() {
   const styles = useMemo(() => createScreenStyles(Colors, isDark), [Colors, isDark]);
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
-  const { id, name, avatar } = route.params;
+  const { id, name, avatar, payIdentifier } = route.params;
   const online = usePresenceStore((s) => s.isOnline(id));
 
   // `id` from the route is the OTHER user's UUID (set by ChatContactsScreen).
@@ -94,6 +95,9 @@ export default function ChatScreen() {
   // Settings modals
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+
+  // Payment sheet
+  const [paymentSheet, setPaymentSheet] = useState<{ visible: boolean; mode: 'send' | 'request' }>({ visible: false, mode: 'send' });
 
   // Merge backend-driven thread with any local-only entries (forwarded msgs / media not yet wired to backend).
   const messages = useMemo<Message[]>(() => {
@@ -481,8 +485,6 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   const moreMenuActions = useMemo<MoreAction[]>(() => [
     { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('ContactsProfile', { name, username: name.toLowerCase().replace(/\s+/g, '_'), avatar }); } },
-    { icon: 'send', label: 'Send Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SendAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar, identifier: id }); } },
-    { icon: 'download', label: 'Request Money', onPress: () => { handleCloseMoreMenu(); navigation.navigate('RequestAmount', { name, username: name.toLowerCase().replace(' ', '_'), avatar, identifier: id }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia' as any); } },
@@ -627,6 +629,14 @@ export default function ChatScreen() {
         onPhotos={handlePickPhoto}
         onCamera={handleOpenCamera}
         onDocument={handlePickDocument}
+        onSendMoney={() => {
+          handleCloseAttachment();
+          setPaymentSheet({ visible: true, mode: 'send' });
+        }}
+        onRequestMoney={() => {
+          handleCloseAttachment();
+          setPaymentSheet({ visible: true, mode: 'request' });
+        }}
       />
 
       <ChatMoreModal
@@ -676,6 +686,31 @@ export default function ChatScreen() {
         message={forwardMessage}
         onClose={() => setShowForwardModal(false)}
         onForward={handleForwardAction}
+      />
+
+      {/* Apple Cash-style payment sheet */}
+      <ChatPaymentSheet
+        visible={paymentSheet.visible}
+        mode={paymentSheet.mode}
+        recipientName={name}
+        recipientAvatar={avatar}
+        recipientIdentifier={payIdentifier ?? id}
+        onClose={() => setPaymentSheet(s => ({ ...s, visible: false }))}
+        onSuccess={(amount, paidMode) => {
+          setPaymentSheet(s => ({ ...s, visible: false }));
+          setLocalOnlyMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            text: paidMode === 'send' ? `Sent GH¢ ${amount.toFixed(2)}` : `Requested GH¢ ${amount.toFixed(2)}`,
+            sender: 'me',
+            time: formatTime(),
+            timestamp: Date.now(),
+            status: 'sent' as const,
+            type: 'payment' as const,
+            paymentAmount: amount,
+            paymentMode: paidMode,
+            paymentStatus: paidMode === 'send' ? 'paid' as const : 'pending' as const,
+          }]);
+        }}
       />
 
       <BlockContactModal

@@ -20,15 +20,18 @@ export interface Message {
   status?: MessageStatus;
   replyTo?: string;
   replyToMessage?: ReplyInfo;
-  type?: 'text' | 'image' | 'document' | 'audio' | 'video';
+  type?: 'text' | 'image' | 'document' | 'audio' | 'video' | 'payment';
   uri?: string;
   mimeType?: string;
   fileSize?: number;
   fileName?: string;
   caption?: string;
-  duration?: number; // For audio messages
+  duration?: number;
   isStarred?: boolean;
   resolvedSize?: number;
+  paymentAmount?: number;
+  paymentMode?: 'send' | 'request';
+  paymentStatus?: 'pending' | 'paid' | 'declined';
 }
 
 export type CategoryStats = { size: number; messages: Message[] };

@@ -102,10 +102,11 @@ export default function ContactsProfileScreen() {
 
   const handleChat = () =>
     navigation.navigate("ChatScreen", {
-      id: displayHandle,
+      id: targetUserId ?? displayHandle,
       name: displayName,
       avatar: displayAvatar,
       online: true,
+      payIdentifier: contact?.handle || (username.startsWith('@') ? username.slice(1) : username) || undefined,
     });
 
   const handleToggleFavorite = async () => {

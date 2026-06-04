@@ -84,6 +84,9 @@ export type ChatSummary = {
   otherUserAvatar?: string;
   otherUserStatus?: string;
   lastMessageAt?: string | null;
+  lastMessagePreview?: string;
+  lastMessageIsSelf?: boolean;
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   unreadCount: number;
   isMuted: boolean;
   isArchived: boolean;
@@ -368,6 +371,24 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const cached = await loadCachedThread(selfUserId, chatId);
     if (cached.length > 0) {
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: cached } }));
+      const lastCached = cached[cached.length - 1];
+      if (lastCached) {
+        set((s) => {
+          const c = s.chats[chatId];
+          if (!c) return s;
+          return {
+            chats: {
+              ...s.chats,
+              [chatId]: {
+                ...c,
+                lastMessagePreview: derivePreview(lastCached),
+                lastMessageIsSelf: lastCached.isSelf,
+                lastMessageStatus: lastCached.isSelf ? lastCached.status : undefined,
+              } as ChatSummary,
+            },
+          };
+        });
+      }
     }
 
     // 2) Pull recent server history and merge in any messages we haven't decrypted yet.
@@ -386,6 +407,24 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       );
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
       await saveCachedThread(selfUserId, chatId, next);
+      const lastMsg = next[next.length - 1];
+      if (lastMsg) {
+        set((s) => {
+          const c = s.chats[chatId];
+          if (!c) return s;
+          return {
+            chats: {
+              ...s.chats,
+              [chatId]: {
+                ...c,
+                lastMessagePreview: derivePreview(lastMsg),
+                lastMessageIsSelf: lastMsg.isSelf,
+                lastMessageStatus: lastMsg.isSelf ? lastMsg.status : undefined,
+              } as ChatSummary,
+            },
+          };
+        });
+      }
     } catch (e) {
       console.warn('[chat] history load failed', e);
     }
@@ -1037,6 +1076,16 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 }));
 
+function derivePreview(msg: LocalMessage): string {
+  if (msg.isDeleted) return 'Message deleted';
+  switch (msg.type) {
+    case 'IMAGE': return msg.text ? `📷 ${msg.text}` : '📷 Photo';
+    case 'VIDEO': return msg.text ? `🎥 ${msg.text}` : '🎥 Video';
+    case 'DOCUMENT': return '📄 Document';
+    default: return msg.text || '';
+  }
+}
+
 function bumpChat(
   chats: Record<string, ChatSummary>,
   chatId: string,
@@ -1050,7 +1099,10 @@ function bumpChat(
       ...c,
       lastMessageAt: new Date(local.timestamp).toISOString(),
       unreadCount: local.isSelf ? c.unreadCount : c.unreadCount + 1,
-    },
+      lastMessagePreview: derivePreview(local),
+      lastMessageIsSelf: local.isSelf,
+      lastMessageStatus: local.isSelf ? local.status : undefined,
+    } as ChatSummary,
   };
 }
 
