@@ -171,6 +171,11 @@ public class AuthService {
                     .build();
         }
 
+        if (user.getRole() == User.UserRole.ADMIN) {
+            otpService.sendOtp(user.getEmail(), "login");
+            return null;
+        }
+
         return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false);
     }
 

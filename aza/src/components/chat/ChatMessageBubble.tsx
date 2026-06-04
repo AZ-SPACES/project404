@@ -27,6 +27,20 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const docIcon = getDocIcon(message.mimeType);
   const replyInfo = message.replyToMessage;
 
+  // Detect payment messages sent as E2EE JSON text (persisted via sendText)
+  const paymentData = useMemo(() => {
+    if (message.type === 'payment') {
+      return { amount: message.paymentAmount ?? 0, mode: message.paymentMode ?? 'send', status: message.paymentStatus };
+    }
+    if (typeof message.text === 'string' && message.text.startsWith('{"__payment":')) {
+      try {
+        const p = JSON.parse(message.text);
+        if (p.__payment === true) return { amount: p.amount ?? 0, mode: p.mode ?? 'send', status: p.status as typeof message.paymentStatus };
+      } catch {}
+    }
+    return null;
+  }, [message.type, message.text, message.paymentAmount, message.paymentMode, message.paymentStatus]);
+
   const statusIcon = useMemo(() => {
     if (!isMe || !message.status) return null;
     const iconColor = isMe ? 'rgba(255,255,255,0.8)' : '#9CA3AF';
@@ -134,39 +148,34 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           </View>
           {metaRow}
         </View>
-      ) : message.type === 'payment' ? (
+      ) : paymentData ? (
         <View style={styles.paymentCard}>
-          {/* AZA Pay branding */}
           <View style={styles.paymentBrand}>
             <View style={styles.paymentBrandDot}>
-              <Text style={styles.paymentBrandDotText}>GH₵</Text>
+              <Text style={styles.paymentBrandDotText}>₵</Text>
             </View>
             <Text style={styles.paymentBrandLabel}>AZA Pay</Text>
           </View>
-          {/* Amount */}
           <Text style={styles.paymentAmount}>
-            ₵{(message.paymentAmount ?? 0).toFixed(2)}
+            GH¢{paymentData.amount.toFixed(2)}
           </Text>
           <Text style={styles.paymentSubtitle}>
-            {message.paymentMode === 'request'
+            {paymentData.mode === 'request'
               ? isMe ? 'Payment Request' : 'Requested'
               : isMe ? 'Sent' : 'Received'}
           </Text>
-          {/* Pay button — shown on received requests */}
-          {!isMe && message.paymentMode === 'request' && message.paymentStatus === 'pending' && (
+          {!isMe && paymentData.mode === 'request' && paymentData.status === 'pending' && (
             <TouchableOpacity style={styles.paymentPayBtn} activeOpacity={0.85}>
               <Text style={styles.paymentPayBtnText}>Pay</Text>
             </TouchableOpacity>
           )}
-          {/* Status badge for sent */}
-          {message.paymentStatus && message.paymentStatus !== 'pending' && (
-            <View style={[styles.paymentStatusBadge, message.paymentStatus === 'paid' ? styles.paymentStatusPaid : styles.paymentStatusDeclined]}>
+          {paymentData.status && paymentData.status !== 'pending' && (
+            <View style={[styles.paymentStatusBadge, paymentData.status === 'paid' ? styles.paymentStatusPaid : styles.paymentStatusDeclined]}>
               <Text style={styles.paymentStatusText}>
-                {message.paymentStatus === 'paid' ? 'Paid' : 'Declined'}
+                {paymentData.status === 'paid' ? 'Paid' : 'Declined'}
               </Text>
             </View>
           )}
-          {/* Meta */}
           <View style={[styles.metaContainer, { marginTop: 8 }]}>
             <Text style={[styles.timeText, styles.timeTextPayment]}>{message.time}</Text>
           </View>
