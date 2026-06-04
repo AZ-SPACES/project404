@@ -26,7 +26,7 @@ export default function AppLockScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { verifyPasscode, isBiometricsEnabled, logout } = useAuth();
-  const { unlock } = useSecurity();
+  const { unlock, unlockWithPasscode } = useSecurity();
 
   const [passcode, setPasscode] = useState("");
   const [errorStatus, setErrorStatus] = useState(false);
@@ -58,7 +58,7 @@ export default function AppLockScreen() {
     const isCorrect = await verifyPasscode(passcode);
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await unlock(); // This will clear the locked state in provider
+      unlockWithPasscode();
     } else {
       const newCount = attemptCount + 1;
       setAttemptCount(newCount);
@@ -66,10 +66,10 @@ export default function AppLockScreen() {
       startShake();
       setPasscode("");
       if (newCount >= MAX_ATTEMPTS) {
-        // Option to logout or lock out for longer
+        logout();
       }
     }
-  }, [passcode, verifyPasscode, unlock, startShake, attemptCount]);
+  }, [passcode, verifyPasscode, unlockWithPasscode, logout, startShake, attemptCount]);
 
   // Attempt biometric on mount
   useEffect(() => {

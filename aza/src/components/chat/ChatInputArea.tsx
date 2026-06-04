@@ -129,7 +129,7 @@ export const ChatInputArea = memo(function ChatInputArea({
     addButtonRef.current?.measure(
       (_x: number, _y: number, width: number, _height: number, _pageX: number, pageY: number) => {
         const CARD_HEIGHT_ESTIMATE = 130;
-        onAddPress({ top: pageY - CARD_HEIGHT_ESTIMATE - 8, left: Spacing.lg, buttonWidth: width });
+        onAddPress({ top: pageY - CARD_HEIGHT_ESTIMATE - 8, left: _pageX, buttonWidth: width });
       },
     );
   }, [onAddPress]);

@@ -27,6 +27,7 @@ type SecurityContextType = {
   lockTimeoutMs: number;
   setLockTimeout: (ms: number) => Promise<void>;
   unlock: () => Promise<boolean>;
+  unlockWithPasscode: () => void;
 };
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -59,6 +60,10 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setLockTimeout = useCallback(async (ms: number) => {
     setLockTimeoutMs(ms);
     await SecureStore.setItemAsync(LOCK_TIMEOUT_KEY, String(ms), SECURE_OPTS);
+  }, []);
+
+  const unlockWithPasscode = useCallback(() => {
+    setIsLocked(false);
   }, []);
 
   const unlock = useCallback(async (): Promise<boolean> => {
@@ -98,7 +103,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <SecurityContext.Provider value={{ isLocked, appLockEnabled, setAppLockEnabled, lockTimeoutMs, setLockTimeout, unlock }}>
+    <SecurityContext.Provider value={{ isLocked, appLockEnabled, setAppLockEnabled, lockTimeoutMs, setLockTimeout, unlock, unlockWithPasscode }}>
       {children}
     </SecurityContext.Provider>
   );

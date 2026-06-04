@@ -98,7 +98,7 @@ export type RootStackParamList = {
   VerifyPasscode: { onSuccessScreen: keyof RootStackParamList; onSuccessParams?: Record<string, unknown> };
   ChangeEmail: undefined;
   ChangePhone: undefined;
-  ChatScreen: { id: string; name: string; avatar: string; online: boolean; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage };
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean; payIdentifier?: string; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage };
   Hub: undefined;
   MiniApp: { appId: string };
   ContactsProfile: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };

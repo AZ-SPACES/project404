@@ -134,6 +134,43 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           </View>
           {metaRow}
         </View>
+      ) : message.type === 'payment' ? (
+        <View style={styles.paymentCard}>
+          {/* AZA Pay branding */}
+          <View style={styles.paymentBrand}>
+            <View style={styles.paymentBrandDot}>
+              <Text style={styles.paymentBrandDotText}>GH₵</Text>
+            </View>
+            <Text style={styles.paymentBrandLabel}>AZA Pay</Text>
+          </View>
+          {/* Amount */}
+          <Text style={styles.paymentAmount}>
+            ₵{(message.paymentAmount ?? 0).toFixed(2)}
+          </Text>
+          <Text style={styles.paymentSubtitle}>
+            {message.paymentMode === 'request'
+              ? isMe ? 'Payment Request' : 'Requested'
+              : isMe ? 'Sent' : 'Received'}
+          </Text>
+          {/* Pay button — shown on received requests */}
+          {!isMe && message.paymentMode === 'request' && message.paymentStatus === 'pending' && (
+            <TouchableOpacity style={styles.paymentPayBtn} activeOpacity={0.85}>
+              <Text style={styles.paymentPayBtnText}>Pay</Text>
+            </TouchableOpacity>
+          )}
+          {/* Status badge for sent */}
+          {message.paymentStatus && message.paymentStatus !== 'pending' && (
+            <View style={[styles.paymentStatusBadge, message.paymentStatus === 'paid' ? styles.paymentStatusPaid : styles.paymentStatusDeclined]}>
+              <Text style={styles.paymentStatusText}>
+                {message.paymentStatus === 'paid' ? 'Paid' : 'Declined'}
+              </Text>
+            </View>
+          )}
+          {/* Meta */}
+          <View style={[styles.metaContainer, { marginTop: 8 }]}>
+            <Text style={[styles.timeText, styles.timeTextPayment]}>{message.time}</Text>
+          </View>
+        </View>
       ) : (
         <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
           {replyPreview}
@@ -303,4 +340,84 @@ const createStyles = (Colors: ThemeColors) =>
     },
     replyTextMe: { color: 'rgba(255,255,255,0.65)' },
     replyTextOther: { color: Colors.textSecondary },
+    // Payment card bubble — always dark, Apple Cash aesthetic
+    paymentCard: {
+      backgroundColor: '#1C1C1E',
+      borderRadius: 20,
+      padding: Spacing.lg,
+      width: 220,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    paymentBrand: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: Spacing.md,
+    },
+    paymentBrandDot: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: Colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    paymentBrandDotText: {
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 14,
+    },
+    paymentBrandLabel: {
+      color: 'rgba(255,255,255,0.6)',
+      ...Typography.caption,
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    paymentAmount: {
+      color: '#fff',
+      fontSize: 36,
+      fontWeight: '700',
+      letterSpacing: -1,
+      lineHeight: 42,
+    },
+    paymentSubtitle: {
+      color: 'rgba(255,255,255,0.5)',
+      ...Typography.caption,
+      fontSize: 13,
+      marginTop: 2,
+      marginBottom: Spacing.md,
+    },
+    paymentPayBtn: {
+      backgroundColor: '#fff',
+      borderRadius: Radius.full,
+      paddingVertical: 10,
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    paymentPayBtnText: {
+      color: '#000',
+      fontWeight: '700',
+      fontSize: 15,
+    },
+    paymentStatusBadge: {
+      borderRadius: Radius.full,
+      paddingVertical: 6,
+      paddingHorizontal: Spacing.md,
+      alignSelf: 'flex-start',
+      marginBottom: 4,
+    },
+    paymentStatusPaid: { backgroundColor: Colors.primary + '33' },
+    paymentStatusDeclined: { backgroundColor: '#EF444433' },
+    paymentStatusText: {
+      color: '#fff',
+      ...Typography.caption,
+      fontWeight: '600',
+      fontSize: 12,
+    },
+    timeTextPayment: { color: 'rgba(255,255,255,0.4)' },
   });
