@@ -264,7 +264,7 @@ public class ChatService {
         payload.put("chatId", chatId.toString());
         payload.put("senderName", user.getFirstName() != null
                 ? user.getFirstName()
-                : (user.getHandle() != null ? "@" + user.getHandle() : "Someone"));
+                : (user.getUsername() != null ? "@" + user.getUsername() : "Someone"));
 
         UUID recipientId = getOtherParticipantId(chat, user.getId());
         webSocketPublisher.publishToChatRoom(
