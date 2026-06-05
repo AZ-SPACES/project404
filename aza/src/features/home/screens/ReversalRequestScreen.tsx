@@ -42,7 +42,7 @@ export function ReversalRequestScreen() {
 
   // Selection/form states
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const { data: transactions = [], isLoading: loadingTxs, error: txError } = useQuery({
+  const { data: transactions = [], isLoading: loadingTxs, error: txError, refetch: refetchTxs } = useQuery({
     queryKey: queryKeys.transactions('COMPLETED'),
     queryFn: async () => {
       const res = await getTransactions(0, 50, undefined, "COMPLETED");
@@ -117,9 +117,9 @@ export function ReversalRequestScreen() {
         <View style={styles.centerContainer}>
           <Feather name="wifi-off" size={40} color={Colors.border} />
           <Text style={[Typography.h3, { color: Colors.textPrimary, marginTop: Spacing.md, textAlign: "center" }]}>
-            {txError}
+            {txError instanceof Error ? txError.message : "Failed to load transactions"}
           </Text>
-          <TouchableOpacity onPress={fetchCompletedTxs} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => refetchTxs()} style={styles.retryBtn}>
             <Text style={[Typography.body, { color: Colors.primary }]}>Tap to retry</Text>
           </TouchableOpacity>
         </View>

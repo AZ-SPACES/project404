@@ -116,7 +116,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
   const handleDelete = (id: string, endpointUrl: string) => {
     Alert.alert('Delete Webhook', `Remove endpoint ${endpointUrl}?`, [
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await deleteMerchantWebhook(id); load(); }
+        try { await deleteMerchantWebhook(id); invalidateWebhooks(); }
         catch { Alert.alert('Error', 'Failed to delete webhook.'); }
       }},
       { text: 'Cancel', style: 'cancel' },
@@ -202,7 +202,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
             </Text>
           </View>
 
-          {webhooks.map((w) => {
+          {webhooks.map((w: any) => {
             const isEditing = editingWebhookId === w.id;
 
             if (isEditing) {

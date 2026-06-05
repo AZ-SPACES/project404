@@ -176,7 +176,7 @@ export default function MediaPreviewScreen() {
         }
         if (uriToSave) {
           try {
-            await MediaLibrary.Asset.create(uriToSave);
+            await MediaLibrary.saveToLibraryAsync(uriToSave);
             Alert.alert('Saved', 'Image saved to your gallery.');
           } catch {
             Alert.alert('Error', 'Failed to save image.');

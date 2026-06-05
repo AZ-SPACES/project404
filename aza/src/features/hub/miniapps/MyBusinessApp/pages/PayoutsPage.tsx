@@ -66,7 +66,7 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
         {!payoutsLoading && payouts.length > 0 && (
           <>
             <Text style={[styles.sectionLabel, { color: Colors.textPrimary, marginTop: Spacing.xl }]}>Payout History</Text>
-            {payouts.map((p, i) => (
+            {payouts.map((p: any, i: number) => (
               <View key={p.id ?? i} style={[styles.sessionRow, { borderColor: Colors.border, backgroundColor: Colors.surface }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>{fmtAmount(p.amount, p.currency)}</Text>

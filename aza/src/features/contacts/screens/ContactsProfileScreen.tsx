@@ -100,14 +100,16 @@ export default function ContactsProfileScreen() {
     });
   };
 
-  const handleChat = () =>
+  const handleChat = () => {
+    const payId = contact?.handle || (username.startsWith('@') ? username.slice(1) : username) || undefined;
     navigation.navigate("ChatScreen", {
       id: targetUserId ?? displayHandle,
       name: displayName,
       avatar: displayAvatar,
       online: true,
-      payIdentifier: contact?.handle || (username.startsWith('@') ? username.slice(1) : username) || undefined,
+      ...(payId ? { payIdentifier: payId } : {}),
     });
+  };
 
   const handleToggleFavorite = async () => {
     if (!id) return;

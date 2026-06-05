@@ -39,6 +39,7 @@ import {
 import { useChat } from '../../../hooks/useChat';
 import { useCallStore } from '../../../store/callStore';
 import { usePresenceStore } from '../../../store/presenceStore';
+import { useStarredMessagesStore } from '../../../store/starredMessagesStore';
 import { uploadChatMedia } from '../../../services/api';
 
 // ----------------------------------------------------------------------------
@@ -86,6 +87,17 @@ export default function ChatScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyTo, setReplyTo] = useState<ReplyInfo | null>(null);
+
+  // Starred messages store
+  const loadStarred = useStarredMessagesStore(s => s.load);
+  const starredEntries = useStarredMessagesStore(s => s.entries);
+  const starLoadedRef = React.useRef(false);
+  useEffect(() => {
+    if (!starLoadedRef.current) {
+      starLoadedRef.current = true;
+      loadStarred();
+    }
+  }, [loadStarred]);
 
   // Forward state
   const [showForwardModal, setShowForwardModal] = useState(false);
@@ -337,12 +349,14 @@ export default function ChatScreen() {
 
   const handleStarMessage = useCallback(() => {
     if (!selectedMessage) return;
-    // Star is a UI-only concept layered on local-only entries.
-    setLocalOnlyMessages(prev =>
-      prev.map(m => (m.id === selectedMessage.id ? { ...m, isStarred: !m.isStarred } : m)),
-    );
+    const { isStarred, star, unstar } = useStarredMessagesStore.getState();
+    if (isStarred(selectedMessage.id)) {
+      unstar(selectedMessage.id).catch(() => {});
+    } else {
+      star(selectedMessage, chatId ?? id, name).catch(() => {});
+    }
     setSelectedMessage(null);
-  }, [selectedMessage]);
+  }, [selectedMessage, chatId, id, name]);
 
   const handleOpenForward = useCallback(() => {
     if (!selectedMessage) return;
@@ -487,7 +501,7 @@ export default function ChatScreen() {
     { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('ContactsProfile', { name, username: name.toLowerCase().replace(/\s+/g, '_'), avatar }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
-    { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia' as any); } },
+    { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia', { chatId: chatId ?? undefined, otherUserName: name }); } },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
     { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
@@ -496,14 +510,19 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   // Message long-press actions
   // --------------------------------------------------------------------------
-  const messageActions = useMemo<MoreAction[]>(() => [
-    { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
-    { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
-    { icon: 'copy', label: 'Copy', onPress: handleCopy },
-    { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
-    { icon: 'star', label: selectedMessage?.isStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
-    { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
-  ], [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply]);
+  const messageActions = useMemo<MoreAction[]>(() => {
+    const isCurrentlyStarred = selectedMessage
+      ? starredEntries.some(e => e.messageId === selectedMessage.id)
+      : false;
+    return [
+      { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
+      { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
+      { icon: 'copy', label: 'Copy', onPress: handleCopy },
+      { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
+      { icon: 'star', label: isCurrentlyStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
+      { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
+    ];
+  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
