@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSystemSettings, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
 import {
@@ -84,7 +84,7 @@ function BlockedPill({ code, onRemove }: { code: string; onRemove: () => void })
   );
 }
 
-const WorldMap = memo(function WorldMap({
+const WorldMap = function WorldMap({
   blocked,
   onToggle,
 }: {
@@ -145,7 +145,7 @@ const WorldMap = memo(function WorldMap({
                 const isBlocked = a2 ? blocked.has(a2) : false;
                 return (
                   <Geography
-                    key={geo.rsmKey}
+                    key={`${geo.rsmKey}-${isBlocked ? 1 : 0}`}
                     geography={geo}
                     onClick={() => { if (a2) onToggle(a2); }}
                     onMouseMove={(e: React.MouseEvent) => { if (a2) handleMouseMove(e, a2, isBlocked); }}
@@ -192,7 +192,7 @@ const WorldMap = memo(function WorldMap({
       </div>
     </div>
   );
-});
+};
 
 function Toggle({ enabled, onChange, label, description, danger }: {
   enabled: boolean; onChange: (v: boolean) => void; label: string; description?: string; danger?: boolean;
