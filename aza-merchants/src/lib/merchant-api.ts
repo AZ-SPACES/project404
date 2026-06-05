@@ -1124,6 +1124,17 @@ export async function createBulkTransfer(data: {
   return body.data;
 }
 
+// ─── Chatbase identity token ──────────────────────────────────────────────────
+
+export async function getChatbaseToken(): Promise<string | null> {
+  try {
+    const body = await request<{ success: boolean; data: { token: string } }>("/api/v1/ai/chatbase-token");
+    return body.data?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Logo upload ─────────────────────────────────────────────────────────────
 
 export async function uploadLogo(file: File): Promise<Merchant> {
