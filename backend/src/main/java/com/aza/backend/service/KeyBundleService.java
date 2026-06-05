@@ -5,7 +5,9 @@ import com.aza.backend.dto.e2ee.KeyBundleUploadRequest;
 import com.aza.backend.dto.e2ee.OtpkReplenishRequest;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.User;
+import com.aza.backend.entity.UserKeyBundle;
 import com.aza.backend.repository.ChatRepository;
+import com.aza.backend.repository.UserKeyBundleRepository;
 import com.aza.backend.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -22,97 +24,110 @@ import com.aza.backend.exception.AppException;
 @RequiredArgsConstructor
 @Slf4j
 public class KeyBundleService {
+
     private final UserRepository userRepository;
+    private final UserKeyBundleRepository userKeyBundleRepository;
     private final ChatRepository chatRepository;
     private final ObjectMapper objectMapper;
     private final WebSocketPublisher webSocketPublisher;
-    
+
     private static final int LOW_OPK_THRESHOLD = 10;
-    
+
+    // ── Upload / rotate ───────────────────────────────────────────────────────
+
     @Transactional
     public void uploadKeyBundle(User user, KeyBundleUploadRequest request) {
-        user.setIdentityPublicKey(request.getIdentityPublicKey());
-        user.setSignedPreKeyPublic(request.getSignedPreKeyPublic());
-        user.setSignedPreKeySignature(request.getSignedPreKeySignature());
-        
+        Optional<UserKeyBundle> existing =
+                userKeyBundleRepository.findByUserIdAndDeviceId(user.getId(), request.getDeviceId());
+
+        UserKeyBundle bundle;
+        if (existing.isPresent()) {
+            bundle = existing.get();
+        } else {
+            bundle = UserKeyBundle.builder()
+                    .userId(user.getId())
+                    .deviceId(request.getDeviceId())
+                    .build();
+        }
+
+        bundle.setIdentityPublicKey(request.getIdentityPublicKey());
+        bundle.setSignedPreKeyPublic(request.getSignedPreKeyPublic());
+        bundle.setSignedPreKeySignature(request.getSignedPreKeySignature());
+
         try {
-            String opksJson = objectMapper.writeValueAsString(request.getOneTimePreKeys());
-            user.setOneTimePreKeysJson(opksJson);
+            bundle.setOneTimePreKeysJson(
+                    objectMapper.writeValueAsString(request.getOneTimePreKeys()));
         } catch (JsonProcessingException e) {
             throw new AppException("Failed to serialize one-time pre-keys");
         }
-        
-        userRepository.save(user);
-        log.info("Key bundle uploaded for user {}, OPK count: {}",
-                user.getId(), request.getOneTimePreKeys().size());
+
+        userKeyBundleRepository.save(bundle);
+        log.info("Key bundle uploaded for user {} device {}, OPK count: {}",
+                user.getId(), request.getDeviceId(), request.getOneTimePreKeys().size());
     }
+
+    // ── Fetch (single device — pops one OPK) ─────────────────────────────────
 
     @Transactional
     public KeyBundleResponse fetchKeyBundle(UUID requesterId, UUID recipientId) {
-        // Only allow key bundle fetches between users who share a chat
         chatRepository.findByParticipants(requesterId, recipientId)
                 .orElseThrow(() -> new AppException("Key bundle not available"));
 
-        User recipient = userRepository.findById(recipientId)
-                .orElseThrow(() -> new AppException("User not found"));
-
-        if (recipient.getIdentityPublicKey() == null) {
+        List<UserKeyBundle> bundles = userKeyBundleRepository.findByUserId(recipientId);
+        if (bundles.isEmpty()) {
             throw new AppException("Recipient has not set up E2EE keys yet");
         }
 
-        Integer opkId = null;
-        String opkPublic = null;
+        // Return the most recently updated bundle; pop one OPK from it.
+        UserKeyBundle bundle = bundles.stream()
+                .max(Comparator.comparing(b -> b.getUpdatedAt() != null ? b.getUpdatedAt() : b.getCreatedAt()))
+                .orElse(bundles.get(0));
 
-        if (recipient.getOneTimePreKeysJson() != null) {
-            try {
-                List<Map<String, Object>> opks = objectMapper.readValue(
-                        recipient.getOneTimePreKeysJson(),
-                        new TypeReference<>() {
-                        });
-
-                if (!opks.isEmpty()) {
-
-                    Map<String, Object> opk = opks.removeFirst();
-                    opkId = (Integer) opk.get("keyId");
-                    opkPublic = (String) opk.get("publicKey");
-
-                    recipient.setOneTimePreKeysJson(
-                            objectMapper.writeValueAsString(opks));
-                    userRepository.save(recipient);
-
-                    log.info("OPK consumed for recipient {}, remaining: {}",
-                            recipientId, opks.size());
-
-                    // Notify the recipient to replenish if running low
-                    if (opks.size() < LOW_OPK_THRESHOLD) {
-                        notifyLowOpks(recipient, opks.size());
-                    }
-                }
-            } catch (JsonProcessingException e) {
-                log.error("Failed to parse OPKs for user {}: {}", recipientId, e.getMessage());
-            }
-        }
-        return KeyBundleResponse.builder()
-                .recipientId(recipientId.toString())
-                .identityPublicKey(recipient.getIdentityPublicKey())
-                .signedPreKeyPublic(recipient.getSignedPreKeyPublic())
-                .signedPreKeySignature(recipient.getSignedPreKeySignature())
-                .oneTimePreKeyId(String.valueOf(opkId))
-                .oneTimePreKeyPublic(opkPublic)
-                .build();
+        return buildResponseWithOpk(bundle, recipientId);
     }
+
+    // ── Fetch all devices for a recipient ─────────────────────────────────────
+
+    @Transactional
+    public List<KeyBundleResponse> fetchAllKeyBundles(UUID requesterId, UUID recipientId) {
+        chatRepository.findByParticipants(requesterId, recipientId)
+                .orElseThrow(() -> new AppException("Key bundles not available"));
+
+        List<UserKeyBundle> bundles = userKeyBundleRepository.findByUserId(recipientId);
+        if (bundles.isEmpty()) {
+            throw new AppException("Recipient has not set up E2EE keys yet");
+        }
+
+        List<KeyBundleResponse> responses = new ArrayList<>();
+        for (UserKeyBundle bundle : bundles) {
+            responses.add(buildResponseWithOpk(bundle, recipientId));
+        }
+        return responses;
+    }
+
+    // ── Fetch own device bundles (for encrypting to sender's other devices) ───
+
+    public List<KeyBundleResponse> fetchOwnBundles(UUID userId) {
+        return userKeyBundleRepository.findByUserId(userId).stream()
+                .map(b -> toResponse(b, null, null))
+                .toList();
+    }
+
+    // ── OPK replenishment ─────────────────────────────────────────────────────
 
     @Transactional
     public int replenishOtpks(User user, OtpkReplenishRequest request) {
-        List<Map<String, Object>> existing = new ArrayList<>();
+        UserKeyBundle bundle = userKeyBundleRepository
+                .findByUserIdAndDeviceId(user.getId(), request.getDeviceId())
+                .orElseThrow(() -> new AppException("Key bundle not found for device: " + request.getDeviceId()));
 
-        if(user.getOneTimePreKeysJson() != null) {
+        List<Map<String, Object>> existing = new ArrayList<>();
+        if (bundle.getOneTimePreKeysJson() != null) {
             try {
                 existing = objectMapper.readValue(
-                        user.getOneTimePreKeysJson(),
-                        new TypeReference<>() {});
+                        bundle.getOneTimePreKeysJson(), new TypeReference<>() {});
             } catch (JsonProcessingException e) {
-                log.warn("Failed to parse existing OPKs, starting fresh");
+                log.warn("Failed to parse existing OPKs for device {}, starting fresh", request.getDeviceId());
             }
         }
 
@@ -124,46 +139,96 @@ public class KeyBundleService {
         }
 
         try {
-                user.setOneTimePreKeysJson(objectMapper.writeValueAsString(existing));
-                userRepository.save(user);
+            bundle.setOneTimePreKeysJson(objectMapper.writeValueAsString(existing));
+            userKeyBundleRepository.save(bundle);
         } catch (JsonProcessingException e) {
             throw new AppException("Failed to serialize OPKs");
         }
 
-        log.info("OPKs replenished for user {}, total now: {}",
-                user.getId(), existing.size());
+        log.info("OPKs replenished for user {} device {}, total: {}",
+                user.getId(), request.getDeviceId(), existing.size());
         return existing.size();
-
     }
 
-    public int getOpkCount(User user) {
-        if (user.getOneTimePreKeysJson() == null) return 0;
+    // ── OPK count (any device for this user) ──────────────────────────────────
+
+    public int getOpkCount(UUID userId) {
+        return userKeyBundleRepository.findByUserId(userId).stream()
+                .mapToInt(this::opkCount)
+                .sum();
+    }
+
+    public boolean hasKeyBundle(UUID userId) {
+        return !userKeyBundleRepository.findByUserId(userId).isEmpty();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private KeyBundleResponse buildResponseWithOpk(UserKeyBundle bundle, UUID recipientId) {
+        Integer opkId = null;
+        String opkPublic = null;
+
+        if (bundle.getOneTimePreKeysJson() != null) {
+            try {
+                List<Map<String, Object>> opks = objectMapper.readValue(
+                        bundle.getOneTimePreKeysJson(), new TypeReference<>() {});
+                if (!opks.isEmpty()) {
+                    Map<String, Object> opk = opks.removeFirst();
+                    opkId = (Integer) opk.get("keyId");
+                    opkPublic = (String) opk.get("publicKey");
+
+                    bundle.setOneTimePreKeysJson(objectMapper.writeValueAsString(opks));
+                    userKeyBundleRepository.save(bundle);
+
+                    log.info("OPK consumed for recipient {} device {}, remaining: {}",
+                            recipientId, bundle.getDeviceId(), opks.size());
+
+                    if (opks.size() < LOW_OPK_THRESHOLD) {
+                        notifyLowOpks(recipientId, bundle.getDeviceId(), opks.size());
+                    }
+                }
+            } catch (JsonProcessingException e) {
+                log.error("Failed to parse OPKs for user {} device {}: {}",
+                        recipientId, bundle.getDeviceId(), e.getMessage());
+            }
+        }
+
+        return toResponse(bundle, opkId != null ? String.valueOf(opkId) : null, opkPublic);
+    }
+
+    private KeyBundleResponse toResponse(UserKeyBundle bundle, String opkId, String opkPublic) {
+        return KeyBundleResponse.builder()
+                .recipientId(bundle.getUserId().toString())
+                .deviceId(bundle.getDeviceId())
+                .identityPublicKey(bundle.getIdentityPublicKey())
+                .signedPreKeyPublic(bundle.getSignedPreKeyPublic())
+                .signedPreKyPublic(bundle.getSignedPreKeyPublic()) // legacy typo field
+                .signedPreKeySignature(bundle.getSignedPreKeySignature())
+                .oneTimePreKeyId(opkId)
+                .oneTimePreKeyPublic(opkPublic)
+                .build();
+    }
+
+    private int opkCount(UserKeyBundle bundle) {
+        if (bundle.getOneTimePreKeysJson() == null) return 0;
         try {
-            List<?> opks = objectMapper.readValue(
-                    user.getOneTimePreKeysJson(), List.class);
-            return opks.size();
+            return ((List<?>) objectMapper.readValue(bundle.getOneTimePreKeysJson(), List.class)).size();
         } catch (JsonProcessingException e) {
             return 0;
         }
     }
 
-    private void notifyLowOpks(User recipient, int remaining) {
+    private void notifyLowOpks(UUID recipientId, String deviceId, int remaining) {
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("message", "One-time pre-keys running low");
+            payload.put("deviceId", deviceId);
             payload.put("remaining", remaining);
             payload.put("threshold", LOW_OPK_THRESHOLD);
-
             webSocketPublisher.publishNotification(
-                    recipient.getId(),
-                    WebSocketEventType.NOTIFICATION_NEW,
-                    payload);
-
-            log.info("Notified user {} to replenish OPKs (remaining: {})",
-                    recipient.getId(), remaining);
+                    recipientId, WebSocketEventType.NOTIFICATION_NEW, payload);
         } catch (Exception e) {
-            log.error("Failed to notify user {} of low OPKs: {}",
-                    recipient.getId(), e.getMessage());
+            log.error("Failed to notify user {} of low OPKs: {}", recipientId, e.getMessage());
         }
     }
 }

@@ -749,19 +749,32 @@ export const getUserDisputes = (page = 0, size = 20) =>
 
 // --- E2EE Chat Endpoints ---
 
+/** One encrypted envelope for a single device, produced by encryptForRecipient. */
+export type DeviceCiphertext = {
+  ciphertext: string;
+  ephemeralKey: string;
+  preKeyId?: string;
+  senderIdentityPublicKey?: string;
+};
+
 export type SendMessagePayload = {
   chatId: string;
+  /** Legacy single-device field — kept for support chats and fallback. */
   ciphertext?: string;
   content?: string;
   ephemeralKey?: string;
   preKeyId?: string;
-  /** Present on the first message of a session (X3DH initiator). */
   senderIdentityPublicKey?: string;
   type?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "VOICE_NOTE" | "PAYMENT_REQUEST";
   mediaKey?: string;
   viewOnce?: boolean;
   /** Opaque sender-side correlation id; echoed back unchanged by the server. */
   clientId?: string;
+  /**
+   * Multi-device envelopes. Key = deviceId, value = per-device ECDH envelope.
+   * When present, each device extracts its own entry on receipt.
+   */
+  deviceCiphertexts?: Record<string, DeviceCiphertext>;
 };
 
 export const listChats = () => api.get("/api/v1/chats");
@@ -823,6 +836,7 @@ export const uploadChatMedia = (file: RNFile, chatId: string, type: string) => {
 // --- E2EE Key Bundle Endpoints ---
 
 export type KeyBundleUpload = {
+  deviceId: string;
   identityPublicKey: string;
   signedPreKeyPublic: string;
   signedPreKeySignature: string;
@@ -832,12 +846,22 @@ export type KeyBundleUpload = {
 export const uploadKeyBundle = (bundle: KeyBundleUpload) =>
   api.put("/api/v1/users/me/key-bundle", bundle);
 
+/** Fetch a single device bundle (backward-compat, pops one OPK). */
 export const fetchUserKeyBundle = (userId: string) =>
   api.get(`/api/v1/users/${userId}/key-bundle`);
 
+/** Fetch ALL device bundles for a recipient, one OPK popped per device. */
+export const fetchUserKeyBundles = (userId: string) =>
+  api.get(`/api/v1/users/${userId}/key-bundles`);
+
+/** Fetch the authenticated user's own device bundles (no OPK consumed). */
+export const fetchOwnKeyBundles = () =>
+  api.get("/api/v1/users/me/key-bundles/own");
+
 export const replenishOneTimePreKeys = (
+  deviceId: string,
   oneTimePreKeys: Array<{ keyId: number; publicKey: string }>,
-) => api.post("/api/v1/users/me/one-time-prekeys", { oneTimePreKeys });
+) => api.post("/api/v1/users/me/one-time-prekeys", { deviceId, oneTimePreKeys });
 
 export const getKeyBundleStatus = () =>
   api.get("/api/v1/users/me/key-bundle/status");

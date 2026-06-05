@@ -4,6 +4,7 @@ import com.aza.backend.entity.AuditLog;
 import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.*;
+import com.aza.backend.repository.UserKeyBundleRepository;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.util.EmailService;
 import com.aza.backend.util.SmsService;
@@ -32,6 +33,7 @@ import java.util.UUID;
 public class GdprErasureService {
 
     private final UserRepository userRepository;
+    private final UserKeyBundleRepository userKeyBundleRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final BiometricTokenRepository biometricTokenRepository;
     private final FcmTokenRepository fcmTokenRepository;
@@ -102,11 +104,8 @@ public class GdprErasureService {
         user.setPasscodeHash(null);
         user.setTwoFactorSecret(null);
 
-        // Wipe E2EE key bundle
-        user.setIdentityPublicKey(null);
-        user.setSignedPreKeyPublic(null);
-        user.setSignedPreKeySignature(null);
-        user.setOneTimePreKeysJson(null);
+        // Wipe all device E2EE key bundles
+        userKeyBundleRepository.deleteAll(userKeyBundleRepository.findByUserId(user.getId()));
 
         user.setStatus(User.AccountStatus.DEACTIVATED);
         user.setScheduledDeletionAt(null);

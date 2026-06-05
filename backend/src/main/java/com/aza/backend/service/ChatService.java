@@ -1,14 +1,17 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.chat.*;
+import com.aza.backend.dto.e2ee.DeviceCiphertextDto;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Chat;
 import com.aza.backend.entity.ChatMessage;
+import com.aza.backend.entity.MessageCiphertext;
 import com.aza.backend.entity.User;
 import com.aza.backend.dto.chat.PaymentRequestResponse;
 import com.aza.backend.repository.BlockedUserRepository;
 import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
+import com.aza.backend.repository.MessageCiphertextRepository;
 import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
@@ -27,6 +30,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.dto.e2ee.DeviceCiphertextDto;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +39,7 @@ public class ChatService {
 
     private final ChatRepository chatRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final MessageCiphertextRepository messageCiphertextRepository;
     private final UserRepository userRepository;
     private final WebSocketPublisher webSocketPublisher;
     private final PresenceService presenceService;
@@ -161,6 +166,8 @@ public class ChatService {
         if (chat.isSupport()) {
             messageBuilder.content(request.getContent());
         } else {
+            // Keep top-level fields populated for legacy single-device clients that
+            // send only the old fields (no deviceCiphertexts map).
             messageBuilder.ciphertext(request.getCiphertext())
                     .ephemeralKey(request.getEphemeralKey())
                     .preKeyId(request.getPreKeyId())
@@ -170,6 +177,24 @@ public class ChatService {
         ChatMessage message = messageBuilder.build();
 
         message = chatMessageRepository.save(message);
+
+        // Persist multi-device envelopes when provided.
+        if (!chat.isSupport()
+                && request.getDeviceCiphertexts() != null
+                && !request.getDeviceCiphertexts().isEmpty()) {
+            final UUID messageId = message.getId();
+            List<MessageCiphertext> rows = request.getDeviceCiphertexts().entrySet().stream()
+                    .map(entry -> MessageCiphertext.builder()
+                            .messageId(messageId)
+                            .deviceId(entry.getKey())
+                            .ciphertext(entry.getValue().getCiphertext())
+                            .ephemeralKey(entry.getValue().getEphemeralKey())
+                            .preKeyId(entry.getValue().getPreKeyId())
+                            .senderIdentityPublicKey(entry.getValue().getSenderIdentityPublicKey())
+                            .build())
+                    .toList();
+            messageCiphertextRepository.saveAll(rows);
+        }
 
         // Update chat's lastMessageAt
         chat.setLastMessageAt(LocalDateTime.now());
@@ -660,6 +685,24 @@ public class ChatService {
                     .orElse(null);
         }
 
+        // Load multi-device envelopes.  Null map = legacy message, client falls back
+        // to top-level ciphertext for backward compat.
+        Map<String, DeviceCiphertextDto> deviceCiphertexts = null;
+        if (!Boolean.TRUE.equals(message.getIsDeleted())) {
+            List<MessageCiphertext> rows = messageCiphertextRepository.findByMessageId(message.getId());
+            if (!rows.isEmpty()) {
+                deviceCiphertexts = new HashMap<>();
+                for (MessageCiphertext row : rows) {
+                    deviceCiphertexts.put(row.getDeviceId(), DeviceCiphertextDto.builder()
+                            .ciphertext(row.getCiphertext())
+                            .ephemeralKey(row.getEphemeralKey())
+                            .preKeyId(row.getPreKeyId())
+                            .senderIdentityPublicKey(row.getSenderIdentityPublicKey())
+                            .build());
+                }
+            }
+        }
+
         return MessageResponse.builder()
                 .id(message.getId().toString())
                 .chatId(message.getChatId().toString())
@@ -685,6 +728,7 @@ public class ChatService {
                 .expiresAt(message.getExpiresAt() != null ? message.getExpiresAt().toString() : null)
                 .isSelf(currentUserId != null ? message.getSenderId().equals(currentUserId) : null)
                 .paymentRequest(paymentRequest)
+                .deviceCiphertexts(deviceCiphertexts)
                 .build();
     }
 }
