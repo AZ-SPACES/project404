@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSystemSettings, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
 import {
@@ -11,6 +11,8 @@ import {
   Geographies,
   Geography,
   ZoomableGroup,
+  Sphere,
+  Graticule,
   type Geography as GeoFeature,
 } from "react-simple-maps";
 
@@ -89,35 +91,53 @@ const WorldMap = memo(function WorldMap({
   blocked: Set<string>;
   onToggle: (code: string) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ name: string; code: string; blocked: boolean } | null>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
 
   const getA2 = useCallback((geo: GeoFeature) => NUM_TO_A2[String(geo.id).padStart(3, "0")] ?? null, []);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent, a2: string, isBlocked: boolean) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setTooltip({ name: COUNTRY_NAMES[a2] ?? a2, code: a2, blocked: isBlocked });
+    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
   return (
-    <div className="relative w-full rounded-xl overflow-hidden bg-[#0d1117] border border-border select-none">
+    <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden border border-white/5 select-none" style={{ background: "#0e1117" }}>
+      {/* Tooltip */}
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-20 px-2.5 py-1.5 rounded-lg bg-card border border-border shadow-lg text-xs"
-          style={{ left: pos.x + 12, top: pos.y - 10 }}
+          className="pointer-events-none absolute z-20 px-2.5 py-1.5 rounded-lg shadow-xl text-xs whitespace-nowrap"
+          style={{
+            left: pos.x + 14,
+            top: pos.y - 14,
+            background: "rgba(15,20,30,0.95)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
         >
-          <span className="font-mono font-bold text-foreground/50 mr-1.5">{tooltip.code}</span>
-          <span className={tooltip.blocked ? "text-red-400 font-semibold" : "text-foreground/80"}>
+          <span className="font-mono font-bold text-white/40 mr-1.5">{tooltip.code}</span>
+          <span className={tooltip.blocked ? "text-red-400 font-semibold" : "text-white/80"}>
             {tooltip.name}
           </span>
-          {tooltip.blocked && <span className="ml-1.5 text-red-400/60">· blocked</span>}
+          {tooltip.blocked && <span className="ml-1.5 text-red-400/50">· blocked</span>}
         </div>
       )}
 
       <ComposableMap
         projection="geoEqualEarth"
-        projectionConfig={{ scale: 160 }}
+        projectionConfig={{ scale: 153 }}
         style={{ width: "100%", height: "auto" }}
+        width={800}
+        height={420}
       >
-        <ZoomableGroup center={[0, 0]} zoom={1}>
-          {/* Ocean */}
-          <rect x="-1000" y="-1000" width="2000" height="2000" fill="#111827" />
+        {/* Ocean */}
+        <Sphere fill="#0a1628" stroke="#1e3a5f" strokeWidth={0.4} />
+        {/* Lat/lon grid */}
+        <Graticule stroke="#1e3a5f" strokeWidth={0.3} />
 
+        <ZoomableGroup center={[0, 0]} zoom={1} minZoom={1} maxZoom={6}>
           <Geographies geography={GEO_URL}>
             {({ geographies }: { geographies: GeoFeature[] }) =>
               geographies.map((geo: GeoFeature) => {
@@ -128,30 +148,25 @@ const WorldMap = memo(function WorldMap({
                     key={geo.rsmKey}
                     geography={geo}
                     onClick={() => { if (a2) onToggle(a2); }}
-                    onMouseMove={(e: React.MouseEvent) => {
-                      if (a2) {
-                        setTooltip({ name: COUNTRY_NAMES[a2] ?? a2, code: a2, blocked: isBlocked });
-                        setPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
-                      }
-                    }}
+                    onMouseMove={(e: React.MouseEvent) => { if (a2) handleMouseMove(e, a2, isBlocked); }}
                     onMouseLeave={() => setTooltip(null)}
                     style={{
                       default: {
-                        fill: isBlocked ? "#ef444488" : "#1e293b",
-                        stroke: "#0d1117",
-                        strokeWidth: 0.5,
+                        fill: isBlocked ? "#dc262680" : "#1e3a5f",
+                        stroke: "#0a1628",
+                        strokeWidth: 0.4,
                         outline: "none",
                         cursor: a2 ? "pointer" : "default",
                       },
                       hover: {
-                        fill: isBlocked ? "#ef4444" : "#334155",
-                        stroke: "#0d1117",
-                        strokeWidth: 0.5,
+                        fill: isBlocked ? "#ef4444" : "#2d5a8e",
+                        stroke: "#0a1628",
+                        strokeWidth: 0.4,
                         outline: "none",
                         cursor: a2 ? "pointer" : "default",
                       },
                       pressed: {
-                        fill: isBlocked ? "#b91c1c" : "#475569",
+                        fill: isBlocked ? "#991b1b" : "#1d4ed8",
                         outline: "none",
                       },
                     }}
@@ -163,16 +178,17 @@ const WorldMap = memo(function WorldMap({
         </ZoomableGroup>
       </ComposableMap>
 
-      <div className="absolute bottom-2 right-3 flex items-center gap-3 text-xs text-foreground/30">
+      {/* Legend */}
+      <div className="absolute bottom-3 right-4 flex items-center gap-4 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-[#1e293b] border border-border inline-block" />
+          <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "#1e3a5f", border: "1px solid rgba(255,255,255,0.1)" }} />
           Allowed
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-red-500/50 inline-block" />
+          <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "#dc2626" }} />
           Blocked
         </span>
-        <span className="text-foreground/20">· Scroll to zoom · Click to toggle</span>
+        <span style={{ color: "rgba(255,255,255,0.15)" }}>· Scroll to zoom · Click to toggle</span>
       </div>
     </div>
   );
