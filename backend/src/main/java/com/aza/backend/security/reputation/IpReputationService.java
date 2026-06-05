@@ -24,7 +24,7 @@ public class IpReputationService {
     private final StringRedisTemplate redis;
     private final SystemSettingRepository settingRepo;
 
-    @Value("${app.security.blocked-countries:KP,CU,IR,SY,RU,BY,MM}")
+    @Value("${app.security.blocked-countries:}")
     private String blockedCountriesFallback;
 
     @Value("${app.security.trusted-ips:127.0.0.1,::1,0:0:0:0:0:0:0:1}")
