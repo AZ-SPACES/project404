@@ -10,6 +10,8 @@ declare module "react-simple-maps" {
     projection?: string;
     projectionConfig?: Record<string, unknown>;
     style?: React.CSSProperties;
+    width?: number;
+    height?: number;
     children?: React.ReactNode;
   }
   export const ComposableMap: React.FC<ComposableMapProps>;
@@ -19,9 +21,6 @@ declare module "react-simple-maps" {
     zoom?: number;
     minZoom?: number;
     maxZoom?: number;
-    translateExtent?: [[number, number], [number, number]];
-    onMoveStart?: (args: { coordinates: [number, number]; zoom: number }) => void;
-    onMove?: (args: { x: number; y: number; k: number; dragging: boolean }) => void;
     onMoveEnd?: (args: { coordinates: [number, number]; zoom: number }) => void;
     children?: React.ReactNode;
   }
@@ -55,4 +54,7 @@ declare module "react-simple-maps" {
     onMouseLeave?: (event: React.MouseEvent) => void;
   }
   export const Geography: React.FC<GeographyProps>;
+
+  export const Sphere: React.FC<{ id?: string; fill?: string; stroke?: string; strokeWidth?: number }>;
+  export const Graticule: React.FC<{ stroke?: string; strokeWidth?: number; clipPathId?: string }>;
 }
