@@ -1,10 +1,7 @@
 /**
- * E2EEProvider — bootstraps the user's identity keypair, publishes the public
- * key bundle to the server on first run, and keeps the one-time pre-key supply
- * topped up. Must sit inside AuthProvider in the React tree.
- *
- * Other modules read the identity X25519 keypair via useE2EE() (for
- * encrypt/decrypt) and the safety-number for verification UI.
+ * E2EEProvider — bootstraps the user's per-device identity keypair, publishes
+ * the public key bundle to the server, and keeps the OPK supply topped up.
+ * Must sit inside AuthProvider in the React tree.
  */
 
 import '../crypto/random';
@@ -30,10 +27,9 @@ import {
   rotateSignedPreKey,
   wipeIdentity,
 } from '../crypto/keystore';
+import { bytesToBase64 } from '../crypto/codec';
 import {
-  bytesToBase64,
-} from '../crypto/codec';
-import {
+  getDeviceId,
   getKeyBundleStatus,
   getMe,
   replenishOneTimePreKeys,
@@ -47,10 +43,9 @@ import { extractErrorMessage } from '../utils/errorUtils';
 
 type Identity = {
   userId: string;
-  /** X25519 — encryption key (recipient-side ECDH). */
+  deviceId: string;
   identityPublicKey: Uint8Array;
   identityPrivateKey: Uint8Array;
-  /** Ed25519 — signing key (used to sign prekeys, future identity rotations). */
   signingPublicKey: Uint8Array;
 };
 
@@ -58,15 +53,12 @@ type E2EEContextValue = {
   ready: boolean;
   error: string | null;
   identity: Identity | null;
-  /** Compute the human-readable verification code against a peer's identity pub key. */
   computeSafetyNumber: (peerPublicKey: Uint8Array) => string | null;
-  /** Wipe local key material — call after successful logout. */
   reset: () => Promise<void>;
 };
 
 const E2EEContext = createContext<E2EEContextValue | undefined>(undefined);
 
-/** OTPK threshold under which we replenish. The backend's `needsReplenishment` uses 10. */
 const OTPK_REPLENISH_THRESHOLD = 10;
 const OTPK_REPLENISH_BATCH = 25;
 
@@ -76,12 +68,8 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bootstrappedFor = useRef<string | null>(null);
-  // Bumped after an explicit reset() so the bootstrap effect re-runs even
-  // though userToken hasn't changed. Without this, the user is left with
-  // no identity until they fully log out and back in.
   const [bootstrapNonce, setBootstrapNonce] = useState(0);
 
-  // Bootstrap on login; teardown on logout.
   useEffect(() => {
     if (!userToken) {
       setIdentity(null);
@@ -96,21 +84,18 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         setError(null);
 
-        // Resolve current user id from /me. The id is the namespace under which
-        // all key material is stored so we never cross accounts on a shared device.
         const meRes = await getMe();
-        const userId: string | undefined =
-          meRes.data?.data?.id ?? meRes.data?.id;
+        const userId: string | undefined = meRes.data?.data?.id ?? meRes.data?.id;
         if (!userId) throw new Error('Could not resolve current user id');
         if (cancelled) return;
-        if (bootstrappedFor.current === userId) return;
 
-        const idX = await getOrCreateIdentityX25519(userId);
-        const idE = await getOrCreateIdentityEd25519(userId);
+        const deviceId = await getDeviceId();
+        const bootstrapKey = `${userId}:${deviceId}`;
+        if (bootstrappedFor.current === bootstrapKey) return;
 
-        // Decide whether we need to (re-)publish the bundle. The server's status
-        // endpoint reports both presence and OPK count; if we've never published
-        // or the server lost our bundle, push a fresh one.
+        const idX = await getOrCreateIdentityX25519(userId, deviceId);
+        const idE = await getOrCreateIdentityEd25519(userId, deviceId);
+
         let status: { hasKeyBundle: boolean; opkCount: number };
         try {
           const sRes = await getKeyBundleStatus();
@@ -119,28 +104,18 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status = { hasKeyBundle: false, opkCount: 0 };
         }
 
-        const localOpkCount = await otpkPrivateCount(userId);
-        // If the server thinks we have OPKs we no longer have locally
-        // (typical after a reinstall or SecureStore wipe), peers might be
-        // handed OPK public keys whose private halves we've lost — first
-        // messages from them would fail to decrypt silently. The safe
-        // remedy is a full bundle rotation: drop any remaining local OPKs,
-        // mint a fresh batch + a new SPK, and re-publish the bundle. The
-        // identity X25519/Ed25519 keypairs stay the same.
-        const driftDetected =
-          status.hasKeyBundle && localOpkCount < status.opkCount;
+        const localOpkCount = await otpkPrivateCount(userId, deviceId);
+        const driftDetected = status.hasKeyBundle && localOpkCount < status.opkCount;
 
         if (!status.hasKeyBundle || driftDetected) {
           if (driftDetected) {
-            console.warn(
-              '[E2EE] Local OPK supply drifted below server-reported count — ' +
-                'rotating the bundle to recover.',
-            );
-            await purgeAllOneTimePreKeys(userId);
+            console.warn('[E2EE] Local OPK supply drifted — rotating bundle.');
+            await purgeAllOneTimePreKeys(userId, deviceId);
           }
-          const spk = await ensureSignedPreKey(userId);
-          const otpks = await generateOneTimePreKeys(userId, KEYSTORE_INITIAL_OTPK_COUNT);
+          const spk = await ensureSignedPreKey(userId, deviceId);
+          const otpks = await generateOneTimePreKeys(userId, deviceId, KEYSTORE_INITIAL_OTPK_COUNT);
           await uploadKeyBundle({
+            deviceId,
             identityPublicKey: bytesToBase64(idX.publicKey),
             signedPreKeyPublic: bytesToBase64(spk.publicKey),
             signedPreKeySignature: bytesToBase64(spk.signature),
@@ -149,16 +124,13 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
               publicKey: bytesToBase64(k.publicKey),
             })),
           });
-        } else if (await isSignedPreKeyStale(userId)) {
-          // SPK has aged out — rotate it and replenish OPKs in the same upload.
-          // Existing cached session roots continue to work; the previous SPK
-          // private key is archived for SPK_GRACE_MS so in-flight first-messages
-          // encrypted against the old bundle still decrypt.
+        } else if (await isSignedPreKeyStale(userId, deviceId)) {
           console.warn('[E2EE] SPK is stale — rotating.');
-          await purgeAllOneTimePreKeys(userId);
-          const spk = await rotateSignedPreKey(userId);
-          const otpks = await generateOneTimePreKeys(userId, KEYSTORE_INITIAL_OTPK_COUNT);
+          await purgeAllOneTimePreKeys(userId, deviceId);
+          const spk = await rotateSignedPreKey(userId, deviceId);
+          const otpks = await generateOneTimePreKeys(userId, deviceId, KEYSTORE_INITIAL_OTPK_COUNT);
           await uploadKeyBundle({
+            deviceId,
             identityPublicKey: bytesToBase64(idX.publicKey),
             signedPreKeyPublic: bytesToBase64(spk.publicKey),
             signedPreKeySignature: bytesToBase64(spk.signature),
@@ -168,34 +140,20 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
             })),
           });
         } else if (status.opkCount < OTPK_REPLENISH_THRESHOLD) {
-          // Top up only — bundle already exists and local supply matches.
           const need = Math.max(OTPK_REPLENISH_BATCH - status.opkCount, 0);
           if (need > 0) {
-            const otpks = await generateOneTimePreKeys(userId, need);
+            const otpks = await generateOneTimePreKeys(userId, deviceId, need);
             await replenishOneTimePreKeys(
-              otpks.map((k) => ({
-                keyId: k.keyId,
-                publicKey: bytesToBase64(k.publicKey),
-              })),
+              deviceId,
+              otpks.map((k) => ({ keyId: k.keyId, publicKey: bytesToBase64(k.publicKey) })),
             );
           }
         }
 
         if (cancelled) return;
-        setIdentity({
-          userId,
-          identityPublicKey: idX.publicKey,
-          identityPrivateKey: idX.privateKey,
-          signingPublicKey: idE.publicKey,
-        });
-        // Push the keypair into the chat store so the ChatSocketProvider can
-        // decrypt incoming frames even before any chat screen mounts. Without
-        // this, push-notification wake-ups would drop messages until a screen
-        // wired up useChat for the first time.
-        useChatStore
-          .getState()
-          .setSelfIdentity(userId, idX.publicKey, idX.privateKey);
-        bootstrappedFor.current = userId;
+        setIdentity({ userId, deviceId, identityPublicKey: idX.publicKey, identityPrivateKey: idX.privateKey, signingPublicKey: idE.publicKey });
+        useChatStore.getState().setSelfIdentity(userId, deviceId, idX.publicKey, idX.privateKey);
+        bootstrappedFor.current = bootstrapKey;
         setReady(true);
       } catch (e: unknown) {
         if (!cancelled) {
@@ -207,9 +165,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     run();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [userToken, bootstrapNonce]);
 
   const computeSafetyNumber = useCallback(
@@ -222,35 +178,24 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const reset = useCallback(async () => {
     const uid = identity?.userId;
-    // Tear down chat-store state first so the reducer doesn't try to use a
-    // partially-wiped identity from the next decrypt call.
-    try {
-      await useChatStore.getState().resetForLogout();
-    } catch (e) {
-      console.warn('[E2EE] chat store reset failed', e);
-    }
-    if (uid) await wipeIdentity(uid);
+    const did = identity?.deviceId;
+    try { await useChatStore.getState().resetForLogout(); } catch {}
+    if (uid && did) await wipeIdentity(uid, did);
     setIdentity(null);
     setReady(false);
     bootstrappedFor.current = null;
-    // If the user is still logged in, kick the bootstrap effect to mint
-    // a fresh identity + bundle. On logout the userToken effect branch
-    // takes over and tears everything down instead.
     setBootstrapNonce((n) => n + 1);
   }, [identity]);
 
-  // Subscribe to global logout so AuthProvider doesn't need to call us
-  // directly. Identity material is wiped from SecureStore + memory.
   useEffect(() => {
     const unsub = subscribeAuthEvents((e) => {
       if (e.type === 'logout') {
-        // On logout we don't want the bootstrap nonce bump (no userToken
-        // means the bootstrap effect's early-return branch wins anyway).
         const uid = identity?.userId;
+        const did = identity?.deviceId;
         Promise.resolve()
           .then(() => useChatStore.getState().resetForLogout())
           .catch(() => {})
-          .then(() => (uid ? wipeIdentity(uid) : null))
+          .then(() => (uid && did ? wipeIdentity(uid, did) : null))
           .catch(() => {})
           .finally(() => {
             setIdentity(null);

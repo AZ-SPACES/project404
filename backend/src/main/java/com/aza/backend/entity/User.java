@@ -157,19 +157,6 @@ public class User {
      */
     private java.math.BigDecimal silentHoursPaymentThreshold;
 
-    // --- E2EE Key Bundle ---
-    @Column(columnDefinition = "TEXT")
-    private String identityPublicKey;
-
-    @Column(columnDefinition = "TEXT")
-    private String signedPreKeyPublic;
-
-    @Column(columnDefinition = "TEXT")
-    private String signedPreKeySignature;
-
-    @Column(columnDefinition = "TEXT")
-    private String oneTimePreKeysJson;
-
     // --- Per-user transaction limit overrides (null = use global default) ---
     @Column(precision = 15, scale = 2)
     private java.math.BigDecimal customDailyLimitGhs;
