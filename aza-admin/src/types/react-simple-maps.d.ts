@@ -1,3 +1,8 @@
+declare module "world-atlas/countries-110m.json" {
+  const value: unknown;
+  export default value;
+}
+
 declare module "react-simple-maps" {
   import * as React from "react";
 

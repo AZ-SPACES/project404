@@ -14,7 +14,8 @@ import {
   type Geography as GeoFeature,
 } from "react-simple-maps";
 
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const GEO_URL = require("world-atlas/countries-110m.json");
 
 // ISO numeric → alpha-2 mapping
 const NUM_TO_A2: Record<string, string> = {
