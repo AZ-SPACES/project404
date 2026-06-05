@@ -574,6 +574,7 @@ export default function ChatScreen() {
         <View style={styles.searchBar}>
           <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: Spacing.sm }} />
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.searchInput}
             placeholder="Search messages..."
             placeholderTextColor={Colors.textSecondary}

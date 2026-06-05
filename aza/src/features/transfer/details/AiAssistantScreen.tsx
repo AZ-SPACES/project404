@@ -171,6 +171,7 @@ export default function AiAssistantScreen() {
         {/* Input */}
         <View style={styles.inputWrap}>
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}

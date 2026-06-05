@@ -551,6 +551,8 @@ export default function HomeScreen() {
           )}
 
           <TextInput
+
+            underlineColorAndroid="transparent"
             ref={pinInputRef}
             value={pin}
             onChangeText={handlePinChange}

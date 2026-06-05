@@ -151,6 +151,7 @@ export default function TotpSetupScreen() {
 
               <View style={styles.inputContainer}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="000 000"
                   placeholderTextColor={Colors.textSecondary}

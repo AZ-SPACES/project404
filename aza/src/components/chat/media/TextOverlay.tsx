@@ -148,6 +148,7 @@ function TextOverlayInner({
         <View style={styles.modalOverlay}>
           <View style={styles.inputCard}>
             <TextInput
+              underlineColorAndroid="transparent"
               ref={inputRef}
               style={[styles.textInput, { color: textColor }]}
               placeholder="Type your text…"

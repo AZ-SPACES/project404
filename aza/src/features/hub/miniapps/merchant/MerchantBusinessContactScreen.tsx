@@ -131,6 +131,7 @@ export default function MerchantBusinessContactScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="business@example.com"
                 placeholderTextColor={Colors.textSecondary}
@@ -153,6 +154,7 @@ export default function MerchantBusinessContactScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="+233 XX XXX XXXX"
                 placeholderTextColor={Colors.textSecondary}
@@ -173,6 +175,7 @@ export default function MerchantBusinessContactScreen() {
                 style={styles.textAreaIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.textAreaInput}
                 placeholder="Tell customers what you do..."
                 placeholderTextColor={Colors.textSecondary}

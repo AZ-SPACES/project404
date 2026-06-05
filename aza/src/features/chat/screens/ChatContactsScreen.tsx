@@ -930,6 +930,7 @@ export default function ChatContactsScreen() {
                 style={{ marginRight: 8 }}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.searchInput}
                 placeholder="Search contacts..."
                 placeholderTextColor={Colors.textSecondary}
@@ -1102,6 +1103,7 @@ export default function ChatContactsScreen() {
               {typeof showCreateFilter === "string" ? "Rename list" : "New list"}
             </Text>
             <TextInput
+              underlineColorAndroid="transparent"
               style={[styles.modalInput, { color: Colors.textPrimary, borderColor: Colors.border }]}
               placeholder="List name (e.g. Work, Family)"
               placeholderTextColor={Colors.textSecondary}

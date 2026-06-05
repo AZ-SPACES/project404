@@ -201,6 +201,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             >
                                 <Text style={styles.currencySymbol}>GH¢</Text>
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     ref={amountInputRef}
                                     style={styles.amountInput}
                                     value={amount}
@@ -263,6 +264,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                     style={styles.noteIcon}
                                 />
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     style={styles.noteInput}
                                     placeholder="Add a note"
                                     placeholderTextColor={Colors.textSecondary}

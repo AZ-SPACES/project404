@@ -143,6 +143,7 @@ export function ChangePhoneScreen() {
                   </TouchableOpacity>
                   <View style={styles.phoneInputContainer}>
                     <TextInput
+                      underlineColorAndroid="transparent"
                       style={styles.input}
                       value={phoneNumber}
                       onChangeText={setPhoneNumber}
@@ -167,6 +168,7 @@ export function ChangePhoneScreen() {
                 <Text style={styles.label}>Verification code</Text>
                 <View style={styles.phoneInputContainer}>
                   <TextInput
+                    underlineColorAndroid="transparent"
                     style={[styles.input, { letterSpacing: 8, fontSize: 24, textAlign: 'center', fontWeight: '700' }]}
                     value={otp}
                     onChangeText={(val) => setOtp(val.replace(/[^0-9]/g, "").slice(0, 6))}

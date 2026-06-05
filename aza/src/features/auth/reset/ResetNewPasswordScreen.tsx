@@ -97,6 +97,7 @@ export default function ResetNewPasswordScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}
@@ -139,6 +140,7 @@ export default function ResetNewPasswordScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}

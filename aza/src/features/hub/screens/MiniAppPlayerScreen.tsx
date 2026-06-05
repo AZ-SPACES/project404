@@ -272,6 +272,7 @@ export default function MiniAppPlayerScreen() {
 
               {/* Optional details */}
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.detailsInput}
                 placeholder="Additional details (optional)"
                 placeholderTextColor={Colors.textSecondary}

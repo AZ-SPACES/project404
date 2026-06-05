@@ -76,6 +76,7 @@ export default function SignUpPasswordScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}
@@ -118,6 +119,7 @@ export default function SignUpPasswordScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}

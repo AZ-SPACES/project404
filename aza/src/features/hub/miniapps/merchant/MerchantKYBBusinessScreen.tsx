@@ -155,6 +155,7 @@ export default function MerchantKYBBusinessScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="pin" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="BN-XXXXXXXX"
                 placeholderTextColor={Colors.textSecondary}
@@ -171,6 +172,7 @@ export default function MerchantKYBBusinessScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="receipt" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="TIN-XXXXXXXXX"
                 placeholderTextColor={Colors.textSecondary}
@@ -187,6 +189,7 @@ export default function MerchantKYBBusinessScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="location-on" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="123 Main Street"
                 placeholderTextColor={Colors.textSecondary}
@@ -202,6 +205,7 @@ export default function MerchantKYBBusinessScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="location-city" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Accra"
                 placeholderTextColor={Colors.textSecondary}
@@ -217,6 +221,7 @@ export default function MerchantKYBBusinessScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="language" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="https://yourbusiness.com"
                 placeholderTextColor={Colors.textSecondary}

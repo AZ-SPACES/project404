@@ -223,6 +223,7 @@ export default function ConfirmPasscodeScreen() {
 
               {/* Hidden Input */}
               <TextInput
+                underlineColorAndroid="transparent"
                 ref={inputRef}
                 value={passcode}
                 onChangeText={handleTextChange}

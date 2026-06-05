@@ -143,6 +143,7 @@ export default function AddFriendsScreen({ navigation }: AddFriendsScreenProps) 
             style={styles.searchIcon}
           />
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.searchInput}
             placeholder="Search by @username"
             placeholderTextColor={Colors.textSecondary}

@@ -114,6 +114,7 @@ export function PEPDetailsScreen() {
               <View style={styles.inputContainer}>
                 <MaterialIcons name="work-outline" color={Colors.primary} style={styles.inputIcon} />
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="e.g., Minister of Finance"
                   placeholderTextColor={Colors.textSecondary}
@@ -130,6 +131,7 @@ export function PEPDetailsScreen() {
               <View style={styles.inputContainer}>
                 <MaterialIcons name="account-balance-wallet" color={Colors.primary} style={styles.inputIcon} />
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="e.g., Real Estate, Business Ownership"
                   placeholderTextColor={Colors.textSecondary}

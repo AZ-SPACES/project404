@@ -149,6 +149,7 @@ export default function SignUpPronounsScreen() {
               ]}
             >
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Add yours"
                 placeholderTextColor={Colors.textSecondary}

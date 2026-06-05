@@ -138,6 +138,7 @@ export default function RequestContactScreen({ navigation }: ReceiveScreenProps)
         <View style={styles.searchInputContainer}>
           <Feather name="search" size={16} color={Colors.textSecondary} style={styles.searchInputIcon} />
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.searchInput}
             placeholder="Search contacts..."
             placeholderTextColor={Colors.textSecondary}

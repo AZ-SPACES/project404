@@ -122,6 +122,8 @@ export default function AppLockScreen() {
               <Text style={styles.subtitle}>Enter your passcode to continue</Text>
 
               <TextInput
+
+                underlineColorAndroid="transparent"
                 ref={inputRef}
                 value={passcode}
                 onChangeText={handleTextChange}

@@ -110,6 +110,7 @@ export const ForwardModal = ({ visible, message, onClose, onForward }: ForwardMo
           <View style={styles.searchContainer}>
             <Feather name="search" size={18} color={Colors.textSecondary} />
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.searchInput}
               placeholder="Search contacts"
               placeholderTextColor={Colors.textSecondary}

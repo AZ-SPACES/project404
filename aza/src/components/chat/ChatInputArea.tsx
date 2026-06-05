@@ -183,6 +183,7 @@ export const ChatInputArea = memo(function ChatInputArea({
                 <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
               )}
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.textInput}
                 placeholder="Type here"
                 placeholderTextColor={Colors.textSecondary}

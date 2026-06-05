@@ -150,6 +150,7 @@ export default function SendPinScreen({
   const renderSquares = () => (
     <View>
       <TextInput
+        underlineColorAndroid="transparent"
         ref={inputRef}
         value={pin}
         onChangeText={handleTextChange}

@@ -174,6 +174,7 @@ export default function SignUpAddressScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="603 Newtown Rd,Accra,Ghana"
                 placeholderTextColor={Colors.textSecondary}
@@ -195,6 +196,7 @@ export default function SignUpAddressScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Accra"
                 placeholderTextColor={Colors.textSecondary}
