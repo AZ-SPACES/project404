@@ -31,6 +31,12 @@ export default function MessageInfoScreen() {
   const isRead = message.status === 'read';
   const isDelivered = message.status === 'delivered' || message.status === 'read';
 
+  const sentTime = message.time;
+  const toTime = (ts: number) =>
+    new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const deliveredTime = isDelivered ? toTime(message.timestamp + 30000) : '—';
+  const readTime = isRead ? toTime(message.timestamp + 90000) : '—';
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor={Colors.background} />
@@ -52,7 +58,7 @@ export default function MessageInfoScreen() {
           </View>
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Read</Text>
-            <Text style={styles.infoTime}>{isRead ? '10:05 AM' : '—'}</Text>
+            <Text style={styles.infoTime}>{readTime}</Text>
           </View>
         </View>
 
@@ -64,7 +70,7 @@ export default function MessageInfoScreen() {
           </View>
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Delivered</Text>
-            <Text style={styles.infoTime}>{isDelivered ? '10:01 AM' : '—'}</Text>
+            <Text style={styles.infoTime}>{deliveredTime}</Text>
           </View>
         </View>
 
@@ -76,7 +82,7 @@ export default function MessageInfoScreen() {
           </View>
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Sent</Text>
-            <Text style={styles.infoTime}>{message.time}</Text>
+            <Text style={styles.infoTime}>{sentTime}</Text>
           </View>
         </View>
       </View>

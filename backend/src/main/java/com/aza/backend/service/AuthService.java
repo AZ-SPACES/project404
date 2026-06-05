@@ -879,6 +879,13 @@ public class AuthService {
         return getPreAuthSession(preAuthToken).user();
     }
 
+    // Finalizes login for QR code web portal login.
+    // Each QR session gets a unique deviceId so refresh-token rows don't collide.
+    @Transactional
+    public AuthResponse completeQrLogin(User user, String challengeToken, String ipAddress) {
+        return finalizeLogin(user, "Web QR Login", "Web", "WEB-QR-" + challengeToken, ipAddress, false);
+    }
+
     // Finalizes login using a preAuthToken — called after recovery contact verification
     @Transactional
     public AuthResponse finalizeLoginFromPreAuth(String preAuthToken, String ipAddress) {

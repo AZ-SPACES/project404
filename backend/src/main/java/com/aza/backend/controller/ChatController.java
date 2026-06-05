@@ -109,6 +109,19 @@ public class ChatController {
     }
 
     /**
+     * POST /api/v1/chats/{chatId}/screenshot
+     * Notify the other participant that the caller took a screenshot.
+     * Intended for use in chats with disappearing messages enabled.
+     */
+    @PostMapping("/{chatId}/screenshot")
+    public ResponseEntity<ApiResponse<String>> notifyScreenshot(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID chatId) {
+        chatService.notifyScreenshot(user, chatId);
+        return ResponseEntity.ok(ApiResponse.success("Screenshot notification sent"));
+    }
+
+    /**
      * POST /api/v1/chats/typing
      * Send a typing indicator to the other participant.
      */

@@ -126,6 +126,8 @@ type ChatStoreState = {
   chatOrder: string[];
   messagesByChat: Record<string, LocalMessage[]>;
   typingByChat: Record<string, boolean>;
+  /** Latest screenshot notification per chatId: { ts, senderName }. UI reads this to show a toast. */
+  lastScreenshotByChatId: Record<string, { ts: number; senderName: string }>;
   peerKeys: Record<string, PeerKeys>; // keyed by otherUserId
 
   // Lifecycle helpers
@@ -149,6 +151,7 @@ type ChatStoreState = {
   setDisappearingTtl: (chatId: string, ttlSeconds: number) => Promise<void>;
   muteChat: (chatId: string, mute: boolean) => Promise<void>;
   archiveChat: (chatId: string, archive: boolean) => Promise<void>;
+  clearChatMessages: (chatId: string) => void;
   retryFailedSends: () => Promise<void>;
 
   // Peer-key access for verification UI
@@ -281,6 +284,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   chatOrder: [],
   messagesByChat: {},
   typingByChat: {},
+  lastScreenshotByChatId: {},
   peerKeys: {},
 
   setStompClient: (c) => set({ stompClient: c }),
@@ -309,6 +313,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       chatOrder: [],
       messagesByChat: {},
       typingByChat: {},
+      lastScreenshotByChatId: {},
       peerKeys: {},
     });
   },
@@ -516,6 +521,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
     // Optimistic insertion — pending status so the UI shows a sending state.
     const clientId = makeClientId();
+    const ttl = chat.disappearingTtlSeconds;
     const optimistic: LocalMessage = {
       clientId,
       chatId,
@@ -526,6 +532,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       timestamp: Date.now(),
       status: 'pending',
       decryptOk: true,
+      expiresAt: ttl ? Date.now() + ttl * 1000 : null,
     };
     set((s) => {
       const thread = s.messagesByChat[chatId] ?? [];
@@ -937,6 +944,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
+  clearChatMessages: (chatId) => {
+    const { selfUserId } = get();
+    set((s) => ({
+      messagesByChat: { ...s.messagesByChat, [chatId]: [] },
+    }));
+    if (selfUserId) clearCachedThread(selfUserId, chatId).catch(() => {});
+  },
+
   retryFailedSends: async () => {
     const { messagesByChat } = get();
     for (const [chatId, thread] of Object.entries(messagesByChat)) {
@@ -1067,6 +1082,20 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             },
           };
         });
+        break;
+      }
+      case 'chat.screenshot': {
+        const chatId = payload.chatId as string;
+        const senderName = (payload.senderName as string) ?? 'Someone';
+        // Only record if it's from the other participant (not our own echo).
+        if (payload.senderId !== get().selfUserId) {
+          set((s) => ({
+            lastScreenshotByChatId: {
+              ...s.lastScreenshotByChatId,
+              [chatId]: { ts: Date.now(), senderName },
+            },
+          }));
+        }
         break;
       }
       default:
