@@ -825,6 +825,7 @@ export interface SystemSettings {
   supportEmail: string;
   supportPhone: string;
   platformVersion: string;
+  blockedCountries: string[];
   featureFlags: {
     biometricEnabled: boolean;
     p2pEnabled: boolean;

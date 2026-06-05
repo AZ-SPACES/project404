@@ -143,4 +143,5 @@ export type RootStackParamList = {
   BudgetManagement: undefined;
   AiAssistant: undefined;
   QrLoginApproval: { challengeToken: string; siteType: string; siteName: string };
+  GeoBlocked: undefined;
 };

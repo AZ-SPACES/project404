@@ -1,3 +1,4 @@
+export { default as GeoBlockedScreen } from './screens/GeoBlockedScreen';
 export { default as LoginScreen } from './screens/LoginScreen';
 export { default as TotpLoginScreen } from './screens/TotpLoginScreen';
 export { default as RecoveryCodeLoginScreen } from './screens/RecoveryCodeLoginScreen';

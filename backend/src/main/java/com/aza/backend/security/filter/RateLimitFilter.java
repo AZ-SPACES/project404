@@ -135,7 +135,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // ── 2. Geo-block (Cloudflare CF-IPCountry) ────────────────────────────
         String country = fingerprinter.getCountryCode(request);
         if (country != null && ipReputation.isCountryBlocked(country)) {
-            rejectAccess(response, "Access from your region is not available.");
+            rejectGeoBlock(response);
             return;
         }
 
@@ -280,6 +280,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(response.getWriter(),
                 ApiResponse.error("ACCESS_DENIED", message));
+    }
+
+    private void rejectGeoBlock(HttpServletResponse response) throws IOException {
+        response.setStatus(403);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(),
+                ApiResponse.error("GEO_RESTRICTED", "AZA is not available in your region."));
     }
 
     private void rejectRateLimit(HttpServletResponse response, String message, long retryAfterSeconds) throws IOException {
