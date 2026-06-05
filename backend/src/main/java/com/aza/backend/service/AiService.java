@@ -8,20 +8,25 @@ import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Date;
 
 @Slf4j
 @Service
@@ -36,8 +41,11 @@ public class AiService {
     @Value("${anthropic.api-key:}")
     private String apiKey;
 
-    @Value("${anthropic.model:claude-3-5-sonnet}")
+    @Value("${anthropic.model:claude-sonnet-4-6}")
     private String model;
+
+    @Value("${chatbase.identity-secret:}")
+    private String chatbaseSecret;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8))
@@ -152,6 +160,25 @@ public class AiService {
 
                 """ + userContext;
         return callClaude(system, history, maxTokens);
+    }
+
+    public String generateChatbaseToken(UUID userId, String email) {
+        if (chatbaseSecret == null || chatbaseSecret.isBlank()) return null;
+        try {
+            Date now = new Date();
+            Date expiry = new Date(now.getTime() + 3_600_000L);
+            SecretKey key = Keys.hmacShaKeyFor(chatbaseSecret.getBytes(StandardCharsets.UTF_8));
+            return Jwts.builder()
+                    .claim("user_id", userId.toString())
+                    .claim("email", email)
+                    .issuedAt(now)
+                    .expiration(expiry)
+                    .signWith(key)
+                    .compact();
+        } catch (Exception e) {
+            log.warn("Failed to generate Chatbase token: {}", e.getMessage());
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -94,6 +94,9 @@ const WorldMap = function WorldMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{ name: string; code: string; blocked: boolean } | null>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  // d3-zoom intercepts mousedown/mouseup and kills the click event via stopImmediatePropagation;
+  // pointer events are not handled by d3-zoom so they propagate normally.
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   const getA2 = useCallback((geo: GeoFeature) => NUM_TO_A2[String(geo.id).padStart(3, "0")] ?? null, []);
 
@@ -147,7 +150,14 @@ const WorldMap = function WorldMap({
                   <Geography
                     key={`${geo.rsmKey}-${isBlocked ? 1 : 0}`}
                     geography={geo}
-                    onClick={() => { if (a2) onToggle(a2); }}
+                    onPointerDown={(e: React.PointerEvent) => { pointerStart.current = { x: e.clientX, y: e.clientY }; }}
+                    onPointerUp={(e: React.PointerEvent) => {
+                      if (!pointerStart.current || !a2) return;
+                      const dx = e.clientX - pointerStart.current.x;
+                      const dy = e.clientY - pointerStart.current.y;
+                      if (dx * dx + dy * dy < 25) onToggle(a2);
+                      pointerStart.current = null;
+                    }}
                     onMouseMove={(e: React.MouseEvent) => { if (a2) handleMouseMove(e, a2, isBlocked); }}
                     onMouseLeave={() => setTooltip(null)}
                     style={{
