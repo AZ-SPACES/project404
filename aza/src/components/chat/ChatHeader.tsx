@@ -12,6 +12,7 @@ type ChatHeaderProps = {
   name: string;
   avatar: string;
   online: boolean;
+  isEncrypted?: boolean | undefined;
   onBack: () => void;
   onProfilePress?: () => void;
   isMenuOpen: boolean;
@@ -27,6 +28,7 @@ export const ChatHeader = memo(function ChatHeader({
   name,
   avatar,
   online,
+  isEncrypted,
   onBack,
   onProfilePress,
   isMenuOpen,
@@ -79,8 +81,17 @@ export const ChatHeader = memo(function ChatHeader({
           </View>
         )}
         <View style={styles.nameContainer}>
-          <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          {online && <Text style={styles.onlineText}>online</Text>}
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>{name}</Text>
+            {isEncrypted && (
+              <Feather name="lock" size={12} color={Colors.primary} style={styles.lockIcon} />
+            )}
+          </View>
+          {online
+            ? <Text style={styles.onlineText}>online</Text>
+            : isEncrypted
+              ? <Text style={styles.encryptedText}>end-to-end encrypted</Text>
+              : null}
         </View>
       </TouchableOpacity>
 
@@ -139,7 +150,10 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     profileInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: Spacing.sm },
     avatar: { width: 44, height: 44, borderRadius: Radius.full, marginRight: Spacing.sm },
     nameContainer: { flex: 1, paddingRight: Spacing.sm },
-    name: { ...Typography.bodyLg, fontWeight: '700', color: Colors.textPrimary },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    name: { ...Typography.bodyLg, fontWeight: '700', color: Colors.textPrimary, flexShrink: 1 },
+    lockIcon: { marginTop: 1 },
     onlineText: { ...Typography.caption, fontWeight: '600', color: Colors.primary },
+    encryptedText: { ...Typography.caption, color: Colors.textSecondary },
     rightActions: { flexDirection: 'row', gap: Spacing.sm },
   });

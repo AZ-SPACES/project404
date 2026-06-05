@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect, } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Alert,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
   Pressable, TextInput, DeviceEventEmitter,
 } from 'react-native';
@@ -40,7 +40,10 @@ import { useChat } from '../../../hooks/useChat';
 import { useCallStore } from '../../../store/callStore';
 import { usePresenceStore } from '../../../store/presenceStore';
 import { useStarredMessagesStore } from '../../../store/starredMessagesStore';
-import { uploadChatMedia } from '../../../services/api';
+import { useChatThemeStore } from '../../../store/chatThemeStore';
+import { useChatStore } from '../../../store/chatStore';
+import { uploadChatMedia, blockUser, notifyChatScreenshot } from '../../../services/api';
+import * as ScreenCapture from 'expo-screen-capture';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -65,17 +68,44 @@ export default function ChatScreen() {
     setTyping,
     markRead,
     deleteMessage: deleteMessageRemote,
+    peerIdentityChange,
   } = useChat(id);
 
   const flatListRef = useRef<FlatList>(null);
   const isPickingRef = useRef(false);
+
+  // Chat store selectors for mute state + actions
+  const chats = useChatStore(s => s.chats);
+  const storeMuteChat = useChatStore(s => s.muteChat);
+  const clearChatMessages = useChatStore(s => s.clearChatMessages);
+  const isMuted = chatId ? (chats[chatId]?.isMuted ?? false) : false;
+  const disappearingTtl = chatId ? (chats[chatId]?.disappearingTtlSeconds ?? 0) : 0;
+  const lastScreenshot = useChatStore(s => chatId ? s.lastScreenshotByChatId[chatId] : undefined);
+
+  // Show a toast when the peer's screenshot notification arrives.
+  const lastScreenshotTsRef = useRef<number | undefined>(lastScreenshot?.ts);
+  useEffect(() => {
+    if (!lastScreenshot) return;
+    if (lastScreenshot.ts === lastScreenshotTsRef.current) return;
+    lastScreenshotTsRef.current = lastScreenshot.ts;
+    setToastMessage(`${lastScreenshot.senderName} took a screenshot 📸`);
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [lastScreenshot]);
+
+  // Detect screenshots locally and notify the peer when disappearing messages are active.
+  useEffect(() => {
+    if (!chatId || !disappearingTtl) return;
+    const sub = ScreenCapture.addScreenshotListener(() => {
+      notifyChatScreenshot(chatId).catch(() => {});
+    });
+    return () => sub.remove();
+  }, [chatId, disappearingTtl]);
 
   const [message, setMessage] = useState('');
   // Local-only messages (forwarded/media) layered on top of liveMessages.
   const [localOnlyMessages, setLocalOnlyMessages] = useState<Message[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
   
   // Call menu state
@@ -99,6 +129,18 @@ export default function ChatScreen() {
     }
   }, [loadStarred]);
 
+  // Chat theme
+  const loadTheme = useChatThemeStore(s => s.load);
+  const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
+  const themeLoadedRef = React.useRef(false);
+  useEffect(() => {
+    if (!themeLoadedRef.current) {
+      themeLoadedRef.current = true;
+      loadTheme();
+    }
+  }, [loadTheme]);
+  const chatBubbleColor = chatId ? getBubbleColor(chatId) : '';
+
   // Forward state
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
@@ -107,15 +149,19 @@ export default function ChatScreen() {
   // Settings modals
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [keyWarningDismissed, setKeyWarningDismissed] = useState(false);
 
   // Payment sheet
   const [paymentSheet, setPaymentSheet] = useState<{ visible: boolean; mode: 'send' | 'request' }>({ visible: false, mode: 'send' });
 
   // Merge backend-driven thread with any local-only entries (forwarded msgs / media not yet wired to backend).
+  // Inject isStarred from the persistent starred store so bubble indicators stay in sync.
   const messages = useMemo<Message[]>(() => {
     const combined = [...liveMessages, ...localOnlyMessages];
-    return combined.sort((a, b) => a.timestamp - b.timestamp);
-  }, [liveMessages, localOnlyMessages]);
+    const sorted = combined.sort((a, b) => a.timestamp - b.timestamp);
+    const starredIds = new Set(starredEntries.map(e => e.messageId));
+    return sorted.map(m => starredIds.has(m.id) ? { ...m, isStarred: true } : m);
+  }, [liveMessages, localOnlyMessages, starredEntries]);
 
   // Mark read on focus.
   useEffect(() => {
@@ -263,15 +309,29 @@ export default function ChatScreen() {
   }, []);
 
   const handleClearChat = useCallback(() => {
-    // Clear only the local-only overlay; backend history isn't deletable here.
-    setLocalOnlyMessages([]);
     setShowMoreMenu(false);
-  }, []);
+    Alert.alert(
+      'Clear Chat',
+      'All messages will be removed from your device. They can be reloaded from the server.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            setLocalOnlyMessages([]);
+            if (chatId) clearChatMessages(chatId);
+          },
+        },
+      ],
+    );
+  }, [chatId, clearChatMessages]);
 
-  const handleToggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
+  const handleToggleMute = useCallback(async () => {
+    if (!chatId) return;
     setShowMoreMenu(false);
-  }, []);
+    await storeMuteChat(chatId, !isMuted);
+  }, [chatId, isMuted, storeMuteChat]);
 
   const handleOpenSearch = useCallback(() => {
     setShowMoreMenu(false);
@@ -498,14 +558,13 @@ export default function ChatScreen() {
   // More menu actions
   // --------------------------------------------------------------------------
   const moreMenuActions = useMemo<MoreAction[]>(() => [
-    { icon: 'user', label: 'View Profile', onPress: () => { handleCloseMoreMenu(); navigation.navigate('ContactsProfile', { name, username: name.toLowerCase().replace(/\s+/g, '_'), avatar }); } },
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia', { chatId: chatId ?? undefined, otherUserName: name }); } },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
     { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
-  ], [isMuted, name, avatar, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat]);
+  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat]);
 
   // --------------------------------------------------------------------------
   // Message long-press actions
@@ -538,7 +597,7 @@ export default function ChatScreen() {
           </View>
         )}
         <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
-          <ChatMessageBubble message={item} onLongPress={() => handleSelectMessage(item)} />
+          <ChatMessageBubble message={item} onLongPress={() => handleSelectMessage(item)} bubbleColor={chatBubbleColor || undefined} />
         </SwipeableMessageBubble>
       </View>
     );
@@ -562,6 +621,7 @@ export default function ChatScreen() {
         name={name}
         avatar={avatar}
         online={online}
+        isEncrypted={!!chatId}
         onBack={handleBack}
         onProfilePress={handleProfilePress}
         isMenuOpen={showMoreMenu}
@@ -569,6 +629,20 @@ export default function ChatScreen() {
         isCallMenuOpen={showCallMenu}
         onCallPress={handleCallPress}
       />
+
+      {peerIdentityChange === 'changed' && !keyWarningDismissed && (
+        <TouchableOpacity
+          style={styles.keyChangeBanner}
+          activeOpacity={0.85}
+          onPress={() => setKeyWarningDismissed(true)}
+        >
+          <Feather name="alert-triangle" size={15} color="#F59E0B" style={{ flexShrink: 0 }} />
+          <Text style={styles.keyChangeBannerText} numberOfLines={2}>
+            {name}'s encryption keys changed. Verify the safety number in Contact Info.
+          </Text>
+          <Feather name="x" size={15} color={Colors.textSecondary} style={{ flexShrink: 0 }} />
+        </TouchableOpacity>
+      )}
 
       {searchActive && (
         <View style={styles.searchBar}>
@@ -686,7 +760,7 @@ export default function ChatScreen() {
         {selectedMessage && (
           <View style={styles.modalContent} pointerEvents="box-none">
             <View style={{ width: '100%', paddingHorizontal: Spacing.lg }}>
-              <ChatMessageBubble message={selectedMessage} />
+              <ChatMessageBubble message={selectedMessage} bubbleColor={chatBubbleColor || undefined} />
             </View>
             <View style={styles.actionMenu}>
               {messageActions.map((action) => (
@@ -729,8 +803,13 @@ export default function ChatScreen() {
         isDark={isDark}
         Colors={Colors}
         onClose={() => setShowBlockModal(false)}
-        onBlock={() => {
+        onBlock={async () => {
           setShowBlockModal(false);
+          try {
+            await blockUser(id);
+          } catch {
+            // navigate regardless — local block still takes effect
+          }
           navigation.goBack();
         }}
       />
@@ -743,7 +822,8 @@ export default function ChatScreen() {
         onClose={() => setShowReportModal(false)}
         onReport={(reason) => {
           setShowReportModal(false);
-          // Toast could be used here
+          setToastMessage(`Report submitted. Thank you for keeping AZA safe.`);
+          setTimeout(() => setToastMessage(null), 4000);
         }}
       />
 
@@ -813,6 +893,25 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       gap: Spacing.md,
     },
     actionLabel: { ...Typography.body, fontWeight: '500' },
+    keyChangeBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+      backgroundColor: isDark ? 'rgba(245,158,11,0.12)' : 'rgba(245,158,11,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(245,158,11,0.3)',
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 10,
+    },
+    keyChangeBannerText: {
+      ...Typography.caption,
+      flex: 1,
+      color: Colors.textPrimary,
+      fontWeight: '500',
+    },
     searchBar: {
       flexDirection: 'row',
       alignItems: 'center',

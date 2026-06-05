@@ -299,6 +299,49 @@ export async function verifyLoginOtp(identifier: string, code: string): Promise<
   return body.data;
 }
 
+// ─── QR Login ────────────────────────────────────────────────────────────────
+
+export interface QrLoginSession {
+  challengeToken: string;
+  sessionSecret: string;
+  qrImageBase64: string;
+  expiresAt: string;
+  ttlSeconds: number;
+}
+
+export async function initiateQrLogin(): Promise<QrLoginSession> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ siteType: "MERCHANT" }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Failed to generate QR");
+  return body.data as QrLoginSession;
+}
+
+export async function pollQrLoginStatus(challengeToken: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/status/${challengeToken}`);
+  const body = await res.json();
+  if (!res.ok || !body.success) return "EXPIRED";
+  return body.data.status as string;
+}
+
+export async function completeQrLogin(
+  challengeToken: string,
+  sessionSecret: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ challengeToken, sessionSecret }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "QR login failed");
+  saveTokens(body.data.accessToken, body.data.refreshToken);
+  return body.data;
+}
+
 // ─── Merchant profile ────────────────────────────────────────────────────────
 
 export async function getMe(): Promise<Merchant | null> {

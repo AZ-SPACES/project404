@@ -80,14 +80,41 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
+      const raw = data.trim();
+
+      // QR login for web portals: aza://qr-login?token=...&site=ADMIN
+      if (raw.startsWith('aza://qr-login')) {
+        try {
+          const url = new URL(raw);
+          const token = url.searchParams.get('token');
+          const site = url.searchParams.get('site') ?? 'ADMIN';
+          if (!token) throw new Error('Missing token');
+          const siteNames: Record<string, string> = {
+            ADMIN: 'Admin Portal',
+            MERCHANT: 'Merchant Portal',
+            DEVELOPER: 'Developer Portal',
+          };
+          navigation.navigate('QrLoginApproval', {
+            challengeToken: token,
+            siteType: site,
+            siteName: siteNames[site] ?? site,
+          });
+        } catch {
+          Alert.alert('Invalid QR', 'This QR code is not valid.', [
+            { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+          ]);
+        }
+        return;
+      }
+
       // Parse the data. Format expected: aza.systems/handle or just handle
-      let handle = data.trim();
+      let handle = raw;
       if (handle.includes('aza.systems/')) {
         handle = handle.split('aza.systems/')[1] || '';
       } else if (handle.includes('aza.me/')) {
         handle = handle.split('aza.me/')[1] || '';
       }
-      
+
       try {
         const user = await findUserByHandle(handle);
         if (user) {

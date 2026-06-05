@@ -12,7 +12,7 @@
  * keep its components untouched.
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, useReducer } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { useE2EE } from '../providers/E2EEProvider';
 import type { LocalMessage } from '../store/chatTypes';
@@ -77,6 +77,7 @@ function toMessage(m: LocalMessage): Message {
     status,
     type,
     ...(m.mediaKey ? { uri: m.mediaKey } : {}),
+    ...(m.expiresAt ? { expiresAt: m.expiresAt } : {}),
   };
 }
 
@@ -128,18 +129,33 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const isOtherTyping = useChatStore((s) => (chatId ? !!s.typingByChat[chatId] : false));
   const peerKeys = useChatStore((s) => (otherUserId ? s.peerKeys[otherUserId] : undefined));
 
+  // Tick every 5 s when the thread has messages with a live TTL so the expiry
+  // filter and the timer badge in the bubble stay current without waiting for
+  // an unrelated re-render to fire first.
+  const [expiryTick, bumpExpiryTick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!thread) return;
+    const hasLive = thread.some(
+      (m) => typeof m.expiresAt === 'number' && m.expiresAt > Date.now(),
+    );
+    if (!hasLive) return;
+    const id = setInterval(bumpExpiryTick, 5_000);
+    return () => clearInterval(id);
+  }, [thread]);
+
   const messages = useMemo<Message[]>(() => {
     if (!thread) return [];
     const now = Date.now();
+    void expiryTick; // forces recompute each tick without referencing the value
     return thread
-      // Hide disappearing messages whose TTL has elapsed even if the server
-      // tombstone WS frame hasn't reached us yet.
       .filter(
         (m) =>
           !(typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now),
       )
       .map(toMessage);
-  }, [thread]);
+  // expiryTick is intentional — it drives the periodic re-filter
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread, expiryTick]);
 
   const sendText = useCallback(
     async (text: string) => {

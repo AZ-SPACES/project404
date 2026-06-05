@@ -94,6 +94,7 @@ import {
   AppLoginApprovalScreen,
   GenerateRecoveryCodeScreen,
 } from '../features/auth';
+import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
 import { InboxScreen } from '../features/notifications';
 
 
@@ -192,6 +193,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
+      <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />

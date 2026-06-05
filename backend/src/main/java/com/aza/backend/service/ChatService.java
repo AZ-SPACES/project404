@@ -254,6 +254,26 @@ public class ChatService {
 
     // ==================== TYPING INDICATOR ====================
 
+    /** Notify the other participant that the caller took a screenshot (only meaningful when disappearing messages are on). */
+    public void notifyScreenshot(User user, UUID chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("Chat not found"));
+        assertParticipant(chat, user.getId());
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("chatId", chatId.toString());
+        payload.put("senderName", user.getFirstName() != null
+                ? user.getFirstName()
+                : (user.getHandle() != null ? "@" + user.getHandle() : "Someone"));
+
+        UUID recipientId = getOtherParticipantId(chat, user.getId());
+        webSocketPublisher.publishToChatRoom(
+                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                WebSocketEventType.CHAT_SCREENSHOT, payload);
+
+        log.info("Screenshot notification sent in chat {} by {}", chatId, user.getId());
+    }
+
     public void sendTypingIndicator(User user, TypingRequest request) {
         Chat chat = chatRepository.findById(request.getChatId())
                 .orElseThrow(() -> new AppException("Chat not found"));

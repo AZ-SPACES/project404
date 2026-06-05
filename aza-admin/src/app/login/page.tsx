@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { adminLoginStep1, adminLoginStep2, adminLoginTotp, saveTokens } from "@/lib/admin-api";
-import { Eye, EyeOff, Loader2, Lock, AtSign, ShieldCheck } from "lucide-react";
+import {
+  adminLoginStep1,
+  adminLoginStep2,
+  adminLoginTotp,
+  saveTokens,
+  initiateQrLogin,
+  pollQrLoginStatus,
+  completeQrLogin,
+  type QrLoginSession,
+} from "@/lib/admin-api";
+import { Eye, EyeOff, Loader2, Lock, AtSign, ShieldCheck, QrCode, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +24,12 @@ import { DecorIcon } from "@/components/decor-icon";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type Step = "credentials" | "otp" | "totp";
+type LoginMode = "password" | "qr";
 
 export default function LoginPage() {
   const router = useRouter();
 
+  // Password login state
   const [step, setStep] = useState<Step>("credentials");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +39,84 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Login mode
+  const [mode, setMode] = useState<LoginMode>("password");
+
+  // QR login state
+  const [qrSession, setQrSession] = useState<QrLoginSession | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+  const [qrStatus, setQrStatus] = useState<"PENDING" | "APPROVED" | "EXPIRED">("PENDING");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const expireTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (expireTimerRef.current) {
+      clearTimeout(expireTimerRef.current);
+      expireTimerRef.current = null;
+    }
+  }, []);
+
+  const startQrSession = useCallback(async () => {
+    setQrLoading(true);
+    setQrError("");
+    setQrStatus("PENDING");
+    stopPolling(); // cancels any stale timers from a prior session
+    try {
+      const session = await initiateQrLogin();
+      setQrSession(session);
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await pollQrLoginStatus(session.challengeToken);
+          setQrStatus(status as "PENDING" | "APPROVED" | "EXPIRED");
+          if (status === "APPROVED") {
+            stopPolling();
+            try {
+              const result = await completeQrLogin(session.challengeToken, session.sessionSecret);
+              if (result.user.role !== "ADMIN") {
+                setQrError("This account does not have admin access.");
+                return;
+              }
+              saveTokens(result.accessToken, result.refreshToken);
+              router.replace("/dashboard");
+            } catch (e: unknown) {
+              setQrError(e instanceof Error ? e.message : "QR login failed");
+            }
+          } else if (status === "EXPIRED") {
+            stopPolling();
+          }
+        } catch {
+          // Transient network error — keep polling, surface a non-fatal message.
+          setQrError("Connection issue. Retrying…");
+        }
+      }, 2000);
+
+      // Expire the UI once the server-side TTL has elapsed.
+      expireTimerRef.current = setTimeout(() => {
+        stopPolling();
+        setQrStatus("EXPIRED");
+      }, session.ttlSeconds * 1000);
+    } catch (e: unknown) {
+      setQrError(e instanceof Error ? e.message : "Failed to generate QR code");
+    } finally {
+      setQrLoading(false);
+    }
+  }, [router, stopPolling]);
+
+  useEffect(() => {
+    if (mode === "qr") {
+      startQrSession();
+    } else {
+      stopPolling();
+    }
+    return () => stopPolling();
+  }, [mode, startQrSession, stopPolling]);
 
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -96,10 +185,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden px-6 md:px-8 bg-background">
-      {/* Theme toggle — top right */}
       <ThemeToggle className="absolute top-5 right-5 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors" />
 
-      {/* Subtle grid background */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 opacity-40 dark:opacity-20"
@@ -116,192 +203,264 @@ export default function LoginPage() {
           "dark:bg-[radial-gradient(50%_80%_at_20%_0%,--theme(--color-foreground/.08),transparent)]"
         )}
       >
-        {/* Border lines */}
         <div className="absolute -inset-y-6 -left-px w-px bg-border" />
         <div className="absolute -inset-y-6 -right-px w-px bg-border" />
         <div className="absolute -inset-x-6 -top-px h-px bg-border" />
         <div className="absolute -inset-x-6 -bottom-px h-px bg-border" />
-
-        {/* Corner decorations */}
         <DecorIcon position="top-left" />
         <DecorIcon position="top-right" />
         <DecorIcon position="bottom-left" />
         <DecorIcon position="bottom-right" />
 
         <div className="space-y-8 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-          {/* Logo + heading */}
           <div className="space-y-4">
             <img src="/logo.png" alt="AZA Admin" className="h-7 w-auto" />
             <div className="space-y-1">
-              {step === "credentials" && (
-                <>
-                  <h1 className="font-bold text-2xl tracking-wide">Admin Portal</h1>
-                  <p className="text-base text-muted-foreground">AZA internal dashboard</p>
-                </>
-              )}
-              {step === "otp" && (
-                <>
-                  <h1 className="font-bold text-2xl tracking-wide">Check your inbox</h1>
-                  <p className="text-base text-muted-foreground">
-                    Enter the OTP sent to <span className="text-foreground font-medium">{identifier}</span>
-                  </p>
-                </>
-              )}
-              {step === "totp" && (
-                <>
-                  <h1 className="font-bold text-2xl tracking-wide">Two-factor auth</h1>
-                  <p className="text-base text-muted-foreground">
-                    Enter the 6-digit code from your authenticator app
-                  </p>
-                </>
-              )}
+              <h1 className="font-bold text-2xl tracking-wide">Admin Portal</h1>
+              <p className="text-base text-muted-foreground">AZA internal dashboard</p>
             </div>
           </div>
 
-          {/* Step: Credentials */}
+          {/* Mode tabs */}
           {step === "credentials" && (
-            <form onSubmit={handleCredentials} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Email or phone</label>
-                <InputGroup>
-                  <InputGroupAddon align="inline-start">
-                    <AtSign size={14} />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    type="text"
-                    required
-                    autoFocus
-                    autoComplete="username"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="admin@aza.app"
-                  />
-                </InputGroup>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Password</label>
-                <InputGroup>
-                  <InputGroupAddon align="inline-start">
-                    <Lock size={14} />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    type={showPass ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowPass((v) => !v)}
-                      className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </InputGroupAddon>
-                </InputGroup>
-              </div>
-
-              {error && <p className="text-sm text-destructive">{error}</p>}
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setMode("password")}
+                className={cn(
+                  "flex-1 py-2 text-sm font-medium transition-colors",
+                  mode === "password"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                Continue
-              </Button>
-            </form>
+                Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("qr")}
+                className={cn(
+                  "flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5",
+                  mode === "qr"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <QrCode size={14} />
+                AZA App
+              </button>
+            </div>
           )}
 
-          {/* Step: OTP */}
-          {step === "otp" && (
-            <form onSubmit={handleOtp} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Verification code</label>
-                <InputGroup>
-                  <InputGroupInput
-                    type="text"
-                    inputMode="numeric"
-                    required
-                    autoFocus
-                    autoComplete="one-time-code"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    placeholder="Enter OTP"
-                    className="text-center tracking-[0.3em] text-lg font-mono"
-                  />
-                </InputGroup>
-              </div>
+          {/* QR Login */}
+          {mode === "qr" && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Open the AZA app and scan this code to sign in.
+              </p>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {qrLoading && (
+                <div className="flex items-center justify-center h-[200px]">
+                  <Loader2 size={28} className="animate-spin text-muted-foreground" />
+                </div>
+              )}
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
-              >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                Verify OTP
-              </Button>
+              {!qrLoading && qrSession && qrStatus === "PENDING" && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="rounded-xl border border-border p-2 bg-white">
+                    <img
+                      src={`data:image/png;base64,${qrSession.qrImageBase64}`}
+                      alt="QR Code"
+                      className="w-[200px] h-[200px]"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Code expires in {qrSession.ttlSeconds}s
+                  </p>
+                </div>
+              )}
+
+              {!qrLoading && qrStatus === "APPROVED" && (
+                <div className="flex flex-col items-center gap-2 py-4">
+                  <Loader2 size={24} className="animate-spin text-[#B7EE7A]" />
+                  <p className="text-sm text-muted-foreground">Signing you in…</p>
+                </div>
+              )}
+
+              {!qrLoading && qrStatus === "EXPIRED" && (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <p className="text-sm text-muted-foreground">QR code expired.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={startQrSession}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw size={13} />
+                    Refresh
+                  </Button>
+                </div>
+              )}
+
+              {qrError && <p className="text-sm text-destructive text-center">{qrError}</p>}
 
               <button
                 type="button"
-                onClick={() => reset("credentials")}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                onClick={() => setMode("password")}
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer text-center"
               >
-                ← Back to login
+                Sign in with password instead
               </button>
-            </form>
+            </div>
           )}
 
-          {/* Step: TOTP */}
-          {step === "totp" && (
-            <form onSubmit={handleTotp} className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Authenticator code</label>
-                <InputGroup>
-                  <InputGroupAddon align="inline-start">
-                    <ShieldCheck size={14} />
-                  </InputGroupAddon>
-                  <InputGroupInput
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    required
-                    autoFocus
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    placeholder="000000"
-                    className="text-center tracking-[0.4em] text-lg font-mono"
-                  />
-                </InputGroup>
-              </div>
+          {/* Password Login */}
+          {mode === "password" && (
+            <>
+              {step === "credentials" && (
+                <form onSubmit={handleCredentials} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Email or phone</label>
+                    <InputGroup>
+                      <InputGroupAddon align="inline-start">
+                        <AtSign size={14} />
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        type="text"
+                        required
+                        autoFocus
+                        autoComplete="username"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="admin@aza.app"
+                      />
+                    </InputGroup>
+                  </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Password</label>
+                    <InputGroup>
+                      <InputGroupAddon align="inline-start">
+                        <Lock size={14} />
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        type={showPass ? "text" : "password"}
+                        required
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowPass((v) => !v)}
+                          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </InputGroupAddon>
+                    </InputGroup>
+                  </div>
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
-              >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                Verify
-              </Button>
+                  {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <button
-                type="button"
-                onClick={() => reset("credentials")}
-                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
-              >
-                ← Back to login
-              </button>
-            </form>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
+                  >
+                    {loading && <Loader2 size={14} className="animate-spin" />}
+                    Continue
+                  </Button>
+                </form>
+              )}
+
+              {step === "otp" && (
+                <form onSubmit={handleOtp} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Verification code</label>
+                    <InputGroup>
+                      <InputGroupInput
+                        type="text"
+                        inputMode="numeric"
+                        required
+                        autoFocus
+                        autoComplete="one-time-code"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="Enter OTP"
+                        className="text-center tracking-[0.3em] text-lg font-mono"
+                      />
+                    </InputGroup>
+                  </div>
+
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
+                  >
+                    {loading && <Loader2 size={14} className="animate-spin" />}
+                    Verify OTP
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => reset("credentials")}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                  >
+                    ← Back to login
+                  </button>
+                </form>
+              )}
+
+              {step === "totp" && (
+                <form onSubmit={handleTotp} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Authenticator code</label>
+                    <InputGroup>
+                      <InputGroupAddon align="inline-start">
+                        <ShieldCheck size={14} />
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={totpCode}
+                        onChange={(e) => setTotpCode(e.target.value)}
+                        placeholder="000000"
+                        className="text-center tracking-[0.4em] text-lg font-mono"
+                      />
+                    </InputGroup>
+                  </div>
+
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-9 bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold border-0"
+                  >
+                    {loading && <Loader2 size={14} className="animate-spin" />}
+                    Verify
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => reset("credentials")}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                  >
+                    ← Back to login
+                  </button>
+                </form>
+              )}
+            </>
           )}
         </div>
       </div>

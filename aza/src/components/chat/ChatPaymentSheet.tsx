@@ -48,6 +48,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
 
   // Step
   const [step, setStep] = useState<Step>('amount');
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // PIN step
   const [pin, setPin] = useState('');
@@ -182,6 +183,31 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   const handleDecrement = useCallback(() => setAmount(p => Math.max(0, p - 1)), []);
   const handleIncrement = useCallback(() => setAmount(p => p + 1), []);
 
+  const stopHold = useCallback(() => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  }, []);
+
+  const startHoldDecrement = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    holdIntervalRef.current = setInterval(() => {
+      setAmount(p => Math.max(0, p - 1));
+    }, 100);
+  }, []);
+
+  const startHoldIncrement = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    holdIntervalRef.current = setInterval(() => {
+      setAmount(p => p + 1);
+    }, 100);
+  }, []);
+
+  useEffect(() => {
+    return () => stopHold();
+  }, [stopHold]);
+
   const handleKeypadPress = useCallback((key: string) => {
     setKeypadInput(prev => {
       if (key === '⌫') return prev.length > 1 ? prev.slice(0, -1) : '0';
@@ -233,13 +259,25 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
               </View>
             ) : (
               <View style={styles.stepperRow}>
-                <TouchableOpacity style={styles.stepperBtn} onPress={handleDecrement} activeOpacity={0.7}>
+                <TouchableOpacity 
+                  style={styles.stepperBtn} 
+                  onPress={handleDecrement} 
+                  onLongPress={startHoldDecrement}
+                  onPressOut={stopHold}
+                  activeOpacity={0.7}
+                >
                   <Feather name="minus" size={22} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.amountText} numberOfLines={1} adjustsFontSizeToFit>
                   ₵{formattedDisplay}
                 </Text>
-                <TouchableOpacity style={styles.stepperBtn} onPress={handleIncrement} activeOpacity={0.7}>
+                <TouchableOpacity 
+                  style={styles.stepperBtn} 
+                  onPress={handleIncrement} 
+                  onLongPress={startHoldIncrement}
+                  onPressOut={stopHold}
+                  activeOpacity={0.7}
+                >
                   <Feather name="plus" size={22} color="#fff" />
                 </TouchableOpacity>
               </View>

@@ -25,6 +25,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
 import { useContactStore } from "../../../store/contactStore";
 import { useStarredMessagesStore } from "../../../store/starredMessagesStore";
+import { useChatThemeStore } from "../../../store/chatThemeStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
 import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
@@ -187,9 +188,13 @@ export default function ChatInfoScreen() {
     chatIdParam ? s.entries.filter((e) => e.chatId === chatIdParam).length : 0,
   );
 
+  const loadTheme = useChatThemeStore((s) => s.load);
+  const setTheme = useChatThemeStore((s) => s.setTheme);
+
   useEffect(() => {
     loadStarred();
-  }, [loadStarred]);
+    loadTheme();
+  }, [loadStarred, loadTheme]);
 
   // The route param `id` carries chatId. Resolve live data from the store.
   const chat = chatIdParam ? chats[chatIdParam] : undefined;
@@ -597,8 +602,8 @@ export default function ChatInfoScreen() {
         isDark={Colors.isDark}
         Colors={Colors}
         onClose={() => setShowThemeModal(false)}
-        onSelectTheme={(theme) => {
-          Alert.alert("Theme Selected", `Theme set to ${theme}`);
+        onSelectTheme={(themeId) => {
+          if (chatIdParam) setTheme(chatIdParam, themeId).catch(() => {});
         }}
       />
 

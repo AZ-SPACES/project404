@@ -801,6 +801,9 @@ export const getTotalUnreadChatCount = () => api.get("/api/v1/chats/unread");
 export const setDisappearingMessages = (chatId: string, ttlSeconds: number) =>
   api.put(`/api/v1/chats/${chatId}/disappearing`, { ttlSeconds });
 
+export const notifyChatScreenshot = (chatId: string) =>
+  api.post(`/api/v1/chats/${chatId}/screenshot`);
+
 export const markChatMediaViewed = (messageId: string) =>
   api.post(`/api/v1/chats/messages/${messageId}/viewed`);
 
@@ -1067,3 +1070,6 @@ export const checkTransferAnomaly = (recipientIdentifier: string, amount: number
 
 export const suggestTransferCategory = (recipientIdentifier: string, note: string) =>
   api.post('/api/v1/transfers/suggest-category', { recipientIdentifier, note });
+
+export const authorizeQrLogin = (challengeToken: string) =>
+  api.post('/api/v1/auth/qr-login/authorize', { challengeToken });

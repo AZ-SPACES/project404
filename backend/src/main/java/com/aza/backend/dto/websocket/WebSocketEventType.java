@@ -12,6 +12,7 @@ public enum WebSocketEventType {
     CHAT_MESSAGE_DELETED("chat.message.deleted"),
     CHAT_MEDIA_VIEWED("chat.media.viewed"),
     CHAT_DISAPPEARING_UPDATED("chat.disappearing.updated"),
+    CHAT_SCREENSHOT("chat.screenshot"),
     CHAT_TYPING("chat.typing"),
     CHAT_READ("chat.read"),
     CHAT_DELIVERED("chat.delivered"),
@@ -49,6 +50,9 @@ public enum WebSocketEventType {
     SUPPORT_CHAT_UPDATED("support.chat_updated"),
     SUPPORT_BOT_TYPING("support.bot_typing"),
     SUPPORT_HANDOFF("support.handoff"),
+
+    // QR Login
+    QR_LOGIN_APPROVED("qr.login.approved"),
 
     // System
     TRANSFER_UPDATE("transfer.update"),

@@ -92,7 +92,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return true;
         }
         String path = request.getRequestURI();
-        return path.startsWith("/ws") || path.startsWith("/actuator");
+        // Skip WS, actuator, and QR-status polling (polled every 2 s — would exhaust the auth-path IP bucket).
+        return path.startsWith("/ws")
+                || path.startsWith("/actuator")
+                || path.startsWith("/api/v1/auth/qr-login/status/");
     }
 
     @Override

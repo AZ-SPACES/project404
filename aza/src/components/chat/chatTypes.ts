@@ -28,6 +28,7 @@ export interface Message {
   caption?: string;
   duration?: number;
   isStarred?: boolean;
+  expiresAt?: number | null;
   resolvedSize?: number;
   paymentAmount?: number;
   paymentMode?: 'send' | 'request';

@@ -11,6 +11,7 @@ import { getDocIcon, formatBytes } from './chatTypes';
 type ChatMessageBubbleProps = {
   message: Message;
   onLongPress?: () => void;
+  bubbleColor?: string | undefined;
 };
 
 // ----------------------------------------------------------------------------
@@ -19,6 +20,7 @@ type ChatMessageBubbleProps = {
 export const ChatMessageBubble = memo(function ChatMessageBubble({
   message,
   onLongPress,
+  bubbleColor,
 }: ChatMessageBubbleProps) {
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
@@ -41,6 +43,16 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     return null;
   }, [message.type, message.text, message.paymentAmount, message.paymentMode, message.paymentStatus]);
 
+  const expiryLabel = useMemo(() => {
+    if (!message.expiresAt || message.expiresAt <= 0) return null;
+    const remaining = message.expiresAt - Date.now();
+    if (remaining <= 0) return null;
+    if (remaining < 60_000) return `${Math.ceil(remaining / 1000)}s`;
+    if (remaining < 3_600_000) return `${Math.ceil(remaining / 60_000)}m`;
+    if (remaining < 86_400_000) return `${Math.ceil(remaining / 3_600_000)}h`;
+    return `${Math.ceil(remaining / 86_400_000)}d`;
+  }, [message.expiresAt]);
+
   const statusIcon = useMemo(() => {
     if (!isMe || !message.status) return null;
     const iconColor = isMe ? 'rgba(255,255,255,0.8)' : '#9CA3AF';
@@ -53,10 +65,17 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const hasCaption = !!message.caption;
   const overlayMeta = isImageType && !hasCaption;
 
+  const timerColor = isMe ? 'rgba(255,255,255,0.75)' : '#9CA3AF';
   const metaRow = (
     <View style={[styles.metaContainer, overlayMeta && styles.metaContainerOverlay]}>
       {message.isStarred && (
         <Feather name="star" size={10} color={isMe ? 'rgba(255,255,255,0.8)' : '#F59E0B'} style={{ marginRight: 4 }} />
+      )}
+      {expiryLabel && (
+        <View style={styles.expiryBadge}>
+          <Feather name="clock" size={10} color={timerColor} />
+          <Text style={[styles.expiryText, { color: timerColor }]}>{expiryLabel}</Text>
+        </View>
       )}
       <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
         {message.time}
@@ -93,7 +112,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
     >
       {isImageType && message.uri ? (
-        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther, hasCaption && { padding: 4 }]}>
+        <View style={[styles.imageBubble, isMe ? styles.bubbleMe : styles.bubbleOther, isMe && bubbleColor ? { backgroundColor: bubbleColor } : null, hasCaption && { padding: 4 }]}>
           {replyPreview}
           <Image 
             source={{ uri: message.uri }} 
@@ -111,7 +130,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           )}
         </View>
       ) : message.type === 'document' ? (
-        <View style={[styles.bubble, styles.docBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+        <View style={[styles.bubble, styles.docBubble, isMe ? styles.bubbleMe : styles.bubbleOther, isMe && bubbleColor ? { backgroundColor: bubbleColor } : null]}>
           {replyPreview}
           <View style={styles.docCard}>
             <View style={[styles.docIconBox, { backgroundColor: docIcon.color + '22' }]}>
@@ -131,7 +150,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           {metaRow}
         </View>
       ) : message.type === 'audio' ? (
-        <View style={[styles.bubble, styles.audioBubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+        <View style={[styles.bubble, styles.audioBubble, isMe ? styles.bubbleMe : styles.bubbleOther, isMe && bubbleColor ? { backgroundColor: bubbleColor } : null]}>
           {replyPreview}
           <View style={styles.audioRow}>
             <TouchableOpacity style={[styles.audioPlayBtn, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : Colors.primary + '15' }]}>
@@ -181,7 +200,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           </View>
         </View>
       ) : (
-        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+        <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther, isMe && bubbleColor ? { backgroundColor: bubbleColor } : null]}>
           {replyPreview}
           <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.text}</Text>
           {metaRow}
@@ -270,6 +289,8 @@ const createStyles = (Colors: ThemeColors) =>
     timeTextMe: { color: 'rgba(255,255,255,0.7)' },
     timeTextOther: { color: Colors.textSecondary },
     statusIcon: { marginLeft: 4 },
+    expiryBadge: { flexDirection: 'row', alignItems: 'center', gap: 2, marginRight: 4 },
+    expiryText: { ...Typography.caption, fontSize: 10, fontWeight: '600' },
     // Audio bubble
     audioBubble: { minWidth: 200, maxWidth: '80%' },
     audioRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
