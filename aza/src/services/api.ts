@@ -2,6 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
+import { navigate } from "../navigation/navigationRef";
 
 /**
  * File payload shape required by React Native's FormData for binary uploads.
@@ -1020,11 +1021,14 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle 403 (Forbidden) — token is revoked or session is invalid.
-    // Clear stored tokens and trigger logout so the user is sent back
-    // to the login screen instead of being stuck on a broken screen.
+    // Handle 403 (Forbidden)
     if (error.response?.status === 403) {
-      // Don't intercept 403s on auth endpoints
+      // Geo-blocked — navigate to the "not available in your region" screen.
+      if (error.response?.data?.error === 'GEO_RESTRICTED') {
+        navigate('GeoBlocked');
+        return Promise.reject(error);
+      }
+      // Token is revoked or session is invalid — clear tokens and trigger logout.
       if (!originalRequest.url?.includes('/auth/')) {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);

@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -16,6 +17,7 @@ public class SystemSettingsResponse {
     private String supportEmail;
     private String supportPhone;
     private String platformVersion;
+    private List<String> blockedCountries;
     private FeatureFlags featureFlags;
 
     @Data
