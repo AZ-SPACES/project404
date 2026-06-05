@@ -130,6 +130,7 @@ export default function PasskeySetupScreen() {
               Your passcode is needed to register this device as a trusted passkey.
             </Text>
             <TextInput
+              underlineColorAndroid="transparent"
               style={[styles.passcodeInput, { borderBottomColor: Colors.primary, color: Colors.textPrimary }]}
               value={passcode}
               onChangeText={t => setPasscode(t.replace(/\D/g, '').slice(0, 4))}

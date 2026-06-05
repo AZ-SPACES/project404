@@ -404,6 +404,7 @@ export function TransactionsScreen() {
           <View style={{ marginBottom: Spacing.md }}>
             <Text style={[styles.pinLabel]}>Enter your PIN to pay</Text>
             <TextInput
+              underlineColorAndroid="transparent"
               ref={pinInputRef}
               value={pin}
               onChangeText={handlePinChange}
@@ -533,6 +534,7 @@ export function TransactionsScreen() {
               <View style={styles.searchBox}>
                 <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: Spacing.sm }} />
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.searchInput}
                   placeholder="Search transactions…"
                   placeholderTextColor={Colors.textSecondary}
@@ -626,6 +628,7 @@ export function TransactionsScreen() {
               <Text style={styles.filterLabel}>Amount range</Text>
               <View style={styles.filterRow2}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={[styles.filterInput, { flex: 1 }]}
                   placeholder="Min"
                   placeholderTextColor={Colors.textSecondary}
@@ -635,6 +638,7 @@ export function TransactionsScreen() {
                 />
                 <Text style={{ color: Colors.textSecondary, marginHorizontal: Spacing.sm }}>–</Text>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={[styles.filterInput, { flex: 1 }]}
                   placeholder="Max"
                   placeholderTextColor={Colors.textSecondary}
@@ -647,6 +651,7 @@ export function TransactionsScreen() {
               <Text style={styles.filterLabel}>Date range</Text>
               <View style={styles.filterRow2}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={[styles.filterInput, { flex: 1 }]}
                   placeholder="From (YYYY-MM-DD)"
                   placeholderTextColor={Colors.textSecondary}
@@ -655,6 +660,7 @@ export function TransactionsScreen() {
                 />
                 <Text style={{ color: Colors.textSecondary, marginHorizontal: Spacing.sm }}>–</Text>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={[styles.filterInput, { flex: 1 }]}
                   placeholder="To (YYYY-MM-DD)"
                   placeholderTextColor={Colors.textSecondary}

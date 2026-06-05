@@ -112,6 +112,7 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
             <View style={styles.noteValueContainer}>
               {isEditingNote ? (
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={[styles.receiptValue, styles.noteInput]}
                   value={editedNote}
                   onChangeText={setEditedNote}

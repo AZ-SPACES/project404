@@ -328,6 +328,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>Key Name</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             value={editKeyName}
                             onChangeText={setEditKeyName}
@@ -337,6 +338,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>IP Whitelist (comma-separated)</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
                             placeholderTextColor={Colors.textSecondary}
@@ -405,6 +407,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>Rollover Grace Period (Hours)</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             value={String(rollGraceHours)}
                             onChangeText={(txt) => setRollGraceHours(Number(txt.replace(/[^0-9]/g, '')) || 24)}
@@ -673,6 +676,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                       IP Whitelist (comma-separated, optional)
                     </Text>
                     <TextInput
+                      underlineColorAndroid="transparent"
                       style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                       placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
                       placeholderTextColor={Colors.textSecondary}
@@ -717,6 +721,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                       Key Name / Label
                     </Text>
                     <TextInput
+                      underlineColorAndroid="transparent"
                       style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                       placeholder="e.g. Production Server Key"
                       placeholderTextColor={Colors.textSecondary}

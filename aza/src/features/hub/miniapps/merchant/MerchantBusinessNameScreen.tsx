@@ -153,6 +153,7 @@ export default function MerchantBusinessNameScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="e.g. Acme Stores"
                 placeholderTextColor={Colors.textSecondary}
@@ -175,6 +176,7 @@ export default function MerchantBusinessNameScreen() {
             >
               <Text style={styles.atSymbol}>@</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="yourhandle"
                 placeholderTextColor={Colors.textSecondary}

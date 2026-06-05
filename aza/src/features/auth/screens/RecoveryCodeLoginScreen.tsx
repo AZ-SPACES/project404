@@ -101,6 +101,8 @@ export default function RecoveryCodeLoginScreen() {
             </Text>
 
             <TextInput
+
+              underlineColorAndroid="transparent"
               style={styles.input}
               value={code}
               onChangeText={handleCodeChange}

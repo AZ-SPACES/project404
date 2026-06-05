@@ -432,6 +432,7 @@ const TotpLoginScreen: React.FC = () => {
                       {otp.map((digit, index) => (
                         <View key={index} style={styles.otpSlot}>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             ref={(ref) => { inputRefs.current[index] = ref; }}
                             style={styles.otpInput}
                             value={digit}

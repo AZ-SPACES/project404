@@ -171,6 +171,7 @@ export default function SignUpHandleScreen() {
             ]}>
               <Text style={styles.atSymbol}>@</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="username"
                 placeholderTextColor={Colors.textSecondary}

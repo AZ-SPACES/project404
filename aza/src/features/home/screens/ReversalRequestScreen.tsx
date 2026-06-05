@@ -236,6 +236,7 @@ export function ReversalRequestScreen() {
           {/* Description */}
           <Text style={styles.label}>Explain what went wrong</Text>
           <TextInput
+            underlineColorAndroid="transparent"
             style={[
               styles.textArea,
               {

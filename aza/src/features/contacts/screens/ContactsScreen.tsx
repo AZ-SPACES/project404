@@ -381,6 +381,7 @@ export default function ContactsScreen() {
               style={styles.searchIcon}
             />
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.searchInput}
               placeholder="Name, tag, email, phone number"
               placeholderTextColor={Colors.textSecondary}
@@ -544,6 +545,7 @@ export default function ContactsScreen() {
             </Text>
             <View style={styles.inviteInputRow}>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.inviteInput}
                 placeholder="Email or Username"
                 placeholderTextColor={Colors.textSecondary}

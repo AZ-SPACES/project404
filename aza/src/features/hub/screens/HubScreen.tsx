@@ -97,6 +97,7 @@ export default function HubScreen() {
             <View style={styles.searchContainer}>
               <Feather name="search" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 placeholder="Search mini apps..."
                 placeholderTextColor={Colors.textSecondary}
                 style={styles.searchInput}

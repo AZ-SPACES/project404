@@ -150,6 +150,7 @@ export default function SignUpEmailScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}

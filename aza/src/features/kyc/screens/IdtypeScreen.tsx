@@ -182,6 +182,7 @@ export default function IdtypeScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="pin" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder={documentType?.placeholder || "Select an ID type first"}
                 placeholderTextColor={Colors.textSecondary}

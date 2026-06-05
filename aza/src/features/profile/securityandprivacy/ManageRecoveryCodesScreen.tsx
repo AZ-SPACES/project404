@@ -255,6 +255,8 @@ export default function ManageRecoveryCodesScreen() {
               </Text>
 
               <TextInput
+
+                underlineColorAndroid="transparent"
                 style={[styles.totpInput, { borderBottomColor: Colors.primary, color: Colors.textPrimary }]}
                 value={totpCode}
                 onChangeText={t => setTotpCode(t.replace(/\D/g, '').slice(0, 6))}

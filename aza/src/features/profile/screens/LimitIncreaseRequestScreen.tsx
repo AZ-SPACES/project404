@@ -122,6 +122,7 @@ export default function LimitIncreaseRequestScreen() {
           <View style={styles.inputRow}>
             <Text style={styles.currency}>GHS</Text>
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.input}
               value={reqDaily}
               onChangeText={setReqDaily}
@@ -136,6 +137,7 @@ export default function LimitIncreaseRequestScreen() {
           <View style={styles.inputRow}>
             <Text style={styles.currency}>GHS</Text>
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.input}
               value={reqSingle}
               onChangeText={setReqSingle}
@@ -148,6 +150,7 @@ export default function LimitIncreaseRequestScreen() {
 
           <Text style={styles.fieldLabel}>Reason for request</Text>
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.reasonInput}
             value={reason}
             onChangeText={setReason}

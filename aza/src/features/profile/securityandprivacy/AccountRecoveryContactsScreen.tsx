@@ -244,6 +244,7 @@ export default function AccountRecoveryContactsScreen() {
             <View style={styles.searchBox}>
               <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.searchInput, { color: Colors.textPrimary }]}
                 placeholder="Search by name or @handle"
                 placeholderTextColor={Colors.textSecondary}

@@ -431,6 +431,7 @@ export default function MediaPreviewScreen() {
               <Feather name="plus-square" size={22} color="#aaa" />
             </TouchableOpacity>
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.captionInput}
               placeholder="Add a caption..."
               placeholderTextColor="#888"

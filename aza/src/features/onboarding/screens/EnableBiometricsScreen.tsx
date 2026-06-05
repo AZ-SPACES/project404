@@ -207,6 +207,7 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
 
                 {/* Hidden input */}
                 <TextInput
+                  underlineColorAndroid="transparent"
                   ref={inputRef}
                   value={pin}
                   onChangeText={handlePinChange}

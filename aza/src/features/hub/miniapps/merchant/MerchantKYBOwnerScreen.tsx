@@ -221,6 +221,7 @@ export default function MerchantKYBOwnerScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="John Mensah"
                 placeholderTextColor={Colors.textSecondary}
@@ -268,6 +269,7 @@ export default function MerchantKYBOwnerScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="pin" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder={idPlaceholder}
                 placeholderTextColor={Colors.textSecondary}

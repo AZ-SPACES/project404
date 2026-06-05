@@ -199,6 +199,7 @@ const LoginScreen: React.FC = () => {
               <MaterialIcons name="mail-outline" color={Colors.primary} style={styles.inputIcon}/>
             )}
             <TextInput
+              underlineColorAndroid="transparent"
               key={useEmail ? 'email' : 'phone'}
               style={styles.input}
               placeholder={useEmail ? 'Email Address' : 'Phone Number'}
@@ -233,6 +234,7 @@ const LoginScreen: React.FC = () => {
             <View style={styles.inputContainer}>
               <MaterialIcons name="lock-outline" color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="********"
                 placeholderTextColor={Colors.textSecondary}

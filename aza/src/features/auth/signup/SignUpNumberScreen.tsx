@@ -147,6 +147,7 @@ export default function SignUpNumberScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="000 000 0000"
                 placeholderTextColor={Colors.textSecondary}

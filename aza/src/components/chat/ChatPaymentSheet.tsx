@@ -292,6 +292,8 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
             </View>
 
             <TextInput
+
+              underlineColorAndroid="transparent"
               ref={pinInputRef}
               value={pin}
               onChangeText={handlePinChange}

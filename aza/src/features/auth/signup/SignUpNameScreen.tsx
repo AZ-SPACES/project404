@@ -118,6 +118,7 @@ export default function SignUpNameScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="e.g. Kwame"
                 placeholderTextColor={Colors.textSecondary}
@@ -141,6 +142,7 @@ export default function SignUpNameScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="e.g. Obeng"
                 placeholderTextColor={Colors.textSecondary}

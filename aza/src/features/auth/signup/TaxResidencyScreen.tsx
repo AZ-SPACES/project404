@@ -150,6 +150,7 @@ export default function TaxResidencyScreen() {
             {data.nationality === "Other" && (
               <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="Enter your nationality"
                   placeholderTextColor={Colors.textSecondary}
@@ -165,6 +166,7 @@ export default function TaxResidencyScreen() {
                 <View style={styles.pickerSearchContainer}>
                   <MaterialIcons name="search" size={20} color={Colors.textSecondary} />
                   <TextInput
+                    underlineColorAndroid="transparent"
                     ref={searchInputRef}
                     style={styles.pickerSearchInput}
                     placeholder="Search nationality"
@@ -272,6 +274,7 @@ export default function TaxResidencyScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="Country of tax residence"
                   placeholderTextColor={Colors.textSecondary}

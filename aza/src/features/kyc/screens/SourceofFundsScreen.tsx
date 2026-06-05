@@ -115,6 +115,7 @@ export default function SourceofFundsScreen() {
         </TouchableOpacity>
         {label === "Other" && isSelected && (
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.otherInput}
             placeholder="Please specify"
             placeholderTextColor={Colors.textSecondary}
