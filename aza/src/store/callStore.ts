@@ -380,7 +380,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     set((state) => {
       const newMuted = !state.isMuted;
       if (state.activeCall?.localStream) {
-        state.activeCall.localStream.getAudioTracks().forEach(track => {
+        state.activeCall.localStream.getAudioTracks().forEach((track: MediaStreamTrack) => {
           track.enabled = !newMuted;
         });
       }
@@ -400,7 +400,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     set((state) => {
       const newVideoEnabled = !state.isLocalVideoEnabled;
       if (state.activeCall?.localStream) {
-        state.activeCall.localStream.getVideoTracks().forEach(track => {
+        state.activeCall.localStream.getVideoTracks().forEach((track: MediaStreamTrack) => {
           track.enabled = newVideoEnabled;
         });
       }

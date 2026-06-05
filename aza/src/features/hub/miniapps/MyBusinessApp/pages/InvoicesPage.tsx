@@ -182,7 +182,7 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {invoices.map((inv) => (
+          {invoices.map((inv: any) => (
             <View
               key={inv.id}
               style={{

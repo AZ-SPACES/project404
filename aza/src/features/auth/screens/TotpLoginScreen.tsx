@@ -103,7 +103,7 @@ const TotpLoginScreen: React.FC = () => {
   const triggerSms2fa = async () => {
     setIsLoading(true);
     try {
-      await requestSms2fa(preAuthToken);
+      await requestSms2fa(preAuthToken!);
       showToast('A verification code has been sent to your phone.', 'success');
     } catch (error: unknown) {
       showToast('Failed to send SMS. Please try again.', 'error');
@@ -115,7 +115,7 @@ const TotpLoginScreen: React.FC = () => {
   const triggerEmail2fa = async () => {
     setIsLoading(true);
     try {
-      await requestEmail2fa(preAuthToken);
+      await requestEmail2fa(preAuthToken!);
       showToast('A verification code has been sent to your email.', 'success');
     } catch (error: unknown) {
       showToast('Failed to send email. Please try again.', 'error');
@@ -147,7 +147,7 @@ const TotpLoginScreen: React.FC = () => {
       }
 
       const deviceId = await getDeviceId();
-      const res = await verifyPasskeys2fa(preAuthToken, biometricToken, deviceId);
+      const res = await verifyPasskeys2fa(preAuthToken!, biometricToken, deviceId);
       await finalizeLogin(res.data?.data ?? res.data);
     } catch (error: unknown) {
       const msg = extractErrorMessage(error, 'Passkey verification failed. Please try another method.');
@@ -190,10 +190,10 @@ const TotpLoginScreen: React.FC = () => {
     setIsLoading(true);
     setAppRequestId(null);
     try {
-      const res = await requestApp2faApproval(preAuthToken);
+      const res = await requestApp2faApproval(preAuthToken!);
       const requestId: string = res.data?.data ?? res.data;
       setAppRequestId(requestId);
-      startPolling(preAuthToken, requestId);
+      startPolling(preAuthToken!, requestId);
     } catch (err: unknown) {
       const msg = extractErrorMessage(err, 'Failed to send approval request. Please try another method.');
       showToast(msg, 'error');
@@ -522,13 +522,13 @@ const TotpLoginScreen: React.FC = () => {
 
             <TouchableOpacity
               style={styles.recoveryButton}
-              onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
+              onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken: preAuthToken! })}
             >
               <Text style={styles.recoveryText}>Use a recovery code</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.recoveryButton, { marginTop: 2 }]}
-              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
+              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken: preAuthToken! })}
             >
               <Text style={styles.recoveryText}>Contact a recovery person</Text>
             </TouchableOpacity>

@@ -177,7 +177,7 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     setIsSubmitting(true);
     try {
       await api.resubmitKyc();
-      update({ status: 'PENDING', rejectionReason: undefined });
+      update({ status: 'PENDING' });
     } finally {
       setIsSubmitting(false);
     }

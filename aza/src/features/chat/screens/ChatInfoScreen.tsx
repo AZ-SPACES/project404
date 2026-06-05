@@ -24,6 +24,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
 import { useContactStore } from "../../../store/contactStore";
+import { useStarredMessagesStore } from "../../../store/starredMessagesStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
 import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
@@ -180,6 +181,15 @@ export default function ChatInfoScreen() {
   const storeSetDisappearingTtl = useChatStore((s) => s.setDisappearingTtl);
 
   const contacts = useContactStore((s) => s.contacts);
+
+  const loadStarred = useStarredMessagesStore((s) => s.load);
+  const starredCount = useStarredMessagesStore((s) =>
+    chatIdParam ? s.entries.filter((e) => e.chatId === chatIdParam).length : 0,
+  );
+
+  useEffect(() => {
+    loadStarred();
+  }, [loadStarred]);
 
   // The route param `id` carries chatId. Resolve live data from the store.
   const chat = chatIdParam ? chats[chatIdParam] : undefined;
@@ -455,7 +465,7 @@ export default function ChatInfoScreen() {
             label="Media, links and docs"
             value={mediaCount.toString()}
             Colors={Colors}
-            onPress={() => navigation.navigate("SharedMedia" as any)}
+            onPress={() => navigation.navigate("SharedMedia", { chatId: chatIdParam, otherUserName: name })}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -469,9 +479,9 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Feather name="star" size={20} color={Colors.textPrimary} />}
             label="Starred"
-            value="None"
+            value={starredCount > 0 ? starredCount.toString() : "None"}
             Colors={Colors}
-            onPress={() => navigation.navigate("StarredMessages" as any)}
+            onPress={() => navigation.navigate("StarredMessages")}
           />
         </View>
 

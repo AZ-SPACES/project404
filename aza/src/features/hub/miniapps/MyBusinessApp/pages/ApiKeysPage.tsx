@@ -126,7 +126,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setShowForm(false);
       invalidateKeys();
     } catch (e: unknown) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create key.');
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to create key.');
     } finally {
       setCreating(false);
     }
@@ -147,7 +147,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setEditingKeyId(null);
       invalidateKeys();
     } catch (e: unknown) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update key.');
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to update key.');
     } finally {
       setUpdating(false);
     }
@@ -164,7 +164,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setRollingKeyId(null);
       invalidateKeys();
     } catch (e: unknown) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to roll key.');
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to roll key.');
     } finally {
       setRolling(false);
     }
@@ -198,8 +198,8 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
     ]);
   };
 
-  const filteredKeys = keys.filter((k) => k.environment === activeTab);
-  const activeKeysCount = keys.filter((k) => k.isActive !== false).length;
+  const filteredKeys = keys.filter((k: any) => k.environment === activeTab);
+  const activeKeysCount = keys.filter((k: any) => k.isActive !== false).length;
 
   return (
     <View style={{ flex: 1 }}>
@@ -316,7 +316,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                   </Text>
                 </View>
               ) : (
-                filteredKeys.map((k) => {
+                filteredKeys.map((k: any) => {
                   const isKeyActive = k.isActive !== false;
 
                   // Render inline edit form

@@ -122,7 +122,7 @@ export type RootStackParamList = {
   VideoCall: { callId?: string; name: string; avatar: string };
   IncomingCall: undefined;
   StarredMessages: undefined;
-  SharedMedia: undefined;
+  SharedMedia: { chatId?: string | undefined; otherUserName?: string | undefined } | undefined;
   ManageStorage: { storageStats?: StorageDetails } | undefined;
   MessageInfo: { message: ChatMessage };
   DeleteAccount: undefined;

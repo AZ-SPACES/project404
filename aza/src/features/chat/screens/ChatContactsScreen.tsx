@@ -663,12 +663,13 @@ export default function ChatContactsScreen() {
     (contact: Contact) => {
       const peerId = contact.contactUserId || contact.id;
       const chat = chatByPeer[peerId];
+      const payId = chat?.otherUserHandle || contact.handle || contact.phoneNumber || contact.email;
       navigation.navigate("ChatScreen", {
         id: peerId,
         name: contact.displayName,
         avatar: contact.profileImageUrl ?? "",
         online: isOnline(peerId),
-        payIdentifier: chat?.otherUserHandle || contact.handle || contact.phoneNumber || contact.email,
+        ...(payId ? { payIdentifier: payId } : {}),
       });
     },
     [navigation, isOnline, chatByPeer],
@@ -754,12 +755,13 @@ export default function ChatContactsScreen() {
             toggleSelect(peerId);
             return;
           }
+          const payId = chat?.otherUserHandle || item.handle || item.phoneNumber || item.email;
           navigation.navigate("ChatScreen", {
             id: peerId,
             name: item.displayName,
             avatar: item.profileImageUrl ?? "",
             online,
-            payIdentifier: chat?.otherUserHandle || item.handle || item.phoneNumber || item.email,
+            ...(payId ? { payIdentifier: payId } : {}),
           });
         }}
         onLongPress={(e) => {

@@ -162,7 +162,7 @@ export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) 
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {codes.map((c) => (
+          {codes.map((c: any) => (
             <View
               key={c.id}
               style={{

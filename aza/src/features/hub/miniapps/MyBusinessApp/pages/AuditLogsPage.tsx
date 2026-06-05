@@ -35,7 +35,7 @@ export default function AuditLogsPage({ goBack, Colors, styles }: NavProps) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {logs.map((log, i) => (
+          {logs.map((log: any, i: number) => (
             <View key={log.id ?? i} style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
               <View style={{ alignItems: 'center', gap: 4 }}>
                 <View style={{
