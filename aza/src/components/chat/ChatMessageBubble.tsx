@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle, Animated, Modal, Dimensions, ScrollView, Platform, GestureResponderEvent } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle, Animated, Modal, Dimensions, ScrollView, Platform, GestureResponderEvent, Alert } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -27,6 +27,7 @@ type ChatMessageBubbleProps = {
   isSelected?: boolean | undefined;
   isSelectMode?: boolean | undefined;
   onSelectToggle?: (() => void) | undefined;
+  onViewOnce?: ((messageId: string) => void) | undefined;
 };
 
 // ----------------------------------------------------------------------------
@@ -205,6 +206,25 @@ function ReactionBar({ messageId, isMe }: { messageId: string; isMe: boolean }) 
         />
       ))}
     </View>
+  );
+}
+
+// Tappable wrapper around ReactionBar — shows an Alert with emoji + "You" entries
+function ReactionBarTappable({ messageId, isMe }: { messageId: string; isMe: boolean }) {
+  const reactions = useReactionStore((s) => s.reactions[messageId] ?? EMPTY_REACTIONS);
+
+  const handlePress = useCallback(() => {
+    if (reactions.length === 0) return;
+    const lines = reactions.map((r) => `${r.emoji}  You`).join('\n');
+    Alert.alert('Reactions', lines);
+  }, [reactions]);
+
+  if (reactions.length === 0) return null;
+
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+      <ReactionBar messageId={messageId} isMe={isMe} />
+    </TouchableOpacity>
   );
 }
 
@@ -445,6 +465,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   isSelected,
   isSelectMode,
   onSelectToggle,
+  onViewOnce,
 }: ChatMessageBubbleProps) {
   const { colors: Colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
@@ -669,9 +690,34 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
       >
         {(isImageType && message.uri) || gifData ? (
+          message.viewOnce && message.viewOnceSeen ? (
+            // View-once already opened — show placeholder
+            <View
+              style={[
+                styles.imageBubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther,
+                isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                !isMe && { backgroundColor: receivedBubbleBg },
+                styles.viewOncePlaceholder,
+                { backgroundColor: isDark ? Colors.surface : '#F3F4F6' },
+                groupedBubbleStyle,
+              ]}
+            >
+              <Feather name="eye-off" size={20} color={Colors.textSecondary} />
+              <Text style={[styles.viewOncePlaceholderText, { color: Colors.textSecondary }]}>Opened</Text>
+              {metaRow}
+            </View>
+          ) : (
           <TouchableOpacity
             activeOpacity={0.95}
-            onPress={() => isSelectMode ? onSelectToggle?.() : onImagePress?.((gifData?.url ?? message.uri)!)}
+            onPress={() => {
+              if (isSelectMode) { onSelectToggle?.(); return; }
+              if (message.viewOnce && !message.viewOnceSeen && message.sender !== 'me') {
+                onViewOnce?.(message.id);
+                return;
+              }
+              onImagePress?.((gifData?.url ?? message.uri)!);
+            }}
             onLongPress={onLongPress}
             delayLongPress={250}
             style={[
@@ -691,6 +737,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               resizeMode="cover"
               accessibilityLabel={gifData ? 'GIF' : 'Sent image'}
             />
+            {message.viewOnce && !message.viewOnceSeen && message.sender !== 'me' && (
+              <View style={styles.viewOnceBanner}>
+                <Feather name="eye" size={14} color="#fff" />
+                <Text style={styles.viewOnceBannerText}>View once</Text>
+              </View>
+            )}
             {hasCaption ? (
               <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingBottom: 6 }}>
                 <Text style={[styles.text, isMe ? styles.textMe : styles.textOther]}>{message.caption}</Text>
@@ -700,6 +752,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               <View style={styles.imageOverlay}>{metaRow}</View>
             )}
           </TouchableOpacity>
+          )
         ) : message.type === 'video' && message.uri ? (
           <TouchableOpacity
             activeOpacity={0.9}
@@ -1050,7 +1103,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       </TouchableOpacity>
 
       {/* Reactions rendered outside the TouchableOpacity so they don't trigger long-press */}
-      <ReactionBar messageId={message.id} isMe={isMe} />
+      <ReactionBarTappable messageId={message.id} isMe={isMe} />
     </Animated.View>
   );
 });
@@ -1347,6 +1400,40 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
     selectCircleMe: { right: 10 },
     selectCircleOther: { left: 10 },
     selectCircleActive: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+    // View-once
+    viewOncePlaceholder: {
+      width: 160,
+      height: 160,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingBottom: 8,
+    },
+    viewOncePlaceholderText: {
+      ...Typography.caption,
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    viewOnceBanner: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      paddingVertical: 8,
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+    },
+    viewOnceBannerText: {
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: '600',
+    },
     // Call bubble
     callCard: {
       flexDirection: 'row',

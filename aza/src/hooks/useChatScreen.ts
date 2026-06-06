@@ -381,6 +381,20 @@ export function useChatScreen() {
     sendText(text).catch(() => {});
   }, [quickReply, navigation, sendText]);
 
+  // Listen for broadcast_send events — send the text if this chat's peer is in the contactIds list
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      'broadcast_send',
+      (payload: { contactIds: string[]; text: string }) => {
+        if (!payload?.contactIds || !payload?.text) return;
+        if (payload.contactIds.includes(id)) {
+          sendText(payload.text).catch(() => {});
+        }
+      },
+    );
+    return () => sub.remove();
+  }, [id, sendText]);
+
   useEffect(() => {
     if (!chatId) return;
     const interval = setInterval(() => {
@@ -888,6 +902,12 @@ export function useChatScreen() {
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
   ], [effectiveMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, handleExportChat, disappearingTtl, handleDisappearingTimer, isChatLockedInStore, handleToggleChatLock]);
 
+  const handleViewOnce = useCallback((messageId: string) => {
+    setLocalOnlyMessages(prev =>
+      prev.map(m => m.id === messageId ? { ...m, viewOnceSeen: true } : m)
+    );
+  }, []);
+
   const handleEditSubmit = useCallback(() => {
     if (!editingMessage || !editText.trim()) { setEditingMessage(null); return; }
     const updated: Message = { ...editingMessage, text: editText.trim(), isEdited: true };
@@ -1008,6 +1028,7 @@ export function useChatScreen() {
     handleToggleMute, handleOpenSearch,
     handleSwipeToReply, handleCancelReply,
     handleSend, handleMessageChange, handleSendAudio,
+    handleViewOnce,
     handleForwardAction,
     handlePickPhoto, handleOpenCamera, handleShareLocation,
     handleShareContact, handleCreatePoll, handleSendSticker,

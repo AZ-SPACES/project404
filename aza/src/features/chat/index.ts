@@ -11,3 +11,5 @@ export { default as ManageStorageScreen } from './screens/ManageStorageScreen';
 export { default as MessageInfoScreen } from './screens/MessageInfoScreen';
 export { default as IncomingCallScreen } from './screens/IncomingCallScreen';
 export { default as ChatThemeScreen } from './screens/ChatThemeScreen';
+export { default as BroadcastScreen } from './screens/BroadcastScreen';
+export { default as SavedMessagesScreen } from './screens/SavedMessagesScreen';

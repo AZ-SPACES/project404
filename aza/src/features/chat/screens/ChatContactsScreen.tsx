@@ -17,15 +17,7 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import Reanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-  interpolate,
-  Extrapolation,
-} from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@react-native-vector-icons/feather";
 import { useNavigation } from "@react-navigation/native";
@@ -37,6 +29,7 @@ import { usePresenceStore } from "../../../store/presenceStore";
 import { usePinnedStore } from "../../../store/pinnedChatsStore";
 import { useChatFiltersStore } from "../../../store/chatFiltersStore";
 import { useDraftStore } from "../../../store/draftStore";
+import { useSavedMessagesStore } from "../../../store/savedMessagesStore";
 import { Contact } from "../../../features/contacts/types";
 import { ChatMoreModal } from "../../../components/chat/ChatMoreModal";
 import type { MoreAction, MenuAnchor } from "../../../components/chat/chatTypes";
@@ -105,103 +98,101 @@ function StatusTicks({ status, color }: { status: MessageStatus; color: string }
 
 // ─── Swipeable row ────────────────────────────────────────────────────────────
 
-const SWIPE_THRESHOLD = 80;
-const REVEAL = 90;
-
 type SwipeableRowProps = {
-  onSwipeLeft: (() => void) | undefined;   // archive
-  onSwipeRight: (() => void) | undefined;  // mark as read
+  onArchive: (() => void) | undefined;
+  onDelete: (() => void) | undefined;
+  onPin: (() => void) | undefined;
   children: React.ReactNode;
 };
 
 const SwipeableRow = memo(function SwipeableRow({
-  onSwipeLeft,
-  onSwipeRight,
+  onArchive,
+  onDelete,
+  onPin,
   children,
 }: SwipeableRowProps) {
-  const translateX = useSharedValue(0);
-  const enabled = !!(onSwipeLeft || onSwipeRight);
+  const renderRightActions = () => {
+    if (!onArchive && !onDelete) return null;
+    return (
+      <View style={{ flexDirection: "row", alignItems: "stretch" }}>
+        {onArchive && (
+          <TouchableOpacity
+            style={swipeActionStyles.archiveAction}
+            onPress={onArchive}
+            activeOpacity={0.85}
+          >
+            <Feather name="archive" size={22} color="#fff" />
+            <Text style={swipeActionStyles.actionLabel}>Archive</Text>
+          </TouchableOpacity>
+        )}
+        {onDelete && (
+          <TouchableOpacity
+            style={swipeActionStyles.deleteAction}
+            onPress={onDelete}
+            activeOpacity={0.85}
+          >
+            <Feather name="trash-2" size={22} color="#fff" />
+            <Text style={swipeActionStyles.actionLabel}>Delete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
-  const pan = Gesture.Pan()
-    .enabled(enabled)
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-15, 15])
-    .onUpdate((e) => {
-      translateX.value = Math.max(
-        onSwipeLeft ? -REVEAL : 0,
-        Math.min(onSwipeRight ? REVEAL : 0, e.translationX),
-      );
-    })
-    .onEnd((e) => {
-      if (e.translationX < -SWIPE_THRESHOLD && onSwipeLeft) {
-        runOnJS(onSwipeLeft)();
-      } else if (e.translationX > SWIPE_THRESHOLD && onSwipeRight) {
-        runOnJS(onSwipeRight)();
-      }
-      translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
-    });
-
-  const rowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  const rightBgStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [-REVEAL, -SWIPE_THRESHOLD * 0.5, 0],
-      [1, 0.5, 0],
-      Extrapolation.CLAMP,
-    ),
-  }));
-
-  const leftBgStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [0, SWIPE_THRESHOLD * 0.5, REVEAL],
-      [0, 0.5, 1],
-      Extrapolation.CLAMP,
-    ),
-  }));
+  const renderLeftActions = () => {
+    if (!onPin) return null;
+    return (
+      <TouchableOpacity
+        style={swipeActionStyles.pinAction}
+        onPress={onPin}
+        activeOpacity={0.85}
+      >
+        <Feather name="bookmark" size={22} color="#fff" />
+        <Text style={swipeActionStyles.actionLabel}>Pin</Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={{ overflow: "hidden" }}>
-      {onSwipeLeft && (
-        <Reanimated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: "#F59E0B",
-              alignItems: "flex-end",
-              justifyContent: "center",
-              paddingRight: 22,
-            },
-            rightBgStyle,
-          ]}
-        >
-          <Feather name="archive" size={22} color="#fff" />
-        </Reanimated.View>
-      )}
-      {onSwipeRight && (
-        <Reanimated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: "#3B82F6",
-              alignItems: "flex-start",
-              justifyContent: "center",
-              paddingLeft: 22,
-            },
-            leftBgStyle,
-          ]}
-        >
-          <Feather name="check-circle" size={22} color="#fff" />
-        </Reanimated.View>
-      )}
-      <GestureDetector gesture={pan}>
-        <Reanimated.View style={rowStyle}>{children}</Reanimated.View>
-      </GestureDetector>
-    </View>
+    <Swipeable
+      renderRightActions={renderRightActions}
+      renderLeftActions={renderLeftActions}
+      friction={2}
+      overshootRight={false}
+      overshootLeft={false}
+    >
+      {children}
+    </Swipeable>
   );
+});
+
+const swipeActionStyles = StyleSheet.create({
+  archiveAction: {
+    width: 80,
+    backgroundColor: "#F59E0B",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  deleteAction: {
+    width: 80,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  pinAction: {
+    width: 80,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  actionLabel: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
 });
 
 // ─── Pinned section ───────────────────────────────────────────────────────────
@@ -291,6 +282,7 @@ export default function ChatContactsScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const [activeFilter, setActiveFilter] = useState("All");
+
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchAnim = React.useRef(new Animated.Value(0)).current;
@@ -334,6 +326,7 @@ export default function ChatContactsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const getDraft = useDraftStore(s => s.getDraft);
   const drafts = useDraftStore(s => s.drafts);
+  const savedMessages = useSavedMessagesStore((s) => s.messages);
 
   useEffect(() => {
     fetchContacts();
@@ -485,6 +478,13 @@ export default function ChatContactsScreen() {
           return bU - aU;
         });
       return applySearch(withUnread);
+    }
+
+    if (activeFilter === "Muted") {
+      return applySearch(contacts.filter((c) => {
+        const chat = chatByPeer[c.contactUserId || c.id];
+        return chat?.isMuted === true && !chat.isArchived;
+      }));
     }
 
     if (activeFilter === "Recent") {
@@ -690,7 +690,7 @@ export default function ChatContactsScreen() {
     }
   }, [selectedIds, chatByPeer, muteChat, exitSelectMode]);
 
-  const BUILTIN_FILTERS = ["All", "Favorites", "Recent", "Unread", "Archived"];
+  const BUILTIN_FILTERS = ["All", "Favorites", "Recent", "Unread", "Muted", "Archived"];
 
   type FilterItem =
     | { type: "builtin"; id: string; label: string }
@@ -900,18 +900,40 @@ export default function ChatContactsScreen() {
 
     if (selectMode) return row;
 
+    const handleDelete = chat
+      ? () => {
+          Alert.alert(
+            "Delete Chat",
+            `Delete your conversation with ${item.displayName}? This cannot be undone.`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => clearChatMessages(chat.id),
+              },
+            ],
+          );
+        }
+      : undefined;
+
+    const handlePin = () => {
+      if (isPinned(peerId)) {
+        unpin(peerId);
+      } else {
+        pin(peerId);
+      }
+    };
+
     return (
       <SwipeableRow
-        onSwipeLeft={
+        onArchive={
           chat && !chat.isArchived
             ? () => archiveChat(chat.id, true).catch(() => {})
             : undefined
         }
-        onSwipeRight={
-          chat && chat.unreadCount > 0
-            ? () => markRead(chat.id).catch(() => {})
-            : undefined
-        }
+        onDelete={handleDelete}
+        onPin={handlePin}
       >
         {row}
       </SwipeableRow>
@@ -958,6 +980,13 @@ export default function ChatContactsScreen() {
                 onPress={toggleSearch}
               >
                 <Feather name="search" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconButton}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate("BroadcastScreen", {})}
+              >
+                <Feather name="radio" size={20} color={Colors.textPrimary} />
               </TouchableOpacity>
               <TouchableOpacity
                 ref={moreButtonRef}
@@ -1055,6 +1084,28 @@ export default function ChatContactsScreen() {
             styles.contactsListContent,
             filteredContacts.length === 0 && styles.contactsListEmpty,
           ]}
+          ListHeaderComponent={
+            !selectMode ? (
+              <TouchableOpacity
+                style={styles.savedMessagesRow}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("SavedMessagesScreen")}
+              >
+                <View style={styles.savedMessagesAvatarWrap}>
+                  <Feather name="bookmark" size={24} color={Colors.secondary} />
+                </View>
+                <View style={styles.savedMessagesInfo}>
+                  <Text style={styles.savedMessagesName}>Saved Messages</Text>
+                  <Text style={styles.savedMessagesSubtitle} numberOfLines={1}>
+                    {(() => {
+                      const last = (savedMessages ?? [])[savedMessages?.length ? savedMessages.length - 1 : 0];
+                      return last ? (last.text || "Media message") : "Tap to save messages, links...";
+                    })()}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="users" size={52} color={Colors.textSecondary} />
@@ -1069,6 +1120,8 @@ export default function ChatContactsScreen() {
                   ? "No recent chats"
                   : activeFilter === "Unread"
                   ? "All caught up"
+                  : activeFilter === "Muted"
+                  ? "No muted chats"
                   : searchQuery.trim()
                   ? "No results found"
                   : "No contacts yet"}
@@ -1084,6 +1137,8 @@ export default function ChatContactsScreen() {
                   ? "Start a conversation to see it here."
                   : activeFilter === "Unread"
                   ? "No unread conversations right now."
+                  : activeFilter === "Muted"
+                  ? "Mute a chat to silence it and find it here."
                   : searchQuery.trim()
                   ? `No contacts match "${searchQuery}".`
                   : "Add contacts from the Contacts tab to start chatting."}
@@ -1502,6 +1557,30 @@ function createStyles(Colors: ThemeColors) {
       fontWeight: "700",
       fontSize: 15,
     },
+
+    // ── Saved Messages row ──
+    savedMessagesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.sm,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "#F3F4F6",
+    },
+    savedMessagesAvatarWrap: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: Spacing.md,
+    },
+    savedMessagesInfo: { flex: 1 },
+    savedMessagesName: { fontWeight: "700", color: Colors.textPrimary, fontSize: 16, marginBottom: 2 },
+    savedMessagesSubtitle: { ...Typography.body, color: Colors.textSecondary },
 
     // ── FAB ──
     fab: {

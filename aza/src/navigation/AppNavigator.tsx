@@ -16,6 +16,7 @@ import {
   ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen,
   AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen,
   SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen,
+  BroadcastScreen, SavedMessagesScreen,
 } from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
@@ -241,6 +242,8 @@ export default function AppNavigator() {
       <Stack.Screen name="FinancialDashboard" component={FinancialDashboardScreen} />
       <Stack.Screen name="BudgetManagement" component={BudgetManagementScreen} />
       <Stack.Screen name="AiAssistant" component={AiAssistantScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BroadcastScreen" component={BroadcastScreen} />
+      <Stack.Screen name="SavedMessagesScreen" component={SavedMessagesScreen} />
     </Stack.Navigator>
   );
 }

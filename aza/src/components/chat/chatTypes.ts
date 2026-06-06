@@ -47,6 +47,14 @@ export interface Message {
   callMissed?: boolean | undefined;
   callDuration?: number | undefined;
   callType?: 'voice' | 'video' | undefined;
+  linkPreview?: {
+    url: string;
+    title?: string | undefined;
+    description?: string | undefined;
+    domain?: string | undefined;
+  } | undefined;
+  viewOnce?: boolean | undefined;
+  viewOnceSeen?: boolean | undefined;
 }
 
 export type CategoryStats = { size: number; messages: Message[] };

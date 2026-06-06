@@ -147,4 +147,6 @@ export type RootStackParamList = {
   QrLoginApproval: { challengeToken: string; siteType: string; siteName: string };
   GeoBlocked: undefined;
   MerchantCheckout: { sessionId: string };
+  BroadcastScreen: { preselected?: string[] };
+  SavedMessagesScreen: undefined;
 };
