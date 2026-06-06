@@ -1,5 +1,5 @@
-import React, { memo, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle } from 'react-native';
+import React, { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle, Animated, Modal, Dimensions, ScrollView, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -8,14 +8,19 @@ import { getDocIcon, formatBytes } from './chatTypes';
 import { useReactionStore, EmojiReaction } from '../../store/reactionStore';
 import { extractFirstUrl, fetchLinkPreview, LinkPreview } from '../../utils/linkPreview';
 
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+
 // ----------------------------------------------------------------------------
 // Props
 // ----------------------------------------------------------------------------
 type ChatMessageBubbleProps = {
   message: Message;
   onLongPress?: () => void;
+  onImagePress?: (uri: string) => void;
+  onPayPress?: (amount: number) => void;
   bubbleColor?: string | undefined;
   isLastInGroup?: boolean;
+  isNew?: boolean;
 };
 
 // ----------------------------------------------------------------------------
@@ -148,6 +153,51 @@ function ReactionBar({ messageId, isMe }: { messageId: string; isMe: boolean }) 
   );
 }
 
+// ----------------------------------------------------------------------------
+// Full-screen image viewer
+// ----------------------------------------------------------------------------
+export function FullScreenImageViewer({ uri, onClose }: { uri: string; onClose: () => void }) {
+  return (
+    <Modal visible animationType="fade" transparent onRequestClose={onClose}>
+      <View style={fsStyles.backdrop}>
+        <TouchableOpacity style={fsStyles.closeBtn} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Feather name="x" size={24} color="#fff" />
+        </TouchableOpacity>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={fsStyles.scrollContent}
+          maximumZoomScale={5}
+          minimumZoomScale={1}
+          bouncesZoom
+          centerContent
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+        >
+          <Image source={{ uri }} style={fsStyles.image} resizeMode="contain" />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+const fsStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)' },
+  closeBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 56 : 20,
+    right: 20,
+    zIndex: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  image: { width: SCREEN_W, height: SCREEN_H * 0.8 },
+});
+
 const rbStyles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3, paddingHorizontal: 4 },
   rowMe: { justifyContent: 'flex-end' },
@@ -223,6 +273,14 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
     }
   }, [status.didJustFinish, player]);
 
+  // Speed control: cycle 1× → 1.5× → 2× → 1×
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
+  const handleSpeedToggle = useCallback(() => {
+    const next: 1 | 1.5 | 2 = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+    setSpeed(next);
+    player.setPlaybackRate(next);
+  }, [speed, player]);
+
   const sentTailColor = bubbleColor || Colors.primary;
   const waveformBars = useMemo(() => generateWaveform(message.id), [message.id]);
 
@@ -290,6 +348,11 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
           <Text style={[styles.audioTime, isMe ? styles.textMe : styles.textOther]}>
             {formatDuration(isPlaying ? currentSecs : (message.duration ?? 0))}
           </Text>
+          <TouchableOpacity onPress={handleSpeedToggle} style={styles.speedBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <Text style={[styles.speedText, { color: isMe ? 'rgba(255,255,255,0.8)' : Colors.primary }]}>
+              {speed === 1 ? '1×' : speed === 1.5 ? '1.5×' : '2×'}
+            </Text>
+          </TouchableOpacity>
         </View>
         {metaRow}
       </View>
@@ -304,12 +367,43 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
 export const ChatMessageBubble = memo(function ChatMessageBubble({
   message,
   onLongPress,
+  onImagePress,
+  onPayPress,
   bubbleColor,
   isLastInGroup = true,
+  isNew = false,
 }: ChatMessageBubbleProps) {
   const { colors: Colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
   const isMe = message.sender === 'me';
+
+  // Spring-in animation for newly sent/received messages
+  const springAnim = useRef(new Animated.Value(isNew ? 0.7 : 1)).current;
+  const fadeAnim = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  useEffect(() => {
+    if (isNew) {
+      Animated.parallel([
+        Animated.spring(springAnim, { toValue: 1, friction: 7, tension: 140, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tap-to-see-full-timestamp
+  const [showFullTime, setShowFullTime] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handlePress = useCallback(() => {
+    setShowFullTime(true);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setShowFullTime(false), 2500);
+  }, []);
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+
+  const fullTimestamp = useMemo(() => {
+    const d = new Date(message.timestamp);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [message.timestamp]);
   const receivedBubbleBg = isDark ? Colors.surface : '#FFFFFF';
   const sentTailColor = bubbleColor || Colors.primary;
   const isImageType = message.type === 'image';
@@ -375,6 +469,11 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       {message.isStarred && (
         <Feather name="star" size={10} color={isMe ? 'rgba(255,255,255,0.8)' : '#F59E0B'} style={{ marginRight: 4 }} />
       )}
+      {message.isEdited && (
+        <Text style={[styles.editedLabel, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
+          edited ·{' '}
+        </Text>
+      )}
       {expiryLabel && (
         <View style={styles.expiryBadge}>
           <Feather name="clock" size={10} color={timerColor} />
@@ -382,7 +481,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         </View>
       )}
       <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
-        {message.time}
+        {showFullTime ? fullTimestamp : message.time}
       </Text>
       {statusIcon}
     </View>
@@ -415,15 +514,20 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   }, [message.type, message.text]);
 
   return (
-    <View style={styles.bubbleWrapper}>
+    <Animated.View style={[styles.bubbleWrapper, { opacity: fadeAnim, transform: [{ scale: springAnim }] }]}>
       <TouchableOpacity
+        onPress={handlePress}
         onLongPress={onLongPress}
         delayLongPress={250}
         activeOpacity={0.9}
         style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
       >
         {isImageType && message.uri ? (
-          <View
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => onImagePress?.(message.uri!)}
+            onLongPress={onLongPress}
+            delayLongPress={250}
             style={[
               styles.imageBubble,
               isMe ? styles.bubbleMe : styles.bubbleOther,
@@ -448,7 +552,38 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             ) : (
               <View style={styles.imageOverlay}>{metaRow}</View>
             )}
-          </View>
+          </TouchableOpacity>
+        ) : message.type === 'video' && message.uri ? (
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => onImagePress?.(message.uri!)}
+            onLongPress={onLongPress}
+            delayLongPress={250}
+            style={[
+              styles.imageBubble,
+              isMe ? styles.bubbleMe : styles.bubbleOther,
+              isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+              !isMe && { backgroundColor: receivedBubbleBg },
+              groupedBubbleStyle,
+            ]}
+          >
+            <Image
+              source={{ uri: message.thumbnailUri ?? message.uri }}
+              style={styles.imageContent}
+              resizeMode="cover"
+            />
+            <View style={styles.videoOverlay}>
+              <View style={styles.videoPlayBtn}>
+                <Feather name="play" size={22} color="#fff" style={{ marginLeft: 3 }} />
+              </View>
+              {!!message.duration && (
+                <Text style={styles.videoDuration}>
+                  {Math.floor(message.duration / 60)}:{String(Math.floor(message.duration % 60)).padStart(2, '0')}
+                </Text>
+              )}
+            </View>
+            <View style={styles.imageOverlay}>{metaRow}</View>
+          </TouchableOpacity>
         ) : message.type === 'document' ? (
           <>
             {!isMe && (
@@ -514,8 +649,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 : isMe ? 'Sent' : 'Received'}
             </Text>
             {!isMe && paymentData.mode === 'request' && paymentData.status === 'pending' && (
-              <TouchableOpacity style={styles.paymentPayBtn} activeOpacity={0.85}>
-                <Text style={styles.paymentPayBtnText}>Pay</Text>
+              <TouchableOpacity
+                style={styles.paymentPayBtn}
+                activeOpacity={0.85}
+                onPress={() => onPayPress?.(paymentData.amount)}
+              >
+                <Text style={styles.paymentPayBtnText}>Pay GH¢{paymentData.amount.toFixed(2)}</Text>
               </TouchableOpacity>
             )}
             {paymentData.status && paymentData.status !== 'pending' && (
@@ -560,7 +699,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
 
       {/* Reactions rendered outside the TouchableOpacity so they don't trigger long-press */}
       <ReactionBar messageId={message.id} isMe={isMe} />
-    </View>
+    </Animated.View>
   );
 });
 
@@ -689,6 +828,48 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
       flex: 1,
       borderRadius: 2,
       minHeight: 3,
+    },
+    speedBtn: {
+      paddingHorizontal: 4,
+      paddingVertical: 2,
+      borderRadius: 4,
+      backgroundColor: 'rgba(128,128,128,0.15)',
+    },
+    speedText: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: -0.3,
+    },
+    editedLabel: {
+      ...Typography.caption,
+      fontSize: 10,
+      fontStyle: 'italic',
+    },
+    // Video bubble overlay
+    videoOverlay: {
+      position: 'absolute',
+      top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    videoPlayBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    videoDuration: {
+      position: 'absolute',
+      bottom: 8,
+      right: 10,
+      color: '#fff',
+      fontSize: 12,
+      fontWeight: '600',
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
     audioTime: {
       ...Typography.caption,

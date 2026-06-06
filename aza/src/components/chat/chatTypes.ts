@@ -28,11 +28,13 @@ export interface Message {
   caption?: string;
   duration?: number;
   isStarred?: boolean;
+  isEdited?: boolean;
   expiresAt?: number | null;
   resolvedSize?: number;
   paymentAmount?: number;
   paymentMode?: 'send' | 'request';
   paymentStatus?: 'pending' | 'paid' | 'declined';
+  thumbnailUri?: string;
 }
 
 export type CategoryStats = { size: number; messages: Message[] };
