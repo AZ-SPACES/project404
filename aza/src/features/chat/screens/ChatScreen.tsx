@@ -25,6 +25,8 @@ import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModa
 import { GifPickerModal } from '../../../components/chat/GifPickerModal';
 import { ContactPickerSheet } from '../../../components/chat/ContactPickerSheet';
 import { PollCreatorSheet } from '../../../components/chat/PollCreatorSheet';
+import { StickerPickerModal } from '../../../components/chat/StickerPickerModal';
+import * as Notifications from 'expo-notifications';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
 import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
@@ -155,11 +157,20 @@ export default function ChatScreen() {
   const chatBubbleColor = chatId ? getBubbleColor(chatId) : '';
   const chatWallpaper   = chatId ? getWallpaper(chatId)   : null;
 
-  // Pinned messages
+  // Pinned messages (up to 3)
   const pinMessage    = usePinnedMessageStore(s => s.pin);
   const unpinMessage  = usePinnedMessageStore(s => s.unpin);
+  const unpinAll      = usePinnedMessageStore(s => s.unpinAll);
+  const isPinned      = usePinnedMessageStore(s => s.isPinned);
   const getPinned     = usePinnedMessageStore(s => s.getPinned);
-  const pinnedMessage = chatId ? getPinned(chatId) : null;
+  const pinnedMessages = chatId ? getPinned(chatId) : [];
+  const [pinnedIndex, setPinnedIndex] = useState(0);
+  // Keep pinnedIndex in bounds when pins change
+  useEffect(() => {
+    if (pinnedMessages.length === 0) setPinnedIndex(0);
+    else if (pinnedIndex >= pinnedMessages.length) setPinnedIndex(pinnedMessages.length - 1);
+  }, [pinnedMessages.length]);
+  const pinnedMessage = pinnedMessages[pinnedIndex] ?? null;
 
   // Reactions
   const addReaction = useReactionStore(s => s.addReaction);
@@ -188,6 +199,9 @@ export default function ChatScreen() {
 
   // Poll creator
   const [showPollCreator, setShowPollCreator] = useState(false);
+
+  // Sticker picker
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
 
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -265,6 +279,13 @@ export default function ChatScreen() {
                 longitude: p.lng as number,
                 ...(typeof p.name === 'string' ? { locationName: p.name } : {}),
               };
+            }
+          } catch {}
+        } else if (typeof text === 'string' && text.startsWith('{"__sticker":')) {
+          try {
+            const p = JSON.parse(text);
+            if (p.__sticker === true && typeof p.url === 'string') {
+              msg = { ...msg, type: 'image', uri: p.url };
             }
           } catch {}
         } else if (typeof text === 'string' && text.startsWith('{"__contact":')) {
@@ -827,6 +848,55 @@ export default function ChatScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }, [sendText]);
 
+  const handleSendSticker = useCallback((url: string) => {
+    sendText(JSON.stringify({ __sticker: true, url })).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, [sendText]);
+
+  const handleSetReminder = useCallback((msg: Message) => {
+    const preview = msg.text
+      ? msg.text.length > 40 ? msg.text.slice(0, 40) + '…' : msg.text
+      : 'Message';
+    const scheduleNotification = async (delaySecs: number) => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission required', 'Enable notifications to use reminders.');
+          return;
+        }
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `Reminder: ${name}`,
+            body: preview,
+            sound: true,
+            data: { chatId, userId: id },
+          },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: delaySecs, repeats: false },
+        });
+        setToastMessage('Reminder set');
+        setTimeout(() => setToastMessage(null), 3000);
+      } catch {
+        Alert.alert('Error', 'Could not set reminder. Please try again.');
+      }
+    };
+    Alert.alert(
+      'Remind me about this',
+      `"${preview}"`,
+      [
+        { text: 'In 30 minutes', onPress: () => scheduleNotification(30 * 60) },
+        { text: 'In 1 hour',     onPress: () => scheduleNotification(60 * 60) },
+        { text: 'In 3 hours',    onPress: () => scheduleNotification(3 * 60 * 60) },
+        { text: 'Tomorrow 9 AM', onPress: () => {
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          d.setHours(9, 0, 0, 0);
+          scheduleNotification(Math.max(60, Math.floor((d.getTime() - Date.now()) / 1000)));
+        }},
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, [name, chatId, id]);
+
   const handleScheduleSend = useCallback((delaySecs: number) => {
     const text = message.trim();
     if (!text || !chatId) return;
@@ -937,6 +1007,16 @@ export default function ChatScreen() {
     if (idx >= 0) flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
   }, [pinnedMessage, filteredMessages]);
 
+  const handlePinnedNext = useCallback(() => {
+    if (pinnedMessages.length <= 1) return;
+    setPinnedIndex(i => (i + 1) % pinnedMessages.length);
+  }, [pinnedMessages.length]);
+
+  const handlePinnedPrev = useCallback(() => {
+    if (pinnedMessages.length <= 1) return;
+    setPinnedIndex(i => (i - 1 + pinnedMessages.length) % pinnedMessages.length);
+  }, [pinnedMessages.length]);
+
   // --------------------------------------------------------------------------
   // Message long-press actions
   // --------------------------------------------------------------------------
@@ -944,7 +1024,8 @@ export default function ChatScreen() {
     const isCurrentlyStarred = selectedMessage
       ? starredEntries.some(e => e.messageId === selectedMessage.id)
       : false;
-    const isPinned = selectedMessage && pinnedMessage?.id === selectedMessage.id;
+    const isCurrentlyPinned = selectedMessage && chatId ? isPinned(chatId, selectedMessage.id) : false;
+    const canPin = chatId && selectedMessage && (pinnedMessages.length < 3 || isCurrentlyPinned);
     const canEdit = selectedMessage?.sender === 'me' && selectedMessage?.type !== 'audio' && selectedMessage?.type !== 'image';
     return [
       { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
@@ -956,12 +1037,13 @@ export default function ChatScreen() {
         setEditText(selectedMessage.text ?? '');
         handleCloseMessageModal();
       }}] : []),
-      { icon: 'bookmark', label: isPinned ? 'Unpin' : 'Pin', onPress: () => {
+      ...(canPin ? [{ icon: 'bookmark', label: isCurrentlyPinned ? 'Unpin' : 'Pin', onPress: () => {
         if (!chatId || !selectedMessage) return;
-        if (isPinned) unpinMessage(chatId);
+        if (isCurrentlyPinned) unpinMessage(chatId, selectedMessage.id);
         else pinMessage(chatId, selectedMessage);
         handleCloseMessageModal();
-      }},
+      }}] : []),
+      { icon: 'bell', label: 'Remind me', onPress: () => { handleCloseMessageModal(); if (selectedMessage) handleSetReminder(selectedMessage); } },
       { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
       { icon: 'star', label: isCurrentlyStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
       { icon: 'check-square', label: 'Select', onPress: () => {
@@ -971,7 +1053,7 @@ export default function ChatScreen() {
       }},
       { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
     ];
-  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessage, pinMessage, unpinMessage, handleEnterSelectMode]);
+  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessages.length, pinMessage, unpinMessage, isPinned, handleEnterSelectMode, handleSetReminder]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
@@ -1002,12 +1084,13 @@ export default function ChatScreen() {
             <View style={styles.unreadLine} />
           </View>
         )}
-        <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
+        <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply} disabled={selectMode || undefined}>
           <ChatMessageBubble
             message={item}
-            onLongPress={() => selectMode ? handleSelectMessage(item) : handleSelectMessage(item)}
+            onLongPress={() => handleSelectMessage(item)}
             onImagePress={setFullScreenUri}
             onPayPress={(amount) => setPaymentSheet({ visible: true, mode: 'send', prefillAmount: amount })}
+            onStatusPress={item.sender === 'me' && item.status ? () => navigation.navigate('MessageInfo', { message: item }) : undefined}
             bubbleColor={chatBubbleColor || undefined}
             isLastInGroup={isLastInGroup}
             isNew={isNew}
@@ -1095,18 +1178,30 @@ export default function ChatScreen() {
       )}
 
       {/* Pinned message banner */}
-      {pinnedMessage && (
+      {pinnedMessages.length > 0 && pinnedMessage && (
         <TouchableOpacity style={styles.pinnedBanner} activeOpacity={0.8} onPress={handleScrollToPinned}>
           <Feather name="bookmark" size={14} color={Colors.primary} style={{ flexShrink: 0 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.pinnedLabel}>Pinned Message</Text>
+            <Text style={styles.pinnedLabel}>
+              {pinnedMessages.length > 1 ? `Pinned (${pinnedIndex + 1}/${pinnedMessages.length})` : 'Pinned Message'}
+            </Text>
             <Text style={styles.pinnedText} numberOfLines={1}>
               {pinnedMessage.text || pinnedMessage.caption || pinnedMessage.fileName || '📎 Media'}
             </Text>
           </View>
+          {pinnedMessages.length > 1 && (
+            <View style={{ flexDirection: 'row', gap: 2 }}>
+              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={handlePinnedPrev}>
+                <Feather name="chevron-up" size={14} color={Colors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} onPress={handlePinnedNext}>
+                <Feather name="chevron-down" size={14} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onPress={() => { if (chatId) unpinMessage(chatId); }}
+            onPress={() => { if (chatId && pinnedMessage) unpinMessage(chatId, pinnedMessage.id); }}
           >
             <Feather name="x" size={14} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -1308,6 +1403,10 @@ export default function ChatScreen() {
           handleCloseAttachment();
           setShowPollCreator(true);
         }}
+        onSticker={() => {
+          handleCloseAttachment();
+          setShowStickerPicker(true);
+        }}
       />
 
       <ChatMoreModal
@@ -1449,6 +1548,13 @@ export default function ChatScreen() {
           sendText(JSON.stringify({ __gif: true, url: gifUrl })).catch(() => {});
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         }}
+      />
+
+      {/* Sticker picker */}
+      <StickerPickerModal
+        visible={showStickerPicker}
+        onClose={() => setShowStickerPicker(false)}
+        onSelect={handleSendSticker}
       />
 
       {/* Contact picker */}

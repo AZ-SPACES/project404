@@ -19,6 +19,7 @@ type ChatMessageBubbleProps = {
   onLongPress?: () => void;
   onImagePress?: (uri: string) => void;
   onPayPress?: (amount: number) => void;
+  onStatusPress?: (() => void) | undefined;
   bubbleColor?: string | undefined;
   isLastInGroup?: boolean;
   isNew?: boolean;
@@ -423,6 +424,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   onLongPress,
   onImagePress,
   onPayPress,
+  onStatusPress,
   bubbleColor,
   isLastInGroup = true,
   isNew = false,
@@ -558,6 +560,16 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const overlayMeta = isImageType && !hasCaption;
 
   const timerColor = isMe ? 'rgba(255,255,255,0.75)' : '#9CA3AF';
+  const statusIconEl = statusIcon && onStatusPress ? (
+    <TouchableOpacity
+      onPress={onStatusPress}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      activeOpacity={0.6}
+    >
+      {statusIcon}
+    </TouchableOpacity>
+  ) : statusIcon;
+
   const metaRow = (
     <View style={[styles.metaContainer, overlayMeta && styles.metaContainerOverlay]}>
       {message.isStarred && (
@@ -577,7 +589,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
         {showFullTime ? fullTimestamp : message.time}
       </Text>
-      {statusIcon}
+      {statusIconEl}
     </View>
   );
 

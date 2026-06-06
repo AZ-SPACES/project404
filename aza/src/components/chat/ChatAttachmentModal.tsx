@@ -23,6 +23,7 @@ type ChatAttachmentModalProps = {
   onLocation?: () => void;
   onContact?: () => void;
   onPoll?: () => void;
+  onSticker?: () => void;
 };
 
 // ----------------------------------------------------------------------------
@@ -36,6 +37,7 @@ const EXTRA_TILES_ROW1 = [
 const EXTRA_TILES_ROW2 = [
   { icon: 'user', label: 'Contact', color: '#8B5CF6' },
   { icon: 'bar-chart-2', label: 'Poll', color: '#F59E0B' },
+  { icon: 'smile', label: 'Sticker', color: '#06B6D4' },
 ] as const;
 
 export const ChatAttachmentModal = memo(function ChatAttachmentModal({
@@ -52,6 +54,7 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
   onLocation,
   onContact,
   onPoll,
+  onSticker,
 }: ChatAttachmentModalProps) {
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
@@ -60,9 +63,9 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
 
   const handlers = useMemo(() => [onPhotos, onCamera, onDocument], [onPhotos, onCamera, onDocument]);
   const extraHandlers1 = useMemo(() => [onGif, onLocation], [onGif, onLocation]);
-  const extraHandlers2 = useMemo(() => [onContact, onPoll], [onContact, onPoll]);
+  const extraHandlers2 = useMemo(() => [onContact, onPoll, onSticker], [onContact, onPoll, onSticker]);
   const showRow1 = !!(onGif || onLocation);
-  const showRow2 = !!(onContact || onPoll);
+  const showRow2 = !!(onContact || onPoll || onSticker);
 
   const cardLeft = anchor
     ? Math.max(Spacing.lg, Math.min(anchor.left, screenWidth - CARD_WIDTH - Spacing.lg))
