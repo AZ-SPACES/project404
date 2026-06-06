@@ -61,6 +61,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { userToken, completeKYC } = useAuth();
   const prevTokenRef = useRef<string | null>(null);
 
+  // Register the chat quick-reply notification category once on mount.
+  // iOS: the server must set `category: 'CHAT_MESSAGE'` in the APNS payload.
+  // Android: expo-notifications surfaces the action button automatically.
+  useEffect(() => {
+    Notifications.setNotificationCategoryAsync('CHAT_MESSAGE', [
+      {
+        identifier: 'QUICK_REPLY',
+        buttonTitle: 'Reply',
+        textInput: { submitButtonTitle: 'Send', placeholder: 'Reply…' },
+        options: { opensAppToForeground: false },
+      },
+    ]).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let subscription: Notifications.Subscription | undefined;
     let responseSubscription: Notifications.Subscription | undefined;
@@ -119,6 +133,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as Record<string, unknown> | undefined;
         const type = data?.type as string | undefined;
+
+        // Handle quick-reply action without opening the app
+        if ((response as any).actionIdentifier === 'QUICK_REPLY') {
+          const replyText = (response as any).userText as string | undefined;
+          if (replyText?.trim() && data?.senderId) {
+            navigate('App', {
+              screen: 'ChatScreen',
+              params: {
+                id: data.senderId as string,
+                name: (data.senderName as string | undefined) ?? 'Unknown',
+                avatar: (data.senderAvatar as string | undefined) ?? '',
+                online: false,
+                quickReply: replyText.trim(),
+              },
+            });
+          }
+          return;
+        }
 
         if (type === 'KYC_APPROVED') {
           completeKYC();

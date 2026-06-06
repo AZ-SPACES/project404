@@ -39,6 +39,7 @@ import { RootStackParamList } from "../../../navigation/types";
 
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
+import { usePresenceStore } from "../../../store/presenceStore";
 
 import { Contact as BackendContact } from "../types";
 import { CloseButton } from '../../../components/ui/CloseButton';
@@ -107,6 +108,9 @@ export default function ContactsScreen() {
     });
   }, [backendContacts]);
 
+  // Presence store — subscribe to the full Set so we re-render when any status changes
+  const onlineUserIds = usePresenceStore((s) => s.onlineUserIds);
+
   // Map backend contacts to UI Recipients
   const contactsList: Recipient[] = uniqueContacts.map(c => ({
     id: c.id,
@@ -117,7 +121,8 @@ export default function ContactsScreen() {
     isOnAza: c.isAzaUser,
     isFavorite: c.isFavorite,
     phoneNumber: c.phoneNumber,
-    email: c.email
+    email: c.email,
+    userId: c.contactUserId ?? c.id
   }));
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -265,6 +270,7 @@ export default function ContactsScreen() {
       );
     }
 
+    const isOnline = onlineUserIds.has(item.userId ?? item.id);
     return (
       <TouchableOpacity
         style={styles.row}
@@ -282,40 +288,45 @@ export default function ContactsScreen() {
               />
             </View>
           )}
+          {isOnline && <View style={styles.onlineDot} />}
         </View>
         <View style={styles.rowInfo}>
           <View style={styles.nameRow}>
             <Text style={[Typography.bodyLg, styles.rowName]}>{item.name}</Text>
           </View>
           <Text style={[Typography.body, styles.rowUsername]}>
-            {item.username}
+            {isOnline ? 'Online' : item.username}
           </Text>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderFavorite = ({ item }: { item: Recipient }) => (
-    <TouchableOpacity
-      style={styles.favoriteItem}
-      activeOpacity={0.8}
-      onPress={() => openSheet(item)}
-    >
-      <View style={styles.favoriteAvatarContainer}>
-        <Image source={{ uri: item.avatar }} style={styles.favoriteAvatar} />
-        <View style={styles.favoriteBadge}>
-          <Image
-            source={AZA_ICON}
-            style={{ width: 12, height: 12, tintColor: "#FFFFFF" }}
-            resizeMode="contain"
-          />
+  const renderFavorite = ({ item }: { item: Recipient }) => {
+    const isOnline = onlineUserIds.has(item.userId ?? item.id);
+    return (
+      <TouchableOpacity
+        style={styles.favoriteItem}
+        activeOpacity={0.8}
+        onPress={() => openSheet(item)}
+      >
+        <View style={styles.favoriteAvatarContainer}>
+          <Image source={{ uri: item.avatar }} style={styles.favoriteAvatar} />
+          <View style={styles.favoriteBadge}>
+            <Image
+              source={AZA_ICON}
+              style={{ width: 12, height: 12, tintColor: "#FFFFFF" }}
+              resizeMode="contain"
+            />
+          </View>
+          {isOnline && <View style={styles.favoriteOnlineDot} />}
         </View>
-      </View>
-      <Text style={styles.favoriteName} numberOfLines={1}>
-        {item.name.split(" ")[0]}
-      </Text>
-    </TouchableOpacity>
-  );
+        <Text style={styles.favoriteName} numberOfLines={1}>
+          {item.name.split(" ")[0]}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <>
@@ -973,6 +984,17 @@ function createStyles(Colors: ThemeColors) {
       alignItems: "center",
       justifyContent: "center",
     },
+    onlineDot: {
+      position: 'absolute',
+      top: -1,
+      right: -1,
+      width: 11,
+      height: 11,
+      borderRadius: 6,
+      backgroundColor: '#22C55E',
+      borderWidth: 2,
+      borderColor: Colors.background,
+    },
     nameRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1020,6 +1042,17 @@ function createStyles(Colors: ThemeColors) {
       borderColor: Colors.background,
       alignItems: "center",
       justifyContent: "center",
+    },
+    favoriteOnlineDot: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: '#22C55E',
+      borderWidth: 2,
+      borderColor: Colors.background,
     },
     favoriteName: {
       ...Typography.caption,

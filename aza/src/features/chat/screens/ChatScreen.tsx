@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback, useEffect, } from 'react
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
-  Pressable, TextInput, DeviceEventEmitter,
+  Pressable, TextInput, DeviceEventEmitter, Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
@@ -42,6 +42,8 @@ import { usePresenceStore } from '../../../store/presenceStore';
 import { useStarredMessagesStore } from '../../../store/starredMessagesStore';
 import { useChatThemeStore } from '../../../store/chatThemeStore';
 import { useChatStore } from '../../../store/chatStore';
+import { usePinnedMessageStore } from '../../../store/pinnedMessageStore';
+import { useReactionStore } from '../../../store/reactionStore';
 import { uploadChatMedia, blockUser, notifyChatScreenshot } from '../../../services/api';
 import * as ScreenCapture from 'expo-screen-capture';
 
@@ -54,7 +56,7 @@ export default function ChatScreen() {
   const styles = useMemo(() => createScreenStyles(Colors, isDark), [Colors, isDark]);
   const route = useRoute<RouteProp<RootStackParamList, 'ChatScreen'>>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
-  const { id, name, avatar, payIdentifier } = route.params;
+  const { id, name, avatar, payIdentifier, quickReply } = route.params;
   const online = usePresenceStore((s) => s.isOnline(id));
 
   // `id` from the route is the OTHER user's UUID (set by ChatContactsScreen).
@@ -130,8 +132,9 @@ export default function ChatScreen() {
   }, [loadStarred]);
 
   // Chat theme
-  const loadTheme = useChatThemeStore(s => s.load);
+  const loadTheme    = useChatThemeStore(s => s.load);
   const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
+  const getWallpaper = useChatThemeStore(s => s.getWallpaper);
   const themeLoadedRef = React.useRef(false);
   useEffect(() => {
     if (!themeLoadedRef.current) {
@@ -140,6 +143,16 @@ export default function ChatScreen() {
     }
   }, [loadTheme]);
   const chatBubbleColor = chatId ? getBubbleColor(chatId) : '';
+  const chatWallpaper   = chatId ? getWallpaper(chatId)   : null;
+
+  // Pinned messages
+  const pinMessage    = usePinnedMessageStore(s => s.pin);
+  const unpinMessage  = usePinnedMessageStore(s => s.unpin);
+  const getPinned     = usePinnedMessageStore(s => s.getPinned);
+  const pinnedMessage = chatId ? getPinned(chatId) : null;
+
+  // Reactions
+  const addReaction = useReactionStore(s => s.addReaction);
 
   // Forward state
   const [showForwardModal, setShowForwardModal] = useState(false);
@@ -238,6 +251,15 @@ export default function ChatScreen() {
       if (forwardedMessage.text) sendText(forwardedMessage.text).catch(() => {});
     }
   }, [route.params?.forwardedMessage, navigation, sendText]);
+
+  // Auto-send a quick reply that arrived from the notification action handler
+  useEffect(() => {
+    if (!quickReply) return;
+    const text = quickReply.trim();
+    if (!text) return;
+    navigation.setParams({ quickReply: undefined } as any);
+    sendText(text).catch(() => {});
+  }, [quickReply, navigation, sendText]);
 
   const filteredMessages = useMemo(
     () =>
@@ -385,7 +407,6 @@ export default function ChatScreen() {
     };
     setLocalOnlyMessages(prev => [...prev, newLocal]);
     setReplyTo(null);
-    sendText('[Voice message]').catch(() => {});
   }, [sendText]);
 
   // --------------------------------------------------------------------------
@@ -566,6 +587,12 @@ export default function ChatScreen() {
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
   ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat]);
 
+  const handleScrollToPinned = useCallback(() => {
+    if (!pinnedMessage) return;
+    const idx = filteredMessages.findIndex(m => m.id === pinnedMessage.id);
+    if (idx >= 0) flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+  }, [pinnedMessage, filteredMessages]);
+
   // --------------------------------------------------------------------------
   // Message long-press actions
   // --------------------------------------------------------------------------
@@ -573,35 +600,51 @@ export default function ChatScreen() {
     const isCurrentlyStarred = selectedMessage
       ? starredEntries.some(e => e.messageId === selectedMessage.id)
       : false;
+    const isPinned = selectedMessage && pinnedMessage?.id === selectedMessage.id;
     return [
       { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
       { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
       { icon: 'copy', label: 'Copy', onPress: handleCopy },
+      { icon: 'bookmark', label: isPinned ? 'Unpin' : 'Pin', onPress: () => {
+        if (!chatId || !selectedMessage) return;
+        if (isPinned) unpinMessage(chatId);
+        else pinMessage(chatId, selectedMessage);
+        handleCloseMessageModal();
+      }},
       { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
       { icon: 'star', label: isCurrentlyStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
       { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
     ];
-  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation]);
+  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessage, pinMessage, unpinMessage]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
   // --------------------------------------------------------------------------
   const renderItem = useCallback(({ item, index }: { item: Message; index: number }) => {
     const prev = index > 0 ? filteredMessages[index - 1] : undefined;
+    const next = index < filteredMessages.length - 1 ? filteredMessages[index + 1] : undefined;
     const isFirstOfDay = index === 0 || !isSameDay(item.timestamp, prev?.timestamp ?? 0);
+    // Last in group when: different sender follows, day boundary follows, or it's the last message
+    const isLastInGroup = !next || next.sender !== item.sender || !isSameDay(item.timestamp, next.timestamp);
+    const groupSpacing = isLastInGroup ? undefined : { marginBottom: 1 };
     return (
-      <View>
+      <View style={groupSpacing}>
         {isFirstOfDay && (
           <View style={styles.dateHeaderContainer}>
             <Text style={styles.dateHeaderText}>{formatDateHeader(item.timestamp)}</Text>
           </View>
         )}
         <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
-          <ChatMessageBubble message={item} onLongPress={() => handleSelectMessage(item)} bubbleColor={chatBubbleColor || undefined} />
+          <ChatMessageBubble
+            message={item}
+            onLongPress={() => handleSelectMessage(item)}
+            bubbleColor={chatBubbleColor || undefined}
+            isLastInGroup={isLastInGroup}
+          />
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, handleSelectMessage, handleSwipeToReply]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, handleSelectMessage, handleSwipeToReply, chatBubbleColor]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
@@ -662,8 +705,33 @@ export default function ChatScreen() {
         </View>
       )}
 
+      {/* Pinned message banner */}
+      {pinnedMessage && (
+        <TouchableOpacity style={styles.pinnedBanner} activeOpacity={0.8} onPress={handleScrollToPinned}>
+          <Feather name="bookmark" size={14} color={Colors.primary} style={{ flexShrink: 0 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pinnedLabel}>Pinned Message</Text>
+            <Text style={styles.pinnedText} numberOfLines={1}>
+              {pinnedMessage.text || pinnedMessage.caption || pinnedMessage.fileName || '📎 Media'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => { if (chatId) unpinMessage(chatId); }}
+          >
+            <Feather name="x" size={14} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView style={styles.keyboardAvoidingView} behavior="padding">
+        <KeyboardAvoidingView
+          style={[styles.keyboardAvoidingView, chatWallpaper?.type === 'solid' && { backgroundColor: chatWallpaper.value }]}
+          behavior="padding"
+        >
+          {chatWallpaper?.type === 'image' && !!chatWallpaper.value && (
+            <Image source={{ uri: chatWallpaper.value }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          )}
           <FlatList
             ref={flatListRef}
             data={filteredMessages}
@@ -677,19 +745,26 @@ export default function ChatScreen() {
             windowSize={10}
             removeClippedSubviews
           />
-          <ChatInputArea
-            message={message}
-            setMessage={handleMessageChange}
-            onSend={handleSend}
-            isAddOpen={showAttachment}
-            onAddPress={handleAddPress}
-            replyTo={replyTo}
-            onCancelReply={handleCancelReply}
-            onSendAudio={handleSendAudio}
-          />
+          <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
+            <ChatInputArea
+              message={message}
+              setMessage={handleMessageChange}
+              onSend={handleSend}
+              isAddOpen={showAttachment}
+              onAddPress={handleAddPress}
+              replyTo={replyTo}
+              onCancelReply={handleCancelReply}
+              onSendAudio={handleSendAudio}
+            />
+          </View>
         </KeyboardAvoidingView>
       ) : (
-        <View style={styles.keyboardAvoidingView}>
+        <View
+          style={[styles.keyboardAvoidingView, chatWallpaper?.type === 'solid' && { backgroundColor: chatWallpaper.value }]}
+        >
+          {chatWallpaper?.type === 'image' && !!chatWallpaper.value && (
+            <Image source={{ uri: chatWallpaper.value }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          )}
           <FlatList
             ref={flatListRef}
             data={filteredMessages}
@@ -703,15 +778,17 @@ export default function ChatScreen() {
             windowSize={10}
             removeClippedSubviews
           />
-          <ChatInputArea
-            message={message}
-            setMessage={handleMessageChange}
-            onSend={handleSend}
-            isAddOpen={showAttachment}
-            onAddPress={handleAddPress}
-            replyTo={replyTo}
-            onCancelReply={handleCancelReply}
-          />
+          <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
+            <ChatInputArea
+              message={message}
+              setMessage={handleMessageChange}
+              onSend={handleSend}
+              isAddOpen={showAttachment}
+              onAddPress={handleAddPress}
+              replyTo={replyTo}
+              onCancelReply={handleCancelReply}
+            />
+          </View>
         </View>
       )}
 
@@ -761,6 +838,22 @@ export default function ChatScreen() {
           <View style={styles.modalContent} pointerEvents="box-none">
             <View style={{ width: '100%', paddingHorizontal: Spacing.lg }}>
               <ChatMessageBubble message={selectedMessage} bubbleColor={chatBubbleColor || undefined} />
+            </View>
+            {/* Emoji reaction picker */}
+            <View style={styles.reactionPicker}>
+              {['👍','❤️','😂','😮','😢','🙏'].map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={styles.reactionPickerBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    addReaction(selectedMessage.id, emoji);
+                    handleCloseMessageModal();
+                  }}
+                >
+                  <Text style={styles.reactionPickerEmoji}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
             <View style={styles.actionMenu}>
               {messageActions.map((action) => (
@@ -847,11 +940,14 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     container: { flex: 1 },
     keyboardAvoidingView: { flex: 1 },
+    inputBarWithWallpaper: {
+      backgroundColor: isDark ? Colors.background + 'F0' : Colors.background + 'F0',
+    },
     messagesList: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.lg,
+      paddingHorizontal: Spacing.sm,
+      paddingTop: Spacing.md,
       paddingBottom: Spacing.xl,
-      gap: Spacing.md,
+      gap: 4,
     },
     dateHeaderContainer: { alignItems: 'center', marginVertical: Spacing.sm },
     dateHeaderText: {
@@ -952,4 +1048,54 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       color: '#fff',
       fontWeight: '500',
     },
+    // Pinned message banner
+    pinnedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+      backgroundColor: isDark ? 'rgba(23,71,23,0.15)' : 'rgba(23,71,23,0.07)',
+      borderLeftWidth: 3,
+      borderLeftColor: Colors.primary,
+      borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
+    },
+    pinnedLabel: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontWeight: '700',
+      color: Colors.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    pinnedText: {
+      ...Typography.body,
+      fontSize: 13,
+      color: Colors.textPrimary,
+    },
+    // Emoji reaction picker row in long-press modal
+    reactionPicker: {
+      flexDirection: 'row',
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderRadius: Radius.full,
+      paddingVertical: 8,
+      paddingHorizontal: Spacing.sm,
+      marginTop: Spacing.lg,
+      gap: 4,
+      elevation: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+    },
+    reactionPickerBtn: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 20,
+    },
+    reactionPickerEmoji: { fontSize: 22 },
   });

@@ -12,10 +12,10 @@ import {
   HelpAndSupportScreen,
   HelpTopicScreen,
 } from '../features/customercare';
-import { 
-  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, 
-  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen, 
-  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen 
+import {
+  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen,
+  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen,
+  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen,
 } from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
@@ -216,6 +216,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
       <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
       <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
+      <Stack.Screen name="ChatThemeScreen" component={ChatThemeScreen} />
       <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
