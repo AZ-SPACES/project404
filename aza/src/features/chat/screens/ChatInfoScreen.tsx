@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import * as MediaLibrary from 'expo-media-library';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -29,6 +30,7 @@ import { useChatThemeStore } from "../../../store/chatThemeStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
 import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { useMediaAutoSaveStore } from '../../../store/mediaAutoSaveStore';
 
 // ─── Types ──────────────────────────────────────────────────────────
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
@@ -222,6 +224,9 @@ export default function ChatInfoScreen() {
   const [archivePending, setArchivePending] = useState(false);
   const [blockPending, setBlockPending] = useState(false);
 
+  const autoSaveEnabled = useMediaAutoSaveStore(s => chatIdParam ? s.isEnabled(chatIdParam) : false);
+  const setAutoSave = useMediaAutoSaveStore(s => s.setEnabled);
+
   // ── E2EE verification ─────────────────────────────────────────────
   const { computeSafetyNumber, identity } = useE2EE();
 
@@ -339,6 +344,18 @@ export default function ChatInfoScreen() {
     }
   }, [chatIdParam, storeSetDisappearingTtl, chat?.disappearingTtlSeconds]);
 
+  const handleSaveProfilePhoto = useCallback(async () => {
+    if (!avatar) { Alert.alert("No photo", "This contact has no profile photo."); return; }
+    const perm = await MediaLibrary.requestPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission denied", "Allow media access to save photos."); return; }
+    try {
+      await MediaLibrary.saveToLibraryAsync(avatar);
+      Alert.alert("Saved", "Profile photo saved to your Photos.");
+    } catch {
+      Alert.alert("Save failed", "Could not save this photo.");
+    }
+  }, [avatar]);
+
   const handleBlockRecipient = useCallback(() => {
     if (!otherUserId) return;
     Alert.alert(
@@ -385,13 +402,22 @@ export default function ChatInfoScreen() {
       >
         {/* ── Avatar & identity ───────────────────────── */}
         <View style={styles.profileSection}>
-          {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            activeOpacity={avatar ? 0.85 : 1}
+            onLongPress={avatar ? () => Alert.alert(name, undefined, [
+              { text: "Save to Photos", onPress: handleSaveProfilePhoto },
+              { text: "Cancel", style: "cancel" },
+            ]) : undefined}
+            delayLongPress={350}
+          >
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.name}>{name}</Text>
           {username ? <Text style={styles.username}>@{username}</Text> : null}
           {phone ? <Text style={styles.phoneNumber}>{phone}</Text> : null}
@@ -520,8 +546,15 @@ export default function ChatInfoScreen() {
           <SettingsRow
             icon={<Feather name="download" size={20} color={Colors.textPrimary} />}
             label="Save to Photos"
-            value="Default"
             Colors={Colors}
+            rightElement={
+              <Switch
+                value={autoSaveEnabled}
+                onValueChange={(val) => { if (chatIdParam) setAutoSave(chatIdParam, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
           />
         </View>
 

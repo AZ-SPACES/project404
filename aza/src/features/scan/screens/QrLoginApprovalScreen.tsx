@@ -85,7 +85,7 @@ const QrLoginApprovalScreen = () => {
         </Text>
 
         <View style={styles.warningBox}>
-          <Ionicons name="information-circle-outline" size={16} color={Colors.textPrimarySecondary} />
+          <Ionicons name="information-circle-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.warningText}>
             Only approve if you initiated this login from a trusted device.
           </Text>
@@ -103,7 +103,7 @@ const QrLoginApprovalScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.denyButton} onPress={handleDeny} disabled={loading}>
-            <Text style={[styles.denyText, { color: Colors.textPrimarySecondary }]}>Deny</Text>
+            <Text style={[styles.denyText, { color: Colors.textSecondary }]}>Deny</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -143,7 +143,7 @@ function createStyles(Colors: ThemeColors) {
     },
     subtitle: {
       fontSize: 15,
-      color: Colors.textPrimarySecondary,
+      color: Colors.textSecondary,
       textAlign: 'center',
       lineHeight: 22,
       marginBottom: 24,
@@ -165,7 +165,7 @@ function createStyles(Colors: ThemeColors) {
     warningText: {
       flex: 1,
       fontSize: 13,
-      color: Colors.textPrimarySecondary,
+      color: Colors.textSecondary,
       lineHeight: 18,
     },
     actions: {
@@ -208,7 +208,7 @@ function createStyles(Colors: ThemeColors) {
     },
     successSub: {
       fontSize: 15,
-      color: Colors.textPrimarySecondary,
+      color: Colors.textSecondary,
       textAlign: 'center',
       marginBottom: 40,
     },

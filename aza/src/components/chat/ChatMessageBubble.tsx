@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle, Animated, Modal, Dimensions, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextStyle, Animated, Modal, Dimensions, ScrollView, Platform, GestureResponderEvent } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -338,6 +338,14 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
 
   const sentTailColor = bubbleColor || Colors.primary;
   const waveformBars = useMemo(() => generateWaveform(message.id), [message.id]);
+  const waveformRef = useRef<View>(null);
+
+  const handleWaveformPress = useCallback((e: GestureResponderEvent) => {
+    waveformRef.current?.measure((_x, _y, w, _h, px) => {
+      const ratio = Math.max(0, Math.min(1, (e.nativeEvent.pageX - px) / w));
+      player.seekTo(ratio * totalSecs).catch(() => {});
+    });
+  }, [totalSecs, player]);
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -380,8 +388,13 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
               style={{ marginLeft: isPlaying ? 0 : 2 }}
             />
           </TouchableOpacity>
-          {/* Waveform bars */}
-          <View style={styles.audioWaveform}>
+          {/* Waveform bars — tappable to seek */}
+          <View
+            ref={waveformRef}
+            style={styles.audioWaveform}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleWaveformPress}
+          >
             {waveformBars.map((amp, i) => {
               const played = i / waveformBars.length <= progress;
               return (
@@ -935,6 +948,40 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               <View style={[styles.tailSent, !isLastInGroup && styles.tailHidden, { borderTopColor: sentTailColor }]} />
             )}
           </>
+        ) : message.type === 'call' ? (
+          <View style={[styles.callCard, isMe && styles.callCardMe]}>
+            <View style={[styles.callIconWrap, { backgroundColor: message.callMissed ? '#FEE2E2' : '#DCFCE7' }]}>
+              <Feather
+                name={message.callType === 'video' ? 'video' : 'phone'}
+                size={20}
+                color={message.callMissed ? '#EF4444' : '#16A34A'}
+              />
+              {message.callMissed && (
+                <View style={styles.callMissedBadge}>
+                  <Feather name="arrow-down-left" size={10} color="#EF4444" />
+                </View>
+              )}
+            </View>
+            <View style={styles.callInfo}>
+              <Text style={[styles.callTitle, isMe ? styles.textMe : { color: Colors.textPrimary }]}>
+                {message.callMissed
+                  ? `Missed ${message.callType === 'video' ? 'video' : 'voice'} call`
+                  : `${message.callType === 'video' ? 'Video' : 'Voice'} call`}
+              </Text>
+              {message.callDuration ? (
+                <Text style={[styles.callDuration, isMe ? { color: 'rgba(255,255,255,0.75)' } : { color: Colors.textSecondary }]}>
+                  {Math.floor(message.callDuration / 60)}:{String(message.callDuration % 60).padStart(2, '0')}
+                </Text>
+              ) : (
+                <Text style={[styles.callDuration, { color: message.callMissed ? '#EF4444' : Colors.textSecondary }]}>
+                  {message.callMissed ? 'Tap to call back' : ''}
+                </Text>
+              )}
+            </View>
+            <Text style={[styles.callTime, isMe ? { color: 'rgba(255,255,255,0.65)' } : { color: Colors.textSecondary }]}>
+              {message.time}
+            </Text>
+          </View>
         ) : paymentData ? (
           <View style={styles.paymentCard}>
             <View style={styles.paymentBrand}>
@@ -1300,6 +1347,46 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
     selectCircleMe: { right: 10 },
     selectCircleOther: { left: 10 },
     selectCircleActive: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+    // Call bubble
+    callCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      backgroundColor: isDark ? Colors.surface : '#F9FAFB',
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      minWidth: 200,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.08)' : Colors.border,
+    },
+    callCardMe: {
+      backgroundColor: Colors.primary + 'DD',
+      borderColor: 'transparent',
+    },
+    callIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      flexShrink: 0,
+    },
+    callMissedBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    callInfo: { flex: 1 },
+    callTitle: { ...Typography.body, fontWeight: '600', fontSize: 14 },
+    callDuration: { ...Typography.caption, fontSize: 12, marginTop: 2 },
+    callTime: { ...Typography.caption, fontSize: 11 },
   });
 };
 
