@@ -182,6 +182,7 @@ export default function ChatInfoScreen() {
   const storeMuteChat = useChatStore((s) => s.muteChat);
   const storeArchiveChat = useChatStore((s) => s.archiveChat);
   const storeSetDisappearingTtl = useChatStore((s) => s.setDisappearingTtl);
+  const clearChatMessages = useChatStore((s) => s.clearChatMessages);
 
   const contacts = useContactStore((s) => s.contacts);
 
@@ -608,6 +609,28 @@ export default function ChatInfoScreen() {
                 {isArchived ? "Unarchive chat" : "Archive chat"}
               </Text>
             )}
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* Clear chat */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            activeOpacity={0.8}
+            onPress={() => {
+              Alert.alert(
+                'Clear Chat',
+                'All messages will be removed from your device. They can be reloaded from the server.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Clear', style: 'destructive', onPress: () => {
+                    if (chatIdParam) clearChatMessages(chatIdParam);
+                  }},
+                ],
+              );
+            }}
+          >
+            <Text style={[styles.dangerRowText, { color: '#F59E0B' }]}>Clear chat</Text>
           </TouchableOpacity>
 
           <View style={styles.rowDivider} />
