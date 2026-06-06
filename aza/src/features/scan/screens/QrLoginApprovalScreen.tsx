@@ -70,7 +70,7 @@ const QrLoginApprovalScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -85,7 +85,7 @@ const QrLoginApprovalScreen = () => {
         </Text>
 
         <View style={styles.warningBox}>
-          <Ionicons name="information-circle-outline" size={16} color={Colors.textSecondary} />
+          <Ionicons name="information-circle-outline" size={16} color={Colors.textPrimarySecondary} />
           <Text style={styles.warningText}>
             Only approve if you initiated this login from a trusted device.
           </Text>
@@ -103,7 +103,7 @@ const QrLoginApprovalScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.denyButton} onPress={handleDeny} disabled={loading}>
-            <Text style={[styles.denyText, { color: Colors.textSecondary }]}>Deny</Text>
+            <Text style={[styles.denyText, { color: Colors.textPrimarySecondary }]}>Deny</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -138,25 +138,25 @@ function createStyles(Colors: ThemeColors) {
     title: {
       fontSize: 24,
       fontWeight: '700',
-      color: Colors.text,
+      color: Colors.textPrimary,
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 15,
-      color: Colors.textSecondary,
+      color: Colors.textPrimarySecondary,
       textAlign: 'center',
       lineHeight: 22,
       marginBottom: 24,
     },
     siteName: {
-      color: Colors.text,
+      color: Colors.textPrimary,
       fontWeight: '600',
     },
     warningBox: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 8,
-      backgroundColor: Colors.cardBackground,
+      backgroundColor: Colors.surface,
       borderRadius: 12,
       padding: 14,
       marginBottom: 32,
@@ -165,7 +165,7 @@ function createStyles(Colors: ThemeColors) {
     warningText: {
       flex: 1,
       fontSize: 13,
-      color: Colors.textSecondary,
+      color: Colors.textPrimarySecondary,
       lineHeight: 18,
     },
     actions: {
@@ -202,13 +202,13 @@ function createStyles(Colors: ThemeColors) {
     successTitle: {
       fontSize: 24,
       fontWeight: '700',
-      color: Colors.text,
+      color: Colors.textPrimary,
       marginTop: 20,
       marginBottom: 8,
     },
     successSub: {
       fontSize: 15,
-      color: Colors.textSecondary,
+      color: Colors.textPrimarySecondary,
       textAlign: 'center',
       marginBottom: 40,
     },
