@@ -7,6 +7,7 @@ import type { Message } from './chatTypes';
 import { getDocIcon, formatBytes } from './chatTypes';
 import { useReactionStore, EmojiReaction } from '../../store/reactionStore';
 import { extractFirstUrl, fetchLinkPreview, LinkPreview } from '../../utils/linkPreview';
+import { usePollStore } from '../../store/pollStore';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -21,6 +22,10 @@ type ChatMessageBubbleProps = {
   bubbleColor?: string | undefined;
   isLastInGroup?: boolean;
   isNew?: boolean;
+  highlight?: string | undefined;
+  isSelected?: boolean | undefined;
+  isSelectMode?: boolean | undefined;
+  onSelectToggle?: (() => void) | undefined;
 };
 
 // ----------------------------------------------------------------------------
@@ -45,9 +50,34 @@ function parseMarkdown(input: string): Segment[] {
   return parts;
 }
 
-function FormattedText({ text, style }: { text: string; style: TextStyle | TextStyle[] }) {
+function FormattedText({ text, style, highlight }: { text: string; style: TextStyle | TextStyle[]; highlight?: string | undefined }) {
   const segments = useMemo(() => parseMarkdown(text), [text]);
   const hasFormatting = segments.some((s) => s.bold || s.italic || s.strike);
+
+  if (highlight && highlight.trim()) {
+    const lower = text.toLowerCase();
+    const hl = highlight.toLowerCase();
+    const parts: Array<{ text: string; isMatch: boolean }> = [];
+    let cursor = 0;
+    let idx = lower.indexOf(hl, cursor);
+    while (idx !== -1) {
+      if (idx > cursor) parts.push({ text: text.slice(cursor, idx), isMatch: false });
+      parts.push({ text: text.slice(idx, idx + hl.length), isMatch: true });
+      cursor = idx + hl.length;
+      idx = lower.indexOf(hl, cursor);
+    }
+    if (cursor < text.length) parts.push({ text: text.slice(cursor), isMatch: false });
+    return (
+      <Text style={style}>
+        {parts.map((p, i) =>
+          p.isMatch
+            ? <Text key={i} style={{ backgroundColor: '#FDE68A', color: '#111', borderRadius: 2 }}>{p.text}</Text>
+            : <Text key={i}>{p.text}</Text>
+        )}
+      </Text>
+    );
+  }
+
   if (!hasFormatting) return <Text style={style}>{text}</Text>;
   return (
     <Text style={style}>
@@ -129,6 +159,32 @@ const lpStyles = StyleSheet.create({
 // ----------------------------------------------------------------------------
 const EMPTY_REACTIONS: EmojiReaction[] = [];
 
+type ReactionChipProps = {
+  r: EmojiReaction;
+  messageId: string;
+  removeReaction: (messageId: string, emoji: string) => void;
+  addReaction: (messageId: string, emoji: string) => void;
+};
+
+const ReactionChip = memo(function ReactionChip({ r, messageId, removeReaction, addReaction }: ReactionChipProps) {
+  const scale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, friction: 5, tension: 200, useNativeDriver: true }).start();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        style={[rbStyles.chip, r.byMe && rbStyles.chipActive]}
+        activeOpacity={0.7}
+        onPress={() => r.byMe ? removeReaction(messageId, r.emoji) : addReaction(messageId, r.emoji)}
+      >
+        <Text style={rbStyles.emoji}>{r.emoji}</Text>
+        {r.count > 1 && <Text style={rbStyles.count}>{r.count}</Text>}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
 function ReactionBar({ messageId, isMe }: { messageId: string; isMe: boolean }) {
   const reactions = useReactionStore((s) => s.reactions[messageId] ?? EMPTY_REACTIONS);
   const removeReaction = useReactionStore((s) => s.removeReaction);
@@ -139,15 +195,13 @@ function ReactionBar({ messageId, isMe }: { messageId: string; isMe: boolean }) 
   return (
     <View style={[rbStyles.row, isMe ? rbStyles.rowMe : rbStyles.rowOther]}>
       {reactions.map((r) => (
-        <TouchableOpacity
+        <ReactionChip
           key={r.emoji}
-          style={[rbStyles.chip, r.byMe && rbStyles.chipActive]}
-          activeOpacity={0.7}
-          onPress={() => r.byMe ? removeReaction(messageId, r.emoji) : addReaction(messageId, r.emoji)}
-        >
-          <Text style={rbStyles.emoji}>{r.emoji}</Text>
-          {r.count > 1 && <Text style={rbStyles.count}>{r.count}</Text>}
-        </TouchableOpacity>
+          r={r}
+          messageId={messageId}
+          removeReaction={removeReaction}
+          addReaction={addReaction}
+        />
       ))}
     </View>
   );
@@ -372,6 +426,10 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   bubbleColor,
   isLastInGroup = true,
   isNew = false,
+  highlight,
+  isSelected,
+  isSelectMode,
+  onSelectToggle,
 }: ChatMessageBubbleProps) {
   const { colors: Colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
@@ -389,14 +447,18 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Tap-to-see-full-timestamp
+  // Tap-to-see-full-timestamp (or select in select mode)
   const [showFullTime, setShowFullTime] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePress = useCallback(() => {
+    if (isSelectMode) {
+      onSelectToggle?.();
+      return;
+    }
     setShowFullTime(true);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setShowFullTime(false), 2500);
-  }, []);
+  }, [isSelectMode, onSelectToggle]);
   useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
 
   const fullTimestamp = useMemo(() => {
@@ -423,6 +485,34 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     }
     return null;
   }, [message.type, message.text, message.paymentAmount, message.paymentMode, message.paymentStatus]);
+
+  // Detect GIF messages sent as E2EE JSON text
+  const gifData = useMemo(() => {
+    if (message.type === 'image' && message.uri) return null; // already a local image bubble
+    if (typeof message.text === 'string' && message.text.startsWith('{"__gif":')) {
+      try {
+        const p = JSON.parse(message.text);
+        if (p.__gif === true && typeof p.url === 'string') return { url: p.url as string };
+      } catch {}
+    }
+    return null;
+  }, [message.type, message.uri, message.text]);
+
+  // Detect location messages sent as E2EE JSON text
+  const incomingLocationData = useMemo(() => {
+    if (message.type === 'location') return null; // already a resolved local message
+    if (typeof message.text === 'string' && message.text.startsWith('{"__location":')) {
+      try {
+        const p = JSON.parse(message.text);
+        if (p.__location === true) return {
+          lat: p.lat as number,
+          lng: p.lng as number,
+          name: typeof p.name === 'string' ? p.name : null,
+        };
+      } catch {}
+    }
+    return null;
+  }, [message.type, message.text]);
 
   const expiryLabel = useMemo(() => {
     if (!message.expiresAt || message.expiresAt <= 0) return null;
@@ -460,6 +550,10 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     return null;
   }, [isMe, message.status, styles.statusIcon, styles.doubleCheck, styles.secondCheck]);
 
+  // Poll store
+  const pollVote = usePollStore((s) => s.getVote(message.id));
+  const castPollVote = usePollStore((s) => s.vote);
+
   const hasCaption = !!message.caption;
   const overlayMeta = isImageType && !hasCaption;
 
@@ -487,6 +581,15 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     </View>
   );
 
+  const forwardedBadge = message.isForwarded ? (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 4 }}>
+      <Feather name="corner-up-right" size={11} color={isMe ? 'rgba(255,255,255,0.65)' : Colors.textSecondary} />
+      <Text style={{ fontSize: 11, fontStyle: 'italic', color: isMe ? 'rgba(255,255,255,0.65)' : Colors.textSecondary }}>
+        Forwarded
+      </Text>
+    </View>
+  ) : null;
+
   const replyPreview = replyInfo ? (
     <View style={[styles.replyPreview, isMe ? styles.replyPreviewMe : styles.replyPreviewOther]}>
       <View style={[styles.replyBar, { backgroundColor: isMe ? 'rgba(255,255,255,0.5)' : Colors.primary }]} />
@@ -506,15 +609,33 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     ? { borderBottomRightRadius: isMe ? 16 : undefined, borderBottomLeftRadius: isMe ? undefined : 16 }
     : null;
 
-  // URL detection for link preview (text messages only)
+  // URL detection for link preview (text messages only — skip JSON payloads)
   const firstUrl = useMemo(() => {
     if (message.type && message.type !== 'text') return null;
     if (!message.text) return null;
+    if (message.text.startsWith('{"__')) return null;
     return extractFirstUrl(message.text);
   }, [message.type, message.text]);
 
   return (
-    <Animated.View style={[styles.bubbleWrapper, { opacity: fadeAnim, transform: [{ scale: springAnim }] }]}>
+    <Animated.View style={[
+      styles.bubbleWrapper,
+      { opacity: fadeAnim, transform: [{ scale: springAnim }] },
+      isSelectMode && isSelected && { backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 12 },
+    ]}>
+      {/* Multi-select indicator */}
+      {isSelectMode && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.selectCircle,
+            isMe ? styles.selectCircleMe : styles.selectCircleOther,
+            isSelected && styles.selectCircleActive,
+          ]}
+        >
+          {isSelected && <Feather name="check" size={13} color="#fff" />}
+        </View>
+      )}
       <TouchableOpacity
         onPress={handlePress}
         onLongPress={onLongPress}
@@ -522,10 +643,10 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         activeOpacity={0.9}
         style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
       >
-        {isImageType && message.uri ? (
+        {(isImageType && message.uri) || gifData ? (
           <TouchableOpacity
             activeOpacity={0.95}
-            onPress={() => onImagePress?.(message.uri!)}
+            onPress={() => isSelectMode ? onSelectToggle?.() : onImagePress?.((gifData?.url ?? message.uri)!)}
             onLongPress={onLongPress}
             delayLongPress={250}
             style={[
@@ -537,12 +658,13 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               groupedBubbleStyle,
             ]}
           >
+            {forwardedBadge}
             {replyPreview}
             <Image
-              source={{ uri: message.uri }}
+              source={{ uri: gifData?.url ?? message.uri }}
               style={[styles.imageContent, hasCaption && { borderRadius: 12 }]}
               resizeMode="cover"
-              accessibilityLabel="Sent image"
+              accessibilityLabel={gifData ? 'GIF' : 'Sent image'}
             />
             {hasCaption ? (
               <View style={{ paddingHorizontal: 8, paddingVertical: 4, paddingBottom: 6 }}>
@@ -567,6 +689,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               groupedBubbleStyle,
             ]}
           >
+            {forwardedBadge}
             <Image
               source={{ uri: message.thumbnailUri ?? message.uri }}
               style={styles.imageContent}
@@ -599,6 +722,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 groupedBubbleStyle,
               ]}
             >
+              {forwardedBadge}
               {replyPreview}
               <View style={styles.docCard}>
                 <View style={[styles.docIconBox, { backgroundColor: docIcon.color + '22' }]}>
@@ -632,6 +756,173 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             Colors={Colors}
             receivedBubbleBg={receivedBubbleBg}
           />
+        ) : (message.type === 'location' || incomingLocationData) ? (
+          (() => {
+            const lat = incomingLocationData?.lat ?? message.latitude;
+            const lng = incomingLocationData?.lng ?? message.longitude;
+            const locName = incomingLocationData?.name ?? message.locationName ?? 'Shared Location';
+            const mapsUrl = lat !== undefined && lng !== undefined
+              ? `https://maps.google.com/?q=${lat},${lng}`
+              : null;
+            return (
+              <>
+                {!isMe && (
+                  <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
+                )}
+                <TouchableOpacity
+                  activeOpacity={mapsUrl ? 0.8 : 1}
+                  onLongPress={onLongPress}
+                  delayLongPress={250}
+                  onPress={mapsUrl ? () => {
+                    const { Linking } = require('react-native');
+                    Linking.openURL(mapsUrl).catch(() => {});
+                  } : undefined}
+                  style={[
+                    styles.bubble,
+                    styles.docBubble,
+                    isMe ? styles.bubbleMe : styles.bubbleOther,
+                    isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                    !isMe && { backgroundColor: receivedBubbleBg },
+                    groupedBubbleStyle,
+                    { paddingHorizontal: 12, paddingVertical: 10 },
+                  ]}
+                >
+                  {forwardedBadge}
+                  {replyPreview}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.docIconBox, { backgroundColor: '#10B98120' }]}>
+                      <Feather name="map-pin" size={20} color="#10B981" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.docName, isMe ? styles.textMe : styles.textOther]} numberOfLines={2}>
+                        {locName}
+                      </Text>
+                      {lat !== undefined && lng !== undefined && (
+                        <Text style={[styles.docSize, isMe ? styles.timeTextMe : styles.timeTextOther]}>
+                          {lat.toFixed(5)}, {lng.toFixed(5)}
+                        </Text>
+                      )}
+                      {mapsUrl && (
+                        <Text style={[styles.docSize, { color: isMe ? 'rgba(255,255,255,0.7)' : '#10B981', marginTop: 2 }]}>
+                          Tap to open in Maps
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {metaRow}
+                </TouchableOpacity>
+                {isMe && (
+                  <View style={[styles.tailSent, !isLastInGroup && styles.tailHidden, { borderTopColor: sentTailColor }]} />
+                )}
+              </>
+            );
+          })()
+        ) : message.type === 'contact' ? (
+          <>
+            {!isMe && (
+              <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
+            )}
+            <View
+              style={[
+                styles.bubble,
+                styles.docBubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther,
+                isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                !isMe && { backgroundColor: receivedBubbleBg },
+                groupedBubbleStyle,
+              ]}
+            >
+              {forwardedBadge}
+              {replyPreview}
+              <View style={styles.docCard}>
+                {message.contactCardAvatar ? (
+                  <Image
+                    source={{ uri: message.contactCardAvatar }}
+                    style={{ width: 44, height: 44, borderRadius: 22, flexShrink: 0 }}
+                  />
+                ) : (
+                  <View style={[styles.docIconBox, { backgroundColor: '#8B5CF622' }]}>
+                    <Feather name="user" size={22} color="#8B5CF6" />
+                  </View>
+                )}
+                <View style={styles.docInfo}>
+                  <Text style={[styles.docName, isMe ? styles.textMe : styles.textOther]} numberOfLines={1}>
+                    {message.contactCardName ?? 'Contact'}
+                  </Text>
+                  {!!message.contactCardHandle && (
+                    <Text style={[styles.docSize, isMe ? styles.timeTextMe : styles.timeTextOther]}>
+                      @{message.contactCardHandle}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              {metaRow}
+            </View>
+            {isMe && (
+              <View style={[styles.tailSent, !isLastInGroup && styles.tailHidden, { borderTopColor: sentTailColor }]} />
+            )}
+          </>
+        ) : message.type === 'poll' ? (
+          <>
+            {!isMe && (
+              <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
+            )}
+            <View
+              style={[
+                styles.bubble,
+                styles.docBubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther,
+                isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                !isMe && { backgroundColor: receivedBubbleBg },
+                groupedBubbleStyle,
+                { paddingBottom: 8 },
+              ]}
+            >
+              {forwardedBadge}
+              {replyPreview}
+              <Text style={[styles.docName, isMe ? styles.textMe : styles.textOther, { marginBottom: 10, fontSize: 14, lineHeight: 20 }]}>
+                {message.pollQuestion ?? 'Poll'}
+              </Text>
+              {(message.pollOptions ?? []).map((option, i) => {
+                const voted = pollVote === i;
+                const anyVoted = pollVote !== null;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    activeOpacity={0.75}
+                    onPress={() => castPollVote(message.id, i)}
+                    style={[
+                      pollOptionStyles.row,
+                      { borderColor: voted ? (isMe ? 'rgba(255,255,255,0.6)' : Colors.primary) : (isMe ? 'rgba(255,255,255,0.25)' : Colors.border) },
+                      voted && { backgroundColor: isMe ? 'rgba(255,255,255,0.18)' : Colors.primary + '15' },
+                    ]}
+                  >
+                    <View style={[
+                      pollOptionStyles.circle,
+                      { borderColor: voted ? (isMe ? '#fff' : Colors.primary) : (isMe ? 'rgba(255,255,255,0.5)' : Colors.border) },
+                      voted && { backgroundColor: isMe ? '#fff' : Colors.primary },
+                    ]}>
+                      {voted && <Feather name="check" size={10} color={isMe ? Colors.primary : '#fff'} />}
+                    </View>
+                    <Text
+                      style={[
+                        pollOptionStyles.text,
+                        isMe ? styles.textMe : { color: Colors.textPrimary },
+                        anyVoted && !voted && { opacity: 0.65 },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {metaRow}
+            </View>
+            {isMe && (
+              <View style={[styles.tailSent, !isLastInGroup && styles.tailHidden, { borderTopColor: sentTailColor }]} />
+            )}
+          </>
         ) : paymentData ? (
           <View style={styles.paymentCard}>
             <View style={styles.paymentBrand}>
@@ -682,10 +973,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 groupedBubbleStyle,
               ]}
             >
+              {forwardedBadge}
               {replyPreview}
               <FormattedText
                 text={message.text}
                 style={[styles.text, isMe ? styles.textMe : styles.textOther]}
+                highlight={highlight}
               />
               {firstUrl && <LinkPreviewCard url={firstUrl} isMe={isMe} />}
               {metaRow}
@@ -705,19 +998,49 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
 
 
 // ----------------------------------------------------------------------------
-// Typing indicator — placed here as it uses the same style factory
+// Typing indicator — animated bouncing dots
 // ----------------------------------------------------------------------------
 export const ChatTypingIndicator = memo(function ChatTypingIndicator() {
   const { colors: Colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
   const receivedBubbleBg = isDark ? Colors.surface : '#FFFFFF';
+  const anims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+
+  useEffect(() => {
+    const animations = anims.map((anim, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 180),
+          Animated.timing(anim, { toValue: -5, duration: 260, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0, duration: 260, useNativeDriver: true }),
+          Animated.delay(Math.max(0, 540 - i * 180)),
+        ])
+      )
+    );
+    animations.forEach(a => a.start());
+    return () => animations.forEach(a => a.stop());
+  }, [anims]);
+
   return (
     <View style={[styles.messageRow, styles.messageRowOther]}>
       <View style={[styles.tailReceived, { borderTopColor: receivedBubbleBg }]} />
-      <View style={[styles.bubble, styles.bubbleOther, { paddingVertical: 10, paddingHorizontal: 14 }]}>
-        <Text style={[styles.text, styles.textOther, { fontStyle: 'italic', fontSize: 13, opacity: 0.7 }]}>
-          typing...
-        </Text>
+      <View style={[styles.bubble, styles.bubbleOther, { paddingVertical: 13, paddingHorizontal: 14 }]}>
+        <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', height: 20 }}>
+          {anims.map((anim, i) => (
+            <Animated.View
+              key={i}
+              style={{
+                width: 7, height: 7, borderRadius: 3.5,
+                backgroundColor: isDark ? Colors.textSecondary : '#9CA3AF',
+                transform: [{ translateY: anim }],
+              }}
+            />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -948,5 +1271,48 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
     paymentStatusDeclined: { backgroundColor: '#EF444433' },
     paymentStatusText: { color: '#fff', ...Typography.caption, fontWeight: '600', fontSize: 12 },
     timeTextPayment: { color: 'rgba(255,255,255,0.4)' },
+    // Multi-select indicator
+    selectCircle: {
+      position: 'absolute',
+      top: 8,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: 'rgba(0,0,0,0.2)',
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10,
+    },
+    selectCircleMe: { right: 10 },
+    selectCircleOther: { left: 10 },
+    selectCircleActive: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
   });
 };
+
+// ----------------------------------------------------------------------------
+// Poll option styles
+// ----------------------------------------------------------------------------
+const pollOptionStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+  },
+  circle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  text: { flex: 1, fontSize: 13, lineHeight: 18 },
+});

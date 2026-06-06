@@ -317,6 +317,7 @@ export default function ChatContactsScreen() {
   const markRead = useChatStore((s) => s.markRead);
   const archiveChat = useChatStore((s) => s.archiveChat);
   const muteChat = useChatStore((s) => s.muteChat);
+  const clearChatMessages = useChatStore((s) => s.clearChatMessages);
   const isOnline = usePresenceStore((s) => s.isOnline);
   const { pinnedIds, load: loadPins, pin, unpin, isPinned } = usePinnedStore();
   const {
@@ -584,6 +585,26 @@ export default function ChatContactsScreen() {
           archiveChat(chat.id, !chat.isArchived).catch(() => {});
         },
       });
+      actions.push({
+        icon: "trash",
+        label: "Clear Chat",
+        color: "#F59E0B",
+        onPress: () => {
+          setContextContact(null);
+          Alert.alert(
+            "Clear Chat",
+            `Clear all messages with ${contextContact?.displayName ?? "this contact"}? They can be reloaded from the server.`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Clear",
+                style: "destructive",
+                onPress: () => clearChatMessages(chat.id),
+              },
+            ]
+          );
+        },
+      });
     }
 
     // Custom filter actions
@@ -615,7 +636,7 @@ export default function ChatContactsScreen() {
     }
 
     return actions;
-  }, [contextContact, chatByPeer, isPinned, pin, unpin, markRead, muteChat, archiveChat, customFilters, activeFilter, addPeer, removePeer]);
+  }, [contextContact, chatByPeer, isPinned, pin, unpin, markRead, muteChat, archiveChat, clearChatMessages, customFilters, activeFilter, addPeer, removePeer]);
 
   // ── Bulk actions ───────────────────────────────────────────────────────────
 

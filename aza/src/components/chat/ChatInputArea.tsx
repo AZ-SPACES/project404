@@ -17,6 +17,7 @@ type ChatInputAreaProps = {
   replyTo?: ReplyInfo | null;
   onCancelReply?: () => void;
   onSendAudio?: (uri: string, duration: number) => void;
+  onScheduleSend?: (delaySecs: number) => void;
 };
 
 // ----------------------------------------------------------------------------
@@ -31,6 +32,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   replyTo,
   onCancelReply,
   onSendAudio,
+  onScheduleSend,
 }: ChatInputAreaProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
@@ -128,7 +130,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   const handleAddPress = useCallback(() => {
     addButtonRef.current?.measure(
       (_x: number, _y: number, width: number, _height: number, _pageX: number, pageY: number) => {
-        const CARD_HEIGHT_ESTIMATE = 130;
+        const CARD_HEIGHT_ESTIMATE = 290;
         onAddPress({ top: pageY - CARD_HEIGHT_ESTIMATE - 8, left: _pageX, buttonWidth: width });
       },
     );
@@ -209,7 +211,13 @@ export const ChatInputArea = memo(function ChatInputArea({
             <Feather name={isRecording ? "stop-circle" : "mic"} size={20} color={Colors.white} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.8}
+            onPress={onSend}
+            onLongPress={onScheduleSend ? () => onScheduleSend(0) : undefined}
+            delayLongPress={500}
+          >
             <Feather name="send" size={20} color={Colors.white} style={styles.sendIcon} />
           </TouchableOpacity>
         )}
