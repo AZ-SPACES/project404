@@ -150,8 +150,8 @@ const WorldMap = function WorldMap({
                   <Geography
                     key={`${geo.rsmKey}-${isBlocked ? 1 : 0}`}
                     geography={geo}
-                    onPointerDown={(e: React.PointerEvent) => { pointerStart.current = { x: e.clientX, y: e.clientY }; }}
-                    onPointerUp={(e: React.PointerEvent) => {
+                    onMouseDown={(e: React.MouseEvent<SVGPathElement>) => { pointerStart.current = { x: e.clientX, y: e.clientY }; }}
+                    onMouseUp={(e: React.MouseEvent<SVGPathElement>) => {
                       if (!pointerStart.current || !a2) return;
                       const dx = e.clientX - pointerStart.current.x;
                       const dy = e.clientY - pointerStart.current.y;
