@@ -16,7 +16,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
-import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
+import { DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
 import { formatBytes } from "../../../components/chat/chatTypes";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -189,7 +189,6 @@ export default function ChatInfoScreen() {
   );
 
   const loadTheme = useChatThemeStore((s) => s.load);
-  const setTheme = useChatThemeStore((s) => s.setTheme);
 
   useEffect(() => {
     loadStarred();
@@ -217,7 +216,6 @@ export default function ChatInfoScreen() {
   }, [contacts, otherUserId, paramPhone]);
 
   // ── UI state ──────────────────────────────────────────────────────
-  const [showThemeModal, setShowThemeModal] = useState(false);
   const [showDisappearingModal, setShowDisappearingModal] = useState(false);
   const [disappearingTimer, setDisappearingTimer] = useState("Off");
   const [mutePending, setMutePending] = useState(false);
@@ -514,7 +512,9 @@ export default function ChatInfoScreen() {
             icon={<MaterialCommunityIcons name="palette-outline" size={20} color={Colors.textPrimary} />}
             label="Chat theme"
             Colors={Colors}
-            onPress={() => setShowThemeModal(true)}
+            onPress={() => {
+              if (chatIdParam) navigation.navigate('ChatThemeScreen', { chatId: chatIdParam, name });
+            }}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -596,16 +596,6 @@ export default function ChatInfoScreen() {
 
         <View style={{ height: Spacing.xl * 2 }} />
       </ScrollView>
-
-      <ChatThemeModal
-        visible={showThemeModal}
-        isDark={Colors.isDark}
-        Colors={Colors}
-        onClose={() => setShowThemeModal(false)}
-        onSelectTheme={(themeId) => {
-          if (chatIdParam) setTheme(chatIdParam, themeId).catch(() => {});
-        }}
-      />
 
       <DisappearingMessagesModal
         visible={showDisappearingModal}

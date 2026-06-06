@@ -99,7 +99,7 @@ export type RootStackParamList = {
   VerifyPasscode: { onSuccessScreen: keyof RootStackParamList; onSuccessParams?: Record<string, unknown> };
   ChangeEmail: undefined;
   ChangePhone: undefined;
-  ChatScreen: { id: string; name: string; avatar: string; online: boolean; payIdentifier?: string; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage };
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean; payIdentifier?: string; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage; quickReply?: string };
   Hub: undefined;
   MiniApp: { appId: string };
   ContactsProfile: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
@@ -119,6 +119,7 @@ export type RootStackParamList = {
   AddFriends: undefined;
   RequestPending: undefined;
   ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: StorageDetails };
+  ChatThemeScreen: { chatId: string; name: string };
   AudioCall: { callId?: string; name: string; avatar: string };
   VideoCall: { callId?: string; name: string; avatar: string };
   IncomingCall: undefined;

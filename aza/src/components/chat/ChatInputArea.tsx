@@ -43,7 +43,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
 
-  const showIcon = !isFocused && !message && !isRecording;
+  const showIcon = false; // no icon in input field
   const isMessageEmpty = !message.trim();
   const recordMode = useRef<'none' | 'tap' | 'hold'>('none');
 
@@ -244,9 +244,9 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: 12,
+      borderRadius: 24,
       borderWidth: 1,
-      borderColor: Colors.border,
+      borderColor: isDark ? Colors.border : 'rgba(0,0,0,0.1)',
       paddingHorizontal: Spacing.md,
       minHeight: 44,
       maxHeight: 120,
