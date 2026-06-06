@@ -53,7 +53,7 @@ export default function TalkToUsScreen() {
         Alert.alert(
           "No agents available",
           "All support agents are currently busy. Try chat instead.",
-          [{ text: "Chat instead", onPress: () => navigation.navigate("ChatWithUs") }, { text: "OK" }]
+          [{ text: "Chat instead", onPress: () => navigation.navigate("ChatbotScreen") }, { text: "OK" }]
         );
         return;
       }
@@ -221,7 +221,7 @@ export default function TalkToUsScreen() {
 
           <TouchableOpacity
             style={styles.issueItem}
-            onPress={() => navigation.navigate("ChatWithUs")}
+            onPress={() => navigation.navigate("ChatbotScreen")}
           >
             <View style={styles.iconContainer}>
               <Feather

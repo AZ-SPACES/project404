@@ -8,6 +8,7 @@ import {
   TalkToUsScreen,
   EmailUsScreen,
   ChatWithUsScreen,
+  ChatbotScreen,
   HelpAndSupportScreen,
   HelpTopicScreen,
 } from '../features/customercare';
@@ -95,6 +96,7 @@ import {
   GenerateRecoveryCodeScreen,
 } from '../features/auth';
 import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
+import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
 import { InboxScreen } from '../features/notifications';
 
 
@@ -132,6 +134,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
+      <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Send" component={SendContactWithBoundary} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Appearance" component={AppearanceScreen} />
@@ -194,6 +197,7 @@ export default function AppNavigator() {
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
       <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
+      <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />

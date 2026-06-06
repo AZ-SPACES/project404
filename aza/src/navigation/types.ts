@@ -54,6 +54,7 @@ export type RootStackParamList = {
   TalkToUs: undefined;
   EmailUs: undefined;
   ChatWithUs: undefined;
+  ChatbotScreen: undefined;
   EnableNotification: undefined;
   EnableBiometrics: undefined;
   Send: undefined;
@@ -144,4 +145,5 @@ export type RootStackParamList = {
   AiAssistant: undefined;
   QrLoginApproval: { challengeToken: string; siteType: string; siteName: string };
   GeoBlocked: undefined;
+  MerchantCheckout: { sessionId: string };
 };

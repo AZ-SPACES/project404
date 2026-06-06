@@ -107,6 +107,13 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         return;
       }
 
+      // Merchant checkout link: pay.aza.systems/c/{sessionId}
+      const checkoutMatch = raw.match(/pay\.aza\.systems\/c\/([a-f0-9-]{36})/i);
+      if (checkoutMatch) {
+        navigation.navigate('MerchantCheckout', { sessionId: checkoutMatch[1]! });
+        return;
+      }
+
       // Parse the data. Format expected: aza.systems/handle or just handle
       let handle = raw;
       if (handle.includes('aza.systems/')) {

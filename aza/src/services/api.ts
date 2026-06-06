@@ -735,6 +735,14 @@ export const createMerchantDiscountCode = (data: {
 export const getMerchantReportSummary = () =>
   api.get('/api/v1/merchant/reports/summary');
 
+// --- Checkout Endpoints ---
+
+export const getCheckoutSession = (sessionId: string) =>
+  api.get(`/api/v1/checkout/${sessionId}`);
+
+export const confirmCheckoutPayment = (sessionId: string, passcode: string) =>
+  api.post(`/api/v1/checkout/${sessionId}/confirm`, { passcode });
+
 // --- Mini App Endpoints ---
 
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>
@@ -1092,6 +1100,9 @@ export const getTransactionInsight = (transactionId: string) =>
 
 export const sendAiMessage = (message: string, history: { role: string; content: string }[]) =>
   api.post('/api/v1/ai/chat', { message, history });
+
+export const getChatbaseToken = () =>
+  api.get<{ success: boolean; data: { token: string } }>('/api/v1/ai/chatbase-token');
 
 export const checkTransferAnomaly = (recipientIdentifier: string, amount: number) =>
   api.post('/api/v1/transfers/check-anomaly', { recipientIdentifier, amount });
