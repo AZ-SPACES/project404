@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, Alert, ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -181,7 +181,13 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
           <BlurView intensity={25} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         </Pressable>
         {selectedMessage && (
-          <View style={styles.modalContent} pointerEvents="box-none">
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalContent}
+            pointerEvents="box-none"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             <View style={{ width: '100%', paddingHorizontal: Spacing.lg }}>
               <ChatMessageBubble message={selectedMessage} bubbleColor={chatBubbleColor || undefined} />
             </View>
@@ -202,14 +208,17 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
               ))}
             </View>
             <View style={styles.actionMenu}>
-              {messageActions.map((action) => (
-                <TouchableOpacity key={action.label} style={styles.actionItem} onPress={action.onPress} activeOpacity={0.7}>
-                  <Feather name={action.icon as any} size={20} color={action.color ?? Colors.textPrimary} />
-                  <Text style={[styles.actionLabel, { color: action.color ?? Colors.textPrimary }]}>{action.label}</Text>
-                </TouchableOpacity>
+              {messageActions.map((action, i) => (
+                <React.Fragment key={action.label}>
+                  {i > 0 && <View style={styles.actionDivider} />}
+                  <TouchableOpacity style={styles.actionItem} onPress={action.onPress} activeOpacity={0.7}>
+                    <Feather name={action.icon as any} size={19} color={action.color ?? Colors.textPrimary} />
+                    <Text style={[styles.actionLabel, { color: action.color ?? Colors.textPrimary }]}>{action.label}</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
               ))}
             </View>
-          </View>
+          </ScrollView>
         )}
       </Modal>
 
@@ -337,18 +346,18 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
 
 const createStyles = (Colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
+    modalScroll: { flex: 1 },
     modalContent: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingVertical: 100,
+      paddingVertical: 48,
     },
     actionMenu: {
       backgroundColor: isDark ? Colors.surface : Colors.white,
       borderRadius: Radius.lg,
-      padding: Spacing.sm,
-      width: 250,
-      marginTop: Spacing.xl,
+      width: 260,
+      marginTop: Spacing.lg,
       elevation: 10,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
@@ -356,15 +365,21 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       shadowRadius: 12,
       borderWidth: 1,
       borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+      overflow: 'hidden',
     },
     actionItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: Spacing.md,
+      paddingVertical: 11,
       paddingHorizontal: Spacing.md,
       gap: Spacing.md,
     },
-    actionLabel: { ...Typography.body, fontWeight: '500' },
+    actionDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+      marginHorizontal: Spacing.md,
+    },
+    actionLabel: { ...Typography.body, fontWeight: '500', fontSize: 15 },
     reactionPicker: {
       flexDirection: 'row',
       flexWrap: 'wrap',

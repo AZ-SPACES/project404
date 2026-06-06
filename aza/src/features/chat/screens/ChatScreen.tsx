@@ -61,6 +61,7 @@ export default function ChatScreen() {
     handleSearchClose, handleSearchNext, handleSearchPrev,
     handleSwipeToReply, handleCancelReply,
     handleSend, handleMessageChange, handleSendAudio,
+    handleViewOnce,
     handleEditSubmit, handleScrollToPinned, handlePinnedNext, handlePinnedPrev,
     handleScroll, handleScrollToBottom,
     handleScheduleSend,
@@ -108,11 +109,12 @@ export default function ChatScreen() {
             isSelected={selectMode ? selectedMsgIds.includes(item.id) : undefined}
             isSelectMode={selectMode || undefined}
             onSelectToggle={selectMode ? () => handleSelectMessage(item) : undefined}
+            onViewOnce={handleViewOnce}
           />
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, newMsgIdsRef, initialMsgCountRef2]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
   const listFooter = useMemo(() => isOtherTyping ? <ChatTypingIndicator /> : null, [isOtherTyping]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -31,6 +31,10 @@ import { useE2EE } from "../../../providers/E2EEProvider";
 import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
 import { useMediaAutoSaveStore } from '../../../store/mediaAutoSaveStore';
+import { useReadReceiptsStore } from '../../../store/readReceiptsStore';
+import { usePresenceStore } from '../../../store/presenceStore';
+import { useOnlineAlertStore } from '../../../store/onlineAlertStore';
+import * as Notifications from 'expo-notifications';
 
 // ─── Types ──────────────────────────────────────────────────────────
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
@@ -39,13 +43,14 @@ type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
 type SettingsRowProps = {
   icon: React.ReactNode;
   label: string;
+  subtitle?: string;
   value?: string;
   onPress?: () => void;
   rightElement?: React.ReactNode;
   Colors: ThemeColors;
 };
 
-function SettingsRow({ icon, label, value, onPress, rightElement, Colors }: SettingsRowProps) {
+function SettingsRow({ icon, label, subtitle, value, onPress, rightElement, Colors }: SettingsRowProps) {
   return (
     <TouchableOpacity
       style={{
@@ -59,16 +64,21 @@ function SettingsRow({ icon, label, value, onPress, rightElement, Colors }: Sett
       disabled={!onPress}
     >
       <View style={{ width: 28, alignItems: "center" }}>{icon}</View>
-      <Text
-        style={{
-          ...Typography.bodyLg,
-          color: Colors.textPrimary,
-          flex: 1,
-          marginLeft: 12,
-        }}
-      >
-        {label}
-      </Text>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text
+          style={{
+            ...Typography.bodyLg,
+            color: Colors.textPrimary,
+          }}
+        >
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text style={{ ...Typography.caption, color: Colors.textSecondary, marginTop: 1 }}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
       {rightElement ?? (
         <>
           {value ? (
@@ -227,6 +237,30 @@ export default function ChatInfoScreen() {
 
   const autoSaveEnabled = useMediaAutoSaveStore(s => chatIdParam ? s.isEnabled(chatIdParam) : false);
   const setAutoSave = useMediaAutoSaveStore(s => s.setEnabled);
+
+  const readReceiptsEnabled = useReadReceiptsStore(s => chatIdParam ? s.isEnabled(chatIdParam) : true);
+  const setReadReceipts = useReadReceiptsStore(s => s.setEnabled);
+
+  // ── Online alert ──────────────────────────────────────────────────
+  const isUserOnline = usePresenceStore(s => s.isOnline(otherUserId ?? ''));
+  const onlineAlertEnabled = useOnlineAlertStore(s => s.isEnabled(otherUserId ?? ''));
+  const setOnlineAlert = useOnlineAlertStore(s => s.setEnabled);
+  const wasOnlineRef = useRef<boolean>(isUserOnline);
+
+  useEffect(() => {
+    const prev = wasOnlineRef.current;
+    if (!prev && isUserOnline && onlineAlertEnabled && otherUserId) {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${name} is online`,
+          body: 'Tap to open chat',
+          sound: true,
+        },
+        trigger: null,
+      }).catch(() => {});
+    }
+    wasOnlineRef.current = isUserOnline;
+  }, [isUserOnline, onlineAlertEnabled, otherUserId, name]);
 
   // ── E2EE verification ─────────────────────────────────────────────
   const { computeSafetyNumber, identity } = useE2EE();
@@ -552,6 +586,36 @@ export default function ChatInfoScreen() {
               <Switch
                 value={autoSaveEnabled}
                 onValueChange={(val) => { if (chatIdParam) setAutoSave(chatIdParam, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="check-circle" size={20} color={Colors.textPrimary} />}
+            label="Read receipts"
+            subtitle="Let contacts know when you've read their messages"
+            Colors={Colors}
+            rightElement={
+              <Switch
+                value={readReceiptsEnabled}
+                onValueChange={(val) => { if (chatIdParam) setReadReceipts(chatIdParam, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="bell" size={20} color={Colors.textPrimary} />}
+            label="Notify when online"
+            subtitle="Get an alert when this contact comes online"
+            Colors={Colors}
+            rightElement={
+              <Switch
+                value={onlineAlertEnabled}
+                onValueChange={(val) => { if (otherUserId) setOnlineAlert(otherUserId, val); }}
                 trackColor={{ false: Colors.border, true: Colors.primary }}
                 thumbColor={Colors.white}
               />

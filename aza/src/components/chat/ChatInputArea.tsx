@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Animated, ScrollView } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -19,6 +19,11 @@ type ChatInputAreaProps = {
   onSendAudio?: (uri: string, duration: number) => void;
   onScheduleSend?: (delaySecs: number) => void;
 };
+
+// ----------------------------------------------------------------------------
+// Quick reply suggestions
+// ----------------------------------------------------------------------------
+const QUICK_REPLIES = ["👍 OK", "On my way!", "Call you back", "Can't talk now", "Thanks!"];
 
 // ----------------------------------------------------------------------------
 // Component
@@ -187,6 +192,27 @@ export const ChatInputArea = memo(function ChatInputArea({
         </View>
       ) : null}
 
+      {isMessageEmpty && !isRecording && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickRepliesContent}
+          style={styles.quickRepliesContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {QUICK_REPLIES.map((chip) => (
+            <TouchableOpacity
+              key={chip}
+              style={styles.quickReplyChip}
+              activeOpacity={0.75}
+              onPress={() => setMessage(chip)}
+            >
+              <Text style={styles.quickReplyText}>{chip}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       <View style={styles.container}>
         {!isRecording && (
           <TouchableOpacity
@@ -352,6 +378,31 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       ...Typography.caption,
       color: Colors.textSecondary,
       fontWeight: '600',
+    },
+    // Quick replies
+    quickRepliesContainer: {
+      maxHeight: 44,
+      marginBottom: 2,
+    },
+    quickRepliesContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 6,
+      gap: Spacing.sm,
+      alignItems: 'center',
+    },
+    quickReplyChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.18)' : Colors.border,
+      backgroundColor: isDark ? Colors.surface : '#F9FAFB',
+    },
+    quickReplyText: {
+      ...Typography.caption,
+      fontSize: 13,
+      color: Colors.textPrimary,
+      fontWeight: '500',
     },
     // Reply banner
     replyBanner: {
