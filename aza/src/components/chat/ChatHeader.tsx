@@ -6,12 +6,28 @@ import type { MenuAnchor } from './chatTypes';
 import { BackButton } from '../ui/BackButton';
 
 // ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+function formatLastSeen(ts: number): string {
+  const now = new Date();
+  const d = new Date(ts);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return `last seen today at ${time}`;
+  if (d.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `last seen ${date}`;
+}
+
+// ----------------------------------------------------------------------------
 // Props
 // ----------------------------------------------------------------------------
 type ChatHeaderProps = {
   name: string;
   avatar: string;
   online: boolean;
+  lastSeen?: number | undefined;
   isEncrypted?: boolean | undefined;
   onBack: () => void;
   onProfilePress?: () => void;
@@ -28,6 +44,7 @@ export const ChatHeader = memo(function ChatHeader({
   name,
   avatar,
   online,
+  lastSeen,
   isEncrypted,
   onBack,
   onProfilePress,
@@ -89,9 +106,11 @@ export const ChatHeader = memo(function ChatHeader({
           </View>
           {online
             ? <Text style={styles.onlineText}>online</Text>
-            : isEncrypted
-              ? <Text style={styles.encryptedText}>end-to-end encrypted</Text>
-              : null}
+            : lastSeen
+              ? <Text style={styles.lastSeenText}>{formatLastSeen(lastSeen)}</Text>
+              : isEncrypted
+                ? <Text style={styles.encryptedText}>end-to-end encrypted</Text>
+                : null}
         </View>
       </TouchableOpacity>
 
@@ -155,5 +174,6 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     lockIcon: { marginTop: 1 },
     onlineText: { ...Typography.caption, fontWeight: '600', color: Colors.primary },
     encryptedText: { ...Typography.caption, color: Colors.textSecondary },
+    lastSeenText: { ...Typography.caption, color: Colors.textSecondary },
     rightActions: { flexDirection: 'row', gap: Spacing.sm },
   });

@@ -19,11 +19,25 @@ type ChatAttachmentModalProps = {
   onDocument: () => void;
   onSendMoney?: () => void;
   onRequestMoney?: () => void;
+  onGif?: () => void;
+  onLocation?: () => void;
+  onContact?: () => void;
+  onPoll?: () => void;
 };
 
 // ----------------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------------
+const EXTRA_TILES_ROW1 = [
+  { icon: 'film', label: 'GIF', color: '#EC4899' },
+  { icon: 'map-pin', label: 'Location', color: '#10B981' },
+] as const;
+
+const EXTRA_TILES_ROW2 = [
+  { icon: 'user', label: 'Contact', color: '#8B5CF6' },
+  { icon: 'bar-chart-2', label: 'Poll', color: '#F59E0B' },
+] as const;
+
 export const ChatAttachmentModal = memo(function ChatAttachmentModal({
   visible,
   isDark,
@@ -34,6 +48,10 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
   onDocument,
   onSendMoney,
   onRequestMoney,
+  onGif,
+  onLocation,
+  onContact,
+  onPoll,
 }: ChatAttachmentModalProps) {
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
@@ -41,6 +59,10 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
   const CARD_WIDTH = Math.min(screenWidth - Spacing.lg * 2, 320);
 
   const handlers = useMemo(() => [onPhotos, onCamera, onDocument], [onPhotos, onCamera, onDocument]);
+  const extraHandlers1 = useMemo(() => [onGif, onLocation], [onGif, onLocation]);
+  const extraHandlers2 = useMemo(() => [onContact, onPoll], [onContact, onPoll]);
+  const showRow1 = !!(onGif || onLocation);
+  const showRow2 = !!(onContact || onPoll);
 
   const cardLeft = anchor
     ? Math.max(Spacing.lg, Math.min(anchor.left, screenWidth - CARD_WIDTH - Spacing.lg))
@@ -90,6 +112,38 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
               </TouchableOpacity>
             ))}
           </View>
+          {showRow1 && (
+            <View style={[styles.tilesRow, { borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', paddingTop: 0 }]}>
+              {EXTRA_TILES_ROW1.map((tile, idx) => {
+                const handler = extraHandlers1[idx];
+                if (!handler) return null;
+                return (
+                  <TouchableOpacity key={tile.label} style={styles.tile} onPress={handler} activeOpacity={0.8}>
+                    <View style={styles.tileIcon}>
+                      <Feather name={tile.icon as any} size={20} color={tile.color} />
+                    </View>
+                    <Text style={styles.tileLabel}>{tile.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          {showRow2 && (
+            <View style={[styles.tilesRow, { borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', paddingTop: 0 }]}>
+              {EXTRA_TILES_ROW2.map((tile, idx) => {
+                const handler = extraHandlers2[idx];
+                if (!handler) return null;
+                return (
+                  <TouchableOpacity key={tile.label} style={styles.tile} onPress={handler} activeOpacity={0.8}>
+                    <View style={styles.tileIcon}>
+                      <Feather name={tile.icon as any} size={20} color={tile.color} />
+                    </View>
+                    <Text style={styles.tileLabel}>{tile.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
       )}
     </Modal>

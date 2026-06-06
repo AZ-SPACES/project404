@@ -44,9 +44,22 @@ export default function SharedMediaScreen() {
   const { mediaMessages, docMessages, linkItems } = useMemo(() => {
     const active = allMessages.filter(m => !m.isDeleted);
 
-    const mediaMessages = active.filter(
-      m => (m.type === 'IMAGE' || m.type === 'VIDEO') && !!m.mediaKey,
-    ).sort((a, b) => b.timestamp - a.timestamp);
+    // GIF messages are stored as TEXT with JSON payload — treat them as images
+    const gifMessages = active.filter(m => m.type === 'TEXT' && m.text?.startsWith('{"__gif":'));
+    const gifAsMedia = gifMessages.map(m => {
+      try {
+        const p = JSON.parse(m.text);
+        if (p.__gif === true && typeof p.url === 'string') {
+          return { ...m, type: 'IMAGE' as const, mediaKey: p.url as string };
+        }
+      } catch {}
+      return null;
+    }).filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const mediaMessages = [
+      ...active.filter(m => (m.type === 'IMAGE' || m.type === 'VIDEO') && !!m.mediaKey),
+      ...gifAsMedia,
+    ].sort((a, b) => b.timestamp - a.timestamp);
 
     const docMessages = active.filter(
       m => m.type === 'DOCUMENT' && !!m.mediaKey,
@@ -55,7 +68,8 @@ export default function SharedMediaScreen() {
     const seen = new Set<string>();
     const linkItems: LinkItem[] = [];
     for (const m of active) {
-      if (m.type === 'TEXT' && m.text) {
+      // Skip JSON payload messages — they are custom types, not plain links
+      if (m.type === 'TEXT' && m.text && !m.text.startsWith('{"__')) {
         const matches = m.text.match(URL_REGEX) ?? [];
         for (const url of matches) {
           if (!seen.has(url)) {

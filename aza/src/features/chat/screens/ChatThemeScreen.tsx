@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo, memo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, Platform, StatusBar, ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView,
-  Alert,
+  Alert, GestureResponderEvent,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +16,89 @@ import { BackButton } from '../../../components/ui/BackButton';
 import { useChatThemeStore, ChatWallpaper } from '../../../store/chatThemeStore';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// ─── Color utilities ─────────────────────────────────────────────────────────
+
+function hsbToHex(h: number, s: number, b: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    return b - b * s * Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  const hex = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${hex(f(5))}${hex(f(3))}${hex(f(1))}`;
+}
+
+function hexToHsb(hex: string): [number, number, number] {
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return [200, 0.65, 0.85];
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d > 0) {
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+    else if (max === g) h = ((b - r) / d + 2) * 60;
+    else h = ((r - g) / d + 4) * 60;
+  }
+  return [Math.round(h), max === 0 ? 0 : d / max, max];
+}
+
+// ─── Draggable gradient slider ────────────────────────────────────────────────
+
+const ColorSlider = memo(function ColorSlider({
+  gradientColors,
+  value,
+  onChange,
+}: {
+  gradientColors: string[];
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const barRef = useRef<View>(null);
+
+  const update = useCallback((e: GestureResponderEvent) => {
+    barRef.current?.measure((_x, _y, w, _h, px) => {
+      const ratio = Math.max(0, Math.min(1, (e.nativeEvent.pageX - px) / w));
+      onChange(ratio);
+    });
+  }, [onChange]);
+
+  return (
+    <View
+      ref={barRef}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderGrant={update}
+      onResponderMove={update}
+      style={{ height: 36, borderRadius: 18, overflow: 'visible', marginBottom: 20 }}
+    >
+      <LinearGradient
+        colors={gradientColors as [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ position: 'absolute', inset: 0, borderRadius: 18 }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 4, width: 28, height: 28, borderRadius: 14,
+          left: `${value * 100}%` as any,
+          transform: [{ translateX: -14 }],
+          backgroundColor: '#fff',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 3,
+          elevation: 4,
+          borderWidth: 0.5,
+          borderColor: 'rgba(0,0,0,0.12)',
+        }}
+      />
+    </View>
+  );
+});
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
 
@@ -136,11 +220,15 @@ export default function ChatThemeScreen() {
   const [bubbleColor, setBubbleColorLocal] = useState('');
   const [wallpaper, setWallpaperLocal] = useState<ChatWallpaper>({ type: 'none', value: '' });
 
-  // Custom hex input sheet
+  // Custom color picker sheet
   const [hexVisible, setHexVisible] = useState(false);
-  const [hexInput, setHexInput] = useState('');
+  const [hue, setHue] = useState(200);
+  const [sat, setSat] = useState(0.65);
+  const [bri, setBri] = useState(0.85);
   const sheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  const previewColor = useMemo(() => hsbToHex(hue, sat, bri), [hue, sat, bri]);
 
   const [pickerLoading, setPickerLoading] = useState(false);
 
@@ -167,14 +255,22 @@ export default function ChatThemeScreen() {
     setBubbleColor(chatId, c).catch(() => {});
   }, [chatId, setBubbleColor]);
 
-  const handleApplyHex = useCallback(() => {
-    const hex = hexInput.trim().startsWith('#') ? hexInput.trim() : `#${hexInput.trim()}`;
-    if (/^#([0-9A-Fa-f]{6})$/.test(hex)) {
-      setBubbleColorLocal(hex);
-      setBubbleColor(chatId, hex).catch(() => {});
-      setHexVisible(false);
+  const handleOpenCustom = useCallback(() => {
+    if (bubbleColor && /^#[0-9a-f]{6}$/i.test(bubbleColor)) {
+      const [h, s, b] = hexToHsb(bubbleColor);
+      setHue(h); setSat(s); setBri(b);
+    } else {
+      setHue(200); setSat(0.65); setBri(0.85);
     }
-  }, [hexInput, chatId, setBubbleColor]);
+    setHexVisible(true);
+  }, [bubbleColor]);
+
+  const handleApplyColor = useCallback(() => {
+    const hex = hsbToHex(hue, sat, bri);
+    setBubbleColorLocal(hex);
+    setBubbleColor(chatId, hex).catch(() => {});
+    setHexVisible(false);
+  }, [hue, sat, bri, chatId, setBubbleColor]);
 
   const handleSelectWallpaper = useCallback((wp: ChatWallpaper) => {
     setWallpaperLocal(wp);
@@ -266,7 +362,7 @@ export default function ChatThemeScreen() {
                 );
               })}
               {/* Custom color */}
-              <TouchableOpacity style={styles.swatchItem} onPress={() => { setHexInput(bubbleColor.replace('#', '')); setHexVisible(true); }} activeOpacity={0.75}>
+              <TouchableOpacity style={styles.swatchItem} onPress={handleOpenCustom} activeOpacity={0.75}>
                 <View style={[styles.swatch, styles.swatchCustom, selectedBubbleId === 'custom' && { borderColor: Colors.primary, borderWidth: 2 }]}>
                   {selectedBubbleId === 'custom' && bubbleColor ? (
                     <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: bubbleColor }} />
@@ -358,33 +454,44 @@ export default function ChatThemeScreen() {
           <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetAnim }] }]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Custom Bubble Color</Text>
-            <Text style={styles.sheetDesc}>Enter a hex color code (e.g. #6C63FF)</Text>
-            <View style={styles.hexInputRow}>
-              <Text style={styles.hexHash}>#</Text>
-              <TextInput
-                style={styles.hexInput}
-                value={hexInput}
-                onChangeText={v => setHexInput(v.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6))}
-                placeholder="6C63FF"
-                placeholderTextColor={Colors.textSecondary}
-                autoCapitalize="characters"
-                maxLength={6}
-                autoFocus={hexVisible}
-              />
-              {hexInput.length === 6 && (
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: `#${hexInput}`, marginLeft: Spacing.sm }} />
-              )}
+
+            {/* Live preview */}
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <View style={[styles.colorPreviewCircle, { backgroundColor: previewColor, shadowColor: previewColor }]} />
+              <Text style={[styles.colorPreviewHex, { color: Colors.textSecondary }]}>
+                {previewColor.toUpperCase()}
+              </Text>
             </View>
+
+            {/* Hue */}
+            <Text style={[styles.sliderLabel, { color: Colors.textSecondary }]}>Hue</Text>
+            <ColorSlider
+              gradientColors={['#FF0000','#FFFF00','#00FF00','#00FFFF','#0000FF','#FF00FF','#FF0000']}
+              value={hue / 360}
+              onChange={(v) => setHue(Math.round(v * 360))}
+            />
+
+            {/* Saturation */}
+            <Text style={[styles.sliderLabel, { color: Colors.textSecondary }]}>Saturation</Text>
+            <ColorSlider
+              gradientColors={[hsbToHex(hue, 0, bri), hsbToHex(hue, 1, bri)]}
+              value={sat}
+              onChange={setSat}
+            />
+
+            {/* Brightness */}
+            <Text style={[styles.sliderLabel, { color: Colors.textSecondary }]}>Brightness</Text>
+            <ColorSlider
+              gradientColors={['#000000', hsbToHex(hue, sat, 1)]}
+              value={bri}
+              onChange={setBri}
+            />
+
             <View style={styles.sheetActions}>
               <TouchableOpacity style={styles.sheetBtnCancel} onPress={() => setHexVisible(false)} activeOpacity={0.8}>
                 <Text style={styles.sheetBtnCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sheetBtnApply, hexInput.length !== 6 && styles.sheetBtnDisabled]}
-                onPress={handleApplyHex}
-                disabled={hexInput.length !== 6}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={styles.sheetBtnApply} onPress={handleApplyColor} activeOpacity={0.8}>
                 <Text style={styles.sheetBtnApplyText}>Apply</Text>
               </TouchableOpacity>
             </View>
@@ -433,21 +540,22 @@ function createStyles(Colors: ThemeColors, isDark: boolean) {
     resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingVertical: Spacing.md, borderRadius: Radius.md, backgroundColor: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' },
     resetBtnText: { ...Typography.body, fontWeight: '600' },
 
-    // Hex sheet
+    // Color picker sheet
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
     sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
     sheet: { backgroundColor: mainBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: 48 },
     sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.lg },
-    sheetTitle: { ...Typography.h3, color: Colors.textPrimary, textAlign: 'center', marginBottom: 4 },
-    sheetDesc: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl },
-    hexInputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? Colors.surface : '#F9FAFB', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingHorizontal: Spacing.md, marginBottom: Spacing.xl },
-    hexHash: { ...Typography.bodyLg, color: Colors.textSecondary, marginRight: 4 },
-    hexInput: { flex: 1, ...Typography.bodyLg, color: Colors.textPrimary, paddingVertical: Platform.OS === 'ios' ? 14 : 10 },
-    sheetActions: { flexDirection: 'row', gap: Spacing.md },
+    sheetTitle: { ...Typography.h3, color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.xl },
+    colorPreviewCircle: {
+      width: 72, height: 72, borderRadius: 36,
+      shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 10, elevation: 8,
+    },
+    colorPreviewHex: { fontSize: 13, fontWeight: '600', marginTop: 8, letterSpacing: 1 },
+    sliderLabel: { ...Typography.caption, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+    sheetActions: { flexDirection: 'row', gap: Spacing.md, marginTop: 8 },
     sheetBtnCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: isDark ? Colors.surface : '#F3F4F6', alignItems: 'center' },
     sheetBtnCancelText: { ...Typography.button, color: Colors.textPrimary },
     sheetBtnApply: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: 'center' },
-    sheetBtnDisabled: { opacity: 0.4 },
     sheetBtnApplyText: { ...Typography.button, color: Colors.white },
   });
 }

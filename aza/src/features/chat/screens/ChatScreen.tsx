@@ -5,6 +5,9 @@ import {
   Pressable, TextInput, DeviceEventEmitter, Image, Animated,
   NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,6 +22,9 @@ import { ChatHeader } from '../../../components/chat/ChatHeader';
 import { ChatMessageBubble, ChatTypingIndicator, FullScreenImageViewer } from '../../../components/chat/ChatMessageBubble';
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
+import { GifPickerModal } from '../../../components/chat/GifPickerModal';
+import { ContactPickerSheet } from '../../../components/chat/ContactPickerSheet';
+import { PollCreatorSheet } from '../../../components/chat/PollCreatorSheet';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
 import { ChatCallModal } from '../../../components/chat/ChatCallModal';
 import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessageBubble';
@@ -45,6 +51,8 @@ import { useChatThemeStore } from '../../../store/chatThemeStore';
 import { useChatStore } from '../../../store/chatStore';
 import { usePinnedMessageStore } from '../../../store/pinnedMessageStore';
 import { useReactionStore } from '../../../store/reactionStore';
+import { useChatLockStore } from '../../../store/chatLockStore';
+import { useScheduledMessagesStore } from '../../../store/scheduledMessagesStore';
 import { uploadChatMedia, blockUser, notifyChatScreenshot } from '../../../services/api';
 import * as ScreenCapture from 'expo-screen-capture';
 
@@ -59,6 +67,7 @@ export default function ChatScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>>();
   const { id, name, avatar, payIdentifier, quickReply } = route.params;
   const online = usePresenceStore((s) => s.isOnline(id));
+  const lastSeenTs = usePresenceStore((s) => s.getLastSeen(id));
 
   // `id` from the route is the OTHER user's UUID (set by ChatContactsScreen).
   // The hook resolves the underlying backend chat resource and runs the E2EE pipeline.
@@ -171,6 +180,34 @@ export default function ChatScreen() {
   // Full-screen image viewer
   const [fullScreenUri, setFullScreenUri] = useState<string | null>(null);
 
+  // GIF picker
+  const [showGifPicker, setShowGifPicker] = useState(false);
+
+  // Contact picker
+  const [showContactPicker, setShowContactPicker] = useState(false);
+
+  // Poll creator
+  const [showPollCreator, setShowPollCreator] = useState(false);
+
+  // Multi-select mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
+
+  // Search navigation
+  const [searchResultIndex, setSearchResultIndex] = useState(0);
+
+  // Biometric lock per chat
+  const lockChat = useChatLockStore(s => s.lock);
+  const unlockChat = useChatLockStore(s => s.unlock);
+  const isChatLockedInStore = useChatLockStore(s => chatId ? s.isLocked(chatId) : false);
+  const [chatUnlockedThisSession, setChatUnlockedThisSession] = useState(false);
+  const showChatLock = isChatLockedInStore && !chatUnlockedThisSession;
+
+  // Scheduled messages
+  const scheduleMessage = useScheduledMessagesStore(s => s.schedule);
+  const removeDue = useScheduledMessagesStore(s => s.remove);
+  const getDueMessages = useScheduledMessagesStore(s => s.getDue);
+
   // Message editing
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [editText, setEditText] = useState('');
@@ -200,11 +237,65 @@ export default function ChatScreen() {
 
   // Merge backend-driven thread with any local-only entries (forwarded msgs / media not yet wired to backend).
   // Inject isStarred from the persistent starred store so bubble indicators stay in sync.
+  // Also resolve JSON payloads (__gif, __location) into typed message objects so they render
+  // correctly everywhere (chat bubbles, Shared Media, storage stats).
   const messages = useMemo<Message[]>(() => {
     const combined = [...liveMessages, ...localOnlyMessages];
     const sorted = combined.sort((a, b) => a.timestamp - b.timestamp);
     const starredIds = new Set(starredEntries.map(e => e.messageId));
-    return sorted.map(m => starredIds.has(m.id) ? { ...m, isStarred: true } : m);
+    return sorted.map(m => {
+      let msg: Message = starredIds.has(m.id) ? { ...m, isStarred: true } : m;
+      if (!msg.type || msg.type === 'text') {
+        const text = msg.text;
+        if (typeof text === 'string' && text.startsWith('{"__gif":')) {
+          try {
+            const p = JSON.parse(text);
+            if (p.__gif === true && typeof p.url === 'string') {
+              msg = { ...msg, type: 'image', uri: p.url };
+            }
+          } catch {}
+        } else if (typeof text === 'string' && text.startsWith('{"__location":')) {
+          try {
+            const p = JSON.parse(text);
+            if (p.__location === true) {
+              msg = {
+                ...msg,
+                type: 'location',
+                latitude: p.lat as number,
+                longitude: p.lng as number,
+                ...(typeof p.name === 'string' ? { locationName: p.name } : {}),
+              };
+            }
+          } catch {}
+        } else if (typeof text === 'string' && text.startsWith('{"__contact":')) {
+          try {
+            const p = JSON.parse(text);
+            if (p.__contact === true) {
+              msg = {
+                ...msg,
+                type: 'contact',
+                contactCardName: typeof p.name === 'string' ? p.name : undefined,
+                contactCardAvatar: typeof p.avatar === 'string' ? p.avatar : undefined,
+                contactCardHandle: typeof p.handle === 'string' ? p.handle : undefined,
+              };
+            }
+          } catch {}
+        } else if (typeof text === 'string' && text.startsWith('{"__poll":')) {
+          try {
+            const p = JSON.parse(text);
+            if (p.__poll === true) {
+              msg = {
+                ...msg,
+                type: 'poll',
+                pollQuestion: typeof p.question === 'string' ? p.question : undefined,
+                pollOptions: Array.isArray(p.options) ? p.options as string[] : undefined,
+              };
+            }
+          } catch {}
+        }
+      }
+      return msg;
+    });
   }, [liveMessages, localOnlyMessages, starredEntries]);
 
   // Set the unread separator position once (first time messages load)
@@ -307,6 +398,36 @@ export default function ChatScreen() {
     sendText(text).catch(() => {});
   }, [quickReply, navigation, sendText]);
 
+  // Fire scheduled messages for this chat
+  useEffect(() => {
+    if (!chatId) return;
+    const interval = setInterval(() => {
+      const due = getDueMessages(chatId);
+      due.forEach(m => {
+        sendText(m.text).catch(() => {});
+        removeDue(m.id);
+      });
+    }, 10_000);
+    return () => clearInterval(interval);
+  }, [chatId, getDueMessages, sendText, removeDue]);
+
+  const handleBiometricUnlock = useCallback(async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: `Unlock chat with ${name}`,
+        fallbackLabel: 'Use Passcode',
+      });
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setChatUnlockedThisSession(true);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
+    } catch {
+      setChatUnlockedThisSession(true);
+    }
+  }, [name]);
+
   const filteredMessages = useMemo(
     () =>
       searchQuery.trim()
@@ -369,12 +490,89 @@ export default function ChatScreen() {
 
   const handleCloseAttachment = useCallback(() => setShowAttachment(false), []);
   const handleCloseMessageModal = useCallback(() => setSelectedMessage(null), []);
-  const handleSelectMessage = useCallback((msg: Message) => setSelectedMessage(msg), []);
+  const handleSelectMessage = useCallback((msg: Message) => {
+    if (selectMode) {
+      setSelectedMsgIds((ids) =>
+        ids.includes(msg.id) ? ids.filter((i) => i !== msg.id) : [...ids, msg.id],
+      );
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setSelectedMessage(msg);
+  }, [selectMode]);
+
+  const handleEnterSelectMode = useCallback((msgId: string) => {
+    setSelectMode(true);
+    setSelectedMsgIds([msgId]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  }, []);
+
+  const handleExitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedMsgIds([]);
+  }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    Alert.alert(
+      'Delete Messages',
+      `Delete ${selectedMsgIds.length} message${selectedMsgIds.length > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setLocalOnlyMessages((prev) => prev.filter((m) => !selectedMsgIds.includes(m.id)));
+            selectedMsgIds.forEach((id) => deleteMessageRemote(id).catch(() => {}));
+            handleExitSelectMode();
+          },
+        },
+      ],
+    );
+  }, [selectedMsgIds, deleteMessageRemote, handleExitSelectMode]);
+
+  const handleBulkStar = useCallback(() => {
+    const { star } = useStarredMessagesStore.getState();
+    const toStar = filteredMessages.filter((m) => selectedMsgIds.includes(m.id));
+    toStar.forEach((m) => star(m, chatId ?? id, name).catch(() => {}));
+    setToastMessage(`Starred ${toStar.length} message${toStar.length > 1 ? 's' : ''}`);
+    setTimeout(() => setToastMessage(null), 3000);
+    handleExitSelectMode();
+  }, [selectedMsgIds, filteredMessages, chatId, id, name, handleExitSelectMode]);
+
+  const handleBulkForward = useCallback(() => {
+    const first = filteredMessages.find((m) => selectedMsgIds[0] && m.id === selectedMsgIds[0]);
+    if (!first) return;
+    setForwardMessage(first);
+    setShowForwardModal(true);
+    handleExitSelectMode();
+  }, [selectedMsgIds, filteredMessages, handleExitSelectMode]);
 
   const handleSearchClose = useCallback(() => {
     setSearchActive(false);
     setSearchQuery('');
+    setSearchResultIndex(0);
   }, []);
+
+  // Reset search index when query changes
+  useEffect(() => {
+    setSearchResultIndex(0);
+  }, [searchQuery]);
+
+  const handleSearchNext = useCallback(() => {
+    if (filteredMessages.length === 0) return;
+    const next = (searchResultIndex + 1) % filteredMessages.length;
+    setSearchResultIndex(next);
+    flatListRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+  }, [searchResultIndex, filteredMessages.length]);
+
+  const handleSearchPrev = useCallback(() => {
+    if (filteredMessages.length === 0) return;
+    const prev = (searchResultIndex - 1 + filteredMessages.length) % filteredMessages.length;
+    setSearchResultIndex(prev);
+    flatListRef.current?.scrollToIndex({ index: prev, animated: true, viewPosition: 0.5 });
+  }, [searchResultIndex, filteredMessages.length]);
 
   const handleClearChat = useCallback(() => {
     setShowMoreMenu(false);
@@ -425,6 +623,7 @@ export default function ChatScreen() {
     setMessage('');
     setReplyTo(null);
     setTyping(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     sendText(text).catch(() => {});
   }, [message, sendText, setTyping]);
 
@@ -505,6 +704,7 @@ export default function ChatScreen() {
         status: 'sent',
         timestamp: Date.now(),
         time: formatTime(),
+        isForwarded: true,
       };
       
       navigation.push('ChatScreen', {
@@ -592,6 +792,56 @@ export default function ChatScreen() {
     }
   }, [navigation, name, id]);
 
+  const handleShareLocation = useCallback(async () => {
+    setShowAttachment(false);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required to share your location.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [geocode] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }).catch(() => []);
+      const locationName = geocode
+        ? [geocode.street, geocode.city, geocode.region].filter(Boolean).join(', ')
+        : undefined;
+      sendText(JSON.stringify({
+        __location: true,
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+        name: locationName ?? null,
+      })).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    } catch {
+      Alert.alert('Error', 'Could not get your location. Please try again.');
+    }
+  }, []);
+
+  const handleShareContact = useCallback((name: string, avatar: string, handle: string) => {
+    sendText(JSON.stringify({ __contact: true, name, avatar, handle })).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, [sendText]);
+
+  const handleCreatePoll = useCallback((question: string, options: string[]) => {
+    sendText(JSON.stringify({ __poll: true, question, options })).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  }, [sendText]);
+
+  const handleScheduleSend = useCallback((delaySecs: number) => {
+    const text = message.trim();
+    if (!text || !chatId) return;
+    Alert.alert(
+      'Schedule Message',
+      'When should this message be sent?',
+      [
+        { text: 'In 5 minutes', onPress: () => { scheduleMessage({ id: Date.now().toString(), chatId, text, scheduledAt: Date.now() + 5 * 60_000 }); setMessage(''); setToastMessage('Scheduled for 5 minutes'); setTimeout(() => setToastMessage(null), 3000); } },
+        { text: 'In 1 hour', onPress: () => { scheduleMessage({ id: Date.now().toString(), chatId, text, scheduledAt: Date.now() + 60 * 60_000 }); setMessage(''); setToastMessage('Scheduled for 1 hour'); setTimeout(() => setToastMessage(null), 3000); } },
+        { text: 'Tomorrow morning', onPress: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); scheduleMessage({ id: Date.now().toString(), chatId, text, scheduledAt: d.getTime() }); setMessage(''); setToastMessage('Scheduled for tomorrow 9:00 AM'); setTimeout(() => setToastMessage(null), 3000); } },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [message, chatId, scheduleMessage]);
+
   const handlePickDocument = useCallback(async () => {
     if (isPickingRef.current) return;
     isPickingRef.current = true;
@@ -643,15 +893,31 @@ export default function ChatScreen() {
     );
   }, [chatId, disappearingTtl, handleCloseMoreMenu, setDisappearingTtl]);
 
+  const handleToggleChatLock = useCallback(() => {
+    if (!chatId) return;
+    handleCloseMoreMenu();
+    if (isChatLockedInStore) {
+      unlockChat(chatId);
+      setChatUnlockedThisSession(false);
+      setToastMessage('Chat lock removed');
+    } else {
+      lockChat(chatId);
+      setChatUnlockedThisSession(false);
+      setToastMessage('Chat locked');
+    }
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [chatId, isChatLockedInStore, lockChat, unlockChat, handleCloseMoreMenu]);
+
   const moreMenuActions = useMemo<MoreAction[]>(() => [
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
     { icon: 'clock', label: `Disappearing Messages${disappearingTtl ? ' ✓' : ''}`, onPress: handleDisappearingTimer },
+    { icon: isChatLockedInStore ? 'unlock' : 'lock', label: isChatLockedInStore ? 'Remove Chat Lock' : 'Lock Chat', onPress: handleToggleChatLock },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia', { chatId: chatId ?? undefined, otherUserName: name }); } },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
     { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
-  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, disappearingTtl, handleDisappearingTimer]);
+  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, disappearingTtl, handleDisappearingTimer, isChatLockedInStore, handleToggleChatLock]);
 
   const handleEditSubmit = useCallback(() => {
     if (!editingMessage || !editText.trim()) { setEditingMessage(null); return; }
@@ -698,9 +964,14 @@ export default function ChatScreen() {
       }},
       { icon: 'info', label: 'Info', onPress: () => { handleCloseMessageModal(); if (selectedMessage) navigation.navigate('MessageInfo', { message: selectedMessage }); } },
       { icon: 'star', label: isCurrentlyStarred ? 'Unstar' : 'Star', onPress: handleStarMessage },
+      { icon: 'check-square', label: 'Select', onPress: () => {
+        if (!selectedMessage) return;
+        handleCloseMessageModal();
+        handleEnterSelectMode(selectedMessage.id);
+      }},
       { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
     ];
-  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessage, pinMessage, unpinMessage]);
+  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessage, pinMessage, unpinMessage, handleEnterSelectMode]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
@@ -734,17 +1005,21 @@ export default function ChatScreen() {
         <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
           <ChatMessageBubble
             message={item}
-            onLongPress={() => handleSelectMessage(item)}
+            onLongPress={() => selectMode ? handleSelectMessage(item) : handleSelectMessage(item)}
             onImagePress={setFullScreenUri}
             onPayPress={(amount) => setPaymentSheet({ visible: true, mode: 'send', prefillAmount: amount })}
             bubbleColor={chatBubbleColor || undefined}
             isLastInGroup={isLastInGroup}
             isNew={isNew}
+            highlight={searchActive && searchQuery ? searchQuery : undefined}
+            isSelected={selectMode ? selectedMsgIds.includes(item.id) : undefined}
+            isSelectMode={selectMode || undefined}
+            onSelectToggle={selectMode ? () => handleSelectMessage(item) : undefined}
           />
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
@@ -764,6 +1039,7 @@ export default function ChatScreen() {
         name={name}
         avatar={avatar}
         online={online}
+        lastSeen={lastSeenTs ?? undefined}
         isEncrypted={!!chatId}
         onBack={handleBack}
         onProfilePress={handleProfilePress}
@@ -799,7 +1075,20 @@ export default function ChatScreen() {
             onChangeText={setSearchQuery}
             autoFocus
           />
-          <TouchableOpacity onPress={handleSearchClose} activeOpacity={0.7}>
+          {searchQuery.trim() && filteredMessages.length > 0 && (
+            <View style={styles.searchNav}>
+              <Text style={styles.searchCount}>
+                {searchResultIndex + 1}/{filteredMessages.length}
+              </Text>
+              <TouchableOpacity onPress={handleSearchPrev} style={styles.searchNavBtn} activeOpacity={0.7}>
+                <Feather name="chevron-up" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSearchNext} style={styles.searchNavBtn} activeOpacity={0.7}>
+                <Feather name="chevron-down" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity onPress={handleSearchClose} activeOpacity={0.7} style={{ marginLeft: Spacing.xs }}>
             <Feather name="x" size={18} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -847,8 +1136,30 @@ export default function ChatScreen() {
             onScroll={handleScroll}
             scrollEventThrottle={100}
           />
+          {/* Bulk select bar */}
+          {selectMode && (
+            <View style={styles.selectBar}>
+              <TouchableOpacity onPress={handleExitSelectMode} style={styles.selectBarCancel}>
+                <Feather name="x" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={[styles.selectBarCount, { color: Colors.textPrimary }]}>
+                {selectedMsgIds.length} selected
+              </Text>
+              <View style={styles.selectBarActions}>
+                <TouchableOpacity onPress={handleBulkForward} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="corner-up-right" size={20} color={selectedMsgIds.length > 0 ? Colors.primary : Colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleBulkStar} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="star" size={20} color={selectedMsgIds.length > 0 ? Colors.primary : Colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleBulkDelete} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="trash-2" size={20} color={selectedMsgIds.length > 0 ? '#EF4444' : Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
           {/* Edit bar */}
-          {editingMessage && (
+          {!selectMode && editingMessage && (
             <View style={styles.editBar}>
               <Feather name="edit-2" size={16} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
               <TextInput
@@ -868,18 +1179,21 @@ export default function ChatScreen() {
               </TouchableOpacity>
             </View>
           )}
-          <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
-            <ChatInputArea
-              message={message}
-              setMessage={handleMessageChange}
-              onSend={handleSend}
-              isAddOpen={showAttachment}
-              onAddPress={handleAddPress}
-              replyTo={replyTo}
-              onCancelReply={handleCancelReply}
-              onSendAudio={handleSendAudio}
-            />
-          </View>
+          {!selectMode && (
+            <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
+              <ChatInputArea
+                message={message}
+                setMessage={handleMessageChange}
+                onSend={handleSend}
+                isAddOpen={showAttachment}
+                onAddPress={handleAddPress}
+                replyTo={replyTo}
+                onCancelReply={handleCancelReply}
+                onSendAudio={handleSendAudio}
+                onScheduleSend={handleScheduleSend}
+              />
+            </View>
+          )}
         </KeyboardAvoidingView>
       ) : (
         <View
@@ -903,7 +1217,29 @@ export default function ChatScreen() {
             onScroll={handleScroll}
             scrollEventThrottle={100}
           />
-          {editingMessage && (
+          {/* Bulk select bar */}
+          {selectMode && (
+            <View style={styles.selectBar}>
+              <TouchableOpacity onPress={handleExitSelectMode} style={styles.selectBarCancel}>
+                <Feather name="x" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={[styles.selectBarCount, { color: Colors.textPrimary }]}>
+                {selectedMsgIds.length} selected
+              </Text>
+              <View style={styles.selectBarActions}>
+                <TouchableOpacity onPress={handleBulkForward} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="corner-up-right" size={20} color={selectedMsgIds.length > 0 ? Colors.primary : Colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleBulkStar} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="star" size={20} color={selectedMsgIds.length > 0 ? Colors.primary : Colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleBulkDelete} style={styles.selectBarBtn} disabled={selectedMsgIds.length === 0}>
+                  <Feather name="trash-2" size={20} color={selectedMsgIds.length > 0 ? '#EF4444' : Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {!selectMode && editingMessage && (
             <View style={styles.editBar}>
               <Feather name="edit-2" size={16} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
               <TextInput
@@ -923,17 +1259,21 @@ export default function ChatScreen() {
               </TouchableOpacity>
             </View>
           )}
-          <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
-            <ChatInputArea
-              message={message}
-              setMessage={handleMessageChange}
-              onSend={handleSend}
-              isAddOpen={showAttachment}
-              onAddPress={handleAddPress}
-              replyTo={replyTo}
-              onCancelReply={handleCancelReply}
-            />
-          </View>
+          {!selectMode && (
+            <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
+              <ChatInputArea
+                message={message}
+                setMessage={handleMessageChange}
+                onSend={handleSend}
+                isAddOpen={showAttachment}
+                onAddPress={handleAddPress}
+                replyTo={replyTo}
+                onCancelReply={handleCancelReply}
+                onSendAudio={handleSendAudio}
+                onScheduleSend={handleScheduleSend}
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -952,6 +1292,21 @@ export default function ChatScreen() {
         onRequestMoney={() => {
           handleCloseAttachment();
           setPaymentSheet({ visible: true, mode: 'request' });
+        }}
+        onGif={() => {
+          handleCloseAttachment();
+          setShowGifPicker(true);
+        }}
+        onLocation={() => {
+          handleShareLocation();
+        }}
+        onContact={() => {
+          handleCloseAttachment();
+          setShowContactPicker(true);
+        }}
+        onPoll={() => {
+          handleCloseAttachment();
+          setShowPollCreator(true);
         }}
       />
 
@@ -992,6 +1347,7 @@ export default function ChatScreen() {
                   style={styles.reactionPickerBtn}
                   activeOpacity={0.7}
                   onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                     addReaction(selectedMessage.id, emoji);
                     handleCloseMessageModal();
                   }}
@@ -1083,6 +1439,48 @@ export default function ChatScreen() {
       {/* Full-screen image viewer */}
       {fullScreenUri && (
         <FullScreenImageViewer uri={fullScreenUri} onClose={() => setFullScreenUri(null)} />
+      )}
+
+      {/* GIF picker */}
+      <GifPickerModal
+        visible={showGifPicker}
+        onClose={() => setShowGifPicker(false)}
+        onSelect={(gifUrl) => {
+          sendText(JSON.stringify({ __gif: true, url: gifUrl })).catch(() => {});
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        }}
+      />
+
+      {/* Contact picker */}
+      <ContactPickerSheet
+        visible={showContactPicker}
+        onClose={() => setShowContactPicker(false)}
+        onSelect={handleShareContact}
+      />
+
+      {/* Poll creator */}
+      <PollCreatorSheet
+        visible={showPollCreator}
+        onClose={() => setShowPollCreator(false)}
+        onCreate={handleCreatePoll}
+      />
+
+      {/* Biometric chat lock overlay */}
+      {showChatLock && (
+        <View style={[StyleSheet.absoluteFill, styles.chatLockOverlay]}>
+          <View style={styles.chatLockCard}>
+            <Feather name="lock" size={40} color={Colors.primary} />
+            <Text style={styles.chatLockTitle}>Chat Locked</Text>
+            <Text style={styles.chatLockSubtitle}>This chat is protected with biometric authentication</Text>
+            <TouchableOpacity style={styles.chatLockBtn} activeOpacity={0.85} onPress={handleBiometricUnlock}>
+              <Feather name="unlock" size={18} color="#fff" />
+              <Text style={styles.chatLockBtnText}>Unlock Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleBack} style={{ marginTop: 12 }}>
+              <Text style={[styles.chatLockSubtitle, { color: Colors.textSecondary }]}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {/* Toast */}
@@ -1332,4 +1730,89 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       borderRadius: 20,
     },
     reactionPickerEmoji: { fontSize: 22 },
+    // Chat lock overlay
+    chatLockOverlay: {
+      backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.92)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 200,
+    },
+    chatLockCard: {
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: Spacing.xl,
+    },
+    chatLockTitle: {
+      ...Typography.body,
+      fontSize: 20,
+      fontWeight: '700',
+      color: Colors.textPrimary,
+    },
+    chatLockSubtitle: {
+      ...Typography.body,
+      fontSize: 14,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+    },
+    chatLockBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: Colors.primary,
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.xl,
+      paddingVertical: 14,
+      marginTop: 8,
+    },
+    chatLockBtnText: {
+      ...Typography.body,
+      fontWeight: '700',
+      color: '#fff',
+      fontSize: 16,
+    },
+    // Search navigation
+    searchNav: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    searchCount: {
+      ...Typography.caption,
+      fontSize: 12,
+      color: Colors.textSecondary,
+      marginRight: 4,
+      minWidth: 36,
+      textAlign: 'right',
+    },
+    searchNavBtn: {
+      padding: 4,
+    },
+    // Multi-select bar
+    selectBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+      gap: Spacing.sm,
+    },
+    selectBarCancel: {
+      padding: 4,
+    },
+    selectBarCount: {
+      flex: 1,
+      ...Typography.body,
+      fontWeight: '600',
+      fontSize: 15,
+    },
+    selectBarActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    selectBarBtn: {
+      padding: 8,
+    },
   });
