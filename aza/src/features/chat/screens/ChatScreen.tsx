@@ -57,6 +57,12 @@ import { useChatLockStore } from '../../../store/chatLockStore';
 import { useScheduledMessagesStore } from '../../../store/scheduledMessagesStore';
 import { uploadChatMedia, blockUser, notifyChatScreenshot } from '../../../services/api';
 import * as ScreenCapture from 'expo-screen-capture';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { useDraftStore } from '../../../store/draftStore';
+import { useMuteDurationStore } from '../../../store/muteDurationStore';
+import { useMediaAutoSaveStore } from '../../../store/mediaAutoSaveStore';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -115,7 +121,54 @@ export default function ChatScreen() {
     return () => sub.remove();
   }, [chatId, disappearingTtl]);
 
+  // Draft persistence
+  const getDraft = useDraftStore(s => s.getDraft);
+  const saveDraft = useDraftStore(s => s.setDraft);
+  const clearDraft = useDraftStore(s => s.clearDraft);
+
+  // Mute with duration
+  const getMutedUntil = useMuteDurationStore(s => s.getMutedUntil);
+  const setMutedUntil = useMuteDurationStore(s => s.setMutedUntil);
+  const clearMutedUntil = useMuteDurationStore(s => s.clearMutedUntil);
+  const isEffectiveMuted = useMuteDurationStore(s => s.isEffectiveMuted);
+  const effectiveMuted = chatId ? isEffectiveMuted(chatId, isMuted) : isMuted;
+  const mutedUntil = chatId ? getMutedUntil(chatId) : null;
+
+  // Auto-unmute when duration expires
+  useEffect(() => {
+    if (!mutedUntil || !chatId) return;
+    const remaining = mutedUntil - Date.now();
+    if (remaining <= 0) {
+      storeMuteChat(chatId, false).catch(() => {});
+      clearMutedUntil(chatId);
+      return;
+    }
+    const timer = setTimeout(() => {
+      storeMuteChat(chatId, false).catch(() => {});
+      clearMutedUntil(chatId);
+    }, Math.min(remaining, 2_147_483_647));
+    return () => clearTimeout(timer);
+  }, [mutedUntil, chatId]);
+
   const [message, setMessage] = useState('');
+
+  // Load draft when chat opens
+  useEffect(() => {
+    if (!chatId) return;
+    const draft = getDraft(chatId);
+    if (draft) setMessage(draft);
+  }, [chatId]);
+
+  // Persist draft on change (debounced 400ms)
+  useEffect(() => {
+    if (!chatId) return;
+    const timer = setTimeout(() => {
+      if (message.trim()) saveDraft(chatId, message);
+      else clearDraft(chatId);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [message, chatId]);
+
   // Local-only messages (forwarded/media) layered on top of liveMessages.
   const [localOnlyMessages, setLocalOnlyMessages] = useState<Message[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -318,6 +371,25 @@ export default function ChatScreen() {
       return msg;
     });
   }, [liveMessages, localOnlyMessages, starredEntries]);
+
+  // Auto-save incoming images when enabled in contact info settings
+  const isAutoSaveEnabled = useMediaAutoSaveStore(s => chatId ? s.isEnabled(chatId) : false);
+  const autoSavedIdsRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    messages.forEach(m => {
+      if (m.sender !== 'other') return;
+      if ((m.type !== 'image' && m.type !== 'video') || !m.uri) return;
+      if (autoSavedIdsRef.current.has(m.id)) return;
+      autoSavedIdsRef.current.add(m.id);
+      MediaLibrary.getPermissionsAsync().then(perm => {
+        if (!perm.granted) return MediaLibrary.requestPermissionsAsync();
+        return perm;
+      }).then(perm => {
+        if (perm.granted) MediaLibrary.saveToLibraryAsync(m.uri!).catch(() => {});
+      }).catch(() => {});
+    });
+  }, [messages, isAutoSaveEnabled]);
 
   // Set the unread separator position once (first time messages load)
   useEffect(() => {
@@ -617,8 +689,19 @@ export default function ChatScreen() {
   const handleToggleMute = useCallback(async () => {
     if (!chatId) return;
     setShowMoreMenu(false);
-    await storeMuteChat(chatId, !isMuted);
-  }, [chatId, isMuted, storeMuteChat]);
+    if (effectiveMuted) {
+      await storeMuteChat(chatId, false);
+      clearMutedUntil(chatId);
+      return;
+    }
+    Alert.alert('Mute Notifications', 'For how long?', [
+      { text: '1 hour',  onPress: () => { storeMuteChat(chatId, true).catch(() => {}); setMutedUntil(chatId, Date.now() + 3_600_000); } },
+      { text: '8 hours', onPress: () => { storeMuteChat(chatId, true).catch(() => {}); setMutedUntil(chatId, Date.now() + 28_800_000); } },
+      { text: '1 week',  onPress: () => { storeMuteChat(chatId, true).catch(() => {}); setMutedUntil(chatId, Date.now() + 604_800_000); } },
+      { text: 'Always',  onPress: () => { storeMuteChat(chatId, true).catch(() => {}); } },
+      { text: 'Cancel',  style: 'cancel' },
+    ]);
+  }, [chatId, effectiveMuted, storeMuteChat, setMutedUntil, clearMutedUntil]);
 
   const handleOpenSearch = useCallback(() => {
     setShowMoreMenu(false);
@@ -642,11 +725,12 @@ export default function ChatScreen() {
     const text = message.trim();
     if (!text) return;
     setMessage('');
+    if (chatId) clearDraft(chatId);
     setReplyTo(null);
     setTyping(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     sendText(text).catch(() => {});
-  }, [message, sendText, setTyping]);
+  }, [message, sendText, setTyping, chatId, clearDraft]);
 
   const handleMessageChange = useCallback(
     (next: string) => {
@@ -978,16 +1062,39 @@ export default function ChatScreen() {
     setTimeout(() => setToastMessage(null), 3000);
   }, [chatId, isChatLockedInStore, lockChat, unlockChat, handleCloseMoreMenu]);
 
+  const handleExportChat = useCallback(async () => {
+    handleCloseMoreMenu();
+    if (!messages.length) { Alert.alert('No messages to export'); return; }
+    const lines = messages.map(m => {
+      const sender = m.sender === 'me' ? 'You' : name;
+      const d = new Date(m.timestamp);
+      const ts = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+        d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const content = m.text || m.caption || m.fileName || `[${m.type ?? 'media'}]`;
+      return `[${ts}] ${sender}: ${content}`;
+    });
+    const text = `Chat with ${name}\n${'─'.repeat(40)}\n${lines.join('\n')}`;
+    const fileName = `chat_${name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+    const path = `${FileSystem.cacheDirectory}${fileName}`;
+    try {
+      await FileSystem.writeAsStringAsync(path, text, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Chat with ${name}` });
+    } catch {
+      Alert.alert('Export failed', 'Could not export this chat.');
+    }
+  }, [messages, name, handleCloseMoreMenu]);
+
   const moreMenuActions = useMemo<MoreAction[]>(() => [
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
-    { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
+    { icon: effectiveMuted ? 'bell' : 'bell-off', label: effectiveMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
     { icon: 'clock', label: `Disappearing Messages${disappearingTtl ? ' ✓' : ''}`, onPress: handleDisappearingTimer },
     { icon: isChatLockedInStore ? 'unlock' : 'lock', label: isChatLockedInStore ? 'Remove Chat Lock' : 'Lock Chat', onPress: handleToggleChatLock },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia', { chatId: chatId ?? undefined, otherUserName: name }); } },
+    { icon: 'share-2', label: 'Export Chat', onPress: handleExportChat },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
     { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
-  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, disappearingTtl, handleDisappearingTimer, isChatLockedInStore, handleToggleChatLock]);
+  ], [effectiveMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, handleExportChat, disappearingTtl, handleDisappearingTimer, isChatLockedInStore, handleToggleChatLock]);
 
   const handleEditSubmit = useCallback(() => {
     if (!editingMessage || !editText.trim()) { setEditingMessage(null); return; }
@@ -1027,10 +1134,21 @@ export default function ChatScreen() {
     const isCurrentlyPinned = selectedMessage && chatId ? isPinned(chatId, selectedMessage.id) : false;
     const canPin = chatId && selectedMessage && (pinnedMessages.length < 3 || isCurrentlyPinned);
     const canEdit = selectedMessage?.sender === 'me' && selectedMessage?.type !== 'audio' && selectedMessage?.type !== 'image';
+    const canSavePhoto = (selectedMessage?.type === 'image' || selectedMessage?.type === 'video') && !!selectedMessage?.uri;
     return [
       { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
       { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
       { icon: 'copy', label: 'Copy', onPress: handleCopy },
+      ...(canSavePhoto ? [{ icon: 'download', label: 'Save to Photos', onPress: async () => {
+        handleCloseMessageModal();
+        const perm = await MediaLibrary.requestPermissionsAsync();
+        if (!perm.granted) { Alert.alert('Permission denied', 'Allow media access to save photos.'); return; }
+        try {
+          await MediaLibrary.saveToLibraryAsync(selectedMessage!.uri!);
+          setToastMessage('Saved to Photos');
+          setTimeout(() => setToastMessage(null), 3000);
+        } catch { Alert.alert('Save failed'); }
+      }}] : []),
       ...(canEdit ? [{ icon: 'edit-2', label: 'Edit', onPress: () => {
         if (!selectedMessage) return;
         setEditingMessage(selectedMessage);
@@ -1053,7 +1171,7 @@ export default function ChatScreen() {
       }},
       { icon: 'trash-2', label: 'Delete', color: '#EF4444', onPress: handleDelete },
     ];
-  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessages.length, pinMessage, unpinMessage, isPinned, handleEnterSelectMode, handleSetReminder]);
+  }, [handleCloseMessageModal, handleCopy, handleDelete, handleStarMessage, selectedMessage, handleSwipeToReply, handleOpenForward, starredEntries, navigation, chatId, pinnedMessages.length, pinMessage, unpinMessage, isPinned, handleEnterSelectMode, handleSetReminder, setToastMessage]);
 
   // --------------------------------------------------------------------------
   // FlatList helpers
@@ -1412,7 +1530,7 @@ export default function ChatScreen() {
       <ChatMoreModal
         visible={showMoreMenu}
         isDark={isDark}
-        isMuted={isMuted}
+        isMuted={effectiveMuted}
         contactName={name}
         anchor={menuAnchor}
         onClose={handleCloseMoreMenu}

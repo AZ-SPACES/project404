@@ -36,6 +36,7 @@ import { useChatStore } from "../../../store/chatStore";
 import { usePresenceStore } from "../../../store/presenceStore";
 import { usePinnedStore } from "../../../store/pinnedChatsStore";
 import { useChatFiltersStore } from "../../../store/chatFiltersStore";
+import { useDraftStore } from "../../../store/draftStore";
 import { Contact } from "../../../features/contacts/types";
 import { ChatMoreModal } from "../../../components/chat/ChatMoreModal";
 import type { MoreAction, MenuAnchor } from "../../../components/chat/chatTypes";
@@ -331,6 +332,8 @@ export default function ChatContactsScreen() {
   } = useChatFiltersStore();
 
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const getDraft = useDraftStore(s => s.getDraft);
+  const drafts = useDraftStore(s => s.drafts);
 
   useEffect(() => {
     fetchContacts();
@@ -444,11 +447,13 @@ export default function ChatContactsScreen() {
   const applySearch = (list: Contact[]): Contact[] => {
     if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
-    return list.filter(
-      (c) =>
-        c.displayName.toLowerCase().includes(q) ||
-        (c.handle && c.handle.toLowerCase().includes(q)),
-    );
+    return list.filter((c) => {
+      if (c.displayName.toLowerCase().includes(q)) return true;
+      if (c.handle && c.handle.toLowerCase().includes(q)) return true;
+      const chat = chatByPeer[c.contactUserId || c.id];
+      if (chat?.lastMessagePreview?.toLowerCase().includes(q)) return true;
+      return false;
+    });
   };
 
   // ── Filtered contacts ──────────────────────────────────────────────────────
@@ -574,7 +579,17 @@ export default function ChatContactsScreen() {
         label: chat.isMuted ? "Unmute" : "Mute",
         onPress: () => {
           setContextContact(null);
-          muteChat(chat.id, !chat.isMuted).catch(() => {});
+          if (chat.isMuted) {
+            muteChat(chat.id, false).catch(() => {});
+          } else {
+            Alert.alert("Mute Notifications", "For how long?", [
+              { text: "1 hour",  onPress: () => muteChat(chat.id, true).catch(() => {}) },
+              { text: "8 hours", onPress: () => muteChat(chat.id, true).catch(() => {}) },
+              { text: "1 week",  onPress: () => muteChat(chat.id, true).catch(() => {}) },
+              { text: "Always",  onPress: () => muteChat(chat.id, true).catch(() => {}) },
+              { text: "Cancel",  style: "cancel" },
+            ]);
+          }
         },
       });
       actions.push({
@@ -661,8 +676,18 @@ export default function ChatContactsScreen() {
       .map((p) => chatByPeer[p])
       .filter(Boolean) as (typeof chats)[string][];
     const anyUnmuted = selected.some((c) => !c.isMuted);
-    selected.forEach((c) => muteChat(c.id, anyUnmuted).catch(() => {}));
-    exitSelectMode();
+    if (anyUnmuted) {
+      Alert.alert("Mute Notifications", "For how long?", [
+        { text: "1 hour",  onPress: () => { selected.forEach((c) => { if (!c.isMuted) muteChat(c.id, true).catch(() => {}); }); exitSelectMode(); } },
+        { text: "8 hours", onPress: () => { selected.forEach((c) => { if (!c.isMuted) muteChat(c.id, true).catch(() => {}); }); exitSelectMode(); } },
+        { text: "1 week",  onPress: () => { selected.forEach((c) => { if (!c.isMuted) muteChat(c.id, true).catch(() => {}); }); exitSelectMode(); } },
+        { text: "Always",  onPress: () => { selected.forEach((c) => { if (!c.isMuted) muteChat(c.id, true).catch(() => {}); }); exitSelectMode(); } },
+        { text: "Cancel",  style: "cancel" },
+      ]);
+    } else {
+      selected.forEach((c) => muteChat(c.id, false).catch(() => {}));
+      exitSelectMode();
+    }
   }, [selectedIds, chatByPeer, muteChat, exitSelectMode]);
 
   const BUILTIN_FILTERS = ["All", "Favorites", "Recent", "Unread", "Archived"];
@@ -755,9 +780,14 @@ export default function ChatContactsScreen() {
     const chat = chatByPeer[peerId];
     const online = isOnline(peerId);
     const isSelected = selectedIds.has(peerId);
+    const draftText = chat ? drafts[chat.id] : undefined;
 
     let subtitle: string;
-    if (chat?.lastMessagePreview) {
+    let subtitleIsDraft = false;
+    if (draftText) {
+      subtitle = draftText;
+      subtitleIsDraft = true;
+    } else if (chat?.lastMessagePreview) {
       subtitle = chat.lastMessageIsSelf
         ? `You: ${chat.lastMessagePreview}`
         : chat.lastMessagePreview;
@@ -819,9 +849,16 @@ export default function ChatContactsScreen() {
 
         <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{item.displayName}</Text>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {subtitle}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {subtitleIsDraft && (
+              <Text style={[styles.lastMessage, { color: "#EF4444", fontWeight: "600", marginRight: 3 }]}>
+                Draft:
+              </Text>
+            )}
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
         </View>
 
         {!selectMode && (

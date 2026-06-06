@@ -20,7 +20,7 @@ export interface Message {
   status?: MessageStatus;
   replyTo?: string;
   replyToMessage?: ReplyInfo;
-  type?: 'text' | 'image' | 'document' | 'audio' | 'video' | 'payment' | 'location' | 'contact' | 'poll';
+  type?: 'text' | 'image' | 'document' | 'audio' | 'video' | 'payment' | 'location' | 'contact' | 'poll' | 'call';
   latitude?: number | undefined;
   longitude?: number | undefined;
   locationName?: string | undefined;
@@ -44,6 +44,9 @@ export interface Message {
   contactCardHandle?: string | undefined;
   pollQuestion?: string | undefined;
   pollOptions?: string[] | undefined;
+  callMissed?: boolean | undefined;
+  callDuration?: number | undefined;
+  callType?: 'voice' | 'video' | undefined;
 }
 
 export type CategoryStats = { size: number; messages: Message[] };

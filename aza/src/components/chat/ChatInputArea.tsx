@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Animated } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -44,6 +44,35 @@ export const ChatInputArea = memo(function ChatInputArea({
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
+
+  // Animated waveform bars for recording preview (8 bars)
+  const waveAnims = useRef(Array.from({ length: 8 }, () => new Animated.Value(0.3))).current;
+  const waveAnimRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isRecording) {
+      const animate = () => {
+        waveAnimRef.current = setTimeout(() => {
+          waveAnims.forEach(anim => {
+            Animated.spring(anim, {
+              toValue: 0.2 + Math.random() * 0.8,
+              friction: 3,
+              tension: 200,
+              useNativeDriver: false,
+            }).start();
+          });
+          animate();
+        }, 150);
+      };
+      animate();
+    } else {
+      if (waveAnimRef.current) clearTimeout(waveAnimRef.current);
+      waveAnims.forEach(anim => {
+        Animated.spring(anim, { toValue: 0.3, friction: 4, tension: 100, useNativeDriver: false }).start();
+      });
+    }
+    return () => { if (waveAnimRef.current) clearTimeout(waveAnimRef.current); };
+  }, [isRecording]);
 
   const showIcon = false; // no icon in input field
   const isMessageEmpty = !message.trim();
@@ -174,6 +203,18 @@ export const ChatInputArea = memo(function ChatInputArea({
           {isRecording ? (
             <View style={styles.recordingContent}>
               <View style={styles.recordingIndicator} />
+              {/* Animated waveform */}
+              <View style={styles.recordingWaveform}>
+                {waveAnims.map((anim, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.recordingWaveBar,
+                      { height: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 20] }) },
+                    ]}
+                  />
+                ))}
+              </View>
               <Text style={styles.recordingTime}>{formatDuration(recordDuration)}</Text>
               <TouchableOpacity onPress={handleCancelRecording} style={styles.cancelRecordBtn}>
                 <Text style={styles.cancelRecordText}>Cancel</Text>
@@ -285,11 +326,24 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       backgroundColor: '#EF4444',
       marginRight: Spacing.sm,
     },
+    recordingWaveform: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flex: 1,
+      height: 24,
+    },
+    recordingWaveBar: {
+      width: 3,
+      borderRadius: 2,
+      backgroundColor: '#EF4444',
+    },
     recordingTime: {
       ...Typography.body,
       fontWeight: '600',
       color: Colors.textPrimary,
-      flex: 1,
+      minWidth: 36,
+      textAlign: 'right',
     },
     cancelRecordBtn: {
       paddingHorizontal: Spacing.sm,
