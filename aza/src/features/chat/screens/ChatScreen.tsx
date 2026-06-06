@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef, useCallback, useEffect, } from 'react
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
   KeyboardAvoidingView, Platform, FlatList, StatusBar, Modal,
-  Pressable, TextInput, DeviceEventEmitter, Image,
+  Pressable, TextInput, DeviceEventEmitter, Image, Animated,
+  NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as Clipboard from 'expo-clipboard';
@@ -15,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { ChatHeader } from '../../../components/chat/ChatHeader';
-import { ChatMessageBubble, ChatTypingIndicator } from '../../../components/chat/ChatMessageBubble';
+import { ChatMessageBubble, ChatTypingIndicator, FullScreenImageViewer } from '../../../components/chat/ChatMessageBubble';
 import { ChatInputArea } from '../../../components/chat/ChatInputArea';
 import { ChatAttachmentModal } from '../../../components/chat/ChatAttachmentModal';
 import { ChatMoreModal } from '../../../components/chat/ChatMoreModal';
@@ -165,7 +166,37 @@ export default function ChatScreen() {
   const [keyWarningDismissed, setKeyWarningDismissed] = useState(false);
 
   // Payment sheet
-  const [paymentSheet, setPaymentSheet] = useState<{ visible: boolean; mode: 'send' | 'request' }>({ visible: false, mode: 'send' });
+  const [paymentSheet, setPaymentSheet] = useState<{ visible: boolean; mode: 'send' | 'request'; prefillAmount?: number }>({ visible: false, mode: 'send' });
+
+  // Full-screen image viewer
+  const [fullScreenUri, setFullScreenUri] = useState<string | null>(null);
+
+  // Message editing
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editText, setEditText] = useState('');
+
+  // New message animation tracking (initialized lazily; prevMsgCountRef2 updated in the scroll effect below)
+  const newMsgIdsRef = useRef(new Set<string>());
+
+  // Unread separator — records message count the first time messages load
+  const initialMsgCountRef2 = useRef<number | null>(null);
+
+  // Scroll-to-bottom FAB
+  const [showFab, setShowFab] = useState(false);
+  const [fabUnread, setFabUnread] = useState(0);
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fabAnim, { toValue: showFab ? 1 : 0, duration: 200, useNativeDriver: true }).start();
+  }, [showFab, fabAnim]);
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    setShowFab(distFromBottom > 120);
+  }, []);
+  const handleScrollToBottom = useCallback(() => {
+    flatListRef.current?.scrollToEnd({ animated: true });
+    setFabUnread(0);
+  }, []);
 
   // Merge backend-driven thread with any local-only entries (forwarded msgs / media not yet wired to backend).
   // Inject isStarred from the persistent starred store so bubble indicators stay in sync.
@@ -175,6 +206,13 @@ export default function ChatScreen() {
     const starredIds = new Set(starredEntries.map(e => e.messageId));
     return sorted.map(m => starredIds.has(m.id) ? { ...m, isStarred: true } : m);
   }, [liveMessages, localOnlyMessages, starredEntries]);
+
+  // Set the unread separator position once (first time messages load)
+  useEffect(() => {
+    if (initialMsgCountRef2.current === null && messages.length > 0) {
+      initialMsgCountRef2.current = messages.length;
+    }
+  }, [messages.length]);
 
   // Mark read on focus.
   useEffect(() => {
@@ -186,14 +224,22 @@ export default function ChatScreen() {
     return unsub;
   }, [navigation, chatId, markRead]);
 
-  // Scroll to bottom when a new message arrives
+  // Scroll to bottom when a new message arrives; track new IDs for animation
   const prevMsgCountRef = useRef(messages.length);
   useEffect(() => {
-    if (messages.length !== prevMsgCountRef.current) {
-      prevMsgCountRef.current = messages.length;
-      flatListRef.current?.scrollToEnd({ animated: true });
+    if (messages.length > prevMsgCountRef.current) {
+      const newOnes = messages.slice(prevMsgCountRef.current);
+      newOnes.forEach(m => newMsgIdsRef.current.add(m.id));
+      // If not at bottom, increment FAB unread for messages from others
+      if (showFab) {
+        const otherCount = newOnes.filter(m => m.sender === 'other').length;
+        if (otherCount > 0) setFabUnread(n => n + otherCount);
+      } else {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }
     }
-  }, [messages.length]);
+    prevMsgCountRef.current = messages.length;
+  }, [messages.length, showFab]);
 
   // Listen for media returned from MediaPreviewScreen — upload to backend then
   // send an E2EE-encrypted message containing the Cloudinary media URL.
@@ -578,14 +624,46 @@ export default function ChatScreen() {
   // --------------------------------------------------------------------------
   // More menu actions
   // --------------------------------------------------------------------------
+  const setDisappearingTtl = useChatStore(s => s.setDisappearingTtl);
+
+  const handleDisappearingTimer = useCallback(() => {
+    if (!chatId) return;
+    handleCloseMoreMenu();
+    const label = disappearingTtl === 86400 ? '24 hours' : disappearingTtl === 604800 ? '7 days' : disappearingTtl === 2592000 ? '30 days' : 'Off';
+    Alert.alert(
+      'Disappearing Messages',
+      `Currently: ${label}\n\nNew messages will be deleted after the selected time.`,
+      [
+        { text: 'Off', onPress: () => setDisappearingTtl(chatId, 0) },
+        { text: '24 hours', onPress: () => setDisappearingTtl(chatId, 86400) },
+        { text: '7 days', onPress: () => setDisappearingTtl(chatId, 604800) },
+        { text: '30 days', onPress: () => setDisappearingTtl(chatId, 2592000) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [chatId, disappearingTtl, handleCloseMoreMenu, setDisappearingTtl]);
+
   const moreMenuActions = useMemo<MoreAction[]>(() => [
     { icon: 'search', label: 'Search in Conversation', onPress: handleOpenSearch },
     { icon: isMuted ? 'bell' : 'bell-off', label: isMuted ? 'Unmute Notifications' : 'Mute Notifications', onPress: handleToggleMute },
+    { icon: 'clock', label: `Disappearing Messages${disappearingTtl ? ' ✓' : ''}`, onPress: handleDisappearingTimer },
     { icon: 'image', label: 'Shared Media', onPress: () => { handleCloseMoreMenu(); navigation.navigate('SharedMedia', { chatId: chatId ?? undefined, otherUserName: name }); } },
     { icon: 'trash', label: 'Clear Chat', color: '#F59E0B', onPress: handleClearChat },
     { icon: 'slash', label: 'Block Contact', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowBlockModal(true); } },
     { icon: 'flag', label: 'Report', color: '#EF4444', onPress: () => { handleCloseMoreMenu(); setShowReportModal(true); } },
-  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat]);
+  ], [isMuted, name, chatId, navigation, handleCloseMoreMenu, handleOpenSearch, handleToggleMute, handleClearChat, disappearingTtl, handleDisappearingTimer]);
+
+  const handleEditSubmit = useCallback(() => {
+    if (!editingMessage || !editText.trim()) { setEditingMessage(null); return; }
+    const updated: Message = { ...editingMessage, text: editText.trim(), isEdited: true };
+    setLocalOnlyMessages(prev =>
+      prev.some(m => m.id === editingMessage.id)
+        ? prev.map(m => m.id === editingMessage.id ? updated : m)
+        : prev
+    );
+    setEditingMessage(null);
+    setEditText('');
+  }, [editingMessage, editText]);
 
   const handleScrollToPinned = useCallback(() => {
     if (!pinnedMessage) return;
@@ -601,10 +679,17 @@ export default function ChatScreen() {
       ? starredEntries.some(e => e.messageId === selectedMessage.id)
       : false;
     const isPinned = selectedMessage && pinnedMessage?.id === selectedMessage.id;
+    const canEdit = selectedMessage?.sender === 'me' && selectedMessage?.type !== 'audio' && selectedMessage?.type !== 'image';
     return [
       { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
       { icon: 'corner-up-right', label: 'Forward', onPress: handleOpenForward },
       { icon: 'copy', label: 'Copy', onPress: handleCopy },
+      ...(canEdit ? [{ icon: 'edit-2', label: 'Edit', onPress: () => {
+        if (!selectedMessage) return;
+        setEditingMessage(selectedMessage);
+        setEditText(selectedMessage.text ?? '');
+        handleCloseMessageModal();
+      }}] : []),
       { icon: 'bookmark', label: isPinned ? 'Unpin' : 'Pin', onPress: () => {
         if (!chatId || !selectedMessage) return;
         if (isPinned) unpinMessage(chatId);
@@ -627,6 +712,11 @@ export default function ChatScreen() {
     // Last in group when: different sender follows, day boundary follows, or it's the last message
     const isLastInGroup = !next || next.sender !== item.sender || !isSameDay(item.timestamp, next.timestamp);
     const groupSpacing = isLastInGroup ? undefined : { marginBottom: 1 };
+    const isNew = newMsgIdsRef.current.has(item.id);
+    // Show unread separator before the first message that arrived after we opened the chat
+    const showUnreadSep = initialMsgCountRef2.current !== null &&
+      index === initialMsgCountRef2.current &&
+      item.sender === 'other';
     return (
       <View style={groupSpacing}>
         {isFirstOfDay && (
@@ -634,17 +724,27 @@ export default function ChatScreen() {
             <Text style={styles.dateHeaderText}>{formatDateHeader(item.timestamp)}</Text>
           </View>
         )}
+        {showUnreadSep && (
+          <View style={styles.unreadSeparator}>
+            <View style={styles.unreadLine} />
+            <Text style={styles.unreadLabel}>New Messages</Text>
+            <View style={styles.unreadLine} />
+          </View>
+        )}
         <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply}>
           <ChatMessageBubble
             message={item}
             onLongPress={() => handleSelectMessage(item)}
+            onImagePress={setFullScreenUri}
+            onPayPress={(amount) => setPaymentSheet({ visible: true, mode: 'send', prefillAmount: amount })}
             bubbleColor={chatBubbleColor || undefined}
             isLastInGroup={isLastInGroup}
+            isNew={isNew}
           />
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, handleSelectMessage, handleSwipeToReply, chatBubbleColor]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
@@ -744,7 +844,30 @@ export default function ChatScreen() {
             maxToRenderPerBatch={10}
             windowSize={10}
             removeClippedSubviews
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
           />
+          {/* Edit bar */}
+          {editingMessage && (
+            <View style={styles.editBar}>
+              <Feather name="edit-2" size={16} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
+              <TextInput
+                style={styles.editInput}
+                value={editText}
+                onChangeText={setEditText}
+                autoFocus
+                multiline
+                onSubmitEditing={handleEditSubmit}
+                blurOnSubmit
+              />
+              <TouchableOpacity onPress={handleEditSubmit} style={{ marginLeft: Spacing.sm }}>
+                <Feather name="check" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingMessage(null)} style={{ marginLeft: Spacing.sm }}>
+                <Feather name="x" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
             <ChatInputArea
               message={message}
@@ -777,7 +900,29 @@ export default function ChatScreen() {
             maxToRenderPerBatch={10}
             windowSize={10}
             removeClippedSubviews
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
           />
+          {editingMessage && (
+            <View style={styles.editBar}>
+              <Feather name="edit-2" size={16} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
+              <TextInput
+                style={styles.editInput}
+                value={editText}
+                onChangeText={setEditText}
+                autoFocus
+                multiline
+                onSubmitEditing={handleEditSubmit}
+                blurOnSubmit
+              />
+              <TouchableOpacity onPress={handleEditSubmit} style={{ marginLeft: Spacing.sm }}>
+                <Feather name="check" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingMessage(null)} style={{ marginLeft: Spacing.sm }}>
+                <Feather name="x" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={!!chatWallpaper && chatWallpaper.type !== 'none' ? styles.inputBarWithWallpaper : undefined}>
             <ChatInputArea
               message={message}
@@ -841,7 +986,7 @@ export default function ChatScreen() {
             </View>
             {/* Emoji reaction picker */}
             <View style={styles.reactionPicker}>
-              {['👍','❤️','😂','😮','😢','🙏'].map((emoji) => (
+              {['👍','❤️','😂','😮','😢','🙏','🔥','🎉','💯','😍','🤔','👏'].map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
                   style={styles.reactionPickerBtn}
@@ -919,6 +1064,26 @@ export default function ChatScreen() {
           setTimeout(() => setToastMessage(null), 4000);
         }}
       />
+
+      {/* Scroll-to-bottom FAB */}
+      <Animated.View
+        pointerEvents={showFab ? 'auto' : 'none'}
+        style={[styles.fab, { opacity: fabAnim, transform: [{ scale: fabAnim }] }]}
+      >
+        <TouchableOpacity style={styles.fabBtn} onPress={handleScrollToBottom} activeOpacity={0.85}>
+          <Feather name="chevron-down" size={22} color="#fff" />
+          {fabUnread > 0 && (
+            <View style={styles.fabBadge}>
+              <Text style={styles.fabBadgeText}>{fabUnread > 99 ? '99+' : fabUnread}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Full-screen image viewer */}
+      {fullScreenUri && (
+        <FullScreenImageViewer uri={fullScreenUri} onClose={() => setFullScreenUri(null)} />
+      )}
 
       {/* Toast */}
       {toastMessage && (
@@ -1075,20 +1240,89 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       fontSize: 13,
       color: Colors.textPrimary,
     },
+    // Unread separator
+    unreadSeparator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    unreadLine: { flex: 1, height: 1, backgroundColor: Colors.primary, opacity: 0.3 },
+    unreadLabel: {
+      ...Typography.caption,
+      fontSize: 11,
+      fontWeight: '700',
+      color: Colors.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    // Edit bar
+    editBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      backgroundColor: isDark ? Colors.surface : '#F0F4EE',
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    editInput: {
+      flex: 1,
+      ...Typography.body,
+      fontSize: 15,
+      color: Colors.textPrimary,
+      maxHeight: 80,
+    },
+    // Scroll-to-bottom FAB
+    fab: {
+      position: 'absolute',
+      bottom: Platform.OS === 'ios' ? 110 : 90,
+      right: Spacing.lg,
+      zIndex: 20,
+    },
+    fabBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: Colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 6,
+    },
+    fabBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: '#EF4444',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    fabBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
     // Emoji reaction picker row in long-press modal
     reactionPicker: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: Radius.full,
+      borderRadius: Radius.lg,
       paddingVertical: 8,
       paddingHorizontal: Spacing.sm,
       marginTop: Spacing.lg,
-      gap: 4,
+      gap: 2,
       elevation: 10,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
+      maxWidth: 300,
     },
     reactionPickerBtn: {
       width: 40,
