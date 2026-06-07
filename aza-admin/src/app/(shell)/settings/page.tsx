@@ -146,8 +146,9 @@ const WorldMap = function WorldMap({
               geographies.map((geo: GeoFeature) => {
                 const a2 = getA2(geo);
                 const isBlocked = a2 ? blocked.has(a2) : false;
+                const GeographyAny = Geography as any;
                 return (
-                  <Geography
+                  <GeographyAny
                     key={`${geo.rsmKey}-${isBlocked ? 1 : 0}`}
                     geography={geo}
                     onMouseDown={(e: React.MouseEvent<SVGPathElement>) => { pointerStart.current = { x: e.clientX, y: e.clientY }; }}
