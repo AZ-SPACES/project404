@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Animated, Alert, ScrollView,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -177,48 +178,53 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
 
       {/* Message long-press modal */}
       <Modal visible={!!selectedMessage} transparent animationType="fade" onRequestClose={handleCloseMessageModal}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleCloseMessageModal}>
-          <BlurView intensity={25} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-        </Pressable>
+        <BlurView intensity={25} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         {selectedMessage && (
-          <ScrollView
-            style={styles.modalScroll}
-            contentContainerStyle={styles.modalContent}
-            pointerEvents="box-none"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            <View style={{ width: '100%', paddingHorizontal: Spacing.lg }}>
-              <ChatMessageBubble message={selectedMessage} bubbleColor={chatBubbleColor || undefined} />
+          <TouchableWithoutFeedback onPress={handleCloseMessageModal}>
+            <View style={StyleSheet.absoluteFill}>
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                <TouchableWithoutFeedback>
+                  <View style={styles.modalInner}>
+                    <View style={{ width: '100%', paddingHorizontal: Spacing.lg }}>
+                      <ChatMessageBubble message={selectedMessage} bubbleColor={chatBubbleColor || undefined} />
+                    </View>
+                    <View style={styles.reactionPicker}>
+                      {['👍','❤️','😂','😮','😢','🙏','🔥','🎉','💯','😍','🤔','👏'].map((emoji) => (
+                        <TouchableOpacity
+                          key={emoji}
+                          style={styles.reactionPickerBtn}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                            addReaction(selectedMessage.id, emoji);
+                            handleCloseMessageModal();
+                          }}
+                        >
+                          <Text style={styles.reactionPickerEmoji}>{emoji}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.actionMenu}>
+                      {messageActions.map((action, i) => (
+                        <React.Fragment key={action.label}>
+                          {i > 0 && <View style={styles.actionDivider} />}
+                          <TouchableOpacity style={styles.actionItem} onPress={action.onPress} activeOpacity={0.7}>
+                            <Feather name={action.icon as any} size={19} color={action.color ?? Colors.textPrimary} />
+                            <Text style={[styles.actionLabel, { color: action.color ?? Colors.textPrimary }]}>{action.label}</Text>
+                          </TouchableOpacity>
+                        </React.Fragment>
+                      ))}
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </ScrollView>
             </View>
-            <View style={styles.reactionPicker}>
-              {['👍','❤️','😂','😮','😢','🙏','🔥','🎉','💯','😍','🤔','👏'].map((emoji) => (
-                <TouchableOpacity
-                  key={emoji}
-                  style={styles.reactionPickerBtn}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                    addReaction(selectedMessage.id, emoji);
-                    handleCloseMessageModal();
-                  }}
-                >
-                  <Text style={styles.reactionPickerEmoji}>{emoji}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.actionMenu}>
-              {messageActions.map((action, i) => (
-                <React.Fragment key={action.label}>
-                  {i > 0 && <View style={styles.actionDivider} />}
-                  <TouchableOpacity style={styles.actionItem} onPress={action.onPress} activeOpacity={0.7}>
-                    <Feather name={action.icon as any} size={19} color={action.color ?? Colors.textPrimary} />
-                    <Text style={[styles.actionLabel, { color: action.color ?? Colors.textPrimary }]}>{action.label}</Text>
-                  </TouchableOpacity>
-                </React.Fragment>
-              ))}
-            </View>
-          </ScrollView>
+          </TouchableWithoutFeedback>
         )}
       </Modal>
 
@@ -352,6 +358,10 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
       paddingVertical: 48,
+    },
+    modalInner: {
+      alignItems: 'center',
+      width: '100%',
     },
     actionMenu: {
       backgroundColor: isDark ? Colors.surface : Colors.white,

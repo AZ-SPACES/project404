@@ -29,7 +29,7 @@ export default function ChatScreen() {
     id, name, avatar, payIdentifier, navigation, chatId, sendText,
     online, lastSeenTs, peerIdentityChange,
     messages, filteredMessages, isOtherTyping,
-    isDark: _isDark, chatBubbleColor, chatWallpaper, hasWallpaper,
+    isDark: _isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize,
     message, replyTo,
     showMoreMenu, menuAnchor, handleCloseMoreMenu, moreMenuActions, effectiveMuted,
     showCallMenu, callMenuAnchor, handleCloseCallMenu, handleAudioCall, handleVideoCall,
@@ -103,6 +103,7 @@ export default function ChatScreen() {
             onPayPress={(amount) => setPaymentSheet({ visible: true, mode: 'send', prefillAmount: amount })}
             onStatusPress={item.sender === 'me' && item.status ? () => navigation.navigate('MessageInfo', { message: item }) : undefined}
             bubbleColor={chatBubbleColor || undefined}
+            fontSize={chatFontSize}
             isLastInGroup={isLastInGroup}
             isNew={isNew}
             highlight={searchActive && searchQuery ? searchQuery : undefined}
@@ -114,7 +115,7 @@ export default function ChatScreen() {
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
   const listFooter = useMemo(() => isOtherTyping ? <ChatTypingIndicator /> : null, [isOtherTyping]);
