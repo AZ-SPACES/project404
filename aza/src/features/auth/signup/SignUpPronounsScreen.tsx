@@ -22,6 +22,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpPronouns">;
 
@@ -65,7 +66,7 @@ export default function SignUpPronounsScreen() {
         styles.radioItem,
         data.pronoun === id && styles.radioItemSelected,
       ]}
-      onPress={() => update({ pronoun: id })}
+      onPress={() => update({ pronoun: data.pronoun === id ? null : id })}
       activeOpacity={0.7}
     >
       <View
@@ -119,6 +120,8 @@ export default function SignUpPronounsScreen() {
             </TouchableOpacity>
           </Animated.View>
 
+          <SignUpProgressBar step={8} total={10} />
+
           {/* Content */}
           <Animated.ScrollView
             style={styles.content}
@@ -155,9 +158,8 @@ export default function SignUpPronounsScreen() {
                 placeholderTextColor={Colors.textSecondary}
                 value={data.customPronoun}
                 onChangeText={(text) => {
-                  update({ customPronoun: text, ...(text.length > 0 ? { pronoun: "custom" } : {}) });
+                  update({ customPronoun: text, ...(text.length > 0 ? { pronoun: "custom" } : { pronoun: null }) });
                 }}
-                onFocus={() => update({ pronoun: "custom" })}
                 autoCapitalize="none"
               />
             </View>

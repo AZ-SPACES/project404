@@ -37,7 +37,7 @@ const MAX_ATTEMPTS = 5;
 export default function ConfirmPasscodeScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === "#121212";
+  const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ConfirmPageRouteProp>();
@@ -106,7 +106,6 @@ export default function ConfirmPasscodeScreen() {
     if (String(passcode).trim() === String(firstPasscode).trim()) {
       isNavigatingRef.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      isNavigatingRef.current = true;
 
       if (userToken) {
         try {
@@ -305,7 +304,7 @@ export default function ConfirmPasscodeScreen() {
 }
 
 function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.background === "#121212";
+  const isDark = Colors.isDark;
   return StyleSheet.create({
     safeArea: {
       flex: 1,

@@ -17,6 +17,7 @@ export type YesNo = 'Yes' | 'No' | null;
 
 export type SignupData = {
   phoneNumber: string;
+  countryCode: string;
   email: string;
   password: string;
   firstName: string;
@@ -38,6 +39,7 @@ export type SignupData = {
 
 const INITIAL_DATA: SignupData = {
   phoneNumber: '',
+  countryCode: '+233',
   email: '',
   password: '',
   firstName: '',
@@ -106,7 +108,7 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       const payload = {
-        phone: data.phoneNumber,
+        phone: data.countryCode + data.phoneNumber.replace(/\D/g, ''),
         email: data.email,
         password: data.password,
         firstName: data.firstName,

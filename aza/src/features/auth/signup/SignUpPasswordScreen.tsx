@@ -21,6 +21,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidPassword, getPasswordRules } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpPassword">;
 
@@ -60,11 +61,13 @@ export default function SignUpPasswordScreen() {
             <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
+          <SignUpProgressBar step={3} total={10} />
+
           {/* Content */}
           <View style={styles.content}>
             <Text style={styles.title}>Enter Password</Text>
             <Text style={styles.subtitle}>
-              Your password is save with you. We don't get to know it.
+              Your password is safe with you. We don't get to know it.
             </Text>
 
             <Text style={styles.label}>Password</Text>

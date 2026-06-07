@@ -48,8 +48,16 @@ export function isValidName(value: string): boolean {
 }
 
 // ─── Sanitize ─────────────────────────────────────────────────────────────────
-// Strips leading/trailing whitespace and ASCII control characters.
+// Strips ASCII control characters. Does NOT trim — trimming on every keystroke
+// in a controlled input prevents users from typing spaces mid-word. Trim at
+// validation / submit time instead (validation helpers already do this).
 
 export function sanitizeText(value: string): string {
-  return value.replace(/[\x00-\x1F\x7F]/g, '').trim();
+  return value.replace(/[\x00-\x1F\x7F]/g, '');
+}
+
+// Strips all whitespace characters — use for email inputs where spaces are
+// never valid and we want to prevent invisible trailing-space issues.
+export function sanitizeEmail(value: string): string {
+  return value.replace(/[\x00-\x1F\x7F\s]/g, '');
 }

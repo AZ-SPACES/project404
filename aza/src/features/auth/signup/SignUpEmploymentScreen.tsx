@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useSignUp, EmploymentOption } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmployment">;
 
@@ -100,6 +101,8 @@ export default function SignUpEmploymentScreen() {
             </Text>
           </Animated.View>
         </Animated.View>
+
+        <SignUpProgressBar step={9} total={10} />
 
         {/* Content */}
         <Animated.ScrollView

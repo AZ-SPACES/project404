@@ -108,7 +108,11 @@ export function PEPStatusScreen() {
             <BackButton onPress={() => navigation.goBack()} size={28} />
           )}
           <Animated.View
-            style={[styles.headerTitleContainer, { opacity: headerTitleOpacity }]}
+            style={[
+              styles.headerTitleContainer,
+              { opacity: headerTitleOpacity },
+              !navigation.canGoBack() && styles.headerTitleCentered,
+            ]}
           >
             <Text style={styles.headerTitle} numberOfLines={1}>
               PEP Status
@@ -175,6 +179,8 @@ function createStyles(Colors: ThemeColors) {
     flex: 1,
     alignItems: "center",
     marginRight: 44 },
+  headerTitleCentered: {
+    marginRight: 0 },
   headerTitle: {
     fontSize: 16,
     fontWeight: "600",

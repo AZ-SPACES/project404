@@ -20,7 +20,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
-import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { isValidEmail, sanitizeEmail } from "../../../utils/validation";
 import { forgotPassword, initAccountRecovery } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -89,7 +89,7 @@ export default function ResetPasswordScreen() {
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
                 value={email}
-                onChangeText={(t) => setEmail(sanitizeText(t))}
+                onChangeText={(t) => setEmail(sanitizeEmail(t))}
                 onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"

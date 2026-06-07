@@ -3,23 +3,30 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Animated,
   StatusBar
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing , Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
 import DateOfBirthCalendar from "../../../components/ui/DateOfBirthCalendar";
-import { useAuth } from "../../../providers/AuthProvider";
 import { useSignUp } from "../../../providers/SignUpProvider";
-import { useToast } from "../../../providers/ToastProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
+
+const MIN_AGE = 18;
+
+function isAtLeastMinAge(dateString: string): boolean {
+  if (!dateString) return false;
+  const dob = new Date(dateString);
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - MIN_AGE);
+  return dob <= cutoff;
+}
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpBirthday">;
 
@@ -28,7 +35,7 @@ export default function SignUpBirthdayScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
-  const { data, update,  isLoading } = useSignUp();
+  const { data, update } = useSignUp();
   const [currentMonth, setCurrentMonth] = useState<string>("2004-07");
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -60,8 +67,15 @@ export default function SignUpBirthdayScreen() {
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
+  const ageError = data.dateOfBirth && !isAtLeastMinAge(data.dateOfBirth)
+    ? `You must be at least ${MIN_AGE} years old to use aza.`
+    : null;
+
   // Derived — avoids inline expression in JSX causing Button re-renders
-  const isDisabled = useMemo(() => !data.dateOfBirth, [data.dateOfBirth]);
+  const isDisabled = useMemo(
+    () => !data.dateOfBirth || !isAtLeastMinAge(data.dateOfBirth),
+    [data.dateOfBirth],
+  );
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -90,6 +104,8 @@ export default function SignUpBirthdayScreen() {
           </Animated.View>
         </Animated.View>
 
+        <SignUpProgressBar step={10} total={10} />
+
         {/* Content */}
         <Animated.ScrollView
           style={styles.content}
@@ -113,6 +129,9 @@ export default function SignUpBirthdayScreen() {
             currentMonth={currentMonth}
             onMonthChange={handleMonthChange}
           />
+          {ageError ? (
+            <Text style={styles.ageErrorText}>{ageError}</Text>
+          ) : null}
         </Animated.ScrollView>
 
         {/* Footer */}
@@ -126,8 +145,7 @@ export default function SignUpBirthdayScreen() {
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
-            disabled={isDisabled || isLoading}
-            loading={isLoading}
+            disabled={isDisabled}
           />
         </View>
       </View>
@@ -198,6 +216,13 @@ function createStyles(Colors: ThemeColors) {
   buttonContainer: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  ageErrorText: {
+    fontSize: 13,
+    color: '#D1222E',
+    marginTop: Spacing.md,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
 }
