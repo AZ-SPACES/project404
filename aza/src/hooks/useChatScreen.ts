@@ -75,8 +75,17 @@ export function useChatScreen() {
     if (!lastScreenshot) return;
     if (lastScreenshot.ts === lastScreenshotTsRef.current) return;
     lastScreenshotTsRef.current = lastScreenshot.ts;
-    setToastMessage(`${lastScreenshot.senderName} took a screenshot 📸`);
+    const notice = `${lastScreenshot.senderName} took a screenshot 📸`;
+    setToastMessage(notice);
     setTimeout(() => setToastMessage(null), 4000);
+    setLocalOnlyMessages(prev => [...prev, {
+      id: `system_screenshot_${lastScreenshot.ts}`,
+      text: notice,
+      sender: 'other',
+      time: new Date(lastScreenshot.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: lastScreenshot.ts,
+      isSystem: true,
+    }]);
   }, [lastScreenshot]);
 
   useEffect(() => {
@@ -155,6 +164,7 @@ export function useChatScreen() {
   const loadTheme = useChatThemeStore(s => s.load);
   const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
   const getWallpaper = useChatThemeStore(s => s.getWallpaper);
+  const getFontSize = useChatThemeStore(s => s.getFontSize);
   const themeLoadedRef = useRef(false);
   useEffect(() => {
     if (!themeLoadedRef.current) {
@@ -165,6 +175,7 @@ export function useChatScreen() {
   const chatBubbleColor = chatId ? getBubbleColor(chatId) : '';
   const chatWallpaper = chatId ? getWallpaper(chatId) : null;
   const hasWallpaper = !!(chatWallpaper && chatWallpaper.type !== 'none');
+  const chatFontSize = chatId ? getFontSize(chatId) : 'medium' as const;
 
   const pinMessage = usePinnedMessageStore(s => s.pin);
   const unpinMessage = usePinnedMessageStore(s => s.unpin);
@@ -628,9 +639,33 @@ export function useChatScreen() {
 
   const handleDelete = useCallback(() => {
     if (!selectedMessage) return;
-    setLocalOnlyMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
-    deleteMessageRemote(selectedMessage.id).catch(() => {});
+    const msg = selectedMessage;
     setSelectedMessage(null);
+    Alert.alert(
+      'Delete message',
+      'Who do you want to delete this message for?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete for me',
+          onPress: () => {
+            setLocalOnlyMessages(prev => prev.map(m =>
+              m.id === msg.id ? { ...m, deleted: true, text: '', uri: undefined } : m,
+            ));
+          },
+        },
+        {
+          text: 'Delete for everyone',
+          style: 'destructive',
+          onPress: () => {
+            setLocalOnlyMessages(prev => prev.map(m =>
+              m.id === msg.id ? { ...m, deleted: true, text: '', uri: undefined } : m,
+            ));
+            deleteMessageRemote(msg.id).catch(() => {});
+          },
+        },
+      ],
+    );
   }, [selectedMessage, deleteMessageRemote]);
 
   const handleStarMessage = useCallback(() => {
@@ -940,7 +975,7 @@ export function useChatScreen() {
     const isCurrentlyStarred = selectedMessage ? starredEntries.some(e => e.messageId === selectedMessage.id) : false;
     const isCurrentlyPinned = selectedMessage && chatId ? isPinned(chatId, selectedMessage.id) : false;
     const canPin = chatId && selectedMessage && (pinnedMessages.length < 3 || isCurrentlyPinned);
-    const canEdit = selectedMessage?.sender === 'me' && selectedMessage?.type !== 'audio' && selectedMessage?.type !== 'image';
+    const canEdit = selectedMessage?.sender === 'me' && !selectedMessage?.deleted && selectedMessage?.type !== 'audio' && selectedMessage?.type !== 'image';
     const canSavePhoto = (selectedMessage?.type === 'image' || selectedMessage?.type === 'video') && !!selectedMessage?.uri;
     return [
       { icon: 'corner-up-left', label: 'Reply', onPress: () => { if (selectedMessage) { handleSwipeToReply(selectedMessage); } handleCloseMessageModal(); } },
@@ -988,7 +1023,7 @@ export function useChatScreen() {
     // Messages
     messages, filteredMessages,
     // Theme
-    isDark, chatBubbleColor, chatWallpaper, hasWallpaper,
+    isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize,
     // Presence
     online, lastSeenTs,
     // Input

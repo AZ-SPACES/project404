@@ -14,6 +14,8 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 // ----------------------------------------------------------------------------
 // Props
 // ----------------------------------------------------------------------------
+type ChatFontSizeProp = 'small' | 'medium' | 'large';
+
 type ChatMessageBubbleProps = {
   message: Message;
   onLongPress?: () => void;
@@ -21,6 +23,7 @@ type ChatMessageBubbleProps = {
   onPayPress?: (amount: number) => void;
   onStatusPress?: (() => void) | undefined;
   bubbleColor?: string | undefined;
+  fontSize?: ChatFontSizeProp | undefined;
   isLastInGroup?: boolean;
   isNew?: boolean;
   highlight?: string | undefined;
@@ -459,6 +462,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   onPayPress,
   onStatusPress,
   bubbleColor,
+  fontSize = 'medium',
   isLastInGroup = true,
   isNew = false,
   highlight,
@@ -468,7 +472,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   onViewOnce,
 }: ChatMessageBubbleProps) {
   const { colors: Colors, isDark } = useAppTheme();
-  const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
+  const resolvedFontSize = fontSize === 'small' ? 13 : fontSize === 'large' ? 17 : 15;
+  const styles = useMemo(() => createStyles(Colors, isDark, resolvedFontSize), [Colors, isDark, resolvedFontSize]);
   const isMe = message.sender === 'me';
 
   // Spring-in animation for newly sent/received messages
@@ -662,6 +667,34 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     if (message.text.startsWith('{"__')) return null;
     return extractFirstUrl(message.text);
   }, [message.type, message.text]);
+
+  // System message (screenshot alert, etc.)
+  if (message.isSystem) {
+    return (
+      <View style={styles.systemMsgRow}>
+        <View style={styles.systemMsgBadge}>
+          <Text style={styles.systemMsgText}>{message.text}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Deleted message
+  if (message.deleted) {
+    return (
+      <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}>
+        <View style={[
+          styles.deletedBubble,
+          isMe ? styles.deletedBubbleMe : styles.deletedBubbleOther,
+        ]}>
+          <Feather name="slash" size={14} color={Colors.textSecondary} style={{ marginRight: 6 }} />
+          <Text style={styles.deletedText}>
+            {isMe ? 'You deleted this message' : 'This message was deleted'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <Animated.View style={[
@@ -1161,7 +1194,7 @@ export const ChatTypingIndicator = memo(function ChatTypingIndicator() {
 // ----------------------------------------------------------------------------
 // Styles
 // ----------------------------------------------------------------------------
-const createStyles = (Colors: ThemeColors, isDark: boolean) => {
+const createStyles = (Colors: ThemeColors, isDark: boolean, fontSize = 15) => {
   const receivedBubbleBg = isDark ? Colors.surface : '#FFFFFF';
   return StyleSheet.create({
     bubbleWrapper: { width: '100%' },
@@ -1176,7 +1209,7 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
     },
     bubbleMe: { backgroundColor: Colors.primary, borderBottomRightRadius: 0 },
     bubbleOther: { backgroundColor: receivedBubbleBg, borderRadius: 16, borderBottomLeftRadius: 0 },
-    text: { ...Typography.body, fontSize: 15, lineHeight: 22 },
+    text: { ...Typography.body, fontSize, lineHeight: Math.round(fontSize * 1.47) },
     textMe: { color: Colors.white },
     textOther: { color: Colors.textPrimary },
     imageBubble: { maxWidth: '75%', borderRadius: 16, overflow: 'hidden' },
@@ -1474,6 +1507,32 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => {
     callTitle: { ...Typography.body, fontWeight: '600', fontSize: 14 },
     callDuration: { ...Typography.caption, fontSize: 12, marginTop: 2 },
     callTime: { ...Typography.caption, fontSize: 11 },
+    systemMsgRow: { alignItems: 'center', marginVertical: 6, paddingHorizontal: 32 },
+    systemMsgBadge: {
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    systemMsgText: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center', fontSize: 12 },
+    deletedBubble: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      maxWidth: '80%' as const,
+    },
+    deletedBubbleMe: {
+      borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+    },
+    deletedBubbleOther: {
+      borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+    },
+    deletedText: { ...Typography.body, fontSize: 14, fontStyle: 'italic' as const, color: Colors.textSecondary },
   });
 };
 

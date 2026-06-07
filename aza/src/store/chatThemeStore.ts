@@ -8,9 +8,14 @@ export type ChatWallpaper = {
   value: string; // '' for none, hex for solid, uri for image
 };
 
+export type ChatFontSize = 'small' | 'medium' | 'large';
+
+export type ChatWallpaperPattern = 'dots' | 'grid' | 'diagonal' | 'waves';
+
 export type ChatThemeConfig = {
   bubbleColor: string; // '' = default (app primary), or hex
   wallpaper: ChatWallpaper;
+  fontSize?: ChatFontSize;
 };
 
 const DEFAULT_WALLPAPER: ChatWallpaper = { type: 'none', value: '' };
@@ -28,8 +33,10 @@ type ChatThemeState = {
   load: () => Promise<void>;
   setBubbleColor: (chatId: string, color: string) => Promise<void>;
   setWallpaper: (chatId: string, wallpaper: ChatWallpaper) => Promise<void>;
+  setFontSize: (chatId: string, size: ChatFontSize) => Promise<void>;
   getBubbleColor: (chatId: string) => string;
   getWallpaper: (chatId: string) => ChatWallpaper;
+  getFontSize: (chatId: string) => ChatFontSize;
   resetTheme: (chatId: string) => Promise<void>;
 };
 
@@ -85,9 +92,18 @@ export const useChatThemeStore = create<ChatThemeState>((set, getState) => ({
     await persist(next);
   },
 
+  setFontSize: async (chatId, fontSize) => {
+    const current = get(getState().themes, chatId);
+    const next = { ...getState().themes, [chatId]: { ...current, fontSize } };
+    set({ themes: next });
+    await persist(next);
+  },
+
   getBubbleColor: (chatId) => get(getState().themes, chatId).bubbleColor,
 
   getWallpaper: (chatId) => get(getState().themes, chatId).wallpaper,
+
+  getFontSize: (chatId) => get(getState().themes, chatId).fontSize ?? 'medium',
 
   resetTheme: async (chatId) => {
     const next = { ...getState().themes };

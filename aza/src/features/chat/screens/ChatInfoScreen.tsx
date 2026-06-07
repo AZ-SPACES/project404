@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -193,6 +195,7 @@ export default function ChatInfoScreen() {
   const storeArchiveChat = useChatStore((s) => s.archiveChat);
   const storeSetDisappearingTtl = useChatStore((s) => s.setDisappearingTtl);
   const clearChatMessages = useChatStore((s) => s.clearChatMessages);
+  const messagesByChat = useChatStore((s) => s.messagesByChat);
 
   const contacts = useContactStore((s) => s.contacts);
 
@@ -417,6 +420,39 @@ export default function ChatInfoScreen() {
     );
   }, [otherUserId, name, navigation]);
 
+  const handleExportChat = useCallback(async () => {
+    if (!chatIdParam) return;
+    const msgs = messagesByChat[chatIdParam] ?? [];
+    if (msgs.length === 0) {
+      Alert.alert('Nothing to export', 'This chat has no messages yet.');
+      return;
+    }
+    const lines = msgs
+      .filter(m => !m.isDeleted)
+      .map(m => {
+        const d = new Date(m.timestamp);
+        const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const sender = m.isSelf ? 'You' : name;
+        const body = m.plaintext || `[${m.type.toLowerCase()}]`;
+        return `[${date}, ${time}] ${sender}: ${body}`;
+      });
+    const header = `Chat with ${name}\nExported on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n${'─'.repeat(40)}\n\n`;
+    const content = header + lines.join('\n');
+    const path = `${FileSystem.cacheDirectory ?? ''}chat_${name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+    try {
+      await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Export chat with ${name}` });
+      } else {
+        Alert.alert('Exported', `Saved to ${path}`);
+      }
+    } catch {
+      Alert.alert('Export failed', 'Could not export the chat. Please try again.');
+    }
+  }, [chatIdParam, messagesByChat, name]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -546,6 +582,13 @@ export default function ChatInfoScreen() {
             value={starredCount > 0 ? starredCount.toString() : "None"}
             Colors={Colors}
             onPress={() => navigation.navigate("StarredMessages")}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="download" size={20} color={Colors.textPrimary} />}
+            label="Export chat"
+            Colors={Colors}
+            onPress={handleExportChat}
           />
         </View>
 
