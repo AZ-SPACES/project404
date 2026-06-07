@@ -27,6 +27,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TaxResidenc
 import nationalities from "i18n-nationality";
 import englishNationalities from "i18n-nationality/langs/en.json";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 nationalities.registerLocale(englishNationalities);
 
@@ -107,6 +108,8 @@ export default function TaxResidencyScreen() {
               </Text>
             </Animated.View>
           </Animated.View>
+
+          <SignUpProgressBar step={7} total={10} />
 
           {/* Content */}
           <Animated.ScrollView
@@ -208,7 +211,9 @@ export default function TaxResidencyScreen() {
                           data.nationality === item && styles.pickerItemSelected,
                         ]}
                         onPress={() => {
-                          update({ nationality: item, ...(item === "American" ? { isUSPerson: "Yes" } : {}) });
+                          // Auto-set isUSPerson when American is selected; auto-clear when switching away.
+                          const usPerson = item === "American" ? "Yes" : (data.isUSPerson === "Yes" && data.nationality === "American" ? null : data.isUSPerson);
+                          update({ nationality: item, isUSPerson: usPerson });
                           setShowNationalityPicker(false);
                           setNationalitySearch("");
                         }}

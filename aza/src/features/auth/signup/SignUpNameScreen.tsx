@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidName, sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpName">;
 
@@ -92,6 +93,8 @@ export default function SignUpNameScreen() {
               </Text>
             </Animated.View>
           </Animated.View>
+
+          <SignUpProgressBar step={4} total={10} />
 
           {/* Content */}
           <Animated.ScrollView

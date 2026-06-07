@@ -89,6 +89,7 @@ export function PEPProofOfWealthScreen() {
   const removeFile = () => {
     setFileUploaded(false);
     setFileDetails(null);
+    setFileUri(null);
   };
 
   const renderOption = (label: DocumentType) => (

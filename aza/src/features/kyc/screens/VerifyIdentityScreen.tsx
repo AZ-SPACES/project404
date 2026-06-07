@@ -19,6 +19,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useKYC } from '../../../providers/KYCProvider';
+import { useToast } from '../../../providers/ToastProvider';
 import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "VerifyIdentity">;
@@ -30,6 +31,7 @@ export default function VerifyIdentityScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const { recordConsent, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const route = useRoute<VerifyIdentityRouteProp>();
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
@@ -52,7 +54,7 @@ export default function VerifyIdentityScreen() {
       navigation.navigate('SourceofFund', { isPEP: !!isPEP });
     } catch (error) {
       console.error('Failed to record consent:', error);
-      // Ideally show a toast or error message here
+      showToast('Failed to record consent. Please try again.', 'error');
     }
   };
 

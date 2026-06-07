@@ -12,7 +12,7 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { Alert } from 'react-native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
-import { isValidEmail, isValidPhone, sanitizeText } from '../../../utils/validation';
+import { isValidEmail, isValidPhone, sanitizeEmail } from '../../../utils/validation';
 import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
@@ -206,7 +206,7 @@ const LoginScreen: React.FC = () => {
               placeholderTextColor={Colors.textSecondary}
               value={useEmail ? email : phoneNumber}
               onChangeText={useEmail
-                ? (t) => setEmail(sanitizeText(t))
+                ? (t) => setEmail(sanitizeEmail(t))
                 : (text) => setPhoneNumber(text.replace(/[^0-9]/g, '').slice(0, 10))}
               onBlur={() => setTouched(true)}
               keyboardType={useEmail ? 'email-address' : 'phone-pad'}

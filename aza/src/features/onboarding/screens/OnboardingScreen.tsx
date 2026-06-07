@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,11 +13,12 @@ import Button from "../../../components/ui/Button";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors } from "../../../theme";
 import { CloseButton } from '../../../components/ui/CloseButton';
+import { useSignupActions } from '../../../providers/SignUpProvider';
 
 const { width, height } = Dimensions.get("window");
 const SLIDE_DURATION = 5000;
@@ -56,7 +57,11 @@ export default function OnboardingScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { reset: resetSignup } = useSignupActions();
   const [activeSlide, setActiveSlide] = useState(0);
+
+  // Clear any leftover signup data from a previous abandoned session.
+  useFocusEffect(useCallback(() => { resetSignup(); }, [resetSignup]));
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideChangeTimeout = useRef<NodeJS.Timeout | null>(null);

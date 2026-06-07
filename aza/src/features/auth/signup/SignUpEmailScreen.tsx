@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert,
   ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,11 +20,12 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { isValidEmail, sanitizeEmail } from "../../../utils/validation";
 import { getErrorStatus } from "../../../utils/errorUtils";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkEmailAvailability } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmail">;
 
@@ -76,10 +76,18 @@ export default function SignUpEmailScreen() {
     []
   );
 
+  // Cancel in-flight debounce when the component unmounts.
+  React.useEffect(() => () => validateEmail.cancel(), [validateEmail]);
+
   const handleNext = async () => {
     if (!isValidEmail(data.email)) return;
-    
     if (isAvailable === false) return;
+
+    // Debounce already confirmed availability — skip the redundant API call.
+    if (isAvailable === true) {
+      navigation.navigate("SignUpPassword");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -105,11 +113,11 @@ export default function SignUpEmailScreen() {
   };
 
   const handleTextChange = (t: string) => {
-    const sanitized = sanitizeText(t);
+    const sanitized = sanitizeEmail(t);
     update({ email: sanitized });
     setError(null);
     setIsAvailable(null);
-    
+
     if (isValidEmail(sanitized)) {
       setIsValidating(true);
       validateEmail(sanitized);
@@ -130,6 +138,8 @@ export default function SignUpEmailScreen() {
           <View style={styles.header}>
             <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
+
+          <SignUpProgressBar step={2} total={10} />
 
           {/* Content */}
           <View style={styles.content}>
