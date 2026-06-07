@@ -51,8 +51,7 @@ async function getDirSize(dirUri: string | null): Promise<number> {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ManageStorageScreen() {
-  const { colors: Colors } = useAppTheme();
-  const isDark = Colors.background === '#121212';
+  const { colors: Colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors, isDark), [Colors, isDark]);
   const navigation = useNavigation();
   const route = useRoute<ManageStorageRouteProp>();
@@ -308,7 +307,7 @@ export default function ManageStorageScreen() {
     );
   };
 
-  const renderGridItem = ({ item: msg }: { item: Message }) => {
+  const renderGridItem = useCallback(({ item: msg }: { item: Message }) => {
     const isSel = selected.has(msg.id);
     return (
       <TouchableOpacity
@@ -328,7 +327,7 @@ export default function ManageStorageScreen() {
         </Text>
       </TouchableOpacity>
     );
-  };
+  }, [selected, selectMode, toggleSelect, enterSelectMode, styles]);
 
   const mediaMessages = useMemo(() =>
     sortMessages([...chatStats.photos.messages, ...chatStats.videos.messages]),

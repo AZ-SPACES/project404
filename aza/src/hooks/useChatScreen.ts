@@ -140,6 +140,7 @@ export function useChatScreen() {
   }, [message, chatId]);
 
   const [localOnlyMessages, setLocalOnlyMessages] = useState<Message[]>([]);
+  const [deletedMsgIds, setDeletedMsgIds] = useState<Set<string>>(new Set());
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
@@ -165,6 +166,7 @@ export function useChatScreen() {
   const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
   const getWallpaper = useChatThemeStore(s => s.getWallpaper);
   const getFontSize = useChatThemeStore(s => s.getFontSize);
+  const getPattern = useChatThemeStore(s => s.getPattern);
   const themeLoadedRef = useRef(false);
   useEffect(() => {
     if (!themeLoadedRef.current) {
@@ -176,6 +178,7 @@ export function useChatScreen() {
   const chatWallpaper = chatId ? getWallpaper(chatId) : null;
   const hasWallpaper = !!(chatWallpaper && chatWallpaper.type !== 'none');
   const chatFontSize = chatId ? getFontSize(chatId) : 'medium' as const;
+  const chatPattern = chatId ? getPattern(chatId) : null;
 
   const pinMessage = usePinnedMessageStore(s => s.pin);
   const unpinMessage = usePinnedMessageStore(s => s.unpin);
@@ -246,6 +249,7 @@ export function useChatScreen() {
     const sorted = combined.sort((a, b) => a.timestamp - b.timestamp);
     const starredIds = new Set(starredEntries.map(e => e.messageId));
     return sorted.map(m => {
+      if (deletedMsgIds.has(m.id)) return { ...m, deleted: true, text: '', uri: undefined };
       let msg: Message = starredIds.has(m.id) ? { ...m, isStarred: true } : m;
       if (!msg.type || msg.type === 'text') {
         const text = msg.text;
@@ -290,7 +294,7 @@ export function useChatScreen() {
       }
       return msg;
     });
-  }, [liveMessages, localOnlyMessages, starredEntries]);
+  }, [liveMessages, localOnlyMessages, starredEntries, deletedMsgIds]);
 
   const isAutoSaveEnabled = useMediaAutoSaveStore(s => chatId ? s.isEnabled(chatId) : false);
   const autoSavedIdsRef = useRef(new Set<string>());
@@ -649,18 +653,14 @@ export function useChatScreen() {
         {
           text: 'Delete for me',
           onPress: () => {
-            setLocalOnlyMessages(prev => prev.map(m =>
-              m.id === msg.id ? { ...m, deleted: true, text: '', uri: undefined } : m,
-            ));
+            setDeletedMsgIds(prev => new Set([...prev, msg.id]));
           },
         },
         {
           text: 'Delete for everyone',
           style: 'destructive',
           onPress: () => {
-            setLocalOnlyMessages(prev => prev.map(m =>
-              m.id === msg.id ? { ...m, deleted: true, text: '', uri: undefined } : m,
-            ));
+            setDeletedMsgIds(prev => new Set([...prev, msg.id]));
             deleteMessageRemote(msg.id).catch(() => {});
           },
         },
@@ -922,6 +922,8 @@ export function useChatScreen() {
       await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Chat with ${name}` });
     } catch {
       Alert.alert('Export failed', 'Could not export this chat.');
+    } finally {
+      FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
     }
   }, [messages, name, handleCloseMoreMenu]);
 
@@ -1023,7 +1025,7 @@ export function useChatScreen() {
     // Messages
     messages, filteredMessages,
     // Theme
-    isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize,
+    isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize, chatPattern,
     // Presence
     online, lastSeenTs,
     // Input

@@ -14,6 +14,7 @@ import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessag
 import { ChatScreenModals } from '../../../components/chat/ChatScreenModals';
 import { Message, isSameDay, formatDateHeader } from '../../../components/chat/chatTypes';
 import { useChatScreen } from '../../../hooks/useChatScreen';
+import { PatternBackground } from './ChatThemeScreen';
 
 // ----------------------------------------------------------------------------
 // Main Screen Component
@@ -29,7 +30,7 @@ export default function ChatScreen() {
     id, name, avatar, payIdentifier, navigation, chatId, sendText,
     online, lastSeenTs, peerIdentityChange,
     messages, filteredMessages, isOtherTyping,
-    isDark: _isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize,
+    isDark: _isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize, chatPattern,
     message, replyTo,
     showMoreMenu, menuAnchor, handleCloseMoreMenu, moreMenuActions, effectiveMuted,
     showCallMenu, callMenuAnchor, handleCloseCallMenu, handleAudioCall, handleVideoCall,
@@ -213,6 +214,9 @@ export default function ChatScreen() {
       )}
       {hasWallpaper && chatWallpaper?.type === 'image' && !!chatWallpaper.value && (
         <Image source={{ uri: chatWallpaper.value }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      )}
+      {chatPattern && (
+        <PatternBackground patternId={chatPattern} color={isDark ? '#FFFFFF' : '#000000'} />
       )}
 
       <ChatHeader

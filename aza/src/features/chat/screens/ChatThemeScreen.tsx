@@ -48,7 +48,7 @@ function hexToHsb(hex: string): [number, number, number] {
 
 type PatternId = 'dots' | 'grid' | 'diagonal' | 'waves';
 
-function PatternBackground({ patternId, color }: { patternId: PatternId; color: string }) {
+export function PatternBackground({ patternId, color }: { patternId: PatternId; color: string }) {
   const TILE = 24;
   const cols = Math.ceil(SCREEN_WIDTH / TILE) + 1;
   const rows = 14;
@@ -315,9 +315,11 @@ export default function ChatThemeScreen() {
   const setBubbleColor  = useChatThemeStore(s => s.setBubbleColor);
   const setWallpaper  = useChatThemeStore(s => s.setWallpaper);
   const setFontSizeStore = useChatThemeStore(s => s.setFontSize);
+  const setPatternStore  = useChatThemeStore(s => s.setPattern);
   const getBubbleColor = useChatThemeStore(s => s.getBubbleColor);
   const getWallpaper  = useChatThemeStore(s => s.getWallpaper);
   const getFontSize   = useChatThemeStore(s => s.getFontSize);
+  const getPattern    = useChatThemeStore(s => s.getPattern);
   const resetTheme    = useChatThemeStore(s => s.resetTheme);
 
   const [bubbleColor, setBubbleColorLocal] = useState('');
@@ -339,6 +341,7 @@ export default function ChatThemeScreen() {
       setBubbleColorLocal(getBubbleColor(chatId));
       setWallpaperLocal(getWallpaper(chatId));
       setFontSizeLocal(getFontSize(chatId));
+      setPattern(getPattern(chatId));
     });
   }, [chatId]);
 
@@ -358,7 +361,8 @@ export default function ChatThemeScreen() {
     setPattern(null);
     setBubbleColor(chatId, color).catch(() => {});
     setWallpaper(chatId, pack.wallpaper).catch(() => {});
-  }, [chatId, setBubbleColor, setWallpaper]);
+    setPatternStore(chatId, null).catch(() => {});
+  }, [chatId, setBubbleColor, setWallpaper, setPatternStore]);
 
   const handleSelectBubble = useCallback((color: string | null) => {
     const c = color ?? '';
@@ -387,11 +391,16 @@ export default function ChatThemeScreen() {
     setWallpaperLocal(wp);
     setPattern(null);
     setWallpaper(chatId, wp).catch(() => {});
-  }, [chatId, setWallpaper]);
+    setPatternStore(chatId, null).catch(() => {});
+  }, [chatId, setWallpaper, setPatternStore]);
 
   const handleTogglePattern = useCallback((pid: PatternId) => {
-    setPattern(prev => prev === pid ? null : pid);
-  }, []);
+    setPattern(prev => {
+      const next = prev === pid ? null : pid;
+      setPatternStore(chatId, next).catch(() => {});
+      return next;
+    });
+  }, [chatId, setPatternStore]);
 
   const handleSelectFontSize = useCallback((size: ChatFontSize) => {
     setFontSizeLocal(size);
@@ -409,11 +418,12 @@ export default function ChatThemeScreen() {
         setWallpaperLocal(wp);
         setPattern(null);
         setWallpaper(chatId, wp).catch(() => {});
+        setPatternStore(chatId, null).catch(() => {});
       }
     } finally {
       setPickerLoading(false);
     }
-  }, [chatId, setWallpaper]);
+  }, [chatId, setWallpaper, setPatternStore]);
 
   const handleReset = useCallback(() => {
     Alert.alert('Reset Theme', 'Remove all custom styling for this chat?', [
@@ -442,14 +452,14 @@ export default function ChatThemeScreen() {
     return match ? match.id : 'custom';
   })();
 
-  const activePackId = (() => {
-    return THEME_PACKS.find(p =>
+  const activePackId = useMemo(() =>
+    THEME_PACKS.find(p =>
       (p.bubble ?? '') === bubbleColor &&
       p.wallpaper.type === wallpaper.type &&
       p.wallpaper.value === wallpaper.value &&
       !pattern,
-    )?.id ?? null;
-  })();
+    )?.id ?? null,
+  [bubbleColor, wallpaper, pattern]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
