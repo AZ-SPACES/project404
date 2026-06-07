@@ -434,7 +434,7 @@ export default function ChatInfoScreen() {
         const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const sender = m.isSelf ? 'You' : name;
-        const body = m.plaintext || `[${m.type.toLowerCase()}]`;
+        const body = m.text || `[${m.type.toLowerCase()}]`;
         return `[${date}, ${time}] ${sender}: ${body}`;
       });
     const header = `Chat with ${name}\nExported on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n${'─'.repeat(40)}\n\n`;
@@ -442,14 +442,11 @@ export default function ChatInfoScreen() {
     const path = `${FileSystem.cacheDirectory ?? ''}chat_${name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
     try {
       await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Export chat with ${name}` });
-      } else {
-        Alert.alert('Exported', `Saved to ${path}`);
-      }
+      await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Export chat with ${name}` });
     } catch {
       Alert.alert('Export failed', 'Could not export the chat. Please try again.');
+    } finally {
+      FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
     }
   }, [chatIdParam, messagesByChat, name]);
 

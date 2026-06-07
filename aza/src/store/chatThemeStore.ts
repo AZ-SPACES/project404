@@ -16,6 +16,7 @@ export type ChatThemeConfig = {
   bubbleColor: string; // '' = default (app primary), or hex
   wallpaper: ChatWallpaper;
   fontSize?: ChatFontSize;
+  pattern?: ChatWallpaperPattern;
 };
 
 const DEFAULT_WALLPAPER: ChatWallpaper = { type: 'none', value: '' };
@@ -34,9 +35,11 @@ type ChatThemeState = {
   setBubbleColor: (chatId: string, color: string) => Promise<void>;
   setWallpaper: (chatId: string, wallpaper: ChatWallpaper) => Promise<void>;
   setFontSize: (chatId: string, size: ChatFontSize) => Promise<void>;
+  setPattern: (chatId: string, pattern: ChatWallpaperPattern | null) => Promise<void>;
   getBubbleColor: (chatId: string) => string;
   getWallpaper: (chatId: string) => ChatWallpaper;
   getFontSize: (chatId: string) => ChatFontSize;
+  getPattern: (chatId: string) => ChatWallpaperPattern | null;
   resetTheme: (chatId: string) => Promise<void>;
 };
 
@@ -104,6 +107,18 @@ export const useChatThemeStore = create<ChatThemeState>((set, getState) => ({
   getWallpaper: (chatId) => get(getState().themes, chatId).wallpaper,
 
   getFontSize: (chatId) => get(getState().themes, chatId).fontSize ?? 'medium',
+
+  setPattern: async (chatId, pattern) => {
+    const current = get(getState().themes, chatId);
+    const updated: ChatThemeConfig = { ...current };
+    if (pattern === null) delete updated.pattern;
+    else updated.pattern = pattern;
+    const next = { ...getState().themes, [chatId]: updated };
+    set({ themes: next });
+    await persist(next);
+  },
+
+  getPattern: (chatId) => get(getState().themes, chatId).pattern ?? null,
 
   resetTheme: async (chatId) => {
     const next = { ...getState().themes };
