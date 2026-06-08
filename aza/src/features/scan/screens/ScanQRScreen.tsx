@@ -83,6 +83,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       const raw = data.trim();
 
       // QR login for web portals: aza://qr-login?token=...&site=ADMIN
+      // OAuth QR: aza://qr-login?token=...&site=THIRD_PARTY&client_id=...&scopes=...
       if (raw.startsWith('aza://qr-login')) {
         try {
           const url = new URL(raw);
@@ -93,12 +94,21 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             ADMIN: 'Admin Portal',
             MERCHANT: 'Merchant Portal',
             DEVELOPER: 'Developer Portal',
+            THIRD_PARTY: 'External App',
           };
-          navigation.navigate('QrLoginApproval', {
+          const params: Parameters<typeof navigation.navigate>[1] = {
             challengeToken: token,
             siteType: site,
             siteName: siteNames[site] ?? site,
-          });
+          } as any;
+          if (site === 'THIRD_PARTY') {
+            const clientId = url.searchParams.get('client_id');
+            const scopes   = url.searchParams.get('scopes');
+            if (!clientId) throw new Error('Missing client_id');
+            (params as any).oauthClientId = clientId;
+            (params as any).oauthScopes   = scopes ?? '';
+          }
+          navigation.navigate('QrLoginApproval', params as any);
         } catch {
           Alert.alert('Invalid QR', 'This QR code is not valid.', [
             { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }

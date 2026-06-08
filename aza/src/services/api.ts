@@ -1112,3 +1112,13 @@ export const suggestTransferCategory = (recipientIdentifier: string, note: strin
 
 export const authorizeQrLogin = (challengeToken: string) =>
   api.post('/api/v1/auth/qr-login/authorize', { challengeToken });
+
+export const fetchOAuthClientInfo = (clientId: string) =>
+  api.get(`/oauth/clients/${clientId}`).then(r => r.data?.data as {
+    clientId: string;
+    appName: string;
+    appDescription?: string;
+    logoUrl?: string;
+    websiteUrl?: string;
+    allowedScopes: string[];
+  });

@@ -144,7 +144,7 @@ export type RootStackParamList = {
   FinancialDashboard: undefined;
   BudgetManagement: undefined;
   AiAssistant: undefined;
-  QrLoginApproval: { challengeToken: string; siteType: string; siteName: string };
+  QrLoginApproval: { challengeToken: string; siteType: string; siteName: string; oauthClientId?: string; oauthScopes?: string };
   GeoBlocked: undefined;
   MerchantCheckout: { sessionId: string };
   BroadcastScreen: { preselected?: string[] };

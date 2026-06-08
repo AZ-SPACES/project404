@@ -1,0 +1,97 @@
+package com.aza.backend.controller;
+
+import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.oauth.*;
+import com.aza.backend.dto.qrlogin.QrLoginInitiateResponse;
+import com.aza.backend.dto.qrlogin.QrLoginStatusResponse;
+import com.aza.backend.service.OAuthService;
+import com.aza.backend.service.QrLoginService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/oauth")
+@RequiredArgsConstructor
+public class OAuthController {
+
+    private final OAuthService    oAuthService;
+    private final QrLoginService  qrLoginService;
+
+    // ── Public client info ────────────────────────────────────────────────────
+
+    @GetMapping("/clients/{clientId}")
+    public ResponseEntity<ApiResponse<OAuthPublicClientResponse>> getClientInfo(
+            @PathVariable String clientId) {
+        return ResponseEntity.ok(ApiResponse.success(oAuthService.getPublicClientInfo(clientId)));
+    }
+
+    // ── PKCE / redirect flow ──────────────────────────────────────────────────
+
+    /**
+     * Step 1: third-party server validates params and gets a pendingState.
+     * Returns the AZA consent URL the user should be redirected to.
+     */
+    @PostMapping("/authorize")
+    public ResponseEntity<ApiResponse<String>> authorize(
+            @Valid @RequestBody OAuthAuthorizeRequest request) {
+        String pendingState = oAuthService.initiateAuthorize(request);
+        String consentUrl   = "https://aza.systems/oauth/consent?state=" + pendingState;
+        return ResponseEntity.ok(ApiResponse.success(consentUrl));
+    }
+
+    // ── Token exchange ────────────────────────────────────────────────────────
+
+    @PostMapping("/token")
+    public ResponseEntity<OAuthTokenResponse> token(
+            @Valid @RequestBody OAuthTokenRequest request) {
+        OAuthTokenResponse response = oAuthService.exchangeToken(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // ── Userinfo ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/userinfo")
+    public ResponseEntity<OAuthUserInfoResponse> userInfo(
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+        return ResponseEntity.ok(oAuthService.getUserInfo(token));
+    }
+
+    // ── Revoke ────────────────────────────────────────────────────────────────
+
+    @PostMapping("/revoke")
+    public ResponseEntity<Void> revoke(
+            @RequestParam String clientId,
+            @RequestParam String clientSecret,
+            @RequestParam String token) {
+        oAuthService.revokeToken(clientId, clientSecret, token);
+        return ResponseEntity.ok().build();
+    }
+
+    // ── QR flow ───────────────────────────────────────────────────────────────
+
+    @PostMapping("/qr/initiate")
+    public ResponseEntity<ApiResponse<QrLoginInitiateResponse>> qrInitiate(
+            @Valid @RequestBody OAuthQrInitiateRequest request) {
+        QrLoginInitiateResponse response = qrLoginService.initiateOAuthQrLogin(
+                request.getClientId(), request.getClientSecret(), request.getScopes());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/qr/status/{challengeToken}")
+    public ResponseEntity<ApiResponse<QrLoginStatusResponse>> qrStatus(
+            @PathVariable String challengeToken) {
+        return ResponseEntity.ok(ApiResponse.success(qrLoginService.getStatus(challengeToken)));
+    }
+
+    @PostMapping("/qr/complete")
+    public ResponseEntity<OAuthTokenResponse> qrComplete(
+            @Valid @RequestBody OAuthQrCompleteRequest request) {
+        OAuthTokenResponse response = qrLoginService.completeOAuthQrLogin(
+                request.getChallengeToken(), request.getSessionSecret(),
+                request.getClientId(), request.getClientSecret());
+        return ResponseEntity.ok(response);
+    }
+}
