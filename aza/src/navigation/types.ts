@@ -146,6 +146,7 @@ export type RootStackParamList = {
   AiAssistant: undefined;
   QrLoginApproval: { challengeToken: string; siteType: string; siteName: string; oauthClientId?: string; oauthScopes?: string };
   GeoBlocked: undefined;
+  ConnectedApps: undefined;
   MerchantCheckout: { sessionId: string };
   BroadcastScreen: { preselected?: string[] };
   SavedMessagesScreen: undefined;

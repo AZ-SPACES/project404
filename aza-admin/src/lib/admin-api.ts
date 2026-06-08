@@ -1289,3 +1289,59 @@ export interface CategoryBreakdown {
 export function getAdminCategoryBreakdown(days = 30): Promise<CategoryBreakdown[]> {
   return request(`/api/v1/admin/analytics/categories?days=${days}`);
 }
+
+// ── OAuth Apps ────────────────────────────────────────────────────────────────
+
+export interface AdminOAuthStats {
+  totalClients: number;
+  activeClients: number;
+  suspendedClients: number;
+  activeTokens: number;
+}
+
+export interface AdminOAuthClient {
+  id: string;
+  clientId: string;
+  appName: string;
+  appDescription?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  allowedScopes: string[];
+  ownerHandle: string;
+  ownerEmail: string;
+  active: boolean;
+  activeTokenCount: number;
+  createdAt: string;
+}
+
+export function getAdminOAuthStats(): Promise<AdminOAuthStats> {
+  return request("/api/v1/admin/oauth/stats");
+}
+
+export function getAdminOAuthClients(
+  page = 0,
+  size = 20,
+  query?: string,
+  active?: boolean,
+): Promise<Page<AdminOAuthClient>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (query) params.set("query", query);
+  if (active !== undefined) params.set("active", String(active));
+  return request(`/api/v1/admin/oauth/clients?${params}`);
+}
+
+export function getAdminOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}`);
+}
+
+export function adminSuspendOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}/suspend`, { method: "POST" });
+}
+
+export function adminRestoreOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}/restore`, { method: "POST" });
+}
+
+export function adminDeleteOAuthClient(clientId: string): Promise<void> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}`, { method: "DELETE" });
+}

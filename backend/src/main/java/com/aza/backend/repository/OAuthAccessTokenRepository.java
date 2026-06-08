@@ -19,4 +19,20 @@ public interface OAuthAccessTokenRepository extends JpaRepository<OAuthAccessTok
     @Modifying
     @Query("UPDATE OAuthAccessToken t SET t.revoked = true WHERE t.user = :user AND t.client = :client")
     void revokeAllForUserAndClient(User user, OAuthClient client);
+
+    @Query("SELECT DISTINCT t.client FROM OAuthAccessToken t WHERE t.user = :user AND t.revoked = false AND t.expiresAt > CURRENT_TIMESTAMP")
+    List<OAuthClient> findActiveClientsByUser(User user);
+
+    @Query("SELECT t FROM OAuthAccessToken t WHERE t.user = :user AND t.client = :client AND t.revoked = false ORDER BY t.createdAt DESC")
+    List<OAuthAccessToken> findActiveByUserAndClient(User user, OAuthClient client);
+
+    @Query("SELECT COUNT(t) FROM OAuthAccessToken t WHERE t.client = :client AND t.revoked = false AND t.expiresAt > CURRENT_TIMESTAMP")
+    long countActiveByClient(OAuthClient client);
+
+    @Query("SELECT COUNT(t) FROM OAuthAccessToken t WHERE t.revoked = false AND t.expiresAt > CURRENT_TIMESTAMP")
+    long countAllActive();
+
+    @Modifying
+    @Query("UPDATE OAuthAccessToken t SET t.revoked = true WHERE t.client = :client")
+    void revokeAllForClient(OAuthClient client);
 }

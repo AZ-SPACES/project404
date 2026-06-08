@@ -4,12 +4,16 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.oauth.*;
 import com.aza.backend.dto.qrlogin.QrLoginInitiateResponse;
 import com.aza.backend.dto.qrlogin.QrLoginStatusResponse;
+import com.aza.backend.entity.User;
 import com.aza.backend.service.OAuthService;
 import com.aza.backend.service.QrLoginService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/oauth")
@@ -93,5 +97,21 @@ public class OAuthController {
                 request.getChallengeToken(), request.getSessionSecret(),
                 request.getClientId(), request.getClientSecret());
         return ResponseEntity.ok(response);
+    }
+
+    // ── Connected apps (user-facing, requires AZA JWT) ────────────────────────
+
+    @GetMapping("/connected-apps")
+    public ResponseEntity<ApiResponse<List<ConnectedAppResponse>>> getConnectedApps(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(oAuthService.getConnectedApps(user)));
+    }
+
+    @DeleteMapping("/connected-apps/{clientId}")
+    public ResponseEntity<ApiResponse<Void>> revokeConnectedApp(
+            @PathVariable String clientId,
+            @AuthenticationPrincipal User user) {
+        oAuthService.revokeConnectedApp(user, clientId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

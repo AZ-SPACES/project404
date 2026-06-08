@@ -1122,3 +1122,25 @@ export const fetchOAuthClientInfo = (clientId: string) =>
     websiteUrl?: string;
     allowedScopes: string[];
   });
+
+// ── Developer OAuth client management ─────────────────────────────────────────
+export const getDeveloperClients = () => api.get('/api/v1/developer/clients');
+export const registerDeveloperClient = (data: {
+  appName: string;
+  appDescription?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  redirectUris: string[];
+  scopes: string[];
+}) => api.post('/api/v1/developer/clients', data);
+export const getDeveloperClient = (clientId: string) =>
+  api.get(`/api/v1/developer/clients/${clientId}`);
+export const rotateDeveloperClientSecret = (clientId: string) =>
+  api.post(`/api/v1/developer/clients/${clientId}/rotate-secret`);
+export const deleteDeveloperClient = (clientId: string) =>
+  api.delete(`/api/v1/developer/clients/${clientId}`);
+
+// ── Connected apps (user side) ────────────────────────────────────────────────
+export const getConnectedApps = () => api.get('/oauth/connected-apps');
+export const revokeConnectedApp = (clientId: string) =>
+  api.delete(`/oauth/connected-apps/${clientId}`);
