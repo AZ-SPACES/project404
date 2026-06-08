@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,12 +21,19 @@ public interface OAuthClientRepository extends JpaRepository<OAuthClient, UUID> 
     long countByActiveTrue();
     long countByActiveFalse();
 
-    @Query("""
+    @Query(value = """
         SELECT c FROM OAuthClient c
+        JOIN FETCH c.owner
         WHERE (:query IS NULL OR LOWER(c.appName) LIKE LOWER(CONCAT('%', :query, '%'))
                OR LOWER(c.clientId) LIKE LOWER(CONCAT('%', :query, '%')))
           AND (:active IS NULL OR c.active = :active)
         ORDER BY c.createdAt DESC
+        """,
+        countQuery = """
+        SELECT COUNT(c) FROM OAuthClient c
+        WHERE (:query IS NULL OR LOWER(c.appName) LIKE LOWER(CONCAT('%', :query, '%'))
+               OR LOWER(c.clientId) LIKE LOWER(CONCAT('%', :query, '%')))
+          AND (:active IS NULL OR c.active = :active)
         """)
-    Page<OAuthClient> adminSearch(String query, Boolean active, Pageable pageable);
+    Page<OAuthClient> adminSearch(@Param("query") String query, @Param("active") Boolean active, Pageable pageable);
 }
