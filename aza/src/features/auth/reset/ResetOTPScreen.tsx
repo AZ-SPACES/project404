@@ -167,10 +167,12 @@ const ResetOTPScreen: React.FC = () => {
               onPress={handleVerify}
               backgroundColor={Colors.primary}
               textColor={Colors.secondary}
-              borderRadius={30} // completely rounded
+              borderRadius={30}
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
+              loading={isLoading}
+              disabled={isLoading || otp.join('').length < 6}
             />
           </View>
         </KeyboardAvoidingView>

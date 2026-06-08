@@ -13,7 +13,7 @@ import { Alert } from 'react-native';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useToast } from '../../../providers/ToastProvider';
 import { isValidEmail, isValidPhone, sanitizeEmail } from '../../../utils/validation';
-import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import { api, biometricLogin, getDeviceId, BIOMETRIC_TOKEN_KEY, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../services/api';
 import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
 import { CloseButton } from '../../../components/ui/CloseButton';
@@ -82,23 +82,29 @@ const LoginScreen: React.FC = () => {
           defaultMethod: payload.defaultMethod,
         });
       } else if (payload?.accessToken) {
-        await SecureStore.setItemAsync('aza_access_token', payload.accessToken);
-        await SecureStore.setItemAsync('aza_refresh_token', payload.refreshToken);
+        await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
+        const existingBiometricToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
         login({
           token: payload.accessToken,
           hasPasscode: payload.user?.passcodeSet ?? false,
           isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
           forcePasswordReset: payload.user?.forcePasswordReset ?? false,
           requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
-          isBiometricsEnabled: false,
+          isBiometricsEnabled: !!existingBiometricToken,
         });
       } else {
         navigation.navigate('TotpLogin', { loginIdentifier: identifier, methods: ['SMS'], defaultMethod: 'SMS' });
       }
     } catch (error: unknown) {
       console.error('Login failed', error);
-      const errorMsg = extractErrorMessage(error, 'Invalid credentials. Please try again.');
-      showToast(errorMsg, 'error');
+      const err = error as Record<string, unknown>;
+      if (err?.isRateLimited) {
+        const seconds = (err.retryAfterSeconds as number) ?? 60;
+        showToast(`Too many login attempts. Please try again in ${seconds}s.`, 'error');
+      } else {
+        showToast(extractErrorMessage(error, 'Invalid credentials. Please try again.'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -142,11 +148,11 @@ const LoginScreen: React.FC = () => {
       const response = await biometricLogin(storedToken, deviceId);
       const payload = response.data?.data ?? response.data;
       const { accessToken, refreshToken } = payload;
-      await SecureStore.setItemAsync('aza_access_token', accessToken);
-      await SecureStore.setItemAsync('aza_refresh_token', refreshToken);
+      await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
       login({
         token: accessToken,
-        hasPasscode: payload.user?.passcodeSet ?? true,
+        hasPasscode: payload.user?.passcodeSet ?? false,
         isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
         forcePasswordReset: payload.user?.forcePasswordReset ?? false,
         requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
