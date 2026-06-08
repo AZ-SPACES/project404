@@ -22,7 +22,7 @@ import {
 } from '../../../services/api';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
-import { extractErrorMessage } from '../../../utils/errorUtils';
+import { extractErrorMessage, getErrorStatus } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ContactRecoveryLogin'>;
 type RouteType = RouteProp<RootStackParamList, 'ContactRecoveryLogin'>;
@@ -58,7 +58,15 @@ export default function ContactRecoveryLoginScreen() {
   useEffect(() => {
     getAvailableRecoveryContacts(preAuthToken)
       .then(res => setContacts(res.data?.data ?? []))
-      .catch(() => setContacts([]))
+      .catch((err) => {
+        const status = getErrorStatus(err);
+        if (status === 401 || status === 403) {
+          showToast('Your session has expired. Please try logging in again.', 'error');
+          navigation.goBack();
+        } else {
+          setContacts([]);
+        }
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -71,7 +79,13 @@ export default function ContactRecoveryLoginScreen() {
       setRequestId(rid);
       setStep('waiting');
     } catch (err: unknown) {
-      showToast(extractErrorMessage(err, 'Failed to send request'), 'error');
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Failed to send request'), 'error');
+      }
     } finally {
       setIsSending(false);
     }
@@ -121,7 +135,13 @@ export default function ContactRecoveryLoginScreen() {
         isBiometricsEnabled: false,
       });
     } catch (err: unknown) {
-      showToast(extractErrorMessage(err, 'Invalid or expired code'), 'error');
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Invalid or expired code'), 'error');
+      }
     } finally {
       setIsVerifying(false);
     }

@@ -69,14 +69,18 @@ const TotpLoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [appRequestId, setAppRequestId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
 
   const { login } = useAuth();
   const { showToast } = useToast();
 
 
-  // Stop polling on unmount
+  // Stop polling on unmount and mark component as gone so callbacks don't update stale state
   useEffect(() => {
-    return () => { stopPolling(); };
+    return () => {
+      mountedRef.current = false;
+      stopPolling();
+    };
   }, []);
 
   // Countdown timer for login-OTP mode
@@ -172,11 +176,12 @@ const TotpLoginScreen: React.FC = () => {
         const payload = res.data?.data;
         if (payload?.accessToken) {
           stopPolling();
-          await finalizeLogin(payload);
+          if (mountedRef.current) await finalizeLogin(payload);
         }
         // null means still PENDING — keep polling
       } catch (err: unknown) {
         stopPolling();
+        if (!mountedRef.current) return;
         const msg = extractErrorMessage(err, 'Login request expired or was denied.');
         showToast(msg, 'error');
         const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
@@ -213,13 +218,14 @@ const TotpLoginScreen: React.FC = () => {
   const finalizeLogin = async (payload: AuthPayload) => {
     await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
+    const existingBiometricToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
     login({
       token: payload.accessToken,
       hasPasscode: payload.user?.passcodeSet ?? false,
       isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
       forcePasswordReset: payload.user?.forcePasswordReset ?? false,
       requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
-      isBiometricsEnabled: false,
+      isBiometricsEnabled: !!existingBiometricToken,
     });
   };
 
@@ -521,18 +527,22 @@ const TotpLoginScreen: React.FC = () => {
               />
             )}
 
-            <TouchableOpacity
-              style={styles.recoveryButton}
-              onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken: preAuthToken! })}
-            >
-              <Text style={styles.recoveryText}>Use a recovery code</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.recoveryButton, { marginTop: 2 }]}
-              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken: preAuthToken! })}
-            >
-              <Text style={styles.recoveryText}>Contact a recovery person</Text>
-            </TouchableOpacity>
+            {!!preAuthToken && (
+              <>
+                <TouchableOpacity
+                  style={styles.recoveryButton}
+                  onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
+                >
+                  <Text style={styles.recoveryText}>Use a recovery code</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.recoveryButton, { marginTop: 2 }]}
+                  onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
+                >
+                  <Text style={styles.recoveryText}>Contact a recovery person</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
           
           {renderMethodSelector()}

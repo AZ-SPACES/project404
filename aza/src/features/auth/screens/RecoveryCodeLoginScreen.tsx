@@ -23,7 +23,7 @@ import { redeemRecoveryCode, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../servi
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
-import { extractErrorMessage } from '../../../utils/errorUtils';
+import { extractErrorMessage, getErrorStatus } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'RecoveryCodeLogin'>;
 type RoutePropType = RouteProp<RootStackParamList, 'RecoveryCodeLogin'>;
@@ -70,8 +70,13 @@ export default function RecoveryCodeLoginScreen() {
         isBiometricsEnabled: false,
       });
     } catch (err: unknown) {
-      const msg = extractErrorMessage(err, 'Invalid or already-used recovery code.');
-      showToast(msg, 'error');
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Invalid or already-used recovery code.'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +102,7 @@ export default function RecoveryCodeLoginScreen() {
             </View>
 
             <Text style={styles.subtitle}>
-              Enter one of the 8-character recovery codes you saved when you set up 2-step verification.
+              Enter one of the recovery codes you saved when you set up 2-step verification.
             </Text>
 
             <TextInput

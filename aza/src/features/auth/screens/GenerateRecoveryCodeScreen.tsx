@@ -44,7 +44,7 @@ export default function GenerateRecoveryCodeScreen() {
 
   useEffect(() => {
     refreshCode();
-  }, []);
+  }, [refreshCode]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
