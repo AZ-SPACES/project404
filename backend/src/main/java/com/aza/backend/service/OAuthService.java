@@ -403,6 +403,7 @@ public class OAuthService {
             String ownerHandle, String ownerEmail,
             boolean active, long activeTokenCount, String createdAt) {}
 
+    @Transactional(readOnly = true)
     public AdminOAuthStats adminGetStats() {
         long total     = clientRepository.count();
         long active    = clientRepository.countByActiveTrue();
@@ -411,6 +412,7 @@ public class OAuthService {
         return new AdminOAuthStats(total, active, suspended, tokens);
     }
 
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<AdminClientSummary> adminListClients(
             String query, Boolean active, int page, int size) {
         var pageable = org.springframework.data.domain.PageRequest.of(page, size);
@@ -418,6 +420,7 @@ public class OAuthService {
                 .map(c -> toAdminSummary(c, tokenRepository.countActiveByClient(c)));
     }
 
+    @Transactional(readOnly = true)
     public AdminClientSummary adminGetClient(String clientId) {
         OAuthClient c = clientRepository.findByClientId(clientId)
                 .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
