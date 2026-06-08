@@ -37,4 +37,6 @@ export const queryKeys = {
   transactionInsight:  (id: string) => ['transaction-insight', id] as const,
   anomalyCheck:        (identifier: string, amount: number) => ['anomaly-check', identifier, amount] as const,
   categorysuggestion:  (identifier: string, note: string) => ['category-suggestion', identifier, note] as const,
+  developerClients:    () => ['developer', 'clients'] as const,
+  connectedApps:       () => ['connected-apps'] as const,
 } as const;

@@ -80,6 +80,7 @@ import {
   ChangePhoneScreen,
   DeleteAccountScreen
 } from '../features/profile';
+import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
 import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
 import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
 import WalletFreezeScreen from '../features/profile/screens/WalletFreezeScreen';
@@ -196,6 +197,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="ConnectedApps" component={ConnectedAppsScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
       <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
       <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />

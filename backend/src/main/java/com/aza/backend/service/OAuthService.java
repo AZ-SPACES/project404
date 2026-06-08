@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.oauth.*;
+import com.aza.backend.dto.oauth.ConnectedAppResponse;
 import com.aza.backend.dto.qrlogin.QrSessionData;
 import com.aza.backend.entity.OAuthAccessToken;
 import com.aza.backend.entity.OAuthClient;
@@ -362,6 +363,107 @@ public class OAuthService {
         String hash = sha256(token);
         tokenRepository.findByTokenHash(hash).ifPresent(t -> t.setRevoked(true));
         tokenRepository.findByRefreshTokenHash(hash).ifPresent(t -> t.setRevoked(true));
+    }
+
+    // ── Connected apps (user-facing) ──────────────────────────────────────────
+
+    public List<ConnectedAppResponse> getConnectedApps(User user) {
+        List<OAuthClient> clients = tokenRepository.findActiveClientsByUser(user);
+        return clients.stream().map(client -> {
+            List<OAuthAccessToken> tokens = tokenRepository.findActiveByUserAndClient(user, client);
+            String scopes    = tokens.isEmpty() ? "" : tokens.get(0).getScopes();
+            String grantedAt = tokens.isEmpty() ? null : tokens.get(tokens.size() - 1).getCreatedAt() != null
+                    ? tokens.get(tokens.size() - 1).getCreatedAt().toString() : null;
+            return ConnectedAppResponse.builder()
+                    .clientId(client.getClientId())
+                    .appName(client.getAppName())
+                    .appDescription(client.getAppDescription())
+                    .logoUrl(client.getLogoUrl())
+                    .websiteUrl(client.getWebsiteUrl())
+                    .grantedScopes(Arrays.asList(scopes.split(",")))
+                    .grantedAt(grantedAt)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void revokeConnectedApp(User user, String clientId) {
+        OAuthClient client = clientRepository.findByClientIdAndActiveTrue(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "App not found.", HttpStatus.NOT_FOUND));
+        tokenRepository.revokeAllForUserAndClient(user, client);
+    }
+
+    // ── Admin ─────────────────────────────────────────────────────────────────
+
+    public record AdminOAuthStats(long totalClients, long activeClients, long suspendedClients, long activeTokens) {}
+
+    public record AdminClientSummary(
+            String id, String clientId, String appName, String appDescription,
+            String logoUrl, String websiteUrl, List<String> allowedScopes,
+            String ownerHandle, String ownerEmail,
+            boolean active, long activeTokenCount, String createdAt) {}
+
+    public AdminOAuthStats adminGetStats() {
+        long total     = clientRepository.count();
+        long active    = clientRepository.countByActiveTrue();
+        long suspended = clientRepository.countByActiveFalse();
+        long tokens    = tokenRepository.countAllActive();
+        return new AdminOAuthStats(total, active, suspended, tokens);
+    }
+
+    public org.springframework.data.domain.Page<AdminClientSummary> adminListClients(
+            String query, Boolean active, int page, int size) {
+        var pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return clientRepository.adminSearch(query, active, pageable)
+                .map(c -> toAdminSummary(c, tokenRepository.countActiveByClient(c)));
+    }
+
+    public AdminClientSummary adminGetClient(String clientId) {
+        OAuthClient c = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
+        return toAdminSummary(c, tokenRepository.countActiveByClient(c));
+    }
+
+    @Transactional
+    public AdminClientSummary adminSuspendClient(String clientId) {
+        OAuthClient c = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
+        c.setActive(false);
+        clientRepository.save(c);
+        return toAdminSummary(c, tokenRepository.countActiveByClient(c));
+    }
+
+    @Transactional
+    public AdminClientSummary adminRestoreClient(String clientId) {
+        OAuthClient c = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
+        c.setActive(true);
+        clientRepository.save(c);
+        return toAdminSummary(c, tokenRepository.countActiveByClient(c));
+    }
+
+    @Transactional
+    public void adminDeleteClient(String clientId) {
+        OAuthClient c = clientRepository.findByClientId(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
+        tokenRepository.revokeAllForClient(c);
+        clientRepository.delete(c);
+    }
+
+    private AdminClientSummary toAdminSummary(OAuthClient c, long tokenCount) {
+        return new AdminClientSummary(
+                c.getId().toString(),
+                c.getClientId(),
+                c.getAppName(),
+                c.getAppDescription(),
+                c.getLogoUrl(),
+                c.getWebsiteUrl(),
+                c.getAllowedScopeList(),
+                c.getOwner().getUsername(),
+                c.getOwner().getEmail(),
+                c.isActive(),
+                tokenCount,
+                c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

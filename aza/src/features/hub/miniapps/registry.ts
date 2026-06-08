@@ -1,4 +1,5 @@
 import MyBusinessApp from './MyBusinessApp';
+import DeveloperApp from './DeveloperApp';
 import Play2048App from './Play2048App';
 import Snake from './Snakegame';
 import Connect4 from './Connect4';
@@ -16,6 +17,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/aza-z.png'),
     category: 'Business',
     component: MyBusinessApp,
+  },
+  {
+    id: 'aza_developer',
+    name: 'AZA Developer',
+    description: 'Manage OAuth apps and Sign in with AZA',
+    icon: require('../../../assets/aza-z.png'),
+    category: 'Business',
+    component: DeveloperApp,
   },
   {
     id: 'play_2048',

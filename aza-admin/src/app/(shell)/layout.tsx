@@ -31,6 +31,7 @@ import {
   TrendingUp,
   Users2,
   X,
+  KeyRound,
 } from "lucide-react";
 
 interface NavItem {
@@ -69,6 +70,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/merchants", label: "Merchants", icon: Store },
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag },
+      { href: "/oauth-apps", label: "OAuth Apps", icon: KeyRound },
       { href: "/disputes", label: "Disputes", icon: Scale },
       { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp },
       { href: "/fees", label: "Fee Management", icon: Coins },

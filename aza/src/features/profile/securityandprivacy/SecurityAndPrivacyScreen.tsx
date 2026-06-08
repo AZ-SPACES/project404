@@ -316,10 +316,18 @@ export function SecurityAndPrivacyScreen() {
             onSwitchChange={(v) => profile.updateProfile({ biometricData: v })}
           />
           
-          <SettingRow 
-            iconType="Feather" 
-            iconName="info" 
-            title="Privacy policy" 
+          <SettingRow
+            iconType="Ionicons"
+            iconName="apps-outline"
+            title="Connected apps"
+            subtitle="Manage third-party apps that have access to your account"
+            onPress={() => navigation.navigate("ConnectedApps")}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="info"
+            title="Privacy policy"
             subtitle="Learn how we protect and use your personal information"
             onPress={() => navigation.navigate("PrivacyPolicy")}
           />
