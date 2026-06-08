@@ -99,6 +99,7 @@ import {
 } from '../features/auth';
 import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
 import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
+import OAuthPaymentApprovalScreen from '../features/scan/screens/OAuthPaymentApprovalScreen';
 import { InboxScreen } from '../features/notifications';
 
 
@@ -201,6 +202,7 @@ export default function AppNavigator() {
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
       <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
       <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />
+      <Stack.Screen name="OAuthPaymentApproval" component={OAuthPaymentApprovalScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />

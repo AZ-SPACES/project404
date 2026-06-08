@@ -101,7 +101,8 @@ public class SecurityConfig {
                             "/oauth/qr/initiate",
                             "/oauth/qr/status/*",
                             "/oauth/qr/complete",
-                            "/oauth/clients/*"
+                            "/oauth/clients/*",
+                            "/oauth/payments/**"
                     ).permitAll();
                     // Checkout GET is public; confirm and cancel require authenticated JWT
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();

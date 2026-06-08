@@ -148,6 +148,7 @@ export type RootStackParamList = {
   GeoBlocked: undefined;
   ConnectedApps: undefined;
   MerchantCheckout: { sessionId: string };
+  OAuthPaymentApproval: { sessionId: string };
   BroadcastScreen: { preselected?: string[] };
   SavedMessagesScreen: undefined;
 };

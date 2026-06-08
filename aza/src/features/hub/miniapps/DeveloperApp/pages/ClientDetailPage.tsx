@@ -7,7 +7,12 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Spacing, Radius, Typography } from '../../../../../theme';
 import { NavProps, OAuthClientData } from '../types';
-import { rotateDeveloperClientSecret, deleteDeveloperClient } from '../../../../../services/api';
+import {
+  rotateDeveloperClientSecret,
+  deleteDeveloperClient,
+  linkMerchantToOAuthClient,
+  unlinkMerchantFromOAuthClient,
+} from '../../../../../services/api';
 import { queryClient } from '../../../../../lib/queryClient';
 import { queryKeys } from '../../../../../lib/queryKeys';
 
@@ -16,6 +21,7 @@ const SCOPE_ICONS: Record<string, string> = {
   email:         'mail-outline',
   phone:         'call-outline',
   'wallet:read': 'wallet-outline',
+  payment:       'card-outline',
 };
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -23,6 +29,7 @@ const SCOPE_LABELS: Record<string, string> = {
   email:         'Email address',
   phone:         'Phone number',
   'wallet:read': 'Wallet balance (read-only)',
+  payment:       'Initiate payments from user wallet',
 };
 
 interface Props extends NavProps {
@@ -36,6 +43,7 @@ export default function ClientDetailPage({ goBack, client: initialClient, justCr
   const [client,   setClient]   = useState(initialClient);
   const [rotating, setRotating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [linking,  setLinking]  = useState(false);
 
   function copy(text: string, label: string) {
     Clipboard.setString(text);
@@ -61,6 +69,67 @@ export default function ClientDetailPage({ goBack, client: initialClient, justCr
               Alert.alert('Error', err?.response?.data?.error?.message ?? 'Failed to rotate secret.');
             } finally {
               setRotating(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleLinkMerchant() {
+    const hasPaymentScope = client.allowedScopes.includes('payment');
+    if (!hasPaymentScope) {
+      Alert.alert(
+        'Payment scope required',
+        "Add the 'payment' scope to this app before linking a merchant account.",
+      );
+      return;
+    }
+    Alert.alert(
+      'Link merchant account?',
+      'Users who authorise this app with the payment scope will be able to pay your merchant account directly.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Link',
+          onPress: async () => {
+            setLinking(true);
+            try {
+              const res = await linkMerchantToOAuthClient(client.clientId);
+              const updated = res.data?.data;
+              setClient((prev: OAuthClientData) => ({ ...prev, merchantId: updated.merchantId, merchantName: updated.merchantName }));
+              await queryClient.invalidateQueries({ queryKey: queryKeys.developerClients() });
+              Alert.alert('Linked', `Merchant "${updated.merchantName}" linked successfully.`);
+            } catch (err: any) {
+              Alert.alert('Error', err?.response?.data?.error?.message ?? 'Failed to link merchant.');
+            } finally {
+              setLinking(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleUnlinkMerchant() {
+    Alert.alert(
+      'Unlink merchant?',
+      'This app will no longer be able to initiate payments to your merchant account.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unlink', style: 'destructive',
+          onPress: async () => {
+            setLinking(true);
+            try {
+              const res = await unlinkMerchantFromOAuthClient(client.clientId);
+              const updated = res.data?.data;
+              setClient((prev: OAuthClientData) => ({ ...prev, merchantId: updated.merchantId, merchantName: updated.merchantName }));
+              await queryClient.invalidateQueries({ queryKey: queryKeys.developerClients() });
+            } catch (err: any) {
+              Alert.alert('Error', err?.response?.data?.error?.message ?? 'Failed to unlink merchant.');
+            } finally {
+              setLinking(false);
             }
           },
         },
@@ -166,6 +235,54 @@ export default function ClientDetailPage({ goBack, client: initialClient, justCr
         ))}
       </View>
 
+      {/* Merchant account */}
+      {client.allowedScopes.includes('payment') && (
+        <>
+          <Text style={[styles.sectionLabel, { color: Colors.textSecondary }]}>Pay with AZA</Text>
+          {client.merchantId ? (
+            <>
+              <View style={[styles.row, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
+                <Ionicons name="storefront-outline" size={16} color={Colors.primary} />
+                <Text style={[styles.rowValue, { color: Colors.textPrimary, flex: 1, marginLeft: 8 }]} numberOfLines={1}>
+                  {client.merchantName ?? client.merchantId}
+                </Text>
+                <View style={[styles.badge, { backgroundColor: Colors.primary + '20' }]}>
+                  <Text style={[styles.badgeText, { color: Colors.primary }]}>Linked</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.actionRow, { backgroundColor: Colors.surface, borderColor: Colors.border }]}
+                onPress={handleUnlinkMerchant}
+                disabled={linking}
+                activeOpacity={0.7}
+              >
+                {linking
+                  ? <ActivityIndicator size="small" color={Colors.textSecondary} />
+                  : <Feather name="x-circle" size={16} color={Colors.textSecondary} />}
+                <Text style={[styles.actionText, { color: Colors.textSecondary }]}>Unlink merchant</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[{ color: Colors.textSecondary, fontSize: 12, marginBottom: 8, lineHeight: 18 }]}>
+                Link your merchant account so users can pay you directly through this app.
+              </Text>
+              <TouchableOpacity
+                style={[styles.actionRow, { backgroundColor: Colors.surface, borderColor: Colors.border }]}
+                onPress={handleLinkMerchant}
+                disabled={linking}
+                activeOpacity={0.7}
+              >
+                {linking
+                  ? <ActivityIndicator size="small" color={Colors.primary} />
+                  : <Ionicons name="storefront-outline" size={16} color={Colors.primary} />}
+                <Text style={[styles.actionText, { color: Colors.primary }]}>Link merchant account</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </>
+      )}
+
       {/* Actions */}
       <Text style={[styles.sectionLabel, { color: Colors.textSecondary }]}>Credentials</Text>
       <TouchableOpacity
@@ -220,5 +337,7 @@ function createStyles(Colors: any) {
     actionText:        { fontSize: 15, fontWeight: '600' },
     deleteBtn:         { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 14, marginTop: Spacing.md },
     deleteText:        { fontSize: 15, fontWeight: '600' },
+    badge:             { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+    badgeText:         { fontSize: 11, fontWeight: '700' },
   });
 }

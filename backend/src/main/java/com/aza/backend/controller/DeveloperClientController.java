@@ -56,4 +56,18 @@ public class DeveloperClientController {
         oAuthService.deleteClient(user, clientId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
+
+    @PostMapping("/{clientId}/merchant")
+    public ResponseEntity<ApiResponse<OAuthClientResponse>> linkMerchant(
+            @PathVariable String clientId,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(oAuthService.linkMerchant(user, clientId)));
+    }
+
+    @DeleteMapping("/{clientId}/merchant")
+    public ResponseEntity<ApiResponse<OAuthClientResponse>> unlinkMerchant(
+            @PathVariable String clientId,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(oAuthService.unlinkMerchant(user, clientId)));
+    }
 }
