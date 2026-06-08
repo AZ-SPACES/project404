@@ -92,6 +92,17 @@ public class SecurityConfig {
                             "/ws/chat/**",
                             "/actuator/**"
                     ).permitAll();
+                    // OAuth 2.0 public endpoints — authenticated via client_secret or Bearer token
+                    auth.requestMatchers(
+                            "/oauth/token",
+                            "/oauth/revoke",
+                            "/oauth/userinfo",
+                            "/oauth/authorize",
+                            "/oauth/qr/initiate",
+                            "/oauth/qr/status/*",
+                            "/oauth/qr/complete",
+                            "/oauth/clients/*"
+                    ).permitAll();
                     // Checkout GET is public; confirm and cancel require authenticated JWT
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();
                     // Discount validation is public — no auth needed

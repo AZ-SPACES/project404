@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.auth.AuthResponse;
+import com.aza.backend.dto.oauth.OAuthTokenResponse;
 import com.aza.backend.dto.qrlogin.*;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.User;
@@ -13,6 +14,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
@@ -24,10 +26,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class QrLoginService {
 
@@ -36,6 +38,19 @@ public class QrLoginService {
     private final UserRepository userRepository;
     private final AuthService authService;
     private final WebSocketPublisher webSocketPublisher;
+    private final OAuthService oAuthService;
+
+    public QrLoginService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper,
+                          UserRepository userRepository, AuthService authService,
+                          WebSocketPublisher webSocketPublisher,
+                          @org.springframework.context.annotation.Lazy OAuthService oAuthService) {
+        this.redisTemplate      = redisTemplate;
+        this.objectMapper       = objectMapper;
+        this.userRepository     = userRepository;
+        this.authService        = authService;
+        this.webSocketPublisher = webSocketPublisher;
+        this.oAuthService       = oAuthService;
+    }
 
     private static final String SESSION_PREFIX = "qr:session:";
     private static final long SESSION_TTL_SECONDS = 90;
@@ -100,6 +115,93 @@ public class QrLoginService {
                 .expiresAt(expiresAt.toString())
                 .ttlSeconds(SESSION_TTL_SECONDS)
                 .build();
+    }
+
+    /**
+     * OAuth QR initiation: validates OAuth client credentials/scopes, then creates a
+     * THIRD_PARTY session. The QR encodes a deep link the mobile app knows how to parse.
+     */
+    public QrLoginInitiateResponse initiateOAuthQrLogin(String clientId, String clientSecret, List<String> scopes) {
+        String[] validated    = oAuthService.validateQrOAuthRequest(clientId, clientSecret, scopes);
+        String validClientId  = validated[0];
+        String validScopes    = validated[1];
+
+        String challengeToken = UUID.randomUUID().toString();
+        String sessionSecret  = UUID.randomUUID().toString();
+        Instant expiresAt     = Instant.now().plusSeconds(SESSION_TTL_SECONDS);
+
+        String qrContent = "aza://qr-login?token=" + challengeToken
+                + "&site=THIRD_PARTY"
+                + "&client_id=" + validClientId
+                + "&scopes=" + validScopes.replace(",", "%2C");
+        String qrImageBase64;
+        try {
+            qrImageBase64 = generateQrBase64(qrContent);
+        } catch (Exception e) {
+            log.error("OAuth QR image generation failed", e);
+            throw new AppException("QR_INIT_FAILED", "Failed to generate QR code", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        QrSessionData session = QrSessionData.builder()
+                .status("PENDING")
+                .siteType(QrSiteType.THIRD_PARTY.name())
+                .sessionSecretHash(sha256(sessionSecret))
+                .expiresAtEpoch(expiresAt.getEpochSecond())
+                .oauthClientId(validClientId)
+                .oauthScopes(validScopes)
+                .build();
+
+        try {
+            redisTemplate.opsForValue().set(
+                    SESSION_PREFIX + challengeToken,
+                    objectMapper.writeValueAsString(session),
+                    SESSION_TTL_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Failed to store OAuth QR session in Redis", e);
+            throw new AppException("QR_INIT_FAILED", "Failed to generate QR code", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return QrLoginInitiateResponse.builder()
+                .challengeToken(challengeToken)
+                .sessionSecret(sessionSecret)
+                .qrImageBase64(qrImageBase64)
+                .expiresAt(expiresAt.toString())
+                .ttlSeconds(SESSION_TTL_SECONDS)
+                .build();
+    }
+
+    /**
+     * After the mobile user has approved a THIRD_PARTY QR session, the third-party server
+     * calls this to consume the session and receive an OAuth access token.
+     */
+    public OAuthTokenResponse completeOAuthQrLogin(String challengeToken, String sessionSecret,
+                                                    String clientId, String clientSecret) {
+        String key = SESSION_PREFIX + challengeToken;
+        String json = redisTemplate.opsForValue().getAndDelete(key);
+        if (json == null) {
+            throw new AppException("QR_EXPIRED", "QR session has expired or already been used.", HttpStatus.GONE);
+        }
+
+        QrSessionData session;
+        try {
+            session = objectMapper.readValue(json, QrSessionData.class);
+        } catch (Exception e) {
+            throw new AppException("QR_INVALID", "Invalid QR session.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!"APPROVED".equals(session.getStatus())) {
+            throw new AppException("QR_NOT_APPROVED", "QR login has not been approved yet.", HttpStatus.FORBIDDEN);
+        }
+        if (!constantTimeEquals(sha256(sessionSecret), session.getSessionSecretHash())) {
+            throw new AppException("QR_FORBIDDEN", "Session secret mismatch.", HttpStatus.FORBIDDEN);
+        }
+        if (!clientId.equals(session.getOauthClientId())) {
+            throw new AppException("OAUTH_CLIENT_MISMATCH", "client_id does not match the session.", HttpStatus.FORBIDDEN);
+        }
+        // Re-validate client credentials — defense-in-depth alongside sessionSecret check
+        oAuthService.validateQrOAuthRequest(clientId, clientSecret, List.of(session.getOauthScopes().split(",")));
+
+        return oAuthService.completeQrOAuth(session);
     }
 
     public QrLoginStatusResponse getStatus(String challengeToken) {
