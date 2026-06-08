@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSystemSettings, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
 import {
@@ -146,6 +146,7 @@ const WorldMap = function WorldMap({
               geographies.map((geo: GeoFeature) => {
                 const a2 = getA2(geo);
                 const isBlocked = a2 ? blocked.has(a2) : false;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const GeographyAny = Geography as any;
                 return (
                   <GeographyAny
@@ -268,6 +269,7 @@ function TextInput({ label, description, value, onChange }: {
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<SystemSettings | null>(null);
+  const [prevSettings, setPrevSettings] = useState<SystemSettings | undefined>(undefined);
   const [success, setSuccess] = useState(false);
 
   const { data: settings, isLoading, error } = useQuery<SystemSettings>({
@@ -275,9 +277,10 @@ export default function SettingsPage() {
     queryFn: getSystemSettings,
   });
 
-  useEffect(() => {
+  if (settings !== prevSettings) {
+    setPrevSettings(settings);
     if (settings) setDraft(settings);
-  }, [settings]);
+  }
 
   const saveMutation = useMutation({
     mutationFn: () => updateSystemSettings(draft!),
