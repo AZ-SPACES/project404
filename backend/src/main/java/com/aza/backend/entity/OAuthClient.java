@@ -49,6 +49,9 @@ public class OAuthClient {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    @Column(name = "merchant_id")
+    private java.util.UUID merchantId;
+
     @Builder.Default
     private boolean active = true;
 

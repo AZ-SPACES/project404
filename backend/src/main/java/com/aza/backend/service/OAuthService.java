@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OAuthService {
 
-    private static final Set<String> VALID_SCOPES = Set.of("identity", "email", "phone", "wallet:read");
+    private static final Set<String> VALID_SCOPES = Set.of("identity", "email", "phone", "wallet:read", "payment");
     private static final long ACCESS_TOKEN_TTL_SECONDS  = 3600;       // 1 hour
     private static final long REFRESH_TOKEN_TTL_SECONDS = 30L * 24 * 3600; // 30 days
     private static final long AUTH_CODE_TTL_SECONDS     = 60;
@@ -44,6 +44,7 @@ public class OAuthService {
     private final OAuthAccessTokenRepository tokenRepository;
     private final UserRepository             userRepository;
     private final WalletRepository           walletRepository;
+    private final com.aza.backend.repository.MerchantRepository merchantRepository;
     private final PasswordEncoder            passwordEncoder;
     private final StringRedisTemplate        redisTemplate;
     private final ObjectMapper               objectMapper;
@@ -99,6 +100,43 @@ public class OAuthService {
     public void deleteClient(User owner, String clientId) {
         OAuthClient client = requireClientOwnedBy(clientId, owner);
         client.setActive(false);
+    }
+
+    @Transactional
+    public OAuthClientResponse linkMerchant(User owner, String clientId) {
+        OAuthClient client = requireClientOwnedBy(clientId, owner);
+        com.aza.backend.entity.Merchant merchant = merchantRepository.findByUserId(owner.getId())
+                .orElseThrow(() -> new AppException("MERCHANT_NOT_FOUND",
+                        "You do not have an active merchant account. Register as a merchant first.", HttpStatus.BAD_REQUEST));
+        if (merchant.getStatus() != com.aza.backend.entity.Merchant.MerchantStatus.ACTIVE) {
+            throw new AppException("MERCHANT_NOT_ACTIVE",
+                    "Your merchant account is not active yet. Complete KYB first.", HttpStatus.BAD_REQUEST);
+        }
+        if (!client.getAllowedScopeList().contains("payment")) {
+            throw new AppException("SCOPE_REQUIRED",
+                    "The 'payment' scope must be added to this OAuth client before linking a merchant.", HttpStatus.BAD_REQUEST);
+        }
+        client.setMerchantId(merchant.getId());
+        clientRepository.save(client);
+        return toResponse(client, null);
+    }
+
+    @Transactional
+    public OAuthClientResponse unlinkMerchant(User owner, String clientId) {
+        OAuthClient client = requireClientOwnedBy(clientId, owner);
+        client.setMerchantId(null);
+        clientRepository.save(client);
+        return toResponse(client, null);
+    }
+
+    public OAuthAccessToken resolveAccessToken(String bearerToken) {
+        String hash = sha256(bearerToken);
+        OAuthAccessToken token = tokenRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new AppException("OAUTH_INVALID_TOKEN", "Invalid access token.", HttpStatus.UNAUTHORIZED));
+        if (token.isRevoked() || token.isExpired()) {
+            throw new AppException("OAUTH_TOKEN_EXPIRED", "Access token has expired.", HttpStatus.UNAUTHORIZED);
+        }
+        return token;
     }
 
     public OAuthPublicClientResponse getPublicClientInfo(String clientId) {
@@ -530,6 +568,11 @@ public class OAuthService {
     }
 
     private OAuthClientResponse toResponse(OAuthClient client, String plaintextSecret) {
+        String merchantName = null;
+        if (client.getMerchantId() != null) {
+            merchantName = merchantRepository.findById(client.getMerchantId())
+                    .map(com.aza.backend.entity.Merchant::getBusinessName).orElse(null);
+        }
         return OAuthClientResponse.builder()
                 .id(client.getId().toString())
                 .clientId(client.getClientId())
@@ -542,6 +585,8 @@ public class OAuthService {
                 .allowedScopes(client.getAllowedScopeList())
                 .active(client.isActive())
                 .createdAt(client.getCreatedAt() != null ? client.getCreatedAt().toString() : null)
+                .merchantId(client.getMerchantId() != null ? client.getMerchantId().toString() : null)
+                .merchantName(merchantName)
                 .build();
     }
 

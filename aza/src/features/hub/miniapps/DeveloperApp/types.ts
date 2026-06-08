@@ -14,6 +14,8 @@ export interface OAuthClientData {
   allowedScopes: string[];
   active: boolean;
   createdAt?: string;
+  merchantId?: string;
+  merchantName?: string;
 }
 
 export interface NavProps {

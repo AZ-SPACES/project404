@@ -1149,6 +1149,12 @@ export const rotateDeveloperClientSecret = (clientId: string) =>
 export const deleteDeveloperClient = (clientId: string) =>
   api.delete(`/api/v1/developer/clients/${clientId}`);
 
+export const linkMerchantToOAuthClient = (clientId: string) =>
+  api.post(`/api/v1/developer/clients/${clientId}/merchant`);
+
+export const unlinkMerchantFromOAuthClient = (clientId: string) =>
+  api.delete(`/api/v1/developer/clients/${clientId}/merchant`);
+
 // ── Connected apps (user side) ────────────────────────────────────────────────
 export const getConnectedApps = () => api.get('/oauth/connected-apps');
 export const revokeConnectedApp = (clientId: string) =>

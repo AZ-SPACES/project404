@@ -19,4 +19,6 @@ public class OAuthClientResponse {
     private List<String> allowedScopes;
     private boolean active;
     private String createdAt;
+    private String merchantId;
+    private String merchantName;
 }

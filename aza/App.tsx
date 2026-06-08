@@ -65,6 +65,8 @@ const linking = {
           // with the handle pre-filled as the recipient identifier. The screen
           // then looks up the rest of the profile by handle.
           SendAmount: "pay/:identifier",
+          // OAuth payment approval: aza://checkout/:sessionId → OAuthPaymentApprovalScreen
+          OAuthPaymentApproval: "checkout/:sessionId",
           // Profile QR code: aza://me/naaddo → MyCode screen (via scan tab)
           MainTabs: {
             screens: {

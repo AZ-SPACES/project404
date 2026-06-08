@@ -16,6 +16,7 @@ const ALL_SCOPES = [
   { id: 'email',        label: 'Email',           desc: 'Email address' },
   { id: 'phone',        label: 'Phone',           desc: 'Phone number' },
   { id: 'wallet:read',  label: 'Wallet (read)',   desc: 'Balance & currency' },
+  { id: 'payment',      label: 'Payment',         desc: 'Initiate payments from wallet' },
 ];
 
 export default function CreateClientPage({ goBack, navigate, Colors }: NavProps) {
@@ -68,7 +69,7 @@ export default function CreateClientPage({ goBack, navigate, Colors }: NavProps)
 
       <Text style={[styles.title, { color: Colors.textPrimary }]}>Register an app</Text>
       <Text style={[styles.subtitle, { color: Colors.textSecondary }]}>
-        Your app will receive a client ID and secret to use the "Sign in with AZA" API.
+        Your app will receive a client ID and secret for "Sign in with AZA" and optionally "Pay with AZA".
       </Text>
 
       <Text style={[styles.label, { color: Colors.textSecondary }]}>App name *</Text>
