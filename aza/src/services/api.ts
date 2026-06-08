@@ -469,6 +469,15 @@ export const updatePrivacySettings = (settings: {
 export const updateNotificationPreferences = (preferences: Record<string, boolean>) =>
   api.put("/api/v1/users/me/notifications", preferences);
 
+export interface SilentHoursPayload {
+  enabled: boolean;
+  startTime?: string | undefined;
+  endTime?: string | undefined;
+  paymentThreshold?: number | null | undefined;
+}
+export const updateSilentHours = (payload: SilentHoursPayload) =>
+  api.put("/api/v1/users/me/silent-hours", payload);
+
 // --- 2FA / TOTP Endpoints ---
 
 export const initiateTotpSetup = () => api.post("/api/v1/auth/2fa/setup");
