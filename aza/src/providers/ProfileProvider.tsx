@@ -2,7 +2,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthProvider';
-import { getMe, updateMe, uploadProfileImage, api, requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, enablePasskeys as apiEnablePasskeys, disablePasskeys as apiDisablePasskeys } from "../services/api";
+import { getMe, updateMe, uploadProfileImage, api, requestEmailChange as apiRequestEmailChange, verifyEmailChange as apiVerifyEmailChange, requestPhoneChange as apiRequestPhoneChange, verifyPhoneChange as apiVerifyPhoneChange, enablePasskeys as apiEnablePasskeys, disablePasskeys as apiDisablePasskeys, updateSilentHours as apiUpdateSilentHours, SilentHoursPayload } from "../services/api";
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
 
@@ -40,6 +40,10 @@ type ProfileData = {
   theme: string;
   homeBackground: string | null;
   hubBackground: string | null;
+  silentHoursEnabled: boolean;
+  silentHoursStart: string | null;
+  silentHoursEnd: string | null;
+  silentHoursPaymentThreshold: number | null;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -74,6 +78,10 @@ const INITIAL_PROFILE: ProfileData = {
   theme: 'System Default',
   homeBackground: null,
   hubBackground: null,
+  silentHoursEnabled: false,
+  silentHoursStart: null,
+  silentHoursEnd: null,
+  silentHoursPaymentThreshold: null,
 };
 
 type ProfileContextType = ProfileData & {
@@ -92,6 +100,7 @@ type ProfileContextType = ProfileData & {
   togglePasskeys: (enabled: boolean) => Promise<void>;
   updateProfile: (data: Partial<ProfileData>) => Promise<void>;
   updateNotificationPreferences: (prefs: Record<string, boolean>) => Promise<void>;
+  updateSilentHours: (payload: SilentHoursPayload) => Promise<void>;
   fetchProfile: () => void;
 };
 
@@ -129,6 +138,10 @@ type UserApiResponse = {
   theme?: string | null;
   homeBackground?: string | null;
   hubBackground?: string | null;
+  silentHoursEnabled?: boolean | null;
+  silentHoursStart?: string | null;
+  silentHoursEnd?: string | null;
+  silentHoursPaymentThreshold?: number | null;
 };
 
 function mapUserData(userData: UserApiResponse): ProfileData {
@@ -168,6 +181,10 @@ function mapUserData(userData: UserApiResponse): ProfileData {
     theme: userData.theme ?? 'System Default',
     homeBackground: userData.homeBackground ?? null,
     hubBackground: userData.hubBackground ?? null,
+    silentHoursEnabled: userData.silentHoursEnabled ?? false,
+    silentHoursStart: userData.silentHoursStart ?? null,
+    silentHoursEnd: userData.silentHoursEnd ?? null,
+    silentHoursPaymentThreshold: userData.silentHoursPaymentThreshold ?? null,
   };
 }
 
@@ -350,6 +367,11 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [userToken]);
 
+  const updateSilentHoursInProvider = useCallback(async (payload: SilentHoursPayload) => {
+    await apiUpdateSilentHours(payload);
+    invalidateProfile();
+  }, []);
+
   const toggleApp2fa = useCallback(async (enabled: boolean) => {
     try {
       await api.post(`/api/v1/auth/2fa/app/toggle?enabled=${enabled}`);
@@ -400,6 +422,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       togglePasskeys,
       updateProfile,
       updateNotificationPreferences: updateNotificationPreferencesInProvider,
+      updateSilentHours: updateSilentHoursInProvider,
       fetchProfile,
     }}>
       {children}

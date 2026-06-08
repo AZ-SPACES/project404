@@ -102,6 +102,10 @@ public class UserService {
                 .homeBackground(user.getHomeBackground())
                 .hubBackground(user.getHubBackground())
                 .scheduledDeletionAt(user.getScheduledDeletionAt() != null ? user.getScheduledDeletionAt().toString() : null)
+                .silentHoursEnabled(user.getSilentHoursEnabled())
+                .silentHoursStart(user.getSilentHoursStart())
+                .silentHoursEnd(user.getSilentHoursEnd())
+                .silentHoursPaymentThreshold(user.getSilentHoursPaymentThreshold())
                 .build();
     }
 

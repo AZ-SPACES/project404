@@ -1,7 +1,8 @@
 import React, { ComponentProps, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, StatusBar, Switch, Animated, AppState, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Switch, Animated, AppState, Linking, Alert, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { useAuth } from '../../../providers/AuthProvider';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -99,6 +100,33 @@ const defaultPreferences: NotificationPreferences = {
   causesPush: false,
 };
 
+// ── Silent Hours helpers ──────────────────────────────────────────────────────
+
+function parseHHmm(str: string | null): Date {
+  const date = new Date();
+  if (str) {
+    const [h, m] = str.split(':').map(Number);
+    date.setHours(h ?? 0, m ?? 0, 0, 0);
+  } else {
+    date.setHours(22, 0, 0, 0);
+  }
+  return date;
+}
+
+function toHHmm(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function fmt12(str: string | null): string {
+  if (!str) return '—';
+  const [h, m] = str.split(':').map(Number);
+  const period = h! >= 12 ? 'PM' : 'AM';
+  const hour12 = h! % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function NotificationSettingsScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
@@ -107,7 +135,15 @@ export default function NotificationSettingsScreen() {
   const { checkPermissions, requestPermissions } = useNotifications();
   const { userToken } = useAuth();
   const { showToast } = useToast();
-  const { notificationPreferences, updateNotificationPreferences } = useProfile();
+  const {
+    notificationPreferences,
+    updateNotificationPreferences,
+    silentHoursEnabled: savedEnabled,
+    silentHoursStart: savedStart,
+    silentHoursEnd: savedEnd,
+    silentHoursPaymentThreshold: savedThreshold,
+    updateSilentHours,
+  } = useProfile();
   const prefsKey = userToken ? `@notification_prefs_${userToken}` : '@notification_prefs';
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -128,6 +164,15 @@ export default function NotificationSettingsScreen() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
   const [isLoaded, setIsLoaded] = useState(false);
   const isSyncingRef = useRef(false);
+
+  // Silent hours state
+  const [silentEnabled, setSilentEnabled] = useState(false);
+  const [silentStart, setSilentStart] = useState<Date>(parseHHmm(null));
+  const [silentEnd, setSilentEnd] = useState<Date>(parseHHmm('07:00'));
+  const [silentThreshold, setSilentThreshold] = useState('');
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [savingSilent, setSavingSilent] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -210,6 +255,37 @@ export default function NotificationSettingsScreen() {
     
     return () => clearTimeout(timeoutId);
   }, [preferences, isLoaded, prefsKey, showToast, updateNotificationPreferences]);
+
+  // Seed silent hours from profile
+  useEffect(() => {
+    setSilentEnabled(savedEnabled ?? false);
+    setSilentStart(parseHHmm(savedStart));
+    setSilentEnd(parseHHmm(savedEnd ?? '07:00'));
+    setSilentThreshold(savedThreshold != null ? String(savedThreshold) : '');
+  }, [savedEnabled, savedStart, savedEnd, savedThreshold]);
+
+  const saveSilentHours = useCallback(async (enabled: boolean) => {
+    setSavingSilent(true);
+    try {
+      const threshold = silentThreshold.trim() !== '' ? parseFloat(silentThreshold) : null;
+      await updateSilentHours({
+        enabled,
+        startTime: enabled ? toHHmm(silentStart) : undefined,
+        endTime:   enabled ? toHHmm(silentEnd)   : undefined,
+        paymentThreshold: threshold,
+      });
+      showToast('Silent hours updated', 'success');
+    } catch {
+      showToast('Failed to save silent hours', 'error');
+    } finally {
+      setSavingSilent(false);
+    }
+  }, [silentStart, silentEnd, silentThreshold, updateSilentHours, showToast]);
+
+  const handleSilentToggle = useCallback(async (val: boolean) => {
+    setSilentEnabled(val);
+    await saveSilentHours(val);
+  }, [saveSilentHours]);
 
   const updatePreference = useCallback(async (key: keyof NotificationPreferences, val: boolean, requiresPushAuth = false) => {
     if (requiresPushAuth && val) {
@@ -404,6 +480,160 @@ export default function NotificationSettingsScreen() {
           />
         </NotificationSection>
 
+        {/* ── Silent Hours ── */}
+        <View style={styles.section}>
+          <Text style={[Typography.h3, styles.sectionTitle]}>Silent hours</Text>
+          <Text style={[Typography.body, styles.sectionDescription]}>
+            Mute push notifications during a set window. Payments above your threshold will still come through.
+          </Text>
+          <View style={[styles.sectionCard, { gap: 0 }]}>
+            <NotificationToggle
+              iconType="Ionicons"
+              iconName="moon-outline"
+              title="Enable silent hours"
+              value={silentEnabled}
+              onValueChange={handleSilentToggle}
+            />
+
+            {silentEnabled && (
+              <>
+                <View style={[styles.silentDivider, { backgroundColor: Colors.border }]} />
+
+                {/* Start time */}
+                <TouchableOpacity
+                  style={styles.silentTimeRow}
+                  onPress={() => setShowStartPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.iconContainer, { backgroundColor: isDark ? Colors.background : '#F3F4F6' }]}>
+                    <Ionicons name="play-outline" size={18} color={Colors.textPrimary} />
+                  </View>
+                  <Text style={[Typography.bodyLg, styles.toggleTitle]}>From</Text>
+                  <Text style={[styles.silentTimeValue, { color: Colors.primary }]}>
+                    {fmt12(toHHmm(silentStart))}
+                  </Text>
+                  <Feather name="chevron-right" size={16} color={Colors.textSecondary} />
+                </TouchableOpacity>
+
+                {/* End time */}
+                <TouchableOpacity
+                  style={styles.silentTimeRow}
+                  onPress={() => setShowEndPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.iconContainer, { backgroundColor: isDark ? Colors.background : '#F3F4F6' }]}>
+                    <Ionicons name="stop-outline" size={18} color={Colors.textPrimary} />
+                  </View>
+                  <Text style={[Typography.bodyLg, styles.toggleTitle]}>Until</Text>
+                  <Text style={[styles.silentTimeValue, { color: Colors.primary }]}>
+                    {fmt12(toHHmm(silentEnd))}
+                  </Text>
+                  <Feather name="chevron-right" size={16} color={Colors.textSecondary} />
+                </TouchableOpacity>
+
+                <View style={[styles.silentDivider, { backgroundColor: Colors.border }]} />
+
+                {/* Payment threshold */}
+                <View style={styles.silentThresholdRow}>
+                  <View style={[styles.iconContainer, { backgroundColor: isDark ? Colors.background : '#F3F4F6' }]}>
+                    <Ionicons name="cash-outline" size={18} color={Colors.textPrimary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Typography.bodyLg, { color: Colors.textPrimary }]}>Payment threshold</Text>
+                    <Text style={[Typography.caption as any, { color: Colors.textSecondary, marginTop: 1 }]}>
+                      Payments above this amount will still notify you. Leave empty to mute all.
+                    </Text>
+                  </View>
+                  <View style={[styles.thresholdInput, { backgroundColor: Colors.background, borderColor: Colors.border }]}>
+                    <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>GH₵</Text>
+                    <TextInput
+                      value={silentThreshold}
+                      onChangeText={setSilentThreshold}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      placeholderTextColor={Colors.textSecondary}
+                      style={{ color: Colors.textPrimary, fontSize: 14, minWidth: 40, textAlign: 'right' }}
+                      returnKeyType="done"
+                      onEndEditing={() => saveSilentHours(true)}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.silentSaveBtn, { backgroundColor: Colors.primary }]}
+                  onPress={() => saveSilentHours(true)}
+                  disabled={savingSilent}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.silentSaveBtnText, { color: Colors.white }]}>
+                    {savingSilent ? 'Saving…' : 'Save silent hours'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Time pickers */}
+        {showStartPicker && (
+          Platform.OS === 'ios' ? (
+            <Modal transparent animationType="slide" onRequestClose={() => setShowStartPicker(false)}>
+              <View style={styles.pickerOverlay}>
+                <View style={[styles.pickerSheet, { backgroundColor: Colors.surface }]}>
+                  <View style={styles.pickerHeader}>
+                    <TouchableOpacity onPress={() => setShowStartPicker(false)}>
+                      <Text style={{ color: Colors.primary, fontSize: 16, fontWeight: '600' }}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={silentStart}
+                    mode="time"
+                    display="spinner"
+                    onChange={(_, d) => d && setSilentStart(d)}
+                    textColor={Colors.textPrimary}
+                  />
+                </View>
+              </View>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={silentStart}
+              mode="time"
+              display="default"
+              onChange={(_, d) => { setShowStartPicker(false); if (d) setSilentStart(d); }}
+            />
+          )
+        )}
+        {showEndPicker && (
+          Platform.OS === 'ios' ? (
+            <Modal transparent animationType="slide" onRequestClose={() => setShowEndPicker(false)}>
+              <View style={styles.pickerOverlay}>
+                <View style={[styles.pickerSheet, { backgroundColor: Colors.surface }]}>
+                  <View style={styles.pickerHeader}>
+                    <TouchableOpacity onPress={() => setShowEndPicker(false)}>
+                      <Text style={{ color: Colors.primary, fontSize: 16, fontWeight: '600' }}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={silentEnd}
+                    mode="time"
+                    display="spinner"
+                    onChange={(_, d) => d && setSilentEnd(d)}
+                    textColor={Colors.textPrimary}
+                  />
+                </View>
+              </View>
+            </Modal>
+          ) : (
+            <DateTimePicker
+              value={silentEnd}
+              mode="time"
+              display="default"
+              onChange={(_, d) => { setShowEndPicker(false); if (d) setSilentEnd(d); }}
+            />
+          )
+        )}
+
         <View style={styles.footerInfo}>
           <Text style={[Typography.body, styles.footerText]}>
             Some things we'll always need to tell you about — like changes to our T&Cs.
@@ -518,7 +748,63 @@ function createStyles(Colors: ThemeColors) {
       lineHeight: 20 
     },
     spacer: {
-      height: Spacing.xl 
-    } 
+      height: Spacing.xl
+    },
+    silentDivider: {
+      height: 1,
+      marginVertical: Spacing.xs,
+    },
+    silentTimeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    silentTimeValue: {
+      fontSize: 15,
+      fontWeight: '600',
+      marginRight: 4,
+    },
+    silentThresholdRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    thresholdInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      borderWidth: 1,
+      borderRadius: Radius.sm,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+    },
+    silentSaveBtn: {
+      borderRadius: Radius.md,
+      paddingVertical: 11,
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    silentSaveBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    pickerOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    pickerSheet: {
+      borderTopLeftRadius: Radius.lg,
+      borderTopRightRadius: Radius.lg,
+      paddingBottom: Spacing.xl,
+    },
+    pickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+    },
   });
 }
