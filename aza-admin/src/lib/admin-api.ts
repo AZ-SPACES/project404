@@ -64,7 +64,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } else {
           throw new Error("Refresh failed");
         }
-      } catch (e) {
+      } catch {
         isRefreshing = false;
         clearTokens();
         window.location.href = "/login";
