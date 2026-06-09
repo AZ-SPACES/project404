@@ -20,7 +20,7 @@ export function SendScreen() {
       </div>
 
       <div className="flex items-center justify-center gap-1 py-4">
-        <span className="text-[24px] font-bold" style={{ color: "#5F6368" }}>$</span>
+        <span className="text-[24px] font-bold" style={{ color: "#5F6368" }}>₵</span>
         <span className="text-[42px] font-black" style={{ color: "#0E0F0C", letterSpacing: "-0.03em" }}>
           45.00
         </span>
@@ -39,7 +39,7 @@ export function SendScreen() {
         className="w-[calc(100%-16px)] mx-2 text-white rounded-full py-[14px] text-[13px] font-bold"
         style={{ background: "#174717" }}
       >
-        Send $45.00
+        Send ₵45.00
       </button>
     </div>
   );
