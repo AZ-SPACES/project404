@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HomeScreen } from "./HomeScreen";
-import { SendScreen } from "./SendScreen";
-import { ChatScreen } from "./ChatScreen";
+import Image from "next/image";
+import photo1 from "@/app/assets/photo-1.png";
+import photo2 from "@/app/assets/photo-2.png";
+import photo3 from "@/app/assets/photo-3.png";
+import photo4 from "@/app/assets/photo-4.png";
 
-const SLIDES = ["home", "send", "chat"] as const;
+const IMAGES = [
+  { src: photo1, alt: "Aza app screen 1" },
+  { src: photo2, alt: "Aza app screen 2" },
+  { src: photo3, alt: "Aza app screen 3" },
+  { src: photo4, alt: "Aza app screen 4" },
+];
 const AUTOPLAY_INTERVAL = 3200;
 
 export function PhoneMockup() {
@@ -15,7 +22,7 @@ export function PhoneMockup() {
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(
-      () => setActive((a) => (a + 1) % SLIDES.length),
+      () => setActive((a) => (a + 1) % IMAGES.length),
       AUTOPLAY_INTERVAL,
     );
   };
@@ -35,21 +42,27 @@ export function PhoneMockup() {
     <div className="phone-mockup flex flex-col items-center gap-4 relative z-[1]">
       <div className="phone-mockup__frame">
         <div className="phone-screen">
-          <div className={`phone-slide screen--home${active === 0 ? " active" : ""}`}>
-            <HomeScreen />
-          </div>
-          <div className={`phone-slide screen--send${active === 1 ? " active" : ""}`}>
-            <SendScreen />
-          </div>
-          <div className={`phone-slide screen--chat${active === 2 ? " active" : ""}`}>
-            <ChatScreen />
-          </div>
+          {IMAGES.map((img, i) => (
+            <div
+              key={i}
+              className={`phone-slide${active === i ? " active" : ""}`}
+              style={{ padding: 0 }}
+            >
+              <Image
+                src={img.src}
+                alt={img.alt}
+                fill
+                style={{ objectFit: "cover", objectPosition: "top" }}
+                priority={i === 0}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Slide dots */}
       <div className="flex gap-2 justify-center" role="tablist" aria-label="Phone screens">
-        {SLIDES.map((_, i) => (
+        {IMAGES.map((_, i) => (
           <button
             key={i}
             role="tab"
