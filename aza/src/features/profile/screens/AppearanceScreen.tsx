@@ -13,6 +13,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Modal,
+  Linking,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -955,17 +956,37 @@ export default function AppearanceScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.unsplashPhotoCard} onPress={() => handleUnsplashSelect(item)} activeOpacity={0.85}>
                   <Image source={{ uri: item.thumbUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                  <View style={styles.unsplashPhotoOverlay}>
-                    <Text style={styles.unsplashPhotoCreditText} numberOfLines={1}>{item.photographerName}</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.unsplashPhotoOverlay}
+                    onPress={e => {
+                      e.stopPropagation?.();
+                      if (item.photographerUrl) {
+                        Linking.openURL(`${item.photographerUrl}?utm_source=aza&utm_medium=referral`);
+                      }
+                    }}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  >
+                    <Text style={styles.unsplashPhotoCreditText} numberOfLines={1}>
+                      📷 {item.photographerName}
+                    </Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               )}
             />
           )}
 
-          {/* Attribution */}
+          {/* Attribution — required by Unsplash API guidelines */}
           <View style={styles.unsplashFooter}>
-            <Text style={styles.unsplashFooterText}>Photos by <Text style={{ color: Colors.primary }}>Unsplash</Text></Text>
+            <Text style={styles.unsplashFooterText}>
+              Photos by{" "}
+              <Text
+                style={{ color: Colors.primary }}
+                onPress={() => Linking.openURL("https://unsplash.com/?utm_source=aza&utm_medium=referral")}
+              >
+                Unsplash
+              </Text>
+            </Text>
           </View>
         </SafeAreaView>
       </Modal>
