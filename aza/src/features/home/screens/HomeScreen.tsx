@@ -22,6 +22,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import {
   useAppTheme,
   ThemeColors,
+  Radii,
   Typography,
   Spacing,
   Radius,
@@ -54,8 +55,8 @@ function getGreeting() {
 }
 
 export default function HomeScreen() {
-  const { colors: Colors, isDark } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { colors: Colors, isDark, radii } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(Colors, radii), [Colors, radii]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
@@ -579,7 +580,7 @@ export default function HomeScreen() {
                     {
                       width: 48,
                       height: 48,
-                      borderRadius: 10,
+                      borderRadius: radii.md,
                       borderWidth: 1.5,
                       borderColor: filled || current ? Colors.primary : Colors.border,
                       backgroundColor: isDark ? Colors.background : Colors.surface,
@@ -616,7 +617,7 @@ export default function HomeScreen() {
   );
 }
 
-function createStyles(Colors: ThemeColors) {
+function createStyles(Colors: ThemeColors, radii: Radii) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
     container: {
@@ -670,7 +671,7 @@ function createStyles(Colors: ThemeColors) {
     balanceCardWrapper: {
       marginHorizontal: Spacing.md,
       marginBottom: Spacing.sm,
-      borderRadius: Radius.lg,
+      borderRadius: radii.lg,
       overflow: "hidden",
       paddingHorizontal: Spacing.sm,
       paddingVertical: Spacing.sm,
@@ -731,8 +732,8 @@ function createStyles(Colors: ThemeColors) {
       flex: 1,
       backgroundColor: Colors.background,
       marginTop: -Spacing.lg,
-      borderTopLeftRadius: Radius.md,
-      borderTopRightRadius: Radius.md,
+      borderTopLeftRadius: radii.md,
+      borderTopRightRadius: radii.md,
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.lg,
     },
@@ -752,7 +753,7 @@ function createStyles(Colors: ThemeColors) {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: Radius.md,
+      borderRadius: radii.md,
       padding: Spacing.md,
       borderWidth: 1,
       borderColor: Colors.border,
@@ -780,8 +781,8 @@ function createStyles(Colors: ThemeColors) {
     },
     bottomSheet: {
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderTopLeftRadius: Radius.lg,
-      borderTopRightRadius: Radius.lg,
+      borderTopLeftRadius: radii.lg,
+      borderTopRightRadius: radii.lg,
       padding: Spacing.xl,
       position: "absolute",
       bottom: 0,
@@ -825,7 +826,7 @@ function createStyles(Colors: ThemeColors) {
       backgroundColor: Colors.surface,
       borderWidth: 1,
       borderColor: Colors.border,
-      borderRadius: 8,
+      borderRadius: radii.sm,
       padding: Spacing.md,
       marginBottom: Spacing.md,
     },
@@ -860,7 +861,7 @@ function createStyles(Colors: ThemeColors) {
     incompleteCancelBtn: {
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 8,
+      borderRadius: radii.sm,
       borderWidth: 1,
       borderColor: Colors.border,
       backgroundColor: isDark ? Colors.background : Colors.surface,
@@ -874,7 +875,7 @@ function createStyles(Colors: ThemeColors) {
     incompleteResumeBtn: {
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 8,
+      borderRadius: radii.sm,
       backgroundColor: Colors.primary,
     },
     incompleteResumeBtnText: {
