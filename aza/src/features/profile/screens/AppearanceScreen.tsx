@@ -956,21 +956,32 @@ export default function AppearanceScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.unsplashPhotoCard} onPress={() => handleUnsplashSelect(item)} activeOpacity={0.85}>
                   <Image source={{ uri: item.thumbUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                  <TouchableOpacity
-                    style={styles.unsplashPhotoOverlay}
-                    onPress={e => {
-                      e.stopPropagation?.();
-                      if (item.photographerUrl) {
-                        Linking.openURL(`${item.photographerUrl}?utm_source=aza&utm_medium=referral`);
-                      }
-                    }}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                  >
+                  <View style={styles.unsplashPhotoOverlay}>
                     <Text style={styles.unsplashPhotoCreditText} numberOfLines={1}>
-                      📷 {item.photographerName}
+                      {"Photo by "}
+                      <Text
+                        onPress={e => {
+                          e.stopPropagation?.();
+                          if (item.photographerUrl) {
+                            Linking.openURL(`${item.photographerUrl}?utm_source=aza&utm_medium=referral`);
+                          }
+                        }}
+                        style={styles.unsplashPhotoCreditLink}
+                      >
+                        {item.photographerName}
+                      </Text>
+                      {" on "}
+                      <Text
+                        onPress={e => {
+                          e.stopPropagation?.();
+                          Linking.openURL("https://unsplash.com/?utm_source=aza&utm_medium=referral");
+                        }}
+                        style={styles.unsplashPhotoCreditLink}
+                      >
+                        Unsplash
+                      </Text>
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
               )}
             />
@@ -1108,7 +1119,8 @@ function createStyles(Colors: ThemeColors) {
     unsplashGrid: { padding: Spacing.md, gap: 8 },
     unsplashPhotoCard: { flex: 1, aspectRatio: 0.75, borderRadius: Radius.md, overflow: "hidden", backgroundColor: Colors.surface },
     unsplashPhotoOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 6, paddingVertical: 4 },
-    unsplashPhotoCreditText: { fontSize: 10, color: "#fff", fontWeight: "500" },
+    unsplashPhotoCreditText: { fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: "400" },
+    unsplashPhotoCreditLink: { color: "#fff", fontWeight: "600", textDecorationLine: "underline" },
     unsplashCenter: { flex: 1, justifyContent: "center", alignItems: "center", gap: Spacing.md, padding: Spacing.xl },
     unsplashEmptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: "center" },
     unsplashFooter: { paddingVertical: Spacing.sm, alignItems: "center", borderTopWidth: 1, borderTopColor: isDark ? Colors.border : "#E5E7EB" },
