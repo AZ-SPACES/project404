@@ -1159,3 +1159,21 @@ export const unlinkMerchantFromOAuthClient = (clientId: string) =>
 export const getConnectedApps = () => api.get('/oauth/connected-apps');
 export const revokeConnectedApp = (clientId: string) =>
   api.delete(`/oauth/connected-apps/${clientId}`);
+
+// ── Unsplash image search ──────────────────────────────────────────────────────
+export type UnsplashPhoto = {
+  id: string;
+  thumbUrl: string;
+  regularUrl: string;
+  photographerName: string;
+  photographerUrl: string;
+  downloadLocation: string;
+};
+
+export const searchUnsplash = (query: string, page = 1) =>
+  api.get<{ success: boolean; data: UnsplashPhoto[] }>('/api/v1/unsplash/search', {
+    params: { query, page, perPage: 20 },
+  });
+
+export const triggerUnsplashDownload = (downloadLocation: string) =>
+  api.post('/api/v1/unsplash/trigger-download', { downloadLocation });
