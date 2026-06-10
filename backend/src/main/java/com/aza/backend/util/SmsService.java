@@ -20,7 +20,7 @@ public class SmsService {
     @Value("${arkesel.api-key}")
     private String apiKey;
 
-    @Value("${arkesel.sender-id:AZA}")
+    @Value("${arkesel.sender-id}")
     private String senderId;
 
     private static final String ARKESEL_URL = "https://sms.arkesel.com/api/v2/sms/send";
