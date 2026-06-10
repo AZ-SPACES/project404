@@ -53,7 +53,7 @@ export function HeroSection() {
 
           <div className="hero-cta reveal flex gap-4 flex-wrap mb-8" data-delay="240">
             <a
-              href="#download"
+              href="#waitlist"
               className="inline-flex items-center gap-2 px-[30px] py-[15px] rounded-lg text-[1rem] font-semibold text-white transition-colors"
               style={{ background: "#174717", boxShadow: "0 2px 8px rgba(23,71,23,0.15)" }}
             >
@@ -63,7 +63,7 @@ export function HeroSection() {
               Download for iOS
             </a>
             <a
-              href="#download"
+              href="#waitlist"
               className="inline-flex items-center gap-2 px-[30px] py-[15px] rounded-lg text-[1rem] font-semibold transition-colors"
               style={{ background: "transparent", border: "1.5px solid var(--aza-border)", color: "var(--aza-text)" }}
             >

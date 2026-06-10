@@ -100,6 +100,33 @@ function segStyles(Colors: ThemeColors) {
   });
 }
 
+// ── Language card ─────────────────────────────────────────────────────────────
+const LANGUAGE_META: Record<LanguageOption, { flag: string; subtitle: string }> = {
+  "English": { flag: "🇬🇧", subtitle: "English — Ghana" },
+  "French":  { flag: "🇫🇷", subtitle: "Français" },
+  "Twi":     { flag: "🇬🇭", subtitle: "Akan · Twi" },
+};
+
+function LanguageCard({ language, isSelected, onSelect }: { language: LanguageOption; isSelected: boolean; onSelect: () => void }) {
+  const { colors: Colors } = useAppTheme();
+  const s = React.useMemo(() => createStyles(Colors), [Colors]);
+  const meta = LANGUAGE_META[language];
+  return (
+    <TouchableOpacity style={[s.themeCard, isSelected && s.themeCardSelected]} onPress={onSelect} activeOpacity={0.8}>
+      <View style={[s.thumbnailBase, { justifyContent: "center", alignItems: "center", backgroundColor: Colors.isDark ? Colors.surface : "#F9FAFB" }]}>
+        <Text style={{ fontSize: 24 }}>{meta.flag}</Text>
+      </View>
+      <View style={s.themeCardTextContainer}>
+        <Text style={[Typography.body, s.themeCardTitle]}>{language}</Text>
+        <Text style={[Typography.caption, s.themeCardSubtitle]}>{meta.subtitle}</Text>
+      </View>
+      <View style={[s.checkCircle, isSelected && s.checkCircleSelected]}>
+        {isSelected && <Ionicons name="checkmark" size={12} color={Colors.white} />}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 // ── Theme card ────────────────────────────────────────────────────────────────
 type ThemeCardProps = { theme: ThemeOption; isSelected: boolean; onSelect: () => void };
 
@@ -380,6 +407,18 @@ export default function AppearanceScreen() {
   const [linkTarget, setLinkTarget] = React.useState<"home" | "hub" | null>(null);
   const [cropLoading, setCropLoading] = React.useState(false);
 
+  // Unsplash picker state
+  const [unsplashVisible, setUnsplashVisible] = React.useState(false);
+  const [unsplashTarget, setUnsplashTarget] = React.useState<"home" | "hub" | null>(null);
+  const [unsplashQuery, setUnsplashQuery] = React.useState("");
+  const [unsplashResults, setUnsplashResults] = React.useState<UnsplashPhoto[]>([]);
+  const [unsplashLoading, setUnsplashLoading] = React.useState(false);
+  const [unsplashLoadingMore, setUnsplashLoadingMore] = React.useState(false);
+  const [unsplashPage, setUnsplashPage] = React.useState(1);
+  const [unsplashHasMore, setUnsplashHasMore] = React.useState(false);
+  const [unsplashError, setUnsplashError] = React.useState<string | null>(null);
+  const unsplashInputRef = React.useRef<TextInput>(null);
+
   const sheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
@@ -406,6 +445,54 @@ export default function AppearanceScreen() {
       else if (linkTarget === "hub") { setHubBackground(uri); addHubCustomBackground(uri); }
     }
     setLinkPromptVisible(false);
+  };
+
+  React.useEffect(() => {
+    if (!unsplashVisible) return;
+    if (!unsplashQuery.trim()) { setUnsplashResults([]); setUnsplashError(null); return; }
+    const t = setTimeout(() => doUnsplashSearch(unsplashQuery), 500);
+    return () => clearTimeout(t);
+  }, [unsplashQuery, unsplashVisible]);
+
+  const openUnsplash = (target: "home" | "hub") => {
+    setUnsplashTarget(target);
+    setUnsplashQuery("");
+    setUnsplashResults([]);
+    setUnsplashPage(1);
+    setUnsplashHasMore(false);
+    setUnsplashError(null);
+    setUnsplashVisible(true);
+  };
+
+  const doUnsplashSearch = async (query: string, page = 1) => {
+    if (!query.trim()) return;
+    setUnsplashError(null);
+    if (page === 1) { setUnsplashLoading(true); setUnsplashResults([]); }
+    else setUnsplashLoadingMore(true);
+    try {
+      const res = await searchUnsplash(query, page);
+      const photos: UnsplashPhoto[] = res.data.data ?? [];
+      setUnsplashResults(prev => page === 1 ? photos : [...prev, ...photos]);
+      setUnsplashHasMore(photos.length === 20);
+      setUnsplashPage(page);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) setUnsplashError("Invalid API key — check UNSPLASH_ACCESS_KEY on the server.");
+      else if (status === 403) setUnsplashError("API key not authorised. Apply for production access on Unsplash.");
+      else if (status === 404) setUnsplashError("Unsplash endpoint not found — has the backend been redeployed?");
+      else setUnsplashError(`Search failed (${status ?? "network error"}). Check server logs.`);
+    } finally {
+      setUnsplashLoading(false);
+      setUnsplashLoadingMore(false);
+    }
+  };
+
+  const handleUnsplashSelect = (photo: UnsplashPhoto) => {
+    const uri = photo.regularUrl;
+    if (unsplashTarget === "home") { setHomeBackground(uri); addHomeCustomBackground(uri); }
+    else if (unsplashTarget === "hub") { setHubBackground(uri); addHubCustomBackground(uri); }
+    setUnsplashVisible(false);
+    if (photo.downloadLocation) triggerUnsplashDownload(photo.downloadLocation).catch(() => {});
   };
 
   const pickAndCrop = async (onDone: (uri: string) => void) => {
@@ -798,6 +885,114 @@ export default function AppearanceScreen() {
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
+      {/* ── Unsplash picker modal ── */}
+      <Modal visible={unsplashVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setUnsplashVisible(false)}>
+        <SafeAreaView style={[styles.safeArea, { flex: 1 }]} edges={["top", "bottom"]}>
+          {/* Header */}
+          <View style={styles.unsplashHeader}>
+            <TouchableOpacity onPress={() => setUnsplashVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={22} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <View style={styles.unsplashSearchRow}>
+              <TextInput
+                ref={unsplashInputRef}
+                style={styles.unsplashInput}
+                value={unsplashQuery}
+                onChangeText={setUnsplashQuery}
+                placeholder="Search photos…"
+                placeholderTextColor={Colors.textSecondary}
+                returnKeyType="search"
+                onSubmitEditing={() => doUnsplashSearch(unsplashQuery)}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[styles.unsplashSearchBtn, !unsplashQuery.trim() && { opacity: 0.4 }]}
+                onPress={() => doUnsplashSearch(unsplashQuery)}
+                disabled={!unsplashQuery.trim()}
+                activeOpacity={0.8}
+              >
+                <Feather name="search" size={16} color={Colors.white} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Results */}
+          {unsplashLoading ? (
+            <View style={styles.unsplashCenter}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : unsplashResults.length === 0 ? (
+            <View style={styles.unsplashCenter}>
+              <Feather name={unsplashError ? "alert-circle" : "image"} size={40} color={unsplashError ? Colors.error : Colors.border} />
+              <Text style={[styles.unsplashEmptyText, unsplashError ? { color: Colors.error } : null]}>
+                {unsplashError ?? (unsplashQuery.trim() ? "No results found" : "Search for a photo to use as background")}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={unsplashResults}
+              keyExtractor={item => item.id}
+              numColumns={2}
+              contentContainerStyle={styles.unsplashGrid}
+              columnWrapperStyle={{ gap: 8 }}
+              onEndReached={() => {
+                if (unsplashHasMore && !unsplashLoadingMore) {
+                  doUnsplashSearch(unsplashQuery, unsplashPage + 1);
+                }
+              }}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={unsplashLoadingMore ? (
+                <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 16 }} />
+              ) : null}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.unsplashPhotoCard} onPress={() => handleUnsplashSelect(item)} activeOpacity={0.85}>
+                  <Image source={{ uri: item.thumbUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  <View style={styles.unsplashPhotoOverlay}>
+                    <Text style={styles.unsplashPhotoCreditText} numberOfLines={1}>
+                      {"Photo by "}
+                      <Text
+                        onPress={e => {
+                          e.stopPropagation?.();
+                          if (item.photographerUrl) {
+                            Linking.openURL(`${item.photographerUrl}?utm_source=aza&utm_medium=referral`);
+                          }
+                        }}
+                        style={styles.unsplashPhotoCreditLink}
+                      >
+                        {item.photographerName}
+                      </Text>
+                      {" on "}
+                      <Text
+                        onPress={e => {
+                          e.stopPropagation?.();
+                          Linking.openURL("https://unsplash.com/?utm_source=aza&utm_medium=referral");
+                        }}
+                        style={styles.unsplashPhotoCreditLink}
+                      >
+                        Unsplash
+                      </Text>
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+
+          {/* Attribution — required by Unsplash API guidelines */}
+          <View style={styles.unsplashFooter}>
+            <Text style={styles.unsplashFooterText}>
+              Photos by{" "}
+              <Text
+                style={{ color: Colors.primary }}
+                onPress={() => Linking.openURL("https://unsplash.com/?utm_source=aza&utm_medium=referral")}
+              >
+                Unsplash
+              </Text>
+            </Text>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
