@@ -7,7 +7,7 @@ import { HowItWorksSection } from "@/components/sections/HowItWorksSection";
 import { SecuritySection } from "@/components/sections/SecuritySection";
 import { HubSection } from "@/components/sections/HubSection";
 import { DownloadSection } from "@/components/sections/DownloadSection";
-import { TestimonialsSection } from "@/components/sections/Waitlist";
+import { WaitlistSection } from "@/components/sections/Waitlist";
 import { CinematicFooter } from "@/components/ui/motion-footer";
 
 export default function Home() {
@@ -24,7 +24,7 @@ export default function Home() {
         <SecuritySection />
         <HubSection />
         <DownloadSection />
-        <TestimonialsSection />
+        <WaitlistSection />
       </main>
 
       <CinematicFooter />

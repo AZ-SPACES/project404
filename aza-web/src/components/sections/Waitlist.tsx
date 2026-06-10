@@ -1,1 +1,1 @@
-export { WaitlistHero as TestimonialsSection } from "@/components/waitlist/WaitlistHero";
+export { WaitlistHero as WaitlistSection } from "@/components/waitlist/WaitlistHero";
