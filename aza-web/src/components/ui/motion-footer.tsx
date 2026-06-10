@@ -113,6 +113,7 @@ const MagneticButton = React.forwardRef<HTMLElement, MagneticButtonProps>(
 
     useEffect(() => {
       if (typeof window === "undefined") return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const element = localRef.current;
       if (!element) return;
 
@@ -197,6 +198,9 @@ export function CinematicFooter() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Reduced motion: skip parallax/reveal — elements stay at their natural,
+    // fully visible state since gsap.fromTo never runs.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!wrapperRef.current) return;
 
     const ctx = gsap.context(() => {
@@ -378,7 +382,7 @@ export function CinematicFooter() {
               © {new Date().getFullYear()} JumpSpaces, Inc. All rights reserved.
             </div>
 
-            <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 md:order-1">
+            <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-1 md:order-2">
               Soon available worldwide
             </div>
 

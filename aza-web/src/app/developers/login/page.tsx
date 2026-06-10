@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff, QrCode, RefreshCw } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -190,7 +192,7 @@ export default function DevLoginPage() {
         setError(res.error?.message ?? res.message ?? 'OTP verification failed');
         return;
       }
-      const data = res.data as any;
+      const data = res.data;
       if (data?.preAuthToken) {
         setPreAuthToken(data.preAuthToken);
         setStep('totp');
@@ -215,11 +217,11 @@ export default function DevLoginPage() {
         preAuthToken,
         code: totpCode,
       });
-      if (!res.success) {
+      if (!res.success || !res.data?.accessToken) {
         setError(res.error?.message ?? res.message ?? 'Authenticator code invalid');
         return;
       }
-      finalize((res.data as any).accessToken);
+      finalize(res.data.accessToken);
     } catch {
       setError('Could not reach the API. Make sure the backend is running.');
     } finally {
@@ -237,7 +239,7 @@ export default function DevLoginPage() {
       style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}
     >
       {/* Back link */}
-      <a
+      <Link
         href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded"
         style={{ color: 'rgba(183,238,122,0.6)' }}
@@ -246,7 +248,7 @@ export default function DevLoginPage() {
       >
         <ArrowLeft size={15} />
         Back to aza
-      </a>
+      </Link>
 
       {/* Card */}
       <div
@@ -259,7 +261,7 @@ export default function DevLoginPage() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 mb-6">
-          <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="AZA" width={71} height={32} className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
             <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
@@ -327,6 +329,7 @@ export default function DevLoginPage() {
                   className="rounded-2xl p-2.5"
                   style={{ background: '#fff', border: '1px solid rgba(183,238,122,0.2)' }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL can't go through next/image */}
                   <img
                     src={`data:image/png;base64,${qrSession.qrImageBase64}`}
                     alt="QR Code"
@@ -516,7 +519,7 @@ export default function DevLoginPage() {
                 </button>
 
                 <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <a href="/developers/signup" style={{ color: '#B7EE7A', fontWeight: 600 }}>
                     Sign up
                   </a>
@@ -543,6 +546,7 @@ export default function DevLoginPage() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     pattern="[0-9]{6}"
                     maxLength={6}
                     placeholder="000000"
@@ -610,6 +614,7 @@ export default function DevLoginPage() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     pattern="[0-9]{6}"
                     maxLength={6}
                     placeholder="000000"
