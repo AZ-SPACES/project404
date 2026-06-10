@@ -1,9 +1,9 @@
 const productLinks = [
-  { label: "Features",      href: "#features"     },
-  { label: "How it works",  href: "#how-it-works"  },
-  { label: "Mini-App Hub",  href: "#hub"           },
-  { label: "Security",      href: "#security"      },
-  { label: "Download",      href: "#download"      },
+  { label: "Features",      href: "/#features"     },
+  { label: "How it works",  href: "/#how-it-works"  },
+  { label: "Mini-App Hub",  href: "/#hub"           },
+  { label: "Security",      href: "/#security"      },
+  { label: "Download",      href: "/#download"      },
 ];
 
 const legalLinks = [
@@ -16,16 +16,19 @@ const legalLinks = [
 const socials = [
   {
     label: "Twitter/X",
+    href: "https://x.com/azafintech",
     svg: <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />,
     fill: true,
   },
   {
     label: "Instagram",
+    href: "https://instagram.com/azafintech",
     svg: <><rect x="2" y="2" width="20" height="20" rx="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></>,
     fill: false,
   },
   {
     label: "LinkedIn",
+    href: "https://linkedin.com/company/azafintech",
     svg: <><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z" /><circle cx="4" cy="4" r="2" /></>,
     fill: true,
   },
@@ -42,8 +45,8 @@ export function Footer() {
           {/* Brand */}
           <div className="footer-brand-col">
             <a
-              href="#"
-              className="flex items-center gap-2 font-extrabold text-[1.2rem] mb-2"
+              href="/"
+              className="flex items-center gap-2 font-extrabold text-[1.2rem] mb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] rounded w-fit"
               style={{ letterSpacing: "-0.04em", color: "var(--aza-text)" }}
             >
               <span
@@ -61,12 +64,14 @@ export function Footer() {
               Soon available worldwide.
             </p>
             <div className="flex gap-2">
-              {socials.map(({ label, svg, fill }) => (
+              {socials.map(({ label, href, svg, fill }) => (
                 <a
                   key={label}
-                  href="#"
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
                   aria-label={label}
-                  className="social-link w-9 h-9 rounded-xl flex items-center justify-center"
+                  className="social-link w-9 h-9 rounded-xl flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A]"
                   style={{ background: "var(--aza-surface-2)", color: "var(--aza-text-secondary)" }}
                 >
                   <svg
@@ -89,7 +94,12 @@ export function Footer() {
           <div>
             <h4 className="text-[0.875rem] font-semibold mb-4" style={{ color: "var(--aza-text)" }}>Product</h4>
             {productLinks.map(({ label, href }) => (
-              <a key={label} href={href} className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>
+              <a
+                key={label}
+                href={href}
+                className="block text-[0.875rem] mb-2 transition-colors hover:text-[var(--aza-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#B7EE7A] rounded"
+                style={{ color: "var(--aza-text-secondary)" }}
+              >
                 {label}
               </a>
             ))}
@@ -99,14 +109,25 @@ export function Footer() {
           <div>
             <h4 className="text-[0.875rem] font-semibold mb-4" style={{ color: "var(--aza-text)" }}>Legal</h4>
             {legalLinks.map((l) => (
-              <a key={l.label} href={l.href} className="block text-[0.875rem] mb-2 transition-colors hover:text-[#174717]" style={{ color: "var(--aza-text-secondary)" }}>{l.label}</a>
+              <a
+                key={l.label}
+                href={l.href}
+                className="block text-[0.875rem] mb-2 transition-colors hover:text-[var(--aza-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#B7EE7A] rounded"
+                style={{ color: "var(--aza-text-secondary)" }}
+              >
+                {l.label}
+              </a>
             ))}
           </div>
         </div>
 
         <div className="flex justify-between items-center flex-wrap gap-2 pt-6" style={{ borderTop: "1px solid var(--aza-border)" }}>
-          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>© 2026 JumpSpaces, Inc. All rights reserved.</p>
-          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>Soon available worldwide.</p>
+          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>
+            © {new Date().getFullYear()} JumpSpaces, Inc. All rights reserved.
+          </p>
+          <p className="text-[0.8rem] m-0" style={{ color: "var(--aza-text-secondary)" }}>
+            Soon available worldwide.
+          </p>
         </div>
       </div>
     </footer>

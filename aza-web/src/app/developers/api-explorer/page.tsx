@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { LogOut, ChevronRight, ExternalLink, Shield, Key, Copy, Check } from 'lucide-react';
-import 'swagger-ui-react/swagger-ui.css';
 
 const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
 
@@ -96,6 +95,17 @@ export default function ApiExplorerPage() {
   const [token, setToken] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const id = 'swagger-ui-css';
+    if (!document.getElementById(id)) {
+      const link = Object.assign(document.createElement('link'), {
+        id, rel: 'stylesheet', href: '/swagger-ui.css',
+      });
+      document.head.appendChild(link);
+    }
+    return () => { document.getElementById(id)?.remove(); };
+  }, []);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('aza_dev_token');
