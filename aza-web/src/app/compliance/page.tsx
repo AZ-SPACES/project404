@@ -4,7 +4,8 @@ import { LegalLayout } from '@/components/layout/LegalLayout';
 
 export const metadata: Metadata = {
   title: 'Compliance | Aza',
-  description: 'Compliance information for Aza.',
+  description: 'Learn about Aza\'s regulatory compliance, licensing, and data protection standards.',
+  alternates: { canonical: '/compliance' },
 };
 
 export default function CompliancePage() {

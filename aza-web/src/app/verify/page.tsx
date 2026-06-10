@@ -170,11 +170,11 @@ export default async function VerifyPage({
       <footer className="text-center px-4 pb-10 text-xs text-[#3a3d35] leading-7">
         AZA Financial Technology Ltd &nbsp;·&nbsp; Licensed under the Payment Systems and Services Act, 2019 (Act 987)
         <br />
-        <a href="https://aza.systems" className="hover:text-[#B7EE7A] transition-colors">
+        <a href="https://aza.systems" className="hover:text-[#B7EE7A] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-1 rounded-sm">
           aza.systems
         </a>
         &nbsp;·&nbsp;
-        <a href="mailto:support@aza.systems" className="hover:text-[#B7EE7A] transition-colors">
+        <a href="mailto:support@aza.systems" className="hover:text-[#B7EE7A] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-1 rounded-sm">
           support@aza.systems
         </a>
       </footer>

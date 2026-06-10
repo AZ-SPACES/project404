@@ -60,6 +60,7 @@ export async function generateMetadata({
     description:
       merchant.businessDescription ??
       `Send a payment to ${merchant.businessName} via Aza.`,
+    alternates: { canonical: `/pay/${handle}` },
     openGraph: {
       title: `Pay ${merchant.businessName}`,
       description:
