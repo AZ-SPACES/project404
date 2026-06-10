@@ -3,6 +3,7 @@ package com.aza.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -39,8 +40,15 @@ public class RefreshToken {
     private String deviceId;
     private String ipAddress;
 
+    /** Human-readable "City, Country" resolved from the IP at session creation. Best-effort. */
+    private String location;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    /** Bumped on every login/token-refresh for this session — powers "Last active" in the devices list. */
+    @UpdateTimestamp
+    private LocalDateTime lastUsedAt;
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);

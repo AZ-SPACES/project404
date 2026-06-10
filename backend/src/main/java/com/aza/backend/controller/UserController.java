@@ -188,8 +188,10 @@ public class UserController {
     // ==================== DEVICES ====================
 
     @GetMapping("/me/devices")
-    public ResponseEntity<ApiResponse<Object>> getDevices(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getDevices(user)));
+    public ResponseEntity<ApiResponse<Object>> getDevices(
+            @AuthenticationPrincipal User user,
+            @RequestHeader(value = "X-Device-ID", required = false) String currentDeviceId) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getDevices(user, currentDeviceId)));
     }
 
     @DeleteMapping("/me/devices/{id}")

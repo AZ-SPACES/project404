@@ -32,7 +32,10 @@ type DeviceSession = {
   deviceName: string | null;
   deviceOs: string | null;
   ipAddress: string | null;
+  location: string | null;
   createdAt: string;
+  lastUsedAt: string | null;
+  currentDevice: boolean;
 };
 
 export function DevicesScreen() {
@@ -104,14 +107,30 @@ export function DevicesScreen() {
 
   const formatDate = (iso: string) => {
     try {
-      return new Date(iso).toLocaleDateString(undefined, {
+      return new Date(iso).toLocaleString(undefined, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
     } catch {
       return iso;
     }
+  };
+
+  const formatRelative = (iso: string | null) => {
+    if (!iso) return 'Unknown';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return 'Unknown';
+    const mins = Math.floor((Date.now() - then) / 60_000);
+    if (mins < 1) return 'Active now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return formatDate(iso);
   };
 
   const getDeviceIcon = (os: string | null): React.ComponentProps<typeof Feather>['name'] => {
@@ -170,11 +189,19 @@ export function DevicesScreen() {
                   />
                 </View>
                 <View style={styles.sessionInfo}>
-                  <Text style={[Typography.bodyLg, styles.sessionTitle]} numberOfLines={1}>
-                    {session.deviceName ?? session.deviceOs ?? 'Unknown Device'}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    <Text style={[Typography.bodyLg, styles.sessionTitle]} numberOfLines={1}>
+                      {session.deviceName ?? session.deviceOs ?? 'Unknown Device'}
+                    </Text>
+                    {session.currentDevice && (
+                      <View style={styles.currentBadge}>
+                        <Text style={styles.currentBadgeText}>This device</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={[Typography.body, styles.sessionSubtitle]} numberOfLines={1}>
-                    {session.ipAddress ?? 'Unknown IP'} · Added {formatDate(session.createdAt)}
+                    {session.location ?? session.ipAddress ?? 'Unknown location'} ·{' '}
+                    {session.currentDevice ? 'Active now' : formatRelative(session.lastUsedAt)}
                   </Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
@@ -216,9 +243,16 @@ export function DevicesScreen() {
               {selected.deviceOs && (
                 <DetailRow label="Operating system" value={selected.deviceOs} />
               )}
+              {selected.location && (
+                <DetailRow label="Location" value={selected.location} />
+              )}
               {selected.ipAddress && (
                 <DetailRow label="IP address" value={selected.ipAddress} />
               )}
+              <DetailRow
+                label="Last active"
+                value={selected.currentDevice ? 'Active now' : formatRelative(selected.lastUsedAt)}
+              />
               <DetailRow label="Added on" value={formatDate(selected.createdAt)} />
             </View>
           )}
@@ -293,8 +327,21 @@ function createStyles(Colors: ThemeColors) {
       marginRight: Spacing.md,
     },
     sessionInfo: { flex: 1 },
-    sessionTitle: { fontWeight: '600', color: Colors.textPrimary, marginBottom: 2 },
+    titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+    sessionTitle: { fontWeight: '600', color: Colors.textPrimary, flexShrink: 1 },
     sessionSubtitle: { color: Colors.textSecondary },
+    currentBadge: {
+      marginLeft: Spacing.sm,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? Colors.white10 : 'rgba(22,51,0,0.08)',
+    },
+    currentBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: Colors.primary,
+    },
     // Bottom sheet
     sheet: {
       position: 'absolute',
