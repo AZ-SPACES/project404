@@ -14,5 +14,9 @@ public class DeviceResponse {
     private String deviceName;
     private String deviceOs;
     private String ipAddress;
+    private String location;
     private LocalDateTime createdAt;
+    private LocalDateTime lastUsedAt;
+    /** True for the session that issued the current request — the "This device" row. */
+    private boolean currentDevice;
 }
