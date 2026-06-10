@@ -147,11 +147,11 @@ const MagneticButton = React.forwardRef<HTMLElement, MagneticButtonProps>(
           });
         };
 
-        element.addEventListener("mousemove", handleMouseMove as any);
+        element.addEventListener("mousemove", handleMouseMove as EventListener);
         element.addEventListener("mouseleave", handleMouseLeave);
 
         return () => {
-          element.removeEventListener("mousemove", handleMouseMove as any);
+          element.removeEventListener("mousemove", handleMouseMove as EventListener);
           element.removeEventListener("mouseleave", handleMouseLeave);
         };
       }, element);
@@ -161,10 +161,10 @@ const MagneticButton = React.forwardRef<HTMLElement, MagneticButtonProps>(
 
     return (
       <Component
-        ref={(node: HTMLElement) => {
-          (localRef as any).current = node;
+        ref={(node: HTMLElement | null) => {
+          (localRef as React.MutableRefObject<HTMLElement | null>).current = node;
           if (typeof forwardedRef === "function") forwardedRef(node);
-          else if (forwardedRef) (forwardedRef as any).current = node;
+          else if (forwardedRef) (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node;
         }}
         className={cn("cursor-pointer", className)}
         {...props}
@@ -300,12 +300,12 @@ export function CinematicFooter() {
             <div ref={linksRef} className="flex flex-col items-center gap-6 w-full">
               {/* App Store Links (Primary) */}
               <div className="flex flex-wrap justify-center gap-4 w-full">
-                <MagneticButton as="a" href="#" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
+                <MagneticButton as="a" href="/#waitlist" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
                   <AppleIcon className="w-5 h-5 text-current" />
                   Download on the App Store
                 </MagneticButton>
 
-                <MagneticButton as="a" href="#" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
+                <MagneticButton as="a" href="/#waitlist" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
                   <GooglePlayIcon className="w-5 h-5 text-current" />
                   Get it on Google Play
                 </MagneticButton>
