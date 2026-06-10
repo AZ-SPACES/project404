@@ -744,3 +744,50 @@
   overflow: hidden;
   background: var(--background);
 }
+
+/* ============================================================
+   PREFERS-REDUCED-MOTION — disable all non-essential animation
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* Immediately reveal scroll-animated elements */
+  .reveal,
+  .reveal-x-left,
+  .reveal-x-right,
+  .reveal-scale {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  /* Stop all infinite ambient animations */
+  .badge-dot,
+  .hero__glow,
+  .animate-spin-slow,
+  .animate-spin-slow-reverse,
+  .animate-success-pulse,
+  .animate-success-glow,
+  .animate-footer-scroll-marquee,
+  .animate-footer-heartbeat {
+    animation: none;
+  }
+
+  /* Collapse entry animations to final visible state */
+  .animate-bounce-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-checkmark-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .animate-celebration-ring {
+    animation: none;
+    opacity: 0;
+  }
+
+  /* Instant phone slide transitions */
+  .phone-slide {
+    transition: none;
+  }
+}
