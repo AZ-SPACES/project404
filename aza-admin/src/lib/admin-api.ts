@@ -803,6 +803,20 @@ export function getRiskAlerts(page = 0, size = 20, severity?: string, status?: s
   return request(`/api/v1/admin/risk/alerts?${params}`);
 }
 
+// ── Campaigns ─────────────────────────────────────────────────────────────────
+
+export function sendCampaign(data: {
+  type: string;
+  segment: string;
+  subject?: string;
+  message: string;
+}): Promise<{ message: string }> {
+  return request("/api/admin/campaigns/send", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export function getRiskStats(): Promise<RiskStats> {
   return request("/api/v1/admin/risk/stats");
 }
