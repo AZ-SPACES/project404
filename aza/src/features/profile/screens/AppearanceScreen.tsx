@@ -108,9 +108,9 @@ function segStyles(Colors: ThemeColors) {
 
 // ── Language card ─────────────────────────────────────────────────────────────
 const LANGUAGE_META: Record<LanguageOption, { flag: string; subtitle: string }> = {
-  "English (US)": { flag: "🇺🇸", subtitle: "English — United States" },
-  "French":       { flag: "🇫🇷", subtitle: "Français" },
-  "Spanish":      { flag: "🇪🇸", subtitle: "Español" },
+  "English": { flag: "🇬🇧", subtitle: "English — Ghana" },
+  "French":  { flag: "🇫🇷", subtitle: "Français" },
+  "Twi":     { flag: "🇬🇭", subtitle: "Akan · Twi" },
 };
 
 function LanguageCard({ language, isSelected, onSelect }: { language: LanguageOption; isSelected: boolean; onSelect: () => void }) {
@@ -423,6 +423,7 @@ export default function AppearanceScreen() {
   const [unsplashLoadingMore, setUnsplashLoadingMore] = React.useState(false);
   const [unsplashPage, setUnsplashPage] = React.useState(1);
   const [unsplashHasMore, setUnsplashHasMore] = React.useState(false);
+  const [unsplashError, setUnsplashError] = React.useState<string | null>(null);
   const unsplashInputRef = React.useRef<TextInput>(null);
 
   const sheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -453,17 +454,26 @@ export default function AppearanceScreen() {
     setLinkPromptVisible(false);
   };
 
+  React.useEffect(() => {
+    if (!unsplashVisible) return;
+    if (!unsplashQuery.trim()) { setUnsplashResults([]); setUnsplashError(null); return; }
+    const t = setTimeout(() => doUnsplashSearch(unsplashQuery), 500);
+    return () => clearTimeout(t);
+  }, [unsplashQuery, unsplashVisible]);
+
   const openUnsplash = (target: "home" | "hub") => {
     setUnsplashTarget(target);
     setUnsplashQuery("");
     setUnsplashResults([]);
     setUnsplashPage(1);
     setUnsplashHasMore(false);
+    setUnsplashError(null);
     setUnsplashVisible(true);
   };
 
   const doUnsplashSearch = async (query: string, page = 1) => {
     if (!query.trim()) return;
+    setUnsplashError(null);
     if (page === 1) { setUnsplashLoading(true); setUnsplashResults([]); }
     else setUnsplashLoadingMore(true);
     try {
@@ -472,8 +482,13 @@ export default function AppearanceScreen() {
       setUnsplashResults(prev => page === 1 ? photos : [...prev, ...photos]);
       setUnsplashHasMore(photos.length === 20);
       setUnsplashPage(page);
-    } catch {}
-    finally {
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401) setUnsplashError("Invalid API key — check UNSPLASH_ACCESS_KEY on the server.");
+      else if (status === 403) setUnsplashError("API key not authorised. Apply for production access on Unsplash.");
+      else if (status === 404) setUnsplashError("Unsplash endpoint not found — has the backend been redeployed?");
+      else setUnsplashError(`Search failed (${status ?? "network error"}). Check server logs.`);
+    } finally {
       setUnsplashLoading(false);
       setUnsplashLoadingMore(false);
     }
@@ -932,9 +947,9 @@ export default function AppearanceScreen() {
             </View>
           ) : unsplashResults.length === 0 ? (
             <View style={styles.unsplashCenter}>
-              <Feather name="image" size={40} color={Colors.border} />
-              <Text style={styles.unsplashEmptyText}>
-                {unsplashQuery.trim() ? "No results found" : "Search for a photo to use as background"}
+              <Feather name={unsplashError ? "alert-circle" : "image"} size={40} color={unsplashError ? Colors.error : Colors.border} />
+              <Text style={[styles.unsplashEmptyText, unsplashError ? { color: Colors.error } : null]}>
+                {unsplashError ?? (unsplashQuery.trim() ? "No results found" : "Search for a photo to use as background")}
               </Text>
             </View>
           ) : (

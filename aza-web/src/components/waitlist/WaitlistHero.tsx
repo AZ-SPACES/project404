@@ -124,7 +124,6 @@ export function WaitlistHero() {
           <WaitlistForm
             email={email}
             status={status}
-            error={error}
             onChange={(e) => setEmail(e.target.value)}
             onSubmit={handleSubmit}
           />

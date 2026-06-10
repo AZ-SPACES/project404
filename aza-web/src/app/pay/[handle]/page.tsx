@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import QRCode from "qrcode";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,8 @@ type FetchResult =
   | { ok: true; merchant: MerchantPublic }
   | { ok: false; status: number };
 
-async function fetchMerchant(handle: string): Promise<FetchResult> {
+// cache() dedupes the upstream call between generateMetadata and the page render
+const fetchMerchant = cache(async (handle: string): Promise<FetchResult> => {
   try {
     const res = await fetch(
       `${API_URL}/api/v1/merchant/public/${handle}`,
@@ -44,6 +47,11 @@ async function fetchMerchant(handle: string): Promise<FetchResult> {
   } catch {
     return { ok: false, status: 503 };
   }
+});
+
+// Only render backend-supplied logo URLs that are plain https
+function safeLogoUrl(url?: string): string | undefined {
+  return url && url.startsWith("https://") ? url : undefined;
 }
 
 export async function generateMetadata({
@@ -60,21 +68,27 @@ export async function generateMetadata({
     description:
       merchant.businessDescription ??
       `Send a payment to ${merchant.businessName} via Aza.`,
+    alternates: { canonical: `/pay/${handle}` },
     openGraph: {
       title: `Pay ${merchant.businessName}`,
       description:
         merchant.businessDescription ??
         `Send a payment to ${merchant.businessName} via Aza.`,
-      ...(merchant.logoUrl ? { images: [merchant.logoUrl] } : {}),
+      ...(safeLogoUrl(merchant.logoUrl) ? { images: [safeLogoUrl(merchant.logoUrl)!] } : {}),
     },
   };
 }
 
-function QrCode({ url }: { url: string }) {
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&margin=2`;
+async function QrCode({ url }: { url: string }) {
+  const dataUrl = await QRCode.toDataURL(url, {
+    width: 220,
+    margin: 2,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={qrSrc}
+      src={dataUrl}
       alt="QR code"
       width={220}
       height={220}
@@ -85,10 +99,12 @@ function QrCode({ url }: { url: string }) {
 
 function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
   const accent = merchant.brandColor ?? "#10b981";
-  if (merchant.logoUrl) {
+  const logoUrl = safeLogoUrl(merchant.logoUrl);
+  if (logoUrl) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- merchant logos live on arbitrary https hosts; next/image would need each host allowlisted
       <img
-        src={merchant.logoUrl}
+        src={logoUrl}
         alt={merchant.businessName}
         width={72}
         height={72}
@@ -109,6 +125,41 @@ function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
       style={{ backgroundColor: accent, width: 72, height: 72 }}
     >
       {initials}
+    </div>
+  );
+}
+
+function ServiceUnavailablePage({ handle }: { handle: string }) {
+  return (
+    <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="bg-white rounded-3xl shadow-xl shadow-black/6 overflow-hidden">
+          <div className="h-2 w-full bg-red-400" />
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Service unavailable</h1>
+              <p className="text-sm text-gray-600 mt-3 leading-snug">
+                We couldn&apos;t load this payment page right now. Please try again in a moment.
+              </p>
+            </div>
+            <a
+              href={`/pay/${handle}`}
+              className="text-sm font-medium text-[#10b981] hover:underline"
+            >
+              Try again →
+            </a>
+          </div>
+        </div>
+        <p className="text-center text-xs text-gray-400">
+          Payments powered by{" "}
+          <a href="https://aza.systems" className="font-medium text-gray-500 hover:underline">
+            Aza
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
@@ -158,16 +209,16 @@ export default async function PayPage({
   const result = await fetchMerchant(handle);
 
   if (!result.ok) {
-    // 403 = merchant exists but not yet active (pending KYB etc.)
     if (result.status === 403) return <NotAcceptingPage handle={handle} />;
-    // 404 = truly doesn't exist
+    if (result.status === 503 || result.status >= 500) return <ServiceUnavailablePage handle={handle} />;
     notFound();
   }
 
   const { merchant } = result;
   const accent = merchant.brandColor ?? "#10b981";
   const deepLink = `aza://pay/${merchant.businessHandle}`;
-  const pageUrl = `https://aza.systems/pay/${merchant.businessHandle}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aza.systems";
+  const pageUrl = `${siteUrl}/pay/${merchant.businessHandle}`;
 
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">

@@ -2,11 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { LogOut, ChevronRight, ExternalLink, Shield, Key, Copy, Check } from 'lucide-react';
-import 'swagger-ui-react/swagger-ui.css';
 
 const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
+
+// Structurally compatible with swagger-ui-react's loosely-typed Request
+type SwaggerRequest = { headers?: Record<string, string> };
 
 const API =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== 'http://localhost:8080'
@@ -98,6 +102,17 @@ export default function ApiExplorerPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const id = 'swagger-ui-css';
+    if (!document.getElementById(id)) {
+      const link = Object.assign(document.createElement('link'), {
+        id, rel: 'stylesheet', href: '/swagger-ui.css',
+      });
+      document.head.appendChild(link);
+    }
+    return () => { document.getElementById(id)?.remove(); };
+  }, []);
+
+  useEffect(() => {
     const stored = sessionStorage.getItem('aza_dev_token');
     if (!stored) {
       router.replace('/developers/login');
@@ -119,9 +134,10 @@ export default function ApiExplorerPage() {
     router.push('/developers/login');
   }
 
-  function requestInterceptor(req: any) {
-    if (token) req.headers['Authorization'] = `Bearer ${token}`;
-    if (apiKey) req.headers['X-Api-Key'] = apiKey;
+  function requestInterceptor(req: SwaggerRequest) {
+    const headers = (req.headers ??= {});
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (apiKey) headers['X-Api-Key'] = apiKey;
     return req;
   }
 
@@ -144,14 +160,14 @@ export default function ApiExplorerPage() {
       >
         {/* Logo */}
         <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <a href="/" className="flex flex-col gap-2">
-            <img src="/logo.png" alt="AZA" className="h-6 w-auto self-start" />
+          <Link href="/" className="flex flex-col gap-2">
+            <Image src="/logo.png" alt="AZA" width={53} height={24} className="h-6 w-auto self-start" />
             <div>
               <p className="text-[10px] font-medium mt-1" style={{ color: 'rgba(183,238,122,0.5)', letterSpacing: '0.05em' }}>
                 API EXPLORER
               </p>
             </div>
-          </a>
+          </Link>
         </div>
 
         {/* Nav sections */}

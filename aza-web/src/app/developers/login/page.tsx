@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff, QrCode, RefreshCw } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -36,6 +38,8 @@ export default function DevLoginPage() {
   const [totpCode, setTotpCode] = useState('');
   const [preAuthToken, setPreAuthToken] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [focused, setFocused] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [loading, setLoading] = useState(false);
 
   // ── QR login state ───────────────────────────────────────────────────────────
@@ -155,6 +159,11 @@ export default function DevLoginPage() {
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    const errs: { identifier?: string; password?: string } = {};
+    if (!identifier.trim()) errs.identifier = 'Email or phone is required';
+    if (!password) errs.password = 'Password is required';
+    if (Object.keys(errs).length) { setFieldErrors(errs); return; }
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await post('/api/v1/auth/login', { identifier, password });
@@ -183,7 +192,7 @@ export default function DevLoginPage() {
         setError(res.error?.message ?? res.message ?? 'OTP verification failed');
         return;
       }
-      const data = res.data as any;
+      const data = res.data;
       if (data?.preAuthToken) {
         setPreAuthToken(data.preAuthToken);
         setStep('totp');
@@ -208,11 +217,11 @@ export default function DevLoginPage() {
         preAuthToken,
         code: totpCode,
       });
-      if (!res.success) {
+      if (!res.success || !res.data?.accessToken) {
         setError(res.error?.message ?? res.message ?? 'Authenticator code invalid');
         return;
       }
-      finalize((res.data as any).accessToken);
+      finalize(res.data.accessToken);
     } catch {
       setError('Could not reach the API. Make sure the backend is running.');
     } finally {
@@ -230,16 +239,16 @@ export default function DevLoginPage() {
       style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}
     >
       {/* Back link */}
-      <a
+      <Link
         href="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors"
+        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded"
         style={{ color: 'rgba(183,238,122,0.6)' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#B7EE7A')}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--aza-accent)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'rgba(183,238,122,0.6)')}
       >
         <ArrowLeft size={15} />
         Back to aza
-      </a>
+      </Link>
 
       {/* Card */}
       <div
@@ -252,7 +261,7 @@ export default function DevLoginPage() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 mb-6">
-          <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="AZA" width={71} height={32} className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
             <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
@@ -320,6 +329,7 @@ export default function DevLoginPage() {
                   className="rounded-2xl p-2.5"
                   style={{ background: '#fff', border: '1px solid rgba(183,238,122,0.2)' }}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL can't go through next/image */}
                   <img
                     src={`data:image/png;base64,${qrSession.qrImageBase64}`}
                     alt="QR Code"
@@ -350,7 +360,7 @@ export default function DevLoginPage() {
             {/* Approved — completing login */}
             {!qrLoading && qrStatus === 'APPROVED' && (
               <div className="flex flex-col items-center gap-2 py-6">
-                <Loader2 size={28} className="animate-spin" style={{ color: '#B7EE7A' }} />
+                <Loader2 size={28} className="animate-spin" style={{ color: 'var(--aza-accent)' }} />
                 <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Signing you in…</p>
               </div>
             )}
@@ -437,51 +447,60 @@ export default function DevLoginPage() {
                   </p>
                 </div>
 
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
                     Email or phone
-                  </span>
+                  </label>
                   <input
                     type="text"
                     autoComplete="username"
                     placeholder="you@example.com"
                     value={identifier}
-                    onChange={e => setIdentifier(e.target.value)}
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    onChange={e => { setIdentifier(e.target.value); if (fieldErrors.identifier) setFieldErrors(p => ({ ...p, identifier: undefined })); }}
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus-visible:outline-none"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.identifier ? 'rgba(183,238,122,0.4)' : fieldErrors.identifier ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
+                    onFocus={() => setFocused(p => ({ ...p, identifier: true }))}
+                    onBlur={() => setFocused(p => ({ ...p, identifier: false }))}
+                    aria-describedby={fieldErrors.identifier ? 'err-identifier' : undefined}
+                    aria-invalid={!!fieldErrors.identifier}
                   />
-                </label>
+                  {fieldErrors.identifier && (
+                    <p id="err-identifier" className="text-xs" style={{ color: '#f87171' }}>{fieldErrors.identifier}</p>
+                  )}
+                </div>
 
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
                     Password
-                  </span>
+                  </label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="••••••••"
                       value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                      className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-                      onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                      onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(p => ({ ...p, password: undefined })); }}
+                      className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all focus-visible:outline-none"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.password ? 'rgba(183,238,122,0.4)' : fieldErrors.password ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
+                      onFocus={() => setFocused(p => ({ ...p, password: true }))}
+                      onBlur={() => setFocused(p => ({ ...p, password: false }))}
+                      aria-describedby={fieldErrors.password ? 'err-password' : undefined}
+                      aria-invalid={!!fieldErrors.password}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 rounded"
                       style={{ color: 'rgba(255,255,255,0.3)' }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                </label>
+                  {fieldErrors.password && (
+                    <p id="err-password" className="text-xs" style={{ color: '#f87171' }}>{fieldErrors.password}</p>
+                  )}
+                </div>
 
                 {error && (
                   <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
@@ -493,14 +512,14 @@ export default function DevLoginPage() {
                   type="submit"
                   disabled={loading}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: '#B7EE7A', color: '#174717' }}
+                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
                 >
                   {loading && <Loader2 size={15} className="animate-spin" />}
                   Continue
                 </button>
 
                 <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <a href="/developers/signup" style={{ color: '#B7EE7A', fontWeight: 600 }}>
                     Sign up
                   </a>
@@ -527,6 +546,7 @@ export default function DevLoginPage() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     pattern="[0-9]{6}"
                     maxLength={6}
                     placeholder="000000"
@@ -556,7 +576,7 @@ export default function DevLoginPage() {
                   type="submit"
                   disabled={loading || otp.length < 6}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: '#B7EE7A', color: '#174717' }}
+                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
                 >
                   {loading && <Loader2 size={15} className="animate-spin" />}
                   Verify code
@@ -594,6 +614,7 @@ export default function DevLoginPage() {
                   <input
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     pattern="[0-9]{6}"
                     maxLength={6}
                     placeholder="000000"
@@ -623,7 +644,7 @@ export default function DevLoginPage() {
                   type="submit"
                   disabled={loading || totpCode.length < 6}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: '#B7EE7A', color: '#174717' }}
+                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
                 >
                   {loading && <Loader2 size={15} className="animate-spin" />}
                   Sign in

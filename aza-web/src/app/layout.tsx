@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import Script from "next/script";
+import { ChatbaseScript } from "@/components/ChatbaseScript";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,20 +40,25 @@ export const metadata: Metadata = {
     title: "Aza — Send Money. Effortlessly.",
     description:
       "Send and request money, chat with friends, scan QR codes, and access powerful mini-apps — all in one secure platform.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Aza — Send Money. Effortlessly." }],
+    // og:image comes from app/opengraph-image.tsx (file convention)
   },
   twitter: {
     card: "summary_large_image",
     title: "Aza — Send Money. Effortlessly.",
     description:
       "Send and request money, chat with friends, scan QR codes, and access powerful mini-apps — all in one secure platform.",
-    images: ["/og-image.png"],
   },
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#174717",
 };
 
 export default function RootLayout({
@@ -68,15 +73,32 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('aza-theme')||'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`,
           }}
         />
-        {children}
-        <Analytics />
-        <Script
-          id="chatbase-init"
-          strategy="afterInteractive"
+        <script
+          type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: `(function(){if(!window.chatbase||window.chatbase("getState")!=="initialized"){window.chatbase=(...arguments)=>{if(!window.chatbase.q){window.chatbase.q=[]}window.chatbase.q.push(arguments)};window.chatbase=new Proxy(window.chatbase,{get(target,prop){if(prop==="q"){return target.q}return(...args)=>target(prop,...args)}})}const onLoad=function(){const script=document.createElement("script");script.src="https://www.chatbase.co/embed.min.js";script.id="lcXHLFPWBcPsUbKaDDbeK";script.domain="www.chatbase.co";document.body.appendChild(script)};if(document.readyState==="complete"){onLoad()}else{window.addEventListener("load",onLoad)}})();`,
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Aza",
+              url: siteUrl,
+              logo: `${siteUrl}/logo.png`,
+              description: "Aza is a mobile-first payments platform that lets you send money, chat with friends, scan QR codes, and access mini-apps — all in one secure platform.",
+              sameAs: [
+                "https://x.com/azafintech",
+                "https://instagram.com/azafintech",
+                "https://linkedin.com/company/azafintech",
+              ],
+              contactPoint: {
+                "@type": "ContactPoint",
+                email: "support@aza.systems",
+                contactType: "customer support",
+              },
+            }),
           }}
         />
+        {children}
+        <Analytics />
+        <ChatbaseScript />
       </body>
     </html>
   );

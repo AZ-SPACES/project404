@@ -3,12 +3,12 @@ type Status = "idle" | "loading" | "success";
 interface WaitlistFormProps {
   email: string;
   status: Status;
-  error: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
-export function WaitlistForm({ email, status, error: _error, onChange, onSubmit }: WaitlistFormProps) {
+// The error message is rendered by WaitlistHero below the form
+export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistFormProps) {
   return (
     <form
       onSubmit={onSubmit}

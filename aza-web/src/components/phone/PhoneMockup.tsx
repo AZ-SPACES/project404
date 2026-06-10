@@ -30,7 +30,6 @@ export function PhoneMockup() {
   useEffect(() => {
     startTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goTo = (i: number) => {
@@ -39,24 +38,38 @@ export function PhoneMockup() {
   };
 
   return (
-    <div className="phone-mockup flex flex-col items-center gap-4 relative z-[1]">
-      <div className="phone-mockup__frame">
+    <div className="phone-mockup flex flex-col items-center gap-6 relative z-[1]">
+      <div className="phone-device">
+        {/* Left-side buttons */}
+        <div className="phone-btn phone-btn--mute"   aria-hidden="true" />
+        <div className="phone-btn phone-btn--vol-up" aria-hidden="true" />
+        <div className="phone-btn phone-btn--vol-dn" aria-hidden="true" />
+        {/* Right-side power button */}
+        <div className="phone-btn phone-btn--power"  aria-hidden="true" />
+
+        {/* Screen glass */}
         <div className="phone-screen">
+        
+
+          {/* Slide content */}
           {IMAGES.map((img, i) => (
             <div
               key={i}
               className={`phone-slide${active === i ? " active" : ""}`}
-              style={{ padding: 0 }}
             >
               <Image
                 src={img.src}
                 alt={img.alt}
                 fill
+                sizes="268px"
                 style={{ objectFit: "cover", objectPosition: "top" }}
                 priority={i === 0}
               />
             </div>
           ))}
+
+          {/* Home indicator */}
+          <div className="phone-home-bar" aria-hidden="true" />
         </div>
       </div>
 
