@@ -9,7 +9,7 @@ export default function NotFound() {
     >
       {/* Logo */}
       <Link href="/" className="mb-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] rounded">
-        <Image src="/logo.png" alt="AZA" width={80} height={28} className="h-7 w-auto" />
+        <Image src="/logo.png" alt="AZA" width={62} height={28} className="h-7 w-auto" />
       </Link>
 
       <div className="max-w-md w-full text-center space-y-4">

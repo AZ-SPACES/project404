@@ -375,7 +375,7 @@ export function CinematicFooter() {
             
             {/* Copyright */}
             <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 md:order-1">
-              © 2026 JumpSpaces, Inc. All rights reserved.
+              © {new Date().getFullYear()} JumpSpaces, Inc. All rights reserved.
             </div>
 
             <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 md:order-1">

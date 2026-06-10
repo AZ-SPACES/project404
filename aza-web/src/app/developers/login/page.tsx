@@ -37,6 +37,7 @@ export default function DevLoginPage() {
   const [preAuthToken, setPreAuthToken] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [focused, setFocused] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [loading, setLoading] = useState(false);
 
   // ── QR login state ───────────────────────────────────────────────────────────
@@ -454,9 +455,9 @@ export default function DevLoginPage() {
                     value={identifier}
                     onChange={e => { setIdentifier(e.target.value); if (fieldErrors.identifier) setFieldErrors(p => ({ ...p, identifier: undefined })); }}
                     className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus-visible:outline-none"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${fieldErrors.identifier ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
-                    onFocus={e => { if (!fieldErrors.identifier) e.target.style.borderColor = 'rgba(183,238,122,0.4)'; }}
-                    onBlur={e => { if (!fieldErrors.identifier) e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                    style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.identifier ? 'rgba(183,238,122,0.4)' : fieldErrors.identifier ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
+                    onFocus={() => setFocused(p => ({ ...p, identifier: true }))}
+                    onBlur={() => setFocused(p => ({ ...p, identifier: false }))}
                     aria-describedby={fieldErrors.identifier ? 'err-identifier' : undefined}
                     aria-invalid={!!fieldErrors.identifier}
                   />
@@ -477,9 +478,9 @@ export default function DevLoginPage() {
                       value={password}
                       onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(p => ({ ...p, password: undefined })); }}
                       className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all focus-visible:outline-none"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${fieldErrors.password ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
-                      onFocus={e => { if (!fieldErrors.password) e.target.style.borderColor = 'rgba(183,238,122,0.4)'; }}
-                      onBlur={e => { if (!fieldErrors.password) e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.password ? 'rgba(183,238,122,0.4)' : fieldErrors.password ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
+                      onFocus={() => setFocused(p => ({ ...p, password: true }))}
+                      onBlur={() => setFocused(p => ({ ...p, password: false }))}
                       aria-describedby={fieldErrors.password ? 'err-password' : undefined}
                       aria-invalid={!!fieldErrors.password}
                     />
