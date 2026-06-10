@@ -32,6 +32,7 @@ import {
   Users2,
   X,
   KeyRound,
+  Megaphone,
 } from "lucide-react";
 
 interface NavItem {
@@ -61,6 +62,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3 },
       { href: "/users", label: "Users", icon: Users },
       { href: "/wallets", label: "Wallets", icon: Wallet },
+      { href: "/campaigns", label: "Campaigns", icon: Megaphone },
     ],
   },
   {
@@ -131,6 +133,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
+    // eslint-disable-next-line
     setReady(true);
   }, [router]);
 

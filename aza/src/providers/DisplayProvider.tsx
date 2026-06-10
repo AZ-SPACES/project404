@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme, Appearance } from "react-native";
 import { useAuth } from "./AuthProvider";
 import { useProfile } from "./ProfileProvider";
 import { uploadHomeBackground, uploadHubBackground, updateMe, api } from "../services/api";
+import { computeImageLuminance } from "../utils/wallpaperContrast";
 import { queryKeys } from "../lib/queryKeys";
 import { queryClient } from "../lib/queryClient";
 
@@ -95,6 +96,8 @@ export type DisplayContextType = {
   setHomeBlur: (val: number) => void;
   hubBlur: number;
   setHubBlur: (val: number) => void;
+  // Average luminance (0..1) of the home wallpaper image, null if none/unknown
+  homeBgLuminance: number | null;
   // Banner gradient (used when no background image)
   homeBannerGradient: string;
   setHomeBannerGradient: (id: string) => void;
@@ -142,6 +145,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [hubDim, setHubDimState] = useState<number>(0);
   const [homeBlur, setHomeBlurState] = useState<number>(0);
   const [hubBlur, setHubBlurState] = useState<number>(0);
+  const [homeBgLuminance, setHomeBgLuminanceState] = useState<number | null>(null);
+  const lumUriRef = useRef<string | null>(null);
   const [homeBannerGradient, setHomeBannerGradientState] = useState<string>('accent');
   const [hubBannerGradient, setHubBannerGradientState] = useState<string>('accent');
   const [balanceCardStyle, setBalanceCardStyleState] = useState<BalanceCardStyle>('flat');
@@ -242,6 +247,42 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     };
     load();
   }, []);
+
+  // Restore the cached wallpaper luminance so we don't re-decode on every launch.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('AppHomeBgLum');
+        if (stored && !cancelled) {
+          const { uri, lum } = JSON.parse(stored) as { uri: string; lum: number };
+          if (typeof lum === 'number') {
+            lumUriRef.current = uri;
+            setHomeBgLuminanceState(lum);
+          }
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Recompute luminance whenever the home wallpaper changes to a new image.
+  useEffect(() => {
+    if (!homeBackground) {
+      lumUriRef.current = null;
+      setHomeBgLuminanceState(null);
+      return;
+    }
+    if (homeBackground === lumUriRef.current) return; // already computed for this image
+    let cancelled = false;
+    computeImageLuminance(homeBackground).then((lum) => {
+      if (cancelled || lum == null) return;
+      lumUriRef.current = homeBackground;
+      setHomeBgLuminanceState(lum);
+      AsyncStorage.setItem('AppHomeBgLum', JSON.stringify({ uri: homeBackground, lum })).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [homeBackground]);
 
   // Sync profile → local
   useEffect(() => {
@@ -386,6 +427,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
       hubDim, setHubDim,
       homeBlur, setHomeBlur,
       hubBlur, setHubBlur,
+      homeBgLuminance,
       homeBannerGradient, setHomeBannerGradient,
       hubBannerGradient, setHubBannerGradient,
       balanceCardStyle, setBalanceCardStyle,

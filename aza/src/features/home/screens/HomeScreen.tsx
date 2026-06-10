@@ -43,6 +43,7 @@ import { queryClient } from "../../../lib/queryClient";
 import { queryKeys } from "../../../lib/queryKeys";
 import { useTransferStore } from "../../../store/transferStore";
 import { extractErrorMessage } from '../../../utils/errorUtils';
+import { getAdaptiveForeground } from '../../../utils/wallpaperContrast';
 
 const { height } = Dimensions.get("window");
 
@@ -61,7 +62,7 @@ export default function HomeScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
     homeBackground, homeDim, homeBlur, homeBannerGradient, accentId, balanceCardStyle,
-    homeLayout, balanceHiddenByDefault, reducedMotion, quickActions,
+    homeLayout, balanceHiddenByDefault, reducedMotion, quickActions, homeBgLuminance,
   } = useDisplayContext();
   const animDuration = reducedMotion ? 0 : 300;
   const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
@@ -242,6 +243,16 @@ export default function HomeScreen() {
 
   const greeting = getGreeting();
 
+  // Adaptive foreground: keeps text/icons readable over light wallpapers.
+  const onImage = homeLayout === 'default' && !!homeBackground;
+  const hasCardBacking = balanceCardStyle === 'card' || balanceCardStyle === 'glass';
+  const fg = getAdaptiveForeground({
+    luminance: homeBgLuminance,
+    dim: homeDim,
+    active: onImage,
+    cardBacking: hasCardBacking,
+  });
+
   const actionHandlers = React.useMemo<Record<QuickActionId, { icon: string; label: string; onPress: () => void }>>(() => ({
     send:      { icon: 'arrow-up',    label: 'Send',      onPress: () => navigation.navigate('Send') },
     request:   { icon: 'arrow-down',  label: 'Request',   onPress: () => navigation.navigate('Receive') },
@@ -254,7 +265,7 @@ export default function HomeScreen() {
   // Shared header row used by both layouts
   const headerRow = (
     <View style={styles.header}>
-      <Text style={[Typography.h2, { color: Colors.white }]} adjustsFontSizeToFit numberOfLines={1}>
+      <Text style={[Typography.h2, { color: fg.header.text }]} adjustsFontSizeToFit numberOfLines={1}>
         {`${greeting}${displayName ? `, ${displayName}` : ""}`}
       </Text>
       <View style={styles.headerRight}>
@@ -262,13 +273,13 @@ export default function HomeScreen() {
           {profileImageUri ? (
             <Image source={{ uri: profileImageUri }} style={styles.profilePic} accessibilityLabel="Profile photo" />
           ) : (
-            <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
-              <Feather name="user" size={20} color="rgba(255,255,255,0.8)" />
+            <View style={[styles.profilePic, styles.profilePicPlaceholder, { backgroundColor: fg.header.pill }]}>
+              <Feather name="user" size={20} color={fg.header.soft} />
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.bellButton} onPress={() => navigation.navigate("Inbox")} accessibilityLabel="Open notifications">
-          <Feather name="bell" size={24} color={Colors.white} />
+        <TouchableOpacity style={[styles.bellButton, { backgroundColor: fg.header.pill }]} onPress={() => navigation.navigate("Inbox")} accessibilityLabel="Open notifications">
+          <Feather name="bell" size={24} color={fg.header.text} />
           {unreadCount > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
@@ -284,15 +295,15 @@ export default function HomeScreen() {
     <View style={styles.actionsRow}>
       {quickActions.slice(0, 3).map(id => {
         const a = actionHandlers[id];
-        return <ActionTarget key={id} icon={a.icon as any} label={a.label} onPress={a.onPress} />;
+        return <ActionTarget key={id} icon={a.icon as any} label={a.label} onPress={a.onPress} color={fg.balance.text} circleColor={fg.balance.pill} />;
       })}
-      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} />
+      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} color={fg.balance.text} circleColor={fg.balance.pill} />
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle={fg.tone === 'dark-text' ? 'dark-content' : 'light-content'} backgroundColor="transparent" translucent />
 
       {homeLayout === 'minimal' ? (
         /* ── Minimal layout: compact accent-color header ── */
@@ -330,6 +341,15 @@ export default function HomeScreen() {
           )}
           {homeBlur > 0 && <BlurView intensity={homeBlur} tint="default" style={StyleSheet.absoluteFill} />}
           {homeDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${homeDim})` }]} />}
+          {/* Contrast scrim — guarantees text legibility over busy/bright wallpapers */}
+          {onImage && (
+            <LinearGradient
+              pointerEvents="none"
+              colors={fg.scrim}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
 
           <SafeAreaView>
             {headerRow}
@@ -344,25 +364,25 @@ export default function HomeScreen() {
               )}
 
               <View style={styles.balanceSection}>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Main • {wallet?.currency}</Text>
+                <Text style={[Typography.bodyLg, styles.accountType, { color: fg.balance.soft }]}>Main • {wallet?.currency}</Text>
                 <View style={styles.balanceRow}>
                   {loading && !wallet ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
+                    <ActivityIndicator size="small" color={fg.balance.text} />
                   ) : (
-                    <Text style={[Typography.h1, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
+                    <Text style={[Typography.h1, styles.balanceText, { color: fg.balance.text }]} numberOfLines={1} adjustsFontSizeToFit>
                       {isBalanceVisible ? (wallet?.formattedBalance || formatCurrency(0, wallet?.currency)) : "••••"}
                     </Text>
                   )}
                   <TouchableOpacity style={styles.eyeIcon} accessibilityLabel="Toggle balance visibility" onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={Colors.white} />
+                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={fg.balance.text} />
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={{ flexDirection: "row", alignItems: "center" }} onPress={onRefresh} disabled={refreshing} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Text style={[Typography.caption, styles.updateTime]}>{updateText}</Text>
+                  <Text style={[Typography.caption, styles.updateTime, { color: fg.balance.soft }]}>{updateText}</Text>
                   {refreshing ? (
-                    <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" style={{ marginLeft: 6, marginTop: Spacing.sm, transform: [{ scale: 0.6 }] }} />
+                    <ActivityIndicator size="small" color={fg.balance.soft} style={{ marginLeft: 6, marginTop: Spacing.sm, transform: [{ scale: 0.6 }] }} />
                   ) : (
-                    <Feather name="refresh-cw" size={12} color="rgba(255,255,255,0.8)" style={{ marginLeft: 6, marginTop: Spacing.sm }} />
+                    <Feather name="refresh-cw" size={12} color={fg.balance.soft} style={{ marginLeft: 6, marginTop: Spacing.sm }} />
                   )}
                 </TouchableOpacity>
               </View>
