@@ -8,8 +8,9 @@ export function isValidEmail(value: string): boolean {
 
 // ─── Phone ───────────────────────────────────────────────────────────────────
 // Accepts 7–15 digits (E.164 body), ignoring spaces, dashes, parentheses.
+// An optional leading + is allowed for E.164 international format (+233…).
 
-const PHONE_RE = /^[\d\s\-().]{7,20}$/;
+const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/;
 
 export function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, '');
@@ -47,8 +48,16 @@ export function isValidName(value: string): boolean {
 }
 
 // ─── Sanitize ─────────────────────────────────────────────────────────────────
-// Strips leading/trailing whitespace and ASCII control characters.
+// Strips ASCII control characters. Does NOT trim — trimming on every keystroke
+// in a controlled input prevents users from typing spaces mid-word. Trim at
+// validation / submit time instead (validation helpers already do this).
 
 export function sanitizeText(value: string): string {
-  return value.replace(/[\x00-\x1F\x7F]/g, '').trim();
+  return value.replace(/[\x00-\x1F\x7F]/g, '');
+}
+
+// Strips all whitespace characters — use for email inputs where spaces are
+// never valid and we want to prevent invisible trailing-space issues.
+export function sanitizeEmail(value: string): string {
+  return value.replace(/[\x00-\x1F\x7F\s]/g, '');
 }

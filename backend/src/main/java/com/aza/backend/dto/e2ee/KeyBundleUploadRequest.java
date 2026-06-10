@@ -8,6 +8,9 @@ import java.util.List;
 
 @Data
 public class KeyBundleUploadRequest {
+    @NotBlank(message = "Device ID is required")
+    private String deviceId;
+
     @NotBlank(message = "Identity public key is required")
     private String identityPublicKey;
 

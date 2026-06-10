@@ -92,13 +92,27 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return true;
         }
         String path = request.getRequestURI();
-        return path.startsWith("/ws") || path.startsWith("/actuator");
+        // Skip WS, actuator, and QR-status polling (polled every 2 s — would exhaust the auth-path IP bucket).
+        return path.startsWith("/ws")
+                || path.startsWith("/actuator")
+                || path.startsWith("/api/v1/auth/qr-login/status/");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
+        try {
+            doRateLimitInternal(request, response, chain);
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("Rate-limit infrastructure error — failing open: {}", e.getMessage());
+            chain.doFilter(request, response);
+        }
+    }
+
+    private void doRateLimitInternal(HttpServletRequest request,
+                                     HttpServletResponse response,
+                                     FilterChain chain) throws ServletException, IOException {
         String ip = fingerprinter.getClientIp(request);
         String fingerprint = fingerprinter.getDeviceFingerprint(request);
         String path = request.getRequestURI();
@@ -121,7 +135,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // ── 2. Geo-block (Cloudflare CF-IPCountry) ────────────────────────────
         String country = fingerprinter.getCountryCode(request);
         if (country != null && ipReputation.isCountryBlocked(country)) {
-            rejectAccess(response, "Access from your region is not available.");
+            rejectGeoBlock(response);
             return;
         }
 
@@ -266,6 +280,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(response.getWriter(),
                 ApiResponse.error("ACCESS_DENIED", message));
+    }
+
+    private void rejectGeoBlock(HttpServletResponse response) throws IOException {
+        response.setStatus(403);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(),
+                ApiResponse.error("GEO_RESTRICTED", "AZA is not available in your region."));
     }
 
     private void rejectRateLimit(HttpServletResponse response, String message, long retryAfterSeconds) throws IOException {

@@ -11,6 +11,7 @@ import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
 import PrimaryButton from '../components/PrimaryButton';
 import StatusBadge from '../components/StatusBadge';
+import { extractErrorMessage } from '../../../../../utils/errorUtils';
 
 export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors, styles }: NavProps) {
   const [amount, setAmount] = useState('');
@@ -38,8 +39,8 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
       setPasscode('');
       queryClient.invalidateQueries({ queryKey: queryKeys.merchantPayouts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.merchant() });
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Payout failed.');
+    } catch (e: unknown) {
+      Alert.alert('Error', extractErrorMessage(e, 'Payout failed.'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
         {!payoutsLoading && payouts.length > 0 && (
           <>
             <Text style={[styles.sectionLabel, { color: Colors.textPrimary, marginTop: Spacing.xl }]}>Payout History</Text>
-            {payouts.map((p, i) => (
+            {payouts.map((p: any, i: number) => (
               <View key={p.id ?? i} style={[styles.sessionRow, { borderColor: Colors.border, backgroundColor: Colors.surface }]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>{fmtAmount(p.amount, p.currency)}</Text>

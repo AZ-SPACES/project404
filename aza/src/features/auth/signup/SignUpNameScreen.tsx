@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { isValidName, sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpName">;
 
@@ -93,6 +94,8 @@ export default function SignUpNameScreen() {
             </Animated.View>
           </Animated.View>
 
+          <SignUpProgressBar step={4} total={10} />
+
           {/* Content */}
           <Animated.ScrollView
             style={styles.content}
@@ -118,6 +121,7 @@ export default function SignUpNameScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="e.g. Kwame"
                 placeholderTextColor={Colors.textSecondary}
@@ -141,6 +145,7 @@ export default function SignUpNameScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="e.g. Obeng"
                 placeholderTextColor={Colors.textSecondary}

@@ -32,7 +32,7 @@ const ID_OPTIONS = [
   { label: "Ghana Card", value: "ghana_card", placeholder: "GHA-123456789-1", prefix: "GHA-", maxLength: 15, keyboardType: "numeric" as const },
   { label: "Passport", value: "passport", placeholder: "G1234567", prefix: "", maxLength: 9, keyboardType: "default" as const },
   { label: "Voter ID", value: "voter_id", placeholder: "1234567890", prefix: "", maxLength: 10, keyboardType: "numeric" as const },
-  { label: "Driver's License", value: "drivers_license", placeholder: "12345678", prefix: "", maxLength: 12, keyboardType: "numeric" as const },
+  { label: "Driver's License", value: "drivers_licence", placeholder: "12345678", prefix: "", maxLength: 12, keyboardType: "numeric" as const },
 ];
 
 export default function IdtypeScreen() {
@@ -182,6 +182,7 @@ export default function IdtypeScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="pin" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder={documentType?.placeholder || "Select an ID type first"}
                 placeholderTextColor={Colors.textSecondary}

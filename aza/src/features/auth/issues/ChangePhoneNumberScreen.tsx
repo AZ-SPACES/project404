@@ -11,7 +11,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "ForgotPassword"
+  "ChangePhoneNumber"
 >;
 
 export default function ChangePhoneNumber() {

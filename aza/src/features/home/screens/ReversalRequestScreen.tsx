@@ -25,6 +25,7 @@ import { TransactionItem } from "../../../components/ui/TransactionItem";
 import Button from "../../../components/ui/Button";
 import { RootStackParamList } from "../../../navigation/types";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 const REASON_CATEGORIES = [
   { id: "WRONG_AMOUNT", label: "Wrong Amount" },
@@ -41,7 +42,7 @@ export function ReversalRequestScreen() {
 
   // Selection/form states
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const { data: transactions = [], isLoading: loadingTxs, error: txError } = useQuery({
+  const { data: transactions = [], isLoading: loadingTxs, error: txError, refetch: refetchTxs } = useQuery({
     queryKey: queryKeys.transactions('COMPLETED'),
     queryFn: async () => {
       const res = await getTransactions(0, 50, undefined, "COMPLETED");
@@ -68,9 +69,9 @@ export function ReversalRequestScreen() {
         description: description.trim(),
       });
       setStep("success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Dispute submission error:", err);
-      setSubmitError(err.response?.data?.message || "Failed to submit request. Please try again.");
+      setSubmitError(extractErrorMessage(err, "Failed to submit request. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -116,9 +117,9 @@ export function ReversalRequestScreen() {
         <View style={styles.centerContainer}>
           <Feather name="wifi-off" size={40} color={Colors.border} />
           <Text style={[Typography.h3, { color: Colors.textPrimary, marginTop: Spacing.md, textAlign: "center" }]}>
-            {txError}
+            {txError instanceof Error ? txError.message : "Failed to load transactions"}
           </Text>
-          <TouchableOpacity onPress={fetchCompletedTxs} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => refetchTxs()} style={styles.retryBtn}>
             <Text style={[Typography.body, { color: Colors.primary }]}>Tap to retry</Text>
           </TouchableOpacity>
         </View>
@@ -235,6 +236,7 @@ export function ReversalRequestScreen() {
           {/* Description */}
           <Text style={styles.label}>Explain what went wrong</Text>
           <TextInput
+            underlineColorAndroid="transparent"
             style={[
               styles.textArea,
               {

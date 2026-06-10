@@ -17,6 +17,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 import { RootStackParamList } from '../../../navigation/types';
 import { respondToApp2faApproval } from '../../../services/api';
 import { useToast } from '../../../providers/ToastProvider';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'AppLoginApproval'>;
 type RoutePropType = RouteProp<RootStackParamList, 'AppLoginApproval'>;
@@ -41,8 +42,8 @@ export default function AppLoginApprovalScreen() {
     try {
       await respondToApp2faApproval(requestId, approve);
       setDone(approve ? 'approved' : 'denied');
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'This request has expired or is no longer valid.';
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'This request has expired or is no longer valid.');
       showToast(msg, 'error');
       navigation.goBack();
     } finally {

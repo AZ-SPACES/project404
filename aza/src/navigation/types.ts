@@ -1,3 +1,5 @@
+import type { StorageDetails, Message as ChatMessage } from '../components/chat/chatTypes';
+
 export type RootStackParamList = {
   MainTabs: undefined;
   Onboarding: undefined;
@@ -52,6 +54,7 @@ export type RootStackParamList = {
   TalkToUs: undefined;
   EmailUs: undefined;
   ChatWithUs: undefined;
+  ChatbotScreen: undefined;
   EnableNotification: undefined;
   EnableBiometrics: undefined;
   Send: undefined;
@@ -93,10 +96,10 @@ export type RootStackParamList = {
   BillForwardingDetails: undefined;
   PersonalDetails: undefined;
   PersonalInformation: undefined;
-  VerifyPasscode: { onSuccessScreen: keyof RootStackParamList; onSuccessParams?: any };
+  VerifyPasscode: { onSuccessScreen: keyof RootStackParamList; onSuccessParams?: Record<string, unknown> };
   ChangeEmail: undefined;
   ChangePhone: undefined;
-  ChatScreen: { id: string; name: string; avatar: string; online: boolean; sentMedia?: any[] | undefined; forwardedMessage?: any };
+  ChatScreen: { id: string; name: string; avatar: string; online: boolean; payIdentifier?: string; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage; quickReply?: string };
   Hub: undefined;
   MiniApp: { appId: string };
   ContactsProfile: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
@@ -115,14 +118,15 @@ export type RootStackParamList = {
   ReversalRequest: undefined;
   AddFriends: undefined;
   RequestPending: undefined;
-  ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: any };
+  ChatInfoScreen: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string; mediaCount?: number; storageStats?: StorageDetails };
+  ChatThemeScreen: { chatId: string; name: string };
   AudioCall: { callId?: string; name: string; avatar: string };
   VideoCall: { callId?: string; name: string; avatar: string };
   IncomingCall: undefined;
   StarredMessages: undefined;
-  SharedMedia: undefined;
-  ManageStorage: { storageStats?: any } | undefined;
-  MessageInfo: { message: any };
+  SharedMedia: { chatId?: string | undefined; otherUserName?: string | undefined } | undefined;
+  ManageStorage: { storageStats?: StorageDetails } | undefined;
+  MessageInfo: { message: ChatMessage };
   DeleteAccount: undefined;
   MerchantBusinessName: undefined;
   MerchantBusinessCategory: { businessName: string; businessHandle: string };
@@ -140,4 +144,11 @@ export type RootStackParamList = {
   FinancialDashboard: undefined;
   BudgetManagement: undefined;
   AiAssistant: undefined;
+  QrLoginApproval: { challengeToken: string; siteType: string; siteName: string; oauthClientId?: string; oauthScopes?: string };
+  GeoBlocked: undefined;
+  ConnectedApps: undefined;
+  MerchantCheckout: { sessionId: string };
+  OAuthPaymentApproval: { sessionId: string };
+  BroadcastScreen: { preselected?: string[] };
+  SavedMessagesScreen: undefined;
 };

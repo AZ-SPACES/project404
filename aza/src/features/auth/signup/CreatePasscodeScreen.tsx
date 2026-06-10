@@ -178,6 +178,7 @@ export default function CreatePasscodeScreen() {
 
               {/* Hidden Input */}
               <TextInput
+                underlineColorAndroid="transparent"
                 ref={inputRef}
                 value={passcode}
                 onChangeText={handleTextChange}

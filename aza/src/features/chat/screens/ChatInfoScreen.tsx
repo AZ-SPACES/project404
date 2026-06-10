@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,47 +8,51 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  Switch,
+  ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
-import { ChatThemeModal, DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
-import { formatBytes, StorageDetails } from "../../../components/chat/chatTypes";
+import { DisappearingMessagesModal } from "../../../components/chat/ChatSettingsModals";
+import { formatBytes } from "../../../components/chat/chatTypes";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useChatStore } from "../../../store/chatStore";
+import { useContactStore } from "../../../store/contactStore";
+import { useStarredMessagesStore } from "../../../store/starredMessagesStore";
+import { useChatThemeStore } from "../../../store/chatThemeStore";
 import { useE2EE } from "../../../providers/E2EEProvider";
-import { setDisappearingMessages as apiSetDisappearing } from "../../../services/api";
+import { blockUser } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { useMediaAutoSaveStore } from '../../../store/mediaAutoSaveStore';
+import { useReadReceiptsStore } from '../../../store/readReceiptsStore';
+import { usePresenceStore } from '../../../store/presenceStore';
+import { useOnlineAlertStore } from '../../../store/onlineAlertStore';
+import * as Notifications from 'expo-notifications';
 
 // ─── Types ──────────────────────────────────────────────────────────
-type ChatInfoParams = {
-  name: string;
-  username: string;
-  avatar: string;
-  phone?: string;
-  status?: string;
-  accountProvider?: string;
-  mediaCount?: number;
-  storageStats?: StorageDetails;
-};
-
 type ChatInfoRouteProp = RouteProp<RootStackParamList, "ChatInfoScreen">;
 
 // ─── Row component for settings-style items ─────────────────────────
 type SettingsRowProps = {
   icon: React.ReactNode;
   label: string;
+  subtitle?: string;
   value?: string;
   onPress?: () => void;
+  rightElement?: React.ReactNode;
   Colors: ThemeColors;
 };
 
-function SettingsRow({ icon, label, value, onPress, Colors }: SettingsRowProps) {
+function SettingsRow({ icon, label, subtitle, value, onPress, rightElement, Colors }: SettingsRowProps) {
   return (
     <TouchableOpacity
       style={{
@@ -57,33 +61,42 @@ function SettingsRow({ icon, label, value, onPress, Colors }: SettingsRowProps) 
         paddingVertical: 14,
         paddingHorizontal: Spacing.lg,
       }}
-      activeOpacity={0.7}
+      activeOpacity={onPress ? 0.7 : 1}
       onPress={onPress}
       disabled={!onPress}
     >
       <View style={{ width: 28, alignItems: "center" }}>{icon}</View>
-      <Text
-        style={{
-          ...Typography.bodyLg,
-          color: Colors.textPrimary,
-          flex: 1,
-          marginLeft: 12,
-        }}
-      >
-        {label}
-      </Text>
-      {value ? (
+      <View style={{ flex: 1, marginLeft: 12 }}>
         <Text
           style={{
-            ...Typography.body,
-            color: Colors.textSecondary,
-            marginRight: 4,
+            ...Typography.bodyLg,
+            color: Colors.textPrimary,
           }}
         >
-          {value}
+          {label}
         </Text>
-      ) : null}
-      <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
+        {subtitle ? (
+          <Text style={{ ...Typography.caption, color: Colors.textSecondary, marginTop: 1 }}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {rightElement ?? (
+        <>
+          {value ? (
+            <Text
+              style={{
+                ...Typography.body,
+                color: Colors.textSecondary,
+                marginRight: 4,
+              }}
+            >
+              {value}
+            </Text>
+          ) : null}
+          {onPress && <Feather name="chevron-right" size={18} color={Colors.textSecondary} />}
+        </>
+      )}
     </TouchableOpacity>
   );
 }
@@ -141,6 +154,21 @@ function DetailRow({ label, value, copyable, Colors }: DetailRowProps) {
   );
 }
 
+// Map TTL seconds → display label
+const LABEL_BY_TTL: Record<number, string> = {
+  0: "Off",
+  86400: "24 hours",
+  604800: "7 days",
+  7776000: "90 days",
+};
+
+const TTL_BY_LABEL: Record<string, number> = {
+  Off: 0,
+  "24 hours": 86400,
+  "7 days": 604800,
+  "90 days": 7776000,
+};
+
 // ─── Main Screen ────────────────────────────────────────────────────
 export default function ChatInfoScreen() {
   const { colors: Colors } = useAppTheme();
@@ -150,36 +178,109 @@ export default function ChatInfoScreen() {
 
   const {
     id: chatIdParam,
-    name,
-    username,
-    avatar,
-    phone = "+233 55 219 4339",
-    status = "Available",
-    accountProvider = "Aza Finance",
+    name: paramName,
+    username: paramUsername,
+    avatar: paramAvatar,
+    phone: paramPhone,
+    status: paramStatus,
     mediaCount = 0,
     storageStats,
   } = route.params;
 
-  const [nickname, setNickname] = useState<string | null>(null);
-  const [showThemeModal, setShowThemeModal] = useState(false);
-  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
-  const [disappearingTimer, setDisappearingTimer] = useState("Off");
-
-  // ── E2EE verification helpers ─────────────────────────────────────────
-  const { computeSafetyNumber, identity } = useE2EE();
+  // ── Store selectors ───────────────────────────────────────────────
   const chats = useChatStore((s) => s.chats);
   const peerKeys = useChatStore((s) => s.peerKeys);
   const ensurePeerKeys = useChatStore((s) => s.ensurePeerKeys);
+  const storeMuteChat = useChatStore((s) => s.muteChat);
+  const storeArchiveChat = useChatStore((s) => s.archiveChat);
+  const storeSetDisappearingTtl = useChatStore((s) => s.setDisappearingTtl);
+  const clearChatMessages = useChatStore((s) => s.clearChatMessages);
+  const messagesByChat = useChatStore((s) => s.messagesByChat);
 
-  // The route param `id` carries chatId (set by ChatScreen.handleProfilePress).
-  // Look it up to recover otherUserId so we can fetch their identity public key.
+  const contacts = useContactStore((s) => s.contacts);
+
+  const loadStarred = useStarredMessagesStore((s) => s.load);
+  const starredCount = useStarredMessagesStore((s) =>
+    chatIdParam ? s.entries.filter((e) => e.chatId === chatIdParam).length : 0,
+  );
+
+  const loadTheme = useChatThemeStore((s) => s.load);
+
+  useEffect(() => {
+    loadStarred();
+    loadTheme();
+  }, [loadStarred, loadTheme]);
+
+  // The route param `id` carries chatId. Resolve live data from the store.
   const chat = chatIdParam ? chats[chatIdParam] : undefined;
   const otherUserId = chat?.otherUserId;
   const peer = otherUserId ? peerKeys[otherUserId] : undefined;
 
+  // Prefer live store data over the (potentially stale) route params
+  const name = chat?.otherUserName ?? paramName;
+  const username = chat?.otherUserHandle ?? paramUsername;
+  const avatar = chat?.otherUserAvatar ?? paramAvatar;
+  const status = chat?.otherUserStatus ?? paramStatus ?? "Available";
+  const isMuted = chat?.isMuted ?? false;
+  const isArchived = chat?.isArchived ?? false;
+
+  // Phone: look up from local contact store by userId, fall back to route param
+  const phone = React.useMemo(() => {
+    if (paramPhone) return paramPhone;
+    const contact = contacts.find((c) => c.contactUserId === otherUserId);
+    return contact?.phoneNumber ?? null;
+  }, [contacts, otherUserId, paramPhone]);
+
+  // ── UI state ──────────────────────────────────────────────────────
+  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
+  const [disappearingTimer, setDisappearingTimer] = useState("Off");
+  const [mutePending, setMutePending] = useState(false);
+  const [archivePending, setArchivePending] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
+
+  const autoSaveEnabled = useMediaAutoSaveStore(s => chatIdParam ? s.isEnabled(chatIdParam) : false);
+  const setAutoSave = useMediaAutoSaveStore(s => s.setEnabled);
+
+  const readReceiptsEnabled = useReadReceiptsStore(s => chatIdParam ? s.isEnabled(chatIdParam) : true);
+  const setReadReceipts = useReadReceiptsStore(s => s.setEnabled);
+
+  // ── Online alert ──────────────────────────────────────────────────
+  const isUserOnline = usePresenceStore(s => s.isOnline(otherUserId ?? ''));
+  const onlineAlertEnabled = useOnlineAlertStore(s => s.isEnabled(otherUserId ?? ''));
+  const setOnlineAlert = useOnlineAlertStore(s => s.setEnabled);
+  const wasOnlineRef = useRef<boolean>(isUserOnline);
+
+  useEffect(() => {
+    const prev = wasOnlineRef.current;
+    if (!prev && isUserOnline && onlineAlertEnabled && otherUserId) {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${name} is online`,
+          body: 'Tap to open chat',
+          sound: true,
+        },
+        trigger: null,
+      }).catch(() => {});
+    }
+    wasOnlineRef.current = isUserOnline;
+  }, [isUserOnline, onlineAlertEnabled, otherUserId, name]);
+
+  // ── E2EE verification ─────────────────────────────────────────────
+  const { computeSafetyNumber, identity } = useE2EE();
+
   useEffect(() => {
     if (otherUserId && !peer) ensurePeerKeys(otherUserId).catch(() => {});
   }, [otherUserId, peer, ensurePeerKeys]);
+
+  // Sync disappearing timer label from live store state
+  useEffect(() => {
+    const ttl = chat?.disappearingTtlSeconds;
+    if (ttl === undefined || ttl === null) {
+      setDisappearingTimer("Off");
+      return;
+    }
+    setDisappearingTimer(LABEL_BY_TTL[ttl] ?? `${ttl}s`);
+  }, [chat?.disappearingTtlSeconds]);
 
   const safetyNumberValue = React.useMemo(() => {
     if (!peer || !identity) return null;
@@ -217,15 +318,7 @@ export default function ChatInfoScreen() {
     );
   };
 
-  // Map TTL label → seconds. Reversed in initial state below.
-  const TTL_BY_LABEL: Record<string, number> = {
-    Off: 0,
-    "24 hours": 24 * 60 * 60,
-    "7 days": 7 * 24 * 60 * 60,
-    "90 days": 90 * 24 * 60 * 60,
-  };
-
-  // Derive initials for fallback avatar
+  // ── Actions ───────────────────────────────────────────────────────
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -245,20 +338,117 @@ export default function ChatInfoScreen() {
     Alert.alert("Share", `Share ${name}'s profile`);
   };
 
-  const handleDeleteRecipient = () => {
+  const handleMuteToggle = useCallback(async () => {
+    if (!chatIdParam || mutePending) return;
+    setMutePending(true);
+    try {
+      await storeMuteChat(chatIdParam, !isMuted);
+    } catch {
+      Alert.alert("Error", "Couldn't update notification settings. Please try again.");
+    } finally {
+      setMutePending(false);
+    }
+  }, [chatIdParam, isMuted, mutePending, storeMuteChat]);
+
+  const handleArchiveToggle = useCallback(async () => {
+    if (!chatIdParam || archivePending) return;
+    setArchivePending(true);
+    try {
+      await storeArchiveChat(chatIdParam, !isArchived);
+      if (!isArchived) {
+        Alert.alert("Chat archived", `${name} has been moved to your archive.`);
+        navigation.goBack();
+      }
+    } catch {
+      Alert.alert("Error", "Couldn't update archive. Please try again.");
+    } finally {
+      setArchivePending(false);
+    }
+  }, [chatIdParam, isArchived, archivePending, storeArchiveChat, name, navigation]);
+
+  const handleDisappearingSelect = useCallback(async (val: string) => {
+    setDisappearingTimer(val);
+    setShowDisappearingModal(false);
+    const ttl = TTL_BY_LABEL[val] ?? 0;
+    if (chatIdParam) {
+      try {
+        await storeSetDisappearingTtl(chatIdParam, ttl);
+      } catch {
+        Alert.alert("Couldn't update", "Disappearing message setting failed. Please try again.");
+        // Revert optimistic label
+        const current = chat?.disappearingTtlSeconds;
+        setDisappearingTimer(current ? (LABEL_BY_TTL[current] ?? `${current}s`) : "Off");
+      }
+    }
+  }, [chatIdParam, storeSetDisappearingTtl, chat?.disappearingTtlSeconds]);
+
+  const handleSaveProfilePhoto = useCallback(async () => {
+    if (!avatar) { Alert.alert("No photo", "This contact has no profile photo."); return; }
+    const perm = await MediaLibrary.requestPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission denied", "Allow media access to save photos."); return; }
+    try {
+      await MediaLibrary.saveToLibraryAsync(avatar);
+      Alert.alert("Saved", "Profile photo saved to your Photos.");
+    } catch {
+      Alert.alert("Save failed", "Could not save this photo.");
+    }
+  }, [avatar]);
+
+  const handleBlockRecipient = useCallback(() => {
+    if (!otherUserId) return;
     Alert.alert(
-      "Delete recipient",
-      `Are you sure you want to remove ${name} from your contacts?`,
+      "Block & remove",
+      `Are you sure you want to block ${name}? They won't be able to message or pay you.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Block",
           style: "destructive",
-          onPress: () => navigation.goBack(),
+          onPress: async () => {
+            setBlockPending(true);
+            try {
+              await blockUser(otherUserId);
+              navigation.goBack();
+            } catch {
+              Alert.alert("Error", "Couldn't block this user. Please try again.");
+            } finally {
+              setBlockPending(false);
+            }
+          },
         },
       ]
     );
-  };
+  }, [otherUserId, name, navigation]);
+
+  const handleExportChat = useCallback(async () => {
+    if (!chatIdParam) return;
+    const msgs = messagesByChat[chatIdParam] ?? [];
+    if (msgs.length === 0) {
+      Alert.alert('Nothing to export', 'This chat has no messages yet.');
+      return;
+    }
+    const lines = msgs
+      .filter(m => !m.isDeleted)
+      .map(m => {
+        const d = new Date(m.timestamp);
+        const date = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const sender = m.isSelf ? 'You' : name;
+        const body = m.text || `[${m.type.toLowerCase()}]`;
+        return `[${date}, ${time}] ${sender}: ${body}`;
+      });
+    const header = `Chat with ${name}\nExported on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n${'─'.repeat(40)}\n\n`;
+    const content = header + lines.join('\n');
+    const path = `${FileSystem.cacheDirectory ?? ''}chat_${name.replace(/\s+/g, '_')}_${Date.now()}.txt`;
+    try {
+      await FileSystem.writeAsStringAsync(path, content, { encoding: FileSystem.EncodingType.UTF8 });
+      await Sharing.shareAsync(path, { mimeType: 'text/plain', dialogTitle: `Export chat with ${name}` });
+    } catch {
+      Alert.alert('Export failed', 'Could not export the chat. Please try again.');
+    } finally {
+      FileSystem.deleteAsync(path, { idempotent: true }).catch(() => {});
+    }
+  }, [chatIdParam, messagesByChat, name]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -271,9 +461,7 @@ export default function ChatInfoScreen() {
       <View style={styles.headerBar}>
         <BackButton onPress={() => navigation.goBack()} size={22} />
         <Text style={styles.headerTitle}>Contact info</Text>
-        <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.editText}>Edit</Text>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -282,16 +470,25 @@ export default function ChatInfoScreen() {
       >
         {/* ── Avatar & identity ───────────────────────── */}
         <View style={styles.profileSection}>
-          {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            activeOpacity={avatar ? 0.85 : 1}
+            onLongPress={avatar ? () => Alert.alert(name, undefined, [
+              { text: "Save to Photos", onPress: handleSaveProfilePhoto },
+              { text: "Cancel", style: "cancel" },
+            ]) : undefined}
+            delayLongPress={350}
+          >
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.name}>{name}</Text>
-          <Text style={styles.username}>{username}</Text>
-          <Text style={styles.phoneNumber}>{phone}</Text>
+          {username ? <Text style={styles.username}>@{username}</Text> : null}
+          {phone ? <Text style={styles.phoneNumber}>{phone}</Text> : null}
           {status ? <Text style={styles.status}>{status}</Text> : null}
         </View>
 
@@ -340,12 +537,22 @@ export default function ChatInfoScreen() {
             copyable
             Colors={Colors}
           />
-          <DetailRow
-            label="Username"
-            value={username}
-            copyable
-            Colors={Colors}
-          />
+          {username ? (
+            <DetailRow
+              label="Username"
+              value={`@${username}`}
+              copyable
+              Colors={Colors}
+            />
+          ) : null}
+          {phone ? (
+            <DetailRow
+              label="Phone number"
+              value={phone}
+              copyable
+              Colors={Colors}
+            />
+          ) : null}
         </View>
 
         {/* ── Media & storage section ─────────────────── */}
@@ -355,7 +562,7 @@ export default function ChatInfoScreen() {
             label="Media, links and docs"
             value={mediaCount.toString()}
             Colors={Colors}
-            onPress={() => navigation.navigate("SharedMedia" as any)}
+            onPress={() => navigation.navigate("SharedMedia", { chatId: chatIdParam, otherUserName: name })}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
@@ -363,15 +570,22 @@ export default function ChatInfoScreen() {
             label="Manage storage"
             value={storageStats?.totalSize ? formatBytes(storageStats.totalSize) : "0 B"}
             Colors={Colors}
-            onPress={() => navigation.navigate("ManageStorage" as any, { storageStats })}
+            onPress={() => navigation.navigate("ManageStorage", storageStats ? { storageStats } : undefined)}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
             icon={<Feather name="star" size={20} color={Colors.textPrimary} />}
             label="Starred"
-            value="None"
+            value={starredCount > 0 ? starredCount.toString() : "None"}
             Colors={Colors}
-            onPress={() => navigation.navigate("StarredMessages" as any)}
+            onPress={() => navigation.navigate("StarredMessages")}
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="download" size={20} color={Colors.textPrimary} />}
+            label="Export chat"
+            Colors={Colors}
+            onPress={handleExportChat}
           />
         </View>
 
@@ -379,22 +593,73 @@ export default function ChatInfoScreen() {
         <View style={styles.sectionCard}>
           <SettingsRow
             icon={<Ionicons name="notifications-outline" size={20} color={Colors.textPrimary} />}
-            label="Notifications"
+            label="Mute notifications"
             Colors={Colors}
+            rightElement={
+              mutePending ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Switch
+                  value={isMuted}
+                  onValueChange={handleMuteToggle}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor={Colors.white}
+                />
+              )
+            }
           />
           <View style={styles.rowDivider} />
           <SettingsRow
             icon={<MaterialCommunityIcons name="palette-outline" size={20} color={Colors.textPrimary} />}
             label="Chat theme"
             Colors={Colors}
-            onPress={() => setShowThemeModal(true)}
+            onPress={() => {
+              if (chatIdParam) navigation.navigate('ChatThemeScreen', { chatId: chatIdParam, name });
+            }}
           />
           <View style={styles.rowDivider} />
           <SettingsRow
             icon={<Feather name="download" size={20} color={Colors.textPrimary} />}
             label="Save to Photos"
-            value="Default"
             Colors={Colors}
+            rightElement={
+              <Switch
+                value={autoSaveEnabled}
+                onValueChange={(val) => { if (chatIdParam) setAutoSave(chatIdParam, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="check-circle" size={20} color={Colors.textPrimary} />}
+            label="Read receipts"
+            subtitle="Let contacts know when you've read their messages"
+            Colors={Colors}
+            rightElement={
+              <Switch
+                value={readReceiptsEnabled}
+                onValueChange={(val) => { if (chatIdParam) setReadReceipts(chatIdParam, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
+          />
+          <View style={styles.rowDivider} />
+          <SettingsRow
+            icon={<Feather name="bell" size={20} color={Colors.textPrimary} />}
+            label="Notify when online"
+            subtitle="Get an alert when this contact comes online"
+            Colors={Colors}
+            rightElement={
+              <Switch
+                value={onlineAlertEnabled}
+                onValueChange={(val) => { if (otherUserId) setOnlineAlert(otherUserId, val); }}
+                trackColor={{ false: Colors.border, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            }
           />
         </View>
 
@@ -430,30 +695,67 @@ export default function ChatInfoScreen() {
           />
         </View>
 
-        {/* ── Account settings / delete ───────────────── */}
+        {/* ── Account settings / dangerous actions ────── */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionHeader}>Account settings</Text>
+
+          {/* Archive toggle */}
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={styles.dangerRow}
             activeOpacity={0.8}
-            onPress={handleDeleteRecipient}
+            onPress={handleArchiveToggle}
+            disabled={archivePending}
           >
-            <Text style={styles.deleteButtonText}>Delete recipient</Text>
+            {archivePending ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Text style={[styles.dangerRowText, { color: Colors.primary }]}>
+                {isArchived ? "Unarchive chat" : "Archive chat"}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* Clear chat */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            activeOpacity={0.8}
+            onPress={() => {
+              Alert.alert(
+                'Clear Chat',
+                'All messages will be removed from your device. They can be reloaded from the server.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Clear', style: 'destructive', onPress: () => {
+                    if (chatIdParam) clearChatMessages(chatIdParam);
+                  }},
+                ],
+              );
+            }}
+          >
+            <Text style={[styles.dangerRowText, { color: '#F59E0B' }]}>Clear chat</Text>
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* Block & remove */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            activeOpacity={0.8}
+            onPress={handleBlockRecipient}
+            disabled={blockPending || !otherUserId}
+          >
+            {blockPending ? (
+              <ActivityIndicator size="small" color={Colors.error} />
+            ) : (
+              <Text style={styles.dangerRowText}>Block & remove</Text>
+            )}
           </TouchableOpacity>
         </View>
 
         <View style={{ height: Spacing.xl * 2 }} />
       </ScrollView>
-
-      <ChatThemeModal
-        visible={showThemeModal}
-        isDark={Colors.isDark}
-        Colors={Colors}
-        onClose={() => setShowThemeModal(false)}
-        onSelectTheme={(theme) => {
-          Alert.alert("Theme Selected", `Theme set to ${theme}`);
-        }}
-      />
 
       <DisappearingMessagesModal
         visible={showDisappearingModal}
@@ -461,16 +763,7 @@ export default function ChatInfoScreen() {
         isDark={Colors.isDark}
         Colors={Colors}
         onClose={() => setShowDisappearingModal(false)}
-        onSelect={(val) => {
-          setDisappearingTimer(val);
-          setShowDisappearingModal(false);
-          const ttl = TTL_BY_LABEL[val];
-          if (chatIdParam && typeof ttl === "number") {
-            apiSetDisappearing(chatIdParam, ttl).catch((e) =>
-              Alert.alert("Couldn't update", e?.message ?? "Network error"),
-            );
-          }
-        }}
+        onSelect={handleDisappearingSelect}
       />
     </SafeAreaView>
   );
@@ -493,23 +786,10 @@ function createStyles(Colors: ThemeColors) {
       paddingHorizontal: Spacing.lg,
       paddingVertical: 12,
     },
-    backButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: isDark ? Colors.surface : Colors.white,
-    },
     headerTitle: {
       ...Typography.bodyLg,
       fontWeight: "600",
       color: Colors.textPrimary,
-    },
-    editText: {
-      ...Typography.bodyLg,
-      fontWeight: "600",
-      color: Colors.primary,
     },
 
     scrollContent: {
@@ -608,32 +888,16 @@ function createStyles(Colors: ThemeColors) {
     rowDivider: {
       height: 1,
       backgroundColor: Colors.border,
-      marginLeft: Spacing.lg + 28 + 12, // icon width + gap
+      marginLeft: Spacing.lg + 28 + 12,
     },
 
-    // Nickname button
-    nicknameButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-      backgroundColor: Colors.primary,
-    },
-    nicknameButtonText: {
-      ...Typography.caption,
-      fontWeight: "600",
-      color: Colors.secondary,
-    },
-
-    // Delete
-    deleteButton: {
-      marginHorizontal: Spacing.md,
-      marginVertical: Spacing.md,
-      paddingVertical: 14,
-      borderRadius: 8,
+    // Dangerous action rows (archive / block)
+    dangerRow: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 16,
       alignItems: "center",
-      backgroundColor: isDark ? "rgba(234,67,53,0.15)" : "rgba(234,67,53,0.1)",
     },
-    deleteButtonText: {
+    dangerRowText: {
       ...Typography.button,
       color: Colors.error,
       fontWeight: "600",

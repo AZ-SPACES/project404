@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, EyeOff, QrCode, RefreshCw } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 type Step = 'credentials' | 'otp' | 'totp';
+type LoginMode = 'password' | 'qr';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -15,9 +16,18 @@ interface ApiResponse<T> {
   error?: { code: string; message: string };
 }
 
+interface QrSession {
+  challengeToken: string;
+  sessionSecret: string;
+  qrImageBase64: string;
+  expiresAt: string;
+  ttlSeconds: number;
+}
+
 export default function DevLoginPage() {
   const router = useRouter();
 
+  // ── Password login state ─────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>('credentials');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +38,18 @@ export default function DevLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // ── QR login state ───────────────────────────────────────────────────────────
+  const [mode, setMode] = useState<LoginMode>('password');
+  const [qrSession, setQrSession] = useState<QrSession | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState('');
+  const [qrStatus, setQrStatus] = useState<'PENDING' | 'APPROVED' | 'EXPIRED'>('PENDING');
+  const [qrSecondsLeft, setQrSecondsLeft] = useState(0);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const expireRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     const res = await fetch(`${API}${path}`, {
       method: 'POST',
@@ -37,7 +59,99 @@ export default function DevLoginPage() {
     return res.json();
   }
 
-  // Step 1: email/phone + password → triggers OTP
+  function finalize(token: string) {
+    sessionStorage.setItem('aza_dev_token', token);
+    router.push('/developers/api-explorer');
+  }
+
+  // ── QR session management ────────────────────────────────────────────────────
+  const stopQr = useCallback(() => {
+    if (pollRef.current)     { clearInterval(pollRef.current);     pollRef.current = null; }
+    if (expireRef.current)   { clearTimeout(expireRef.current);    expireRef.current = null; }
+    if (countdownRef.current){ clearInterval(countdownRef.current); countdownRef.current = null; }
+  }, []);
+
+  const startQrSession = useCallback(async () => {
+    stopQr();
+    setQrLoading(true);
+    setQrError('');
+    setQrStatus('PENDING');
+    setQrSession(null);
+    try {
+      const res = await fetch(`${API}/api/v1/auth/qr-login/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteType: 'DEVELOPER' }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.success) {
+        setQrError(body.error?.message ?? 'Failed to generate QR code');
+        return;
+      }
+      const session: QrSession = body.data;
+      setQrSession(session);
+      setQrSecondsLeft(session.ttlSeconds);
+
+      // Countdown timer
+      countdownRef.current = setInterval(() => {
+        setQrSecondsLeft(s => Math.max(0, s - 1));
+      }, 1000);
+
+      // Poll for status every 2 seconds
+      pollRef.current = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${API}/api/v1/auth/qr-login/status/${session.challengeToken}`);
+          const statusBody = await statusRes.json();
+          const status: string = statusRes.ok && statusBody.success ? statusBody.data.status : 'EXPIRED';
+          setQrStatus(status as 'PENDING' | 'APPROVED' | 'EXPIRED');
+
+          if (status === 'APPROVED') {
+            stopQr();
+            try {
+              const completeRes = await fetch(`${API}/api/v1/auth/qr-login/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ challengeToken: session.challengeToken, sessionSecret: session.sessionSecret }),
+              });
+              const completeBody = await completeRes.json();
+              if (!completeRes.ok || !completeBody.success) {
+                setQrError(completeBody.error?.message ?? 'QR login failed');
+                return;
+              }
+              finalize(completeBody.data.accessToken);
+            } catch {
+              setQrError('Failed to complete login. Please try again.');
+            }
+          } else if (status === 'EXPIRED') {
+            stopQr();
+          }
+        } catch {
+          setQrError('Connection issue. Retrying…');
+        }
+      }, 2000);
+
+      // Auto-expire UI when TTL runs out
+      expireRef.current = setTimeout(() => {
+        stopQr();
+        setQrStatus('EXPIRED');
+      }, session.ttlSeconds * 1000);
+    } catch {
+      setQrError('Could not reach the API. Make sure the backend is running.');
+    } finally {
+      setQrLoading(false);
+    }
+  }, [API, stopQr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (mode === 'qr') {
+      startQrSession();
+    } else {
+      stopQr();
+    }
+    return () => stopQr();
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Password login handlers ──────────────────────────────────────────────────
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -56,7 +170,6 @@ export default function DevLoginPage() {
     }
   }
 
-  // Step 2: verify OTP
   async function handleOtp(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -86,7 +199,6 @@ export default function DevLoginPage() {
     }
   }
 
-  // Step 3: TOTP (2FA)
   async function handleTotp(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -108,11 +220,7 @@ export default function DevLoginPage() {
     }
   }
 
-  function finalize(token: string) {
-    sessionStorage.setItem('aza_dev_token', token);
-    router.push('/developers/api-explorer');
-  }
-
+  // ── Step indicator (password flow only) ─────────────────────────────────────
   const stepIndex = step === 'credentials' ? 0 : step === 'otp' ? 1 : 2;
   const steps = ['Credentials', 'Verification', '2FA'];
 
@@ -143,257 +251,386 @@ export default function DevLoginPage() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
             <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => (
-            <React.Fragment key={s}>
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
-                  style={
-                    i < stepIndex
-                      ? { background: '#B7EE7A', color: '#174717' }
-                      : i === stepIndex
-                      ? { background: 'rgba(183,238,122,0.25)', border: '1.5px solid #B7EE7A', color: '#B7EE7A' }
-                      : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }
-                  }
-                >
-                  {i < stepIndex ? '✓' : i + 1}
-                </div>
-                <span
-                  className="text-xs font-medium hidden sm:block"
-                  style={{ color: i === stepIndex ? '#B7EE7A' : 'rgba(255,255,255,0.25)' }}
-                >
-                  {s}
-                </span>
-              </div>
-              {i < steps.length - 1 && (
-                <div
-                  className="flex-1 h-px"
-                  style={{ background: i < stepIndex ? 'rgba(183,238,122,0.4)' : 'rgba(255,255,255,0.08)' }}
-                />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* ── Step 1: Credentials ── */}
+        {/* Mode toggle — only on the first password step */}
         {step === 'credentials' && (
-          <form onSubmit={handleCredentials} className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                Sign in to the API Explorer
-              </h1>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Use your AZA account credentials.
-              </p>
-            </div>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                Email or phone
-              </span>
-              <input
-                type="text"
-                autoComplete="username"
-                placeholder="you@example.com"
-                value={identifier}
-                onChange={e => setIdentifier(e.target.value)}
-                required
-                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-              />
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                Password
-              </span>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </label>
-
-            {error && (
-              <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                {error}
-              </p>
-            )}
-
+          <div
+            className="flex rounded-xl overflow-hidden mb-6"
+            style={{ border: '1px solid rgba(183,238,122,0.15)' }}
+          >
             <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-              style={{ background: '#B7EE7A', color: '#174717' }}
+              type="button"
+              onClick={() => { setMode('password'); setError(''); }}
+              className="flex-1 py-2 text-sm font-semibold transition-all"
+              style={
+                mode === 'password'
+                  ? { background: '#B7EE7A', color: '#174717' }
+                  : { background: 'transparent', color: 'rgba(255,255,255,0.4)' }
+              }
             >
-              {loading && <Loader2 size={15} className="animate-spin" />}
-              Continue
+              Password
             </button>
-
-            <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              Don't have an account?{' '}
-              <a href="/developers/signup" style={{ color: '#B7EE7A', fontWeight: 600 }}>
-                Sign up
-              </a>
-            </p>
-          </form>
+            <button
+              type="button"
+              onClick={() => setMode('qr')}
+              className="flex-1 py-2 text-sm font-semibold transition-all flex items-center justify-center gap-1.5"
+              style={
+                mode === 'qr'
+                  ? { background: '#B7EE7A', color: '#174717' }
+                  : { background: 'transparent', color: 'rgba(255,255,255,0.4)' }
+              }
+            >
+              <QrCode size={14} />
+              AZA App
+            </button>
+          </div>
         )}
 
-        {/* ── Step 2: OTP ── */}
-        {step === 'otp' && (
-          <form onSubmit={handleOtp} className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                Check your {identifier.includes('@') ? 'email' : 'phone'}
-              </h1>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                We sent a 6-digit code to <strong className="text-white/70">{identifier}</strong>.
-              </p>
-            </div>
+        {/* ── QR Login Panel ── */}
+        {mode === 'qr' && step === 'credentials' && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-center" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              Open the AZA app and scan this code to sign in.
+            </p>
 
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                One-time code
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                autoFocus
-                required
-                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
+            {/* Loading skeleton */}
+            {qrLoading && (
+              <div
+                className="flex items-center justify-center rounded-2xl"
                 style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontFamily: 'monospace',
-                  fontSize: '1.4rem',
+                  width: 220, height: 220,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(183,238,122,0.1)',
                 }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-              />
-            </label>
-
-            {error && (
-              <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                {error}
-              </p>
+              >
+                <Loader2 size={28} className="animate-spin" style={{ color: 'rgba(183,238,122,0.5)' }} />
+              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || otp.length < 6}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-              style={{ background: '#B7EE7A', color: '#174717' }}
-            >
-              {loading && <Loader2 size={15} className="animate-spin" />}
-              Verify code
-            </button>
+            {/* QR image */}
+            {!qrLoading && qrSession && qrStatus === 'PENDING' && (
+              <>
+                <div
+                  className="rounded-2xl p-2.5"
+                  style={{ background: '#fff', border: '1px solid rgba(183,238,122,0.2)' }}
+                >
+                  <img
+                    src={`data:image/png;base64,${qrSession.qrImageBase64}`}
+                    alt="QR Code"
+                    style={{ width: 200, height: 200, display: 'block' }}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5" style={{ color: 'rgba(183,238,122,0.5)' }}>
+                  <span className="text-xs font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {qrSecondsLeft}s
+                  </span>
+                  <div
+                    className="h-1 rounded-full overflow-hidden"
+                    style={{ width: 80, background: 'rgba(255,255,255,0.08)' }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${(qrSecondsLeft / (qrSession.ttlSeconds || 90)) * 100}%`,
+                        background: qrSecondsLeft > 20 ? '#B7EE7A' : '#f87171',
+                        transition: 'width 1s linear',
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Approved — completing login */}
+            {!qrLoading && qrStatus === 'APPROVED' && (
+              <div className="flex flex-col items-center gap-2 py-6">
+                <Loader2 size={28} className="animate-spin" style={{ color: '#B7EE7A' }} />
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Signing you in…</p>
+              </div>
+            )}
+
+            {/* Expired */}
+            {!qrLoading && qrStatus === 'EXPIRED' && (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>QR code expired.</p>
+                <button
+                  type="button"
+                  onClick={startQrSession}
+                  className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80"
+                  style={{ background: 'rgba(183,238,122,0.12)', color: '#B7EE7A', border: '1px solid rgba(183,238,122,0.2)' }}
+                >
+                  <RefreshCw size={13} />
+                  Refresh QR code
+                </button>
+              </div>
+            )}
+
+            {qrError && qrStatus !== 'APPROVED' && (
+              <p className="text-sm text-center px-2" style={{ color: '#f87171' }}>{qrError}</p>
+            )}
 
             <button
               type="button"
-              onClick={() => { setStep('credentials'); setOtp(''); setError(''); }}
-              className="text-sm text-center transition-colors"
-              style={{ color: 'rgba(255,255,255,0.35)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+              onClick={() => setMode('password')}
+              className="text-sm transition-colors"
+              style={{ color: 'rgba(255,255,255,0.3)' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
             >
-              ← Back
+              Sign in with password instead
             </button>
-          </form>
+          </div>
         )}
 
-        {/* ── Step 3: TOTP ── */}
-        {step === 'totp' && (
-          <form onSubmit={handleTotp} className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                Authenticator app
-              </h1>
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Enter the 6-digit code from your authenticator app.
-              </p>
+        {/* ── Password flow ── */}
+        {mode === 'password' && (
+          <>
+            {/* Step indicator */}
+            <div className="flex items-center gap-2 mb-8">
+              {steps.map((s, i) => (
+                <React.Fragment key={s}>
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
+                      style={
+                        i < stepIndex
+                          ? { background: '#B7EE7A', color: '#174717' }
+                          : i === stepIndex
+                          ? { background: 'rgba(183,238,122,0.25)', border: '1.5px solid #B7EE7A', color: '#B7EE7A' }
+                          : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }
+                      }
+                    >
+                      {i < stepIndex ? '✓' : i + 1}
+                    </div>
+                    <span
+                      className="text-xs font-medium hidden sm:block"
+                      style={{ color: i === stepIndex ? '#B7EE7A' : 'rgba(255,255,255,0.25)' }}
+                    >
+                      {s}
+                    </span>
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div
+                      className="flex-1 h-px"
+                      style={{ background: i < stepIndex ? 'rgba(183,238,122,0.4)' : 'rgba(255,255,255,0.08)' }}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
             </div>
 
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                Authenticator code
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="000000"
-                value={totpCode}
-                onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                autoFocus
-                required
-                className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontFamily: 'monospace',
-                  fontSize: '1.4rem',
-                }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-              />
-            </label>
+            {/* ── Step 1: Credentials ── */}
+            {step === 'credentials' && (
+              <form onSubmit={handleCredentials} className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
+                    Sign in to the API Explorer
+                  </h1>
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Use your AZA account credentials.
+                  </p>
+                </div>
 
-            {error && (
-              <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                {error}
-              </p>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                    Email or phone
+                  </span>
+                  <input
+                    type="text"
+                    autoComplete="username"
+                    placeholder="you@example.com"
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                    Password
+                  </span>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
+                      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: 'rgba(255,255,255,0.3)' }}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </label>
+
+                {error && (
+                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
+                  style={{ background: '#B7EE7A', color: '#174717' }}
+                >
+                  {loading && <Loader2 size={15} className="animate-spin" />}
+                  Continue
+                </button>
+
+                <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Don't have an account?{' '}
+                  <a href="/developers/signup" style={{ color: '#B7EE7A', fontWeight: 600 }}>
+                    Sign up
+                  </a>
+                </p>
+              </form>
             )}
 
-            <button
-              type="submit"
-              disabled={loading || totpCode.length < 6}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-              style={{ background: '#B7EE7A', color: '#174717' }}
-            >
-              {loading && <Loader2 size={15} className="animate-spin" />}
-              Sign in
-            </button>
-          </form>
+            {/* ── Step 2: OTP ── */}
+            {step === 'otp' && (
+              <form onSubmit={handleOtp} className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
+                    Check your {identifier.includes('@') ? 'email' : 'phone'}
+                  </h1>
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    We sent a 6-digit code to <strong className="text-white/70">{identifier}</strong>.
+                  </p>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                    One-time code
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    autoFocus
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      fontFamily: 'monospace',
+                      fontSize: '1.4rem',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                </label>
+
+                {error && (
+                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length < 6}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
+                  style={{ background: '#B7EE7A', color: '#174717' }}
+                >
+                  {loading && <Loader2 size={15} className="animate-spin" />}
+                  Verify code
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setStep('credentials'); setOtp(''); setError(''); }}
+                  className="text-sm text-center transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.35)' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+                >
+                  ← Back
+                </button>
+              </form>
+            )}
+
+            {/* ── Step 3: TOTP ── */}
+            {step === 'totp' && (
+              <form onSubmit={handleTotp} className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
+                    Authenticator app
+                  </h1>
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Enter the 6-digit code from your authenticator app.
+                  </p>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+                    Authenticator code
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    autoFocus
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      fontFamily: 'monospace',
+                      fontSize: '1.4rem',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  />
+                </label>
+
+                {error && (
+                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || totpCode.length < 6}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
+                  style={{ background: '#B7EE7A', color: '#174717' }}
+                >
+                  {loading && <Loader2 size={15} className="animate-spin" />}
+                  Sign in
+                </button>
+              </form>
+            )}
+          </>
         )}
       </div>
 

@@ -94,7 +94,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {sessions.map((s) => (
+          {sessions.map((s: any) => (
             <TouchableOpacity 
               key={s.id} 
               style={[styles.sessionRow, { borderColor: Colors.border, backgroundColor: Colors.surface }]}

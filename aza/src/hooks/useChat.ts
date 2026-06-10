@@ -12,12 +12,13 @@
  * keep its components untouched.
  */
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, useReducer } from 'react';
 import { useChatStore } from '../store/chatStore';
 import { useE2EE } from '../providers/E2EEProvider';
 import type { LocalMessage } from '../store/chatTypes';
 import type { Message } from '../components/chat/chatTypes';
 import { formatTime } from '../components/chat/chatTypes';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export type UseChatResult = {
   ready: boolean;
@@ -27,6 +28,8 @@ export type UseChatResult = {
   isOtherTyping: boolean;
   /** Send a plaintext text message. Returns when the optimistic insert is in store; ack happens async. */
   sendText: (text: string) => Promise<void>;
+  /** Upload media to the server and send an encrypted message containing the media URL. */
+  sendMedia: (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => Promise<void>;
   /** Inform peer about typing state. Debounce in the caller. */
   setTyping: (isTyping: boolean) => void;
   /** Mark all messages in this chat as read (call when screen mounts / focuses). */
@@ -74,10 +77,11 @@ function toMessage(m: LocalMessage): Message {
     status,
     type,
     ...(m.mediaKey ? { uri: m.mediaKey } : {}),
+    ...(m.expiresAt ? { expiresAt: m.expiresAt } : {}),
   };
 }
 
-const TYPING_DEBOUNCE_MS = 1200;
+const TYPING_DEBOUNCE_MS = 400;
 
 export function useChat(otherUserId: string | undefined): UseChatResult {
   const { identity, ready: e2eeReady } = useE2EE();
@@ -88,6 +92,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const openChatWithUser = useChatStore((s) => s.openChatWithUser);
   const loadHistory = useChatStore((s) => s.loadHistory);
   const sendTextStore = useChatStore((s) => s.sendText);
+  const sendMediaStore = useChatStore((s) => s.sendMedia);
   const sendTypingStore = useChatStore((s) => s.sendTyping);
   const markReadStore = useChatStore((s) => s.markRead);
   const setDisappearingTtlStore = useChatStore((s) => s.setDisappearingTtl);
@@ -110,8 +115,8 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
         // Pre-fetch peer key bundle so the first send is instant and
         // verification UI works on first open.
         await ensurePeerKeys(otherUserId);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Could not open chat');
+      } catch (e: unknown) {
+        if (!cancelled) setError(extractErrorMessage(e, 'Could not open chat'));
       }
     })();
     return () => {
@@ -124,18 +129,33 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const isOtherTyping = useChatStore((s) => (chatId ? !!s.typingByChat[chatId] : false));
   const peerKeys = useChatStore((s) => (otherUserId ? s.peerKeys[otherUserId] : undefined));
 
+  // Tick every 5 s when the thread has messages with a live TTL so the expiry
+  // filter and the timer badge in the bubble stay current without waiting for
+  // an unrelated re-render to fire first.
+  const [expiryTick, bumpExpiryTick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (!thread) return;
+    const hasLive = thread.some(
+      (m) => typeof m.expiresAt === 'number' && m.expiresAt > Date.now(),
+    );
+    if (!hasLive) return;
+    const id = setInterval(bumpExpiryTick, 5_000);
+    return () => clearInterval(id);
+  }, [thread]);
+
   const messages = useMemo<Message[]>(() => {
     if (!thread) return [];
     const now = Date.now();
+    void expiryTick; // forces recompute each tick without referencing the value
     return thread
-      // Hide disappearing messages whose TTL has elapsed even if the server
-      // tombstone WS frame hasn't reached us yet.
       .filter(
         (m) =>
           !(typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now),
       )
       .map(toMessage);
-  }, [thread]);
+  // expiryTick is intentional — it drives the periodic re-filter
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread, expiryTick]);
 
   const sendText = useCallback(
     async (text: string) => {
@@ -143,6 +163,14 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
       await sendTextStore(chatId, text);
     },
     [chatId, sendTextStore],
+  );
+
+  const sendMedia = useCallback(
+    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => {
+      if (!chatId) return;
+      await sendMediaStore(chatId, mediaKey, mediaType, caption);
+    },
+    [chatId, sendMediaStore],
   );
 
   // Typing indicator with leading + trailing debounce.
@@ -222,6 +250,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     messages,
     isOtherTyping,
     sendText,
+    sendMedia,
     setTyping,
     markRead,
     setDisappearingTtl,

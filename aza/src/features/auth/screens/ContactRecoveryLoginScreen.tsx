@@ -22,6 +22,7 @@ import {
 } from '../../../services/api';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import { extractErrorMessage, getErrorStatus } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'ContactRecoveryLogin'>;
 type RouteType = RouteProp<RootStackParamList, 'ContactRecoveryLogin'>;
@@ -57,7 +58,15 @@ export default function ContactRecoveryLoginScreen() {
   useEffect(() => {
     getAvailableRecoveryContacts(preAuthToken)
       .then(res => setContacts(res.data?.data ?? []))
-      .catch(() => setContacts([]))
+      .catch((err) => {
+        const status = getErrorStatus(err);
+        if (status === 401 || status === 403) {
+          showToast('Your session has expired. Please try logging in again.', 'error');
+          navigation.goBack();
+        } else {
+          setContacts([]);
+        }
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -69,8 +78,14 @@ export default function ContactRecoveryLoginScreen() {
       const rid: string = res.data?.data ?? res.data;
       setRequestId(rid);
       setStep('waiting');
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to send request', 'error');
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Failed to send request'), 'error');
+      }
     } finally {
       setIsSending(false);
     }
@@ -111,16 +126,22 @@ export default function ContactRecoveryLoginScreen() {
       const payload = res.data?.data ?? res.data;
       await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
-      login(
-        payload.accessToken,
-        payload.user?.passcodeSet ?? false,
-        payload.user?.kycStatus === 'VERIFIED',
-        payload.user?.forcePasswordReset ?? false,
-        payload.user?.requireSelfieVerification ?? false,
-        false,
-      );
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Invalid or expired code', 'error');
+      login({
+        token: payload.accessToken,
+        hasPasscode: payload.user?.passcodeSet ?? false,
+        isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+        forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+        requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+        isBiometricsEnabled: false,
+      });
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Invalid or expired code'), 'error');
+      }
     } finally {
       setIsVerifying(false);
     }

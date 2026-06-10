@@ -102,8 +102,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                @Param("start") LocalDateTime start,
                                @Param("end") LocalDateTime end);
 
-    /* Task 1: Full-text search with optional filters */
+    /* Filter by direction: INCOMING = user is recipient */
+    @Query("SELECT t FROM Transaction t WHERE t.recipientId = :userId ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findIncomingByUserId(@Param("userId") UUID userId, Pageable pageable);
+
+    /* Filter by direction: OUTGOING = user is sender */
+    @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findOutgoingByUserId(@Param("userId") UUID userId, Pageable pageable);
+
+    /* Task 1: Full-text search with optional filters, including direction */
     @Query("SELECT t FROM Transaction t WHERE (t.senderId = :userId OR t.recipientId = :userId) " +
+            "AND (:incoming = false OR t.recipientId = :userId) " +
+            "AND (:outgoing = false OR t.senderId = :userId) " +
             "AND (:status IS NULL OR t.status = :status) " +
             "AND (:type IS NULL OR t.type = :type) " +
             "AND (:minAmount IS NULL OR t.amount >= :minAmount) " +
@@ -113,6 +123,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "ORDER BY t.initiatedAt DESC")
     Page<Transaction> searchTransactions(
             @Param("userId") UUID userId,
+            @Param("incoming") boolean incoming,
+            @Param("outgoing") boolean outgoing,
             @Param("status") Transaction.TransactionStatus status,
             @Param("type") Transaction.TransactionType type,
             @Param("minAmount") BigDecimal minAmount,

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import { api } from '../services/api';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 export type PronounOption = 'he/his' | 'she/her' | 'they/them' | 'custom' | null;
 export type EmploymentOption =
@@ -16,6 +17,7 @@ export type YesNo = 'Yes' | 'No' | null;
 
 export type SignupData = {
   phoneNumber: string;
+  countryCode: string;
   email: string;
   password: string;
   firstName: string;
@@ -37,6 +39,7 @@ export type SignupData = {
 
 const INITIAL_DATA: SignupData = {
   phoneNumber: '',
+  countryCode: '+233',
   email: '',
   password: '',
   firstName: '',
@@ -56,15 +59,25 @@ const INITIAL_DATA: SignupData = {
   handle: '',
 };
 
+export type SignupResult = {
+  data?: {
+    accessToken: string;
+    refreshToken: string;
+    preAuthToken?: string;
+  };
+  accessToken?: string;
+  refreshToken?: string;
+  preAuthToken?: string;
+};
+
 interface SignupState {
   data: SignupData;
   isLoading: boolean;
   error: string | null;
 
-  // Actions
   updateData: (partialData: Partial<SignupData>) => void;
   reset: () => void;
-  submitSignup: () => Promise<any>; // Returns response or throws error
+  submitSignup: () => Promise<SignupResult>;
 }
 
 export const useSignupStore = create<SignupState>((set, get) => ({
@@ -95,7 +108,7 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       const payload = {
-        phone: data.phoneNumber,
+        phone: data.countryCode + data.phoneNumber.replace(/\D/g, ''),
         email: data.email,
         password: data.password,
         firstName: data.firstName,
@@ -121,11 +134,10 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       
       set({ isLoading: false });
       return response.data;
-    } catch (error: any) {
-      console.error('Signup failed:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Signup failed';
+    } catch (error: unknown) {
+      const errorMsg = extractErrorMessage(error, 'Signup failed');
       set({ isLoading: false, error: errorMsg });
-      throw error;
+      throw new Error(errorMsg);
     }
   },
 }));

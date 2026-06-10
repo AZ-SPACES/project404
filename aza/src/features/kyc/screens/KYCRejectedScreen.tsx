@@ -32,7 +32,7 @@ export default function KYCRejectedScreen() {
   const handleResubmit = async () => {
     try {
       await resubmit();
-      navigation.navigate('VerifyIdentity');
+      navigation.navigate('VerifyIdentity', {});
     } catch {
       showToast('Could not start resubmission. Please try again.', 'error');
     }

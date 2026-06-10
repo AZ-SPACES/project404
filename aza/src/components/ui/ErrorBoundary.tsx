@@ -24,9 +24,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // In a production app, report to Sentry, Bugsnag, etc.
-    console.error('Uncaught error:', error, errorInfo);
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+    // errors are displayed in the ErrorScreen below
   }
 
   handleReset = () => {

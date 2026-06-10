@@ -8,6 +8,7 @@ import { createMerchantSession } from '../../../../../services/api';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
 import PrimaryButton from '../components/PrimaryButton';
+import { extractErrorMessage } from '../../../../../utils/errorUtils';
 
 export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) {
   const [amount, setAmount] = useState('');
@@ -35,8 +36,8 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
       if (session) {
         setResult(session);
       }
-    } catch (e: any) {
-      const msg = e?.response?.data?.error?.message ?? 'Failed to create payment link.';
+    } catch (e: unknown) {
+      const msg = extractErrorMessage(e, 'Failed to create payment link.');
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);

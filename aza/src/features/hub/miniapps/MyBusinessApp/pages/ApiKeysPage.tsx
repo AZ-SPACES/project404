@@ -125,8 +125,8 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       setNewKeyScopes({ 'sessions:read': false, 'sessions:write': false });
       setShowForm(false);
       invalidateKeys();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create key.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to create key.');
     } finally {
       setCreating(false);
     }
@@ -146,8 +146,8 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       await updateMerchantApiKey(keyId, payload);
       setEditingKeyId(null);
       invalidateKeys();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update key.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to update key.');
     } finally {
       setUpdating(false);
     }
@@ -163,8 +163,8 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
       }
       setRollingKeyId(null);
       invalidateKeys();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to roll key.');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e as any)?.response?.data?.error?.message ?? 'Failed to roll key.');
     } finally {
       setRolling(false);
     }
@@ -198,8 +198,8 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
     ]);
   };
 
-  const filteredKeys = keys.filter((k) => k.environment === activeTab);
-  const activeKeysCount = keys.filter((k) => k.isActive !== false).length;
+  const filteredKeys = keys.filter((k: any) => k.environment === activeTab);
+  const activeKeysCount = keys.filter((k: any) => k.isActive !== false).length;
 
   return (
     <View style={{ flex: 1 }}>
@@ -316,7 +316,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                   </Text>
                 </View>
               ) : (
-                filteredKeys.map((k) => {
+                filteredKeys.map((k: any) => {
                   const isKeyActive = k.isActive !== false;
 
                   // Render inline edit form
@@ -328,6 +328,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>Key Name</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             value={editKeyName}
                             onChangeText={setEditKeyName}
@@ -337,6 +338,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>IP Whitelist (comma-separated)</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
                             placeholderTextColor={Colors.textSecondary}
@@ -405,6 +407,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         <View style={{ marginBottom: Spacing.md }}>
                           <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 }}>Rollover Grace Period (Hours)</Text>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                             value={String(rollGraceHours)}
                             onChangeText={(txt) => setRollGraceHours(Number(txt.replace(/[^0-9]/g, '')) || 24)}
@@ -673,6 +676,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                       IP Whitelist (comma-separated, optional)
                     </Text>
                     <TextInput
+                      underlineColorAndroid="transparent"
                       style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                       placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
                       placeholderTextColor={Colors.textSecondary}
@@ -717,6 +721,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                       Key Name / Label
                     </Text>
                     <TextInput
+                      underlineColorAndroid="transparent"
                       style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.background }]}
                       placeholder="e.g. Production Server Key"
                       placeholderTextColor={Colors.textSecondary}

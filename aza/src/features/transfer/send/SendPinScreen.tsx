@@ -10,7 +10,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import {
   Animated,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Typography, Spacing } from "../../../theme";
@@ -27,6 +27,7 @@ import type { RootStackParamList } from "../../../navigation/types";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { useTransferStore } from "../../../store/transferStore";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type SendPinScreenProps = NativeStackScreenProps<RootStackParamList, "SendPin">;
 
@@ -93,11 +94,11 @@ export default function SendPinScreen({
         await confirmTransfer(pendingTransactionId, enteredPin);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         navigation.replace("SendSuccess", { ...route.params, transactionId: pendingTransactionId });
-      } catch (err: any) {
+      } catch (err: unknown) {
         startShake();
         setPin("");
         // Distinguish wrong PIN from network errors
-        const msg: string = err.message || "Transfer failed. Please try again.";
+        const msg: string = extractErrorMessage(err, "Transfer failed. Please try again.");
         const isWrongPin =
           msg.toLowerCase().includes("passcode") ||
           msg.toLowerCase().includes("pin") ||
@@ -149,6 +150,7 @@ export default function SendPinScreen({
   const renderSquares = () => (
     <View>
       <TextInput
+        underlineColorAndroid="transparent"
         ref={inputRef}
         value={pin}
         onChangeText={handleTextChange}

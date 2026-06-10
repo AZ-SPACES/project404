@@ -1,9 +1,9 @@
 import { Hand, ArrowUp, ArrowDown, ScanLine } from "lucide-react";
 
 const transactions = [
-  { bg: "#4285F4", letter: "J", name: "Jordan",  date: "Today",     amount: "-$45.00",  out: true },
-  { bg: "#B7EE7A", color: "#174717", letter: "M", name: "Maya", date: "Yesterday", amount: "+$120.00", out: false },
-  { bg: "#FF6D00", letter: "S", name: "Sam",     date: "Mon",       amount: "-$30.00",  out: true },
+  { bg: "#4285F4", letter: "J", name: "Jordan",  date: "Today",     amount: "-₵45.00",  out: true },
+  { bg: "#B7EE7A", color: "#174717", letter: "M", name: "Maya", date: "Yesterday", amount: "+₵120.00", out: false },
+  { bg: "#FF6D00", letter: "S", name: "Sam",     date: "Mon",       amount: "-₵30.00",  out: true },
 ] as const;
 
 const actions = [
@@ -36,9 +36,9 @@ export function HomeScreen() {
           className="text-[26px] font-black tracking-tight my-1 m-0"
           style={{ color: "#fff", letterSpacing: "-0.03em" }}
         >
-          $4,280.50
+          ₵4,280.50
         </h2>
-        <p className="text-[11px] m-0" style={{ color: "#B7EE7A" }}>+$120.00 this week</p>
+        <p className="text-[11px] m-0" style={{ color: "#B7EE7A" }}>+₵120.00 this week</p>
       </div>
 
       <div className="flex gap-2 mb-4">

@@ -8,13 +8,15 @@ import {
   TalkToUsScreen,
   EmailUsScreen,
   ChatWithUsScreen,
+  ChatbotScreen,
   HelpAndSupportScreen,
   HelpTopicScreen,
 } from '../features/customercare';
-import { 
-  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, 
-  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen, 
-  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen 
+import {
+  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen,
+  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen,
+  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen,
+  BroadcastScreen, SavedMessagesScreen,
 } from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
@@ -78,6 +80,7 @@ import {
   ChangePhoneScreen,
   DeleteAccountScreen
 } from '../features/profile';
+import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
 import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
 import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
 import WalletFreezeScreen from '../features/profile/screens/WalletFreezeScreen';
@@ -94,6 +97,9 @@ import {
   AppLoginApprovalScreen,
   GenerateRecoveryCodeScreen,
 } from '../features/auth';
+import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
+import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
+import OAuthPaymentApprovalScreen from '../features/scan/screens/OAuthPaymentApprovalScreen';
 import { InboxScreen } from '../features/notifications';
 
 
@@ -131,6 +137,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TalkToUs" component={TalkToUsScreen} />
       <Stack.Screen name="EmailUs" component={EmailUsScreen} />
       <Stack.Screen name="ChatWithUs" component={ChatWithUsScreen} />
+      <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Send" component={SendContactWithBoundary} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Appearance" component={AppearanceScreen} />
@@ -191,7 +198,11 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="ConnectedApps" component={ConnectedAppsScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
+      <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
+      <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />
+      <Stack.Screen name="OAuthPaymentApproval" component={OAuthPaymentApprovalScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />
@@ -210,6 +221,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
       <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
       <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
+      <Stack.Screen name="ChatThemeScreen" component={ChatThemeScreen} />
       <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -234,6 +246,8 @@ export default function AppNavigator() {
       <Stack.Screen name="FinancialDashboard" component={FinancialDashboardScreen} />
       <Stack.Screen name="BudgetManagement" component={BudgetManagementScreen} />
       <Stack.Screen name="AiAssistant" component={AiAssistantScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BroadcastScreen" component={BroadcastScreen} />
+      <Stack.Screen name="SavedMessagesScreen" component={SavedMessagesScreen} />
     </Stack.Navigator>
   );
 }

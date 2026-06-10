@@ -2,6 +2,38 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
+import { navigate } from "../navigation/navigationRef";
+
+/**
+ * File payload shape required by React Native's FormData for binary uploads.
+ * Matches the object accepted by expo-image-picker and expo-document-picker results.
+ */
+export type RNFile = {
+  uri: string;
+  type: string;
+  name: string;
+};
+
+/** Subset of user profile fields the PUT /users/me endpoint accepts. */
+export type UserUpdateRequest = {
+  handle?: string;
+  profileImageUrl?: string;
+  theme?: string;
+  language?: string;
+  homeBackground?: string;
+  hubBackground?: string;
+  quickActions?: string;
+  transactionGrouping?: string;
+  transactionDensity?: string;
+  balanceHiddenByDefault?: boolean;
+  homeDim?: number;
+  homeBlur?: number;
+  homeLayout?: string;
+  homeBannerGradient?: string;
+  accentId?: string;
+  balanceCardStyle?: string;
+  reducedMotion?: boolean;
+};
 
 const getBaseUrl = (): string => {
   return "https://api.aza.systems";
@@ -40,10 +72,12 @@ export const setForceLogoutHandler = (handler: () => void) => {
 export const getDeviceId = async (): Promise<string> => {
   const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
-  const id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40; // UUID v4 version bits
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80; // RFC 4122 variant bits
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  const id = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
   await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
   return id;
 };
@@ -112,30 +146,26 @@ export const submitFundsSource = (
 export const submitIdentity = (
   idType: string,
   idNumber: string,
-  frontImage: any,
-  backImage: any,
+  frontImage: RNFile,
+  backImage: RNFile,
 ) => {
   const formData = new FormData();
   formData.append("idType", idType);
   formData.append("idNumber", idNumber);
-  formData.append("frontImage", frontImage);
-  formData.append("backImage", backImage);
+  formData.append("frontImage", frontImage as any);
+  formData.append("backImage", backImage as any);
 
   return api.post("/api/v1/kyc/identity", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const submitSelfie = (selfie: any) => {
+export const submitSelfie = (selfie: RNFile) => {
   const formData = new FormData();
-  formData.append("selfie", selfie);
+  formData.append("selfie", selfie as any);
 
   return api.post("/api/v1/kyc/selfie", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -161,14 +191,12 @@ export const submitPepDetails = (
     wealthSource,
   });
 
-export const submitProofOfWealth = (document: any) => {
+export const submitProofOfWealth = (document: RNFile) => {
   const formData = new FormData();
-  formData.append("document", document);
+  formData.append("document", document as any);
 
   return api.post("/api/v1/kyc/proof-of-wealth", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -191,35 +219,29 @@ export const requestLimitIncrease = (data: {
   reason: string;
 }) => api.post("/api/v1/users/me/limits/request", data);
 
-export const updateMe = (data: any) => api.put("/api/v1/users/me", data);
+export const updateMe = (data: UserUpdateRequest) => api.put("/api/v1/users/me", data);
 
-export const uploadProfileImage = (file: any) => {
+export const uploadProfileImage = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/profile-image", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const uploadHomeBackground = (file: any) => {
+export const uploadHomeBackground = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/home-background", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
-export const uploadHubBackground = (file: any) => {
+export const uploadHubBackground = (file: RNFile) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   return api.put("/api/v1/users/me/hub-background", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
 };
 
@@ -355,8 +377,8 @@ export const getSpendingSummary = () => api.get("/api/v1/wallet/spending");
 export const getYearlySpendingSummary = (year?: number) =>
   api.get(`/api/v1/wallet/spending/yearly${year ? `?year=${year}` : ""}`);
 
-export const getTransactions = (page = 0, size = 20, type?: string, status?: string) =>
-  api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}`);
+export const getTransactions = (page = 0, size = 20, type?: string, status?: string, direction?: string) =>
+  api.get(`/api/v1/transfers?page=${page}&size=${size}${type ? `&type=${type}` : ""}${status ? `&status=${status}` : ""}${direction ? `&direction=${direction}` : ""}`);
 
 export const getTransactionsStatement = (startDate: string, endDate: string) =>
   api.get(`/api/v1/transfers/statement?startDate=${startDate}&endDate=${endDate}`, {
@@ -412,6 +434,9 @@ export const resetPassword = (identifier: string, code: string, newPassword: str
 export const verifyOtp = (identifier: string, code: string, purpose: string, deviceName?: string, deviceOs?: string, deviceId?: string) =>
   api.post("/api/v1/auth/verify-otp", { identifier, code, purpose, deviceName, deviceOs, deviceId });
 
+export const logout = () =>
+  api.post("/api/v1/auth/logout");
+
 export const logoutEverywhere = () =>
   api.post("/api/v1/auth/logout-everywhere");
 
@@ -425,6 +450,9 @@ export const removeSelfEverywhere = () =>
 
 export const deleteAccount = () =>
   api.delete("/api/v1/users/me");
+
+export const cancelAccountDeletion = () =>
+  api.post("/api/v1/users/me/cancel-deletion");
 
 export const removeDevice = (deviceId: string) =>
   api.delete(`/api/v1/users/me/devices/${encodeURIComponent(deviceId)}`);
@@ -440,6 +468,15 @@ export const updatePrivacySettings = (settings: {
 
 export const updateNotificationPreferences = (preferences: Record<string, boolean>) =>
   api.put("/api/v1/users/me/notifications", preferences);
+
+export interface SilentHoursPayload {
+  enabled: boolean;
+  startTime?: string | undefined;
+  endTime?: string | undefined;
+  paymentThreshold?: number | null | undefined;
+}
+export const updateSilentHours = (payload: SilentHoursPayload) =>
+  api.put("/api/v1/users/me/silent-hours", payload);
 
 // --- 2FA / TOTP Endpoints ---
 
@@ -570,9 +607,9 @@ export const registerMerchant = (data: {
   category?: string;
 }) => api.post('/api/v1/merchant/register', data);
 
-export const uploadMerchantLogo = (file: any) => {
+export const uploadMerchantLogo = (file: RNFile) => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', file as any);
   return api.post('/api/v1/merchant/logo', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
@@ -592,9 +629,9 @@ export const submitMerchantKyb = (data: {
   ownerIdNumber?: string;
 }) => api.post('/api/v1/merchant/kyb', data);
 
-export const uploadKybDocument = (file: any, type: string) => {
+export const uploadKybDocument = (file: RNFile, type: string) => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', file as any);
   formData.append('type', type);
   return api.post('/api/v1/merchant/kyb/document', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -707,6 +744,14 @@ export const createMerchantDiscountCode = (data: {
 export const getMerchantReportSummary = () =>
   api.get('/api/v1/merchant/reports/summary');
 
+// --- Checkout Endpoints ---
+
+export const getCheckoutSession = (sessionId: string) =>
+  api.get(`/api/v1/checkout/${sessionId}`);
+
+export const confirmCheckoutPayment = (sessionId: string, passcode: string) =>
+  api.post(`/api/v1/checkout/${sessionId}/confirm`, { passcode });
+
 // --- Mini App Endpoints ---
 
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>
@@ -722,17 +767,32 @@ export const getUserDisputes = (page = 0, size = 20) =>
 
 // --- E2EE Chat Endpoints ---
 
+/** One encrypted envelope for a single device, produced by encryptForRecipient. */
+export type DeviceCiphertext = {
+  ciphertext: string;
+  ephemeralKey: string;
+  preKeyId?: string;
+  senderIdentityPublicKey?: string;
+};
+
 export type SendMessagePayload = {
   chatId: string;
+  /** Legacy single-device field — kept for support chats and fallback. */
   ciphertext?: string;
   content?: string;
   ephemeralKey?: string;
   preKeyId?: string;
+  senderIdentityPublicKey?: string;
   type?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "VOICE_NOTE" | "PAYMENT_REQUEST";
   mediaKey?: string;
   viewOnce?: boolean;
   /** Opaque sender-side correlation id; echoed back unchanged by the server. */
   clientId?: string;
+  /**
+   * Multi-device envelopes. Key = deviceId, value = per-device ECDH envelope.
+   * When present, each device extracts its own entry on receipt.
+   */
+  deviceCiphertexts?: Record<string, DeviceCiphertext>;
 };
 
 export const listChats = () => api.get("/api/v1/chats");
@@ -772,15 +832,18 @@ export const getTotalUnreadChatCount = () => api.get("/api/v1/chats/unread");
 export const setDisappearingMessages = (chatId: string, ttlSeconds: number) =>
   api.put(`/api/v1/chats/${chatId}/disappearing`, { ttlSeconds });
 
+export const notifyChatScreenshot = (chatId: string) =>
+  api.post(`/api/v1/chats/${chatId}/screenshot`);
+
 export const markChatMediaViewed = (messageId: string) =>
   api.post(`/api/v1/chats/messages/${messageId}/viewed`);
 
 export const editChatMessage = (messageId: string, ciphertext: string) =>
   api.put(`/api/v1/chats/messages/${messageId}`, { ciphertext });
 
-export const uploadChatMedia = (file: any, chatId: string, type: string) => {
+export const uploadChatMedia = (file: RNFile, chatId: string, type: string) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file as any);
   formData.append("chatId", chatId);
   formData.append("type", type);
   return api.post("/api/v1/chats/media/upload", formData, {
@@ -791,6 +854,7 @@ export const uploadChatMedia = (file: any, chatId: string, type: string) => {
 // --- E2EE Key Bundle Endpoints ---
 
 export type KeyBundleUpload = {
+  deviceId: string;
   identityPublicKey: string;
   signedPreKeyPublic: string;
   signedPreKeySignature: string;
@@ -800,12 +864,22 @@ export type KeyBundleUpload = {
 export const uploadKeyBundle = (bundle: KeyBundleUpload) =>
   api.put("/api/v1/users/me/key-bundle", bundle);
 
+/** Fetch a single device bundle (backward-compat, pops one OPK). */
 export const fetchUserKeyBundle = (userId: string) =>
   api.get(`/api/v1/users/${userId}/key-bundle`);
 
+/** Fetch ALL device bundles for a recipient, one OPK popped per device. */
+export const fetchUserKeyBundles = (userId: string) =>
+  api.get(`/api/v1/users/${userId}/key-bundles`);
+
+/** Fetch the authenticated user's own device bundles (no OPK consumed). */
+export const fetchOwnKeyBundles = () =>
+  api.get("/api/v1/users/me/key-bundles/own");
+
 export const replenishOneTimePreKeys = (
+  deviceId: string,
   oneTimePreKeys: Array<{ keyId: number; publicKey: string }>,
-) => api.post("/api/v1/users/me/one-time-prekeys", { oneTimePreKeys });
+) => api.post("/api/v1/users/me/one-time-prekeys", { deviceId, oneTimePreKeys });
 
 export const getKeyBundleStatus = () =>
   api.get("/api/v1/users/me/key-bundle/status");
@@ -964,11 +1038,14 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle 403 (Forbidden) — token is revoked or session is invalid.
-    // Clear stored tokens and trigger logout so the user is sent back
-    // to the login screen instead of being stuck on a broken screen.
+    // Handle 403 (Forbidden)
     if (error.response?.status === 403) {
-      // Don't intercept 403s on auth endpoints
+      // Geo-blocked — navigate to the "not available in your region" screen.
+      if (error.response?.data?.error === 'GEO_RESTRICTED') {
+        navigate('GeoBlocked');
+        return Promise.reject(error);
+      }
+      // Token is revoked or session is invalid — clear tokens and trigger logout.
       if (!originalRequest.url?.includes('/auth/')) {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
         await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
@@ -994,7 +1071,7 @@ export const bulkTransfer = (data: { transfers: { recipientIdentifier: string; a
 
 // --- Transaction Search ---
 
-export const searchTransactions = (params: { q?: string; status?: string; type?: string; minAmount?: number; maxAmount?: number; startDate?: string; endDate?: string; page?: number; size?: number }) => {
+export const searchTransactions = (params: { q?: string; status?: string; type?: string; direction?: string; minAmount?: number; maxAmount?: number; startDate?: string; endDate?: string; page?: number; size?: number }) => {
   const p = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') p.set(k, String(v)); });
   return api.get(`/api/v1/transfers/search?${p}`);
@@ -1033,8 +1110,70 @@ export const getTransactionInsight = (transactionId: string) =>
 export const sendAiMessage = (message: string, history: { role: string; content: string }[]) =>
   api.post('/api/v1/ai/chat', { message, history });
 
+export const getChatbaseToken = () =>
+  api.get<{ success: boolean; data: { token: string } }>('/api/v1/ai/chatbase-token');
+
 export const checkTransferAnomaly = (recipientIdentifier: string, amount: number) =>
   api.post('/api/v1/transfers/check-anomaly', { recipientIdentifier, amount });
 
 export const suggestTransferCategory = (recipientIdentifier: string, note: string) =>
   api.post('/api/v1/transfers/suggest-category', { recipientIdentifier, note });
+
+export const authorizeQrLogin = (challengeToken: string) =>
+  api.post('/api/v1/auth/qr-login/authorize', { challengeToken });
+
+export const fetchOAuthClientInfo = (clientId: string) =>
+  api.get(`/oauth/clients/${clientId}`).then(r => r.data?.data as {
+    clientId: string;
+    appName: string;
+    appDescription?: string;
+    logoUrl?: string;
+    websiteUrl?: string;
+    allowedScopes: string[];
+  });
+
+// ── Developer OAuth client management ─────────────────────────────────────────
+export const getDeveloperClients = () => api.get('/api/v1/developer/clients');
+export const registerDeveloperClient = (data: {
+  appName: string;
+  appDescription?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  redirectUris: string[];
+  scopes: string[];
+}) => api.post('/api/v1/developer/clients', data);
+export const getDeveloperClient = (clientId: string) =>
+  api.get(`/api/v1/developer/clients/${clientId}`);
+export const rotateDeveloperClientSecret = (clientId: string) =>
+  api.post(`/api/v1/developer/clients/${clientId}/rotate-secret`);
+export const deleteDeveloperClient = (clientId: string) =>
+  api.delete(`/api/v1/developer/clients/${clientId}`);
+
+export const linkMerchantToOAuthClient = (clientId: string) =>
+  api.post(`/api/v1/developer/clients/${clientId}/merchant`);
+
+export const unlinkMerchantFromOAuthClient = (clientId: string) =>
+  api.delete(`/api/v1/developer/clients/${clientId}/merchant`);
+
+// ── Connected apps (user side) ────────────────────────────────────────────────
+export const getConnectedApps = () => api.get('/oauth/connected-apps');
+export const revokeConnectedApp = (clientId: string) =>
+  api.delete(`/oauth/connected-apps/${clientId}`);
+
+// ── Unsplash image search ──────────────────────────────────────────────────────
+export type UnsplashPhoto = {
+  id: string;
+  thumbUrl: string;
+  regularUrl: string;
+  photographerName: string;
+  photographerUrl: string;
+  downloadLocation: string;
+};
+
+export const searchUnsplash = (query: string, page = 1) =>
+  api.get<{ success: boolean; data: UnsplashPhoto[] }>('/api/v1/unsplash/search', {
+    params: { query, page, perPage: 20 },
+  });
+
+export const triggerUnsplashDownload = (downloadLocation: string) =>
+  api.post('/api/v1/unsplash/trigger-download', { downloadLocation });

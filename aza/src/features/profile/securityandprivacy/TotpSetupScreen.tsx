@@ -25,6 +25,7 @@ import { initiateTotpSetup, confirmTotpSetup } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 const { width } = Dimensions.get("window");
 
@@ -51,8 +52,8 @@ export default function TotpSetupScreen() {
     try {
       const response = await initiateTotpSetup();
       setSetupData(response.data.data);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Failed to initialize setup.";
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, "Failed to initialize setup.");
       Alert.alert("Error", msg);
       navigation.goBack();
     } finally {
@@ -74,8 +75,8 @@ export default function TotpSetupScreen() {
       const response = await confirmTotpSetup(verificationCode);
       invalidateProfile();
       navigation.replace("RecoveryCodes", { codes: response.data.data.codes });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Invalid code. Please try again.";
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, "Invalid code. Please try again.");
       showToast(msg, "error");
     } finally {
       setIsLoading(false);
@@ -150,6 +151,7 @@ export default function TotpSetupScreen() {
 
               <View style={styles.inputContainer}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="000 000"
                   placeholderTextColor={Colors.textSecondary}

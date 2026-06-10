@@ -183,6 +183,7 @@ export default function BudgetManagementScreen() {
               <View style={styles.inputWrap}>
                 <Text style={styles.currencyPrefix}>GH₵</Text>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.amountInput}
                   value={modal.currentAmount}
                   onChangeText={v => setModal(m => ({ ...m, currentAmount: v.replace(/[^0-9.]/g, '') }))}

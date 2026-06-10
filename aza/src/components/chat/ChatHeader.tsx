@@ -6,12 +6,29 @@ import type { MenuAnchor } from './chatTypes';
 import { BackButton } from '../ui/BackButton';
 
 // ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+function formatLastSeen(ts: number): string {
+  const now = new Date();
+  const d = new Date(ts);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === now.toDateString()) return `last seen today at ${time}`;
+  if (d.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `last seen ${date}`;
+}
+
+// ----------------------------------------------------------------------------
 // Props
 // ----------------------------------------------------------------------------
 type ChatHeaderProps = {
   name: string;
   avatar: string;
   online: boolean;
+  lastSeen?: number | undefined;
+  isEncrypted?: boolean | undefined;
   onBack: () => void;
   onProfilePress?: () => void;
   isMenuOpen: boolean;
@@ -27,6 +44,8 @@ export const ChatHeader = memo(function ChatHeader({
   name,
   avatar,
   online,
+  lastSeen,
+  isEncrypted,
   onBack,
   onProfilePress,
   isMenuOpen,
@@ -79,8 +98,19 @@ export const ChatHeader = memo(function ChatHeader({
           </View>
         )}
         <View style={styles.nameContainer}>
-          <Text style={styles.name} numberOfLines={1}>{name}</Text>
-          {online && <Text style={styles.onlineText}>online</Text>}
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>{name}</Text>
+            {isEncrypted && (
+              <Feather name="lock" size={12} color={Colors.primary} style={styles.lockIcon} />
+            )}
+          </View>
+          {online
+            ? <Text style={styles.onlineText}>online</Text>
+            : lastSeen
+              ? <Text style={styles.lastSeenText}>{formatLastSeen(lastSeen)}</Text>
+              : isEncrypted
+                ? <Text style={styles.encryptedText}>end-to-end encrypted</Text>
+                : null}
         </View>
       </TouchableOpacity>
 
@@ -139,7 +169,11 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     profileInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: Spacing.sm },
     avatar: { width: 44, height: 44, borderRadius: Radius.full, marginRight: Spacing.sm },
     nameContainer: { flex: 1, paddingRight: Spacing.sm },
-    name: { ...Typography.bodyLg, fontWeight: '700', color: Colors.textPrimary },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    name: { ...Typography.bodyLg, fontWeight: '700', color: Colors.textPrimary, flexShrink: 1 },
+    lockIcon: { marginTop: 1 },
     onlineText: { ...Typography.caption, fontWeight: '600', color: Colors.primary },
+    encryptedText: { ...Typography.caption, color: Colors.textSecondary },
+    lastSeenText: { ...Typography.caption, color: Colors.textSecondary },
     rightActions: { flexDirection: 'row', gap: Spacing.sm },
   });

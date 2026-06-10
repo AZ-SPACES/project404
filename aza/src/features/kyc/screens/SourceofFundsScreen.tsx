@@ -23,6 +23,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { useKYC, FundsSource } from '../../../providers/KYCProvider';
+import { useToast } from '../../../providers/ToastProvider';
 import { BackButton } from '../../../components/ui/BackButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SourceofFund'>;
@@ -58,6 +59,7 @@ export default function SourceofFundsScreen() {
   const { isPEP } = route.params || {};
   usePreventScreenCapture();
   const { data, submitFundsSource, isSubmitting } = useKYC();
+  const { showToast } = useToast();
   const [selectedOptions, setSelectedOptions] = useState<SourceOptions[]>(data.fundsSource as SourceOptions[]);
   const [otherText, setOtherText] = useState(data.otherFundsText);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -78,6 +80,7 @@ export default function SourceofFundsScreen() {
       navigation.navigate('Idtype', { isPEP: isPEP as boolean });
     } catch (error) {
       console.error('Failed to submit funds source:', error);
+      showToast('Failed to submit source of funds. Please try again.', 'error');
     }
   };
 
@@ -115,6 +118,7 @@ export default function SourceofFundsScreen() {
         </TouchableOpacity>
         {label === "Other" && isSelected && (
           <TextInput
+            underlineColorAndroid="transparent"
             style={styles.otherInput}
             placeholder="Please specify"
             placeholderTextColor={Colors.textSecondary}

@@ -27,6 +27,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "TaxResidenc
 import nationalities from "i18n-nationality";
 import englishNationalities from "i18n-nationality/langs/en.json";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 nationalities.registerLocale(englishNationalities);
 
@@ -108,6 +109,8 @@ export default function TaxResidencyScreen() {
             </Animated.View>
           </Animated.View>
 
+          <SignUpProgressBar step={7} total={10} />
+
           {/* Content */}
           <Animated.ScrollView
             style={styles.content}
@@ -150,6 +153,7 @@ export default function TaxResidencyScreen() {
             {data.nationality === "Other" && (
               <View style={[styles.inputContainer, { marginTop: Spacing.sm }]}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="Enter your nationality"
                   placeholderTextColor={Colors.textSecondary}
@@ -165,6 +169,7 @@ export default function TaxResidencyScreen() {
                 <View style={styles.pickerSearchContainer}>
                   <MaterialIcons name="search" size={20} color={Colors.textSecondary} />
                   <TextInput
+                    underlineColorAndroid="transparent"
                     ref={searchInputRef}
                     style={styles.pickerSearchInput}
                     placeholder="Search nationality"
@@ -206,7 +211,9 @@ export default function TaxResidencyScreen() {
                           data.nationality === item && styles.pickerItemSelected,
                         ]}
                         onPress={() => {
-                          update({ nationality: item, ...(item === "American" ? { isUSPerson: "Yes" } : {}) });
+                          // Auto-set isUSPerson when American is selected; auto-clear when switching away.
+                          const usPerson = item === "American" ? "Yes" : (data.isUSPerson === "Yes" && data.nationality === "American" ? null : data.isUSPerson);
+                          update({ nationality: item, isUSPerson: usPerson });
                           setShowNationalityPicker(false);
                           setNationalitySearch("");
                         }}
@@ -272,6 +279,7 @@ export default function TaxResidencyScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   placeholder="Country of tax residence"
                   placeholderTextColor={Colors.textSecondary}

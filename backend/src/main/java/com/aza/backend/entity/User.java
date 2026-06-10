@@ -157,19 +157,6 @@ public class User {
      */
     private java.math.BigDecimal silentHoursPaymentThreshold;
 
-    // --- E2EE Key Bundle ---
-    @Column(columnDefinition = "TEXT")
-    private String identityPublicKey;
-
-    @Column(columnDefinition = "TEXT")
-    private String signedPreKeyPublic;
-
-    @Column(columnDefinition = "TEXT")
-    private String signedPreKeySignature;
-
-    @Column(columnDefinition = "TEXT")
-    private String oneTimePreKeysJson;
-
     // --- Per-user transaction limit overrides (null = use global default) ---
     @Column(precision = 15, scale = 2)
     private java.math.BigDecimal customDailyLimitGhs;
@@ -189,6 +176,9 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /** Set when user requests deletion; erasure runs 30 days later. */
+    private LocalDateTime scheduledDeletionAt;
+
     // ====== ENUMS ======
 
     public enum EmploymentStatus {
@@ -196,7 +186,7 @@ public class User {
     }
 
     public enum AccountStatus {
-        ACTIVE, DEACTIVATED, SUSPENDED
+        ACTIVE, DEACTIVATED, SUSPENDED, PENDING_DELETION
     }
 
     public enum KycStatus {

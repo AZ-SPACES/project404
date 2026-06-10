@@ -80,14 +80,58 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
+      const raw = data.trim();
+
+      // QR login for web portals: aza://qr-login?token=...&site=ADMIN
+      // OAuth QR: aza://qr-login?token=...&site=THIRD_PARTY&client_id=...&scopes=...
+      if (raw.startsWith('aza://qr-login')) {
+        try {
+          const url = new URL(raw);
+          const token = url.searchParams.get('token');
+          const site = url.searchParams.get('site') ?? 'ADMIN';
+          if (!token) throw new Error('Missing token');
+          const siteNames: Record<string, string> = {
+            ADMIN: 'Admin Portal',
+            MERCHANT: 'Merchant Portal',
+            DEVELOPER: 'Developer Portal',
+            THIRD_PARTY: 'External App',
+          };
+          const params: Parameters<typeof navigation.navigate>[1] = {
+            challengeToken: token,
+            siteType: site,
+            siteName: siteNames[site] ?? site,
+          } as any;
+          if (site === 'THIRD_PARTY') {
+            const clientId = url.searchParams.get('client_id');
+            const scopes   = url.searchParams.get('scopes');
+            if (!clientId) throw new Error('Missing client_id');
+            (params as any).oauthClientId = clientId;
+            (params as any).oauthScopes   = scopes ?? '';
+          }
+          navigation.navigate('QrLoginApproval', params as any);
+        } catch {
+          Alert.alert('Invalid QR', 'This QR code is not valid.', [
+            { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+          ]);
+        }
+        return;
+      }
+
+      // Merchant checkout link: pay.aza.systems/c/{sessionId}
+      const checkoutMatch = raw.match(/pay\.aza\.systems\/c\/([a-f0-9-]{36})/i);
+      if (checkoutMatch) {
+        navigation.navigate('MerchantCheckout', { sessionId: checkoutMatch[1]! });
+        return;
+      }
+
       // Parse the data. Format expected: aza.systems/handle or just handle
-      let handle = data.trim();
+      let handle = raw;
       if (handle.includes('aza.systems/')) {
         handle = handle.split('aza.systems/')[1] || '';
       } else if (handle.includes('aza.me/')) {
         handle = handle.split('aza.me/')[1] || '';
       }
-      
+
       try {
         const user = await findUserByHandle(handle);
         if (user) {

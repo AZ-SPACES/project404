@@ -64,7 +64,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } else {
           throw new Error("Refresh failed");
         }
-      } catch (e) {
+      } catch {
         isRefreshing = false;
         clearTokens();
         window.location.href = "/login";
@@ -149,6 +149,45 @@ export async function adminLoginTotp(preAuthToken: string, code: string): Promis
   });
   const body = await res.json();
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? "TOTP failed");
+  return body.data as LoginResult;
+}
+
+// ── QR Login ─────────────────────────────────────────────────────────────────
+
+export interface QrLoginSession {
+  challengeToken: string;
+  sessionSecret: string;
+  qrImageBase64: string;
+  expiresAt: string;
+  ttlSeconds: number;
+}
+
+export async function initiateQrLogin(): Promise<QrLoginSession> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ siteType: "ADMIN" }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Failed to generate QR");
+  return body.data as QrLoginSession;
+}
+
+export async function pollQrLoginStatus(challengeToken: string): Promise<string> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/status/${challengeToken}`);
+  const body = await res.json();
+  if (!res.ok || !body.success) return "EXPIRED";
+  return body.data.status as string;
+}
+
+export async function completeQrLogin(challengeToken: string, sessionSecret: string): Promise<LoginResult> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ challengeToken, sessionSecret }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "QR login failed");
   return body.data as LoginResult;
 }
 
@@ -786,6 +825,7 @@ export interface SystemSettings {
   supportEmail: string;
   supportPhone: string;
   platformVersion: string;
+  blockedCountries: string[];
   featureFlags: {
     biometricEnabled: boolean;
     p2pEnabled: boolean;
@@ -1248,4 +1288,60 @@ export interface CategoryBreakdown {
 
 export function getAdminCategoryBreakdown(days = 30): Promise<CategoryBreakdown[]> {
   return request(`/api/v1/admin/analytics/categories?days=${days}`);
+}
+
+// ── OAuth Apps ────────────────────────────────────────────────────────────────
+
+export interface AdminOAuthStats {
+  totalClients: number;
+  activeClients: number;
+  suspendedClients: number;
+  activeTokens: number;
+}
+
+export interface AdminOAuthClient {
+  id: string;
+  clientId: string;
+  appName: string;
+  appDescription?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  allowedScopes: string[];
+  ownerHandle: string;
+  ownerEmail: string;
+  active: boolean;
+  activeTokenCount: number;
+  createdAt: string;
+}
+
+export function getAdminOAuthStats(): Promise<AdminOAuthStats> {
+  return request("/api/v1/admin/oauth/stats");
+}
+
+export function getAdminOAuthClients(
+  page = 0,
+  size = 20,
+  query?: string,
+  active?: boolean,
+): Promise<Page<AdminOAuthClient>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (query) params.set("query", query);
+  if (active !== undefined) params.set("active", String(active));
+  return request(`/api/v1/admin/oauth/clients?${params}`);
+}
+
+export function getAdminOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}`);
+}
+
+export function adminSuspendOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}/suspend`, { method: "POST" });
+}
+
+export function adminRestoreOAuthClient(clientId: string): Promise<AdminOAuthClient> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}/restore`, { method: "POST" });
+}
+
+export function adminDeleteOAuthClient(clientId: string): Promise<void> {
+  return request(`/api/v1/admin/oauth/clients/${clientId}`, { method: "DELETE" });
 }

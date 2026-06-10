@@ -22,6 +22,7 @@ import { disableTotp } from "../../../services/api";
 import { useToast } from "../../../providers/ToastProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export default function DisableTotpScreen() {
   const { colors: Colors } = useAppTheme();
@@ -52,8 +53,8 @@ export default function DisableTotpScreen() {
               fetchProfile();
               showToast("Authenticator app disabled", "success");
               navigation.navigate("TwoStepVerification");
-            } catch (err: any) {
-              const msg = err.response?.data?.message || "Invalid code. Please try again.";
+            } catch (err: unknown) {
+              const msg = extractErrorMessage(err, "Invalid code. Please try again.");
               showToast(msg, "error");
             } finally {
               setIsLoading(false);
@@ -85,6 +86,7 @@ export default function DisableTotpScreen() {
 
             <View style={styles.inputContainer}>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="000 000"
                 placeholderTextColor={Colors.textSecondary}

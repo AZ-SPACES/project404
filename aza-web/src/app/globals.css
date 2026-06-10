@@ -208,37 +208,70 @@
 }
 
 /* ============================================================
-   PHONE MOCKUP
+   PHONE MOCKUP  —  iPhone 15 Pro style frame
    ============================================================ */
+
+/* Outer shell */
 .phone-mockup__frame {
-  width: 280px;
-  background: var(--aza-primary);
-  border-radius: 44px;
-  padding: 12px;
+  position: relative;
+  width: 284px;
+  background: linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 40%, #2c2c2e 100%);
+  border-radius: 54px;
+  padding: 14px 13px;
   box-shadow:
-    0 40px 80px rgba(23,71,23,0.35),
-    0 0 0 1px rgba(255,255,255,0.1) inset;
+    0 0 0 1px rgba(255,255,255,0.14) inset,
+    0 0 0 2px rgba(0,0,0,0.6),
+    0 50px 100px rgba(0,0,0,0.45),
+    0 20px 40px rgba(23,71,23,0.2);
 }
 
+/* Left-side buttons */
+.phone-mockup__frame::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 110px;
+  width: 3px;
+  height: 34px;
+  background: linear-gradient(180deg, #48484a, #3a3a3c);
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 44px 0 #48484a, 0 88px 0 #48484a;
+}
+
+/* Right-side power button */
+.phone-mockup__frame::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 140px;
+  width: 3px;
+  height: 70px;
+  background: linear-gradient(180deg, #48484a, #3a3a3c);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Inner screen area */
 .phone-screen {
   background: var(--aza-surface);
-  border-radius: 34px;
+  border-radius: 42px;
   overflow: hidden;
   position: relative;
-  height: 520px;
+  height: 530px;
 }
 
 [data-theme="dark"] .phone-screen { background: #1a1a1a; }
 
+/* Dynamic Island */
 .phone-screen::before {
   content: '';
   position: absolute;
-  top: 12px;
+  top: 13px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100px; height: 28px;
-  background: var(--aza-primary);
-  border-radius: 999px;
+  width: 110px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
   z-index: 10;
 }
 

@@ -20,10 +20,11 @@ import { RootStackParamList } from "../../../navigation/types";
 import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../../theme";
 import { MaterialIcons } from '@react-native-vector-icons/material-icons';
 import Button from "../../../components/ui/Button";
-import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { isValidEmail, sanitizeEmail } from "../../../utils/validation";
 import { forgotPassword, initAccountRecovery } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
 import { Feather } from '@react-native-vector-icons/feather';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 export default function ResetPasswordScreen() {
   const { colors: Colors } = useAppTheme();
@@ -43,8 +44,8 @@ export default function ResetPasswordScreen() {
       const res = await initAccountRecovery(email);
       const preAuthToken: string = res.data?.data ?? res.data;
       navigation.navigate(dest, { preAuthToken });
-    } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.message || "Could not start account recovery. Please try again.");
+    } catch (err: unknown) {
+      Alert.alert("Error", extractErrorMessage(err, "Could not start account recovery. Please try again."));
     } finally {
       setRecoveryLoading(null);
     }
@@ -83,11 +84,12 @@ export default function ResetPasswordScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}
                 value={email}
-                onChangeText={(t) => setEmail(sanitizeText(t))}
+                onChangeText={(t) => setEmail(sanitizeEmail(t))}
                 onBlur={() => setTouched(true)}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -104,8 +106,8 @@ export default function ResetPasswordScreen() {
                   try {
                     await forgotPassword(email);
                     navigation.navigate("ResetOTP", { email });
-                  } catch (err: any) {
-                    const msg = err.response?.data?.message || "Failed to send reset code";
+                  } catch (err: unknown) {
+                    const msg = extractErrorMessage(err, "Failed to send reset code");
                     Alert.alert("Error", msg);
                   } finally {
                     setIsLoading(false);

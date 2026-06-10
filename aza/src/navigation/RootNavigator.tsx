@@ -6,6 +6,7 @@ import KYCNavigator from './KYCNavigator';
 import SetupNavigator from './SetupNavigator';
 import AppNavigator from './AppNavigator';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { GeoBlockedScreen } from '../features/auth';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,9 +25,9 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
         <Stack.Group>
-          <Stack.Screen 
-            name="Auth" 
-            component={AuthNavigator} 
+          <Stack.Screen
+            name="Auth"
+            component={AuthNavigator}
             options={{ animation: 'fade' }}
           />
         </Stack.Group>
@@ -45,6 +46,8 @@ export default function RootNavigator() {
           )}
         </Stack.Group>
       )}
+      {/* Always present — navigated to imperatively when geo-block is detected */}
+      <Stack.Screen name="GeoBlocked" component={GeoBlockedScreen} />
     </Stack.Navigator>
   );
 }

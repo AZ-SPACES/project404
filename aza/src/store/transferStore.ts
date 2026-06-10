@@ -9,6 +9,7 @@ import {
 } from '../services/api';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 type TransferStatus = 'idle' | 'initiating' | 'confirming' | 'requesting' | 'success' | 'error';
 
@@ -41,45 +42,16 @@ interface TransferState {
   reset: () => void;
 }
 
-/** Generates a UUID v4 idempotency key (no external dependency). */
+/** Generates a cryptographically secure UUID v4 idempotency key. */
 function generateIdempotencyKey(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40; // UUID v4 version bits
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80; // RFC 4122 variant bits
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 }
 
-/** Extracts a human-readable error message from an Axios error.
- *  Some backend error shapes put the message inside an object (e.g.
- *  `{ error: { code, message } }` or `{ errors: [{ message }] }`).
- *  If we returned that object verbatim, `new Error(obj)` would coerce it
- *  to the string "[object Object]" and surface that in the UI. So we
- *  walk candidates and only accept non-empty strings.
- */
-function extractError(err: unknown): string {
-  const pickString = (v: unknown): string | null =>
-    typeof v === 'string' && v.trim() ? v : null;
-
-  if (err && typeof err === 'object') {
-    const axiosErr = err as any;
-    const data = axiosErr.response?.data;
-
-    const candidates: unknown[] = [
-      data?.message,
-      data?.error?.message,
-      data?.error,
-      Array.isArray(data?.errors) ? data.errors[0]?.message ?? data.errors[0] : undefined,
-      data?.detail,
-      axiosErr.message,
-    ];
-
-    for (const c of candidates) {
-      const s = pickString(c);
-      if (s) return s;
-    }
-  }
-  return 'Something went wrong';
-}
 
 export const useTransferStore = create<TransferState>((set, get) => ({
   status: 'idle',
@@ -102,7 +74,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       set({ status: 'idle', pendingTransactionId: txId });
       return txId;
     } catch (err) {
-      const msg = extractError(err);
+      const msg = extractErrorMessage(err);
       set({ status: 'error', error: msg });
       throw new Error(msg);
     }
@@ -117,7 +89,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.spendingYearly() });
     } catch (err) {
-      const msg = extractError(err);
+      const msg = extractErrorMessage(err);
       set({ status: 'error', error: msg });
       throw new Error(msg);
     }
@@ -146,7 +118,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       set({ status: 'success', pendingTransactionId: txId });
       return txId;
     } catch (err) {
-      const msg = extractError(err);
+      const msg = extractErrorMessage(err);
       set({ status: 'error', error: msg });
       throw new Error(msg);
     }
@@ -161,7 +133,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.spendingYearly() });
     } catch (err) {
-      const msg = extractError(err);
+      const msg = extractErrorMessage(err);
       set({ status: 'error', error: msg });
       throw new Error(msg);
     }
@@ -173,7 +145,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
       await declineMoneyRequestApi(txId);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (err) {
-      const msg = extractError(err);
+      const msg = extractErrorMessage(err);
       set({ status: 'error', error: msg });
       throw new Error(msg);
     }

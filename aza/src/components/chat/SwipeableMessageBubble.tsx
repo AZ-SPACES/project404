@@ -21,13 +21,19 @@ type SwipeableMessageBubbleProps = {
   message: Message;
   onSwipeToReply: (message: Message) => void;
   children: React.ReactNode;
+  disabled?: boolean | undefined;
 };
 
 function SwipeableMessageBubbleInner({
   message,
   onSwipeToReply,
   children,
+  disabled,
 }: SwipeableMessageBubbleProps) {
+  // When disabled (e.g. multi-select mode), render without gesture
+  if (disabled) {
+    return <View style={styles.container}>{children}</View>;
+  }
   const { colors: Colors } = useAppTheme();
   const translateX = useSharedValue(0);
   const hasTriggered = useSharedValue(false);

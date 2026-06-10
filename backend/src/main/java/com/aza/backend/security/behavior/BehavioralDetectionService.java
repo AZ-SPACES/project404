@@ -48,12 +48,20 @@ public class BehavioralDetectionService {
     // ── Block checks ─────────────────────────────────────────────────────────
 
     public boolean isBlocked(String actorKey) {
-        return Boolean.TRUE.equals(redis.hasKey("behavior:block:" + actorKey));
+        try {
+            return Boolean.TRUE.equals(redis.hasKey("behavior:block:" + actorKey));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public long getBlockTtlSeconds(String actorKey) {
-        Long ttl = redis.getExpire("behavior:block:" + actorKey);
-        return (ttl != null && ttl > 0) ? ttl : 60;
+        try {
+            Long ttl = redis.getExpire("behavior:block:" + actorKey);
+            return (ttl != null && ttl > 0) ? ttl : 60;
+        } catch (Exception e) {
+            return 60;
+        }
     }
 
     // ── Tracking ──────────────────────────────────────────────────────────────
@@ -62,24 +70,32 @@ public class BehavioralDetectionService {
      * Records a request and returns the burst count for the current window.
      */
     public long trackRequest(String actorKey) {
-        long now = System.currentTimeMillis();
-        Long count = redis.execute(
-                BURST_SCRIPT,
-                Collections.singletonList("behavior:burst:" + actorKey),
-                String.valueOf(now),
-                String.valueOf((long) BURST_WINDOW_SECONDS * 1000)
-        );
-        return count != null ? count : 0;
+        try {
+            long now = System.currentTimeMillis();
+            Long count = redis.execute(
+                    BURST_SCRIPT,
+                    Collections.singletonList("behavior:burst:" + actorKey),
+                    String.valueOf(now),
+                    String.valueOf((long) BURST_WINDOW_SECONDS * 1000)
+            );
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
      * Records a failed authentication attempt. Returns the cumulative failure count.
      */
     public long recordFailure(String actorKey) {
-        String key = "behavior:fail:" + actorKey;
-        Long n = redis.opsForValue().increment(key);
-        redis.expire(key, Duration.ofMinutes(15));
-        return n != null ? n : 0;
+        try {
+            String key = "behavior:fail:" + actorKey;
+            Long n = redis.opsForValue().increment(key);
+            redis.expire(key, Duration.ofMinutes(15));
+            return n != null ? n : 0;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     // ── Suspicion scoring ────────────────────────────────────────────────────
@@ -101,11 +117,15 @@ public class BehavioralDetectionService {
      * Returns true if a block was applied.
      */
     public boolean reportSuspiciousEvent(String actorKey, int points) {
-        long score = addSuspicion(actorKey, points);
-        if (score >= SUSPICION_BLOCK_THRESHOLD) {
-            long duration = blockActor(actorKey);
-            log.warn("Auto-blocked actor {} for {}s (suspicion score {})", actorKey, duration, score);
-            return true;
+        try {
+            long score = addSuspicion(actorKey, points);
+            if (score >= SUSPICION_BLOCK_THRESHOLD) {
+                long duration = blockActor(actorKey);
+                log.warn("Auto-blocked actor {} for {}s (suspicion score {})", actorKey, duration, score);
+                return true;
+            }
+        } catch (Exception e) {
+            log.warn("Behavioral scoring unavailable for {}: {}", actorKey, e.getMessage());
         }
         return false;
     }

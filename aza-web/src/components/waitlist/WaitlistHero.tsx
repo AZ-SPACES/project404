@@ -5,6 +5,8 @@ import { WaitlistBackground } from "./WaitlistBackground";
 import { WaitlistForm } from "./WaitlistForm";
 import { WaitlistSuccess } from "./WaitlistSuccess";
 import { useConfetti } from "@/hooks/useConfetti";
+import Image from "next/image";
+import azaZ from "../../app/assets/aza-z.png";
 
 type Status = "idle" | "loading" | "success";
 
@@ -68,14 +70,11 @@ export function WaitlistHero() {
       {/* Content */}
       <div className="relative z-20 w-full flex flex-col items-center justify-end pb-16 md:pb-24 pt-40 md:pt-48 gap-5 px-4">
         {/* App icon */}
-        <div
-          className="w-16 h-16 rounded-2xl mb-2 ring-1 ring-white/10 flex items-center justify-center"
-          style={{ backgroundColor: "#174717" }}
-        >
-          <span style={{ color: "#B7EE7A", fontSize: "28px", fontWeight: 800, lineHeight: 1 }}>
-            A
-          </span>
-        </div>
+        <Image
+          src={azaZ}
+          alt="Aza"
+          className="w-16 h-16 rounded-2xl mb-2 ring-1 ring-white/10 object-cover"
+        />
 
         <div
           className="inline-flex items-center gap-2 px-[14px] py-[6px] rounded-md text-[0.8rem] font-semibold"

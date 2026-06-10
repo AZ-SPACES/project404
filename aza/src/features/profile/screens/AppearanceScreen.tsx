@@ -5,12 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Image,
   StatusBar,
   TextInput,
   Animated,
   Dimensions,
   KeyboardAvoidingView,
+  Modal,
+  Linking,
   Platform,
   ActivityIndicator,
 } from "react-native";
@@ -26,6 +29,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { BackButton } from '../../../components/ui/BackButton';
+import { searchUnsplash, triggerUnsplashDownload, UnsplashPhoto } from '../../../services/api';
 import {
   useDisplayContext,
   BACKGROUND_IMAGES,
@@ -35,6 +39,8 @@ import {
   TAB_REGISTRY,
   ThemeOption,
   THEMES,
+  LanguageOption,
+  LANGUAGES,
   BalanceCardStyle,
   TabBarStyle,
   TransactionDensity,
@@ -379,6 +385,7 @@ export default function AppearanceScreen() {
 
   const {
     theme: selectedTheme, setTheme,
+    language: selectedLanguage, setLanguage,
     accentId, setAccentId,
     homeBackground, setHomeBackground,
     hubBackground, setHubBackground,
@@ -586,6 +593,12 @@ export default function AppearanceScreen() {
             <Text style={[Typography.caption, styles.uploadText]}>Link</Text>
           </TouchableOpacity>
 
+          {/* Unsplash search */}
+          <TouchableOpacity style={styles.bgUploadButton} onPress={() => openUnsplash(target)} activeOpacity={0.7}>
+            <Feather name="search" size={24} color={Colors.textSecondary} />
+            <Text style={[Typography.caption, styles.uploadText]}>Unsplash</Text>
+          </TouchableOpacity>
+
           {/* Custom */}
           {customBgs.map(bgUri => {
             const sel = bg === bgUri;
@@ -623,11 +636,21 @@ export default function AppearanceScreen() {
 
       <View style={styles.header}>
         <BackButton onPress={() => navigation.goBack()} />
-        <Text style={[Typography.h3, styles.headerTitle]}>Appearance</Text>
+        <Text style={[Typography.h3, styles.headerTitle]}>Language & Appearance</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* ── Language ── */}
+        <View style={styles.section}>
+          <Text style={[Typography.h3, styles.sectionTitle]}>Language</Text>
+          <View style={styles.cardContainer}>
+            {LANGUAGES.map(lang => (
+              <LanguageCard key={lang} language={lang} isSelected={selectedLanguage === lang} onSelect={() => setLanguage(lang)} />
+            ))}
+          </View>
+        </View>
 
         {/* ── Theme ── */}
         <View style={styles.section}>
@@ -1102,5 +1125,20 @@ function createStyles(Colors: ThemeColors) {
     btnPrimary: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: "center" },
     btnDisabled: { opacity: 0.5 },
     btnPrimaryText: { ...Typography.button, color: Colors.white, fontWeight: "600" },
+
+    // Unsplash picker
+    unsplashHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: isDark ? Colors.border : "#E5E7EB" },
+    unsplashSearchRow: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: isDark ? Colors.surface : "#F3F4F6", borderRadius: Radius.md, paddingHorizontal: Spacing.sm, gap: Spacing.xs },
+    unsplashInput: { flex: 1, ...Typography.body, color: Colors.textPrimary, paddingVertical: Spacing.sm },
+    unsplashSearchBtn: { width: 32, height: 32, borderRadius: Radius.sm, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center" },
+    unsplashGrid: { padding: Spacing.md, gap: 8 },
+    unsplashPhotoCard: { flex: 1, aspectRatio: 0.75, borderRadius: Radius.md, overflow: "hidden", backgroundColor: Colors.surface },
+    unsplashPhotoOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 6, paddingVertical: 4 },
+    unsplashPhotoCreditText: { fontSize: 10, color: "rgba(255,255,255,0.85)", fontWeight: "400" },
+    unsplashPhotoCreditLink: { color: "#fff", fontWeight: "600", textDecorationLine: "underline" },
+    unsplashCenter: { flex: 1, justifyContent: "center", alignItems: "center", gap: Spacing.md, padding: Spacing.xl },
+    unsplashEmptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: "center" },
+    unsplashFooter: { paddingVertical: Spacing.sm, alignItems: "center", borderTopWidth: 1, borderTopColor: isDark ? Colors.border : "#E5E7EB" },
+    unsplashFooterText: { ...Typography.caption, color: Colors.textSecondary },
   });
 }

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +40,17 @@ public class AiController {
         }
         String insight = aiService.generateTransferInsight(user.getId(), txId);
         return ResponseEntity.ok(ApiResponse.success(new AiInsightResponse(insight)));
+    }
+
+    @GetMapping("/chatbase-token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getChatbaseToken(
+            @AuthenticationPrincipal User user) {
+        String token = aiService.generateChatbaseToken(user.getId(), user.getEmail());
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error("CHATBASE_UNAVAILABLE", "Chatbase identity not configured"));
+        }
+        return ResponseEntity.ok(ApiResponse.success(Map.of("token", token)));
     }
 
     @PostMapping("/chat")
