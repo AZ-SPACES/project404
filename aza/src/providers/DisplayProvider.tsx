@@ -8,7 +8,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { queryClient } from "../lib/queryClient";
 
 export type ThemeOption = "Light" | "Dark" | "System Default";
-export type LanguageOption = "English (US)" | "French" | "Spanish";
+export type LanguageOption = "English" | "French" | "Twi";
 export type BalanceCardStyle = 'flat' | 'glass' | 'card';
 export type TabBarStyle = 'labeled' | 'minimal';
 export type TransactionDensity = 'comfortable' | 'compact';
@@ -37,7 +37,7 @@ export const TAB_REGISTRY: { id: TabId; label: string }[] = [
 const DEFAULT_TAB_ORDER: TabId[] = ['home', 'contacts', 'chat', 'hub'];
 
 export const THEMES: ThemeOption[] = ["Light", "Dark", "System Default"];
-export const LANGUAGES: LanguageOption[] = ["English (US)", "French", "Spanish"];
+export const LANGUAGES: LanguageOption[] = ["English", "French", "Twi"];
 
 export const ACCENT_PALETTES = [
   { id: 'forest',  label: 'Forest',  primary: '#174717', secondary: '#B7EE7A', gradientEnd: '#2D6A4F' },
@@ -132,7 +132,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const defaultBg = BACKGROUND_IMAGES[0]?.uri ?? "";
 
   const [theme, setThemeState] = useState<ThemeOption>("System Default");
-  const [language, setLanguageState] = useState<LanguageOption>("English (US)");
+  const [language, setLanguageState] = useState<LanguageOption>("English");
   const [accentId, setAccentIdState] = useState<string>('forest');
   const [homeBackground, setHomeBackgroundState] = useState<string>(defaultBg);
   const [hubBackground, setHubBackgroundState] = useState<string>(defaultBg);
