@@ -1,0 +1,51 @@
+name: Deploy
+
+on:
+  # Auto-deploy only after CI passes on main
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+  # Allow triggering a deploy manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    # For workflow_run triggers: only deploy if CI actually passed
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo "→ Pulling latest code..."
+            git pull origin main
+
+            echo "→ Rebuilding and restarting services..."
+            SENTRY_RELEASE=$(git rev-parse --short HEAD) \
+            docker compose up --build -d --remove-orphans
+
+            echo "→ Waiting for services to become healthy..."
+            sleep 15
+
+            echo "→ Checking running containers..."
+            docker compose ps
+
+            echo "→ Pruning unused images..."
+            docker image prune -f
+
+            echo "✓ Deploy complete."

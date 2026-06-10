@@ -32,7 +32,7 @@ export default function DisputesPage({ goBack, Colors, styles }: NavProps) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {disputes.map((d) => (
+          {disputes.map((d: any) => (
             <View
               key={d.id}
               style={{

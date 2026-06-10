@@ -24,6 +24,7 @@ import { queryClient } from "../../../lib/queryClient";
 import { queryKeys } from "../../../lib/queryKeys";
 import { Contact } from "../types";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type ContactsProfileRouteProp = RouteProp<RootStackParamList, "ContactsProfile">;
 
@@ -99,13 +100,16 @@ export default function ContactsProfileScreen() {
     });
   };
 
-  const handleChat = () =>
+  const handleChat = () => {
+    const payId = contact?.handle || (username.startsWith('@') ? username.slice(1) : username) || undefined;
     navigation.navigate("ChatScreen", {
-      id: displayHandle,
+      id: targetUserId ?? displayHandle,
       name: displayName,
       avatar: displayAvatar,
       online: true,
+      ...(payId ? { payIdentifier: payId } : {}),
     });
+  };
 
   const handleToggleFavorite = async () => {
     if (!id) return;
@@ -194,8 +198,8 @@ export default function ContactsProfileScreen() {
                 try {
                   await useContactStore.getState().requestContact(targetUserId);
                   Alert.alert("Success", "Contact request sent.");
-                } catch (error: any) {
-                  Alert.alert("Error", error.message || "Failed to send contact request.");
+                } catch (error: unknown) {
+                  Alert.alert("Error", extractErrorMessage(error, "Failed to send contact request."));
                 }
               }}
             >

@@ -22,6 +22,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type RequestAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'RequestAmount'>;
 
@@ -115,8 +116,8 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
         try {
             await requestMoney({ fromIdentifier: identifier, amount: numericAmount, note });
             showSuccessModal();
-        } catch (err: any) {
-            setApiError(err.message || 'Could not send request. Please try again.');
+        } catch (err: unknown) {
+            setApiError(extractErrorMessage(err, 'Could not send request. Please try again.'));
         }
     };
 
@@ -164,6 +165,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                             >
                                 <Text style={styles.currencySymbol}>GH¢</Text>
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     ref={amountInputRef}
                                     style={styles.amountInput}
                                     value={amount}
@@ -197,6 +199,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
                                     style={styles.noteIcon}
                                 />
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     style={styles.noteInput}
                                     placeholder="Add a note"
                                     placeholderTextColor={Colors.textSecondary}

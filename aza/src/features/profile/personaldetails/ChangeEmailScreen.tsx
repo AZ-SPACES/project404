@@ -23,6 +23,7 @@ import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import { isValidEmail } from "../../../utils/validation";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -64,8 +65,8 @@ export function ChangeEmailScreen() {
         showToast('Email address updated successfully', 'success');
         navigation.goBack();
       }
-    } catch (e: any) {
-      const errorMsg = e.response?.data?.message || 'Something went wrong. Please try again.';
+    } catch (e: unknown) {
+      const errorMsg = extractErrorMessage(e, 'Something went wrong. Please try again.');
       showToast(errorMsg, 'error');
     } finally {
       setIsSaving(false);
@@ -134,6 +135,7 @@ export function ChangeEmailScreen() {
                 <Text style={styles.label}>New email address</Text>
                 <View style={[styles.inputContainer, emailError ? { borderColor: '#D1222E' } : null]}>
                   <TextInput
+                    underlineColorAndroid="transparent"
                     style={styles.input}
                     value={newEmail}
                     onChangeText={setNewEmail}
@@ -165,6 +167,7 @@ export function ChangeEmailScreen() {
                 <Text style={styles.label}>Verification code</Text>
                 <View style={styles.inputContainer}>
                   <TextInput
+                    underlineColorAndroid="transparent"
                     style={[styles.input, { letterSpacing: 8, fontSize: 24, textAlign: 'center', fontWeight: '700' }]}
                     value={otp}
                     onChangeText={(val) => setOtp(val.replace(/[^0-9]/g, "").slice(0, 6))}

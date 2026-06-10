@@ -16,6 +16,7 @@ import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
+import { extractErrorMessage } from '../../../../../utils/errorUtils';
 
 const ALL_EVENTS = [
   'checkout.completed',
@@ -72,8 +73,8 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       setSelectedEvents(['checkout.completed']);
       setShowForm(false);
       invalidateWebhooks();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to create webhook.');
+    } catch (e: unknown) {
+      Alert.alert('Error', extractErrorMessage(e, 'Failed to create webhook.'));
     } finally {
       setCreating(false);
     }
@@ -83,8 +84,8 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
     try {
       await updateMerchantWebhook(w.id, { isActive: !w.isActive });
       invalidateWebhooks();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update status.');
+    } catch (e: unknown) {
+      Alert.alert('Error', extractErrorMessage(e, 'Failed to update status.'));
     }
   };
 
@@ -105,8 +106,8 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
       });
       setEditingWebhookId(null);
       invalidateWebhooks();
-    } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.error?.message ?? 'Failed to update webhook.');
+    } catch (e: unknown) {
+      Alert.alert('Error', extractErrorMessage(e, 'Failed to update webhook.'));
     } finally {
       setUpdating(false);
     }
@@ -115,7 +116,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
   const handleDelete = (id: string, endpointUrl: string) => {
     Alert.alert('Delete Webhook', `Remove endpoint ${endpointUrl}?`, [
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await deleteMerchantWebhook(id); load(); }
+        try { await deleteMerchantWebhook(id); invalidateWebhooks(); }
         catch { Alert.alert('Error', 'Failed to delete webhook.'); }
       }},
       { text: 'Cancel', style: 'cancel' },
@@ -201,7 +202,7 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
             </Text>
           </View>
 
-          {webhooks.map((w) => {
+          {webhooks.map((w: any) => {
             const isEditing = editingWebhookId === w.id;
 
             if (isEditing) {

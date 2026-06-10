@@ -1,45 +1,95 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import {
-  TrendingUp, BarChart3, PiggyBank,
-  Zap, Wifi, Droplets, Tv,
-  Clapperboard, Music, Gamepad2, Newspaper,
-} from "lucide-react";
+import { useState } from "react";
+import Image from "next/image";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 
 const categories = [
   { key: "all",           label: "All"               },
-  { key: "finance",       label: "Finance"           },
-  { key: "bills",         label: "Bills & Utilities"  },
-  { key: "entertainment", label: "Entertainment"     },
+  { key: "Business",      label: "Business"          },
+  { key: "Finance",       label: "Finance"           },
+  { key: "Games",         label: "Games"             },
+  { key: "Entertainment", label: "Entertainment"     },
+  { key: "Productivity",  label: "Productivity"      },
 ];
 
-const apps: { cat: string; icon: ReactNode; bg: string; name: string }[] = [
-  { cat: "finance",       icon: <TrendingUp    size={28} color="#fff" />, bg: "#174717", name: "Invest"      },
-  { cat: "finance",       icon: <BarChart3     size={28} color="#fff" />, bg: "#1A5C1A", name: "Analytics"   },
-  { cat: "finance",       icon: <PiggyBank     size={28} color="#fff" />, bg: "#2E7D32", name: "Savings"     },
-  { cat: "bills",         icon: <Zap           size={28} color="#fff" />, bg: "#4285F4", name: "Electricity" },
-  { cat: "bills",         icon: <Wifi          size={28} color="#fff" />, bg: "#1565C0", name: "Internet"    },
-  { cat: "bills",         icon: <Droplets      size={28} color="#fff" />, bg: "#0288D1", name: "Water"       },
-  { cat: "bills",         icon: <Tv            size={28} color="#fff" />, bg: "#F57C00", name: "Cable TV"    },
-  { cat: "entertainment", icon: <Clapperboard  size={28} color="#fff" />, bg: "#E53935", name: "Movies"      },
-  { cat: "entertainment", icon: <Music         size={28} color="#fff" />, bg: "#8E24AA", name: "Music"       },
-  { cat: "entertainment", icon: <Gamepad2      size={28} color="#fff" />, bg: "#C62828", name: "Gaming"      },
-  { cat: "entertainment", icon: <Newspaper     size={28} color="#fff" />, bg: "#AD1457", name: "News"        },
+const apps = [
+  {
+    id: "aza_business",
+    name: "Aza Business",
+    desc: "Accept payments, manage payouts and API keys",
+    icon: "/hub-apps/aza-business.png",
+    category: "Business",
+  },
+  {
+    id: "aza_developer",
+    name: "AZA Developer",
+    desc: "Manage OAuth apps and Sign in with AZA",
+    icon: "/hub-apps/aza-developer.png",
+    category: "Business",
+  },
+  {
+    id: "cedirates",
+    name: "CediRates",
+    desc: "Live exchange rates and fuel prices",
+    icon: "/hub-apps/cedirates.png",
+    category: "Finance",
+  },
+  {
+    id: "play_2048",
+    name: "2048",
+    desc: "Join the numbers and get to the 2048 tile!",
+    icon: "/hub-apps/2048.png",
+    category: "Games",
+  },
+  {
+    id: "snake",
+    name: "Snake",
+    desc: "Eat apples, grow your snake, avoid crashing!",
+    icon: "/hub-apps/snakegame.png",
+    category: "Games",
+  },
+  {
+    id: "connect4",
+    name: "Connect 4",
+    desc: "Connect 4 in a row to win!",
+    icon: "/hub-apps/connect4.png",
+    category: "Games",
+  },
+  {
+    id: "sm",
+    name: "Salifu & Master",
+    desc: "Play Salifu and Master",
+    icon: "/hub-apps/sm.png",
+    category: "Games",
+  },
+  {
+    id: "radio",
+    name: "Radio",
+    desc: "Listen to live radio stations",
+    icon: "/hub-apps/radio.png",
+    category: "Entertainment",
+  },
+  {
+    id: "notepad",
+    name: "Notepad",
+    desc: "Take notes quickly inside Aza",
+    icon: "/hub-apps/notepad.png",
+    category: "Productivity",
+  },
 ];
 
 export function HubSection() {
   const [activeCat, setActiveCat] = useState("all");
-  const visible = apps.filter((a) => activeCat === "all" || a.cat === activeCat);
+  const visible = apps.filter((a) => activeCat === "all" || a.category === activeCat);
 
   return (
     <section id="hub" className="section-py" style={{ background: "var(--aza-bg)" }}>
       <div className="max-w-[1160px] mx-auto px-4 sm:px-6">
         <SectionHeader
           label="The Aza Hub"
-          heading="Your financial command center"
-          description="Access a curated marketplace of mini-apps for finance, bills, and entertainment — without switching apps."
+          heading="Mini apps built into Aza"
+          description="Games, tools, and services — all running inside the app. No installs, no switching."
         />
 
         {/* Category filters */}
@@ -64,18 +114,24 @@ export function HubSection() {
 
         {/* App grid */}
         <div
-          className="grid gap-4 max-w-[800px] mx-auto"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
+          className="grid gap-6 max-w-[800px] mx-auto"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}
         >
           {visible.map((app) => (
-            <div key={app.name} className="hub-app flex flex-col items-center gap-2 cursor-pointer">
-              <div
-                className="hub-app__icon-wrap w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-md"
-                style={{ background: app.bg }}
-              >
-                {app.icon}
+            <div key={app.id} className="hub-app flex flex-col items-center gap-2 cursor-pointer group">
+              <div className="hub-app__icon-wrap w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl overflow-hidden shadow-md transition-transform group-hover:scale-105">
+                <Image
+                  src={app.icon}
+                  alt={app.name}
+                  width={72}
+                  height={72}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <span className="text-[0.75rem] md:text-[0.8rem] font-semibold text-center" style={{ color: "var(--aza-text)" }}>
+              <span
+                className="text-[0.75rem] md:text-[0.8rem] font-semibold text-center leading-tight"
+                style={{ color: "var(--aza-text)" }}
+              >
                 {app.name}
               </span>
             </div>

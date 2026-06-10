@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Account Deleted</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#0E0F0C;margin:0;padding:0;background-color:#E6ECE1;">
+<div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #DADCE0;border-radius:12px;overflow:hidden;">
+  <div style="padding:28px 40px;border-bottom:1px solid #EAECEF;">
+    <table cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;"><img src="cid:aza_default" alt="AZA" width="28" height="28" style="display:block;border:0;"></td>
+    </tr></table>
+  </div>
+  <div style="padding:40px;">
+    <h1 style="font-size:32px;font-weight:800;color:#0E0F0C;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.2;">Your account has been deleted</h1>
+    <p style="font-size:16px;color:#5F6368;margin:0 0 24px 0;line-height:1.6;">Hi <span th:text="${name}">there</span>, your AZA account has been permanently deleted as requested.</p>
+
+    <div style="background:#F8F9FA;border:1px solid #EAECEF;border-radius:10px;overflow:hidden;margin:0 0 24px 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #EAECEF;">
+          <td style="padding:14px 20px;font-size:14px;color:#5F6368;">Personal data</td>
+          <td style="padding:14px 20px;font-size:14px;font-weight:600;color:#166534;text-align:right;">Permanently erased</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EAECEF;">
+          <td style="padding:14px 20px;font-size:14px;color:#5F6368;">Financial records</td>
+          <td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;">Retained (BoG regulation)</td>
+        </tr>
+        <tr>
+          <td style="padding:14px 20px;font-size:14px;color:#5F6368;">Retention period</td>
+          <td style="padding:14px 20px;font-size:14px;font-weight:600;color:#0E0F0C;text-align:right;">7 years</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="font-size:14px;color:#5F6368;margin:0;line-height:1.6;">Financial records are retained under Bank of Ghana AML/CFT and data-protection regulations. All personally identifiable information has been erased. Thank you for using AZA.</p>
+  </div>
+  <div style="padding:28px 40px;background:#F8F9FA;border-top:1px solid #EAECEF;">
+    <p style="margin:0;font-size:13px;color:#9AA0A6;">&copy; 2026 AZA. All rights reserved. &bull; <a href="mailto:support@aza.systems" style="color:#9AA0A6;">support@aza.systems</a></p>
+  </div>
+</div>
+</body>
+</html>

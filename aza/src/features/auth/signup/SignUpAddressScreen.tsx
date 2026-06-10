@@ -25,6 +25,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { sanitizeText } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpAddress">;
 
@@ -100,7 +101,7 @@ export default function SignUpAddressScreen() {
     }
   };
 
-  const isFormValid = data.homeAddress.trim().length > 0 && data.city.trim().length > 0;
+  const isFormValid = data.homeAddress.trim().length >= 3 && data.city.trim().length >= 2;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -132,6 +133,8 @@ export default function SignUpAddressScreen() {
               </Text>
             </Animated.View>
           </Animated.View>
+
+          <SignUpProgressBar step={6} total={10} />
 
           {/* Content */}
           <Animated.ScrollView
@@ -174,6 +177,7 @@ export default function SignUpAddressScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="603 Newtown Rd,Accra,Ghana"
                 placeholderTextColor={Colors.textSecondary}
@@ -195,6 +199,7 @@ export default function SignUpAddressScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Accra"
                 placeholderTextColor={Colors.textSecondary}

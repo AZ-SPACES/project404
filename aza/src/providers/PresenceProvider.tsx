@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import { BASE_URL, TOKEN_KEY } from '../services/api';
 import { useAuth } from './AuthProvider';
 import { subscribeAuthEvents } from './authEvents';
+import { usePresenceStore } from '../store/presenceStore';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
@@ -12,6 +13,8 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
   const { userToken } = useAuth();
   const clientRef = useRef<Client | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const setOnline = usePresenceStore((s) => s.setOnline);
+  const setOffline = usePresenceStore((s) => s.setOffline);
 
   useEffect(() => {
     if (!userToken) {
@@ -46,10 +49,27 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
         forceBinaryWSFrames: true,
         appendMissingNULLonIncoming: true,
         onConnect: () => {
-          // Send initial heartbeat
+          // Send initial heartbeat so the server marks us online immediately.
           client.publish({ destination: '/app/heartbeat' });
 
-          // Refresh presence every 30 seconds
+          // Receive broadcast presence events for all users.
+          client.subscribe('/topic/presence', (frame) => {
+            try {
+              const msg = JSON.parse(frame.body);
+              const type: string = msg?.type ?? '';
+              const userId: string = msg?.payload?.userId ?? '';
+              if (!userId) return;
+              if (type === 'user.online') {
+                usePresenceStore.getState().setOnline(userId);
+              } else if (type === 'user.offline') {
+                usePresenceStore.getState().setOffline(userId);
+              }
+            } catch {
+              // Presence frames are best-effort; ignore parse errors.
+            }
+          });
+
+          // Refresh presence every 30 seconds.
           heartbeatRef.current = setInterval(() => {
             if (client.connected) {
               client.publish({ destination: '/app/heartbeat' });

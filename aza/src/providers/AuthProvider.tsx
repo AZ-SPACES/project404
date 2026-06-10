@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { Alert } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { setForceLogoutHandler, getKycStatus } from "../services/api";
+import { setForceLogoutHandler, getKycStatus, logout as apiLogout } from "../services/api";
 import { emitAuthEvent } from "./authEvents";
 import { queryClient } from "../lib/queryClient";
 
@@ -19,20 +19,25 @@ type AuthState = {
   isBiometricsEnabled: boolean;
   forcePasswordReset: boolean;
   requireSelfieVerification: boolean;
+  scheduledDeletionAt: string | null;
   isLoading: boolean;
+};
+
+/** Named-parameter bag for the login() action. All fields except `token` are optional. */
+export type LoginSession = {
+  token: string;
+  hasPasscode?: boolean;
+  isKYCVerified?: boolean;
+  forcePasswordReset?: boolean;
+  requireSelfieVerification?: boolean;
+  isBiometricsEnabled?: boolean;
+  scheduledDeletionAt?: string | null;
 };
 
 type PinLockoutResult = { isLocked: boolean; secondsRemaining: number };
 
 type AuthContextType = AuthState & {
-  login: (
-    token: string,
-    hasPasscodeArg?: boolean,
-    isKYCVerifiedArg?: boolean,
-    forcePasswordReset?: boolean,
-    requireSelfieVerification?: boolean,
-    isBiometricsEnabled?: boolean,
-  ) => void;
+  login: (session: LoginSession) => void;
   logout: () => void;
   completeKYC: () => void;
   setPasscode: () => void;
@@ -64,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isBiometricsEnabled: false,
     forcePasswordReset: false,
     requireSelfieVerification: false,
+    scheduledDeletionAt: null,
     isLoading: true,
   });
 
@@ -106,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isBiometricsEnabled: stateFromStorage?.isBiometricsEnabled || false,
         forcePasswordReset: stateFromStorage?.forcePasswordReset || false,
         requireSelfieVerification: stateFromStorage?.requireSelfieVerification || false,
+        scheduledDeletionAt: stateFromStorage?.scheduledDeletionAt || null,
         isLoading: false,
       });
     };
@@ -140,21 +147,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const login = useCallback((
-    token: string,
-    hasPasscodeArg: boolean = false,
-    isKYCVerifiedArg: boolean = false,
-    forcePasswordResetArg: boolean = false,
-    requireSelfieVerificationArg: boolean = false,
-    isBiometricsEnabledArg: boolean = false,
-  ) => {
+  const login = useCallback(({
+    token,
+    hasPasscode = false,
+    isKYCVerified = false,
+    forcePasswordReset = false,
+    requireSelfieVerification = false,
+    isBiometricsEnabled = false,
+    scheduledDeletionAt = null,
+  }: LoginSession) => {
     saveState({
       userToken: token,
-      hasPasscode: hasPasscodeArg,
-      isKYCVerified: isKYCVerifiedArg,
-      forcePasswordReset: forcePasswordResetArg,
-      requireSelfieVerification: requireSelfieVerificationArg,
-      isBiometricsEnabled: isBiometricsEnabledArg,
+      hasPasscode,
+      isKYCVerified,
+      forcePasswordReset,
+      requireSelfieVerification,
+      isBiometricsEnabled,
+      scheduledDeletionAt: scheduledDeletionAt ?? null,
     });
   }, [saveState]);
 
@@ -167,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isBiometricsEnabled: false,
       forcePasswordReset: false,
       requireSelfieVerification: false,
+      scheduledDeletionAt: null,
       isLoading: false,
     });
     // Wipe all server-state cache so stale data never bleeds into the next session
@@ -174,8 +184,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // Fan out to providers that hold sensitive in-memory state (E2EE identity,
     // chat caches, peer key cache) so they can wipe.
     emitAuthEvent({ type: 'logout' });
-    // Clear all persisted secrets in the background
+    // Invalidate the session token on the server and clear local secrets.
+    // apiLogout is fire-and-forget — local state is already cleared above.
     Promise.all([
+      apiLogout().catch(() => {}),
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),
       SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
     ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));

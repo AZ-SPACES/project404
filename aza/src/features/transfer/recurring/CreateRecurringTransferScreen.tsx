@@ -179,6 +179,7 @@ export default function CreateRecurringTransferScreen() {
 
               <Text style={styles.label}>Recipient</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.input, errors.recipient ? styles.inputError : undefined]}
                 placeholder="Email, phone or @handle"
                 placeholderTextColor={Colors.textSecondary}
@@ -191,6 +192,7 @@ export default function CreateRecurringTransferScreen() {
 
               <Text style={styles.label}>Amount (GHS)</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.input, errors.amount ? styles.inputError : undefined]}
                 placeholder="0.00"
                 placeholderTextColor={Colors.textSecondary}
@@ -202,6 +204,7 @@ export default function CreateRecurringTransferScreen() {
 
               <Text style={styles.label}>Note (optional)</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="What's this for?"
                 placeholderTextColor={Colors.textSecondary}

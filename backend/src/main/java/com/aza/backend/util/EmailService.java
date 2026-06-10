@@ -37,15 +37,15 @@ public class EmailService {
     @Value("${brevo.sender-email:noreply@aza.systems}")
     private String senderEmail;
 
-    @Value("${app.base-url:https://aza.systems}")
-    private String appBaseUrl;
+    @Value("${app.api-base-url:https://api.aza.systems}")
+    private String apiBaseUrl;
 
     private String inlineImages(String html) {
-        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + appBaseUrl + "/images/aza.png\"");
-        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + appBaseUrl + "/images/Aza_Merchant.png\"");
-        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + appBaseUrl + "/images/Aza-admin.png\"");
-        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + appBaseUrl + "/images/Aza-Pay.png\"");
-        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + appBaseUrl + "/images/aza.png\"");
+        String result = html.replace("src=\"cid:paperplane\"",   "src=\"" + apiBaseUrl + "/images/aza.png\"");
+        result = result.replace("src=\"cid:aza_merchant\"", "src=\"" + apiBaseUrl + "/images/Aza_Merchant.png\"");
+        result = result.replace("src=\"cid:aza_admin\"",    "src=\"" + apiBaseUrl + "/images/Aza-admin.png\"");
+        result = result.replace("src=\"cid:aza_pay\"",      "src=\"" + apiBaseUrl + "/images/Aza-Pay.png\"");
+        result = result.replace("src=\"cid:aza_default\"",  "src=\"" + apiBaseUrl + "/images/aza.png\"");
         return result;
     }
 
@@ -527,5 +527,44 @@ public class EmailService {
     private static class LocationInfo {
         String description;
         String mapUrl;
+    }
+
+    // ── GDPR Account Deletion ──────────────────────────────────────────────────
+
+    public void sendDeletionScheduledEmail(String email, String name, java.time.LocalDateTime deletionDate) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("deletionDate", deletionDate.toLocalDate().toString());
+            String html = inlineImages(templateEngine.process("email/account-deletion-scheduled", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account is scheduled for deletion", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-scheduled email to {}: {}", email, e.getMessage());
+        }
+    }
+
+    public void sendDeletionCancelledEmail(String email, String name) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name);
+            String html = inlineImages(templateEngine.process("email/account-deletion-cancelled", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account deletion has been cancelled", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-cancelled email to {}: {}", email, e.getMessage());
+        }
+    }
+
+    public void sendDeletionCompletedEmail(String email, String name) {
+        try {
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("name", name != null ? name : "there");
+            String html = inlineImages(templateEngine.process("email/account-deletion-completed", ctx));
+            sendViaBrevo("AZA", senderEmail, email,
+                    "Your AZA account has been deleted", html, null, null);
+        } catch (Exception e) {
+            log.error("Failed to send deletion-completed email to {}: {}", email, e.getMessage());
+        }
     }
 }

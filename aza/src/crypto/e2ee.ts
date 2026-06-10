@@ -307,6 +307,15 @@ function buildMsgNInfo(senderId: string, chatId: string): string {
   return `aza.chat.v3.msgN|${senderId}|${chatId}`;
 }
 
+/**
+ * HKDF info string for ratcheting the root key forward after each follow-up
+ * message. Both sender and recipient derive the same new root from the same
+ * `ikm = rootKey || mix`, so the session state advances in lock-step.
+ */
+function buildChainInfo(senderId: string, chatId: string): string {
+  return `aza.chat.v3.chain|${senderId}|${chatId}`;
+}
+
 /** v3 canonical-JSON AAD. Distinct from v2 so legacy fallback can't cross-decrypt. */
 function buildAadV3(
   senderId: string,
@@ -497,6 +506,12 @@ export function encryptFirstMessageV3(args: {
  * Encrypt a follow-up message in an established session. Uses a fresh
  * ephemeral keypair mixed with the cached rootKey, giving sender-side FS
  * while keeping the per-message latency low.
+ *
+ * Returns the envelope AND a `newRootKey` — the ratcheted session state the
+ * caller MUST persist (replacing the old rootKey in SecureStore) before the
+ * next send. Both sides independently derive the same newRootKey from:
+ *   HKDF(rootKey || mix, salt=zeros, info=chain)
+ * Caller is responsible for zeroing newRootKey after persisting.
  */
 export function encryptFollowupMessageV3(args: {
   plaintext: string;
@@ -504,12 +519,14 @@ export function encryptFollowupMessageV3(args: {
   recipientIdentityPublic: Uint8Array;
   senderId: string;
   chatId: string;
-}): V3Envelope {
+}): { envelope: V3Envelope; newRootKey: Uint8Array } {
   const { plaintext, rootKey, recipientIdentityPublic, senderId, chatId } = args;
   const ephemeral = generateX25519();
   try {
     const mix = deriveSharedSecret(ephemeral.privateKey, recipientIdentityPublic);
     const ikm = concatBytes(rootKey, mix);
+
+    // Per-message AES key — salt is ephemeral pub prefix for uniqueness.
     const aesKey = hkdf(
       sha256,
       ikm,
@@ -517,6 +534,15 @@ export function encryptFollowupMessageV3(args: {
       utf8ToBytes(buildMsgNInfo(senderId, chatId)),
       32,
     );
+    // Ratchet: next root key — zero salt, distinct info, same IKM.
+    const newRootKey = hkdf(
+      sha256,
+      ikm,
+      new Uint8Array(32),
+      utf8ToBytes(buildChainInfo(senderId, chatId)),
+      32,
+    );
+
     const ephB64 = bytesToBase64(ephemeral.publicKey);
     const nonce = randomBytes(12);
     const aad = buildAadV3(senderId, chatId, ephB64);
@@ -529,10 +555,11 @@ export function encryptFollowupMessageV3(args: {
     mix.fill(0);
     ikm.fill(0);
     aesKey.fill(0);
+    // newRootKey is intentionally NOT zeroed here — returned to caller.
 
     return {
-      ephemeralPublicKey: ephB64,
-      ciphertext: bytesToBase64(blob),
+      envelope: { ephemeralPublicKey: ephB64, ciphertext: bytesToBase64(blob) },
+      newRootKey,
     };
   } finally {
     ephemeral.privateKey.fill(0);
@@ -620,10 +647,20 @@ export function decryptV3(args: {
       utf8ToBytes(buildMsgNInfo(senderId, chatId)),
       32,
     );
+    // Ratchet: derive the same newRootKey the sender computed (mirror of encrypt path).
+    const newRootKey = hkdf(
+      sha256,
+      ikm,
+      new Uint8Array(32),
+      utf8ToBytes(buildChainInfo(senderId, chatId)),
+      32,
+    );
     try {
       const plaintext = bytesToUtf8(gcm(aesKey, nonce, aad).decrypt(ciphertext));
-      return { plaintext };
+      // Return newRootKey so the caller can persist it. Caller zeroes after saving.
+      return { plaintext, rootKey: newRootKey };
     } catch {
+      newRootKey.fill(0);
       return null;
     } finally {
       mix.fill(0);

@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.auth.*;
+import com.aza.backend.entity.AuditLog;
 import com.aza.backend.entity.RecoveryCode;
 import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.entity.User;
@@ -54,6 +55,7 @@ public class AuthService {
     private final TotpEncryptionService totpEncryptionService;
     private final RecoveryCodeRepository recoveryCodeRepository;
     private final NotificationService notificationService;
+    private final AuditService auditService;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -105,7 +107,10 @@ public class AuthService {
                 .build();
         walletRepository.save(wallet);
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, true);
+        AuthResponse response = finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, true);
+        auditService.log(AuditLog.AUTH_SIGNUP, AuditLog.SUCCESS,
+                user.getId(), user.getEmail(), ipAddress, request.getDeviceId());
+        return response;
     }
 
     // ==================== LOGIN ====================
@@ -124,12 +129,15 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             emailService.sendFailedLoginAlert(user.getEmail(), user.getFirstName(), ipAddress);
+            auditService.log(AuditLog.AUTH_LOGIN_FAILURE, AuditLog.FAILURE,
+                    user.getId(), user.getEmail(), ipAddress, request.getDeviceId());
             throw new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED);
         }
 
-        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+        if (user.getStatus() == User.AccountStatus.SUSPENDED || user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new com.aza.backend.exception.AppException("ACCOUNT_INACTIVE", "Your account is not active", org.springframework.http.HttpStatus.FORBIDDEN);
         }
+        // PENDING_DELETION users can log in to cancel their deletion request
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             String preAuthToken = UUID.randomUUID().toString();
@@ -161,6 +169,11 @@ public class AuthService {
                     .methods(methods)
                     .defaultMethod(defMethod)
                     .build();
+        }
+
+        if (user.getRole() == User.UserRole.ADMIN) {
+            otpService.sendOtp(identifier, "login");
+            return null;
         }
 
         return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false);
@@ -212,7 +225,7 @@ public class AuthService {
 
     private AuthResponse finalizeLogin(User user, String deviceName,
                                        String deviceOs, String deviceId, String ipAddress, boolean isSignup) {
-        if (user.getStatus() != User.AccountStatus.ACTIVE) {
+        if (user.getStatus() == User.AccountStatus.SUSPENDED || user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new AppException("Account is not active");
         }
 
@@ -229,6 +242,8 @@ public class AuthService {
         } else {
             emailService.sendLoginNotification(
                     user.getEmail(), user.getFirstName(), deviceName, deviceOs, ipAddress);
+            auditService.log(AuditLog.AUTH_LOGIN_SUCCESS, AuditLog.SUCCESS,
+                    user.getId(), user.getEmail(), ipAddress, deviceId);
         }
 
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -255,6 +270,8 @@ public class AuthService {
     public void logoutEverywhere(User user) {
         refreshTokenRepository.deleteAllByUserId(user.getId());
         biometricService.revokeAllBiometricTokens(user);
+        auditService.log(AuditLog.AUTH_LOGOUT_EVERYWHERE, AuditLog.SUCCESS,
+                user.getId(), user.getEmail(), null);
     }
 
     @Transactional
@@ -860,6 +877,13 @@ public class AuthService {
     // Called by AccountRecoveryContactService to resolve a user without full auth
     public User getUserFromPreAuth(String preAuthToken) {
         return getPreAuthSession(preAuthToken).user();
+    }
+
+    // Finalizes login for QR code web portal login.
+    // Each QR session gets a unique deviceId so refresh-token rows don't collide.
+    @Transactional
+    public AuthResponse completeQrLogin(User user, String challengeToken, String ipAddress) {
+        return finalizeLogin(user, "Web QR Login", "Web", "WEB-QR-" + challengeToken, ipAddress, false);
     }
 
     // Finalizes login using a preAuthToken — called after recovery contact verification

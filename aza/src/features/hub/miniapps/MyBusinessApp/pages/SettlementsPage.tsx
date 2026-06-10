@@ -31,7 +31,7 @@ export default function SettlementsPage({ goBack, Colors, styles }: NavProps) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {settlements.map((s) => (
+          {settlements.map((s: any) => (
             <View
               key={s.id}
               style={{

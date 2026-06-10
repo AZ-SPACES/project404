@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform, Animated, ScrollView } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
@@ -17,7 +17,13 @@ type ChatInputAreaProps = {
   replyTo?: ReplyInfo | null;
   onCancelReply?: () => void;
   onSendAudio?: (uri: string, duration: number) => void;
+  onScheduleSend?: (delaySecs: number) => void;
 };
+
+// ----------------------------------------------------------------------------
+// Quick reply suggestions
+// ----------------------------------------------------------------------------
+const QUICK_REPLIES = ["👍 OK", "On my way!", "Call you back", "Can't talk now", "Thanks!"];
 
 // ----------------------------------------------------------------------------
 // Component
@@ -31,6 +37,7 @@ export const ChatInputArea = memo(function ChatInputArea({
   replyTo,
   onCancelReply,
   onSendAudio,
+  onScheduleSend,
 }: ChatInputAreaProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
@@ -43,7 +50,36 @@ export const ChatInputArea = memo(function ChatInputArea({
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
 
-  const showIcon = !isFocused && !message && !isRecording;
+  // Animated waveform bars for recording preview (8 bars)
+  const waveAnims = useRef(Array.from({ length: 8 }, () => new Animated.Value(0.3))).current;
+  const waveAnimRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isRecording) {
+      const animate = () => {
+        waveAnimRef.current = setTimeout(() => {
+          waveAnims.forEach(anim => {
+            Animated.spring(anim, {
+              toValue: 0.2 + Math.random() * 0.8,
+              friction: 3,
+              tension: 200,
+              useNativeDriver: false,
+            }).start();
+          });
+          animate();
+        }, 150);
+      };
+      animate();
+    } else {
+      if (waveAnimRef.current) clearTimeout(waveAnimRef.current);
+      waveAnims.forEach(anim => {
+        Animated.spring(anim, { toValue: 0.3, friction: 4, tension: 100, useNativeDriver: false }).start();
+      });
+    }
+    return () => { if (waveAnimRef.current) clearTimeout(waveAnimRef.current); };
+  }, [isRecording]);
+
+  const showIcon = false; // no icon in input field
   const isMessageEmpty = !message.trim();
   const recordMode = useRef<'none' | 'tap' | 'hold'>('none');
 
@@ -128,8 +164,8 @@ export const ChatInputArea = memo(function ChatInputArea({
   const handleAddPress = useCallback(() => {
     addButtonRef.current?.measure(
       (_x: number, _y: number, width: number, _height: number, _pageX: number, pageY: number) => {
-        const CARD_HEIGHT_ESTIMATE = 130;
-        onAddPress({ top: pageY - CARD_HEIGHT_ESTIMATE - 8, left: Spacing.lg, buttonWidth: width });
+        const CARD_HEIGHT_ESTIMATE = 290;
+        onAddPress({ top: pageY - CARD_HEIGHT_ESTIMATE - 8, left: _pageX, buttonWidth: width });
       },
     );
   }, [onAddPress]);
@@ -156,6 +192,27 @@ export const ChatInputArea = memo(function ChatInputArea({
         </View>
       ) : null}
 
+      {isMessageEmpty && !isRecording && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickRepliesContent}
+          style={styles.quickRepliesContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {QUICK_REPLIES.map((chip) => (
+            <TouchableOpacity
+              key={chip}
+              style={styles.quickReplyChip}
+              activeOpacity={0.75}
+              onPress={() => setMessage(chip)}
+            >
+              <Text style={styles.quickReplyText}>{chip}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       <View style={styles.container}>
         {!isRecording && (
           <TouchableOpacity
@@ -172,6 +229,18 @@ export const ChatInputArea = memo(function ChatInputArea({
           {isRecording ? (
             <View style={styles.recordingContent}>
               <View style={styles.recordingIndicator} />
+              {/* Animated waveform */}
+              <View style={styles.recordingWaveform}>
+                {waveAnims.map((anim, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.recordingWaveBar,
+                      { height: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 20] }) },
+                    ]}
+                  />
+                ))}
+              </View>
               <Text style={styles.recordingTime}>{formatDuration(recordDuration)}</Text>
               <TouchableOpacity onPress={handleCancelRecording} style={styles.cancelRecordBtn}>
                 <Text style={styles.cancelRecordText}>Cancel</Text>
@@ -183,6 +252,7 @@ export const ChatInputArea = memo(function ChatInputArea({
                 <Feather name="message-square" size={20} color={Colors.textSecondary} style={styles.icon} />
               )}
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.textInput}
                 placeholder="Type here"
                 placeholderTextColor={Colors.textSecondary}
@@ -208,7 +278,13 @@ export const ChatInputArea = memo(function ChatInputArea({
             <Feather name={isRecording ? "stop-circle" : "mic"} size={20} color={Colors.white} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.actionButton} activeOpacity={0.8} onPress={onSend}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            activeOpacity={0.8}
+            onPress={onSend}
+            onLongPress={onScheduleSend ? () => onScheduleSend(0) : undefined}
+            delayLongPress={500}
+          >
             <Feather name="send" size={20} color={Colors.white} style={styles.sendIcon} />
           </TouchableOpacity>
         )}
@@ -243,9 +319,9 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderRadius: 12,
+      borderRadius: 24,
       borderWidth: 1,
-      borderColor: Colors.border,
+      borderColor: isDark ? Colors.border : 'rgba(0,0,0,0.1)',
       paddingHorizontal: Spacing.md,
       minHeight: 44,
       maxHeight: 120,
@@ -276,11 +352,24 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       backgroundColor: '#EF4444',
       marginRight: Spacing.sm,
     },
+    recordingWaveform: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      flex: 1,
+      height: 24,
+    },
+    recordingWaveBar: {
+      width: 3,
+      borderRadius: 2,
+      backgroundColor: '#EF4444',
+    },
     recordingTime: {
       ...Typography.body,
       fontWeight: '600',
       color: Colors.textPrimary,
-      flex: 1,
+      minWidth: 36,
+      textAlign: 'right',
     },
     cancelRecordBtn: {
       paddingHorizontal: Spacing.sm,
@@ -289,6 +378,31 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       ...Typography.caption,
       color: Colors.textSecondary,
       fontWeight: '600',
+    },
+    // Quick replies
+    quickRepliesContainer: {
+      maxHeight: 44,
+      marginBottom: 2,
+    },
+    quickRepliesContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 6,
+      gap: Spacing.sm,
+      alignItems: 'center',
+    },
+    quickReplyChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.18)' : Colors.border,
+      backgroundColor: isDark ? Colors.surface : '#F9FAFB',
+    },
+    quickReplyText: {
+      ...Typography.caption,
+      fontSize: 13,
+      color: Colors.textPrimary,
+      fontWeight: '500',
     },
     // Reply banner
     replyBanner: {

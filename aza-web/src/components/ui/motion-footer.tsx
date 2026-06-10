@@ -5,11 +5,18 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
-import { ChevronUp, Apple } from "lucide-react";
+import { ChevronUp } from "lucide-react";
+
+const AppleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M18.546,12.763c0.024-1.87,1.004-3.597,2.597-4.576c-1.009-1.442-2.64-2.323-4.399-2.378    c-1.851-0.194-3.645,1.107-4.588,1.107c-0.961,0-2.413-1.088-3.977-1.056C6.122,5.927,4.25,7.068,3.249,8.867    c-2.131,3.69-0.542,9.114,1.5,12.097c1.022,1.461,2.215,3.092,3.778,3.035c1.529-0.063,2.1-0.975,3.945-0.975    c1.828,0,2.364,0.975,3.958,0.938c1.64-0.027,2.674-1.467,3.66-2.942c0.734-1.041,1.299-2.191,1.673-3.408    C19.815,16.788,18.548,14.879,18.546,12.763z" />
+    <path d="M15.535,3.847C16.429,2.773,16.87,1.393,16.763,0c-1.366,0.144-2.629,0.797-3.535,1.829    c-0.895,1.019-1.349,2.351-1.261,3.705C13.352,5.548,14.667,4.926,15.535,3.847z" />
+  </svg>
+);
 
 const GooglePlayIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M3.18 23.76c.31.17.67.19 1.01.04l12.2-7.05-2.55-2.55-10.66 9.56zm16.84-10.09L17.44 12l2.58-1.67L6.8.28C6.47.1 6.11.09 5.79.26L16.42 10.9l3.6 2.77zm2.16-3.41c-.33-.23-.77-.24-1.11-.03l-2.13 1.38 2.3 2.3 1.94-1.26c.71-.46.71-1.62 0-2.39zm-18.8 1.37l-2.03-2.03c-.29.32-.35.79-.1 1.17l2.13 2.81v-1.95z" />
+    <path d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.487 1.487 0 0 0-.227.82v21.89c0 .28.077.54.211.76l11.498-11.54L1.337.924zm10.992 10.927L1.297 22.872a1.498 1.498 0 0 0 1.58-.315l13.06-7.398-4.608-3.308zm.214-.215l4.655 3.339 3.028-1.715L2.946.6a1.5 1.5 0 0 0-.803-.303l10.4 11.339z" />
   </svg>
 );
 
@@ -294,7 +301,7 @@ export function CinematicFooter() {
               {/* App Store Links (Primary) */}
               <div className="flex flex-wrap justify-center gap-4 w-full">
                 <MagneticButton as="a" href="#" className="footer-solid-pill px-10 py-4 rounded-xl font-bold text-sm md:text-base flex items-center gap-3 group">
-                  <Apple className="w-5 h-5 text-current" />
+                  <AppleIcon className="w-5 h-5 text-current" />
                   Download on the App Store
                 </MagneticButton>
 

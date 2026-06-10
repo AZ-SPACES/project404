@@ -42,6 +42,7 @@ import {
 } from '../../../services/api';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Device from 'expo-device';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TotpLogin'>;
 type TotpLoginRouteProp = RouteProp<RootStackParamList, 'TotpLogin'>;
@@ -68,14 +69,18 @@ const TotpLoginScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [appRequestId, setAppRequestId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
 
   const { login } = useAuth();
   const { showToast } = useToast();
 
 
-  // Stop polling on unmount
+  // Stop polling on unmount and mark component as gone so callbacks don't update stale state
   useEffect(() => {
-    return () => { stopPolling(); };
+    return () => {
+      mountedRef.current = false;
+      stopPolling();
+    };
   }, []);
 
   // Countdown timer for login-OTP mode
@@ -102,9 +107,9 @@ const TotpLoginScreen: React.FC = () => {
   const triggerSms2fa = async () => {
     setIsLoading(true);
     try {
-      await requestSms2fa(preAuthToken);
+      await requestSms2fa(preAuthToken!);
       showToast('A verification code has been sent to your phone.', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showToast('Failed to send SMS. Please try again.', 'error');
     } finally {
       setIsLoading(false);
@@ -114,9 +119,9 @@ const TotpLoginScreen: React.FC = () => {
   const triggerEmail2fa = async () => {
     setIsLoading(true);
     try {
-      await requestEmail2fa(preAuthToken);
+      await requestEmail2fa(preAuthToken!);
       showToast('A verification code has been sent to your email.', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showToast('Failed to send email. Please try again.', 'error');
     } finally {
       setIsLoading(false);
@@ -146,10 +151,10 @@ const TotpLoginScreen: React.FC = () => {
       }
 
       const deviceId = await getDeviceId();
-      const res = await verifyPasskeys2fa(preAuthToken, biometricToken, deviceId);
+      const res = await verifyPasskeys2fa(preAuthToken!, biometricToken, deviceId);
       await finalizeLogin(res.data?.data ?? res.data);
-    } catch (error: any) {
-      const msg = error.response?.data?.message || 'Passkey verification failed. Please try another method.';
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Passkey verification failed. Please try another method.');
       showToast(msg, 'error');
     } finally {
       setIsLoading(false);
@@ -171,12 +176,13 @@ const TotpLoginScreen: React.FC = () => {
         const payload = res.data?.data;
         if (payload?.accessToken) {
           stopPolling();
-          await finalizeLogin(payload);
+          if (mountedRef.current) await finalizeLogin(payload);
         }
         // null means still PENDING — keep polling
-      } catch (err: any) {
+      } catch (err: unknown) {
         stopPolling();
-        const msg = err.response?.data?.message || 'Login request expired or was denied.';
+        if (!mountedRef.current) return;
+        const msg = extractErrorMessage(err, 'Login request expired or was denied.');
         showToast(msg, 'error');
         const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
         setCurrentMethod(fallback);
@@ -189,12 +195,12 @@ const TotpLoginScreen: React.FC = () => {
     setIsLoading(true);
     setAppRequestId(null);
     try {
-      const res = await requestApp2faApproval(preAuthToken);
+      const res = await requestApp2faApproval(preAuthToken!);
       const requestId: string = res.data?.data ?? res.data;
       setAppRequestId(requestId);
-      startPolling(preAuthToken, requestId);
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to send approval request. Please try another method.';
+      startPolling(preAuthToken!, requestId);
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to send approval request. Please try another method.');
       showToast(msg, 'error');
       const fallback = (methods.find(m => m !== 'APP') ?? 'TOTP') as VerificationMethod;
       setCurrentMethod(fallback);
@@ -203,17 +209,24 @@ const TotpLoginScreen: React.FC = () => {
     }
   };
 
-  const finalizeLogin = async (payload: any) => {
+  type AuthPayload = {
+    accessToken: string;
+    refreshToken: string;
+    user?: { passcodeSet?: boolean; kycStatus?: string; forcePasswordReset?: boolean; requireSelfieVerification?: boolean };
+  };
+
+  const finalizeLogin = async (payload: AuthPayload) => {
     await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
-    login(
-      payload.accessToken,
-      payload.user?.passcodeSet ?? false,
-      payload.user?.kycStatus === 'VERIFIED',
-      payload.user?.forcePasswordReset ?? false,
-      payload.user?.requireSelfieVerification ?? false,
-      false
-    );
+    const existingBiometricToken = await SecureStore.getItemAsync(BIOMETRIC_TOKEN_KEY);
+    login({
+      token: payload.accessToken,
+      hasPasscode: payload.user?.passcodeSet ?? false,
+      isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+      forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+      requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+      isBiometricsEnabled: !!existingBiometricToken,
+    });
   };
 
   const handleOtpChange = (text: string, index: number) => {
@@ -287,8 +300,8 @@ const TotpLoginScreen: React.FC = () => {
         data = res.data;
       }
       await finalizeLogin(data?.data ?? data);
-    } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Invalid code. Please try again.';
+    } catch (error: unknown) {
+      const errorMsg = extractErrorMessage(error, 'Invalid code. Please try again.');
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
@@ -425,6 +438,7 @@ const TotpLoginScreen: React.FC = () => {
                       {otp.map((digit, index) => (
                         <View key={index} style={styles.otpSlot}>
                           <TextInput
+                            underlineColorAndroid="transparent"
                             ref={(ref) => { inputRefs.current[index] = ref; }}
                             style={styles.otpInput}
                             value={digit}
@@ -513,18 +527,22 @@ const TotpLoginScreen: React.FC = () => {
               />
             )}
 
-            <TouchableOpacity
-              style={styles.recoveryButton}
-              onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
-            >
-              <Text style={styles.recoveryText}>Use a recovery code</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.recoveryButton, { marginTop: 2 }]}
-              onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
-            >
-              <Text style={styles.recoveryText}>Contact a recovery person</Text>
-            </TouchableOpacity>
+            {!!preAuthToken && (
+              <>
+                <TouchableOpacity
+                  style={styles.recoveryButton}
+                  onPress={() => navigation.navigate('RecoveryCodeLogin', { preAuthToken })}
+                >
+                  <Text style={styles.recoveryText}>Use a recovery code</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.recoveryButton, { marginTop: 2 }]}
+                  onPress={() => navigation.navigate('ContactRecoveryLogin', { preAuthToken })}
+                >
+                  <Text style={styles.recoveryText}>Contact a recovery person</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
           
           {renderMethodSelector()}

@@ -148,6 +148,7 @@ export default function EmailUsScreen() {
 
               <Text style={[styles.inputLabel, { marginTop: Spacing.md }]}>Details</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Describe your issue in detail..."
                 placeholderTextColor={Colors.textSecondary}

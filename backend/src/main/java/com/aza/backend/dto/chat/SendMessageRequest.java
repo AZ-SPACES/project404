@@ -1,8 +1,10 @@
 package com.aza.backend.dto.chat;
 
+import com.aza.backend.dto.e2ee.DeviceCiphertextDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -66,4 +68,13 @@ public class SendMessageRequest {
      * Null on subsequent messages once the session root key is cached.
      */
     private String senderIdentityPublicKey;
+
+    /**
+     * Multi-device encrypted envelopes. Key = deviceId, value = per-device
+     * ECDH-encrypted envelope. When present, the server stores one
+     * MessageCiphertext row per entry and includes the full map in every
+     * delivery so each device can extract its own envelope.
+     * Null for support-chat messages (those use plaintext content).
+     */
+    private Map<String, DeviceCiphertextDto> deviceCiphertexts;
 }

@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../../../lib/queryKeys";
 import { useProfile } from "../../../../providers/ProfileProvider";
 import { BackButton } from '../../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "MerchantKYBOwner">;
 type RoutePropType = RouteProp<RootStackParamList, "MerchantKYBOwner">;
@@ -121,9 +122,9 @@ export default function MerchantKYBOwnerScreen() {
 
       await submitMerchantKyb(payload);
       navigation.navigate("MerchantKYBDocuments", { merchantId, isPrimaryOwner: isPrimaryOwner === "yes" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const message =
-        err?.response?.data?.message ?? err?.message ?? "Something went wrong. Please try again.";
+        extractErrorMessage(err, "Something went wrong. Please try again.");
       Alert.alert("Error", message);
     } finally {
       setLoading(false);
@@ -220,6 +221,7 @@ export default function MerchantKYBOwnerScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="John Mensah"
                 placeholderTextColor={Colors.textSecondary}
@@ -267,6 +269,7 @@ export default function MerchantKYBOwnerScreen() {
             <View style={styles.inputContainer}>
               <MaterialIcons name="pin" size={24} color={Colors.primary} style={styles.inputIcon} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder={idPlaceholder}
                 placeholderTextColor={Colors.textSecondary}

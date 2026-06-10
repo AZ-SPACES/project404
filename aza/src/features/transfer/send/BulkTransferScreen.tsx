@@ -154,6 +154,7 @@ export default function BulkTransferScreen() {
                 )}
               </View>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.input, errors[`${row.id}_recipientIdentifier`] ? styles.inputError : undefined]}
                 placeholder="Email, phone or @handle"
                 placeholderTextColor={Colors.textSecondary}
@@ -166,6 +167,7 @@ export default function BulkTransferScreen() {
                 <Text style={styles.errorText}>{errors[`${row.id}_recipientIdentifier`]}</Text>
               )}
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.input, errors[`${row.id}_amount`] ? styles.inputError : undefined]}
                 placeholder="Amount (GHS)"
                 placeholderTextColor={Colors.textSecondary}
@@ -177,6 +179,7 @@ export default function BulkTransferScreen() {
                 <Text style={styles.errorText}>{errors[`${row.id}_amount`]}</Text>
               )}
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Note (optional)"
                 placeholderTextColor={Colors.textSecondary}

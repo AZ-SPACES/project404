@@ -53,6 +53,7 @@ export function PersonalInformationScreen() {
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputContainer, styles.readOnlyContainer]}>
         <TextInput
+          underlineColorAndroid="transparent"
           style={[styles.input, { color: Colors.textSecondary }]}
           value={value}
           placeholder={placeholder}
@@ -272,6 +273,7 @@ export function PersonalInformationScreen() {
             ]}>
               <Text style={{ ...Typography.bodyLg, color: Colors.textPrimary, marginRight: 2 }}>@</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 value={username}
                 onChangeText={onUsernameChange}

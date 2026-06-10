@@ -75,5 +75,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     /* Task 4: Find users who signed up in a date range (for cohort analytics) */
     @Query("SELECT u FROM User u WHERE u.createdAt >= :start AND u.createdAt < :end AND u.deletedAt IS NULL")
     List<User> findSignupsInPeriod(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT u FROM User u WHERE u.status = 'PENDING_DELETION' AND u.scheduledDeletionAt <= :now")
+    List<User> findDueForErasure(@Param("now") LocalDateTime now);
 }
 

@@ -1,10 +1,12 @@
 import MyBusinessApp from './MyBusinessApp';
+import DeveloperApp from './DeveloperApp';
 import Play2048App from './Play2048App';
 import Snake from './Snakegame';
 import Connect4 from './Connect4';
 import Radio from './Radio';
 import Notepad from './Notepad';
 import CediratesApp from './CediratesApp';
+import SalifuAndMaster from './Salifuandmaster';
 import { MiniAppEntry } from './types';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
@@ -12,9 +14,17 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     id: 'aza_business',
     name: 'Aza Business',
     description: 'Accept payments, manage payouts and API keys',
-    icon: require('../../../assets/aza-z.png'),
+    icon: require('../../../assets/aza-business.png'),
     category: 'Business',
     component: MyBusinessApp,
+  },
+  {
+    id: 'aza_developer',
+    name: 'AZA Developer',
+    description: 'Manage OAuth apps and Sign in with AZA',
+    icon: require('../../../assets/aza-developer.png'),
+    category: 'Business',
+    component: DeveloperApp,
   },
   {
     id: 'play_2048',
@@ -63,6 +73,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/cedirates.png'),
     category: 'Finance',
     component: CediratesApp,
+  },
+    {
+    id: 'salifu_and_master',
+    name: 'Salifu and Master',
+    description: 'Play Salifu and Master',
+    icon: require('../../../assets/s&m.png'),
+    category: 'Games',
+    component: SalifuAndMaster,
   }
 ];
 

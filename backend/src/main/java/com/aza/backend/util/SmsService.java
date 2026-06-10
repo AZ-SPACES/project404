@@ -72,26 +72,25 @@ public class SmsService {
     }
 
     public void sendTransferSentSms(String phoneNumber, String recipientName,
-                                    BigDecimal amount, String txnRef, BigDecimal newBalance, 
+                                    BigDecimal amount, String txnRef, BigDecimal newBalance,
                                     String reference, String transactionId, BigDecimal fee, BigDecimal tax) {
         CompletableFuture.runAsync(() -> {
             String bal = newBalance != null ? fmt(newBalance) : "0.00";
-            String msg = "Payment made for GHS " + fmt(amount) + " to " + recipientName + " Current Balance: GHS " + bal 
-                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "") 
-                    + ". Transaction ID: " + transactionId + ". Fee charged: GHS" + (fee != null ? fmt(fee) : "0.00") 
-                    + " Tax charged: " + (tax != null ? fmt(tax) : "0") + ".";
+            String noteSegment = (reference != null && !reference.isBlank()) ? " Note: " + reference + "." : "";
+            String msg = "AZA: You sent GHS " + fmt(amount) + " to " + recipientName + "."
+                    + noteSegment + " New bal: GHS " + bal + ". Txn ID: " + transactionId + ".";
             sendSms(phoneNumber, msg);
         });
     }
 
     public void sendTransferReceivedSms(String phoneNumber, String senderName,
-                                        BigDecimal amount, String txnRef, BigDecimal newBalance, 
+                                        BigDecimal amount, String txnRef, BigDecimal newBalance,
                                         String reference, String transactionId, BigDecimal fee) {
         CompletableFuture.runAsync(() -> {
             String bal = newBalance != null ? fmt(newBalance) : "0.00";
-            String msg = "Payment received for GHS " + fmt(amount) + " from " + senderName + "  Current Balance: GHS " + bal 
-                    + " . Available Balance: GHS " + bal + ". Reference: " + (reference != null ? reference : "00") 
-                    + ". Transaction ID: " + transactionId + ". TRANSACTION FEE: " + (fee != null ? fmt(fee) : "0.00");
+            String noteSegment = (reference != null && !reference.isBlank()) ? " Note: " + reference + "." : "";
+            String msg = "AZA: GHS " + fmt(amount) + " was sent to you by " + senderName + "."
+                    + noteSegment + " New bal: GHS " + bal + ". Txn ID: " + transactionId + ".";
             sendSms(phoneNumber, msg);
         });
     }
@@ -133,7 +132,26 @@ public class SmsService {
         if (digits.startsWith("233") && digits.length() == 12) {
             return digits;
         }
-        
+
         return digits;
+    }
+
+    // ── GDPR Account Deletion ──────────────────────────────────────────────────
+
+    public void sendDeletionScheduledSms(String phoneNumber, java.time.LocalDateTime deletionDate) {
+        sendSms(phoneNumber,
+                "AZA: Your account is scheduled for permanent deletion on " +
+                deletionDate.toLocalDate() + ". Log in and go to Settings > Security & Privacy to cancel.");
+    }
+
+    public void sendDeletionCancelledSms(String phoneNumber) {
+        sendSms(phoneNumber,
+                "AZA: Your account deletion has been cancelled. Your account is active again.");
+    }
+
+    public void sendDeletionCompletedSms(String phoneNumber) {
+        sendSms(phoneNumber,
+                "AZA: Your account has been permanently deleted. Financial records are retained " +
+                "as required by Bank of Ghana regulations. Thank you for using AZA.");
     }
 }

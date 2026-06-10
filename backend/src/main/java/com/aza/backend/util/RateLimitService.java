@@ -40,27 +40,37 @@ public class RateLimitService {
         long windowMillis = window.toMillis();
         String redisKey = "ratelimit:" + key;
 
-        Long result = redisTemplate.execute(
-                RATE_LIMIT_SCRIPT,
-                Collections.singletonList(redisKey),
-                String.valueOf(now),
-                String.valueOf(windowMillis),
-                String.valueOf(limit),
-                UUID.randomUUID().toString()
-        );
+        Long result;
+        try {
+            result = redisTemplate.execute(
+                    RATE_LIMIT_SCRIPT,
+                    Collections.singletonList(redisKey),
+                    String.valueOf(now),
+                    String.valueOf(windowMillis),
+                    String.valueOf(limit),
+                    UUID.randomUUID().toString()
+            );
+        } catch (org.springframework.dao.DataAccessException e) {
+            // Redis unavailable — fail open so requests aren't blocked during outages
+            return;
+        }
 
         if (result != null && result == 1L) {
             long retryAfterSeconds = window.getSeconds();
             // Best-effort retry-after calculation (non-critical path)
-            Set<TypedTuple<String>> elements = redisTemplate.opsForZSet()
-                    .rangeByScoreWithScores(redisKey, 0, now);
-            if (elements != null && !elements.isEmpty()) {
-                Double score = elements.iterator().next().getScore();
-                if (score != null) {
-                    long expiresAt = score.longValue() + windowMillis;
-                    long retryAfterMillis = expiresAt - now;
-                    retryAfterSeconds = Math.max(1, retryAfterMillis / 1000);
+            try {
+                Set<TypedTuple<String>> elements = redisTemplate.opsForZSet()
+                        .rangeByScoreWithScores(redisKey, 0, now);
+                if (elements != null && !elements.isEmpty()) {
+                    Double score = elements.iterator().next().getScore();
+                    if (score != null) {
+                        long expiresAt = score.longValue() + windowMillis;
+                        long retryAfterMillis = expiresAt - now;
+                        retryAfterSeconds = Math.max(1, retryAfterMillis / 1000);
+                    }
                 }
+            } catch (Exception ignored) {
+                // Non-critical — proceed with default retry-after
             }
             throw new RateLimitExceededException("Too many requests. Please try again later.", retryAfterSeconds);
         }
@@ -71,11 +81,15 @@ public class RateLimitService {
      * Does NOT consume a slot — use enforceRateLimit() for actual limiting.
      */
     public long getRemainingCount(String key, int limit, Duration window) {
-        long now = System.currentTimeMillis();
-        String redisKey = "ratelimit:" + key;
-        redisTemplate.opsForZSet().removeRangeByScore(redisKey, 0, now - window.toMillis());
-        Long used = redisTemplate.opsForZSet().zCard(redisKey);
-        return Math.max(0, limit - (used != null ? used : 0));
+        try {
+            long now = System.currentTimeMillis();
+            String redisKey = "ratelimit:" + key;
+            redisTemplate.opsForZSet().removeRangeByScore(redisKey, 0, now - window.toMillis());
+            Long used = redisTemplate.opsForZSet().zCard(redisKey);
+            return Math.max(0, limit - (used != null ? used : 0));
+        } catch (Exception e) {
+            return limit;
+        }
     }
 
     /** Clear all sliding-window counters for a specific user. */

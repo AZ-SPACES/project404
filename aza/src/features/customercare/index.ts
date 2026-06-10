@@ -1,3 +1,4 @@
+export { default as ChatbotScreen } from './screens/ChatbotScreen';
 export { default as ChatWithUsScreen } from './screens/ChatWithUsScreen';
 export { default as EmailUsScreen } from './screens/EmailUsScreen';
 export { default as HelpAndSupportScreen } from './screens/HelpAndSupportScreen';

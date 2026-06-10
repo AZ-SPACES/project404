@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Banknote, PartyPopper } from "lucide-react";
 
 const messages = [
-  { side: "left",  bg: "#E6ECE1", color: "#0E0F0C", text: "Hey! Can you send me the $120?",  Icon: null },
+  { side: "left",  bg: "#E6ECE1", color: "#0E0F0C", text: "Hey! Can you send me the ₵120?",  Icon: null },
   { side: "right", bg: "#174717", color: "#fff",     text: "Sure! Just sent it ",              Icon: Banknote },
   { side: "left",  bg: "#E6ECE1", color: "#0E0F0C", text: "Got it, thanks! ",                  Icon: PartyPopper },
   { side: "right", bg: "#174717", color: "#fff",     text: "Anytime!",                         Icon: null },

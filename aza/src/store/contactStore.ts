@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   getContacts,
+  getContactRequests,
   searchContacts,
   markContactFavorite,
   unmarkContactFavorite,
@@ -18,6 +19,7 @@ import {
 import { Contact, BlockedUser, PublicProfile, ContactRequest, SentContactRequest } from '../features/contacts/types';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface ContactState {
   contacts: Contact[];
@@ -64,8 +66,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
         staleTime: 30_000,
       });
       set({ contacts: data });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch contacts' });
+    } catch (error: unknown) {
+      set({ error: extractErrorMessage(error, 'Failed to fetch contacts') });
     } finally {
       set({ isLoading: false });
     }
@@ -107,26 +109,18 @@ export const useContactStore = create<ContactState>((set, get) => ({
   },
 
   blockUser: async (userId: string) => {
-    try {
-      await blockUserApi(userId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
-      await get().fetchBlockedUsers();
-      await get().fetchContacts();
-    } catch (error) {
-      console.error('Failed to block user', error);
-    }
+    await blockUserApi(userId);
+    queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
+    await get().fetchBlockedUsers();
+    await get().fetchContacts();
   },
 
   unblockUser: async (userId: string) => {
-    try {
-      await unblockUserApi(userId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
-      await get().fetchBlockedUsers();
-    } catch (error) {
-      console.error('Failed to unblock user', error);
-    }
+    await unblockUserApi(userId);
+    queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() });
+    await get().fetchBlockedUsers();
   },
 
   fetchBlockedUsers: async () => {
@@ -152,8 +146,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContacts();
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to add contact' });
+    } catch (error: unknown) {
+      set({ error: extractErrorMessage(error, 'Failed to add contact') });
     } finally {
       set({ isLoading: false });
     }
@@ -185,8 +179,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
       set({ isLoading: true });
       await requestContactApi(userId);
       queryClient.invalidateQueries({ queryKey: queryKeys.sentContactRequests() });
-    } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to send contact request';
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Failed to send contact request');
       set({ error: msg });
       throw new Error(msg);
     } finally {
@@ -202,8 +196,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
       queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContacts();
       await get().fetchContactRequests();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to approve request';
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Failed to approve request');
       set({ error: msg });
       throw new Error(msg);
     } finally {
@@ -217,8 +211,8 @@ export const useContactStore = create<ContactState>((set, get) => ({
       await rejectContactRequestApi(requestId);
       queryClient.invalidateQueries({ queryKey: queryKeys.contactRequests() });
       await get().fetchContactRequests();
-    } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to reject request';
+    } catch (error: unknown) {
+      const msg = extractErrorMessage(error, 'Failed to reject request');
       set({ error: msg });
       throw new Error(msg);
     } finally {
@@ -231,7 +225,6 @@ export const useContactStore = create<ContactState>((set, get) => ({
       const data = await queryClient.fetchQuery({
         queryKey: queryKeys.contactRequests(),
         queryFn: async () => {
-          const { getContactRequests } = require('../services/api');
           const { data } = await getContactRequests();
           return data.data || [];
         },

@@ -85,6 +85,7 @@ export function ChangePasswordScreen() {
               <Text style={[Typography.body, styles.label]}>Current password</Text>
               <View style={styles.inputContainer}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   value={currentPassword}
                   onChangeText={setCurrentPassword}
@@ -101,6 +102,7 @@ export function ChangePasswordScreen() {
               <Text style={[Typography.body, styles.label]}>New password</Text>
               <View style={styles.inputContainer}>
                 <TextInput
+                  underlineColorAndroid="transparent"
                   style={styles.input}
                   value={newPassword}
                   onChangeText={setNewPassword}

@@ -11,6 +11,8 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.security.JwtUtil;
 import com.aza.backend.util.CloudinaryService;
+import com.aza.backend.util.EmailService;
+import com.aza.backend.util.SmsService;
 import com.aza.backend.exception.AppException;
 import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,8 @@ public class UserService {
     private final OtpService otpService;
     private final NotificationService notificationService;
     private final ImageService imageService;
+    private final EmailService emailService;
+    private final SmsService smsService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -97,6 +101,11 @@ public class UserService {
                 .theme(user.getTheme())
                 .homeBackground(user.getHomeBackground())
                 .hubBackground(user.getHubBackground())
+                .scheduledDeletionAt(user.getScheduledDeletionAt() != null ? user.getScheduledDeletionAt().toString() : null)
+                .silentHoursEnabled(user.getSilentHoursEnabled())
+                .silentHoursStart(user.getSilentHoursStart())
+                .silentHoursEnd(user.getSilentHoursEnd())
+                .silentHoursPaymentThreshold(user.getSilentHoursPaymentThreshold())
                 .build();
     }
 
@@ -458,34 +467,19 @@ public class UserService {
 
     // ==================== DELETE (SOFT) ====================
 
+    /**
+     * Schedules the account for erasure in 30 days (GDPR right-to-erasure with grace period).
+     * The user is immediately logged out. GdprErasureService runs the actual wipe after the
+     * grace period so the user can cancel within 30 days.
+     */
     @Transactional
-    public void softDeleteAccount(User user, String accessToken) {
-        String id = user.getId().toString();
-
-        // Free unique fields so the same credentials can be re-registered later
-        user.setEmail("deleted_" + id + "@aza.deleted");
-        user.setPhoneNumber("deleted_" + id);
-        user.setUsername(null);
-
-        // Wipe PII and secrets
-        user.setFirstName(null);
-        user.setLastName(null);
-        user.setDateOfBirth(null);
-        user.setProfileImageUrl(null);
-        user.setHomeAddress(null);
-        user.setCity(null);
-        user.setNationality(null);
-        user.setOtherNationality(null);
-        user.setTaxCountry(null);
-        user.setPasswordHash("deleted");
-        user.setPasscodeHash(null);
-        user.setTwoFactorSecret(null);
-
-        user.setDeletedAt(java.time.LocalDateTime.now());
-        user.setStatus(User.AccountStatus.DEACTIVATED);
+    public void requestAccountDeletion(User user, String accessToken) {
+        java.time.LocalDateTime deletionDate = java.time.LocalDateTime.now().plusDays(30);
+        user.setStatus(User.AccountStatus.PENDING_DELETION);
+        user.setScheduledDeletionAt(deletionDate);
         userRepository.save(user);
 
-        // Revoke all sessions
+        // Revoke all active sessions — user must re-authenticate to cancel
         refreshTokenRepository.deleteAllByUserId(user.getId());
 
         if (accessToken != null && accessToken.startsWith("Bearer ")) {
@@ -493,8 +487,31 @@ public class UserService {
             Duration remaining = jwtUtil.getRemainingValidity(token);
             if (!remaining.isZero()) {
                 redisTemplate.opsForValue().set(
-                        BLACKLIST_PREFIX + hashToken(token), "deleted", remaining);
+                        BLACKLIST_PREFIX + hashToken(token), "pending_deletion", remaining);
             }
+        }
+
+        emailService.sendDeletionScheduledEmail(user.getEmail(), user.getFirstName(), deletionDate);
+        if (user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
+            smsService.sendDeletionScheduledSms(user.getPhoneNumber(), deletionDate);
+        }
+    }
+
+    /**
+     * Cancels a pending deletion within the 30-day grace period.
+     */
+    @Transactional
+    public void cancelAccountDeletion(User user) {
+        if (user.getStatus() != User.AccountStatus.PENDING_DELETION) {
+            throw new com.aza.backend.exception.AppException("No pending deletion request found");
+        }
+        user.setStatus(User.AccountStatus.ACTIVE);
+        user.setScheduledDeletionAt(null);
+        userRepository.save(user);
+
+        emailService.sendDeletionCancelledEmail(user.getEmail(), user.getFirstName());
+        if (user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
+            smsService.sendDeletionCancelledSms(user.getPhoneNumber());
         }
     }
 

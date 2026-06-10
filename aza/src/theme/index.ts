@@ -78,13 +78,13 @@ export function useAppTheme() {
 }
 
 export const Typography = {
-  h1:      { fontSize: 32, fontWeight: '700' },
-  h2:      { fontSize: 24, fontWeight: '600' },
-  h3:      { fontSize: 18, fontWeight: '600' },
-  bodyLg:  { fontSize: 16, fontWeight: '400' },
-  body:    { fontSize: 14, fontWeight: '400' },
-  caption: { fontSize: 12, fontWeight: '400' },
-  button:  { fontSize: 16, fontWeight: '600' },
+  h1:      { fontSize: 32, fontWeight: '700', lineHeight: 40 },
+  h2:      { fontSize: 24, fontWeight: '700', lineHeight: 32 },
+  h3:      { fontSize: 18, fontWeight: '700', lineHeight: 26 },
+  bodyLg:  { fontSize: 16, fontWeight: '400', lineHeight: 24 },
+  body:    { fontSize: 14, fontWeight: '400', lineHeight: 20 },
+  caption: { fontSize: 12, fontWeight: '400', lineHeight: 18 },
+  button:  { fontSize: 16, fontWeight: '700', lineHeight: 24 },
 } as const;
 
 export const Spacing = { xs:4, sm:8, md:16, lg:24, xl:32 } as const;

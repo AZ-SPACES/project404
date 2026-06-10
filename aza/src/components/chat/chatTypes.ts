@@ -20,15 +20,43 @@ export interface Message {
   status?: MessageStatus;
   replyTo?: string;
   replyToMessage?: ReplyInfo;
-  type?: 'text' | 'image' | 'document' | 'audio' | 'video';
-  uri?: string;
-  mimeType?: string;
-  fileSize?: number;
-  fileName?: string;
-  caption?: string;
-  duration?: number; // For audio messages
-  isStarred?: boolean;
-  resolvedSize?: number;
+  type?: 'text' | 'image' | 'document' | 'audio' | 'video' | 'payment' | 'location' | 'contact' | 'poll' | 'call';
+  latitude?: number | undefined;
+  longitude?: number | undefined;
+  locationName?: string | undefined;
+  uri?: string | undefined;
+  mimeType?: string | undefined;
+  fileSize?: number | undefined;
+  fileName?: string | undefined;
+  caption?: string | undefined;
+  duration?: number | undefined;
+  isStarred?: boolean | undefined;
+  isEdited?: boolean | undefined;
+  isForwarded?: boolean | undefined;
+  expiresAt?: number | null;
+  resolvedSize?: number | undefined;
+  paymentAmount?: number | undefined;
+  paymentMode?: 'send' | 'request' | undefined;
+  paymentStatus?: 'pending' | 'paid' | 'declined' | undefined;
+  thumbnailUri?: string | undefined;
+  contactCardName?: string | undefined;
+  contactCardAvatar?: string | undefined;
+  contactCardHandle?: string | undefined;
+  pollQuestion?: string | undefined;
+  pollOptions?: string[] | undefined;
+  callMissed?: boolean | undefined;
+  callDuration?: number | undefined;
+  callType?: 'voice' | 'video' | undefined;
+  linkPreview?: {
+    url: string;
+    title?: string | undefined;
+    description?: string | undefined;
+    domain?: string | undefined;
+  } | undefined;
+  viewOnce?: boolean | undefined;
+  viewOnceSeen?: boolean | undefined;
+  deleted?: boolean | undefined;
+  isSystem?: boolean | undefined;
 }
 
 export type CategoryStats = { size: number; messages: Message[] };
@@ -192,7 +220,8 @@ export const formatBytes = (bytes?: number): string => {
   if (!bytes) return '';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
+  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
+  return `${(bytes / 1073741824).toFixed(2)} GB`;
 };
 
 // ----------------------------------------------------------------------------

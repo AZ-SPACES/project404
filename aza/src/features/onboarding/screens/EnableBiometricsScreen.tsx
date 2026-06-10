@@ -27,6 +27,7 @@ import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { biometricEnroll, getDeviceId, BIOMETRIC_TOKEN_KEY } from '../../../services/api';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 import { CloseButton } from '../../../components/ui/CloseButton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnableBiometrics'>;
@@ -150,8 +151,8 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
       toggleBiometrics(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       handleFinish();
-    } catch (e: any) {
-      const msg: string = e?.response?.data?.message ?? '';
+    } catch (e: unknown) {
+      const msg: string = extractErrorMessage(e);
       const isWrongPin =
         msg.toLowerCase().includes('invalid passcode') ||
         msg.toLowerCase().includes('passcode');
@@ -206,6 +207,7 @@ export default function EnableBiometricsScreen({ onComplete }: EnableBiometricsP
 
                 {/* Hidden input */}
                 <TextInput
+                  underlineColorAndroid="transparent"
                   ref={inputRef}
                   value={pin}
                   onChangeText={handlePinChange}

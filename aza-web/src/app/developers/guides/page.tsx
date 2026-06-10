@@ -15,7 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 
-type CodeTab = 'curl' | 'js' | 'python';
+type CodeTab = 'curl' | 'js' | 'python' | 'java';
 
 interface DocArticle {
   id: string;
@@ -25,7 +25,7 @@ interface DocArticle {
   lastUpdated: string;
   description: string;
   content: React.ReactNode;
-  codeSnippets: { curl: string; js: string; python: string };
+  codeSnippets: { curl: string; js: string; python: string; java: string };
 }
 
 export default function GuidesPage() {
@@ -159,13 +159,13 @@ function GuidesContent() {
           <aside className="w-full xl:w-[420px] bg-[#111827] text-[#e5e7eb] flex-shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-gray-800 xl:sticky xl:top-14 xl:h-[calc(100vh-56px)] overflow-y-auto font-mono">
             <div className="flex items-center justify-between px-4 py-2 bg-[#1f2937] border-b border-gray-800">
               <div className="flex items-center gap-1">
-                {(['curl', 'js', 'python'] as CodeTab[]).map((tab) => (
+                {(['curl', 'js', 'python', 'java'] as CodeTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveCodeTab(tab)}
                     className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeCodeTab === tab ? 'bg-[#111827] text-white border border-gray-700' : 'text-gray-400 hover:text-white'}`}
                   >
-                    {tab === 'curl' ? 'cURL' : tab === 'js' ? 'Node.js' : 'Python'}
+                    {tab === 'curl' ? 'cURL' : tab === 'js' ? 'Node.js' : tab === 'python' ? 'Python' : 'Java'}
                   </button>
                 ))}
               </div>
@@ -361,6 +361,20 @@ resp = requests.get(
 )
 data = resp.json()['data']
 print(data['businessName'], data['status'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// Fetch your merchant profile
+var client = HttpClient.newHttpClient();
+var req = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.aza.systems/api/v1/merchant/profile"))
+    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .GET()
+    .build();
+
+var res = client.send(req, HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+// {"success":true,"data":{"businessName":"...","status":"ACTIVE"}}`,
     },
   },
 
@@ -463,6 +477,28 @@ new_key = requests.post(
 ).json()
 
 print(new_key['data']['secret'])  # store immediately`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+
+// List API keys
+var listReq = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.aza.systems/api/v1/merchant/api-keys"))
+    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .GET().build();
+System.out.println(client.send(listReq, HttpResponse.BodyHandlers.ofString()).body());
+
+// Create a new key
+String createBody = "{\"name\": \"Production server\"}";
+var createReq = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.aza.systems/api/v1/merchant/api-keys"))
+    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(createBody))
+    .build();
+var createRes = client.send(createReq, HttpResponse.BodyHandlers.ofString());
+System.out.println(createRes.body()); // contains secret — store immediately`,
     },
   },
 
@@ -579,6 +615,31 @@ status = requests.get(
 ).json()['data']
 
 print(status['status'])  # 'COMPLETED'`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// Create a session
+String body = "{\"amount\": 50.00, \"description\": \"Order #1042\"}";
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body()); // contains checkoutUrl and deepLink
+
+// Poll session status
+var statusRes = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions/sess_7f3a9b"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(statusRes.body()); // status: COMPLETED`,
     },
   },
 
@@ -664,6 +725,25 @@ profile = requests.get(
 ).json()['data']
 
 print(profile['businessName'], profile['status'])`,
+      java: `import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.*;
+import java.nio.charset.StandardCharsets;
+
+String handle     = "jumpspaces";
+String paymentUrl = "https://aza.systems/pay/" + handle;
+String deepLink   = "aza://pay/" + handle;
+String qrUrl      = "https://api.qrserver.com/v1/create-qr-code/?size=300x300"
+    + "&data=" + URLEncoder.encode(paymentUrl, StandardCharsets.UTF_8) + "&margin=2";
+
+// Fetch public profile (no auth required)
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/public/" + handle))
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body()); // businessName, status`,
     },
   },
 
@@ -782,6 +862,31 @@ requests.post(
     headers=HEADERS
 )
 print('Invoice sent:', inv['id'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// Create invoice
+String body = "{\"customerName\":\"Kwame Mensah\",\"customerEmail\":\"kwame@example.com\","
+    + "\"amount\":250.00,\"description\":\"Web design services\",\"dueDate\":\"2026-06-15\"}";
+var inv = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/invoices"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println("Created: " + inv.body());
+
+// Send the invoice (triggers customer email)
+client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/invoices/inv_abc123/send"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .POST(HttpRequest.BodyPublishers.noBody()).build(),
+    HttpResponse.BodyHandlers.ofString());`,
     },
   },
 
@@ -884,6 +989,41 @@ code = requests.post(
 ).json()['data']
 
 print(code['code'], code['isActive'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// Create 20% off code (max 100 uses)
+String body = "{\"code\":\"SAVE20\",\"type\":\"PERCENTAGE\",\"value\":20,\"maxUses\":100}";
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/discount-codes"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+
+// Create fixed GH₵10 off code
+String body2 = "{\"code\":\"OFF10\",\"type\":\"FIXED\",\"value\":10}";
+client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/discount-codes"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body2)).build(),
+    HttpResponse.BodyHandlers.ofString());
+
+// List codes
+var list = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/discount-codes?page=0&size=20"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(list.body());`,
     },
   },
 
@@ -951,6 +1091,18 @@ data = resp.json()['data']
 print(f"{data['totalElements']} total customers")
 for c in data['content']:
     print(c['name'], c['email'], f"GH₵{c['totalSpent']}")`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/customers?page=0&size=20"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+// {"success":true,"data":{"content":[...],"totalElements":142,"totalPages":8}}`,
     },
   },
 
@@ -1045,6 +1197,29 @@ refund = requests.post(
 ).json()['data']
 
 print(refund['status'])  # 'REFUNDED'`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// List disputes
+var disputes = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/disputes?page=0&size=20"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(disputes.body());
+
+// Issue a full refund
+var refund = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions/sess_7f3a9b/refund"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .POST(HttpRequest.BodyPublishers.noBody()).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(refund.body()); // status: REFUNDED`,
     },
   },
 
@@ -1117,6 +1292,18 @@ resp = requests.get(
 
 for s in resp['data']['content']:
     print(s['periodStart'][:10], f"GH₵{s['netAmount']}", s['status'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/settlements?page=0&size=20"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body());
+// periodStart, netAmount, status for each settlement`,
     },
   },
 
@@ -1217,6 +1404,31 @@ payout = requests.post(
 ).json()['data']
 
 print(payout['id'], payout['status'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// Check available balance
+var summary = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/reports/summary"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println("Balance: " + summary.body());
+
+// Request a payout
+String body = "{\"amount\": 2000.00, \"note\": \"Weekly withdrawal\"}";
+var payout = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/payouts"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(payout.body());`,
     },
   },
 
@@ -1345,6 +1557,33 @@ def handle_webhook():
     if event['type'] == 'session.completed':
         print('Payment:', event['data']['id'], event['data']['amount'])
     return jsonify(received=True), 200`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+
+// Register webhook endpoint
+String body = "{\"url\":\"https://yourserver.com/webhooks/aza\","
+    + "\"events\":[\"session.completed\",\"payout.completed\"]}";
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/webhooks"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(res.body()); // contains webhook id and signing secret
+
+// Spring Boot handler example:
+// @RestController
+// public class WebhookController {
+//   @PostMapping("/webhooks/aza")
+//   public ResponseEntity<Void> handle(@RequestBody String payload,
+//       @RequestHeader("X-Aza-Signature") String sig) {
+//     // verify signature, then process event
+//     return ResponseEntity.ok().build();
+//   }
+// }`,
     },
   },
 
@@ -1446,6 +1685,46 @@ def handle():
     event = request.json
     # process event...
     return '', 200`,
+      java: `import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+
+public static boolean verifySignature(
+        String rawBody, String sigHeader, String secret) throws Exception {
+    String timestamp = null, v1 = null;
+    for (String part : sigHeader.split(",")) {
+        if (part.startsWith("t="))  timestamp = part.substring(2);
+        if (part.startsWith("v1=")) v1         = part.substring(3);
+    }
+    if (timestamp == null || v1 == null) return false;
+
+    // Reject events older than 5 minutes
+    if (System.currentTimeMillis() / 1000 - Long.parseLong(timestamp) > 300)
+        return false;
+
+    String signed = timestamp + "." + rawBody;
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    String expected = HexFormat.of().formatHex(
+        mac.doFinal(signed.getBytes(StandardCharsets.UTF_8)));
+
+    return MessageDigest.isEqual(
+        expected.getBytes(StandardCharsets.UTF_8),
+        v1.getBytes(StandardCharsets.UTF_8));
+}
+
+// Spring Boot usage:
+// @PostMapping("/webhooks/aza")
+// public ResponseEntity<Void> handle(
+//     @RequestBody byte[] body,
+//     @RequestHeader("X-Aza-Signature") String sig) throws Exception {
+//   if (!verifySignature(new String(body), sig, webhookSecret))
+//     return ResponseEntity.status(400).build();
+//   // process event...
+//   return ResponseEntity.ok().build();
+// }`,
     },
   },
 
@@ -1568,6 +1847,36 @@ except AzaError as e:
         print('Complete KYB first')
     else:
         print(e.code, str(e))`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+public static String azaRequest(HttpClient client, String apiKey,
+        String method, String path, String body) throws Exception {
+    var builder = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems" + path))
+        .header("X-Api-Key", apiKey)
+        .header("Content-Type", "application/json");
+    var req = body != null
+        ? builder.method(method, HttpRequest.BodyPublishers.ofString(body)).build()
+        : builder.method(method, HttpRequest.BodyPublishers.noBody()).build();
+    var res = client.send(req, HttpResponse.BodyHandlers.ofString());
+    if (res.statusCode() >= 400)
+        throw new RuntimeException("AZA:" + res.statusCode() + " " + res.body());
+    return res.body();
+}
+
+// Usage
+var client = HttpClient.newHttpClient();
+try {
+    String profile = azaRequest(client, "sk_live_YOUR_KEY",
+        "GET", "/api/v1/merchant/profile", null);
+    System.out.println(profile);
+} catch (RuntimeException e) {
+    if (e.getMessage().contains("MERCHANT_NOT_ACTIVE"))
+        System.err.println("Complete KYB before using the API");
+    else
+        System.err.println(e.getMessage());
+}`,
     },
   },
 
@@ -1678,6 +1987,29 @@ def paginate(path, headers, size=100):
 HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
 for session in paginate('/api/v1/merchant/sessions', HEADERS):
     print(session['id'], session['status'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// Paginate through all sessions
+var client = HttpClient.newHttpClient();
+int page = 0, totalPages = Integer.MAX_VALUE;
+
+while (page < totalPages) {
+    var res = client.send(
+        HttpRequest.newBuilder()
+            .uri(URI.create(
+                "https://api.aza.systems/api/v1/merchant/sessions"
+                + "?page=" + page + "&size=100"))
+            .header("X-Api-Key", "sk_live_YOUR_KEY")
+            .GET().build(),
+        HttpResponse.BodyHandlers.ofString());
+    System.out.println("Page " + page + ": " + res.body());
+    // Parse totalPages with your JSON library, e.g. Jackson:
+    // totalPages = mapper.readTree(res.body())
+    //     .path("data").path("totalPages").asInt();
+    break; // remove once totalPages parsing is wired up
+    page++;
+}`,
     },
   },
 
@@ -1844,6 +2176,49 @@ class AzaClient:
 client = AzaClient()
 session = client.post('/api/v1/merchant/sessions', {'amount': 50.00})
 print(session['checkoutUrl'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// No SDK needed — Java 11+ HttpClient is sufficient
+public class AzaClient {
+    private static final String BASE = "https://api.aza.systems";
+    private final HttpClient http = HttpClient.newHttpClient();
+    private final String apiKey;
+
+    public AzaClient(String apiKey) { this.apiKey = apiKey; }
+
+    public String get(String path) throws Exception {
+        var res = http.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create(BASE + path))
+                .header("X-Api-Key", apiKey)
+                .GET().build(),
+            HttpResponse.BodyHandlers.ofString());
+        return checkSuccess(res);
+    }
+
+    public String post(String path, String json) throws Exception {
+        var res = http.send(
+            HttpRequest.newBuilder()
+                .uri(URI.create(BASE + path))
+                .header("X-Api-Key", apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json)).build(),
+            HttpResponse.BodyHandlers.ofString());
+        return checkSuccess(res);
+    }
+
+    private String checkSuccess(HttpResponse<String> res) {
+        if (res.statusCode() >= 400) throw new RuntimeException(res.body());
+        return res.body();
+    }
+}
+
+// Usage
+var aza = new AzaClient(System.getenv("AZA_API_KEY"));
+String session = aza.post("/api/v1/merchant/sessions",
+    "{\"amount\": 50.00, \"description\": \"Test payment\"}");
+System.out.println(session); // contains checkoutUrl`,
     },
   },
 
@@ -1992,6 +2367,23 @@ print('API version:', version)
 major = int(version.split('.')[0])
 if major < 1:
     raise RuntimeError('Unsupported API version')`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// Check API version via HEAD request
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/profile"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
+    HttpResponse.BodyHandlers.discarding());
+
+String version = res.headers().firstValue("X-Api-Version").orElse("1.0");
+System.out.println("API version: " + version);
+
+int major = Integer.parseInt(version.split("\\.")[0]);
+if (major < 1) throw new RuntimeException("Unsupported API version: " + version);`,
     },
   },
 };

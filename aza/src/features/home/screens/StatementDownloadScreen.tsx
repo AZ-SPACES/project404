@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert, ActivityIndicator } from "react-native";
 import { BackButton } from "../../../components/ui/BackButton";
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 const DURATIONS = [
   { id: '1m', label: 'Last 30 Days' },
@@ -103,9 +104,9 @@ export function StatementDownloadScreen() {
         };
         reader.onerror = () => reject(new Error("Failed to read PDF data"));
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Statement download error:", error);
-      Alert.alert("Download Failed", error.response?.data?.message || "An unexpected error occurred while generating your statement.");
+      Alert.alert("Download Failed", extractErrorMessage(error, "An unexpected error occurred while generating your statement."));
     } finally {
       setIsDownloading(false);
     }
@@ -123,9 +124,9 @@ export function StatementDownloadScreen() {
     try {
       await sendTransactionsStatementEmail(start, end);
       Alert.alert("Email Sent", "Your statement has been sent to your registered email address.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Statement email error:", error);
-      Alert.alert("Email Failed", error.response?.data?.message || "Failed to send statement via email.");
+      Alert.alert("Email Failed", extractErrorMessage(error, "Failed to send statement via email."));
     } finally {
       setIsEmailing(false);
     }

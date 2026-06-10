@@ -65,8 +65,10 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                     // App-push 2FA approval must be authenticated — the responding device already has a JWT.
+                    // QR login authorize must be authenticated — the mobile user proves their identity.
                     // These rules must precede the /api/v1/auth/** permitAll wildcard.
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/app/respond").authenticated();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/qr-login/authorize").authenticated();
                     // Recovery contact management — requires full auth (these are not pre-auth flows)
                     auth.requestMatchers(
                             "/api/v1/auth/recovery-contact",
@@ -89,6 +91,18 @@ public class SecurityConfig {
                             "/ws/**",
                             "/ws/chat/**",
                             "/actuator/**"
+                    ).permitAll();
+                    // OAuth 2.0 public endpoints — authenticated via client_secret or Bearer token
+                    auth.requestMatchers(
+                            "/oauth/token",
+                            "/oauth/revoke",
+                            "/oauth/userinfo",
+                            "/oauth/authorize",
+                            "/oauth/qr/initiate",
+                            "/oauth/qr/status/*",
+                            "/oauth/qr/complete",
+                            "/oauth/clients/*",
+                            "/oauth/payments/**"
                     ).permitAll();
                     // Checkout GET is public; confirm and cancel require authenticated JWT
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();

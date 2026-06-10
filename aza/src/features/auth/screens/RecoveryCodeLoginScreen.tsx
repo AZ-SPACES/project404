@@ -23,6 +23,7 @@ import { redeemRecoveryCode, TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../../servi
 import { useAuth } from '../../../providers/AuthProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
+import { extractErrorMessage, getErrorStatus } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'RecoveryCodeLogin'>;
 type RoutePropType = RouteProp<RootStackParamList, 'RecoveryCodeLogin'>;
@@ -60,17 +61,22 @@ export default function RecoveryCodeLoginScreen() {
       const payload = res.data?.data ?? res.data;
       await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
-      login(
-        payload.accessToken,
-        payload.user?.passcodeSet ?? false,
-        payload.user?.kycStatus === 'VERIFIED',
-        payload.user?.forcePasswordReset ?? false,
-        payload.user?.requireSelfieVerification ?? false,
-        false,
-      );
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Invalid or already-used recovery code.';
-      showToast(msg, 'error');
+      login({
+        token: payload.accessToken,
+        hasPasscode: payload.user?.passcodeSet ?? false,
+        isKYCVerified: payload.user?.kycStatus === 'VERIFIED',
+        forcePasswordReset: payload.user?.forcePasswordReset ?? false,
+        requireSelfieVerification: payload.user?.requireSelfieVerification ?? false,
+        isBiometricsEnabled: false,
+      });
+    } catch (err: unknown) {
+      const status = getErrorStatus(err);
+      if (status === 401 || status === 403) {
+        showToast('Your session has expired. Please try logging in again.', 'error');
+        navigation.goBack();
+      } else {
+        showToast(extractErrorMessage(err, 'Invalid or already-used recovery code.'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,10 +102,12 @@ export default function RecoveryCodeLoginScreen() {
             </View>
 
             <Text style={styles.subtitle}>
-              Enter one of the 8-character recovery codes you saved when you set up 2-step verification.
+              Enter one of the recovery codes you saved when you set up 2-step verification.
             </Text>
 
             <TextInput
+
+              underlineColorAndroid="transparent"
               style={styles.input}
               value={code}
               onChangeText={handleCodeChange}

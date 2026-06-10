@@ -3,7 +3,7 @@
 import { PhoneMockup } from "@/components/phone/PhoneMockup";
 
 const stats = [
-  { value: "$0",      label: "Hidden fees"  },
+  { value: "₵0",      label: "Hidden fees"  },
   { value: "Instant", label: "Transfers"    },
   { value: "256-bit", label: "AES Encryption" },
 ];
@@ -68,7 +68,7 @@ export function HeroSection() {
               style={{ background: "transparent", border: "1.5px solid var(--aza-border)", color: "var(--aza-text)" }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3.18 23.76c.31.17.67.19 1.01.04l12.2-7.05-2.55-2.55-10.66 9.56zm16.84-10.09L17.44 12l2.58-1.67L6.8.28C6.47.1 6.11.09 5.79.26L16.42 10.9l3.6 2.77zm2.16-3.41c-.33-.23-.77-.24-1.11-.03l-2.13 1.38 2.3 2.3 1.94-1.26c.71-.46.71-1.62 0-2.39zm-18.8 1.37l-2.03-2.03c-.29.32-.35.79-.1 1.17l2.13 2.81v-1.95z" />
+                <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.85c.577.33.702 1.059.318 1.54l-.318.318L15.396 12l2.302-2.302.318.318c-.005-.005.005.005 0 0zM5.864 2.658L16.8 8.99 14.499 11.29 5.864 2.658z" />
               </svg>
               Download for Android
             </a>

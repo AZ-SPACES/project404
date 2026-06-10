@@ -19,7 +19,9 @@ import type { Client as StompClient } from '@stomp/stompjs';
 import {
   archiveChat as apiArchiveChat,
   deleteChatMessage,
-  fetchUserKeyBundle,
+  fetchUserKeyBundles,
+  fetchOwnKeyBundles,
+  getDeviceId,
   getChatMessages,
   getOrCreateChat,
   listChats,
@@ -29,6 +31,7 @@ import {
   sendChatMessage,
   sendChatTypingIndicator,
   setDisappearingMessages,
+  type DeviceCiphertext,
   type SendMessagePayload,
 } from '../services/api';
 import {
@@ -40,13 +43,16 @@ import {
   decryptV3,
   encryptFirstMessageV3,
   encryptFollowupMessageV3,
+  encryptForRecipient,
   verifyEd25519,
   type RecipientBundle,
   type V3Envelope,
 } from '../crypto/e2ee';
 import {
-  consumeOneTimePreKey,
+  deleteConsumedOneTimePreKey,
+  getPreviousSignedPreKeyPrivate,
   getSignedPreKeyPrivate,
+  readOneTimePreKey,
 } from '../crypto/keystore';
 import type { LocalMessage, LocalMessageStatus } from './chatTypes';
 import {
@@ -82,6 +88,9 @@ export type ChatSummary = {
   otherUserAvatar?: string;
   otherUserStatus?: string;
   lastMessageAt?: string | null;
+  lastMessagePreview?: string;
+  lastMessageIsSelf?: boolean;
+  lastMessageStatus?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   unreadCount: number;
   isMuted: boolean;
   isArchived: boolean;
@@ -113,6 +122,7 @@ type PeerKeys = {
 
 type ChatStoreState = {
   selfUserId: string | null;
+  selfDeviceId: string | null;
   selfIdentityPrivate: Uint8Array | null;
   selfIdentityPublic: Uint8Array | null;
 
@@ -121,12 +131,15 @@ type ChatStoreState = {
   chatOrder: string[];
   messagesByChat: Record<string, LocalMessage[]>;
   typingByChat: Record<string, boolean>;
+  /** Latest screenshot notification per chatId: { ts, senderName }. UI reads this to show a toast. */
+  lastScreenshotByChatId: Record<string, { ts: number; senderName: string }>;
   peerKeys: Record<string, PeerKeys>; // keyed by otherUserId
 
   // Lifecycle helpers
   setStompClient: (c: StompClient | null) => void;
   setSelfIdentity: (
     userId: string,
+    deviceId: string,
     publicKey: Uint8Array,
     privateKey: Uint8Array,
   ) => void;
@@ -137,12 +150,14 @@ type ChatStoreState = {
   openChatWithUser: (otherUserId: string) => Promise<ChatSummary>;
   loadHistory: (chatId: string) => Promise<void>;
   sendText: (chatId: string, plaintext: string) => Promise<void>;
+  sendMedia: (chatId: string, mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => Promise<void>;
   sendTyping: (chatId: string, isTyping: boolean) => Promise<void>;
   markRead: (chatId: string) => Promise<void>;
   deleteMessage: (chatId: string, messageId: string) => Promise<void>;
   setDisappearingTtl: (chatId: string, ttlSeconds: number) => Promise<void>;
   muteChat: (chatId: string, mute: boolean) => Promise<void>;
   archiveChat: (chatId: string, archive: boolean) => Promise<void>;
+  clearChatMessages: (chatId: string) => void;
   retryFailedSends: () => Promise<void>;
 
   // Peer-key access for verification UI
@@ -267,6 +282,7 @@ function makeClientId(): string {
 
 export const useChatStore = create<ChatStoreState>((set, get) => ({
   selfUserId: null,
+  selfDeviceId: null,
   selfIdentityPrivate: null,
   selfIdentityPublic: null,
 
@@ -275,12 +291,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   chatOrder: [],
   messagesByChat: {},
   typingByChat: {},
+  lastScreenshotByChatId: {},
   peerKeys: {},
 
   setStompClient: (c) => set({ stompClient: c }),
-  setSelfIdentity: (userId, publicKey, privateKey) =>
+  setSelfIdentity: (userId, deviceId, publicKey, privateKey) =>
     set({
       selfUserId: userId,
+      selfDeviceId: deviceId,
       selfIdentityPublic: publicKey,
       selfIdentityPrivate: privateKey,
     }),
@@ -297,12 +315,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
     set({
       selfUserId: null,
+      selfDeviceId: null,
       selfIdentityPrivate: null,
       selfIdentityPublic: null,
       chats: {},
       chatOrder: [],
       messagesByChat: {},
       typingByChat: {},
+      lastScreenshotByChatId: {},
       peerKeys: {},
     });
   },
@@ -358,13 +378,31 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 
   loadHistory: async (chatId) => {
-    const { selfUserId, selfIdentityPrivate } = get();
-    if (!selfUserId || !selfIdentityPrivate) return;
+    const { selfUserId, selfDeviceId, selfIdentityPrivate } = get();
+    if (!selfUserId || !selfDeviceId || !selfIdentityPrivate) return;
 
     // 1) Show cached thread immediately so the UI isn't blank.
     const cached = await loadCachedThread(selfUserId, chatId);
     if (cached.length > 0) {
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: cached } }));
+      const lastCached = cached[cached.length - 1];
+      if (lastCached) {
+        set((s) => {
+          const c = s.chats[chatId];
+          if (!c) return s;
+          return {
+            chats: {
+              ...s.chats,
+              [chatId]: {
+                ...c,
+                lastMessagePreview: derivePreview(lastCached),
+                lastMessageIsSelf: lastCached.isSelf,
+                lastMessageStatus: lastCached.isSelf ? lastCached.status : undefined,
+              } as ChatSummary,
+            },
+          };
+        });
+      }
     }
 
     // 2) Pull recent server history and merge in any messages we haven't decrypted yet.
@@ -374,7 +412,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const items: any[] = (page?.content ?? []).slice().reverse(); // oldest first
       const decrypted: LocalMessage[] = [];
       for (const m of items) {
-        const local = await decryptServerMessage(m, chatId, selfUserId, selfIdentityPrivate);
+        const local = await decryptServerMessage(m, chatId, selfUserId, selfDeviceId, selfIdentityPrivate);
         if (local) decrypted.push(local);
       }
       const next = decrypted.reduce<LocalMessage[]>(
@@ -383,6 +421,24 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       );
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
       await saveCachedThread(selfUserId, chatId, next);
+      const lastMsg = next[next.length - 1];
+      if (lastMsg) {
+        set((s) => {
+          const c = s.chats[chatId];
+          if (!c) return s;
+          return {
+            chats: {
+              ...s.chats,
+              [chatId]: {
+                ...c,
+                lastMessagePreview: derivePreview(lastMsg),
+                lastMessageIsSelf: lastMsg.isSelf,
+                lastMessageStatus: lastMsg.isSelf ? lastMsg.status : undefined,
+              } as ChatSummary,
+            },
+          };
+        });
+      }
     } catch (e) {
       console.warn('[chat] history load failed', e);
     }
@@ -394,8 +450,10 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
     const { selfUserId } = get();
     try {
-      const { data } = await fetchUserKeyBundle(otherUserId);
-      const bundle = data?.data;
+      const { data } = await fetchUserKeyBundles(otherUserId);
+      // Pick the first bundle returned — used for the v3 X3DH session.
+      const bundles: any[] = Array.isArray(data?.data) ? data.data : (data?.data ? [data.data] : []);
+      const bundle = bundles[0];
       if (!bundle?.identityPublicKey) return null;
 
       const identityPub = base64ToBytes(bundle.identityPublicKey);
@@ -463,8 +521,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   sendText: async (chatId, plaintext) => {
     const text = plaintext.trim();
     if (!text) return;
-    const { selfUserId, chats } = get();
-    if (!selfUserId) return;
+    const { selfUserId, selfDeviceId, chats } = get();
+    if (!selfUserId || !selfDeviceId) return;
 
     const chat = chats[chatId];
     if (!chat) {
@@ -472,8 +530,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       return;
     }
 
-    // Optimistic insertion — pending status so the UI shows a sending state.
     const clientId = makeClientId();
+    const ttl = chat.disappearingTtlSeconds;
     const optimistic: LocalMessage = {
       clientId,
       chatId,
@@ -484,6 +542,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       timestamp: Date.now(),
       status: 'pending',
       decryptOk: true,
+      expiresAt: ttl ? Date.now() + ttl * 1000 : null,
     };
     set((s) => {
       const thread = s.messagesByChat[chatId] ?? [];
@@ -493,89 +552,167 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     });
 
     try {
-      const peer = await get().ensurePeerKeys(chat.otherUserId);
-      if (!peer) throw new Error('Peer key bundle unavailable');
       const selfIdentityPub = get().selfIdentityPublic;
       const selfIdentityPriv = get().selfIdentityPrivate;
-      if (!selfIdentityPub || !selfIdentityPriv) {
-        throw new Error('Identity not ready');
+      if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
+
+      // ── Multi-device encryption ────────────────────────────────────────────
+      // Fetch all recipient device bundles + sender's own other-device bundles,
+      // encrypt once per device using per-message ECDH (v2 style), collect into
+      // deviceCiphertexts map.  Also maintain a v3 X3DH session for backward
+      // compat with legacy single-device recipients.
+
+      const deviceCiphertexts: Record<string, DeviceCiphertext> = {};
+
+      // Recipient devices
+      let recipientBundles: any[] = [];
+      try {
+        const { data } = await fetchUserKeyBundles(chat.otherUserId);
+        recipientBundles = data?.data ?? [];
+      } catch {
+        // Fall back to single-bundle fetch so we can still send.
+        try {
+          const peer = await get().ensurePeerKeys(chat.otherUserId);
+          if (peer) {
+            recipientBundles = [{ deviceId: 'device_legacy', identityPublicKey: bytesToBase64(peer.identityPublicKey) }];
+          }
+        } catch {}
       }
 
-      // v3 path: try to load a cached session root. If absent (or if the peer
-      // identity changed underneath us) we run X3DH and persist a fresh root.
-      let rootKey = await loadSessionRoot(
-        selfUserId,
-        chat.otherUserId,
-        peer.identityPublicKey,
-      );
-      let envelope: V3Envelope;
-      let usedPreKeyId: string | undefined;
-      if (!rootKey) {
-        const bundle: RecipientBundle = {
-          identityPublicKey: peer.identityPublicKey,
-          signedPreKeyPublic: peer.signedPreKeyPublic,
-          ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
-          ...(peer.oneTimePreKeyPublic
-            ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic }
-            : {}),
+      for (const bundle of recipientBundles) {
+        if (!bundle.identityPublicKey) continue;
+        const env = encryptForRecipient({
+          plaintext: text,
+          recipientIdentityPublic: base64ToBytes(bundle.identityPublicKey),
+          senderId: selfUserId,
+          chatId,
+        });
+        deviceCiphertexts[bundle.deviceId] = {
+          ciphertext: env.ciphertext,
+          ephemeralKey: env.ephemeralPublicKey,
         };
-        const first = encryptFirstMessageV3({
-          plaintext: text,
-          senderIdentityKeyPair: {
-            publicKey: selfIdentityPub,
-            privateKey: selfIdentityPriv,
-          },
-          recipientBundle: bundle,
-          senderId: selfUserId,
-          chatId,
-        });
-        envelope = first.envelope;
-        rootKey = first.rootKey;
-        usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
-        // Persist before the network call so a crash mid-send doesn't lose the
-        // root — worst case we re-send and the peer will see a duplicate first
-        // message, which the OPK uniqueness check already protects against.
-        await saveSessionRoot(
-          selfUserId,
-          chat.otherUserId,
-          rootKey,
-          peer.identityPublicKey,
-        );
-        await indexSessionRoot(selfUserId, chat.otherUserId);
-      } else {
-        envelope = encryptFollowupMessageV3({
-          plaintext: text,
-          rootKey,
-          recipientIdentityPublic: peer.identityPublicKey,
-          senderId: selfUserId,
-          chatId,
-        });
+      }
+
+      // Sender's own other devices (so Device 2 can read what Device 1 sent)
+      try {
+        const { data } = await fetchOwnKeyBundles();
+        const ownBundles: any[] = data?.data ?? [];
+        for (const bundle of ownBundles) {
+          if (bundle.deviceId === selfDeviceId || !bundle.identityPublicKey) continue;
+          const env = encryptForRecipient({
+            plaintext: text,
+            recipientIdentityPublic: base64ToBytes(bundle.identityPublicKey),
+            senderId: selfUserId,
+            chatId,
+          });
+          deviceCiphertexts[bundle.deviceId] = {
+            ciphertext: env.ciphertext,
+            ephemeralKey: env.ephemeralPublicKey,
+          };
+        }
+      } catch {}
+
+      // Also maintain the v3 X3DH session (primary recipient, legacy-compat).
+      const peer = await get().ensurePeerKeys(chat.otherUserId);
+      let legacyCiphertext: string | undefined;
+      let legacyEphemeralKey: string | undefined;
+      let legacySenderIK: string | undefined;
+      let usedPreKeyId: string | undefined;
+      if (peer) {
+        let rootKey = await loadSessionRoot(selfUserId, chat.otherUserId, peer.identityPublicKey);
+        let envelope: V3Envelope;
+        if (!rootKey) {
+          const bundle: RecipientBundle = {
+            identityPublicKey: peer.identityPublicKey,
+            signedPreKeyPublic: peer.signedPreKeyPublic,
+            ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
+            ...(peer.oneTimePreKeyPublic ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic } : {}),
+          };
+          const first = encryptFirstMessageV3({
+            plaintext: text,
+            senderIdentityKeyPair: { publicKey: selfIdentityPub, privateKey: selfIdentityPriv },
+            recipientBundle: bundle,
+            senderId: selfUserId,
+            chatId,
+          });
+          envelope = first.envelope;
+          rootKey = first.rootKey;
+          usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
+          await saveSessionRoot(selfUserId, chat.otherUserId, rootKey, peer.identityPublicKey);
+          await indexSessionRoot(selfUserId, chat.otherUserId);
+        } else {
+          const followup = encryptFollowupMessageV3({
+            plaintext: text,
+            rootKey,
+            recipientIdentityPublic: peer.identityPublicKey,
+            senderId: selfUserId,
+            chatId,
+          });
+          envelope = followup.envelope;
+          await saveSessionRoot(selfUserId, chat.otherUserId, followup.newRootKey, peer.identityPublicKey);
+          followup.newRootKey.fill(0);
+        }
+        legacyCiphertext = envelope.ciphertext;
+        legacyEphemeralKey = envelope.ephemeralPublicKey;
+        legacySenderIK = envelope.senderIdentityPublicKey;
       }
 
       const payload: SendMessagePayload = {
         chatId,
         type: 'TEXT',
-        ciphertext: envelope.ciphertext,
-        ephemeralKey: envelope.ephemeralPublicKey,
-        // The server persists clientId and echoes it back on the eventual WS
-        // frame, letting mergeMessage attribute the echo to this optimistic
-        // entry deterministically instead of falling back to a timing heuristic.
         clientId,
-        ...(envelope.senderIdentityPublicKey
-          ? { senderIdentityPublicKey: envelope.senderIdentityPublicKey }
-          : {}),
+        ...(Object.keys(deviceCiphertexts).length > 0 ? { deviceCiphertexts } : {}),
+        ...(legacyCiphertext ? { ciphertext: legacyCiphertext } : {}),
+        ...(legacyEphemeralKey ? { ephemeralKey: legacyEphemeralKey } : {}),
+        ...(legacySenderIK ? { senderIdentityPublicKey: legacySenderIK } : {}),
         ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
       };
 
+      // Prefer WebSocket — the connection is already live so there is no HTTP
+      // handshake overhead. The server persists the message and broadcasts the
+      // echo to both participants; handleSocketEvent picks it up and promotes
+      // the optimistic entry from 'pending' to 'sent' via mergeMessage+clientId.
+      // Fall back to REST when the STOMP client is offline (e.g., reconnecting).
+      const stompClient = get().stompClient;
+      if (stompClient?.connected) {
+        stompClient.publish({
+          destination: '/app/chat.send',
+          body: JSON.stringify(payload),
+        });
+        hasSessionWithPeer(selfUserId, chat.otherUserId).then((established) => {
+          if (!established) markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
+        });
+        const uid = get().selfUserId;
+        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        // Safety net: if the WS echo never arrives (e.g. the connection drops
+        // immediately after publish), mark the message failed so retryFailedSends
+        // can pick it up on reconnect.
+        setTimeout(() => {
+          set((s) => {
+            const thread = s.messagesByChat[chatId] ?? [];
+            const msg = thread.find((m) => m.clientId === clientId);
+            if (!msg || msg.status !== 'pending') return s;
+            return {
+              messagesByChat: {
+                ...s.messagesByChat,
+                [chatId]: thread.map((m) =>
+                  m.clientId === clientId ? { ...m, status: 'failed' as LocalMessageStatus } : m,
+                ),
+              },
+            };
+          });
+        }, 8_000);
+        return;
+      }
+
+      // REST fallback — used when WebSocket is not connected.
       const { data } = await sendChatMessage(payload);
       const m = data?.data;
       const serverId = m?.id;
       const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
       const expiresAt = parseDateTime(m?.expiresAt);
 
-      // Keep the legacy session-established flag in sync. It's no longer used
-      // for first-message gating (the session-root cache plays that role now)
-      // but still drives misc diagnostics and the upgrade path from v2 carts.
+      // Keep the legacy session-established flag in sync.
       const sessionEstablished = await hasSessionWithPeer(selfUserId, chat.otherUserId);
       if (!sessionEstablished) {
         markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
@@ -614,12 +751,217 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
-  sendTyping: async (chatId, isTyping) => {
-    try {
-      await sendChatTypingIndicator(chatId, isTyping);
-    } catch (e) {
-      // Typing is best-effort; never surface failures.
+  sendMedia: async (chatId, mediaKey, mediaType, caption = '') => {
+    const { selfUserId, selfDeviceId, chats } = get();
+    if (!selfUserId || !selfDeviceId) return;
+
+    const chat = chats[chatId];
+    if (!chat) {
+      console.warn('[chat] sendMedia called for unknown chat', chatId);
+      return;
     }
+
+    const clientId = makeClientId();
+    const optimistic: LocalMessage = {
+      clientId,
+      chatId,
+      senderId: selfUserId,
+      isSelf: true,
+      type: mediaType,
+      text: caption,
+      timestamp: Date.now(),
+      status: 'pending',
+      decryptOk: true,
+      mediaKey,
+    };
+    set((s) => {
+      const thread = s.messagesByChat[chatId] ?? [];
+      return {
+        messagesByChat: { ...s.messagesByChat, [chatId]: mergeMessage(thread, optimistic) },
+      };
+    });
+
+    try {
+      const selfIdentityPub = get().selfIdentityPublic;
+      const selfIdentityPriv = get().selfIdentityPrivate;
+      if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
+
+      const plaintextForEncryption = caption.trim() || ' ';
+
+      // Multi-device encryption (same pattern as sendText)
+      const deviceCiphertexts: Record<string, DeviceCiphertext> = {};
+
+      let recipientBundles: any[] = [];
+      try {
+        const { data } = await fetchUserKeyBundles(chat.otherUserId);
+        recipientBundles = data?.data ?? [];
+      } catch {
+        try {
+          const peer = await get().ensurePeerKeys(chat.otherUserId);
+          if (peer) {
+            recipientBundles = [{ deviceId: 'device_legacy', identityPublicKey: bytesToBase64(peer.identityPublicKey) }];
+          }
+        } catch {}
+      }
+
+      for (const bundle of recipientBundles) {
+        if (!bundle.identityPublicKey) continue;
+        const env = encryptForRecipient({
+          plaintext: plaintextForEncryption,
+          recipientIdentityPublic: base64ToBytes(bundle.identityPublicKey),
+          senderId: selfUserId,
+          chatId,
+        });
+        deviceCiphertexts[bundle.deviceId] = {
+          ciphertext: env.ciphertext,
+          ephemeralKey: env.ephemeralPublicKey,
+        };
+      }
+
+      try {
+        const { data } = await fetchOwnKeyBundles();
+        const ownBundles: any[] = data?.data ?? [];
+        for (const bundle of ownBundles) {
+          if (bundle.deviceId === selfDeviceId || !bundle.identityPublicKey) continue;
+          const env = encryptForRecipient({
+            plaintext: plaintextForEncryption,
+            recipientIdentityPublic: base64ToBytes(bundle.identityPublicKey),
+            senderId: selfUserId,
+            chatId,
+          });
+          deviceCiphertexts[bundle.deviceId] = {
+            ciphertext: env.ciphertext,
+            ephemeralKey: env.ephemeralPublicKey,
+          };
+        }
+      } catch {}
+
+      const peer = await get().ensurePeerKeys(chat.otherUserId);
+      let legacyCiphertext: string | undefined;
+      let legacyEphemeralKey: string | undefined;
+      let legacySenderIK: string | undefined;
+      let usedPreKeyId: string | undefined;
+      if (peer) {
+        let rootKey = await loadSessionRoot(selfUserId, chat.otherUserId, peer.identityPublicKey);
+        let envelope: V3Envelope;
+        if (!rootKey) {
+          const bundle: RecipientBundle = {
+            identityPublicKey: peer.identityPublicKey,
+            signedPreKeyPublic: peer.signedPreKeyPublic,
+            ...(peer.oneTimePreKeyId ? { oneTimePreKeyId: peer.oneTimePreKeyId } : {}),
+            ...(peer.oneTimePreKeyPublic ? { oneTimePreKeyPublic: peer.oneTimePreKeyPublic } : {}),
+          };
+          const first = encryptFirstMessageV3({
+            plaintext: plaintextForEncryption,
+            senderIdentityKeyPair: { publicKey: selfIdentityPub, privateKey: selfIdentityPriv },
+            recipientBundle: bundle,
+            senderId: selfUserId,
+            chatId,
+          });
+          envelope = first.envelope;
+          rootKey = first.rootKey;
+          usedPreKeyId = peer.oneTimePreKeyId ?? undefined;
+          await saveSessionRoot(selfUserId, chat.otherUserId, rootKey, peer.identityPublicKey);
+          await indexSessionRoot(selfUserId, chat.otherUserId);
+        } else {
+          const followup = encryptFollowupMessageV3({
+            plaintext: plaintextForEncryption,
+            rootKey,
+            recipientIdentityPublic: peer.identityPublicKey,
+            senderId: selfUserId,
+            chatId,
+          });
+          envelope = followup.envelope;
+          await saveSessionRoot(selfUserId, chat.otherUserId, followup.newRootKey, peer.identityPublicKey);
+          followup.newRootKey.fill(0);
+        }
+        legacyCiphertext = envelope.ciphertext;
+        legacyEphemeralKey = envelope.ephemeralPublicKey;
+        legacySenderIK = envelope.senderIdentityPublicKey;
+      }
+
+      const payload: SendMessagePayload = {
+        chatId,
+        type: mediaType,
+        mediaKey,
+        clientId,
+        ...(Object.keys(deviceCiphertexts).length > 0 ? { deviceCiphertexts } : {}),
+        ...(legacyCiphertext ? { ciphertext: legacyCiphertext } : {}),
+        ...(legacyEphemeralKey ? { ephemeralKey: legacyEphemeralKey } : {}),
+        ...(legacySenderIK ? { senderIdentityPublicKey: legacySenderIK } : {}),
+        ...(usedPreKeyId ? { preKeyId: usedPreKeyId } : {}),
+      };
+
+      const stompClient = get().stompClient;
+      if (stompClient?.connected) {
+        stompClient.publish({
+          destination: '/app/chat.send',
+          body: JSON.stringify(payload),
+        });
+        const uid = get().selfUserId;
+        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        setTimeout(() => {
+          set((s) => {
+            const thread = s.messagesByChat[chatId] ?? [];
+            const msg = thread.find((m) => m.clientId === clientId);
+            if (!msg || msg.status !== 'pending') return s;
+            return {
+              messagesByChat: {
+                ...s.messagesByChat,
+                [chatId]: thread.map((m) =>
+                  m.clientId === clientId ? { ...m, status: 'failed' as LocalMessageStatus } : m,
+                ),
+              },
+            };
+          });
+        }, 8_000);
+        return;
+      }
+
+      const { data } = await sendChatMessage(payload);
+      const m = data?.data;
+      const serverId = m?.id;
+      const serverTs = parseDateTime(m?.sentAt) ?? optimistic.timestamp;
+      const expiresAt = parseDateTime(m?.expiresAt);
+
+      set((s) => {
+        const thread = s.messagesByChat[chatId] ?? [];
+        const updated = thread.map((msg) =>
+          msg.clientId === clientId
+            ? { ...msg, serverId, timestamp: serverTs, status: 'sent' as LocalMessageStatus, expiresAt: expiresAt ?? null }
+            : msg,
+        );
+        return { messagesByChat: { ...s.messagesByChat, [chatId]: updated } };
+      });
+
+      const uid = get().selfUserId;
+      if (uid) await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []);
+    } catch (e) {
+      console.warn('[chat] sendMedia failed', e);
+      set((s) => {
+        const thread = s.messagesByChat[chatId] ?? [];
+        const updated = thread.map((msg) =>
+          msg.clientId === clientId ? { ...msg, status: 'failed' as LocalMessageStatus } : msg,
+        );
+        return { messagesByChat: { ...s.messagesByChat, [chatId]: updated } };
+      });
+    }
+  },
+
+  sendTyping: (chatId, isTyping) => {
+    // Prefer the already-open WebSocket connection — no HTTP round-trip, near-instant
+    // delivery to the peer. Falls back to REST only if the STOMP client is offline.
+    const client = get().stompClient;
+    if (client?.connected) {
+      client.publish({
+        destination: '/app/chat.typing',
+        body: JSON.stringify({ chatId, isTyping }),
+      });
+      return Promise.resolve();
+    }
+    // REST fallback — best-effort, never throw.
+    sendChatTypingIndicator(chatId, isTyping).catch(() => {});
+    return Promise.resolve();
   },
 
   markRead: async (chatId) => {
@@ -702,6 +1044,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
+  clearChatMessages: (chatId) => {
+    const { selfUserId } = get();
+    set((s) => ({
+      messagesByChat: { ...s.messagesByChat, [chatId]: [] },
+    }));
+    if (selfUserId) clearCachedThread(selfUserId, chatId).catch(() => {});
+  },
+
   retryFailedSends: async () => {
     const { messagesByChat } = get();
     for (const [chatId, thread] of Object.entries(messagesByChat)) {
@@ -714,8 +1064,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 
   handleSocketEvent: (event) => {
-    const { selfUserId, selfIdentityPrivate } = get();
-    if (!selfUserId || !selfIdentityPrivate) return;
+    const { selfUserId, selfDeviceId, selfIdentityPrivate } = get();
+    if (!selfUserId || !selfDeviceId || !selfIdentityPrivate) return;
     const type = event?.type;
     const payload = event?.payload;
     if (!type || !payload) return;
@@ -733,6 +1083,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             payload,
             chatId,
             selfUserId,
+            selfDeviceId,
             selfIdentityPrivate,
           );
           if (!local) return;
@@ -834,12 +1185,36 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         });
         break;
       }
+      case 'chat.screenshot': {
+        const chatId = payload.chatId as string;
+        const senderName = (payload.senderName as string) ?? 'Someone';
+        // Only record if it's from the other participant (not our own echo).
+        if (payload.senderId !== get().selfUserId) {
+          set((s) => ({
+            lastScreenshotByChatId: {
+              ...s.lastScreenshotByChatId,
+              [chatId]: { ts: Date.now(), senderName },
+            },
+          }));
+        }
+        break;
+      }
       default:
         // Other event types (calls, presence, payment) are handled elsewhere.
         break;
     }
   },
 }));
+
+function derivePreview(msg: LocalMessage): string {
+  if (msg.isDeleted) return 'Message deleted';
+  switch (msg.type) {
+    case 'IMAGE': return msg.text ? `📷 ${msg.text}` : '📷 Photo';
+    case 'VIDEO': return msg.text ? `🎥 ${msg.text}` : '🎥 Video';
+    case 'DOCUMENT': return '📄 Document';
+    default: return msg.text || '';
+  }
+}
 
 function bumpChat(
   chats: Record<string, ChatSummary>,
@@ -854,7 +1229,10 @@ function bumpChat(
       ...c,
       lastMessageAt: new Date(local.timestamp).toISOString(),
       unreadCount: local.isSelf ? c.unreadCount : c.unreadCount + 1,
-    },
+      lastMessagePreview: derivePreview(local),
+      lastMessageIsSelf: local.isSelf,
+      lastMessageStatus: local.isSelf ? local.status : undefined,
+    } as ChatSummary,
   };
 }
 
@@ -862,14 +1240,19 @@ function bumpChat(
  * Convert a server MessageResponse into a LocalMessage by attempting decryption.
  * Returns null for malformed payloads we should silently ignore.
  *
- * Async because v3 decryption may need to read the SPK private + consume an
- * OPK from SecureStore on first-contact messages, and may need to load the
- * cached session root key for follow-ups.
+ * Multi-device: when `message.deviceCiphertexts` is present, we first try the
+ * envelope keyed to our own deviceId.  If missing (legacy message), we fall
+ * through to the existing v3/v2/v1 single-device path.
+ *
+ * Self-messages on other devices: the sender included our device in
+ * deviceCiphertexts, so we can decrypt them too — the optimistic-preserve
+ * path only fires when no per-device envelope is available.
  */
 async function decryptServerMessage(
   m: any,
   chatId: string,
   selfUserId: string,
+  selfDeviceId: string,
   selfIdentityPrivate: Uint8Array,
 ): Promise<LocalMessage | null> {
   if (!m?.id) return null;
@@ -881,110 +1264,125 @@ async function decryptServerMessage(
 
   let text = '';
   let decryptOk = true;
+
   if (m.isDeleted) {
     text = '';
   } else if (m.content) {
-    // Support chat falls back to plaintext.
     text = m.content;
-  } else if (!m.ciphertext || !m.ephemeralKey) {
-    decryptOk = false;
-  } else if (isSelf) {
-    // Our own message coming back from the server — we don't try to decrypt;
-    // the optimistic entry already holds the plaintext and mergeMessage
-    // preserves it across the undecryptable echo.
-    text = '';
-    decryptOk = false;
   } else {
-    const peerSenderId = m.senderId as string;
-    const v3Envelope: V3Envelope = {
-      ephemeralPublicKey: m.ephemeralKey,
-      ciphertext: m.ciphertext,
-      ...(m.senderIdentityPublicKey
-        ? { senderIdentityPublicKey: m.senderIdentityPublicKey }
-        : {}),
-      ...(m.preKeyId ? { preKeyId: m.preKeyId } : {}),
-    };
+    // ── Multi-device path ────────────────────────────────────────────────────
+    const dcMap: Record<string, { ciphertext: string; ephemeralKey: string; preKeyId?: string; senderIdentityPublicKey?: string }> | null =
+      m.deviceCiphertexts ?? null;
 
-    let plaintext: string | null = null;
-    if (v3Envelope.senderIdentityPublicKey) {
-      // v3 first-message path. We need our SPK private and (if referenced)
-      // the OPK private. The OPK is consumed (deleted) after a successful
-      // decrypt so the same envelope can't be replayed against us.
-      const spkPriv = await getSignedPreKeyPrivate(selfUserId);
-      let opkPriv: Uint8Array | null = null;
-      if (m.preKeyId != null) {
-        const opkId = Number(m.preKeyId);
-        if (!Number.isNaN(opkId)) {
-          opkPriv = await consumeOneTimePreKey(selfUserId, opkId);
-        }
+    const myEnvelope = dcMap?.[selfDeviceId] ?? null;
+
+    if (myEnvelope) {
+      // We have a per-device envelope encrypted with encryptForRecipient (v2 style).
+      const plaintext = decryptFromSender({
+        envelope: { ciphertext: myEnvelope.ciphertext, ephemeralPublicKey: myEnvelope.ephemeralKey },
+        identityPrivateKey: selfIdentityPrivate,
+        senderId: m.senderId as string,
+        chatId,
+      });
+      if (plaintext != null) {
+        text = plaintext;
+      } else {
+        decryptOk = false;
       }
-      if (spkPriv) {
-        const result = decryptV3({
-          envelope: v3Envelope,
-          recipientIdentityPrivate: selfIdentityPrivate,
-          recipientSignedPreKeyPrivate: spkPriv,
-          oneTimePreKeyPrivate: opkPriv,
-          senderId: peerSenderId,
-          chatId,
-        });
-        if (result) {
-          plaintext = result.plaintext;
-          // Persist the freshly established session root so follow-up
-          // messages from this peer key off the cached root.
-          if (result.rootKey) {
-            // We need the sender's IK to anchor the TOFU comparison stored
-            // alongside the root. Use the IK we just X3DH-decrypted against.
-            const senderIK = base64ToBytes(v3Envelope.senderIdentityPublicKey);
-            try {
-              await saveSessionRoot(selfUserId, peerSenderId, result.rootKey, senderIK);
-              await indexSessionRoot(selfUserId, peerSenderId);
-            } catch (e) {
-              console.warn('[chat] failed to persist session root', e);
+    } else if (isSelf && !myEnvelope) {
+      // Own echo with no device envelope for us — optimistic plaintext will be
+      // preserved by mergeMessage.  This happens when the sender didn't know
+      // about our device yet (e.g., device registered after the send).
+      text = '';
+      decryptOk = false;
+    } else if (!m.ciphertext || !m.ephemeralKey) {
+      decryptOk = false;
+    } else {
+      // ── Legacy single-device path (v3 / v2 / v1) ────────────────────────
+      const peerSenderId = m.senderId as string;
+      const v3Envelope: V3Envelope = {
+        ephemeralPublicKey: m.ephemeralKey,
+        ciphertext: m.ciphertext,
+        ...(m.senderIdentityPublicKey ? { senderIdentityPublicKey: m.senderIdentityPublicKey } : {}),
+        ...(m.preKeyId ? { preKeyId: m.preKeyId } : {}),
+      };
+
+      let plaintext: string | null = null;
+      if (v3Envelope.senderIdentityPublicKey) {
+        const spkPriv = await getSignedPreKeyPrivate(selfUserId, selfDeviceId);
+        let opkPriv: Uint8Array | null = null;
+        let opkId: number | null = null;
+        if (m.preKeyId != null) {
+          opkId = Number(m.preKeyId);
+          if (!Number.isNaN(opkId)) opkPriv = await readOneTimePreKey(selfUserId, selfDeviceId, opkId);
+        }
+
+        const tryDecryptFirst = async (spkPrivKey: Uint8Array) => {
+          const result = decryptV3({
+            envelope: v3Envelope,
+            recipientIdentityPrivate: selfIdentityPrivate,
+            recipientSignedPreKeyPrivate: spkPrivKey,
+            oneTimePreKeyPrivate: opkPriv,
+            senderId: peerSenderId,
+            chatId,
+          });
+          if (!result) return null;
+          const senderIK = base64ToBytes(v3Envelope.senderIdentityPublicKey!);
+          try {
+            await saveSessionRoot(selfUserId, peerSenderId, result.rootKey!, senderIK);
+            await indexSessionRoot(selfUserId, peerSenderId);
+            result.rootKey!.fill(0);
+          } catch (e) { console.warn('[chat] failed to persist session root', e); }
+          return result.plaintext;
+        };
+
+        if (spkPriv) plaintext = await tryDecryptFirst(spkPriv);
+        if (plaintext == null) {
+          const prevSpk = await getPreviousSignedPreKeyPrivate(selfUserId, selfDeviceId);
+          if (prevSpk) plaintext = await tryDecryptFirst(prevSpk);
+        }
+        if (plaintext != null && opkId != null) {
+          deleteConsumedOneTimePreKey(selfUserId, selfDeviceId, opkId).catch(() => {});
+        }
+      } else {
+        const peer = useChatStore.getState().peerKeys[peerSenderId];
+        if (peer) {
+          const cachedRoot = await loadSessionRoot(selfUserId, peerSenderId, peer.identityPublicKey);
+          if (cachedRoot) {
+            const result = decryptV3({
+              envelope: v3Envelope,
+              recipientIdentityPrivate: selfIdentityPrivate,
+              cachedRootKey: cachedRoot,
+              senderId: peerSenderId,
+              chatId,
+            });
+            if (result) {
+              plaintext = result.plaintext;
+              if (result.rootKey) {
+                try {
+                  await saveSessionRoot(selfUserId, peerSenderId, result.rootKey, peer.identityPublicKey);
+                  result.rootKey.fill(0);
+                } catch (e) { console.warn('[chat] failed to update session root', e); }
+              }
             }
           }
         }
       }
-    } else {
-      // v3 follow-up: needs a cached root key keyed by the sender's IK.
-      // We don't have a direct peerKeys map by senderId; pull from the
-      // store's peerKeys cache if it's there, else fall back to v2.
-      const peer = useChatStore.getState().peerKeys[peerSenderId];
-      if (peer) {
-        const cachedRoot = await loadSessionRoot(
-          selfUserId,
-          peerSenderId,
-          peer.identityPublicKey,
-        );
-        if (cachedRoot) {
-          const result = decryptV3({
-            envelope: v3Envelope,
-            recipientIdentityPrivate: selfIdentityPrivate,
-            cachedRootKey: cachedRoot,
-            senderId: peerSenderId,
-            chatId,
-          });
-          if (result) plaintext = result.plaintext;
-        }
+
+      if (plaintext == null) {
+        plaintext = decryptFromSender({
+          envelope: { ephemeralPublicKey: v3Envelope.ephemeralPublicKey, ciphertext: v3Envelope.ciphertext },
+          identityPrivateKey: selfIdentityPrivate,
+          senderId: peerSenderId,
+          chatId,
+        });
       }
-    }
 
-    // Legacy fallback: v2/v1 envelopes from older clients still in flight.
-    if (plaintext == null) {
-      plaintext = decryptFromSender({
-        envelope: {
-          ephemeralPublicKey: v3Envelope.ephemeralPublicKey,
-          ciphertext: v3Envelope.ciphertext,
-        },
-        identityPrivateKey: selfIdentityPrivate,
-        senderId: peerSenderId,
-        chatId,
-      });
-    }
-
-    if (plaintext == null) {
-      decryptOk = false;
-    } else {
-      text = plaintext;
+      if (plaintext == null) {
+        decryptOk = false;
+      } else {
+        text = plaintext;
+      }
     }
   }
 

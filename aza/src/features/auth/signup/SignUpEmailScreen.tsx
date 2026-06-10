@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  Alert,
   ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,10 +20,12 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { isValidEmail, sanitizeText } from "../../../utils/validation";
+import { isValidEmail, sanitizeEmail } from "../../../utils/validation";
+import { getErrorStatus } from "../../../utils/errorUtils";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkEmailAvailability } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpEmail">;
 
@@ -61,8 +62,8 @@ export default function SignUpEmailScreen() {
         } else {
           setError(null);
         }
-      } catch (err: any) {
-        if (err.response?.status === 409) {
+      } catch (err: unknown) {
+        if (getErrorStatus(err) === 409) {
           setIsAvailable(false);
           setError("This email address is already linked to an account.");
         } else {
@@ -75,10 +76,18 @@ export default function SignUpEmailScreen() {
     []
   );
 
+  // Cancel in-flight debounce when the component unmounts.
+  React.useEffect(() => () => validateEmail.cancel(), [validateEmail]);
+
   const handleNext = async () => {
     if (!isValidEmail(data.email)) return;
-    
     if (isAvailable === false) return;
+
+    // Debounce already confirmed availability — skip the redundant API call.
+    if (isAvailable === true) {
+      navigation.navigate("SignUpPassword");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -90,8 +99,8 @@ export default function SignUpEmailScreen() {
         setIsAvailable(false);
         setError("This email address is already linked to an account.");
       }
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (err: unknown) {
+      if (getErrorStatus(err) === 409) {
         setIsAvailable(false);
         setError("This email address is already linked to an account.");
       } else {
@@ -104,11 +113,11 @@ export default function SignUpEmailScreen() {
   };
 
   const handleTextChange = (t: string) => {
-    const sanitized = sanitizeText(t);
+    const sanitized = sanitizeEmail(t);
     update({ email: sanitized });
     setError(null);
     setIsAvailable(null);
-    
+
     if (isValidEmail(sanitized)) {
       setIsValidating(true);
       validateEmail(sanitized);
@@ -130,6 +139,8 @@ export default function SignUpEmailScreen() {
             <BackButton onPress={() => navigation.goBack()} size={28} />
           </View>
 
+          <SignUpProgressBar step={2} total={10} />
+
           {/* Content */}
           <View style={styles.content}>
             <Text style={styles.title}>What's your email?</Text>
@@ -149,6 +160,7 @@ export default function SignUpEmailScreen() {
                 style={styles.inputIcon}
               />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="Email Address"
                 placeholderTextColor={Colors.textSecondary}

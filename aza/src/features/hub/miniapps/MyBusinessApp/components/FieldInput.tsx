@@ -14,6 +14,7 @@ export default function FieldInput({
     <View style={{ marginBottom: Spacing.md }}>
       <Text style={[styles.fieldLabel, { color: Colors.textSecondary }]}>{label}</Text>
       <TextInput
+        underlineColorAndroid="transparent"
         style={[styles.fieldInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: Colors.surface }]}
         value={value}
         onChangeText={onChangeText}

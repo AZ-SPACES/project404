@@ -41,7 +41,8 @@ function KYCStatusGate({ children }: { children: React.ReactNode }) {
       getKycStatus()
         .then((res) => {
           if (cancelled) return;
-          const status = res.data?.status;
+          // Backend wraps responses: { success, data: { status } }
+          const status = res.data?.data?.status;
           if (status === 'VERIFIED') {
             completeKYC();
           } else if (status === 'UNDER_REVIEW' && isInitial) {

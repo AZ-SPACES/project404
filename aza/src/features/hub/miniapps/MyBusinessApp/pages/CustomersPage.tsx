@@ -34,7 +34,7 @@ export default function CustomersPage({ goBack, Colors, styles }: NavProps) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {customers.map((c) => (
+          {customers.map((c: any) => (
             <View
               key={c.userId ?? c.id}
               style={{

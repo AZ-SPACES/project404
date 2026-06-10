@@ -26,6 +26,7 @@ import {
 
 const ARC_TOTP_PREFIX = 'arc_totp_';
 import { TextInput } from 'react-native';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'AccountRecoveryContacts'>;
 
@@ -98,8 +99,8 @@ export default function AccountRecoveryContactsScreen() {
       setSearchQuery('');
       setSearchResults([]);
       load();
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to send invitation', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Failed to send invitation'), 'error');
     } finally {
       setActionId(null);
     }
@@ -116,8 +117,8 @@ export default function AccountRecoveryContactsScreen() {
       }
       showToast('You are now a recovery contact', 'success');
       load();
-    } catch (err: any) {
-      showToast(err.response?.data?.message || 'Failed to accept', 'error');
+    } catch (err: unknown) {
+      showToast(extractErrorMessage(err, 'Failed to accept'), 'error');
     } finally {
       setActionId(null);
     }
@@ -243,6 +244,7 @@ export default function AccountRecoveryContactsScreen() {
             <View style={styles.searchBox}>
               <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
+                underlineColorAndroid="transparent"
                 style={[styles.searchInput, { color: Colors.textPrimary }]}
                 placeholder="Search by name or @handle"
                 placeholderTextColor={Colors.textSecondary}

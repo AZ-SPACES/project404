@@ -1,9 +1,15 @@
 "use client";
 
+declare global {
+  interface Window {
+    chatbase: ((...args: unknown[]) => void) & { q?: unknown[][] };
+  }
+}
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearTokens, getMe, Merchant } from "@/lib/merchant-api";
+import { clearTokens, getChatbaseToken, getMe, Merchant } from "@/lib/merchant-api";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard,
@@ -139,6 +145,11 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
         }
         setMerchant(me);
         setReady(true);
+        getChatbaseToken().then((token) => {
+          if (token && typeof window !== "undefined" && window.chatbase) {
+            window.chatbase("identify", { token });
+          }
+        });
       })
       .catch(() => {
         router.replace("/login");

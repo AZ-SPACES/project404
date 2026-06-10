@@ -14,7 +14,7 @@ export type IdType =
   | 'ghana_card'
   | 'passport'
   | 'voter_id'
-  | 'drivers_license';
+  | 'drivers_licence';
 
 export type PEPStatus = 'self' | 'family_associate';
 
@@ -35,10 +35,10 @@ export type PEPAccountPurpose =
   | 'Salary receiving';
 
 export type PEPMonthlyVolume =
-  | 'Below GH₵10,000'
-  | 'GH₵10,000 – GH₵50,000'
-  | 'GH₵50,000 – GH₵100,000'
-  | 'Above GH₵100,000';
+  | 'Less than GH₵ 10,000'
+  | 'GH₵ 10,000 - 50,000'
+  | 'GH₵ 50,000 - 100,000'
+  | 'More than GH₵ 100,000';
 
 export type PEPProofDocType =
   | 'Asset Declaration Form'
@@ -177,7 +177,7 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     setIsSubmitting(true);
     try {
       await api.resubmitKyc();
-      update({ status: 'PENDING', rejectionReason: undefined });
+      update({ status: 'PENDING' });
     } finally {
       setIsSubmitting(false);
     }
@@ -340,8 +340,9 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     setIsSubmitting(true);
     try {
       const response = await api.submitKycFinal();
-      if (response.data?.status) {
-        update({ status: response.data.status });
+      const kycStatus = response.data?.data?.status ?? response.data?.status;
+      if (kycStatus) {
+        update({ status: kycStatus });
       }
     } finally {
       setIsSubmitting(false);
@@ -352,12 +353,13 @@ export function KYCProvider({ children }: { children: React.ReactNode }) {
     try {
       await queryClient.invalidateQueries({ queryKey: queryKeys.kycStatus() });
       const response = await api.getKycStatus();
-      if (response.data?.status) {
+      const kycData = response.data?.data;
+      if (kycData?.status) {
         update({
-          status: response.data.status,
-          rejectionReason: response.data.rejectionReason
+          status: kycData.status,
+          rejectionReason: kycData.rejectionReason,
         });
-        return response.data.status;
+        return kycData.status;
       }
       return 'NOT_STARTED';
     } catch (error) {

@@ -63,4 +63,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     @Query("SELECT m FROM ChatMessage m WHERE m.expiresAt IS NOT NULL " +
            "AND m.expiresAt <= :now AND m.isDeleted = false")
     List<ChatMessage> findExpiredMessages(@Param("now") LocalDateTime now);
+
+    /** GDPR erasure: null out E2EE payload fields for all messages sent by a user. */
+    @Modifying
+    @Query("UPDATE ChatMessage m SET m.ciphertext = null, m.ephemeralKey = null, " +
+           "m.senderIdentityPublicKey = null, m.content = null, m.mediaKey = null " +
+           "WHERE m.senderId = :userId")
+    void wipeSenderMessageContent(@Param("userId") UUID userId);
 }

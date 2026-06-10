@@ -124,6 +124,8 @@ export function VerifyPasscodeScreen() {
               <Text style={styles.subtitle}>Enter your 4-digit passcode to proceed with this sensitive change.</Text>
 
               <TextInput
+
+                underlineColorAndroid="transparent"
                 ref={inputRef}
                 value={passcode}
                 onChangeText={handleTextChange}

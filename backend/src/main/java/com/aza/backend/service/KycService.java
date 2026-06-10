@@ -35,11 +35,11 @@ public class KycService {
     private final NotificationService notificationService;
 
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
-    private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; //5MB
+    private static final long MAX_IMAGE_SIZE = 8 * 1024 * 1024; //8MB
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg","image/png");
     private static final List<String> ALLOWED_DOC_TYPES = List.of("image/jpeg", "image/png", "application/pdf");
     private static final Set<String> ALLOWED_FUNDS_SOURCES = Set.of(
-            "salary", "savings", "business", "investment", "pension", "gift", "rental", "remittance", "other"
+            "salary", "savings", "business", "investment", "pension", "gift", "rental", "remittance", "asset_sale", "other"
     );
     // Alphanumeric + hyphens only, 4–30 chars — covers all supported ID formats
     private static final java.util.regex.Pattern ID_NUMBER_PATTERN =

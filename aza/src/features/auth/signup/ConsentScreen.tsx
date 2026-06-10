@@ -6,9 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Linking,
   StatusBar,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -23,6 +21,7 @@ import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Consent">;
 
@@ -70,8 +69,10 @@ export default function ConsentScreen() {
       const authPayload = response?.data ?? response;
       const { accessToken, refreshToken } = authPayload;
 
+      if (!accessToken || !refreshToken) throw new Error('Signup did not return tokens');
+
       const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-      
+
       // Save passcode locally for biometrics/verification
       if (data.passcode) {
         await savePasscodeValue(data.passcode);
@@ -81,11 +82,11 @@ export default function ConsentScreen() {
 
       await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
-      
+
       // hasPasscode=true because we just set it during signup
-      login(accessToken, true, false);
-    } catch (error: any) {
-      showToast(error?.response?.data?.message || error.message || 'Signup failed', 'error');
+      login({ token: accessToken, hasPasscode: true, isKYCVerified: false });
+    } catch (error: unknown) {
+      showToast(extractErrorMessage(error, 'Signup failed'), 'error');
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -26,6 +26,7 @@ import { queryKeys } from '../../../lib/queryKeys';
 import { formatCurrency } from '../../../utils/transactionUtils';
 import { BackButton } from '../../../components/ui/BackButton';
 import { CloseButton } from '../../../components/ui/CloseButton';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { height } = Dimensions.get('window');
 
@@ -138,6 +139,9 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
         setAmount(num.toFixed(2));
     };
 
+    // Reset loading state whenever the screen regains focus (e.g. user presses Back from SendConfirm).
+    useFocusEffect(useCallback(() => { setIsLoading(false); }, []));
+
     const handleSend = () => {
         if (!canSend) return;
         setIsLoading(true);
@@ -151,7 +155,6 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             identifier,
             ...(effectiveCategory ? { category: effectiveCategory } : {}),
         });
-        setTimeout(() => setIsLoading(false), 500);
     };
 
     return (
@@ -198,6 +201,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             >
                                 <Text style={styles.currencySymbol}>GH¢</Text>
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     ref={amountInputRef}
                                     style={styles.amountInput}
                                     value={amount}
@@ -260,6 +264,7 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                                     style={styles.noteIcon}
                                 />
                                 <TextInput
+                                  underlineColorAndroid="transparent"
                                     style={styles.noteInput}
                                     placeholder="Add a note"
                                     placeholderTextColor={Colors.textSecondary}

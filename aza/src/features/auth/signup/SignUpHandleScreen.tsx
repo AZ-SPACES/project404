@@ -24,6 +24,7 @@ import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkHandleAvailability, suggestHandles } from "../../../services/api";
 import { debounce } from "lodash";
 import { BackButton } from '../../../components/ui/BackButton';
+import SignUpProgressBar from '../../../components/ui/SignUpProgressBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "SignUpHandle">;
 
@@ -54,6 +55,9 @@ export default function SignUpHandleScreen() {
     extrapolate: "clamp",
   });
 
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const validateHandle = useCallback(
     debounce(async (text: string) => {
       if (text.length < 3) {
@@ -67,7 +71,13 @@ export default function SignUpHandleScreen() {
         setIsAvailable(response.data.data);
         if (!response.data.data) {
           setError("This username is already taken");
-          fetchSuggestions();
+          try {
+            const { firstName, lastName } = dataRef.current;
+            const suggestRes = await suggestHandles(firstName, lastName);
+            setSuggestions(suggestRes.data.data || []);
+          } catch {
+            // suggestions are best-effort
+          }
         } else {
           setError(null);
         }
@@ -80,14 +90,7 @@ export default function SignUpHandleScreen() {
     []
   );
 
-  const fetchSuggestions = async () => {
-    try {
-      const response = await suggestHandles(data.firstName, data.lastName);
-      setSuggestions(response.data.data || []);
-    } catch (err) {
-      console.error("Error fetching suggestions:", err);
-    }
-  };
+  useEffect(() => () => validateHandle.cancel(), [validateHandle]);
 
   useEffect(() => {
     if (handle.length >= 3) {
@@ -147,6 +150,8 @@ export default function SignUpHandleScreen() {
             </Animated.View>
           </Animated.View>
 
+          <SignUpProgressBar step={5} total={10} />
+
           {/* Content */}
           <Animated.ScrollView
             style={styles.content}
@@ -171,6 +176,7 @@ export default function SignUpHandleScreen() {
             ]}>
               <Text style={styles.atSymbol}>@</Text>
               <TextInput
+                underlineColorAndroid="transparent"
                 style={styles.input}
                 placeholder="username"
                 placeholderTextColor={Colors.textSecondary}

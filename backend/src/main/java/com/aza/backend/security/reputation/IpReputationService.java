@@ -1,5 +1,6 @@
 package com.aza.backend.security.reputation;
 
+import com.aza.backend.repository.SystemSettingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,20 +22,29 @@ import java.util.stream.Collectors;
 public class IpReputationService {
 
     private final StringRedisTemplate redis;
+    private final SystemSettingRepository settingRepo;
 
     @Value("${app.security.blocked-countries:}")
-    private String blockedCountries;
+    private String blockedCountriesFallback;
 
     @Value("${app.security.trusted-ips:127.0.0.1,::1,0:0:0:0:0:0:0:1}")
     private String trustedIpsConfig;
 
     private static final String BLOCK_PREFIX = "iprep:block:";
     private static final String TRUST_PREFIX = "iprep:trust:";
+    private static final long CACHE_TTL_MS = 60_000;
+
+    private volatile Set<String> cachedBlockedCodes = null;
+    private volatile long cacheExpiresAt = 0;
 
     // ── Trust ─────────────────────────────────────────────────────────────────
 
     public boolean isTrusted(String ip) {
-        if (Boolean.TRUE.equals(redis.hasKey(TRUST_PREFIX + ip))) return true;
+        try {
+            if (Boolean.TRUE.equals(redis.hasKey(TRUST_PREFIX + ip))) return true;
+        } catch (Exception e) {
+            // Redis unavailable — fall through to static list
+        }
         return staticTrustedIps().contains(ip);
     }
 
@@ -45,8 +55,12 @@ public class IpReputationService {
     // ── Block ─────────────────────────────────────────────────────────────────
 
     public boolean isBlocked(String ip) {
-        if (isTrusted(ip)) return false;
-        return Boolean.TRUE.equals(redis.hasKey(BLOCK_PREFIX + ip));
+        try {
+            if (isTrusted(ip)) return false;
+            return Boolean.TRUE.equals(redis.hasKey(BLOCK_PREFIX + ip));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void blockIp(String ip, Duration ttl) {
@@ -71,11 +85,17 @@ public class IpReputationService {
 
     public boolean isCountryBlocked(String countryCode) {
         if (countryCode == null || countryCode.isBlank()) return false;
+        Set<String> codes = blockedCountryCodes();
         if ("XX".equals(countryCode) || "T1".equals(countryCode)) {
             // Cloudflare uses XX for unknown, T1 for Tor
-            return blockedCountries.contains("TOR") || blockedCountries.contains("T1");
+            return codes.contains("TOR") || codes.contains("T1");
         }
-        return blockedCountryCodes().contains(countryCode.toUpperCase());
+        return codes.contains(countryCode.toUpperCase());
+    }
+
+    /** Force the next call to reload from DB, e.g. after an admin update. */
+    public void invalidateGeoBlockCache() {
+        cacheExpiresAt = 0;
     }
 
     // ── Internal ─────────────────────────────────────────────────────────────
@@ -88,9 +108,20 @@ public class IpReputationService {
     }
 
     private Set<String> blockedCountryCodes() {
-        return Arrays.stream(blockedCountries.split(","))
+        long now = System.currentTimeMillis();
+        if (cachedBlockedCodes != null && now < cacheExpiresAt) {
+            return cachedBlockedCodes;
+        }
+        // DB value takes precedence; fall back to application property when no DB entry exists.
+        String raw = settingRepo.findById("blocked_countries")
+                .map(s -> s.getValue())
+                .orElse(blockedCountriesFallback);
+        Set<String> codes = Arrays.stream(raw.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toSet());
+        cachedBlockedCodes = codes;
+        cacheExpiresAt = now + CACHE_TTL_MS;
+        return codes;
     }
 }

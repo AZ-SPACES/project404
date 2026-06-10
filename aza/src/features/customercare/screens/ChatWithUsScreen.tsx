@@ -259,6 +259,7 @@ export default function ChatWithUsScreen() {
               </View>
             )}
             <TextInput
+              underlineColorAndroid="transparent"
               style={styles.textInput}
               placeholder="Ask me anything..."
               placeholderTextColor={Colors.textSecondary}
