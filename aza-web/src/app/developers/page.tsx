@@ -99,13 +99,8 @@ export default function DevelopersPage() {
           <Link
             key={href}
             href={href}
-            className="group flex flex-col gap-4 p-6 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A]"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(183,238,122,0.1)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(183,238,122,0.25)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(183,238,122,0.1)")}
+            className="group flex flex-col gap-4 p-6 rounded-2xl transition-all border border-[rgba(183,238,122,0.1)] hover:border-[rgba(183,238,122,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A]"
+            style={{ background: "rgba(255,255,255,0.03)" }}
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"

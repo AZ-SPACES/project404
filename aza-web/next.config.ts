@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "api.aza.systems" },
-      { protocol: "https", hostname: "api.qrserver.com" },
     ],
   },
 };

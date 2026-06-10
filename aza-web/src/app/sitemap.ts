@@ -9,7 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/terms-of-service`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/cookie-policy`,             lastModified: new Date(), changeFrequency: "monthly", priority: 0.4 },
     { url: `${base}/compliance`,                lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-    { url: `${base}/developers/api-explorer`,   lastModified: new Date(), changeFrequency: "weekly",  priority: 0.6 },
     { url: `${base}/verify`,                    lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/developers`,                lastModified: new Date(), changeFrequency: "weekly",  priority: 0.8 },
     { url: `${base}/developers/guides`,         lastModified: new Date(), changeFrequency: "weekly",  priority: 0.7 },

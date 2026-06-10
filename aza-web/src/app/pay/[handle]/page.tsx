@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import QRCode from "qrcode";
 
 export const dynamic = "force-dynamic";
 
@@ -71,11 +72,16 @@ export async function generateMetadata({
   };
 }
 
-function QrCode({ url }: { url: string }) {
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&margin=2`;
+async function QrCode({ url }: { url: string }) {
+  const dataUrl = await QRCode.toDataURL(url, {
+    width: 220,
+    margin: 2,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={qrSrc}
+      src={dataUrl}
       alt="QR code"
       width={220}
       height={220}
@@ -114,7 +120,7 @@ function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
   );
 }
 
-function ServiceUnavailablePage() {
+function ServiceUnavailablePage({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm space-y-6">
@@ -131,8 +137,7 @@ function ServiceUnavailablePage() {
               </p>
             </div>
             <a
-              href=""
-              onClick={(e) => { e.preventDefault(); window.location.reload(); }}
+              href={`/pay/${handle}`}
               className="text-sm font-medium text-[#10b981] hover:underline"
             >
               Try again →
@@ -196,7 +201,7 @@ export default async function PayPage({
 
   if (!result.ok) {
     if (result.status === 403) return <NotAcceptingPage handle={handle} />;
-    if (result.status === 503 || result.status >= 500) return <ServiceUnavailablePage />;
+    if (result.status === 503 || result.status >= 500) return <ServiceUnavailablePage handle={handle} />;
     notFound();
   }
 
