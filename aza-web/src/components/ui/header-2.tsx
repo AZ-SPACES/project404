@@ -1,5 +1,7 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
@@ -67,12 +69,12 @@ export function Header() {
           }}
         >
           {/* Logo */}
-          <a
-            href="#"
-            className="flex items-center shrink-0 mr-2"
+          <Link
+            href="/"
+            className="flex items-center shrink-0 mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] rounded"
           >
-            <img src="/logo.png" alt="AZA" className="h-6 w-auto" />
-          </a>
+            <Image src="/logo.png" alt="AZA" width={53} height={24} className="h-6 w-auto" priority />
+          </Link>
 
           {/* Desktop nav */}
           <nav
@@ -116,13 +118,13 @@ export function Header() {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            <a
-              href="#waitlist"
+            <Link
+              href="/#waitlist"
               className="hidden md:inline-flex items-center text-[0.85rem] font-bold px-[18px] py-2 rounded-lg transition-opacity hover:opacity-90 ml-1"
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
               Join waitlist
-            </a>
+            </Link>
 
             <button
               onClick={() => setOpen((o) => !o)}
@@ -142,7 +144,10 @@ export function Header() {
               'md:hidden absolute left-4 right-4 flex flex-col gap-1 p-3',
               'rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.07)]',
               'animate-in zoom-in-95 fade-in-0 duration-200 ease-out',
-              scrolled ? 'top-[calc(3rem+52px+4px)]' : 'top-[calc(14px+52px+4px)]',
+              // While the menu is open the header always uses pt-[14px]
+              // (the scrolled pt-3 only applies when closed), so the
+              // dropdown offset is constant.
+              'top-[calc(14px+52px+4px)]',
             )}
             style={{ background: '#0e2a0e' }}
           >
@@ -168,14 +173,14 @@ export function Header() {
             </button>
 
             <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
-            <a
-              href="#waitlist"
+            <Link
+              href="/#waitlist"
               onClick={() => setOpen(false)}
               className="flex items-center justify-center text-[0.9rem] font-bold px-4 py-[10px] rounded-2xl"
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
               Join waitlist
-            </a>
+            </Link>
           </div>
         )}
       </header>

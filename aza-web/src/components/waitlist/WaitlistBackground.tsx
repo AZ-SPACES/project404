@@ -1,7 +1,7 @@
 const rings = [
-  { cls: "animate-spin-slow",         size: 2000, rotate: 279.05, src: "https://framerusercontent.com/images/oqZEqzDEgSLygmUDuZAYNh2XQ9U.png?scale-down-to=2048", opacity: "opacity-50" },
-  { cls: "animate-spin-slow-reverse", size: 1000, rotate: 304.42, src: "https://framerusercontent.com/images/UbucGYsHDAUHfaGZNjwyCzViw8.png?scale-down-to=1024",  opacity: "opacity-60" },
-  { cls: "animate-spin-slow",         size: 800,  rotate: 48.33,  src: "https://framerusercontent.com/images/Ans5PAxtJfg3CwxlrPMSshx2Pqc.png",                       opacity: "opacity-80" },
+  { cls: "animate-spin-slow",         size: 2000, rotate: 279.05, src: "/waitlist-rings/ring-1.png", opacity: "opacity-50" },
+  { cls: "animate-spin-slow-reverse", size: 1000, rotate: 304.42, src: "/waitlist-rings/ring-2.png", opacity: "opacity-60" },
+  { cls: "animate-spin-slow",         size: 800,  rotate: 48.33,  src: "/waitlist-rings/ring-3.png", opacity: "opacity-80" },
 ] as const;
 
 export function WaitlistBackground() {
@@ -21,7 +21,9 @@ export function WaitlistBackground() {
             className="absolute top-1/2 left-1/2"
             style={{ width: size, height: size, transform: `translate(-50%, -50%) rotate(${rotate}deg)` }}
           >
-            <img src={src} alt="" className={`w-full h-full object-cover ${opacity}`} />
+            {/* Decorative below-the-fold art: plain <img> + lazy is enough; no next/image pipeline needed */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src} alt="" loading="lazy" decoding="async" className={`w-full h-full object-cover ${opacity}`} />
           </div>
         </div>
       ))}

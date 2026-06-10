@@ -21,6 +21,13 @@ export function CinematicHero({
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    // Skip the splash entirely for reduced-motion users — no scroll lock,
+    // no multi-second animation holding the page hostage.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setIsVisible(false);
+      return;
+    }
+
     // Hide navbar and lock scroll while cinematic is active
     document.body.classList.add('cinematic-active');
     document.body.style.overflow = 'hidden';
@@ -117,13 +124,14 @@ export function CinematicHero({
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex flex-col items-center justify-center text-center w-full px-4">
-        <h1 className="text-track gsap-reveal text-3d-matte text-5xl md:text-7xl lg:text-[6rem] font-bold tracking-tight mb-2">
+      {/* Decorative splash — the page's real h1 lives in HeroSection */}
+      <div className="relative z-10 flex flex-col items-center justify-center text-center w-full px-4" aria-hidden="true">
+        <p className="text-track gsap-reveal text-3d-matte text-5xl md:text-7xl lg:text-[6rem] font-bold tracking-tight mb-2">
           {tagline1}
-        </h1>
-        <h1 className="text-days gsap-reveal text-silver-matte text-5xl md:text-7xl lg:text-[6rem] font-extrabold tracking-tighter">
+        </p>
+        <p className="text-days gsap-reveal text-silver-matte text-5xl md:text-7xl lg:text-[6rem] font-extrabold tracking-tighter">
           {tagline2}
-        </h1>
+        </p>
       </div>
 
       <div className="scroll-indicator absolute bottom-12 z-20 flex flex-col items-center gap-2 text-neutral-500/80 pointer-events-none">

@@ -2,9 +2,16 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+
+// Latest DOB that still makes the user 18 — computed once at module load
+const MAX_DOB = new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000)
+  .toISOString()
+  .split('T')[0];
 
 type Step = 'credentials' | 'profile';
 
@@ -31,11 +38,18 @@ export default function DevSignupPage() {
   const [dob, setDob]             = useState('');
   const [employment, setEmployment] = useState('');
   const [error, setError]         = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string; password?: string }>({});
   const [loading, setLoading]     = useState(false);
 
   function nextStep(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    const errs: typeof fieldErrors = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Enter a valid email address';
+    if (!/^\+?[0-9]{9,15}$/.test(phone.replace(/\s/g, ''))) errs.phone = 'Enter a valid phone number (e.g. +233XXXXXXXXX)';
+    if (password.length < 8) errs.password = 'Password must be at least 8 characters';
+    if (Object.keys(errs).length) { setFieldErrors(errs); return; }
+    setFieldErrors({});
     setStep('profile');
   }
 
@@ -84,16 +98,16 @@ export default function DevSignupPage() {
       className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}
     >
-      <a
+      <Link
         href="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors"
+        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded"
         style={{ color: 'rgba(183,238,122,0.6)' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#B7EE7A')}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--aza-accent)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'rgba(183,238,122,0.6)')}
       >
         <ArrowLeft size={15} />
         Back to aza
-      </a>
+      </Link>
 
       <div
         className="w-full max-w-[440px] rounded-3xl p-8"
@@ -105,7 +119,7 @@ export default function DevSignupPage() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="AZA" width={71} height={32} className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
             <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
@@ -120,9 +134,9 @@ export default function DevSignupPage() {
                   className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
                   style={
                     i < stepIndex
-                      ? { background: '#B7EE7A', color: '#174717' }
+                      ? { background: 'var(--aza-accent)', color: 'var(--aza-primary)' }
                       : i === stepIndex
-                      ? { background: 'rgba(183,238,122,0.25)', border: '1.5px solid #B7EE7A', color: '#B7EE7A' }
+                      ? { background: 'rgba(183,238,122,0.25)', border: '1.5px solid var(--aza-accent)', color: 'var(--aza-accent)' }
                       : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }
                   }
                 >
@@ -130,7 +144,7 @@ export default function DevSignupPage() {
                 </div>
                 <span
                   className="text-xs font-medium hidden sm:block"
-                  style={{ color: i === stepIndex ? '#B7EE7A' : 'rgba(255,255,255,0.25)' }}
+                  style={{ color: i === stepIndex ? 'var(--aza-accent)' : 'rgba(255,255,255,0.25)' }}
                 >
                   {s}
                 </span>
@@ -157,45 +171,48 @@ export default function DevSignupPage() {
               </p>
             </div>
 
-            <Field label="Email">
+            <Field label="Email" htmlFor="su-email" error={fieldErrors.email}>
               <input
+                id="su-email"
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
+                onChange={e => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(p => ({ ...p, email: undefined })); }}
+                aria-invalid={!!fieldErrors.email}
               />
             </Field>
 
-            <Field label="Phone number">
+            <Field label="Phone number" htmlFor="su-phone" error={fieldErrors.phone}>
               <input
+                id="su-phone"
                 type="tel"
                 autoComplete="tel"
                 placeholder="+233 XX XXX XXXX"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
-                required
+                onChange={e => { setPhone(e.target.value); if (fieldErrors.phone) setFieldErrors(p => ({ ...p, phone: undefined })); }}
+                aria-invalid={!!fieldErrors.phone}
               />
             </Field>
 
-            <Field label="Password">
+            <Field label="Password" htmlFor="su-password" error={fieldErrors.password}>
               <div className="relative">
                 <input
+                  id="su-password"
                   type={showPwd ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Min. 8 characters"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  minLength={8}
-                  required
+                  onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(p => ({ ...p, password: undefined })); }}
+                  aria-invalid={!!fieldErrors.password}
                   style={{ paddingRight: '2.75rem' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 rounded"
                   style={{ color: 'rgba(255,255,255,0.3)' }}
+                  aria-label={showPwd ? 'Hide password' : 'Show password'}
                 >
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -206,7 +223,7 @@ export default function DevSignupPage() {
 
             <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
               Already have an account?{' '}
-              <a href="/developers/login" style={{ color: '#B7EE7A', fontWeight: 600 }}>
+              <a href="/developers/login" style={{ color: 'var(--aza-accent)', fontWeight: 600 }} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] rounded-sm">
                 Sign in
               </a>
             </p>
@@ -269,7 +286,7 @@ export default function DevSignupPage() {
                 type="date"
                 value={dob}
                 onChange={e => setDob(e.target.value)}
-                max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                max={MAX_DOB}
               />
             </Field>
 
@@ -316,16 +333,17 @@ export default function DevSignupPage() {
 
 // ── Shared sub-components ──────────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error, htmlFor }: { label: string; children: React.ReactNode; error?: string; htmlFor?: string }) {
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
         {label}
-      </span>
-      <div className="[&_input]:w-full [&_input]:rounded-xl [&_input]:px-4 [&_input]:py-3 [&_input]:text-sm [&_input]:text-white [&_input]:outline-none [&_input]:transition-all [&_input]:bg-white/[0.06] [&_input]:border [&_input]:border-white/10 [&_input:focus]:border-[rgba(183,238,122,0.4)] [&_input]:placeholder:text-white/25 [&_select]:w-full [&_select]:rounded-xl [&_select]:px-4 [&_select]:py-3 [&_select]:text-sm [&_select]:text-white [&_select]:outline-none [&_select]:transition-all [&_select]:bg-[#1a321a] [&_select]:border [&_select]:border-white/10 [&_select:focus]:border-[rgba(183,238,122,0.4)] [&_select]:appearance-none">
+      </label>
+      <div className={`[&_input]:w-full [&_input]:rounded-xl [&_input]:px-4 [&_input]:py-3 [&_input]:text-sm [&_input]:text-white [&_input]:outline-none [&_input]:transition-all [&_input]:bg-white/[0.06] [&_input]:border [&_input]:placeholder:text-white/25 [&_select]:w-full [&_select]:rounded-xl [&_select]:px-4 [&_select]:py-3 [&_select]:text-sm [&_select]:text-white [&_select]:outline-none [&_select]:transition-all [&_select]:bg-[#1a321a] [&_select]:border [&_select]:appearance-none ${error ? '[&_input]:border-red-400/50 [&_select]:border-red-400/50' : '[&_input]:border-white/10 [&_input:focus]:border-[rgba(183,238,122,0.4)] [&_select]:border-white/10 [&_select:focus]:border-[rgba(183,238,122,0.4)]'}`}>
         {children}
       </div>
-    </label>
+      {error && <p className="text-xs" style={{ color: '#f87171' }}>{error}</p>}
+    </div>
   );
 }
 
@@ -335,7 +353,7 @@ function PrimaryButton({ children, loading }: { children: React.ReactNode; loadi
       type="submit"
       disabled={loading}
       className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60 mt-1"
-      style={{ background: '#B7EE7A', color: '#174717' }}
+      style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
     >
       {loading && <Loader2 size={15} className="animate-spin" />}
       {children}

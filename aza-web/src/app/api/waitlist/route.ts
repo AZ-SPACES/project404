@@ -25,10 +25,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A valid email address is required." }, { status: 400 });
   }
 
-  // Forward the real client IP so the backend's rate limiter sees the actual user
+  // Forward the real client IP so the backend's rate limiter sees the actual user.
+  // Prefer x-real-ip (set by our proxy) and the right-most XFF hop — the left-most
+  // entries are client-supplied and trivially spoofable for rate-limit evasion.
+  const xff = request.headers.get("x-forwarded-for");
   const clientIp =
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     request.headers.get("x-real-ip") ??
+    xff?.split(",").map((s) => s.trim()).filter(Boolean).pop() ??
     "unknown";
 
   let upstream: Response;

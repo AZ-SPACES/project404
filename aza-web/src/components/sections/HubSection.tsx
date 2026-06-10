@@ -113,16 +113,20 @@ export function HubSection() {
         </div>
 
         {/* App grid */}
-        <div
+        <ul
+          role="list"
           className="grid gap-6 max-w-[800px] mx-auto"
           style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}
         >
           {visible.map((app) => (
-            <div key={app.id} className="hub-app flex flex-col items-center gap-2 cursor-pointer group">
-              <div className="hub-app__icon-wrap w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl overflow-hidden shadow-md transition-transform group-hover:scale-105">
+            <li key={app.id} className="hub-app flex flex-col items-center gap-2 group">
+              <div
+                className="hub-app__icon-wrap w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl overflow-hidden shadow-md transition-transform group-hover:scale-105"
+                aria-label={`${app.name} — ${app.desc}`}
+              >
                 <Image
                   src={app.icon}
-                  alt={app.name}
+                  alt=""
                   width={72}
                   height={72}
                   className="w-full h-full object-cover"
@@ -134,9 +138,9 @@ export function HubSection() {
               >
                 {app.name}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

@@ -2103,7 +2103,7 @@ echo $body['data']['checkoutUrl'];`}</pre>
             ['AZA_WEBHOOK_SECRET', 'Your webhook endpoint signing secret'],
           ]}
         />
-        <p className="text-sm">Never hard-code keys. Use <code>.env</code> files locally and your hosting provider's secret management in production.</p>
+        <p className="text-sm">Never hard-code keys. Use <code>.env</code> files locally and your hosting provider&apos;s secret management in production.</p>
       </div>
     ),
     codeSnippets: {

@@ -14,7 +14,7 @@ export function StoreButton({ children, label }: StoreButtonProps) {
     e.preventDefault();
     if (feedback) return;
     setFeedback(true);
-    setTimeout(() => setFeedback(false), 2200);
+    setTimeout(() => setFeedback(false), 1000);
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
 
 const API = 'https://api.aza.systems';
@@ -97,9 +98,13 @@ export default function StatusPage() {
     setServices(prev => prev.map(s => ({ ...s, status: 'checking', latencyMs: null })));
     const now = new Date();
 
-    // Run first check (gateway) which all others reuse since they hit the same host
+    // Services sharing the same health URL reuse a single in-flight request
+    const inFlight = new Map<string, Promise<{ status: ServiceStatus; latencyMs: number }>>();
     const results = await Promise.all(
-      SERVICES.map(s => checkService(s.url))
+      SERVICES.map(s => {
+        if (!inFlight.has(s.url)) inFlight.set(s.url, checkService(s.url));
+        return inFlight.get(s.url)!;
+      })
     );
 
     setServices(SERVICES.map((s, i) => ({
@@ -141,7 +146,7 @@ export default function StatusPage() {
           </Link>
 
           <div className="flex items-center gap-4 mb-3">
-            <img src="/logo.png" alt="Aza" className="h-10 w-auto shrink-0" />
+            <Image src="/logo.png" alt="Aza" width={88} height={40} className="h-10 w-auto shrink-0" />
             <div>
               <p className="text-white font-extrabold text-xl" style={{ letterSpacing: '-0.04em' }}>Aza System Status</p>
               <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>api.aza.systems</p>

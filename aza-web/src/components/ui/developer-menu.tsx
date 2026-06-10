@@ -63,16 +63,19 @@ export function DeveloperMenu({ isOpen, onClose }: Props) {
 
         item.addEventListener('mouseenter', enter);
         item.addEventListener('mouseleave', leave);
-        (item as any)._off = () => {
+        (item as HTMLElement & { _off?: () => void })._off = () => {
           item.removeEventListener('mouseenter', enter);
           item.removeEventListener('mouseleave', leave);
         };
       });
     }, containerRef);
 
+    const container = containerRef.current;
     return () => {
       ctx.revert();
-      containerRef.current?.querySelectorAll('.dev-menu-item[data-shape]').forEach((item: any) => item._off?.());
+      container?.querySelectorAll('.dev-menu-item[data-shape]').forEach(item =>
+        (item as HTMLElement & { _off?: () => void })._off?.()
+      );
     };
   }, []);
 
