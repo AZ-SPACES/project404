@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import QRCode from "qrcode";
@@ -29,7 +30,8 @@ type FetchResult =
   | { ok: true; merchant: MerchantPublic }
   | { ok: false; status: number };
 
-async function fetchMerchant(handle: string): Promise<FetchResult> {
+// cache() dedupes the upstream call between generateMetadata and the page render
+const fetchMerchant = cache(async (handle: string): Promise<FetchResult> => {
   try {
     const res = await fetch(
       `${API_URL}/api/v1/merchant/public/${handle}`,
@@ -45,6 +47,11 @@ async function fetchMerchant(handle: string): Promise<FetchResult> {
   } catch {
     return { ok: false, status: 503 };
   }
+});
+
+// Only render backend-supplied logo URLs that are plain https
+function safeLogoUrl(url?: string): string | undefined {
+  return url && url.startsWith("https://") ? url : undefined;
 }
 
 export async function generateMetadata({
@@ -67,7 +74,7 @@ export async function generateMetadata({
       description:
         merchant.businessDescription ??
         `Send a payment to ${merchant.businessName} via Aza.`,
-      ...(merchant.logoUrl ? { images: [merchant.logoUrl] } : {}),
+      ...(safeLogoUrl(merchant.logoUrl) ? { images: [safeLogoUrl(merchant.logoUrl)!] } : {}),
     },
   };
 }
@@ -92,10 +99,12 @@ async function QrCode({ url }: { url: string }) {
 
 function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
   const accent = merchant.brandColor ?? "#10b981";
-  if (merchant.logoUrl) {
+  const logoUrl = safeLogoUrl(merchant.logoUrl);
+  if (logoUrl) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- merchant logos live on arbitrary https hosts; next/image would need each host allowlisted
       <img
-        src={merchant.logoUrl}
+        src={logoUrl}
         alt={merchant.businessName}
         width={72}
         height={72}
@@ -208,7 +217,8 @@ export default async function PayPage({
   const { merchant } = result;
   const accent = merchant.brandColor ?? "#10b981";
   const deepLink = `aza://pay/${merchant.businessHandle}`;
-  const pageUrl = `https://aza.systems/pay/${merchant.businessHandle}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aza.systems";
+  const pageUrl = `${siteUrl}/pay/${merchant.businessHandle}`;
 
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">

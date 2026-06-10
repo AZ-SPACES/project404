@@ -2,9 +2,16 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+
+// Latest DOB that still makes the user 18 — computed once at module load
+const MAX_DOB = new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000)
+  .toISOString()
+  .split('T')[0];
 
 type Step = 'credentials' | 'profile';
 
@@ -91,7 +98,7 @@ export default function DevSignupPage() {
       className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}
     >
-      <a
+      <Link
         href="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded"
         style={{ color: 'rgba(183,238,122,0.6)' }}
@@ -100,7 +107,7 @@ export default function DevSignupPage() {
       >
         <ArrowLeft size={15} />
         Back to aza
-      </a>
+      </Link>
 
       <div
         className="w-full max-w-[440px] rounded-3xl p-8"
@@ -112,7 +119,7 @@ export default function DevSignupPage() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <img src="/logo.png" alt="AZA" className="h-8 w-auto" />
+          <Image src="/logo.png" alt="AZA" width={71} height={32} className="h-8 w-auto" />
           <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
             <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
           </span>
@@ -279,7 +286,7 @@ export default function DevSignupPage() {
                 type="date"
                 value={dob}
                 onChange={e => setDob(e.target.value)}
-                max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                max={MAX_DOB}
               />
             </Field>
 

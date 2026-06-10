@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 interface LegalLayoutProps {
   children: React.ReactNode;
@@ -14,7 +15,7 @@ export function LegalLayout({ children }: LegalLayoutProps) {
       >
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <img src="/logo.png" alt="AZA" className="h-6 w-auto" />
+            <Image src="/logo.png" alt="AZA" width={53} height={24} className="h-6 w-auto" />
           </Link>
           <Link
             href="/"
