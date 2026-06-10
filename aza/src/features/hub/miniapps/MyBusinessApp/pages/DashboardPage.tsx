@@ -21,6 +21,7 @@ import { fmtAmount } from '../helpers';
 import { CATEGORY_LABELS } from '../constants';
 import StatusBadge from '../components/StatusBadge';
 import { ActionTarget } from '../../../../home/components/ActionTarget';
+import { getAdaptiveForeground } from '../../../../../utils/wallpaperContrast';
 
 const { height } = Dimensions.get('window');
 
@@ -36,14 +37,24 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const {
     homeBackground, homeDim, homeBlur, homeBannerGradient, accentId, balanceCardStyle,
-    homeLayout, balanceHiddenByDefault, reducedMotion
+    homeLayout, balanceHiddenByDefault, reducedMotion, homeBgLuminance
   } = useDisplayContext();
-  
+
   const animDuration = reducedMotion ? 0 : 300;
   const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
   const bannerGrad = homeBannerGradient === 'accent'
     ? [accentPalette.primary, accentPalette.gradientEnd]
     : (BANNER_GRADIENTS.find(g => g.id === homeBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
+
+  // Adaptive foreground: keeps text/icons readable over light wallpapers.
+  const onImage = homeLayout === 'default' && !!homeBackground;
+  const hasCardBacking = balanceCardStyle === 'card' || balanceCardStyle === 'glass';
+  const fg = getAdaptiveForeground({
+    luminance: homeBgLuminance,
+    dim: homeDim,
+    active: onImage,
+    cardBacking: hasCardBacking,
+  });
     
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
   const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
@@ -103,7 +114,7 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
 
   const headerRow = (
     <View style={styles.header}>
-      <Text style={[Typography.h2, { color: Colors.white, flex: 1 }]} adjustsFontSizeToFit numberOfLines={1}>
+      <Text style={[Typography.h2, { color: fg.header.text, flex: 1 }]} adjustsFontSizeToFit numberOfLines={1}>
         {`${greeting}${merchant?.businessName ? `, ${merchant.businessName}` : ""}`}
       </Text>
       <View style={styles.headerRight}>
@@ -111,8 +122,8 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
           {merchant?.logoUrl ? (
             <Image source={{ uri: merchant.logoUrl }} style={styles.profilePic} accessibilityLabel="Business logo" />
           ) : (
-            <View style={[styles.profilePic, styles.profilePicPlaceholder]}>
-              <Feather name="briefcase" size={20} color="rgba(255,255,255,0.8)" />
+            <View style={[styles.profilePic, styles.profilePicPlaceholder, { backgroundColor: fg.header.pill }]}>
+              <Feather name="briefcase" size={20} color={fg.header.soft} />
             </View>
           )}
         </View>
@@ -123,15 +134,15 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
   const actionsRow = (
     <View style={styles.actionsRow}>
       {actionHandlers.slice(0, 3).map(a => (
-        <ActionTarget key={a.id} icon={a.icon as any} label={a.label} onPress={a.onPress} />
+        <ActionTarget key={a.id} icon={a.icon as any} label={a.label} onPress={a.onPress} color={fg.balance.text} circleColor={fg.balance.pill} />
       ))}
-      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} />
+      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} color={fg.balance.text} circleColor={fg.balance.pill} />
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle={fg.tone === 'dark-text' ? 'dark-content' : 'light-content'} backgroundColor="transparent" translucent />
 
       {homeLayout === 'minimal' ? (
         <View style={[styles.minimalBanner, { backgroundColor: accentPalette.primary }]}>
@@ -163,6 +174,15 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
           )}
           {homeBlur > 0 && <BlurView intensity={homeBlur} tint="default" style={StyleSheet.absoluteFill} />}
           {homeDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${homeDim})` }]} />}
+          {/* Contrast scrim — guarantees text legibility over busy/bright wallpapers */}
+          {onImage && (
+            <LinearGradient
+              pointerEvents="none"
+              colors={fg.scrim}
+              locations={[0, 0.5, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
 
           <SafeAreaView edges={['top']}>
             {headerRow}
@@ -176,18 +196,18 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
               )}
 
               <View style={styles.balanceSection}>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Merchant Balance</Text>
+                <Text style={[Typography.bodyLg, styles.accountType, { color: fg.balance.soft }]}>Merchant Balance</Text>
                 <View style={styles.balanceRow}>
-                  <Text style={[Typography.h1, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text style={[Typography.h1, styles.balanceText, { color: fg.balance.text }]} numberOfLines={1} adjustsFontSizeToFit>
                     {isBalanceVisible ? formattedBalance : "••••"}
                   </Text>
                   <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={Colors.white} />
+                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={fg.balance.text} />
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", marginTop: Spacing.sm }}>
-                    <Text style={[Typography.caption, styles.updateTime]}>Volume: {fmtAmount(merchant?.totalVolume, merchant?.currency ?? 'GHS')}</Text>
-                    <Text style={[Typography.caption, styles.updateTime, { marginLeft: Spacing.md }]}>Fee: {feePercent}%</Text>
+                    <Text style={[Typography.caption, styles.updateTime, { color: fg.balance.soft }]}>Volume: {fmtAmount(merchant?.totalVolume, merchant?.currency ?? 'GHS')}</Text>
+                    <Text style={[Typography.caption, styles.updateTime, { color: fg.balance.soft, marginLeft: Spacing.md }]}>Fee: {feePercent}%</Text>
                 </View>
               </View>
 

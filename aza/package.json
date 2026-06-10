@@ -69,6 +69,7 @@
     "expo-video": "~55.0.0",
     "fast-text-encoding": "^1.0.6",
     "i18n-nationality": "^1.4.0",
+    "jpeg-js": "^0.4.4",
     "lodash": "^4.17.23",
     "material-icons": "^1.13.14",
     "react": "19.2.0",
