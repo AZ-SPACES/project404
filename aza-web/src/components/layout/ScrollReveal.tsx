@@ -7,6 +7,11 @@ export function ScrollReveal() {
     const selector = ".reveal, .reveal-x-left, .reveal-x-right, .reveal-scale";
     const targets = document.querySelectorAll<HTMLElement>(selector);
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      targets.forEach((el) => el.classList.add("is-visible"));
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

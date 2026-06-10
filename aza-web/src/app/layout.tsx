@@ -68,6 +68,29 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('aza-theme')||'light';document.documentElement.setAttribute('data-theme',t)}catch(e){}})()`,
           }}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Aza",
+              url: siteUrl,
+              logo: `${siteUrl}/logo.png`,
+              description: "Aza is a mobile-first payments platform that lets you send money, chat with friends, scan QR codes, and access mini-apps — all in one secure platform.",
+              sameAs: [
+                "https://x.com/azafintech",
+                "https://instagram.com/azafintech",
+                "https://linkedin.com/company/azafintech",
+              ],
+              contactPoint: {
+                "@type": "ContactPoint",
+                email: "support@aza.systems",
+                contactType: "customer support",
+              },
+            }),
+          }}
+        />
         {children}
         <Analytics />
         <Script

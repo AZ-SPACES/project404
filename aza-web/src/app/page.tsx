@@ -10,9 +10,26 @@ import { DownloadSection } from "@/components/sections/DownloadSection";
 import { WaitlistSection } from "@/components/sections/Waitlist";
 import { CinematicFooter } from "@/components/ui/motion-footer";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aza.systems";
+
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "Aza",
+            operatingSystem: "iOS, Android",
+            applicationCategory: "FinanceApplication",
+            url: siteUrl,
+            offers: { "@type": "Offer", price: "0", priceCurrency: "GHS" },
+            description: "Send and request money, chat with friends, scan QR codes, and access powerful mini-apps — all in one secure platform.",
+          }),
+        }}
+      />
       <ScrollReveal />
       <Navbar />
 
