@@ -5,6 +5,7 @@ import { LegalLayout } from '@/components/layout/LegalLayout';
 export const metadata: Metadata = {
   title: 'Terms of Service | Aza',
   description: 'Terms of Service for the Aza application.',
+  alternates: { canonical: '/terms-of-service' },
 };
 
 export default function TermsOfServicePage() {

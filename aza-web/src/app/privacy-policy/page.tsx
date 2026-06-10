@@ -5,6 +5,7 @@ import { LegalLayout } from '@/components/layout/LegalLayout';
 export const metadata: Metadata = {
   title: 'Privacy Policy | Aza',
   description: 'Privacy Policy for the Aza application.',
+  alternates: { canonical: '/privacy-policy' },
 };
 
 export default function PrivacyPolicyPage() {

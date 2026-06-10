@@ -5,6 +5,7 @@ import { LegalLayout } from '@/components/layout/LegalLayout';
 export const metadata: Metadata = {
   title: 'Cookie Policy | Aza',
   description: 'Cookie Policy for the Aza application.',
+  alternates: { canonical: '/cookie-policy' },
 };
 
 export default function CookiePolicyPage() {
