@@ -114,6 +114,42 @@ function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
   );
 }
 
+function ServiceUnavailablePage() {
+  return (
+    <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="bg-white rounded-3xl shadow-xl shadow-black/6 overflow-hidden">
+          <div className="h-2 w-full bg-red-400" />
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Service unavailable</h1>
+              <p className="text-sm text-gray-600 mt-3 leading-snug">
+                We couldn&apos;t load this payment page right now. Please try again in a moment.
+              </p>
+            </div>
+            <a
+              href=""
+              onClick={(e) => { e.preventDefault(); window.location.reload(); }}
+              className="text-sm font-medium text-[#10b981] hover:underline"
+            >
+              Try again →
+            </a>
+          </div>
+        </div>
+        <p className="text-center text-xs text-gray-400">
+          Payments powered by{" "}
+          <a href="https://aza.systems" className="font-medium text-gray-500 hover:underline">
+            Aza
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function NotAcceptingPage({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
@@ -159,9 +195,8 @@ export default async function PayPage({
   const result = await fetchMerchant(handle);
 
   if (!result.ok) {
-    // 403 = merchant exists but not yet active (pending KYB etc.)
     if (result.status === 403) return <NotAcceptingPage handle={handle} />;
-    // 404 = truly doesn't exist
+    if (result.status === 503 || result.status >= 500) return <ServiceUnavailablePage />;
     notFound();
   }
 

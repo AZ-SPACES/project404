@@ -68,8 +68,8 @@ export function Header() {
         >
           {/* Logo */}
           <a
-            href="#"
-            className="flex items-center shrink-0 mr-2"
+            href="/"
+            className="flex items-center shrink-0 mr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] rounded"
           >
             <img src="/logo.png" alt="AZA" className="h-6 w-auto" />
           </a>
@@ -117,7 +117,7 @@ export function Header() {
             </button>
 
             <a
-              href="#waitlist"
+              href="/#waitlist"
               className="hidden md:inline-flex items-center text-[0.85rem] font-bold px-[18px] py-2 rounded-lg transition-opacity hover:opacity-90 ml-1"
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
@@ -169,7 +169,7 @@ export function Header() {
 
             <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
             <a
-              href="#waitlist"
+              href="/#waitlist"
               onClick={() => setOpen(false)}
               className="flex items-center justify-center text-[0.9rem] font-bold px-4 py-[10px] rounded-2xl"
               style={{ background: '#B7EE7A', color: '#174717' }}

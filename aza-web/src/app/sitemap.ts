@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/compliance`,                lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     { url: `${base}/developers/api-explorer`,   lastModified: new Date(), changeFrequency: "weekly",  priority: 0.6 },
     { url: `${base}/verify`,                    lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/developers`,                lastModified: new Date(), changeFrequency: "weekly",  priority: 0.8 },
     { url: `${base}/developers/guides`,         lastModified: new Date(), changeFrequency: "weekly",  priority: 0.7 },
     { url: `${base}/developers/status`,         lastModified: new Date(), changeFrequency: "always",  priority: 0.6 },
   ];
