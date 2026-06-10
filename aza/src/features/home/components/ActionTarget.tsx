@@ -17,11 +17,16 @@ type ActionTargetProps = {
   icon: ComponentProps<typeof Feather>["name"];
   label: string;
   onPress?: () => void;
+  /** Icon/label colour — defaults to white for dark banners */
+  color?: string;
+  /** Background colour of the icon circle */
+  circleColor?: string;
 };
 
-export function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
+export function ActionTarget({ icon, label, onPress, color, circleColor }: ActionTargetProps) {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const fg = color ?? Colors.white;
   return (
     <TouchableOpacity
       style={styles.actionContainer}
@@ -31,10 +36,10 @@ export function ActionTarget({ icon, label, onPress }: ActionTargetProps) {
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <View style={styles.actionIconCircle}>
-        <Feather name={icon} size={24} color={Colors.white} />
+      <View style={[styles.actionIconCircle, circleColor ? { backgroundColor: circleColor } : null]}>
+        <Feather name={icon} size={24} color={fg} />
       </View>
-      <Text style={styles.actionLabel}>{label}</Text>
+      <Text style={[styles.actionLabel, { color: fg }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
