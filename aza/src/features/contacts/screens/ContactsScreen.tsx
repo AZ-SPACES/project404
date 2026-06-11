@@ -40,6 +40,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import Button from "../../../components/ui/Button";
 import { useContactStore } from "../../../store/contactStore";
 import { usePresenceStore } from "../../../store/presenceStore";
+import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
 
 import { Contact as BackendContact } from "../types";
 import { CloseButton } from '../../../components/ui/CloseButton';
@@ -110,6 +111,13 @@ export default function ContactsScreen() {
 
   // Presence store — subscribe to the full Set so we re-render when any status changes
   const onlineUserIds = usePresenceStore((s) => s.onlineUserIds);
+
+  // Seed online dots from the server; live WS events keep them fresh afterwards.
+  const azaUserIds = React.useMemo(
+    () => uniqueContacts.filter((c) => c.isAzaUser).map((c) => c.contactUserId),
+    [uniqueContacts],
+  );
+  usePresenceSeed(azaUserIds);
 
   // Map backend contacts to UI Recipients
   const contactsList: Recipient[] = uniqueContacts.map(c => ({

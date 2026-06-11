@@ -220,7 +220,20 @@ export default function ChatInfoScreen() {
   const name = chat?.otherUserName ?? paramName;
   const username = chat?.otherUserHandle ?? paramUsername;
   const avatar = chat?.otherUserAvatar ?? paramAvatar;
-  const status = chat?.otherUserStatus ?? paramStatus ?? "Available";
+  const presenceOnline = usePresenceStore(s => (otherUserId ? s.isOnline(otherUserId) : false));
+  const presenceLastSeen = usePresenceStore(s => (otherUserId ? s.getLastSeen(otherUserId) : null));
+  const status = React.useMemo(() => {
+    if (presenceOnline) return 'Online';
+    if (presenceLastSeen) {
+      const mins = Math.floor((Date.now() - presenceLastSeen) / 60_000);
+      if (mins < 1) return 'Last seen just now';
+      if (mins < 60) return `Last seen ${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `Last seen ${hrs}h ago`;
+      return `Last seen ${new Date(presenceLastSeen).toLocaleDateString()}`;
+    }
+    return paramStatus ?? 'Offline';
+  }, [presenceOnline, presenceLastSeen, paramStatus]);
   const isMuted = chat?.isMuted ?? false;
   const isArchived = chat?.isArchived ?? false;
 

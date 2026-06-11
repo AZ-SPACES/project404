@@ -60,6 +60,22 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getDevices(target, null)));
     }
 
+    /**
+     * Force-logout one device session: deletes the refresh token and blacklists
+     * its paired access token, so the device is signed out immediately.
+     */
+    @DeleteMapping("/{userId}/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<Object>> revokeUserSession(
+            @PathVariable UUID userId,
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal User admin) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+        userService.removeDevice(target, sessionId);
+        auditService.log(admin, "REVOKE_SESSION", target, "sessionId=" + sessionId);
+        return ResponseEntity.ok(ApiResponse.success("Session revoked"));
+    }
+
     @GetMapping("/{userId}/transactions")
     public ResponseEntity<ApiResponse<Page<AdminTransactionResponse>>> getUserTransactions(
             @PathVariable UUID userId,

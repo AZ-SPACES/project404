@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
 import { useChatStore } from "../../../store/chatStore";
 import { usePresenceStore } from "../../../store/presenceStore";
+import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
 import { usePinnedStore } from "../../../store/pinnedChatsStore";
 import { useChatFiltersStore } from "../../../store/chatFiltersStore";
 import { useDraftStore } from "../../../store/draftStore";
@@ -312,6 +313,14 @@ export default function ChatContactsScreen() {
   const muteChat = useChatStore((s) => s.muteChat);
   const clearChatMessages = useChatStore((s) => s.clearChatMessages);
   const isOnline = usePresenceStore((s) => s.isOnline);
+
+  // Seed online dots from the server; live WS events keep them fresh afterwards.
+  const peerIds = useMemo(
+    () => contacts.map((c) => c.contactUserId || c.id),
+    [contacts],
+  );
+  usePresenceSeed(peerIds);
+
   const { pinnedIds, load: loadPins, pin, unpin, isPinned } = usePinnedStore();
   const {
     filters: customFilters,

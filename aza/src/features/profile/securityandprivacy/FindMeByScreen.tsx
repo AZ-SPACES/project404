@@ -86,15 +86,16 @@ export function FindMeByScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const navigation = useNavigation<NavigationProp>();
-  const { 
+  const {
     handle, email, phone,
-    findMeByHandle, findMeByEmail, findMeByPhone,
+    findMeByHandle, findMeByEmail, findMeByPhone, showOnlineStatus,
     updateProfile, fetchProfile: invalidateProfile
   } = useProfile();
 
   const handleAZATagChange = (v: boolean) => { updateProfile({ findMeByHandle: v }); };
   const handleEmailChange = (v: boolean) => { updateProfile({ findMeByEmail: v }); };
   const handlePhoneChange = (v: boolean) => { updateProfile({ findMeByPhone: v }); };
+  const handleOnlineStatusChange = (v: boolean) => { updateProfile({ showOnlineStatus: v }); };
 
   const [isModalVisible, setModalVisible] = useState(false);
   const modalAnim = useRef(new Animated.Value(height)).current;
@@ -170,6 +171,15 @@ export function FindMeByScreen() {
             subtitle={phone ?? 'Not set'}
             switchValue={findMeByPhone ?? true}
             onSwitchChange={handlePhoneChange}
+          />
+
+          <SettingRow
+            iconType="Feather"
+            iconName="wifi"
+            title="Online status"
+            subtitle="Let others see when you're online and when you were last active"
+            switchValue={showOnlineStatus ?? true}
+            onSwitchChange={handleOnlineStatusChange}
           />
         </View>
 

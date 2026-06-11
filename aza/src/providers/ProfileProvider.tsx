@@ -35,6 +35,7 @@ type ProfileData = {
   findMeByPhone: boolean;
   findMeByEmail: boolean;
   findMeByHandle: boolean;
+  showOnlineStatus: boolean;
   biometricData: boolean;
   language: string;
   theme: string;
@@ -73,6 +74,7 @@ const INITIAL_PROFILE: ProfileData = {
   findMeByPhone: true,
   findMeByEmail: true,
   findMeByHandle: true,
+  showOnlineStatus: true,
   biometricData: true,
   language: 'English (US)',
   theme: 'System Default',
@@ -133,6 +135,7 @@ type UserApiResponse = {
   findMeByPhone?: boolean | null;
   findMeByEmail?: boolean | null;
   findMeByHandle?: boolean | null;
+  showOnlineStatus?: boolean | null;
   biometricData?: boolean | null;
   language?: string | null;
   theme?: string | null;
@@ -176,6 +179,7 @@ function mapUserData(userData: UserApiResponse): ProfileData {
     findMeByPhone: userData.findMeByPhone ?? true,
     findMeByEmail: userData.findMeByEmail ?? true,
     findMeByHandle: userData.findMeByHandle ?? true,
+    showOnlineStatus: userData.showOnlineStatus ?? true,
     biometricData: userData.biometricData ?? true,
     language: userData.language ?? 'English (US)',
     theme: userData.theme ?? 'System Default',
@@ -324,7 +328,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateProfile = useCallback(async (data: Partial<ProfileData>) => {
     try {
-      const PRIVACY_FIELDS = ['findMeByHandle', 'findMeByEmail', 'findMeByPhone', 'syncContacts', 'billForwardingEnabled', 'biometricData'] as const;
+      const PRIVACY_FIELDS = ['findMeByHandle', 'findMeByEmail', 'findMeByPhone', 'syncContacts', 'showOnlineStatus', 'billForwardingEnabled', 'biometricData'] as const;
       type PrivacyKey = typeof PRIVACY_FIELDS[number];
 
       const privacyData: Partial<Record<PrivacyKey, boolean>> = {};

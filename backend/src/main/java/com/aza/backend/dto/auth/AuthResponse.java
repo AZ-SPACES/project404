@@ -41,6 +41,7 @@ public class AuthResponse {
         private Boolean findMeByEmail;
         private Boolean findMeByHandle;
         private Boolean syncContacts;
+        private Boolean showOnlineStatus;
         private Boolean billForwardingEnabled;
         // Security
         private Boolean twoFactorEnabled;

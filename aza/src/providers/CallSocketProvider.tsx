@@ -1,5 +1,6 @@
 import 'fast-text-encoding';
 import React, { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { BASE_URL, TOKEN_KEY } from '../services/api';
@@ -73,6 +74,23 @@ export function CallSocketProvider({ children }: { children: React.ReactNode }) 
       }
     };
   }, [userToken, connect]);
+
+  // Close the socket on background so presence goes offline promptly — but
+  // never mid-call: signaling (hangup, renegotiation) must survive the user
+  // locking the screen or switching apps during an active call.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      const client = clientRef.current;
+      if (!client) return;
+      if (state === 'active') {
+        if (!client.active) client.activate();
+      } else if (state === 'background') {
+        if (useCallStore.getState().activeCall) return;
+        client.deactivate().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // After axios refreshes the access token, tear down the old STOMP client
   // and reconnect with the new bearer. Without the reconnect, the broker
