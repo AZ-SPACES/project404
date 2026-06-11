@@ -25,6 +25,10 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
     /* Find a contact by owner and contact user ID */
     Optional<Contact> findByOwnerUserIdAndContactUserId(UUID ownerUserId, UUID contactUserId);
 
+    /** Ids of users who have this user saved as a contact — for presence fan-out. */
+    @Query("SELECT c.ownerUserId FROM Contact c WHERE c.contactUserId = :userId")
+    java.util.List<UUID> findOwnerUserIdsByContactUserId(@Param("userId") UUID userId);
+
     /*Search contacts by name, phone or email*/
     @Query("SELECT c FROM Contact c WHERE c.ownerUserId = :userId AND (" +
             "LOWER(c.displayName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

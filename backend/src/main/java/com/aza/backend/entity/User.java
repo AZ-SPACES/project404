@@ -127,6 +127,10 @@ public class User {
     @Builder.Default
     private Boolean syncContacts = true;
 
+    /** When false, other users see OFFLINE and no last-seen; admin views are unaffected. */
+    @Builder.Default
+    private Boolean showOnlineStatus = true;
+
     @Builder.Default
     private Boolean billForwardingEnabled = false;
 

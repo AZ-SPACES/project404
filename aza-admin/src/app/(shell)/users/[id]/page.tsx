@@ -10,6 +10,7 @@ import {
   getKycRecord,
   getUserTransactions,
   getUserSessions,
+  revokeUserSession,
   updateUserLimits,
   type AdminUser,
   type KycRecord,
@@ -150,6 +151,15 @@ export default function UserDetailPage() {
     retry: false,
     // Online flags track a 65s server-side TTL — keep the panel live.
     refetchInterval: 30_000,
+  });
+
+  const [revokeTarget, setRevokeTarget] = useState<UserSession | null>(null);
+  const revokeMutation = useMutation({
+    mutationFn: (sessionId: string) => revokeUserSession(userId, sessionId),
+    onSuccess: () => {
+      setRevokeTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["userSessions", userId] });
+    },
   });
 
   const userTxs: AdminTransaction[] = txPage?.content ?? [];
@@ -303,11 +313,40 @@ export default function UserDetailPage() {
                     {s.online ? "Online" : relativeTime(s.lastUsedAt)}
                   </span>
                 </span>
+                <button onClick={() => setRevokeTarget(s)}
+                  className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                  Revoke
+                </button>
               </div>
             ))}
           </div>
         )}
+        {revokeMutation.error && (
+          <p className="text-red-400 text-xs mt-3">{(revokeMutation.error as Error).message}</p>
+        )}
       </div>
+
+      {revokeTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-foreground font-semibold">Revoke session</h3>
+            <p className="text-foreground/50 text-sm">
+              Sign out <span className="text-foreground">{revokeTarget.deviceName ?? revokeTarget.deviceOs ?? "this device"}</span>?
+              The device is logged out immediately and must sign in again.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => revokeMutation.mutate(revokeTarget.id)} disabled={revokeMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/90 text-white font-semibold text-sm hover:bg-red-500 disabled:opacity-50 flex items-center justify-center gap-2">
+                {revokeMutation.isPending && <Loader2 size={14} className="animate-spin" />} Revoke
+              </button>
+              <button onClick={() => setRevokeTarget(null)}
+                className="px-4 py-2.5 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-2xl p-5">
         <p className="text-foreground/30 text-xs uppercase tracking-wider mb-4">KYC Documents</p>

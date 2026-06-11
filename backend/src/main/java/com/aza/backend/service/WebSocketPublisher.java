@@ -48,10 +48,12 @@ public class WebSocketPublisher {
     }
 
     /**
-     * Broadcast a presence event (USER_ONLINE / USER_OFFLINE) to all connected clients.
+     * Send a presence event (USER_ONLINE / USER_OFFLINE) to one recipient's
+     * /user/queue/presence. Presence is intentionally not broadcast: only users
+     * with a chat or contact relationship to the subject should learn about it.
      */
-    public void publishPresence(WebSocketEventType type, Object payload) {
-        publish(RedisPubSubConfig.PRESENCE_CHANNEL, type, payload);
+    public void publishPresenceToUser(UUID recipientId, WebSocketEventType type, Object payload) {
+        publish(RedisPubSubConfig.PRESENCE_USER_CHANNEL_PREFIX + recipientId, type, payload);
     }
 
     /**
