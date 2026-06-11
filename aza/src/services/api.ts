@@ -856,6 +856,9 @@ export const confirmCheckoutPayment = (sessionId: string, passcode: string) =>
 export const reportMiniApp = (appId: string, reason: string, details?: string) =>
   api.post(`/api/v1/miniapps/${appId}/report`, { reason, details });
 
+export const getDisabledMiniApps = () =>
+  api.get('/api/v1/miniapps/disabled');
+
 // --- Dispute / Reversal Endpoints ---
 
 export const createDispute = (payload: { transactionId: string; category: string; description: string }) =>

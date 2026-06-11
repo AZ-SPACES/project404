@@ -6,11 +6,14 @@ import {
   getMiniAppReports,
   getMiniAppReportStats,
   resolveMiniAppReport,
+  getDisabledMiniApps,
+  enableMiniApp,
   MiniAppReport,
   MiniAppReportStats,
+  DisabledMiniApp,
   Page,
 } from "@/lib/admin-api";
-import { Flag, CheckCircle2, XCircle, Clock, Loader2, X } from "lucide-react";
+import { Flag, CheckCircle2, XCircle, Clock, Loader2, X, Ban } from "lucide-react";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
@@ -43,10 +46,23 @@ export default function MiniAppsPage() {
   const [page, setPage] = useState(0);
   const [resolving, setResolving] = useState<MiniAppReport | null>(null);
   const [resolution, setResolution] = useState("");
+  const [disableApp, setDisableApp] = useState(false);
 
   const { data: stats } = useQuery<MiniAppReportStats>({
     queryKey: ["miniAppStats"],
     queryFn: getMiniAppReportStats,
+  });
+
+  const { data: disabledApps } = useQuery<DisabledMiniApp[]>({
+    queryKey: ["disabledMiniApps"],
+    queryFn: getDisabledMiniApps,
+  });
+
+  const enableMutation = useMutation({
+    mutationFn: (appId: string) => enableMiniApp(appId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["disabledMiniApps"] });
+    },
   });
 
   const { data, isLoading, error } = useQuery<Page<MiniAppReport>>({
@@ -56,12 +72,14 @@ export default function MiniAppsPage() {
 
   const resolveMutation = useMutation({
     mutationFn: ({ action }: { action: "RESOLVE" | "DISMISS" }) =>
-      resolveMiniAppReport(resolving!.id, action, resolution),
+      resolveMiniAppReport(resolving!.id, action, resolution, action === "RESOLVE" && disableApp),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["miniAppReports"] });
       queryClient.invalidateQueries({ queryKey: ["miniAppStats"] });
+      queryClient.invalidateQueries({ queryKey: ["disabledMiniApps"] });
       setResolving(null);
       setResolution("");
+      setDisableApp(false);
     },
   });
 
@@ -141,7 +159,7 @@ export default function MiniAppsPage() {
                   <td className="px-4 py-3">
                     {r.status === "OPEN" && (
                       <button
-                        onClick={() => { setResolving(r); setResolution(""); }}
+                        onClick={() => { setResolving(r); setResolution(""); setDisableApp(false); }}
                         className="text-xs text-[#B7EE7A] hover:underline"
                       >
                         Review
@@ -174,6 +192,48 @@ export default function MiniAppsPage() {
               </button>
             </div>
           </div>
+        )}
+      </div>
+
+      <div className="bg-muted/30 border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <Ban size={14} className="text-red-400" />
+          <h2 className="text-sm font-semibold">Disabled Apps</h2>
+          <span className="text-xs text-foreground/40">
+            Hidden from the mobile hub for all users
+          </span>
+        </div>
+        {!disabledApps || disabledApps.length === 0 ? (
+          <div className="text-center py-8 text-foreground/30 text-sm">No apps are currently disabled</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-foreground/40 text-xs uppercase tracking-wider">
+                <th className="text-left px-4 py-3">App</th>
+                <th className="text-left px-4 py-3">Reason</th>
+                <th className="text-left px-4 py-3">Disabled</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {disabledApps.map((d) => (
+                <tr key={d.appId} className="hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-3 font-mono text-foreground/70">{d.appId}</td>
+                  <td className="px-4 py-3 text-foreground/50 max-w-xs truncate">{d.reason ?? "—"}</td>
+                  <td className="px-4 py-3 text-foreground/40 whitespace-nowrap">{fmtDate(d.disabledAt)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      disabled={enableMutation.isPending}
+                      onClick={() => enableMutation.mutate(d.appId)}
+                      className="text-xs text-emerald-400 hover:underline disabled:opacity-50"
+                    >
+                      Re-enable
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
@@ -211,6 +271,16 @@ export default function MiniAppsPage() {
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
             />
+
+            <label className="flex items-center gap-2 mb-4 text-sm text-foreground/70 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={disableApp}
+                onChange={(e) => setDisableApp(e.target.checked)}
+                className="accent-red-500"
+              />
+              Also disable <span className="font-mono">{resolving.appId}</span> platform-wide
+            </label>
 
             {resolveMutation.error && (
               <p className="text-red-400 text-sm mb-3">{(resolveMutation.error as Error).message}</p>

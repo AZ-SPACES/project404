@@ -45,4 +45,5 @@ export const queryKeys = {
   categorysuggestion:  (identifier: string, note: string) => ['category-suggestion', identifier, note] as const,
   developerClients:    () => ['developer', 'clients'] as const,
   connectedApps:       () => ['connected-apps'] as const,
+  disabledMiniApps:    () => ['disabled-mini-apps'] as const,
 } as const;
