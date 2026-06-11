@@ -30,6 +30,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByUsername(String username);
 
+    List<User> findByRole(User.UserRole role);
+
 
     @Query("SELECT u FROM User u WHERE " +
             "(LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

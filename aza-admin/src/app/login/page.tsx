@@ -7,6 +7,8 @@ import {
   adminLoginStep2,
   adminLoginTotp,
   saveTokens,
+  saveUser,
+  isStaff,
   initiateQrLogin,
   pollQrLoginStatus,
   completeQrLogin,
@@ -79,12 +81,13 @@ export default function LoginPage() {
             stopPolling();
             try {
               const result = await completeQrLogin(session.challengeToken, session.sessionSecret);
-              if (result.user.role !== "ADMIN") {
+              if (!isStaff(result.user)) {
                 setQrError("This account does not have admin access.");
                 return;
               }
               saveTokens(result.accessToken, result.refreshToken);
-              router.replace("/dashboard");
+              saveUser(result.user);
+              router.replace("/step-up");
             } catch (e: unknown) {
               setQrError(e instanceof Error ? e.message : "QR login failed");
             }
@@ -138,12 +141,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await adminLoginStep2(identifier, otpCode);
-      if (result.user.role !== "ADMIN") {
+      if (!isStaff(result.user)) {
         setError("This account does not have admin access.");
         return;
       }
       saveTokens(result.accessToken, result.refreshToken);
-      router.replace("/dashboard");
+      saveUser(result.user);
+      router.replace("/step-up");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Verification failed";
       if (msg.startsWith("TOTP_REQUIRED:")) {
@@ -163,12 +167,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await adminLoginTotp(preAuthToken, totpCode);
-      if (result.user.role !== "ADMIN") {
+      if (!isStaff(result.user)) {
         setError("This account does not have admin access.");
         return;
       }
       saveTokens(result.accessToken, result.refreshToken);
-      router.replace("/dashboard");
+      saveUser(result.user);
+      router.replace("/step-up");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {

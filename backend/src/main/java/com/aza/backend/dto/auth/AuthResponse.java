@@ -28,6 +28,8 @@ public class AuthResponse {
         private String profileImageUrl;
         private String kycStatus;
         private String role;
+        /** Active back-office roles (SUPPORT/COMPLIANCE/FINANCE/ADMIN); empty for customers. */
+        private java.util.List<String> staffRoles;
         private boolean passcodeSet;
         private String homeAddress;
         private String city;

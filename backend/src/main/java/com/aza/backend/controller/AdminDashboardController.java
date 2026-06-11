@@ -18,7 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/dashboard")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPPORT','COMPLIANCE','FINANCE')")
 public class AdminDashboardController {
 
     private final AdminService adminService;
@@ -46,6 +46,7 @@ public class AdminDashboardController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getLiveStats()));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
     @PostMapping("/transactions/{id}/reverse")
     public ResponseEntity<ApiResponse<AdminTransactionResponse>> reverseTransaction(
             @PathVariable UUID id,

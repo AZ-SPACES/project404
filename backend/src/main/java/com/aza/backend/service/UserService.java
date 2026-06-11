@@ -51,6 +51,7 @@ public class UserService {
     private final EmailService emailService;
     private final SmsService smsService;
     private final PresenceService presenceService;
+    private final StaffRoleService staffRoleService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -75,6 +76,7 @@ public class UserService {
                 .profileImageUrl(user.getProfileImageUrl())
                 .kycStatus(user.getKycStatus().name())
                 .role(user.getRole() != null ? user.getRole().name() : "USER")
+                .staffRoles(staffRoleService.getActiveRoles(user).stream().map(Enum::name).sorted().toList())
                 .passcodeSet(user.getPasscodeHash() != null)
                 .homeAddress(user.getHomeAddress())
                 .city(user.getCity())

@@ -2,6 +2,7 @@ package com.aza.backend.security;
 
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.UserRepository;
+import com.aza.backend.service.StaffRoleService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
+    private final StaffRoleService staffRoleService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -78,14 +81,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 5. Set authentication in Spring Security context
-        String roleAuthority = "ROLE_" + (user.getRole() != null ? user.getRole().name() : "USER");
+        // 5. Set authentication in Spring Security context.
+        // Staff authorities come from staff_roles, not the users.role enum. They are
+        // only loaded for admin-path requests so customer traffic skips the extra query.
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        if (request.getRequestURI().startsWith("/api/v1/admin")) {
+            staffRoleService.getEffectiveRoles(user).forEach(role ->
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name())));
+        }
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        user,
-                        null,
-                        List.of(new SimpleGrantedAuthority(roleAuthority))
-                );
+                new UsernamePasswordAuthenticationToken(user, null, authorities);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
