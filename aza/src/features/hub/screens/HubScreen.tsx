@@ -21,6 +21,7 @@ import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../p
 import { RootStackParamList } from '../../../navigation/types';
 import { MINI_APP_REGISTRY, getMiniApp } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
+import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 
 type HubNavProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -51,6 +52,7 @@ export default function HubScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'All' | MiniAppCategory>('All');
+  const disabledAppIds = useDisabledMiniApps();
 
   const openApp = useCallback((appId: string) => {
     navigation.navigate('MiniApp', { appId });
@@ -58,11 +60,12 @@ export default function HubScreen() {
 
   const filteredApps = React.useMemo(() => {
     return MINI_APP_REGISTRY.filter((app) => {
+      if (disabledAppIds.includes(app.id)) return false;
       const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || app.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, disabledAppIds]);
 
   return (
     <View style={styles.container}>
