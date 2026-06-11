@@ -28,7 +28,7 @@ import { usePinnedMessageStore } from '../store/pinnedMessageStore';
 import { useReactionStore } from '../store/reactionStore';
 import { useChatLockStore } from '../store/chatLockStore';
 import { useScheduledMessagesStore } from '../store/scheduledMessagesStore';
-import { uploadChatMedia, blockUser, notifyChatScreenshot } from '../services/api';
+import { uploadChatMedia, blockUser, notifyChatScreenshot, getUserPresence } from '../services/api';
 import { useDraftStore } from '../store/draftStore';
 import { useMuteDurationStore } from '../store/muteDurationStore';
 import { useMediaAutoSaveStore } from '../store/mediaAutoSaveStore';
@@ -45,6 +45,26 @@ export function useChatScreen() {
   const { id, name, avatar, payIdentifier, quickReply } = route.params;
   const online = usePresenceStore((s) => s.isOnline(id));
   const lastSeenTs = usePresenceStore((s) => s.getLastSeen(id));
+
+  // Seed presence from the server on open — live WS events only cover
+  // transitions that happen while we're connected, so without this the
+  // header has no "last seen" for users who went offline before app launch.
+  useEffect(() => {
+    let mounted = true;
+    getUserPresence(id)
+      .then((res) => {
+        const p = res.data?.data ?? res.data;
+        if (!mounted || !p) return;
+        const ts = p.lastSeenAt ? new Date(p.lastSeenAt).getTime() : null;
+        usePresenceStore.getState().syncFromServer(id, p.status, ts);
+      })
+      .catch(() => {
+        // Presence is best-effort; the header just shows nothing.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
 
   const {
     chatId,

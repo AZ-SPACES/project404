@@ -109,6 +109,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(presenceService.getStatus(id)));
     }
 
+    /** Online status + last-seen, used by chat headers to seed presence on open. */
+    @GetMapping("/{id}/presence")
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.user.PresenceResponse>> getPresence(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                com.aza.backend.dto.user.PresenceResponse.builder()
+                        .status(presenceService.getStatus(id))
+                        .lastSeenAt(presenceService.getLastSeen(id))
+                        .build()));
+    }
+
     // ==================== PRIVACY ====================
 
     @PutMapping("/me/privacy")

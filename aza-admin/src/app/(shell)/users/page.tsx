@@ -27,15 +27,44 @@ function Badge({ value, map }: { value: string; map: Record<string, string> }) {
   );
 }
 
+function relativeTime(iso: string | null): string {
+  if (!iso) return "—";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "—";
+  const mins = Math.floor((Date.now() - then) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function PresenceCell({ user }: { user: AdminUser }) {
+  const online = user.onlineStatus === "ONLINE";
+  return (
+    <span className="flex items-center gap-1.5 text-xs">
+      <span className={`w-2 h-2 rounded-full ${online ? "bg-emerald-400" : "bg-foreground/15"}`} />
+      <span className={online ? "text-emerald-400 font-medium" : "text-foreground/40"}>
+        {online ? "Online" : relativeTime(user.lastSeenAt)}
+      </span>
+    </span>
+  );
+}
+
 export default function UsersPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [kycStatus, setKycStatus] = useState("");
+  const [onlineOnly, setOnlineOnly] = useState(false);
   const [page, setPage] = useState(0);
 
   const { data: result, isLoading, error } = useQuery<Page<AdminUser>>({
-    queryKey: ["users", { query, status, kycStatus, page }],
-    queryFn: () => getUsers({ query: query || undefined, status: status || undefined, kycStatus: kycStatus || undefined, page, size: 20 }),
+    queryKey: ["users", { query, status, kycStatus, onlineOnly, page }],
+    queryFn: () => getUsers({ query: query || undefined, status: status || undefined, kycStatus: kycStatus || undefined, online: onlineOnly || undefined, page, size: 20 }),
+    // Presence changes by the minute — keep the list live while it's open.
+    refetchInterval: 30_000,
   });
 
   return (
@@ -63,6 +92,15 @@ export default function UsersPage() {
           {["NOT_STARTED","PENDING","UNDER_REVIEW","VERIFIED","REJECTED"].map(s =>
             <option key={s} value={s}>{s.replace(/_/g," ")}</option>)}
         </select>
+        <button type="button" onClick={() => { setOnlineOnly(v => !v); setPage(0); }}
+          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+            onlineOnly
+              ? "bg-emerald-400/15 border-emerald-400/40 text-emerald-400"
+              : "bg-muted/30 border-border text-foreground/70 hover:bg-muted"
+          }`}>
+          <span className={`w-2 h-2 rounded-full ${onlineOnly ? "bg-emerald-400" : "bg-foreground/30"}`} />
+          Online now
+        </button>
       </form>
 
       {error && <p className="text-red-400 text-sm">{(error as Error).message}</p>}
@@ -75,7 +113,7 @@ export default function UsersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  {["User","Phone","Account Status","KYC","Wallet","Joined"].map(h => (
+                  {["User","Presence","Phone","Account Status","KYC","Wallet","Joined"].map(h => (
                     <th key={h} className="text-left text-xs text-foreground/30 font-medium uppercase tracking-wider px-4 py-3">{h}</th>
                   ))}
                   <th />
@@ -88,6 +126,7 @@ export default function UsersPage() {
                       <p className="text-foreground font-medium">{`${u.firstName} ${u.lastName}`.trim() || u.username}</p>
                       <p className="text-foreground/40 text-xs mt-0.5">{u.email}</p>
                     </td>
+                    <td className="px-4 py-3"><PresenceCell user={u} /></td>
                     <td className="px-4 py-3 text-foreground/60">{u.phone}</td>
                     <td className="px-4 py-3"><Badge value={u.accountStatus} map={STATUS_COLORS} /></td>
                     <td className="px-4 py-3"><Badge value={u.kycStatus} map={KYC_COLORS} /></td>
@@ -105,7 +144,7 @@ export default function UsersPage() {
                   </tr>
                 ))}
                 {result?.content.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-foreground/30 text-sm">No users found</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-12 text-center text-foreground/30 text-sm">No users found</td></tr>
                 )}
               </tbody>
             </table>

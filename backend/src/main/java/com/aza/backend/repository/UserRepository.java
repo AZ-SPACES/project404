@@ -56,6 +56,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Page<User> findAllByKycStatus(User.KycStatus kycStatus, Pageable pageable);
 
+    Page<User> findAllByOnlineStatus(User.OnlineStatus onlineStatus, Pageable pageable);
+
+    java.util.List<User> findAllByOnlineStatus(User.OnlineStatus onlineStatus);
+
     long countByStatus(User.AccountStatus status);
 
     long countByKycStatus(User.KycStatus kycStatus);

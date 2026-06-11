@@ -8,6 +8,13 @@ type PresenceState = {
   isOnline: (userId: string) => boolean;
   setLastSeen: (userId: string, ts: number) => void;
   getLastSeen: (userId: string) => number | null;
+  /**
+   * Reconcile with a server snapshot (chat list / presence endpoint).
+   * Unlike setOffline, never stamps "now" as last seen — it only records
+   * the server-provided timestamp, so a stale local "online" entry doesn't
+   * turn into a fake "last seen just now".
+   */
+  syncFromServer: (userId: string, status: string | undefined, lastSeenTs: number | null) => void;
 };
 
 export const usePresenceStore = create<PresenceState>((set, get) => ({
@@ -39,4 +46,17 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
     set((s) => ({ lastSeenByUserId: { ...s.lastSeenByUserId, [userId]: ts } })),
 
   getLastSeen: (userId) => get().lastSeenByUserId[userId] ?? null,
+
+  syncFromServer: (userId, status, lastSeenTs) =>
+    set((s) => {
+      const online = status === 'ONLINE';
+      const next = new Set(s.onlineUserIds);
+      if (online) next.add(userId);
+      else next.delete(userId);
+      const lastSeen =
+        lastSeenTs != null && Number.isFinite(lastSeenTs)
+          ? { ...s.lastSeenByUserId, [userId]: lastSeenTs }
+          : s.lastSeenByUserId;
+      return { onlineUserIds: next, lastSeenByUserId: lastSeen };
+    }),
 }));

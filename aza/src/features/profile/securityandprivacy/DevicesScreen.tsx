@@ -36,6 +36,7 @@ type DeviceSession = {
   createdAt: string;
   lastUsedAt: string | null;
   currentDevice: boolean;
+  online: boolean;
 };
 
 export function DevicesScreen() {
@@ -53,6 +54,8 @@ export function DevicesScreen() {
       return Array.isArray(data) ? (data as DeviceSession[]) : [];
     },
     staleTime: 60_000,
+    // Online dots track a 65s server-side TTL — refresh while the screen is open.
+    refetchInterval: 30_000,
   });
   const [selected, setSelected] = useState<DeviceSession | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -199,10 +202,15 @@ export function DevicesScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={[Typography.body, styles.sessionSubtitle]} numberOfLines={1}>
-                    {session.location ?? session.ipAddress ?? 'Unknown location'} ·{' '}
-                    {session.currentDevice ? 'Active now' : formatRelative(session.lastUsedAt)}
-                  </Text>
+                  <View style={styles.subtitleRow}>
+                    {(session.online || session.currentDevice) && <View style={styles.onlineDot} />}
+                    <Text style={[Typography.body, styles.sessionSubtitle]} numberOfLines={1}>
+                      {session.location ?? session.ipAddress ?? 'Unknown location'} ·{' '}
+                      {session.online || session.currentDevice
+                        ? 'Online'
+                        : formatRelative(session.lastUsedAt)}
+                    </Text>
+                  </View>
                 </View>
                 <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
               </TouchableOpacity>
@@ -251,7 +259,11 @@ export function DevicesScreen() {
               )}
               <DetailRow
                 label="Last active"
-                value={selected.currentDevice ? 'Active now' : formatRelative(selected.lastUsedAt)}
+                value={
+                  selected.online || selected.currentDevice
+                    ? 'Online now'
+                    : formatRelative(selected.lastUsedAt)
+                }
               />
               <DetailRow label="Added on" value={formatDate(selected.createdAt)} />
             </View>
@@ -328,6 +340,14 @@ function createStyles(Colors: ThemeColors) {
     },
     sessionInfo: { flex: 1 },
     titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+    subtitleRow: { flexDirection: 'row', alignItems: 'center' },
+    onlineDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#22C55E',
+      marginRight: 6,
+    },
     sessionTitle: { fontWeight: '600', color: Colors.textPrimary, flexShrink: 1 },
     sessionSubtitle: { color: Colors.textSecondary },
     currentBadge: {
