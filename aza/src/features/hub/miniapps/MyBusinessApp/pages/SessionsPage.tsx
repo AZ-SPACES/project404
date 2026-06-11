@@ -4,7 +4,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
-import { getMerchantSessions, refundMerchantSession } from '../../../../../services/api';
+import { getMerchantSessions, refundMerchantSession, expireMerchantSession } from '../../../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
@@ -23,6 +23,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [expiring, setExpiring] = useState(false);
 
 
   const handleCopy = (session: any) => {
@@ -63,6 +64,30 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
               Alert.alert('Error', 'Refund failed. Please try again.');
             } finally {
               setRefunding(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleExpire = (session: any) => {
+    Alert.alert(
+      'Expire Link',
+      'Expire this payment link? Customers will no longer be able to pay with it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Expire', style: 'destructive', onPress: async () => {
+            setExpiring(true);
+            try {
+              await expireMerchantSession(session.id);
+              queryClient.invalidateQueries({ queryKey: queryKeys.merchantSessions() });
+              setSelectedSession(null);
+            } catch {
+              Alert.alert('Error', 'Failed to expire the link. Please try again.');
+            } finally {
+              setExpiring(false);
             }
           },
         },
@@ -296,6 +321,16 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                       >
                         <Feather name="printer" size={16} color={Colors.textPrimary} />
                         <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Save / Print Poster</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ width: '100%', borderWidth: 1, borderColor: '#ef4444', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
+                        onPress={() => handleExpire(selectedSession)}
+                        disabled={expiring}
+                      >
+                        {expiring ? <ActivityIndicator color="#ef4444" /> : (
+                          <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Expire Link</Text>
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>

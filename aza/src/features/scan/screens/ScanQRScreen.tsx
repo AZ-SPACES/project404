@@ -96,11 +96,11 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             DEVELOPER: 'Developer Portal',
             THIRD_PARTY: 'External App',
           };
-          const params: Parameters<typeof navigation.navigate>[1] = {
+          const params: Record<string, unknown> = {
             challengeToken: token,
             siteType: site,
             siteName: siteNames[site] ?? site,
-          } as any;
+          };
           if (site === 'THIRD_PARTY') {
             const clientId = url.searchParams.get('client_id');
             const scopes   = url.searchParams.get('scopes');

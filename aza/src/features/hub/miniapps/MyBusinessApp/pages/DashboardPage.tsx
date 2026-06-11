@@ -17,7 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../../../theme';
 import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../../../providers/DisplayProvider';
 import { NavProps } from '../types';
-import { fmtAmount } from '../helpers';
+import { extractData, fmtAmount } from '../helpers';
+import { getMerchantReportSummary } from '../../../../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../../../lib/queryKeys';
 import { CATEGORY_LABELS } from '../constants';
 import StatusBadge from '../components/StatusBadge';
 import { ActionTarget } from '../../../../home/components/ActionTarget';
@@ -79,6 +82,18 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
   const feePercent = ((merchant?.feeRateBps ?? 150) / 100).toFixed(2);
   const formattedBalance = fmtAmount(merchant?.balance, merchant?.currency ?? 'GHS');
 
+  const { data: summary } = useQuery({
+    queryKey: queryKeys.merchantReportSummary(),
+    queryFn: async () => extractData(await getMerchantReportSummary()),
+    staleTime: 60_000,
+  });
+
+  const statCards = summary ? [
+    { label: 'Today', value: fmtAmount(summary.todayRevenue, merchant?.currency ?? 'GHS'), sub: `${summary.todayPayments ?? 0} payments` },
+    { label: '7 Days', value: fmtAmount(summary.sevenDayRevenue, merchant?.currency ?? 'GHS'), sub: `${summary.sevenDayPayments ?? 0} payments` },
+    { label: '30 Days', value: fmtAmount(summary.thirtyDayRevenue, merchant?.currency ?? 'GHS'), sub: `${Math.round(summary.successRate ?? 0)}% success` },
+  ] : [];
+
   const actionHandlers = [
     { id: 'link', icon: 'link', label: 'Payment Link', onPress: () => navigate('create_session') },
     { id: 'transactions', icon: 'list', label: 'Transactions', onPress: () => navigate('sessions') },
@@ -98,8 +113,10 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
     {
       label: 'Manage',
       items: [
+        { id: 'plans', icon: 'repeat', label: 'Plans & Subscriptions', onPress: () => navigate('plans') },
         { id: 'disputes', icon: 'shield', label: 'Disputes', onPress: () => navigate('disputes') },
         { id: 'discount_codes', icon: 'tag', label: 'Discount Codes', onPress: () => navigate('discount_codes') },
+        { id: 'team', icon: 'users', label: 'Team', onPress: () => navigate('team') },
         { id: 'audit_logs', icon: 'clipboard', label: 'Audit Log', onPress: () => navigate('audit_logs') },
       ],
     },
@@ -108,6 +125,12 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
       items: [
         { id: 'api_keys', icon: 'key', label: 'API Keys', onPress: () => navigate('api_keys') },
         { id: 'webhooks', icon: 'zap', label: 'Webhooks', onPress: () => navigate('webhooks') },
+      ],
+    },
+    {
+      label: 'Account',
+      items: [
+        { id: 'settings', icon: 'settings', label: 'Business Settings', onPress: () => navigate('settings') },
       ],
     },
   ];
@@ -218,6 +241,28 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
       )}
 
       <View style={styles.bottomSection}>
+        {statCards.length > 0 && (
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
+            {statCards.map((s) => (
+              <View
+                key={s.label}
+                style={{
+                  flex: 1, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface,
+                  borderRadius: Radius.md, padding: Spacing.sm,
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {s.label}
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit>
+                  {s.value}
+                </Text>
+                <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 1 }}>{s.sub}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={styles.transactionsHeader}>
           <Text style={[Typography.h3, styles.transactionsTitle]}>
             Business Details

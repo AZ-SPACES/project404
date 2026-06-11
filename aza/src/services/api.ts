@@ -740,15 +740,108 @@ export const getMerchantDiscountCodes = (page = 0, size = 20) =>
   api.get(`/api/v1/merchant/discount-codes?page=${page}&size=${size}`);
 
 export const createMerchantDiscountCode = (data: {
-  code: string;
-  type: 'PERCENTAGE' | 'FIXED';
+  code?: string;
+  discountType: 'PERCENTAGE' | 'FIXED';
   value: number;
   maxUses?: number;
   expiresAt?: string;
 }) => api.post('/api/v1/merchant/discount-codes', data);
 
+export const updateMerchantDiscountCode = (codeId: string, data: {
+  active?: boolean;
+  maxUses?: number;
+  expiresAt?: string;
+}) => api.put(`/api/v1/merchant/discount-codes/${codeId}`, data);
+
+export const deleteMerchantDiscountCode = (codeId: string) =>
+  api.delete(`/api/v1/merchant/discount-codes/${codeId}`);
+
 export const getMerchantReportSummary = () =>
   api.get('/api/v1/merchant/reports/summary');
+
+export const updateMerchant = (data: {
+  businessName?: string | undefined;
+  businessEmail?: string | undefined;
+  businessPhone?: string | undefined;
+  businessDescription?: string | undefined;
+  brandColor?: string | undefined;
+  checkoutTagline?: string | undefined;
+  supportEmail?: string | undefined;
+  taxEnabled?: boolean | undefined;
+  taxRate?: number | undefined;
+  taxLabel?: string | undefined;
+}) => api.put('/api/v1/merchant/me', data);
+
+export const getMerchantAutoPayoutSettings = () =>
+  api.get('/api/v1/merchant/auto-payout');
+
+export const updateMerchantAutoPayoutSettings = (data: {
+  autoPayoutEnabled?: boolean | undefined;
+  autoPayoutSchedule?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | undefined;
+  autoPayoutMinBalance?: number | undefined;
+  autoPayoutDay?: number | undefined;
+}) => api.put('/api/v1/merchant/auto-payout', data);
+
+export const getMerchantNotificationPrefs = () =>
+  api.get('/api/v1/merchant/notification-preferences');
+
+export const updateMerchantNotificationPrefs = (data: {
+  emailPaymentReceived?: boolean | undefined;
+  emailDisputeOpened?: boolean | undefined;
+  emailPayoutCompleted?: boolean | undefined;
+  emailPayoutFailed?: boolean | undefined;
+  emailInvoicePaid?: boolean | undefined;
+  emailWeeklySummary?: boolean | undefined;
+  emailApiKeyCreated?: boolean | undefined;
+  emailLowBalance?: boolean | undefined;
+  lowBalanceThreshold?: number | undefined;
+}) => api.put('/api/v1/merchant/notification-preferences', data);
+
+export const getMerchantTeam = () => api.get('/api/v1/merchant/team');
+
+export const inviteMerchantTeamMember = (email: string, role: 'ADMIN' | 'DEVELOPER' | 'VIEWER') =>
+  api.post('/api/v1/merchant/team/invite', { email, role });
+
+export const updateMerchantTeamMemberRole = (memberId: string, role: 'ADMIN' | 'DEVELOPER' | 'VIEWER') =>
+  api.put(`/api/v1/merchant/team/${memberId}/role`, { role });
+
+export const removeMerchantTeamMember = (memberId: string) =>
+  api.delete(`/api/v1/merchant/team/${memberId}`);
+
+export const getMerchantPlans = () => api.get('/api/v1/merchant/plans');
+
+export const createMerchantPlan = (data: {
+  name: string;
+  description?: string | undefined;
+  amount: number;
+  interval: string;
+}) => api.post('/api/v1/merchant/plans', data);
+
+export const updateMerchantPlan = (planId: string, data: {
+  name?: string | undefined;
+  description?: string | undefined;
+  amount?: number | undefined;
+  interval?: string | undefined;
+}) => api.put(`/api/v1/merchant/plans/${planId}`, data);
+
+export const deactivateMerchantPlan = (planId: string) =>
+  api.delete(`/api/v1/merchant/plans/${planId}`);
+
+export const getMerchantSubscriptions = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/subscriptions?page=${page}&size=${size}`);
+
+export const createMerchantSubscription = (data: {
+  planId: string;
+  customerName: string;
+  customerEmail?: string | undefined;
+  customerId?: string | undefined;
+}) => api.post('/api/v1/merchant/subscriptions', data);
+
+export const cancelMerchantSubscription = (subscriptionId: string) =>
+  api.delete(`/api/v1/merchant/subscriptions/${subscriptionId}`);
+
+export const expireMerchantSession = (sessionId: string) =>
+  api.post(`/api/v1/merchant/sessions/${sessionId}/expire`);
 
 // --- Checkout Endpoints ---
 
@@ -889,6 +982,57 @@ export const replenishOneTimePreKeys = (
 
 export const getKeyBundleStatus = () =>
   api.get("/api/v1/users/me/key-bundle/status");
+
+// --- Chat History Sync (device-to-device transfer + encrypted backup) ---
+// Every payload is encrypted client-side; the server relays opaque blobs.
+
+export const requestHistoryTransfer = (deviceId: string) =>
+  api.post("/api/v1/chats/sync/transfers", { deviceId });
+
+export const getPendingHistoryTransfers = (deviceId: string) =>
+  api.get(`/api/v1/chats/sync/transfers/pending?deviceId=${encodeURIComponent(deviceId)}`);
+
+export const getHistoryTransfer = (transferId: string) =>
+  api.get(`/api/v1/chats/sync/transfers/${transferId}`);
+
+export const acceptHistoryTransfer = (transferId: string, deviceId: string) =>
+  api.post(`/api/v1/chats/sync/transfers/${transferId}/accept`, { deviceId });
+
+export const declineHistoryTransfer = (transferId: string) =>
+  api.post(`/api/v1/chats/sync/transfers/${transferId}/decline`);
+
+export const uploadHistoryTransferChunk = (
+  transferId: string, deviceId: string, seq: number, payload: string,
+) => api.put(`/api/v1/chats/sync/transfers/${transferId}/chunks`, { deviceId, seq, payload });
+
+export const completeHistoryTransfer = (
+  transferId: string, deviceId: string, chunkCount: number,
+) => api.post(`/api/v1/chats/sync/transfers/${transferId}/complete`, { deviceId, chunkCount });
+
+export const downloadHistoryTransferChunk = (
+  transferId: string, deviceId: string, seq: number,
+) => api.get(`/api/v1/chats/sync/transfers/${transferId}/chunks/${seq}?deviceId=${encodeURIComponent(deviceId)}`);
+
+export const ackHistoryTransfer = (transferId: string, deviceId: string) =>
+  api.post(`/api/v1/chats/sync/transfers/${transferId}/ack`, { deviceId });
+
+export const beginChatBackup = () =>
+  api.post("/api/v1/chats/sync/backup/begin");
+
+export const uploadChatBackupChunk = (backupId: string, seq: number, payload: string) =>
+  api.put(`/api/v1/chats/sync/backup/${backupId}/chunks`, { seq, payload });
+
+export const completeChatBackup = (backupId: string, chunkCount: number) =>
+  api.post(`/api/v1/chats/sync/backup/${backupId}/complete`, { chunkCount });
+
+export const getChatBackupMeta = () =>
+  api.get("/api/v1/chats/sync/backup");
+
+export const downloadChatBackupChunk = (backupId: string, seq: number) =>
+  api.get(`/api/v1/chats/sync/backup/${backupId}/chunks/${seq}`);
+
+export const deleteChatBackup = () =>
+  api.delete("/api/v1/chats/sync/backup");
 
 // In-memory queue for requests that fail while refreshing
 let isRefreshing = false;

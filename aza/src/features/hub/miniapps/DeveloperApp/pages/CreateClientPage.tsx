@@ -43,9 +43,9 @@ export default function CreateClientPage({ goBack, navigate, Colors }: NavProps)
     try {
       const res = await registerDeveloperClient({
         appName:      appName.trim(),
-        appDescription: appDesc.trim() || undefined,
-        logoUrl:      logoUrl.trim() || undefined,
-        websiteUrl:   websiteUrl.trim() || undefined,
+        ...(appDesc.trim() ? { appDescription: appDesc.trim() } : {}),
+        ...(logoUrl.trim() ? { logoUrl: logoUrl.trim() } : {}),
+        ...(websiteUrl.trim() ? { websiteUrl: websiteUrl.trim() } : {}),
         redirectUris: redirectUri.split('\n').map(u => u.trim()).filter(Boolean),
         scopes,
       });

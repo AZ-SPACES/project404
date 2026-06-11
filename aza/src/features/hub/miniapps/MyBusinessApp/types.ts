@@ -19,7 +19,10 @@ export type Page =
   | 'invoices'
   | 'settlements'
   | 'discount_codes'
-  | 'audit_logs';
+  | 'audit_logs'
+  | 'settings'
+  | 'team'
+  | 'plans';
 
 export interface MerchantData {
   id: string;
@@ -37,6 +40,12 @@ export interface MerchantData {
   feeRateBps?: number;
   rejectionReason?: string;
   moreInfoRequest?: string;
+  brandColor?: string;
+  checkoutTagline?: string;
+  supportEmail?: string;
+  taxEnabled?: boolean;
+  taxRate?: number;
+  taxLabel?: string;
 }
 
 export interface NavProps {

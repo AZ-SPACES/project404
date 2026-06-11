@@ -7,6 +7,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, Spacing, Radius, Typography } from '../../theme';
 import { useTransferStore } from '../../store/transferStore';
+import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 // ----------------------------------------------------------------------------
@@ -14,14 +15,22 @@ import { extractErrorMessage } from '../../utils/errorUtils';
 // ----------------------------------------------------------------------------
 type Step = 'amount' | 'pin' | 'success';
 
+export type ChatPaymentMode = 'send' | 'request' | 'pay';
+
 type ChatPaymentSheetProps = {
   visible: boolean;
-  mode: 'send' | 'request';
+  /** 'pay' settles an existing money request: fixed amount, straight to PIN. */
+  mode: ChatPaymentMode;
   recipientName: string;
   recipientAvatar?: string;
   recipientIdentifier: string;
+  /** Money-request transaction id — required for 'pay' mode. */
+  payRequestId?: string | undefined;
+  /** Pre-filled amount; fixed in 'pay' mode, starting value otherwise. */
+  prefillAmount?: number | undefined;
   onClose: () => void;
-  onSuccess?: (amount: number, mode: 'send' | 'request') => void;
+  /** requestId is the money-request id: the new request for 'request', the settled one for 'pay'. */
+  onSuccess?: (amount: number, mode: ChatPaymentMode, requestId?: string) => void;
 };
 
 const PIN_LENGTH = 4;
@@ -36,6 +45,8 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   recipientName,
   recipientAvatar,
   recipientIdentifier,
+  payRequestId,
+  prefillAmount,
   onClose,
   onSuccess,
 }: ChatPaymentSheetProps) {
@@ -60,25 +71,35 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
 
   // Captured at the moment we leave the amount step
   const finalAmountRef = useRef(0);
+  // Money-request id to report back via onSuccess (new request, or the one being paid)
+  const requestIdRef = useRef<string | undefined>(undefined);
 
-  const { initiateTransfer, confirmTransfer, cancelPendingTransfer, requestMoney, pendingTransactionId } =
+  const { initiateTransfer, confirmTransfer, cancelPendingTransfer, requestMoney, acceptMoneyRequest, pendingTransactionId } =
     useTransferStore();
 
   const displayAmount = showKeypad ? (parseFloat(keypadInput) || 0) : amount;
   const formattedDisplay = showKeypad ? keypadInput : (amount === 0 ? '0' : String(amount));
   const canConfirm = displayAmount > 0;
 
-  // Reset when sheet opens
+  // Reset when sheet opens. Paying an existing request has a fixed amount,
+  // so it skips the amount step and goes straight to PIN entry.
   useEffect(() => {
     if (!visible) return;
-    setStep('amount');
-    setAmount(0);
+    if (mode === 'pay') {
+      finalAmountRef.current = prefillAmount ?? 0;
+      requestIdRef.current = payRequestId;
+      setStep('pin');
+    } else {
+      requestIdRef.current = undefined;
+      setStep('amount');
+      setAmount(prefillAmount && prefillAmount > 0 ? prefillAmount : 0);
+    }
     setKeypadInput('0');
     setShowKeypad(false);
     setPin('');
     setErrorMsg(null);
     setIsLoading(false);
-  }, [visible]);
+  }, [visible, mode, prefillAmount, payRequestId]);
 
   // Focus PIN input when step becomes 'pin'
   useEffect(() => {
@@ -91,11 +112,19 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   useEffect(() => {
     if (step !== 'pin' || pin.length !== PIN_LENGTH || isLoading) return;
     const t = setTimeout(async () => {
-      if (!pendingTransactionId) return;
+      const paying = mode === 'pay';
+      if (paying ? !payRequestId : !pendingTransactionId) return;
       setIsLoading(true);
       setErrorMsg(null);
       try {
-        await confirmTransfer(pendingTransactionId, pin);
+        if (paying) {
+          await acceptMoneyRequest(payRequestId!, pin);
+          // Record locally right away — if the chat receipt fails to send,
+          // this card must never offer "Pay" again (the server has settled it).
+          useSettledRequestsStore.getState().markPaid(payRequestId!);
+        } else {
+          await confirmTransfer(pendingTransactionId!, pin);
+        }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setStep('success');
       } catch (err) {
@@ -114,13 +143,13 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [pin, step, isLoading, pendingTransactionId, confirmTransfer, shakeAnim]);
+  }, [pin, step, isLoading, mode, payRequestId, pendingTransactionId, confirmTransfer, acceptMoneyRequest, shakeAnim]);
 
   // Auto-close 2 s after success and fire callback
   useEffect(() => {
     if (step !== 'success') return;
     const t = setTimeout(() => {
-      onSuccess?.(finalAmountRef.current, mode);
+      onSuccess?.(finalAmountRef.current, mode, requestIdRef.current);
       onClose();
     }, 2000);
     return () => clearTimeout(t);
@@ -145,7 +174,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
     setIsLoading(true);
     try {
       if (mode === 'request') {
-        await requestMoney({ fromIdentifier: recipientIdentifier, amount: displayAmount, note: '' });
+        requestIdRef.current = await requestMoney({ fromIdentifier: recipientIdentifier, amount: displayAmount, note: '' });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setStep('success');
       } else {
@@ -176,9 +205,10 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   }, [isLoading, errorMsg, pin.length, scaleAnims]);
 
   const handleClose = useCallback(() => {
-    if (step === 'pin') cancelPendingTransfer();
+    // 'pay' mode has no pending transfer — the request simply stays pending.
+    if (step === 'pin' && mode !== 'pay') cancelPendingTransfer();
     onClose();
-  }, [step, cancelPendingTransfer, onClose]);
+  }, [step, mode, cancelPendingTransfer, onClose]);
 
   const handleDecrement = useCallback(() => setAmount(p => Math.max(0, p - 1)), []);
   const handleIncrement = useCallback(() => setAmount(p => p + 1), []);
@@ -321,7 +351,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
               <Image source={require('../../assets/aza-z.png')} style={styles.pinLogo} resizeMode="contain" />
               <Text style={styles.pinTitle}>Enter your PIN</Text>
               <Text style={styles.pinSubtitle}>
-                To send{' '}
+                {mode === 'pay' ? 'To pay' : 'To send'}{' '}
                 <Text style={{ color: '#fff', fontWeight: '700' }}>
                   GH¢ {finalAmountRef.current.toFixed(2)}
                 </Text>{' '}
@@ -395,12 +425,12 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
               <Feather name="check" size={36} color={Colors.primary} />
             </View>
             <Text style={styles.successTitle}>
-              {mode === 'send' ? 'Payment Sent!' : 'Request Sent!'}
+              {mode === 'request' ? 'Request Sent!' : 'Payment Sent!'}
             </Text>
             <Text style={styles.successSubtitle}>
-              {mode === 'send'
-                ? `GH¢ ${finalAmountRef.current.toFixed(2)} sent to ${recipientName}`
-                : `Requested GH¢ ${finalAmountRef.current.toFixed(2)} from ${recipientName}`}
+              {mode === 'request'
+                ? `Requested GH¢ ${finalAmountRef.current.toFixed(2)} from ${recipientName}`
+                : `GH¢ ${finalAmountRef.current.toFixed(2)} sent to ${recipientName}`}
             </Text>
           </View>
         )}
