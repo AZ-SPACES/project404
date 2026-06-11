@@ -13,6 +13,44 @@ export function saveTokens(accessToken: string, refreshToken: string) {
 export function clearTokens() {
   localStorage.removeItem("aza_admin_token");
   localStorage.removeItem("aza_admin_refresh_token");
+  localStorage.removeItem("aza_admin_user");
+}
+
+// ── Staff roles ───────────────────────────────────────────────────────────────
+
+export type StaffRoleName = "ADMIN" | "SUPPORT" | "COMPLIANCE" | "FINANCE";
+
+export function saveUser(user: LoginResult["user"]) {
+  localStorage.setItem("aza_admin_user", JSON.stringify(user));
+}
+
+export function getStoredUser(): LoginResult["user"] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("aza_admin_user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Roles the signed-in staff member holds. Empty when unknown (pre-existing session). */
+export function getStoredRoles(): StaffRoleName[] {
+  const user = getStoredUser();
+  if (!user) return [];
+  const roles = (user.staffRoles ?? []) as StaffRoleName[];
+  if (user.role === "ADMIN" && !roles.includes("ADMIN")) roles.push("ADMIN");
+  return roles;
+}
+
+export function isStaff(user: LoginResult["user"]): boolean {
+  return user.role === "ADMIN" || (user.staffRoles?.length ?? 0) > 0;
+}
+
+/** ADMIN implies every other role, mirroring the backend's expansion. */
+export function hasRole(roles: StaffRoleName[], required: StaffRoleName[]): boolean {
+  if (roles.includes("ADMIN")) return true;
+  return required.some((r) => roles.includes(r));
 }
 
 let isRefreshing = false;
@@ -88,8 +126,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (res.status === 403) {
     // 403 is often "Forbidden" (wrong role) not just expired.
     // If it's truly a session issue, the backend should return 401.
-    // We only kick out on 403 if it's persistent, but for now let's be less aggressive.
-    throw new Error("Forbidden: You don't have permission for this action");
+    const errBody = await res.json().catch(() => null);
+    if (errBody?.error?.code === "STEP_UP_REQUIRED") {
+      // Admin elevation expired — re-verify, then come back here.
+      if (window.location.pathname !== "/step-up") {
+        window.location.href = `/step-up?next=${encodeURIComponent(window.location.pathname)}`;
+      }
+      throw new Error("Verification required");
+    }
+    throw new Error(errBody?.error?.message ?? "Forbidden: You don't have permission for this action");
   }
 
   const body = await res.json();
@@ -111,6 +156,7 @@ export interface LoginResult {
     lastName: string;
     displayName: string;
     role: string;
+    staffRoles?: string[];
   };
 }
 
@@ -1408,4 +1454,54 @@ export function adminRestoreOAuthClient(clientId: string): Promise<AdminOAuthCli
 
 export function adminDeleteOAuthClient(clientId: string): Promise<void> {
   return request(`/api/v1/admin/oauth/clients/${clientId}`, { method: "DELETE" });
+}
+
+// ── Admin step-up (2FA elevation) ─────────────────────────────────────────────
+
+export interface StepUpStatus {
+  elevated: boolean;
+  method: "TOTP" | "PASSWORD";
+}
+
+export function getStepUpStatus(): Promise<StepUpStatus> {
+  return request("/api/v1/admin/step-up/status");
+}
+
+export function submitStepUp(payload: { code?: string; password?: string }): Promise<{ elevated: boolean }> {
+  return request("/api/v1/admin/step-up", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Staff management ──────────────────────────────────────────────────────────
+
+export interface StaffRoleGrant {
+  role: StaffRoleName;
+  grantedAt: string | null;
+  grantedByEmail: string | null;
+}
+
+export interface StaffMember {
+  userId: string;
+  name: string;
+  email: string;
+  handle: string | null;
+  profileImageUrl: string | null;
+  roles: StaffRoleGrant[];
+}
+
+export function getStaff(): Promise<StaffMember[]> {
+  return request("/api/v1/admin/staff");
+}
+
+export function grantStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember> {
+  return request(`/api/v1/admin/staff/${userId}/roles`, {
+    method: "POST",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function revokeStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember> {
+  return request(`/api/v1/admin/staff/${userId}/roles/${role}`, { method: "DELETE" });
 }

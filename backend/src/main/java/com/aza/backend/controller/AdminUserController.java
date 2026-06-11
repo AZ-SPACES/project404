@@ -24,7 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPPORT','COMPLIANCE')")
 public class AdminUserController {
 
     private final AdminService adminService;
@@ -34,6 +34,7 @@ public class AdminUserController {
     private final com.aza.backend.service.NotificationService notificationService;
     private final com.aza.backend.util.EmailService emailService;
     private final com.aza.backend.service.SystemSettingService settingService;
+    private final com.aza.backend.service.StaffRoleService staffRoleService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> getUsers(
@@ -64,6 +65,7 @@ public class AdminUserController {
      * Force-logout one device session: deletes the refresh token and blacklists
      * its paired access token, so the device is signed out immediately.
      */
+    @PreAuthorize("hasAnyRole('ADMIN','SUPPORT')")
     @DeleteMapping("/{userId}/sessions/{sessionId}")
     public ResponseEntity<ApiResponse<Object>> revokeUserSession(
             @PathVariable UUID userId,
@@ -84,18 +86,18 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserTransactions(userId, page, Math.min(size, 50))));
     }
 
+    /** Legacy USER/ADMIN toggle — now backed by staff_roles (grant/revoke ADMIN). */
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{userId}/role")
     public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserRole(
             @PathVariable UUID userId,
             @RequestBody AdminRoleRequest request,
             @AuthenticationPrincipal User admin) {
-        AdminUserResponse result = adminService.updateUserRole(userId, request.getRole());
-        User target = userRepository.findById(userId).orElse(null);
-        auditService.log(admin, "CHANGE_ROLE", target,
-                "newRole=" + request.getRole());
-        return ResponseEntity.ok(ApiResponse.success(result));
+        staffRoleService.setLegacyRole(admin, userId, request.getRole());
+        return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
     @PatchMapping("/{userId}/status")
     public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserStatus(
             @PathVariable UUID userId,
@@ -116,6 +118,7 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
     @PatchMapping("/{userId}/limits")
     public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserLimits(
             @PathVariable UUID userId,
