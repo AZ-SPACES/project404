@@ -1,8 +1,10 @@
 package com.aza.backend.websocket.interceptor;
 
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.security.JwtUtil;
+import com.aza.backend.websocket.StompUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -27,8 +29,12 @@ import com.aza.backend.exception.AppException;
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
+    /** Session-attribute key holding the RefreshToken id of the device session behind this socket. */
+    public static final String DEVICE_SESSION_ATTR = "deviceSessionId";
+
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final StringRedisTemplate redisTemplate;
 
     @Override
@@ -71,11 +77,17 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 throw new IllegalArgumentException("User not found or account inactive");
             }
 
-            // Set the session principal to the user's UUID string.
-            // Spring routes convertAndSendToUser(userId, ...) by matching principal.getName(),
-            // so this must return the UUID — not user.toString() which is a JVM object hash.
-            final String principalName = userId.toString();
-            accessor.setUser(() -> principalName);
+            // Full Authentication so @AuthenticationPrincipal and the presence
+            // listeners get the User; getName() still returns the UUID for routing.
+            accessor.setUser(new StompUserPrincipal(user));
+
+            // Tie this socket to its device session (the RefreshToken row paired with
+            // this access token) so presence can be tracked per device, not just per user.
+            if (accessor.getSessionAttributes() != null) {
+                refreshTokenRepository.findByAccessTokenHash(hashToken(token))
+                        .ifPresent(rt -> accessor.getSessionAttributes()
+                                .put(DEVICE_SESSION_ATTR, rt.getId().toString()));
+            }
             log.info("WebSocket CONNECT authenticated: userId={}", userId);
         }
 

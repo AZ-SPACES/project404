@@ -9,10 +9,12 @@ import {
   updateUserRole,
   getKycRecord,
   getUserTransactions,
+  getUserSessions,
   updateUserLimits,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
+  type UserSession,
 } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,6 +27,8 @@ import {
   ZoomIn,
   ArrowUpRight,
   ArrowDownLeft,
+  Smartphone,
+  Monitor,
 } from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
@@ -57,6 +61,26 @@ const TX_STATUS_COLORS: Record<string, string> = {
   DECLINED: "bg-red-500/10 text-red-400 border-red-500/20",
   REVERSED: "bg-purple-500/10 text-purple-400 border-purple-500/20",
 };
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return "—";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "—";
+  const mins = Math.floor((Date.now() - then) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function isDesktopOs(os: string | null): boolean {
+  if (!os) return false;
+  const lower = os.toLowerCase();
+  return ["windows", "linux", "mac", "desktop", "web"].some(k => lower.includes(k));
+}
 
 function DocImage({ url, label }: { url: string | null; label: string }) {
   const [enlarged, setEnlarged] = useState(false);
@@ -101,6 +125,8 @@ export default function UserDetailPage() {
   const { data: user, isLoading, error } = useQuery<AdminUser>({
     queryKey: ["user", userId],
     queryFn: () => getUserDetail(userId),
+    // Keeps the Online/Last-seen badge current while the page is open.
+    refetchInterval: 30_000,
   });
 
   const { data: kycRecord } = useQuery<KycRecord>({
@@ -115,6 +141,15 @@ export default function UserDetailPage() {
     queryFn: () => getUserTransactions(userId, 0, 5),
     enabled: !!userId,
     retry: false,
+  });
+
+  const { data: sessions = [] } = useQuery<UserSession[]>({
+    queryKey: ["userSessions", userId],
+    queryFn: () => getUserSessions(userId),
+    enabled: !!userId,
+    retry: false,
+    // Online flags track a 65s server-side TTL — keep the panel live.
+    refetchInterval: 30_000,
   });
 
   const userTxs: AdminTransaction[] = txPage?.content ?? [];
@@ -184,6 +219,14 @@ export default function UserDetailPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <span className={`text-xs px-3 py-1 rounded-full font-medium border flex items-center gap-1.5 ${
+          user.onlineStatus === "ONLINE"
+            ? "bg-emerald-400/15 text-emerald-400 border-emerald-400/20"
+            : "bg-muted/50 text-foreground/40 border-transparent"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${user.onlineStatus === "ONLINE" ? "bg-emerald-400" : "bg-foreground/30"}`} />
+          {user.onlineStatus === "ONLINE" ? "Online" : `Last seen ${relativeTime(user.lastSeenAt)}`}
+        </span>
         <span className={`text-xs px-3 py-1 rounded-full font-medium border ${STATUS_COLORS[user.accountStatus] ?? "bg-muted/50 text-foreground/40"}`}>
           {user.accountStatus}
         </span>
@@ -229,6 +272,41 @@ export default function UserDetailPage() {
             <span className="text-sm text-foreground/70">Biometrics {user.biometricsEnabled ? "enabled" : "disabled"}</span>
           </div>
         </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-foreground/30 text-xs uppercase tracking-wider">Active Sessions</p>
+          <span className="text-xs text-foreground/40">{sessions.length} device{sessions.length === 1 ? "" : "s"}</span>
+        </div>
+        {sessions.length === 0 ? (
+          <p className="text-foreground/20 text-sm">No active sessions.</p>
+        ) : (
+          <div className="space-y-1">
+            {sessions.map(s => (
+              <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center text-foreground/50">
+                  {isDesktopOs(s.deviceOs) ? <Monitor size={15} /> : <Smartphone size={15} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground text-sm font-medium truncate">
+                    {s.deviceName ?? s.deviceOs ?? "Unknown device"}
+                  </p>
+                  <p className="text-foreground/35 text-xs truncate">
+                    {s.location ?? s.ipAddress ?? "Unknown location"}
+                    {s.deviceOs ? ` · ${s.deviceOs}` : ""}
+                  </p>
+                </div>
+                <span className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                  <span className={`w-2 h-2 rounded-full ${s.online ? "bg-emerald-400" : "bg-foreground/15"}`} />
+                  <span className={s.online ? "text-emerald-400 font-medium" : "text-foreground/40"}>
+                    {s.online ? "Online" : relativeTime(s.lastUsedAt)}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-5">

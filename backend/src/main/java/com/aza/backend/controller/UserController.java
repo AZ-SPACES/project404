@@ -109,6 +109,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(presenceService.getStatus(id)));
     }
 
+    /** Online status + last-seen, used by chat headers to seed presence on open. */
+    @GetMapping("/{id}/presence")
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.user.PresenceResponse>> getPresence(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                com.aza.backend.dto.user.PresenceResponse.builder()
+                        .status(presenceService.getStatus(id))
+                        .lastSeenAt(presenceService.getLastSeen(id))
+                        .build()));
+    }
+
     // ==================== PRIVACY ====================
 
     @PutMapping("/me/privacy")
@@ -188,8 +198,10 @@ public class UserController {
     // ==================== DEVICES ====================
 
     @GetMapping("/me/devices")
-    public ResponseEntity<ApiResponse<Object>> getDevices(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getDevices(user)));
+    public ResponseEntity<ApiResponse<Object>> getDevices(
+            @AuthenticationPrincipal User user,
+            @RequestHeader(value = "X-Device-ID", required = false) String currentDeviceId) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getDevices(user, currentDeviceId)));
     }
 
     @DeleteMapping("/me/devices/{id}")

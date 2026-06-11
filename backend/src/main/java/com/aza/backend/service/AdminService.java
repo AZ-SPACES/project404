@@ -48,11 +48,15 @@ public class AdminService {
     private final PresenceService presenceService;
     private final AdminAuditService auditService;
 
-    public Page<AdminUserResponse> getUsers(String query, String status, String kycStatus, int page, int size) {
+    public Page<AdminUserResponse> getUsers(String query, String status, String kycStatus,
+                                            boolean onlineOnly, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         Page<User> users;
-        if (query != null && !query.isBlank()) {
+        if (onlineOnly) {
+            // DB mirror is kept honest by the presence sweeper (≤30s lag).
+            users = userRepository.findAllByOnlineStatus(User.OnlineStatus.ONLINE, pageable);
+        } else if (query != null && !query.isBlank()) {
             users = userRepository.adminSearchUsers(query, pageable);
         } else if (status != null && !status.isBlank()) {
             User.AccountStatus accountStatus = User.AccountStatus.valueOf(status.toUpperCase());
@@ -406,6 +410,10 @@ public class AdminService {
                 .walletCurrency(wallet != null ? wallet.getCurrency() : "GHS")
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt())
+                .onlineStatus(presenceService.getStatus(user.getId()))
+                .lastSeenAt(presenceService.getLastSeenLive(user.getId()) != null
+                        ? presenceService.getLastSeenLive(user.getId())
+                        : user.getLastSeenAt())
                 .customDailyLimitGhs(user.getCustomDailyLimitGhs())
                 .customSingleTransactionLimitGhs(user.getCustomSingleTransactionLimitGhs())
                 .build();

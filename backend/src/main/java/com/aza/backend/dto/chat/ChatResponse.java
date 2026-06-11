@@ -14,6 +14,8 @@ public class ChatResponse {
     private String otherUserHandle;
     private String otherUserAvatar;
     private String otherUserStatus;
+    /** ISO timestamp of the other user's last activity — null if never seen. */
+    private String otherUserLastSeenAt;
     private String lastMessageAt;
     private long unreadCount;
     private boolean isMuted;

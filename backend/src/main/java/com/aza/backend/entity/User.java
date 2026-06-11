@@ -59,6 +59,9 @@ public class User {
     @Builder.Default
     private OnlineStatus onlineStatus = OnlineStatus.OFFLINE;
 
+    /** Persisted on offline transitions — powers "last seen" when Redis has no live value. */
+    private LocalDateTime lastSeenAt;
+
     // --- Profile Information ---
     private String pronouns;
     private LocalDate dateOfBirth;

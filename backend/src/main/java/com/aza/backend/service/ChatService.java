@@ -592,6 +592,12 @@ public class ChatService {
         long unreadCount = chatMessageRepository
                 .findUnreadMessages(chat.getId(), currentUserId).size();
 
+        java.time.LocalDateTime otherLastSeen = null;
+        if (otherUser != null) {
+            otherLastSeen = presenceService.getLastSeenLive(otherUser.getId());
+            if (otherLastSeen == null) otherLastSeen = otherUser.getLastSeenAt();
+        }
+
         return ChatResponse.builder()
                 .id(chat.getId().toString())
                 .otherUserId(otherUserId.toString())
@@ -601,6 +607,7 @@ public class ChatService {
                 .otherUserAvatar(otherUser != null ? otherUser.getProfileImageUrl() : null)
                 .otherUserStatus(otherUser != null
                         ? presenceService.getStatus(otherUser.getId()) : "OFFLINE")
+                .otherUserLastSeenAt(otherLastSeen != null ? otherLastSeen.toString() : null)
                 .lastMessageAt(chat.getLastMessageAt() != null
                         ? chat.getLastMessageAt().toString() : null)
                 .unreadCount(unreadCount)
