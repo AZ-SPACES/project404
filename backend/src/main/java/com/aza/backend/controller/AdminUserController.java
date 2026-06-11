@@ -30,6 +30,7 @@ public class AdminUserController {
     private final AdminService adminService;
     private final AdminAuditService auditService;
     private final UserRepository userRepository;
+    private final com.aza.backend.service.UserService userService;
     private final com.aza.backend.service.NotificationService notificationService;
     private final com.aza.backend.util.EmailService emailService;
     private final com.aza.backend.service.SystemSettingService settingService;
@@ -39,15 +40,24 @@ public class AdminUserController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String kycStatus,
+            @RequestParam(defaultValue = "false") boolean online,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(
-                adminService.getUsers(query, status, kycStatus, page, size)));
+                adminService.getUsers(query, status, kycStatus, online, page, size)));
     }
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable UUID userId) {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
+    }
+
+    /** Device sessions for a user — same data as the mobile devices list, plus live online flags. */
+    @GetMapping("/{userId}/sessions")
+    public ResponseEntity<ApiResponse<Object>> getUserSessions(@PathVariable UUID userId) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+        return ResponseEntity.ok(ApiResponse.success(userService.getDevices(target, null)));
     }
 
     @GetMapping("/{userId}/transactions")

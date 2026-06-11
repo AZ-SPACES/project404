@@ -31,6 +31,9 @@ public class AdminUserResponse {
     private String walletCurrency;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
+    /** "ONLINE" / "OFFLINE" from live Redis presence. */
+    private String onlineStatus;
+    private LocalDateTime lastSeenAt;
     private BigDecimal customDailyLimitGhs;
     private BigDecimal customSingleTransactionLimitGhs;
 }

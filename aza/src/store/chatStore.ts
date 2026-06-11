@@ -55,6 +55,7 @@ import {
   readOneTimePreKey,
 } from '../crypto/keystore';
 import type { LocalMessage, LocalMessageStatus } from './chatTypes';
+import { usePresenceStore } from './presenceStore';
 import {
   loadCachedThread,
   saveCachedThread,
@@ -332,7 +333,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const list: any[] = data?.data ?? [];
     const chats: Record<string, ChatSummary> = {};
     const order: string[] = [];
+    const presence = usePresenceStore.getState();
     for (const c of list) {
+      // Seed presence from the server snapshot so online dots and "last seen"
+      // are right immediately, not only after a live presence event arrives.
+      if (c.otherUserId) {
+        const lastSeenTs = c.otherUserLastSeenAt ? new Date(c.otherUserLastSeenAt).getTime() : null;
+        presence.syncFromServer(c.otherUserId, c.otherUserStatus, lastSeenTs);
+      }
       const summary: ChatSummary = {
         id: c.id,
         otherUserId: c.otherUserId,

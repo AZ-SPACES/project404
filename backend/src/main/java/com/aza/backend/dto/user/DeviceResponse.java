@@ -19,4 +19,6 @@ public class DeviceResponse {
     private LocalDateTime lastUsedAt;
     /** True for the session that issued the current request — the "This device" row. */
     private boolean currentDevice;
+    /** True if this device session has an active WebSocket heartbeat right now. */
+    private boolean online;
 }

@@ -50,6 +50,7 @@ public class UserService {
     private final ImageService imageService;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final PresenceService presenceService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -584,6 +585,7 @@ public class UserService {
                         .createdAt(token.getCreatedAt())
                         .lastUsedAt(lastActive(token))
                         .currentDevice(currentDeviceId != null && currentDeviceId.equals(token.getDeviceId()))
+                        .online(presenceService.isSessionOnline(token.getId()))
                         .build())
                 .toList();
     }

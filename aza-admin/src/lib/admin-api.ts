@@ -286,8 +286,22 @@ export interface AdminUser {
   walletCurrency: string;
   createdAt: string;
   lastLoginAt: string | null;
+  onlineStatus: "ONLINE" | "OFFLINE";
+  lastSeenAt: string | null;
   customDailyLimitGhs: number | null;
   customSingleTransactionLimitGhs: number | null;
+}
+
+export interface UserSession {
+  id: string;
+  deviceName: string | null;
+  deviceOs: string | null;
+  ipAddress: string | null;
+  location: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  currentDevice: boolean;
+  online: boolean;
 }
 
 export interface Page<T> {
@@ -302,6 +316,7 @@ export function getUsers(params: {
   query?: string;
   status?: string;
   kycStatus?: string;
+  online?: boolean;
   page?: number;
   size?: number;
 }): Promise<Page<AdminUser>> {
@@ -309,6 +324,7 @@ export function getUsers(params: {
   if (params.query) qs.set("query", params.query);
   if (params.status) qs.set("status", params.status);
   if (params.kycStatus) qs.set("kycStatus", params.kycStatus);
+  if (params.online) qs.set("online", "true");
   qs.set("page", String(params.page ?? 0));
   qs.set("size", String(params.size ?? 20));
   return request(`/api/v1/admin/users?${qs}`);
@@ -316,6 +332,10 @@ export function getUsers(params: {
 
 export function getUserDetail(userId: string): Promise<AdminUser> {
   return request(`/api/v1/admin/users/${userId}`);
+}
+
+export function getUserSessions(userId: string): Promise<UserSession[]> {
+  return request(`/api/v1/admin/users/${userId}/sessions`);
 }
 
 export function updateUserStatus(userId: string, status: string, reason?: string): Promise<AdminUser> {
