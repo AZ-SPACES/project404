@@ -28,8 +28,11 @@ public class RedisMessageSubscriber implements MessageListener {
                 String userId = channel.replace("aza:call:", "");
                 messagingTemplate.convertAndSendToUser(userId, "/queue/calls", payload);
 
-            } else if (channel.equals("aza:presence")) {
-                messagingTemplate.convertAndSend("/topic/presence", payload);
+            } else if (channel.startsWith("aza:presence_user:")) {
+                // Presence is per-recipient: only users who share a chat or contact
+                // relationship with the subject receive it — never a global broadcast.
+                String userId = channel.replace("aza:presence_user:", "");
+                messagingTemplate.convertAndSendToUser(userId, "/queue/presence", payload);
 
             } else if (channel.startsWith("aza:notify:")) {
                 String userId = channel.replace("aza:notify:", "");

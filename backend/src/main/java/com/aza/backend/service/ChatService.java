@@ -592,11 +592,10 @@ public class ChatService {
         long unreadCount = chatMessageRepository
                 .findUnreadMessages(chat.getId(), currentUserId).size();
 
-        java.time.LocalDateTime otherLastSeen = null;
-        if (otherUser != null) {
-            otherLastSeen = presenceService.getLastSeenLive(otherUser.getId());
-            if (otherLastSeen == null) otherLastSeen = otherUser.getLastSeenAt();
-        }
+        // Presence as the current user is allowed to see it (privacy toggle + blocks).
+        com.aza.backend.dto.user.PresenceResponse otherPresence = otherUser != null
+                ? presenceService.getPresenceFor(currentUserId, otherUser)
+                : null;
 
         return ChatResponse.builder()
                 .id(chat.getId().toString())
@@ -605,11 +604,10 @@ public class ChatService {
                         ? otherUser.getFirstName() + " " + otherUser.getLastName() : "Unknown")
                 .otherUserHandle(otherUser != null ? otherUser.getUsername() : null)
                 .otherUserAvatar(otherUser != null ? otherUser.getProfileImageUrl() : null)
-                .otherUserStatus(otherUser != null
-                        ? presenceService.getStatus(otherUser.getId()) : "OFFLINE")
-                .otherUserLastSeenAt(otherLastSeen != null ? otherLastSeen.toString() : null)
-                .lastMessageAt(chat.getLastMessageAt() != null
-                        ? chat.getLastMessageAt().toString() : null)
+                .otherUserStatus(otherPresence != null ? otherPresence.getStatus() : "OFFLINE")
+                .otherUserLastSeenAt(otherPresence != null
+                        ? com.aza.backend.util.TimeFormats.toUtcIso(otherPresence.getLastSeenAt()) : null)
+                .lastMessageAt(com.aza.backend.util.TimeFormats.toUtcIso(chat.getLastMessageAt()))
                 .unreadCount(unreadCount)
                 .isMuted(isMuted)
                 .isArchived(isArchived)

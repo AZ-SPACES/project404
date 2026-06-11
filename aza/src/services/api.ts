@@ -448,6 +448,9 @@ export const getDevices = () => api.get("/api/v1/users/me/devices");
 export const getUserPresence = (userId: string) =>
   api.get(`/api/v1/users/${encodeURIComponent(userId)}/presence`);
 
+export const getPresenceBatch = (userIds: string[]) =>
+  api.post("/api/v1/users/presence/batch", { userIds });
+
 export const removeSelfEverywhere = () =>
   api.delete("/api/v1/users/me/privacy");
 

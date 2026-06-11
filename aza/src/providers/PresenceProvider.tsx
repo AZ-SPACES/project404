@@ -53,8 +53,9 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
           // Send initial heartbeat so the server marks us online immediately.
           client.publish({ destination: '/app/heartbeat' });
 
-          // Receive broadcast presence events for all users.
-          client.subscribe('/topic/presence', (frame) => {
+          // Per-user presence queue: the server fans events out only for
+          // people we share a chat or contact relationship with.
+          client.subscribe('/user/queue/presence', (frame) => {
             try {
               const msg = JSON.parse(frame.body);
               const type: string = msg?.type ?? '';
