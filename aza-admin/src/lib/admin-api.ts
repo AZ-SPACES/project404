@@ -835,7 +835,7 @@ export function sendCampaign(data: {
   subject?: string;
   message: string;
 }): Promise<{ message: string }> {
-  return request("/api/admin/campaigns/send", {
+  return request("/api/v1/admin/campaigns/send", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -1296,10 +1296,36 @@ export function resolveMiniAppReport(
   id: string,
   action: "RESOLVE" | "DISMISS",
   resolution: string,
+  disableApp = false,
 ): Promise<MiniAppReport> {
   return request(`/api/v1/admin/miniapps/reports/${id}/resolve`, {
     method: "POST",
-    body: JSON.stringify({ action, resolution }),
+    body: JSON.stringify({ action, resolution, disableApp }),
+  });
+}
+
+export interface DisabledMiniApp {
+  appId: string;
+  reason: string | null;
+  disabledBy: string;
+  disabledAt: string;
+}
+
+export function getDisabledMiniApps(): Promise<DisabledMiniApp[]> {
+  return request("/api/v1/admin/miniapps/disabled");
+}
+
+export function disableMiniApp(appId: string, reason?: string): Promise<DisabledMiniApp> {
+  return request(`/api/v1/admin/miniapps/${encodeURIComponent(appId)}/disable`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function enableMiniApp(appId: string): Promise<void> {
+  return request(`/api/v1/admin/miniapps/${encodeURIComponent(appId)}/enable`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

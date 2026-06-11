@@ -20,7 +20,13 @@ type ChatMessageBubbleProps = {
   message: Message;
   onLongPress?: () => void;
   onImagePress?: (uri: string) => void;
-  onPayPress?: (amount: number) => void;
+  /** messageId is the request card's chat message id — keys legacy cards with no requestId. */
+  onPayPress?: (amount: number, requestId: string | undefined, messageId: string) => void;
+  onDeclinePress?: ((requestId: string | undefined, messageId: string) => void) | undefined;
+  /** Money-request ids (or legacy card message ids) settled in this chat — flips request cards to Paid. */
+  paidRequestIds?: Set<string> | undefined;
+  /** Money-request ids (or legacy card message ids) declined in this chat — flips request cards to Declined. */
+  declinedRequestIds?: Set<string> | undefined;
   onStatusPress?: (() => void) | undefined;
   bubbleColor?: string | undefined;
   fontSize?: ChatFontSizeProp | undefined;
@@ -460,6 +466,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   onLongPress,
   onImagePress,
   onPayPress,
+  onDeclinePress,
+  paidRequestIds,
+  declinedRequestIds,
   onStatusPress,
   bubbleColor,
   fontSize = 'medium',
@@ -516,16 +525,47 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   // Detect payment messages sent as E2EE JSON text (persisted via sendText)
   const paymentData = useMemo(() => {
     if (message.type === 'payment') {
-      return { amount: message.paymentAmount ?? 0, mode: message.paymentMode ?? 'send', status: message.paymentStatus };
+      return {
+        amount: message.paymentAmount ?? 0,
+        mode: message.paymentMode ?? 'send',
+        status: message.paymentStatus,
+        requestId: undefined as string | undefined,
+      };
     }
     if (typeof message.text === 'string' && message.text.startsWith('{"__payment":')) {
       try {
         const p = JSON.parse(message.text);
-        if (p.__payment === true) return { amount: p.amount ?? 0, mode: p.mode ?? 'send', status: p.status as typeof message.paymentStatus };
+        if (p.__payment === true) {
+          return {
+            amount: p.amount ?? 0,
+            mode: p.mode ?? 'send',
+            status: p.status as typeof message.paymentStatus,
+            requestId: typeof p.requestId === 'string' ? p.requestId : undefined,
+          };
+        }
       } catch {}
     }
     return null;
   }, [message.type, message.text, message.paymentAmount, message.paymentMode, message.paymentStatus]);
+
+  // A request card is settled once a receipt for its money-request id — or,
+  // for legacy cards without one, its own message id — exists in this chat;
+  // messages are immutable (E2EE), so paid state is derived.
+  const paymentStatus = useMemo(() => {
+    if (!paymentData) return undefined;
+    if (paymentData.mode !== 'request') return paymentData.status;
+    if (paymentData.status === 'paid'
+        || (paymentData.requestId && paidRequestIds?.has(paymentData.requestId))
+        || paidRequestIds?.has(message.id)) {
+      return 'paid';
+    }
+    if (paymentData.status === 'declined'
+        || (paymentData.requestId && declinedRequestIds?.has(paymentData.requestId))
+        || declinedRequestIds?.has(message.id)) {
+      return 'declined';
+    }
+    return 'pending';
+  }, [paymentData, paidRequestIds, declinedRequestIds, message.id]);
 
   // Detect GIF messages sent as E2EE JSON text
   const gifData = useMemo(() => {
@@ -1084,19 +1124,30 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 ? isMe ? 'Payment Request' : 'Requested'
                 : isMe ? 'Sent' : 'Received'}
             </Text>
-            {!isMe && paymentData.mode === 'request' && paymentData.status === 'pending' && (
-              <TouchableOpacity
-                style={styles.paymentPayBtn}
-                activeOpacity={0.85}
-                onPress={() => onPayPress?.(paymentData.amount)}
-              >
-                <Text style={styles.paymentPayBtnText}>Pay GH¢{paymentData.amount.toFixed(2)}</Text>
-              </TouchableOpacity>
+            {!isMe && paymentData.mode === 'request' && paymentStatus === 'pending' && (
+              <>
+                <TouchableOpacity
+                  style={styles.paymentPayBtn}
+                  activeOpacity={0.85}
+                  onPress={() => onPayPress?.(paymentData.amount, paymentData.requestId, message.id)}
+                >
+                  <Text style={styles.paymentPayBtnText}>Pay GH¢{paymentData.amount.toFixed(2)}</Text>
+                </TouchableOpacity>
+                {onDeclinePress && (
+                  <TouchableOpacity
+                    style={styles.paymentDeclineBtn}
+                    activeOpacity={0.85}
+                    onPress={() => onDeclinePress(paymentData.requestId, message.id)}
+                  >
+                    <Text style={styles.paymentDeclineBtnText}>Decline</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
-            {paymentData.status && paymentData.status !== 'pending' && (
-              <View style={[styles.paymentStatusBadge, paymentData.status === 'paid' ? styles.paymentStatusPaid : styles.paymentStatusDeclined]}>
+            {(paymentStatus === 'paid' || paymentStatus === 'declined') && (
+              <View style={[styles.paymentStatusBadge, paymentStatus === 'paid' ? styles.paymentStatusPaid : styles.paymentStatusDeclined]}>
                 <Text style={styles.paymentStatusText}>
-                  {paymentData.status === 'paid' ? 'Paid' : 'Declined'}
+                  {paymentStatus === 'paid' ? 'Paid' : 'Declined'}
                 </Text>
               </View>
             )}
@@ -1405,6 +1456,15 @@ const createStyles = (Colors: ThemeColors, isDark: boolean, fontSize = 15) => {
       marginBottom: 4,
     },
     paymentPayBtnText: { color: '#000', fontWeight: '700', fontSize: 15 },
+    paymentDeclineBtn: {
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
+      paddingVertical: 10,
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    paymentDeclineBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
     paymentStatusBadge: {
       borderRadius: Radius.full,
       paddingVertical: 6,

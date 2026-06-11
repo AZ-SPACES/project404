@@ -101,8 +101,9 @@ describe('isValidName', () => {
 });
 
 describe('sanitizeText', () => {
-  it('strips leading and trailing whitespace', () => {
-    expect(sanitizeText('  hello  ')).toBe('hello');
+  it('preserves whitespace — it runs on every keystroke, so trimming would block typing spaces', () => {
+    expect(sanitizeText('  hello  ')).toBe('  hello  ');
+    expect(sanitizeText('John Smith')).toBe('John Smith');
   });
 
   it('removes ASCII control characters', () => {

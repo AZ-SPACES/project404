@@ -24,7 +24,7 @@ export default function DeveloperApp() {
     setStack(prev => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }, []);
 
-  const current = stack[stack.length - 1];
+  const current = stack[stack.length - 1] ?? { page: 'list' as Page };
   const navProps = { navigate, goBack, Colors };
 
   return (

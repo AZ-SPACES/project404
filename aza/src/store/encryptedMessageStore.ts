@@ -113,6 +113,58 @@ export async function clearCachedThread(userId: string, chatId: string): Promise
 }
 
 /**
+ * Decrypt and return every cached thread for this user, keyed by chatId.
+ * Used for history transfers and backups — the caller re-encrypts before
+ * anything leaves the device.
+ */
+export async function exportAllThreads(
+  userId: string,
+): Promise<Record<string, LocalMessage[]>> {
+  const allKeys = await AsyncStorage.getAllKeys();
+  const prefix = `aza_chat_thread_${userId}_`;
+  const threads: Record<string, LocalMessage[]> = {};
+  for (const key of allKeys) {
+    if (!key.startsWith(prefix)) continue;
+    const chatId = key.slice(prefix.length);
+    const messages = await loadCachedThread(userId, chatId);
+    if (messages.length > 0) threads[chatId] = messages;
+  }
+  return threads;
+}
+
+/**
+ * Merge imported threads (from a transfer or backup restore) into the local
+ * cache. Existing local messages win on id collision — the device's own state
+ * is fresher than a snapshot.
+ */
+export async function importThreads(
+  userId: string,
+  threads: Record<string, LocalMessage[]>,
+): Promise<number> {
+  let imported = 0;
+  for (const [chatId, incoming] of Object.entries(threads)) {
+    if (!Array.isArray(incoming) || incoming.length === 0) continue;
+    const existing = await loadCachedThread(userId, chatId);
+    const seen = new Set<string>();
+    for (const m of existing) {
+      if (m.serverId) seen.add(m.serverId);
+      if (m.clientId) seen.add(m.clientId);
+    }
+    const merged = [...existing];
+    for (const m of incoming) {
+      const id = m.serverId ?? m.clientId;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      merged.push(m);
+      imported++;
+    }
+    merged.sort((a, b) => a.timestamp - b.timestamp);
+    await saveCachedThread(userId, chatId, merged);
+  }
+  return imported;
+}
+
+/**
  * Nuke all chat caches and rotate the master key. The next write produces a
  * fresh key, so any old AsyncStorage backups on disk become permanently
  * undecryptable. Call this on logout.

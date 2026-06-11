@@ -27,6 +27,7 @@ import { useContactStore } from "../../../store/contactStore";
 import { useChatStore } from "../../../store/chatStore";
 import { usePresenceStore } from "../../../store/presenceStore";
 import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
+import { useServeHistoryTransfers } from "../../../hooks/useServeHistoryTransfers";
 import { usePinnedStore } from "../../../store/pinnedChatsStore";
 import { useChatFiltersStore } from "../../../store/chatFiltersStore";
 import { useDraftStore } from "../../../store/draftStore";
@@ -281,6 +282,10 @@ export default function ChatContactsScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
+  // Answer history-sync requests from the user's other devices while the
+  // chat list is on screen.
+  useServeHistoryTransfers();
 
   const [activeFilter, setActiveFilter] = useState("All");
 
@@ -1180,7 +1185,7 @@ export default function ChatContactsScreen() {
         <TouchableOpacity
           style={styles.fab}
           activeOpacity={0.85}
-          onPress={() => (navigation as any).getParent()?.navigate("Contacts")}
+          onPress={() => (navigation as any).navigate("Contacts")}
         >
           <Feather name="edit-2" size={22} color="#fff" />
         </TouchableOpacity>

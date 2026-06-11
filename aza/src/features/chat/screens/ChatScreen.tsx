@@ -14,6 +14,9 @@ import { SwipeableMessageBubble } from '../../../components/chat/SwipeableMessag
 import { ChatScreenModals } from '../../../components/chat/ChatScreenModals';
 import { Message, isSameDay, formatDateHeader } from '../../../components/chat/chatTypes';
 import { useChatScreen } from '../../../hooks/useChatScreen';
+import { useTransferStore } from '../../../store/transferStore';
+import { useSettledRequestsStore } from '../../../store/settledRequestsStore';
+import { extractErrorMessage } from '../../../utils/errorUtils';
 import { PatternBackground } from './ChatThemeScreen';
 
 // ----------------------------------------------------------------------------
@@ -29,7 +32,7 @@ export default function ChatScreen() {
   const {
     id, name, avatar, payIdentifier, navigation, chatId, sendText,
     online, lastSeenTs, peerIdentityChange,
-    messages, filteredMessages, isOtherTyping,
+    messages, filteredMessages, paidRequestIds, declinedRequestIds, isOtherTyping,
     isDark: _isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize, chatPattern,
     message, replyTo,
     showMoreMenu, menuAnchor, handleCloseMoreMenu, moreMenuActions, effectiveMuted,
@@ -69,6 +72,27 @@ export default function ChatScreen() {
     unpinMessage,
   } = screen;
 
+  // Decline a money request from its card: server-side decline (when we know
+  // the request id — legacy cards don't carry one, so their decline is
+  // chat-level only), then a local record plus a control message so both
+  // sides' cards flip to Declined (messages are E2EE/immutable). The local
+  // record is the backstop for control messages that fail to send.
+  const declineMoneyRequest = useTransferStore((s) => s.declineMoneyRequest);
+  const handleDeclineRequest = useCallback(async (requestId: string | undefined, messageId: string) => {
+    try {
+      if (requestId) await declineMoneyRequest(requestId);
+      useSettledRequestsStore.getState().markDeclined(requestId ?? messageId);
+      sendText(JSON.stringify({
+        __payment_decline: true,
+        ...(requestId ? { requestId } : {}),
+        messageId,
+      })).catch(() => {});
+    } catch (err) {
+      setToastMessage(extractErrorMessage(err, 'Failed to decline request'));
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+  }, [declineMoneyRequest, sendText, setToastMessage]);
+
   // --------------------------------------------------------------------------
   // FlatList helpers
   // --------------------------------------------------------------------------
@@ -101,7 +125,17 @@ export default function ChatScreen() {
             message={item}
             onLongPress={() => handleSelectMessage(item)}
             onImagePress={setFullScreenUri}
-            onPayPress={(amount) => setPaymentSheet({ visible: true, mode: 'send', prefillAmount: amount })}
+            onPayPress={(amount, requestId, messageId) => setPaymentSheet(
+              // With a request id we settle that request (fixed amount, straight
+              // to PIN); legacy cards without one fall back to a prefilled send.
+              // settleMsgId keys the card itself so the receipt can flip it.
+              requestId
+                ? { visible: true, mode: 'pay', prefillAmount: amount, requestId, settleMsgId: messageId }
+                : { visible: true, mode: 'send', prefillAmount: amount, settleMsgId: messageId },
+            )}
+            onDeclinePress={handleDeclineRequest}
+            paidRequestIds={paidRequestIds}
+            declinedRequestIds={declinedRequestIds}
             onStatusPress={item.sender === 'me' && item.status ? () => navigation.navigate('MessageInfo', { message: item }) : undefined}
             bubbleColor={chatBubbleColor || undefined}
             fontSize={chatFontSize}
@@ -116,7 +150,7 @@ export default function ChatScreen() {
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, paidRequestIds, declinedRequestIds, handleDeclineRequest, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
   const listFooter = useMemo(() => isOtherTyping ? <ChatTypingIndicator /> : null, [isOtherTyping]);
