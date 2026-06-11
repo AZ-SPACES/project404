@@ -445,6 +445,9 @@ export const secureAccount = () =>
 
 export const getDevices = () => api.get("/api/v1/users/me/devices");
 
+export const getUserPresence = (userId: string) =>
+  api.get(`/api/v1/users/${encodeURIComponent(userId)}/presence`);
+
 export const removeSelfEverywhere = () =>
   api.delete("/api/v1/users/me/privacy");
 

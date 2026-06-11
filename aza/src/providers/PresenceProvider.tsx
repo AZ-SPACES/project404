@@ -1,5 +1,6 @@
 import 'fast-text-encoding';
 import React, { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { BASE_URL, TOKEN_KEY } from '../services/api';
@@ -105,6 +106,29 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [userToken]);
+
+  // Tie presence to the app lifecycle: going to the background closes the
+  // socket so the server marks us offline right away (instead of waiting for
+  // the heartbeat TTL to lapse), and returning to the foreground reconnects
+  // and heartbeats immediately so we show online without the 30s wait.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      const client = clientRef.current;
+      if (!client) return;
+      if (state === 'active') {
+        if (!client.active) {
+          client.activate();
+        } else if (client.connected) {
+          client.publish({ destination: '/app/heartbeat' });
+        }
+      } else if (state === 'background') {
+        // 'inactive' (iOS control centre, Face ID, etc.) is transient — only
+        // a real background transition should end the presence session.
+        client.deactivate().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // When the access token rotates, drop the current STOMP client so the
   // next reconnect uses the fresh bearer. Without this, the heartbeat

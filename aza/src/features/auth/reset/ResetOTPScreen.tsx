@@ -20,10 +20,7 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../../../navigation/types";
-import { useToast } from "../../../providers/ToastProvider";
-import { verifyOtp } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
-import { extractErrorMessage } from '../../../utils/errorUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "ResetOTP">;
 
@@ -86,23 +83,16 @@ const ResetOTPScreen: React.FC = () => {
 
   const route = useRoute<RouteProp<RootStackParamList, "ResetOTP">>();
   const { email } = route.params;
-  const { showToast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     const code = otp.join("");
     if (code.length < 6) return;
 
-    setIsLoading(true);
-    try {
-      await verifyOtp(email, code, "password_reset");
-      navigation.navigate("ResetNewPassword", { email, code });
-    } catch (err: unknown) {
-      const msg = extractErrorMessage(err, "Invalid or expired code.");
-      showToast(msg, "error");
-    } finally {
-      setIsLoading(false);
-    }
+    // The reset OTP is single-use: the /reset-password endpoint verifies and
+    // consumes it. Verifying here too would delete the OTP early and make the
+    // final reset fail with "OTP expired or not found", so just carry the
+    // code forward and let ResetNewPassword perform the one verification.
+    navigation.navigate("ResetNewPassword", { email, code });
   };
 
   const handleClose = () => {
@@ -171,8 +161,7 @@ const ResetOTPScreen: React.FC = () => {
               paddingVertical={16}
               fontSize={Typography.button.fontSize}
               fontWeight={Typography.button.fontWeight}
-              loading={isLoading}
-              disabled={isLoading || otp.join('').length < 6}
+              disabled={otp.join('').length < 6}
             />
           </View>
         </KeyboardAvoidingView>

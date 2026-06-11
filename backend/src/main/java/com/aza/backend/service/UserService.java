@@ -50,6 +50,7 @@ public class UserService {
     private final ImageService imageService;
     private final EmailService emailService;
     private final SmsService smsService;
+    private final PresenceService presenceService;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -564,19 +565,33 @@ public class UserService {
 
     // ==================== DEVICES ====================
 
-    public List<DeviceResponse> getDevices(User user) {
+    public List<DeviceResponse> getDevices(User user, String currentDeviceId) {
         return refreshTokenRepository.findAllByUserId(user.getId())
                 .stream()
                 .filter(token -> !token.isExpired())
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .sorted((a, b) -> {
+                    // Pin the current device to the top, then most-recently-active first.
+                    boolean aCurrent = currentDeviceId != null && currentDeviceId.equals(a.getDeviceId());
+                    boolean bCurrent = currentDeviceId != null && currentDeviceId.equals(b.getDeviceId());
+                    if (aCurrent != bCurrent) return aCurrent ? -1 : 1;
+                    return lastActive(b).compareTo(lastActive(a));
+                })
                 .map(token -> DeviceResponse.builder()
                         .id(token.getId().toString())
                         .deviceName(token.getDeviceName())
                         .deviceOs(token.getDeviceOs())
                         .ipAddress(token.getIpAddress())
+                        .location(token.getLocation())
                         .createdAt(token.getCreatedAt())
+                        .lastUsedAt(lastActive(token))
+                        .currentDevice(currentDeviceId != null && currentDeviceId.equals(token.getDeviceId()))
+                        .online(presenceService.isSessionOnline(token.getId()))
                         .build())
                 .toList();
+    }
+
+    private static java.time.LocalDateTime lastActive(RefreshToken token) {
+        return token.getLastUsedAt() != null ? token.getLastUsedAt() : token.getCreatedAt();
     }
 
     @Transactional

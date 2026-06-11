@@ -56,6 +56,7 @@ public class AuthService {
     private final RecoveryCodeRepository recoveryCodeRepository;
     private final NotificationService notificationService;
     private final AuditService auditService;
+    private final GeoLocationService geoLocationService;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -798,6 +799,11 @@ public class AuthService {
         RefreshToken rt = refreshTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
                 .orElse(new RefreshToken());
 
+        // Resolve location only for brand-new sessions or when the IP changed, to avoid an
+        // external lookup on every routine token refresh.
+        boolean shouldResolveLocation = rt.getLocation() == null
+                || !java.util.Objects.equals(rt.getIpAddress(), ipAddress);
+
         rt.setUserId(userId);
         rt.setTokenHash(hashToken(rawRefreshToken));
         rt.setAccessTokenHash(hashToken(rawAccessToken));
@@ -808,7 +814,11 @@ public class AuthService {
         rt.setIpAddress(ipAddress);
         rt.setExpiresAt(LocalDateTime.now().plusDays(30));
 
-        refreshTokenRepository.save(rt);
+        RefreshToken saved = refreshTokenRepository.save(rt);
+
+        if (shouldResolveLocation) {
+            geoLocationService.resolveAndStore(saved.getId(), ipAddress);
+        }
     }
 
     public String hashToken(String token) {
