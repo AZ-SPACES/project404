@@ -393,7 +393,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const cached = await loadCachedThread(selfUserId, chatId);
     if (cached.length > 0) {
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: cached } }));
-      const lastCached = cached[cached.length - 1];
+      const lastCached = lastVisibleMessage(cached);
       if (lastCached) {
         set((s) => {
           const c = s.chats[chatId];
@@ -429,7 +429,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       );
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
       await saveCachedThread(selfUserId, chatId, next);
-      const lastMsg = next[next.length - 1];
+      const lastMsg = lastVisibleMessage(next);
       if (lastMsg) {
         set((s) => {
           const c = s.chats[chatId];
@@ -1214,13 +1214,51 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 }));
 
+/**
+ * Friendly chat-list previews for the special E2EE JSON text messages
+ * (payments, GIFs, locations, stickers, contacts, polls) that would otherwise
+ * surface as raw JSON. Returns null for ordinary text.
+ */
+function previewForSpecialText(text: string): string | null {
+  if (!text.startsWith('{"__')) return null;
+  if (text.startsWith('{"__payment":')) {
+    try {
+      const p = JSON.parse(text);
+      const amount = typeof p.amount === 'number' ? ` GH¢${p.amount.toFixed(2)}` : '';
+      return p.mode === 'request' ? `💰 Payment request${amount}` : `💰 Payment${amount}`;
+    } catch {}
+    return '💰 Payment';
+  }
+  if (text.startsWith('{"__payment_decline":')) return 'Payment request declined';
+  if (text.startsWith('{"__gif":')) return 'GIF';
+  if (text.startsWith('{"__location":')) return '📍 Location';
+  if (text.startsWith('{"__sticker":')) return 'Sticker';
+  if (text.startsWith('{"__contact":')) return '👤 Contact';
+  if (text.startsWith('{"__poll":')) return '📊 Poll';
+  return 'Message';
+}
+
+/** Control messages flip UI state (e.g. a request card to Declined) and never render as bubbles. */
+function isControlMessage(msg: LocalMessage): boolean {
+  return typeof msg.text === 'string' && msg.text.startsWith('{"__payment_decline":');
+}
+
+/** Last message that actually renders in the chat — skips trailing control messages. */
+function lastVisibleMessage(msgs: LocalMessage[]): LocalMessage | undefined {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m && !isControlMessage(m)) return m;
+  }
+  return undefined;
+}
+
 function derivePreview(msg: LocalMessage): string {
   if (msg.isDeleted) return 'Message deleted';
   switch (msg.type) {
     case 'IMAGE': return msg.text ? `📷 ${msg.text}` : '📷 Photo';
     case 'VIDEO': return msg.text ? `🎥 ${msg.text}` : '🎥 Video';
     case 'DOCUMENT': return '📄 Document';
-    default: return msg.text || '';
+    default: return msg.text ? (previewForSpecialText(msg.text) ?? msg.text) : '';
   }
 }
 
@@ -1230,7 +1268,9 @@ function bumpChat(
   local: LocalMessage,
 ): Record<string, ChatSummary> {
   const c = chats[chatId];
-  if (!c) return chats;
+  // Control messages are invisible in the chat, so they must not bump the
+  // preview or the unread badge.
+  if (!c || isControlMessage(local)) return chats;
   return {
     ...chats,
     [chatId]: {

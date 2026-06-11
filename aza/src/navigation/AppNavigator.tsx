@@ -16,7 +16,7 @@ import {
   ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen,
   AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen,
   SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen,
-  BroadcastScreen, SavedMessagesScreen,
+  BroadcastScreen, SavedMessagesScreen, ChatBackupScreen,
 } from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
@@ -220,6 +220,7 @@ export default function AppNavigator() {
       <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
       <Stack.Screen name="SharedMedia" component={SharedMediaScreen} />
       <Stack.Screen name="ManageStorage" component={ManageStorageScreen} />
+      <Stack.Screen name="ChatBackup" component={ChatBackupScreen} />
       <Stack.Screen name="MessageInfo" component={MessageInfoScreen} />
       <Stack.Screen name="ChatThemeScreen" component={ChatThemeScreen} />
       <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />

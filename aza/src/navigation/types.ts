@@ -126,6 +126,7 @@ export type RootStackParamList = {
   StarredMessages: undefined;
   SharedMedia: { chatId?: string | undefined; otherUserName?: string | undefined } | undefined;
   ManageStorage: { storageStats?: StorageDetails } | undefined;
+  ChatBackup: undefined;
   MessageInfo: { message: ChatMessage };
   DeleteAccount: undefined;
   MerchantBusinessName: undefined;

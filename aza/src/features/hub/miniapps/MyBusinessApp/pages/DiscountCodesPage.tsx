@@ -7,7 +7,10 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing, Radius } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
-import { getMerchantDiscountCodes, createMerchantDiscountCode } from '../../../../../services/api';
+import {
+  getMerchantDiscountCodes, createMerchantDiscountCode,
+  updateMerchantDiscountCode, deleteMerchantDiscountCode,
+} from '../../../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
@@ -27,7 +30,7 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
     try {
       const payload: Parameters<typeof createMerchantDiscountCode>[0] = {
         code: code.trim().toUpperCase(),
-        type,
+        discountType: type,
         value: parseFloat(value),
       };
       if (maxUses) payload.maxUses = parseInt(maxUses);
@@ -117,16 +120,54 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
 export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) {
   const { data: codes = [], isLoading: loading } = useQuery({
     queryKey: queryKeys.merchantDiscounts(),
-    queryFn: async () => { const r = await getMerchantDiscountCodes(0, 40); return extractData(r)?.content ?? []; },
+    queryFn: async () => {
+      const r = await getMerchantDiscountCodes(0, 40);
+      const data = extractData(r);
+      return Array.isArray(data) ? data : data?.content ?? [];
+    },
     staleTime: 60_000,
   });
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const handleCopy = (code: string) => {
     Clipboard.setString(code);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.merchantDiscounts() });
+
+  const handleToggle = async (c: any) => {
+    setBusyId(c.id);
+    try {
+      await updateMerchantDiscountCode(c.id, { active: !c.active });
+      refresh();
+    } catch {
+      Alert.alert('Error', 'Failed to update discount code.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = (c: any) => {
+    Alert.alert('Delete Code', `Delete discount code ${c.code}? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          setBusyId(c.id);
+          try {
+            await deleteMerchantDiscountCode(c.id);
+            refresh();
+          } catch {
+            Alert.alert('Error', 'Failed to delete discount code.');
+          } finally {
+            setBusyId(null);
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -182,21 +223,33 @@ export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) 
                   <Text style={{ fontSize: 15, fontWeight: '800', color: Colors.primary, fontVariant: ['tabular-nums'] }}>
                     {c.code}
                   </Text>
-                  {!c.isActive && (
+                  {!c.active && (
                     <View style={{ backgroundColor: Colors.border, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
                       <Text style={{ fontSize: 10, color: Colors.textSecondary, fontWeight: '600' }}>INACTIVE</Text>
                     </View>
                   )}
                 </View>
                 <Text style={{ fontSize: 12, color: Colors.textSecondary }}>
-                  {c.type === 'PERCENTAGE' ? `${c.value}% off` : `GH₵${Number(c.value).toFixed(2)} off`}
+                  {c.discountType === 'PERCENTAGE' ? `${c.value}% off` : `GH₵${Number(c.value).toFixed(2)} off`}
                   {c.maxUses ? `  ·  ${c.usedCount ?? 0}/${c.maxUses} uses` : ''}
                   {c.expiresAt ? `  ·  Exp: ${fmtDate(c.expiresAt)}` : ''}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => handleCopy(c.code)} style={{ padding: 6 }}>
-                <Feather name={copied === c.code ? 'check' : 'copy'} size={16} color={copied === c.code ? Colors.primary : Colors.textSecondary} />
-              </TouchableOpacity>
+              {busyId === c.id ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <>
+                  <TouchableOpacity onPress={() => handleCopy(c.code)} style={{ padding: 6 }}>
+                    <Feather name={copied === c.code ? 'check' : 'copy'} size={16} color={copied === c.code ? Colors.primary : Colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleToggle(c)} style={{ padding: 6 }}>
+                    <Feather name={c.active ? 'pause-circle' : 'play-circle'} size={16} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(c)} style={{ padding: 6 }}>
+                    <Feather name="trash-2" size={16} color="#ef4444" />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           ))}
         </ScrollView>

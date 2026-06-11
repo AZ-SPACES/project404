@@ -390,12 +390,19 @@ export default function ProfileScreen() {
             subtitle="Customise how you get updates" 
             onPress={() => navigation.navigate("NotificationSettings")}
           />
-          <SectionItem 
-            iconFamily="Ionicons" 
-            iconName="contrast-outline" 
-            title="Language and Appearance" 
-            subtitle="Customise language and theme settings" 
+          <SectionItem
+            iconFamily="Ionicons"
+            iconName="contrast-outline"
+            title="Language and Appearance"
+            subtitle="Customise language and theme settings"
             onPress={() => navigation.navigate("Appearance")}
+          />
+          <SectionItem
+            iconFamily="Feather"
+            iconName="upload-cloud"
+            title="Chat Backup & Sync"
+            subtitle="Encrypted backup and device-to-device sync"
+            onPress={() => navigation.navigate("ChatBackup")}
           />
           <SectionItem 
             iconFamily="Feather" 

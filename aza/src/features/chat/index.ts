@@ -13,3 +13,4 @@ export { default as IncomingCallScreen } from './screens/IncomingCallScreen';
 export { default as ChatThemeScreen } from './screens/ChatThemeScreen';
 export { default as BroadcastScreen } from './screens/BroadcastScreen';
 export { default as SavedMessagesScreen } from './screens/SavedMessagesScreen';
+export { default as ChatBackupScreen } from './screens/ChatBackupScreen';

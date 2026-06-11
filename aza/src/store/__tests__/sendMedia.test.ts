@@ -48,6 +48,11 @@ jest.mock('../../services/api', () => ({
   markChatRead: jest.fn().mockResolvedValue({}),
   markChatDelivered: jest.fn().mockResolvedValue({}),
   fetchUserKeyBundle: jest.fn().mockResolvedValue({ data: { data: {} } }),
+  // Multi-device bundle endpoints fail in tests → sendMedia falls back to the
+  // legacy single-device path driven by the peerKeys seeded into the store.
+  fetchUserKeyBundles: jest.fn().mockRejectedValue(new Error('unavailable in tests')),
+  fetchOwnKeyBundles: jest.fn().mockRejectedValue(new Error('unavailable in tests')),
+  getDeviceId: jest.fn().mockResolvedValue('device-test'),
   deleteChatMessage: jest.fn().mockResolvedValue({}),
   setDisappearingMessages: jest.fn().mockResolvedValue({}),
   muteChat: jest.fn().mockResolvedValue({}),
@@ -116,6 +121,7 @@ function seedStore() {
 
   useChatStore.setState({
     selfUserId: SELF_ID,
+    selfDeviceId: 'device-test',
     selfIdentityPublic: selfPair.publicKey,
     selfIdentityPrivate: selfPair.privateKey,
     chats: {
