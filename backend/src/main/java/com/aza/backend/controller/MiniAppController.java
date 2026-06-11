@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/miniapps")
 @RequiredArgsConstructor
@@ -23,5 +25,10 @@ public class MiniAppController {
             @RequestBody MiniAppReportRequest request) {
         reportService.createReport(appId, request, user);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/disabled")
+    public ResponseEntity<ApiResponse<List<String>>> getDisabledApps() {
+        return ResponseEntity.ok(ApiResponse.success(reportService.getDisabledAppIds()));
     }
 }

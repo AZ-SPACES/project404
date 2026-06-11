@@ -32,6 +32,7 @@ import { uploadChatMedia, blockUser, notifyChatScreenshot, getUserPresence } fro
 import { useDraftStore } from '../store/draftStore';
 import { useMuteDurationStore } from '../store/muteDurationStore';
 import { useMediaAutoSaveStore } from '../store/mediaAutoSaveStore';
+import { useSettledRequestsStore } from '../store/settledRequestsStore';
 import {
   Message, Contact, ReplyInfo, MoreAction, MenuAnchor, AttachmentAnchor,
   isSameDay, formatTime, calculateStorageAsync,
@@ -220,7 +221,15 @@ export function useChatScreen() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [keyWarningDismissed, setKeyWarningDismissed] = useState(false);
-  const [paymentSheet, setPaymentSheet] = useState<{ visible: boolean; mode: 'send' | 'request'; prefillAmount?: number }>({ visible: false, mode: 'send' });
+  const [paymentSheet, setPaymentSheet] = useState<{
+    visible: boolean;
+    mode: 'send' | 'request' | 'pay';
+    prefillAmount?: number;
+    /** Money-request transaction id — set when paying a request from its card. */
+    requestId?: string;
+    /** Chat message id of the request card being settled — keys legacy cards with no requestId. */
+    settleMsgId?: string;
+  }>({ visible: false, mode: 'send' });
   const [fullScreenUri, setFullScreenUri] = useState<string | null>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -265,7 +274,11 @@ export function useChatScreen() {
   }, []);
 
   const messages = useMemo<Message[]>(() => {
-    const combined = [...liveMessages, ...localOnlyMessages];
+    // Drop payment-decline control messages — they only flip a request card's
+    // status (via declinedRequestIds) and shouldn't render as bubbles.
+    const combined = [...liveMessages, ...localOnlyMessages].filter(
+      m => !(typeof m.text === 'string' && m.text.startsWith('{"__payment_decline":')),
+    );
     const sorted = combined.sort((a, b) => a.timestamp - b.timestamp);
     const starredIds = new Set(starredEntries.map(e => e.messageId));
     return sorted.map(m => {
@@ -315,6 +328,41 @@ export function useChatScreen() {
       return msg;
     });
   }, [liveMessages, localOnlyMessages, starredEntries, deletedMsgIds]);
+
+  // Money requests settled in this chat. Chat messages are E2EE and immutable,
+  // so paying sends a receipt carrying paysRequestId (or paysMsgId for legacy
+  // cards keyed by the request message's id) and declining sends a control
+  // message; request cards look themselves up here to flip from "Pay" to a
+  // Paid/Declined badge. Locally-settled ids are unioned in as a backstop for
+  // receipts that failed to send — the server already settled the request.
+  const localPaidIds = useSettledRequestsStore(s => s.paidIds);
+  const localDeclinedIds = useSettledRequestsStore(s => s.declinedIds);
+  const { paidRequestIds, declinedRequestIds } = useMemo(() => {
+    const paid = new Set<string>(localPaidIds);
+    const declined = new Set<string>(localDeclinedIds);
+    for (const m of liveMessages) {
+      const text = m.text;
+      if (typeof text !== 'string') continue;
+      if (text.startsWith('{"__payment":')) {
+        try {
+          const p = JSON.parse(text);
+          if (p.__payment === true) {
+            if (typeof p.paysRequestId === 'string') paid.add(p.paysRequestId);
+            if (typeof p.paysMsgId === 'string') paid.add(p.paysMsgId);
+          }
+        } catch {}
+      } else if (text.startsWith('{"__payment_decline":')) {
+        try {
+          const p = JSON.parse(text);
+          if (p.__payment_decline === true) {
+            if (typeof p.requestId === 'string') declined.add(p.requestId);
+            if (typeof p.messageId === 'string') declined.add(p.messageId);
+          }
+        } catch {}
+      }
+    }
+    return { paidRequestIds: paid, declinedRequestIds: declined };
+  }, [liveMessages, localPaidIds, localDeclinedIds]);
 
   const isAutoSaveEnabled = useMediaAutoSaveStore(s => chatId ? s.isEnabled(chatId) : false);
   const autoSavedIdsRef = useRef(new Set<string>());
@@ -1043,7 +1091,7 @@ export function useChatScreen() {
     // Chat core
     chatId, isOtherTyping, sendText, peerIdentityChange,
     // Messages
-    messages, filteredMessages,
+    messages, filteredMessages, paidRequestIds, declinedRequestIds,
     // Theme
     isDark, chatBubbleColor, chatWallpaper, hasWallpaper, chatFontSize, chatPattern,
     // Presence

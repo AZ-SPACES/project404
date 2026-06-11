@@ -28,6 +28,9 @@ import InvoicesPage from './pages/InvoicesPage';
 import SettlementsPage from './pages/SettlementsPage';
 import DiscountCodesPage from './pages/DiscountCodesPage';
 import AuditLogsPage from './pages/AuditLogsPage';
+import SettingsPage from './pages/SettingsPage';
+import TeamPage from './pages/TeamPage';
+import PlansPage from './pages/PlansPage';
 
 // Local interface just for the exported component props
 interface LocalMiniAppProps {
@@ -142,6 +145,12 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
         return <DiscountCodesPage {...navProps} />;
       case 'audit_logs':
         return <AuditLogsPage {...navProps} />;
+      case 'settings':
+        return <SettingsPage {...navProps} />;
+      case 'team':
+        return <TeamPage {...navProps} />;
+      case 'plans':
+        return <PlansPage {...navProps} />;
       default:
         return null;
     }

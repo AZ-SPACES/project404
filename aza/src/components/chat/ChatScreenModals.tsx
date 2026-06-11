@@ -19,6 +19,7 @@ import { StickerPickerModal } from './StickerPickerModal';
 import { ContactPickerSheet } from './ContactPickerSheet';
 import { PollCreatorSheet } from './PollCreatorSheet';
 import { Message, Contact, MoreAction, MenuAnchor, AttachmentAnchor } from './chatTypes';
+import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { blockUser } from '../../services/api';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
@@ -41,7 +42,7 @@ export type ChatScreenModalsProps = {
   handleOpenCamera: () => void;
   handlePickDocument: () => void;
   handleShareLocation: () => void;
-  setPaymentSheet: React.Dispatch<React.SetStateAction<{ visible: boolean; mode: 'send' | 'request'; prefillAmount?: number }>>;
+  setPaymentSheet: React.Dispatch<React.SetStateAction<{ visible: boolean; mode: 'send' | 'request' | 'pay'; prefillAmount?: number; requestId?: string; settleMsgId?: string }>>;
 
   // More menu
   showMoreMenu: boolean;
@@ -71,7 +72,7 @@ export type ChatScreenModalsProps = {
   handleForwardAction: (contacts: Contact[], message: Message) => void;
 
   // Payment
-  paymentSheet: { visible: boolean; mode: 'send' | 'request'; prefillAmount?: number };
+  paymentSheet: { visible: boolean; mode: 'send' | 'request' | 'pay'; prefillAmount?: number; requestId?: string; settleMsgId?: string };
 
   // Block / Report
   showBlockModal: boolean;
@@ -237,10 +238,33 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
         recipientName={name}
         recipientAvatar={avatar}
         recipientIdentifier={payIdentifier ?? id}
+        payRequestId={paymentSheet.requestId}
+        prefillAmount={paymentSheet.prefillAmount}
         onClose={() => setPaymentSheet(s => ({ ...s, visible: false }))}
-        onSuccess={(amount, paidMode) => {
+        onSuccess={(amount, paidMode, requestId) => {
+          const settleMsgId = paymentSheet.settleMsgId;
           setPaymentSheet(s => ({ ...s, visible: false }));
-          sendText(JSON.stringify({ __payment: true, amount, mode: paidMode })).catch(() => {});
+          // Requests carry their money-request id so the payer's card can settle
+          // them; paying sends a receipt carrying paysRequestId (or paysMsgId
+          // for legacy cards keyed by the request message's id) so both sides'
+          // request cards flip to Paid (messages are E2EE and can't be edited).
+          const payload =
+            paidMode === 'request'
+              ? { __payment: true, amount, mode: 'request', status: 'pending', requestId }
+              : paidMode === 'pay' || settleMsgId
+                ? {
+                    __payment: true, amount, mode: 'send',
+                    ...(requestId ? { paysRequestId: requestId } : {}),
+                    ...(settleMsgId ? { paysMsgId: settleMsgId } : {}),
+                  }
+                : { __payment: true, amount, mode: 'send' };
+          // Legacy settles run through the plain transfer flow, so the sheet
+          // can't record them against a request id — flip the card locally
+          // here so it never offers "Pay" again even if the receipt fails.
+          if (paidMode === 'send' && settleMsgId) {
+            useSettledRequestsStore.getState().markPaid(settleMsgId);
+          }
+          sendText(JSON.stringify(payload)).catch(() => {});
         }}
       />
 

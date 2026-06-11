@@ -1,5 +1,6 @@
 package com.aza.backend.controller;
 
+import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.CampaignRequest;
 import com.aza.backend.service.AdminCampaignService;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/admin/campaigns")
+@RequestMapping("/api/v1/admin/campaigns")
 @RequiredArgsConstructor
 public class AdminCampaignController {
 
@@ -18,14 +19,16 @@ public class AdminCampaignController {
 
     @PostMapping("/send")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> sendCampaign(@RequestBody CampaignRequest request) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> sendCampaign(@RequestBody CampaignRequest request) {
         if (request.getType() == null || request.getSegment() == null || request.getMessage() == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields (type, segment, message)"));
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("VALIDATION_ERROR", "Missing required fields (type, segment, message)"));
         }
-        
+
         // Start async processing
         adminCampaignService.processCampaign(request);
-        
-        return ResponseEntity.ok(Map.of("message", "Campaign queued for sending to segment: " + request.getSegment()));
+
+        return ResponseEntity.ok(ApiResponse.success(
+                Map.of("message", "Campaign queued for sending to segment: " + request.getSegment())));
     }
 }

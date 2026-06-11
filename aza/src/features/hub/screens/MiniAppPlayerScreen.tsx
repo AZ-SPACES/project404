@@ -23,6 +23,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { getMiniApp } from '../miniapps/registry';
 import { reportMiniApp } from '../../../services/api';
+import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 import { useToast } from '../../../providers/ToastProvider';
 import { CloseButton } from '../../../components/ui/CloseButton';
 import Button from '../../../components/ui/Button';
@@ -57,6 +58,7 @@ export default function MiniAppPlayerScreen() {
   const [reportDetails, setReportDetails] = React.useState('');
   const [reportLoading, setReportLoading] = React.useState(false);
   const insets = useSafeAreaInsets();
+  const disabledAppIds = useDisabledMiniApps();
 
   const app = getMiniApp(appId);
 
@@ -130,6 +132,21 @@ export default function MiniAppPlayerScreen() {
       <View style={[styles.notFoundSafeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Mini app not found.</Text>
+          <Button
+            title="Go Back"
+            onPress={handleClose}
+            width="auto"
+          />
+        </View>
+      </View>
+    );
+  }
+
+  if (disabledAppIds.includes(appId)) {
+    return (
+      <View style={[styles.notFoundSafeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{app.name} is temporarily unavailable.</Text>
           <Button
             title="Go Back"
             onPress={handleClose}

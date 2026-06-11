@@ -143,6 +143,10 @@ export const useTransferStore = create<TransferState>((set, get) => ({
     set({ status: 'idle', error: null });
     try {
       await declineMoneyRequestApi(txId);
+      // Wallet query bundles the recent transactions the home screen's
+      // pending-request card is built from — without this, a decline from
+      // chat leaves the card visible on the home screen.
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
     } catch (err) {
       const msg = extractErrorMessage(err);
