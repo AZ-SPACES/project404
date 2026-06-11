@@ -87,6 +87,7 @@ public class UserService {
                 .findMeByEmail(user.getFindMeByEmail())
                 .findMeByHandle(user.getFindMeByHandle())
                 .syncContacts(user.getSyncContacts())
+                .showOnlineStatus(user.getShowOnlineStatus())
                 .billForwardingEnabled(user.getBillForwardingEnabled())
                 .twoFactorEnabled(user.getTwoFactorEnabled())
                 .totpEnabled(user.getTwoFactorSecret() != null)
@@ -418,6 +419,9 @@ public class UserService {
         }
         if (request.getSyncContacts() != null) {
             user.setSyncContacts(request.getSyncContacts());
+        }
+        if (request.getShowOnlineStatus() != null) {
+            user.setShowOnlineStatus(request.getShowOnlineStatus());
         }
         if (request.getBillForwardingEnabled() != null) {
             user.setBillForwardingEnabled(request.getBillForwardingEnabled());

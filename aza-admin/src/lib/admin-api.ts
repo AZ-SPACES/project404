@@ -338,6 +338,10 @@ export function getUserSessions(userId: string): Promise<UserSession[]> {
   return request(`/api/v1/admin/users/${userId}/sessions`);
 }
 
+export function revokeUserSession(userId: string, sessionId: string): Promise<string> {
+  return request(`/api/v1/admin/users/${userId}/sessions/${sessionId}`, { method: "DELETE" });
+}
+
 export function updateUserStatus(userId: string, status: string, reason?: string): Promise<AdminUser> {
   return request(`/api/v1/admin/users/${userId}/status`, {
     method: "PATCH",

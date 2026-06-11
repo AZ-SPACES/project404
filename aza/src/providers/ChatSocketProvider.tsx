@@ -10,6 +10,7 @@
 
 import 'fast-text-encoding';
 import React, { useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 
@@ -94,6 +95,22 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
       useChatStore.getState().setStompClient(null);
     };
   }, [userToken, ready, identity, connect]);
+
+  // Close the socket when the app backgrounds so the server can mark the
+  // session offline promptly (instead of waiting for the broker heartbeat
+  // to time out), and reconnect when the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      const client = clientRef.current;
+      if (!client) return;
+      if (state === 'active') {
+        if (!client.active) client.activate();
+      } else if (state === 'background') {
+        client.deactivate().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // When axios refreshes the access token, tear down the current client
   // and reconnect immediately with the new bearer. Without this the STOMP

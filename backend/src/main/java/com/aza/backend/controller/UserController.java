@@ -105,18 +105,30 @@ public class UserController {
     // ==================== ONLINE STATUS ====================
 
     @GetMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<String>> getOnlineStatus(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(presenceService.getStatus(id)));
+    public ResponseEntity<ApiResponse<String>> getOnlineStatus(
+            @AuthenticationPrincipal User viewer,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                presenceService.getPresenceForId(viewer.getId(), id).getStatus()));
     }
 
     /** Online status + last-seen, used by chat headers to seed presence on open. */
     @GetMapping("/{id}/presence")
-    public ResponseEntity<ApiResponse<com.aza.backend.dto.user.PresenceResponse>> getPresence(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.user.PresenceResponse>> getPresence(
+            @AuthenticationPrincipal User viewer,
+            @PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(
-                com.aza.backend.dto.user.PresenceResponse.builder()
-                        .status(presenceService.getStatus(id))
-                        .lastSeenAt(presenceService.getLastSeen(id))
-                        .build()));
+                presenceService.getPresenceForId(viewer.getId(), id)));
+    }
+
+    /** Batch presence (capped) — seeds online dots on contact/chat lists in one round trip. */
+    @PostMapping("/presence/batch")
+    public ResponseEntity<ApiResponse<java.util.Map<String, com.aza.backend.dto.user.PresenceResponse>>> getPresenceBatch(
+            @AuthenticationPrincipal User viewer,
+            @RequestBody com.aza.backend.dto.user.PresenceBatchRequest request) {
+        java.util.List<UUID> ids = request.getUserIds() != null ? request.getUserIds() : java.util.List.of();
+        return ResponseEntity.ok(ApiResponse.success(
+                presenceService.getPresenceBatch(viewer.getId(), ids)));
     }
 
     // ==================== PRIVACY ====================

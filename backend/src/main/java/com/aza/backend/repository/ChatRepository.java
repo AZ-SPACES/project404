@@ -21,6 +21,15 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
     List<Chat> findAllByUserId(@Param("userId") UUID userId);
 
     /**
+     * Ids of everyone the user shares a chat with — used to scope presence
+     * event fan-out to people who actually know this user.
+     */
+    @Query("SELECT CASE WHEN c.participantOneId = :userId THEN c.participantTwoId " +
+            "ELSE c.participantOneId END FROM Chat c " +
+            "WHERE c.participantOneId = :userId OR c.participantTwoId = :userId")
+    List<UUID> findPartnerIds(@Param("userId") UUID userId);
+
+    /**
      * Find an existing 1:1 chat between two users
      */
     @Query("SELECT c FROM Chat c WHERE " +

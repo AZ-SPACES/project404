@@ -24,4 +24,8 @@ public interface BlockedUserRepository extends JpaRepository<BlockedUser, UUID> 
            "(b.blockerId = :a AND b.blockedUserId = :b) OR " +
            "(b.blockerId = :b AND b.blockedUserId = :a)")
     boolean existsBlockBetween(@Param("a") UUID userA, @Param("b") UUID userB);
+
+    /** All block rows the user is on either side of — for presence fan-out exclusion. */
+    @Query("SELECT b FROM BlockedUser b WHERE b.blockerId = :userId OR b.blockedUserId = :userId")
+    List<BlockedUser> findAllInvolving(@Param("userId") UUID userId);
 }

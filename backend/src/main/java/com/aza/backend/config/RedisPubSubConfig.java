@@ -13,7 +13,8 @@ public class RedisPubSubConfig {
 
     public static final String CHAT_USER_CHANNEL_PREFIX  = "aza:chat_user:";
     public static final String CALL_CHANNEL_PREFIX       = "aza:call:";
-    public static final String PRESENCE_CHANNEL          = "aza:presence";
+    /** Per-user presence channel — events are fanned out only to related users, never broadcast. */
+    public static final String PRESENCE_USER_CHANNEL_PREFIX = "aza:presence_user:";
     public static final String NOTIFY_CHANNEL_PREFIX     = "aza:notify:";
     public static final String ADMIN_SUPPORT_CHANNEL     = "aza:admin_support";
 
