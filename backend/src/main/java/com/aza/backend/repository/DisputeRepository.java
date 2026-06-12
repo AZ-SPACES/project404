@@ -20,6 +20,10 @@ public interface DisputeRepository extends JpaRepository<Dispute, UUID> {
     long countByStatus(Dispute.DisputeStatus status);
     long countByResolvedAtAfter(LocalDateTime since);
 
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByResolvedAtBetween(LocalDateTime start, LocalDateTime end);
+
     @Query("SELECT COALESCE(SUM(d.amount), 0) FROM Dispute d WHERE d.status IN ('OPEN', 'UNDER_REVIEW')")
     BigDecimal sumActiveDisputeValue();
 

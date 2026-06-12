@@ -9,7 +9,6 @@ import com.aza.backend.entity.User;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.AdminAuditService;
 import com.aza.backend.service.AdminService;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -17,23 +16,20 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','SUPPORT','COMPLIANCE')")
 public class AdminUserController {
 
     private final AdminService adminService;
     private final AdminAuditService auditService;
     private final UserRepository userRepository;
     private final com.aza.backend.service.UserService userService;
-    private final com.aza.backend.service.NotificationService notificationService;
-    private final com.aza.backend.util.EmailService emailService;
-    private final com.aza.backend.service.SystemSettingService settingService;
+    private final com.aza.backend.service.StaffRoleService staffRoleService;
+    private final com.aza.backend.service.ApprovalService approvalService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> getUsers(
@@ -64,6 +60,7 @@ public class AdminUserController {
      * Force-logout one device session: deletes the refresh token and blacklists
      * its paired access token, so the device is signed out immediately.
      */
+    @PreAuthorize("hasAnyRole('ADMIN','SUPPORT')")
     @DeleteMapping("/{userId}/sessions/{sessionId}")
     public ResponseEntity<ApiResponse<Object>> revokeUserSession(
             @PathVariable UUID userId,
@@ -84,18 +81,31 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserTransactions(userId, page, Math.min(size, 50))));
     }
 
+    /**
+     * Legacy USER/ADMIN toggle — backed by staff_roles. Granting ADMIN goes
+     * through maker-checker like the staff API (revoking stays direct: it
+     * reduces power and must never be blockable by the person losing it).
+     */
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{userId}/role")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserRole(
+    public ResponseEntity<ApiResponse<Object>> updateUserRole(
             @PathVariable UUID userId,
             @RequestBody AdminRoleRequest request,
             @AuthenticationPrincipal User admin) {
-        AdminUserResponse result = adminService.updateUserRole(userId, request.getRole());
-        User target = userRepository.findById(userId).orElse(null);
-        auditService.log(admin, "CHANGE_ROLE", target,
-                "newRole=" + request.getRole());
-        return ResponseEntity.ok(ApiResponse.success(result));
+        boolean granting = "ADMIN".equalsIgnoreCase(request.getRole());
+        if (granting && staffRoleService.countActiveStaffUsers() > 1) {
+            User target = userRepository.findById(userId)
+                    .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+            return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                    admin, com.aza.backend.entity.PendingApproval.ActionType.GRANT_STAFF_ROLE, userId,
+                    new com.aza.backend.service.ApprovalService.GrantRolePayload("ADMIN"),
+                    "Grant ADMIN to " + target.getEmail())));
+        }
+        staffRoleService.setLegacyRole(admin, userId, request.getRole());
+        return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
     @PatchMapping("/{userId}/status")
     public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserStatus(
             @PathVariable UUID userId,
@@ -116,66 +126,18 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
+    /** Maker-checker: limit changes are submitted for a second COMPLIANCE/ADMIN to approve. */
+    @PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
     @PatchMapping("/{userId}/limits")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserLimits(
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.admin.ApprovalResponse>> updateUserLimits(
             @PathVariable UUID userId,
-            @RequestBody UserLimitsRequest request,
+            @RequestBody com.aza.backend.dto.admin.UserLimitsPayload request,
             @AuthenticationPrincipal User admin) {
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
-
-        com.aza.backend.dto.admin.SystemSettingsResponse settings = settingService.getSettings();
-        java.math.BigDecimal prevDaily = target.getCustomDailyLimitGhs() != null
-                ? target.getCustomDailyLimitGhs() : settings.getMaxDailyTransferGhs();
-        java.math.BigDecimal prevSingle = target.getCustomSingleTransactionLimitGhs() != null
-                ? target.getCustomSingleTransactionLimitGhs() : settings.getMaxSingleTransactionGhs();
-
-        target.setCustomDailyLimitGhs(request.getDailyLimitGhs());
-        target.setCustomSingleTransactionLimitGhs(request.getSingleTransactionLimitGhs());
-        userRepository.save(target);
-
-        java.math.BigDecimal newDaily = request.getDailyLimitGhs() != null
-                ? request.getDailyLimitGhs() : settings.getMaxDailyTransferGhs();
-        java.math.BigDecimal newSingle = request.getSingleTransactionLimitGhs() != null
-                ? request.getSingleTransactionLimitGhs() : settings.getMaxSingleTransactionGhs();
-
-        boolean dailyIncreased = newDaily.compareTo(prevDaily) > 0;
-        boolean singleIncreased = newSingle.compareTo(prevSingle) > 0;
-
-        if (dailyIncreased || singleIncreased) {
-            String firstName = target.getFirstName() != null ? target.getFirstName() : "there";
-            notificationService.sendNotification(
-                    target.getId(),
-                    com.aza.backend.entity.Notification.NotificationType.LIMIT_INCREASE,
-                    "Your transaction limits have been increased",
-                    buildLimitIncreaseBody(dailyIncreased, newDaily, singleIncreased, newSingle),
-                    null, null);
-            emailService.sendLimitIncreaseEmail(
-                    target.getEmail(), firstName,
-                    dailyIncreased, newDaily,
-                    singleIncreased, newSingle);
-        }
-
-        auditService.log(admin, "UPDATE_TRANSACTION_LIMITS", target,
-                "dailyLimit=" + request.getDailyLimitGhs() + " singleLimit=" + request.getSingleTransactionLimitGhs());
-        return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
-    }
-
-    private String buildLimitIncreaseBody(boolean dailyUp, java.math.BigDecimal newDaily,
-                                           boolean singleUp, java.math.BigDecimal newSingle) {
-        if (dailyUp && singleUp) {
-            return "Your daily limit is now GHS " + newDaily.toPlainString()
-                    + " and your single-transaction limit is now GHS " + newSingle.toPlainString() + ".";
-        } else if (dailyUp) {
-            return "Your daily transfer limit has been increased to GHS " + newDaily.toPlainString() + ".";
-        } else {
-            return "Your single-transaction limit has been increased to GHS " + newSingle.toPlainString() + ".";
-        }
-    }
-
-    @Data
-    static class UserLimitsRequest {
-        private BigDecimal dailyLimitGhs;
-        private BigDecimal singleTransactionLimitGhs;
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, com.aza.backend.entity.PendingApproval.ActionType.UPDATE_USER_LIMITS, userId, request,
+                "Set limits for " + target.getEmail() + " (daily=" + request.getDailyLimitGhs()
+                        + ", single=" + request.getSingleTransactionLimitGhs() + ")")));
     }
 }

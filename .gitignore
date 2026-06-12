@@ -18,3 +18,4 @@ aza-web/.next
 
 .DS_Store
 turnserver.conf
+backend/docs

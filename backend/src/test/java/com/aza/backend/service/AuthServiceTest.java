@@ -45,6 +45,7 @@ class AuthServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private AuditService auditService;
     @Mock private GeoLocationService geoLocationService;
+    @Mock private ScreeningService screeningService;
     @Mock private ValueOperations<String, String> valueOps;
 
     private final UUID userId = UUID.randomUUID();
@@ -57,7 +58,8 @@ class AuthServiceTest {
                 userRepository, walletRepository, refreshTokenRepository, transactionRepository,
                 passwordEncoder, jwtUtil, redisTemplate, emailService, rateLimitService,
                 userService, otpService, biometricService, totpService, totpEncryptionService,
-                recoveryCodeRepository, notificationService, auditService, geoLocationService);
+                recoveryCodeRepository, notificationService, auditService, geoLocationService,
+                screeningService);
     }
 
     // ── Signup ────────────────────────────────────────────────────────────────

@@ -13,6 +13,44 @@ export function saveTokens(accessToken: string, refreshToken: string) {
 export function clearTokens() {
   localStorage.removeItem("aza_admin_token");
   localStorage.removeItem("aza_admin_refresh_token");
+  localStorage.removeItem("aza_admin_user");
+}
+
+// ── Staff roles ───────────────────────────────────────────────────────────────
+
+export type StaffRoleName = "ADMIN" | "SUPPORT" | "COMPLIANCE" | "FINANCE";
+
+export function saveUser(user: LoginResult["user"]) {
+  localStorage.setItem("aza_admin_user", JSON.stringify(user));
+}
+
+export function getStoredUser(): LoginResult["user"] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("aza_admin_user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Roles the signed-in staff member holds. Empty when unknown (pre-existing session). */
+export function getStoredRoles(): StaffRoleName[] {
+  const user = getStoredUser();
+  if (!user) return [];
+  const roles = (user.staffRoles ?? []) as StaffRoleName[];
+  if (user.role === "ADMIN" && !roles.includes("ADMIN")) roles.push("ADMIN");
+  return roles;
+}
+
+export function isStaff(user: LoginResult["user"]): boolean {
+  return user.role === "ADMIN" || (user.staffRoles?.length ?? 0) > 0;
+}
+
+/** ADMIN implies every other role, mirroring the backend's expansion. */
+export function hasRole(roles: StaffRoleName[], required: StaffRoleName[]): boolean {
+  if (roles.includes("ADMIN")) return true;
+  return required.some((r) => roles.includes(r));
 }
 
 let isRefreshing = false;
@@ -88,8 +126,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (res.status === 403) {
     // 403 is often "Forbidden" (wrong role) not just expired.
     // If it's truly a session issue, the backend should return 401.
-    // We only kick out on 403 if it's persistent, but for now let's be less aggressive.
-    throw new Error("Forbidden: You don't have permission for this action");
+    const errBody = await res.json().catch(() => null);
+    if (errBody?.error?.code === "STEP_UP_REQUIRED") {
+      // Admin elevation expired — re-verify, then come back here.
+      if (window.location.pathname !== "/step-up") {
+        window.location.href = `/step-up?next=${encodeURIComponent(window.location.pathname)}`;
+      }
+      throw new Error("Verification required");
+    }
+    throw new Error(errBody?.error?.message ?? "Forbidden: You don't have permission for this action");
   }
 
   const body = await res.json();
@@ -111,6 +156,7 @@ export interface LoginResult {
     lastName: string;
     displayName: string;
     role: string;
+    staffRoles?: string[];
   };
 }
 
@@ -349,7 +395,8 @@ export function updateUserStatus(userId: string, status: string, reason?: string
   });
 }
 
-export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
+/** Granting ADMIN goes through maker-checker once a second staff member exists. */
+export function updateUserRole(userId: string, role: string): Promise<AdminUser | Approval> {
   return request(`/api/v1/admin/users/${userId}/role`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
@@ -559,11 +606,12 @@ export function getUserTransactions(userId: string, page = 0, size = 10): Promis
 
 // ── User transaction limits ───────────────────────────────────────────────────
 
+/** Maker-checker: returns the pending approval, not the (unchanged) user. */
 export function updateUserLimits(
   userId: string,
   dailyLimitGhs: number | null,
   singleTransactionLimitGhs: number | null,
-): Promise<AdminUser> {
+): Promise<Approval> {
   return request(`/api/v1/admin/users/${userId}/limits`, {
     method: "PATCH",
     body: JSON.stringify({ dailyLimitGhs, singleTransactionLimitGhs }),
@@ -606,7 +654,8 @@ export function updateChatPriority(chatId: string, priority: string): Promise<Su
 
 // ── Transaction reversal ──────────────────────────────────────────────────────
 
-export function reverseTransaction(txId: string): Promise<AdminTransaction> {
+/** Maker-checker: returns the pending approval; the reversal runs once approved. */
+export function reverseTransaction(txId: string): Promise<Approval> {
   return request(`/api/v1/admin/dashboard/transactions/${txId}/reverse`, { method: "POST" });
 }
 
@@ -875,7 +924,10 @@ export function getSystemSettings(): Promise<SystemSettings> {
   return request("/api/v1/admin/settings");
 }
 
-export function updateSystemSettings(settings: Partial<Omit<SystemSettings, "platformVersion">>): Promise<SystemSettings> {
+/** Maker-checker once a second staff member exists: may return a pending Approval instead. */
+export function updateSystemSettings(
+  settings: Partial<Omit<SystemSettings, "platformVersion">>,
+): Promise<SystemSettings | Approval> {
   return request("/api/v1/admin/settings", {
     method: "PATCH",
     body: JSON.stringify(settings),
@@ -914,7 +966,8 @@ export function getFeeStats(): Promise<FeeStats> {
   return request("/api/v1/admin/fees/stats");
 }
 
-export function updateFeeRule(id: string, data: Partial<Pick<FeeRule, "amount" | "active" | "minFee" | "maxFee">>): Promise<FeeRule> {
+/** Maker-checker: returns the pending approval; the rule changes once approved. */
+export function updateFeeRule(id: string, data: Partial<Pick<FeeRule, "amount" | "active" | "minFee" | "maxFee">>): Promise<Approval> {
   return request(`/api/v1/admin/fees/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -1408,4 +1461,366 @@ export function adminRestoreOAuthClient(clientId: string): Promise<AdminOAuthCli
 
 export function adminDeleteOAuthClient(clientId: string): Promise<void> {
   return request(`/api/v1/admin/oauth/clients/${clientId}`, { method: "DELETE" });
+}
+
+// ── Admin step-up (2FA elevation) ─────────────────────────────────────────────
+
+export interface StepUpStatus {
+  elevated: boolean;
+  method: "TOTP" | "PASSWORD";
+}
+
+export function getStepUpStatus(): Promise<StepUpStatus> {
+  return request("/api/v1/admin/step-up/status");
+}
+
+export function submitStepUp(payload: { code?: string; password?: string }): Promise<{ elevated: boolean }> {
+  return request("/api/v1/admin/step-up", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Staff management ──────────────────────────────────────────────────────────
+
+export interface StaffRoleGrant {
+  role: StaffRoleName;
+  grantedAt: string | null;
+  grantedByEmail: string | null;
+}
+
+export interface StaffMember {
+  userId: string;
+  name: string;
+  email: string;
+  handle: string | null;
+  profileImageUrl: string | null;
+  roles: StaffRoleGrant[];
+}
+
+export function getStaff(): Promise<StaffMember[]> {
+  return request("/api/v1/admin/staff");
+}
+
+/** Maker-checker once a second staff member exists: may return a pending Approval instead. */
+export function grantStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember | Approval> {
+  return request(`/api/v1/admin/staff/${userId}/roles`, {
+    method: "POST",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function isPendingApproval(result: unknown): result is Approval {
+  return typeof result === "object" && result !== null && "actionType" in result && "summary" in result;
+}
+
+export function revokeStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember> {
+  return request(`/api/v1/admin/staff/${userId}/roles/${role}`, { method: "DELETE" });
+}
+
+// ── Authenticated file downloads ──────────────────────────────────────────────
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message ?? `Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ── Maker-checker approvals ───────────────────────────────────────────────────
+
+export interface Approval {
+  id: string;
+  actionType:
+    | "REVERSE_TRANSACTION"
+    | "UPDATE_FEE_RULE"
+    | "UPDATE_USER_LIMITS"
+    | "GRANT_STAFF_ROLE"
+    | "UPDATE_SYSTEM_SETTINGS";
+  targetId: string;
+  summary: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+  requestedByEmail: string;
+  requestedAt: string;
+  reviewedByEmail: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+}
+
+export function getApprovals(status?: string, page = 0, size = 20): Promise<Page<Approval>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/approvals?${params}`);
+}
+
+export function getApprovalStats(): Promise<{ pending: number }> {
+  return request("/api/v1/admin/approvals/stats");
+}
+
+export function approveRequest(id: string, notes?: string): Promise<Approval> {
+  return request(`/api/v1/admin/approvals/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function rejectRequest(id: string, notes?: string): Promise<Approval> {
+  return request(`/api/v1/admin/approvals/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+// ── Reconciliation & safeguarding ─────────────────────────────────────────────
+
+export interface SafeguardingSnapshot {
+  id: string;
+  customerFloat: number;
+  merchantFloat: number;
+  safeguardingBalance: number;
+  variance: number;
+  breach: boolean;
+  recordedBy: string | null;
+  createdAt: string;
+}
+
+export interface ReconBreak {
+  id: string;
+  importLabel: string;
+  statementReference: string;
+  statementAmount: number;
+  direction: "CREDIT" | "DEBIT";
+  reason: "NO_MATCH" | "AMOUNT_MISMATCH";
+  internalAmount: number | null;
+  status: "OPEN" | "RESOLVED";
+  resolutionNotes: string | null;
+  createdAt: string;
+}
+
+export function getSafeguardingHistory(page = 0, size = 20): Promise<Page<SafeguardingSnapshot>> {
+  return request(`/api/v1/admin/recon/safeguarding?page=${page}&size=${size}`);
+}
+
+export function takeSafeguardingSnapshot(safeguardingBalance: number): Promise<SafeguardingSnapshot> {
+  return request("/api/v1/admin/recon/safeguarding", {
+    method: "POST",
+    body: JSON.stringify({ safeguardingBalance }),
+  });
+}
+
+export function importStatement(label: string, csv: string): Promise<{ matched: number; breaks: number }> {
+  return request("/api/v1/admin/recon/import", {
+    method: "POST",
+    body: JSON.stringify({ label, csv }),
+  });
+}
+
+export function getReconBreaks(status?: string, page = 0, size = 20): Promise<Page<ReconBreak>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/recon/breaks?${params}`);
+}
+
+export function resolveReconBreak(id: string, notes: string): Promise<ReconBreak> {
+  return request(`/api/v1/admin/recon/breaks/${id}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+// ── Regulatory filings & accounting exports ───────────────────────────────────
+
+export function downloadStrExport(flaggedId: string): Promise<void> {
+  return downloadFile(`/api/v1/admin/regulatory/str/${flaggedId}`, `str-${flaggedId}.xml`);
+}
+
+export function downloadMonthlyReturns(month: string): Promise<void> {
+  return downloadFile(`/api/v1/admin/regulatory/returns?month=${month}`, `bog-returns-${month}.csv`);
+}
+
+export function downloadAccountingJournal(from: string, to: string): Promise<void> {
+  return downloadFile(`/api/v1/admin/accounting/journal?from=${from}&to=${to}`, `journal-${from}-to-${to}.csv`);
+}
+
+// ── Sanctions / PEP screening ─────────────────────────────────────────────────
+
+export interface WatchlistEntry {
+  id: string;
+  listName: string;
+  fullName: string;
+  entryType: "SANCTION" | "PEP";
+  country: string | null;
+  dateOfBirth: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface ScreeningMatch {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  listName: string;
+  listEntryName: string;
+  entryType: "SANCTION" | "PEP";
+  matchScore: number;
+  status: "PENDING_REVIEW" | "FALSE_POSITIVE" | "CONFIRMED";
+  notes: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+export function getScreeningStats(): Promise<{ pendingMatches: number; activeListEntries: number }> {
+  return request("/api/v1/admin/screening/stats");
+}
+
+export function runScreening(): Promise<{ newMatches: number }> {
+  return request("/api/v1/admin/screening/run", { method: "POST" });
+}
+
+export function getScreeningMatches(status?: string, page = 0, size = 20): Promise<Page<ScreeningMatch>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/screening/matches?${params}`);
+}
+
+export function reviewScreeningMatch(id: string, confirmed: boolean, notes?: string): Promise<ScreeningMatch> {
+  return request(`/api/v1/admin/screening/matches/${id}/review`, {
+    method: "POST",
+    body: JSON.stringify({ confirmed, notes }),
+  });
+}
+
+export function getWatchlist(): Promise<WatchlistEntry[]> {
+  return request("/api/v1/admin/screening/list");
+}
+
+export function addWatchlistEntry(data: {
+  listName: string;
+  fullName: string;
+  entryType: string;
+  country?: string;
+  dateOfBirth?: string;
+  notes?: string;
+}): Promise<WatchlistEntry> {
+  return request("/api/v1/admin/screening/list", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function importUnList(): Promise<{ imported: number }> {
+  return request("/api/v1/admin/screening/list/import-un", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+// ── Risk rules ────────────────────────────────────────────────────────────────
+
+export interface RiskRules {
+  largeTransferGhs: string;
+  velocityMaxHourly: string;
+}
+
+export function getRiskRules(): Promise<RiskRules> {
+  return request("/api/v1/admin/risk/rules");
+}
+
+export function updateRiskRules(rules: Partial<RiskRules>): Promise<RiskRules> {
+  return request("/api/v1/admin/risk/rules", {
+    method: "PATCH",
+    body: JSON.stringify(rules),
+  });
+}
+
+// ── Audit log integrity anchors ───────────────────────────────────────────────
+
+export interface AuditAnchor {
+  id: string;
+  anchorDate: string;
+  entryCount: number;
+  contentHash: string;
+  prevHash: string;
+  createdAt: string;
+}
+
+export interface AnchorVerification {
+  date: string;
+  valid: boolean;
+  anchoredCount: number;
+  currentCount: number;
+}
+
+export function getAuditAnchors(): Promise<AuditAnchor[]> {
+  return request("/api/v1/admin/audit-anchors");
+}
+
+export function verifyAuditAnchors(): Promise<AnchorVerification[]> {
+  return request("/api/v1/admin/audit-anchors/verify", { method: "POST", body: JSON.stringify({}) });
+}
+
+export function importWatchlist(csv: string): Promise<{ imported: number }> {
+  return request("/api/v1/admin/screening/list/import", {
+    method: "POST",
+    body: JSON.stringify({ csv }),
+  });
+}
+
+export function deactivateWatchlistEntry(id: string): Promise<string> {
+  return request(`/api/v1/admin/screening/list/${id}`, { method: "DELETE" });
+}
+
+// ── DSAR data requests ────────────────────────────────────────────────────────
+
+export interface DataRequest {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  type: "ACCESS" | "DELETION";
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
+  dueDate: string;
+  overdue: boolean;
+  notes: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export function getDataRequests(status?: string, page = 0, size = 20): Promise<Page<DataRequest>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/data-requests?${params}`);
+}
+
+export function createDataRequest(userId: string, type: string, notes?: string): Promise<DataRequest> {
+  return request("/api/v1/admin/data-requests", {
+    method: "POST",
+    body: JSON.stringify({ userId, type, notes }),
+  });
+}
+
+export function updateDataRequestStatus(id: string, status: string, notes?: string): Promise<DataRequest> {
+  return request(`/api/v1/admin/data-requests/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, notes }),
+  });
+}
+
+export function downloadUserDataExport(userId: string): Promise<void> {
+  return downloadFile(`/api/v1/admin/data-requests/user/${userId}/export`, `user-data-${userId}.json`);
 }

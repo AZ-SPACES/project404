@@ -60,6 +60,7 @@ public class TransferService {
     private final MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
     private final AnomalyDetectionService anomalyDetectionService;
     private final AuditService auditService;
+    private final RiskEngineService riskEngineService;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -361,6 +362,8 @@ public class TransferService {
             transaction.setCompletedAt(completedAt);
             transactionRepository.save(transaction);
 
+            riskEngineService.evaluateTransfer(transaction, sender);
+
             webSocketPublisher.publishNotification(merchant.getUserId(), WebSocketEventType.TRANSFER_UPDATE,
                     Map.of(
                             "transactionId", transaction.getId().toString(),
@@ -422,6 +425,8 @@ public class TransferService {
             LocalDateTime completedAt = LocalDateTime.now();
             transaction.setCompletedAt(completedAt);
             transactionRepository.save(transaction);
+
+            riskEngineService.evaluateTransfer(transaction, sender);
 
             webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
                     Map.of(

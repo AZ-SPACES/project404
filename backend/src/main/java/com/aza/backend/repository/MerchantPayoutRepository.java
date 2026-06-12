@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface MerchantPayoutRepository extends JpaRepository<MerchantPayout, UUID> {
 
     Page<MerchantPayout> findAllByMerchantIdOrderByRequestedAtDesc(UUID merchantId, Pageable pageable);
+
+    java.util.List<MerchantPayout> findByStatusAndCompletedAtBetween(MerchantPayout.PayoutStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }
