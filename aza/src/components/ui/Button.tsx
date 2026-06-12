@@ -1,7 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, DimensionValue, ActivityIndicator, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, DimensionValue, ActivityIndicator, View, TouchableOpacityProps } from 'react-native';
 
-interface ButtonProps {
+interface ButtonProps extends TouchableOpacityProps {
   title: string;
   onPress: () => void;
   style?: ViewStyle | ViewStyle[];

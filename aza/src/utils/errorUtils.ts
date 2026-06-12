@@ -19,10 +19,27 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
     | Record<string, unknown>
     | undefined;
 
-  if (data) {
-    const pick = (v: unknown): string | null =>
-      typeof v === 'string' && v.trim() ? v : null;
+  const containsErrorCode = (str: string): boolean => {
+    if (/status code \d+/i.test(str)) return true;
+    if (/error( code)?[: ]?\d{3}\b/i.test(str)) return true;
+    if (/^\d{3}\b/.test(str)) return true;
+    if (/http \d{3}\b/i.test(str)) return true;
+    // Catch cases like "Request failed with status code 403" explicitly
+    if (/\b(?:400|401|402|403|404|409|422|429|500|502|503|504)\b/.test(str) && /(unauthorized|forbidden|not found|bad gateway|server error)/i.test(str)) {
+      return true;
+    }
+    return false;
+  };
 
+  const pick = (v: unknown): string | null => {
+    if (typeof v === 'string' && v.trim()) {
+      if (containsErrorCode(v)) return null;
+      return v;
+    }
+    return null;
+  };
+
+  if (data) {
     const errorsFirst =
       Array.isArray(data.errors) && data.errors.length > 0
         ? pick((data.errors[0] as Record<string, unknown>)?.message) ??
@@ -40,7 +57,9 @@ export function extractErrorMessage(err: unknown, fallback = 'Something went wro
   }
 
   const msg = (axiosErr as { message?: unknown }).message;
-  if (typeof msg === 'string' && msg.trim()) return msg;
+  if (typeof msg === 'string' && msg.trim()) {
+    if (!containsErrorCode(msg)) return msg;
+  }
 
   return fallback;
 }

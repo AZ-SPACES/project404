@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Platfo
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeColors, Typography, Spacing, Radius, LightColors, DarkColors } from '../../theme';
+import Button from './Button';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -73,13 +74,14 @@ function ErrorScreen({ error, onReset }: { error: Error | null; onReset: () => v
         </Text>
 
         <View style={styles.actions}>
-          <TouchableOpacity 
-            style={styles.primaryButton} 
+          <Button
+            title="Reload Application"
             onPress={onReset}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.primaryButtonText}>Reload Application</Text>
-          </TouchableOpacity>
+            backgroundColor={Colors.textPrimary}
+            textColor={Colors.white}
+            borderRadius={Radius.md}
+            style={{ height: 52 }}
+          />
 
           {__DEV__ && (
             <TouchableOpacity 
