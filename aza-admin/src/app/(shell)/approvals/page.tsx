@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<string, string> = {
   UPDATE_FEE_RULE: "Fee Rule Change",
   UPDATE_USER_LIMITS: "User Limit Change",
   GRANT_STAFF_ROLE: "Staff Role Grant",
+  CHANGE_STAFF_ROLE: "Staff Role Change",
   UPDATE_SYSTEM_SETTINGS: "System Settings Change",
 };
 

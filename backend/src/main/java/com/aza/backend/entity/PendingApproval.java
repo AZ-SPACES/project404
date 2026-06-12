@@ -67,6 +67,7 @@ public class PendingApproval {
         UPDATE_FEE_RULE,        // approver needs FINANCE
         UPDATE_USER_LIMITS,     // approver needs COMPLIANCE
         GRANT_STAFF_ROLE,       // approver needs ADMIN
+        CHANGE_STAFF_ROLE,      // approver needs ADMIN
         UPDATE_SYSTEM_SETTINGS  // approver needs ADMIN
     }
 
