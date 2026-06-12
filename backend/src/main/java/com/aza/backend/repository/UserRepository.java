@@ -32,6 +32,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByRole(User.UserRole role);
 
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
 
     @Query("SELECT u FROM User u WHERE " +
             "(LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

@@ -18,6 +18,10 @@ public interface FlaggedTransactionRepository extends JpaRepository<FlaggedTrans
     long countByFlaggedAtAfter(LocalDateTime since);
     long countByRiskScoreGreaterThanEqual(int score);
 
+    long countByFlaggedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByStatusAndReviewedAtBetween(FlaggedTransaction.FlagStatus status, LocalDateTime start, LocalDateTime end);
+
     @Query("SELECT AVG(f.riskScore) FROM FlaggedTransaction f")
     Double avgRiskScore();
 }

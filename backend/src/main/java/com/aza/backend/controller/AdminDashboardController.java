@@ -3,9 +3,12 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.AdminStatsResponse;
 import com.aza.backend.dto.admin.AdminTransactionResponse;
+import com.aza.backend.dto.admin.ApprovalResponse;
 import com.aza.backend.dto.admin.LiveStatsResponse;
+import com.aza.backend.entity.PendingApproval;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AdminService;
+import com.aza.backend.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,7 @@ import java.util.UUID;
 public class AdminDashboardController {
 
     private final AdminService adminService;
+    private final ApprovalService approvalService;
 
     @GetMapping("/stats")
     public ResponseEntity<ApiResponse<AdminStatsResponse>> getStats() {
@@ -46,11 +50,16 @@ public class AdminDashboardController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getLiveStats()));
     }
 
+    /** Maker-checker: submits a reversal request; a second FINANCE/ADMIN must approve. */
     @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
     @PostMapping("/transactions/{id}/reverse")
-    public ResponseEntity<ApiResponse<AdminTransactionResponse>> reverseTransaction(
+    public ResponseEntity<ApiResponse<ApprovalResponse>> reverseTransaction(
             @PathVariable UUID id,
             @AuthenticationPrincipal User admin) {
-        return ResponseEntity.ok(ApiResponse.success(adminService.reverseTransaction(id, admin)));
+        AdminTransactionResponse tx = adminService.getTransactionById(id);
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.REVERSE_TRANSACTION, id, null,
+                "Reverse transaction of GHS " + tx.getAmount() + " from "
+                        + tx.getSenderName() + " to " + tx.getRecipientName())));
     }
 }

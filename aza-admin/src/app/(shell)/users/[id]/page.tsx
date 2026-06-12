@@ -189,9 +189,7 @@ export default function UserDetailPage() {
       dailyLimit !== "" ? Number(dailyLimit) : null,
       singleLimit !== "" ? Number(singleLimit) : null,
     ),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["user", userId], updated);
-    },
+    // Maker-checker: limits don't change until a second COMPLIANCE/ADMIN approves.
   });
 
   useEffect(() => {
@@ -461,7 +459,9 @@ export default function UserDetailPage() {
           <p className="text-red-400 text-xs mt-3">{(limitsMutation.error as Error).message}</p>
         )}
         {limitsMutation.isSuccess && (
-          <p className="text-emerald-400 text-xs mt-3">Limits saved.</p>
+          <p className="text-emerald-400 text-xs mt-3">
+            Submitted — another COMPLIANCE/ADMIN staff member must approve in Approvals.
+          </p>
         )}
         <button
           onClick={() => limitsMutation.mutate()}
