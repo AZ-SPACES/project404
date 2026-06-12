@@ -16,6 +16,7 @@ import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import { extractErrorMessage } from '../../../../../utils/errorUtils';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 import StatusBadge from '../components/StatusBadge';
 
 type TeamRole = 'ADMIN' | 'DEVELOPER' | 'VIEWER';
@@ -94,22 +95,28 @@ function InviteModal({ visible, onClose, onInvited, Colors }: any) {
               </TouchableOpacity>
             ))}
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: canSubmit ? Colors.primary : Colors.border,
-                borderRadius: 12, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.md,
-              }}
+            <Button
+              title="Send Invite"
               onPress={submit}
-              disabled={!canSubmit || saving}
-            >
-              {saving ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Send Invite</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!canSubmit}
+              loading={saving}
+              backgroundColor={Colors.primary}
+              borderRadius={12}
+              paddingVertical={Spacing.md}
+              fontSize={15}
+              style={{ marginTop: Spacing.md }}
+            />
 
-            <TouchableOpacity onPress={onClose} style={{ marginTop: Spacing.md, alignItems: 'center' }}>
-              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              style={{ marginTop: Spacing.md }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -179,17 +186,17 @@ export default function TeamPage({ goBack, Colors, styles }: NavProps) {
     <View style={{ flex: 1 }}>
       <InternalHeader title="Team" onBack={goBack} Colors={Colors} styles={styles} />
 
-      <TouchableOpacity
-        style={{
-          marginHorizontal: Spacing.md, marginTop: Spacing.sm,
-          backgroundColor: Colors.primary, borderRadius: Radius.md, padding: Spacing.md,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
-        }}
+      <Button
+        title="Invite Member"
         onPress={() => setInviting(true)}
-      >
-        <Feather name="user-plus" size={16} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Invite Member</Text>
-      </TouchableOpacity>
+        leftIcon={<Feather name="user-plus" size={16} color="#fff" />}
+        backgroundColor={Colors.primary}
+        borderRadius={Radius.md}
+        paddingVertical={Spacing.md}
+        fontSize={14}
+        width="auto"
+        style={{ marginHorizontal: Spacing.md, marginTop: Spacing.sm }}
+      />
 
       {loading ? (
         <View style={[styles.center, { marginTop: Spacing.xl }]}><ActivityIndicator color={Colors.primary} /></View>

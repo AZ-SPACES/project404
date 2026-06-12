@@ -5,11 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
@@ -19,6 +17,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { queryKeys } from '../../../lib/queryKeys';
 import { getUserLimits, requestLimitIncrease } from '../../../services/api';
 import { formatCurrency } from '../../../utils/transactionUtils';
@@ -74,13 +73,17 @@ export default function LimitIncreaseRequestScreen() {
             We've received your limit increase request and will review it within 2 business days.
             You'll be notified by email and in the app once a decision is made.
           </Text>
-          <TouchableOpacity
-            style={styles.doneButton}
+          <Button
+            title="Done"
             onPress={() => navigation.goBack()}
+            backgroundColor={Colors.primary}
+            textColor={Colors.secondary}
+            borderRadius={Radius.sm}
+            paddingVertical={14}
+            paddingHorizontal={Spacing.xl * 2}
+            width="auto"
             activeOpacity={0.8}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
+          />
         </View>
       </SafeAreaView>
     );
@@ -167,17 +170,17 @@ export default function LimitIncreaseRequestScreen() {
             <Text style={styles.errorText}>{(mutation.error as Error).message}</Text>
           )}
 
-          <TouchableOpacity
-            style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+          <Button
+            title="Submit request"
             onPress={() => mutation.mutate()}
             disabled={!canSubmit}
+            loading={mutation.isPending}
+            backgroundColor={Colors.primary}
+            textColor={Colors.secondary}
+            borderRadius={Radius.sm}
+            style={{ marginTop: Spacing.xl }}
             activeOpacity={0.8}
-          >
-            {mutation.isPending
-              ? <ActivityIndicator color={Colors.secondary} size="small" />
-              : <Text style={styles.submitButtonText}>Submit request</Text>
-            }
-          </TouchableOpacity>
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -306,20 +309,6 @@ function createStyles(Colors: ThemeColors) {
     },
 
     // Submit
-    submitButton: {
-      backgroundColor: Colors.primary,
-      borderRadius: Radius.sm,
-      paddingVertical: 16,
-      alignItems: 'center',
-      marginTop: Spacing.xl,
-    },
-    submitButtonDisabled: {
-      opacity: 0.4,
-    },
-    submitButtonText: {
-      ...Typography.button,
-      color: Colors.secondary,
-    },
 
     // Success
     successContainer: {
@@ -349,17 +338,6 @@ function createStyles(Colors: ThemeColors) {
       textAlign: 'center',
       lineHeight: 22,
       marginBottom: Spacing.xl,
-    },
-    doneButton: {
-      backgroundColor: Colors.primary,
-      borderRadius: Radius.sm,
-      paddingVertical: 14,
-      paddingHorizontal: Spacing.xl * 2,
-      alignItems: 'center',
-    },
-    doneButtonText: {
-      ...Typography.button,
-      color: Colors.secondary,
     },
   });
 }

@@ -17,6 +17,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { useChatStore } from '../../../store/chatStore';
 import { getChatBackupMeta, deleteChatBackup } from '../../../services/api';
 import {
@@ -235,14 +236,17 @@ export default function ChatBackupScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
-            disabled={!!busy}
+          <Button
+            title="Request sync"
             onPress={handleSyncFromDevice}
+            disabled={!!busy}
+            backgroundColor={Colors.primary}
+            borderRadius={Radius.full}
+            paddingVertical={12}
+            fontSize={14}
+            style={{ marginTop: Spacing.sm }}
             activeOpacity={0.85}
-          >
-            <Text style={styles.primaryBtnText}>Request sync</Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Encrypted backup */}
@@ -264,24 +268,32 @@ export default function ChatBackupScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
-            disabled={!!busy}
+          <Button
+            title={meta?.exists ? 'Back up now' : 'Turn on backup'}
             onPress={handleBackupNow}
+            disabled={!!busy}
+            backgroundColor={Colors.primary}
+            borderRadius={Radius.full}
+            paddingVertical={12}
+            fontSize={14}
+            style={{ marginTop: Spacing.sm }}
             activeOpacity={0.85}
-          >
-            <Text style={styles.primaryBtnText}>{meta?.exists ? 'Back up now' : 'Turn on backup'}</Text>
-          </TouchableOpacity>
+          />
 
           {meta?.exists && (
-            <TouchableOpacity
-              style={[styles.secondaryBtn, busy && styles.btnDisabled]}
-              disabled={!!busy}
+            <Button
+              title="Restore from backup"
               onPress={() => setShowRestoreModal(true)}
+              disabled={!!busy}
+              backgroundColor="transparent"
+              fontSize={14}
+              fontWeight="600"
+              borderRadius={Radius.full}
+              paddingVertical={12}
+              style={{ borderWidth: 1, borderColor: Colors.primary, marginTop: Spacing.sm }}
+              textStyle={{ color: Colors.primary }}
               activeOpacity={0.85}
-            >
-              <Text style={styles.secondaryBtnText}>Restore from backup</Text>
-            </TouchableOpacity>
+            />
           )}
 
           {hasLocalKey && (
@@ -314,15 +326,27 @@ export default function ChatBackupScreen() {
               backup — AZA cannot recover it for you.
             </Text>
             <Text style={styles.codeText} selectable>{newCode}</Text>
-            <TouchableOpacity
-              style={styles.secondaryBtn}
+            <Button
+              title="Share / save"
               onPress={() => { if (newCode) Share.share({ message: newCode }).catch(() => {}); }}
-            >
-              <Text style={styles.secondaryBtnText}>Share / save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleCodeSaved} activeOpacity={0.85}>
-              <Text style={styles.primaryBtnText}>I've saved my code</Text>
-            </TouchableOpacity>
+              backgroundColor="transparent"
+              textColor={Colors.primary}
+              fontSize={14}
+              fontWeight="600"
+              borderRadius={Radius.full}
+              paddingVertical={12}
+              style={{ borderWidth: 1, borderColor: Colors.primary, marginTop: Spacing.sm }}
+            />
+            <Button
+              title="I've saved my code"
+              onPress={handleCodeSaved}
+              backgroundColor={Colors.primary}
+              borderRadius={Radius.full}
+              paddingVertical={12}
+              fontSize={14}
+              style={{ marginTop: Spacing.sm }}
+              activeOpacity={0.85}
+            />
           </View>
         </View>
       </Modal>
@@ -351,9 +375,16 @@ export default function ChatBackupScreen() {
               autoCorrect={false}
               multiline
             />
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleRestore} activeOpacity={0.85}>
-              <Text style={styles.primaryBtnText}>Restore</Text>
-            </TouchableOpacity>
+            <Button
+              title="Restore"
+              onPress={handleRestore}
+              backgroundColor={Colors.primary}
+              borderRadius={Radius.full}
+              paddingVertical={12}
+              fontSize={14}
+              style={{ marginTop: Spacing.sm }}
+              activeOpacity={0.85}
+            />
             <TouchableOpacity
               style={styles.linkBtn}
               onPress={() => { setShowRestoreModal(false); setRestoreCode(''); }}
@@ -404,28 +435,8 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     },
     rowTitle: { ...Typography.body, fontWeight: '600', color: Colors.textPrimary },
     rowSubtitle: { ...Typography.body, fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-    primaryBtn: {
-      backgroundColor: Colors.primary,
-      borderRadius: Radius.full,
-      paddingVertical: 12,
-      alignItems: 'center',
-      marginTop: Spacing.sm,
-      alignSelf: 'stretch',
-    },
-    primaryBtnText: { ...Typography.body, fontWeight: '700', color: '#fff' },
-    secondaryBtn: {
-      borderRadius: Radius.full,
-      borderWidth: 1,
-      borderColor: Colors.primary,
-      paddingVertical: 12,
-      alignItems: 'center',
-      marginTop: Spacing.sm,
-      alignSelf: 'stretch',
-    },
-    secondaryBtnText: { ...Typography.body, fontWeight: '600', color: Colors.primary },
     linkBtn: { alignItems: 'center', paddingVertical: 10 },
     linkBtnText: { ...Typography.body, fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-    btnDisabled: { opacity: 0.5 },
     progressCard: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -18,6 +18,7 @@ import { GifPickerModal } from './GifPickerModal';
 import { StickerPickerModal } from './StickerPickerModal';
 import { ContactPickerSheet } from './ContactPickerSheet';
 import { PollCreatorSheet } from './PollCreatorSheet';
+import Button from '../ui/Button';
 import { Message, Contact, MoreAction, MenuAnchor, AttachmentAnchor } from './chatTypes';
 import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { blockUser } from '../../services/api';
@@ -347,13 +348,30 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
             <Feather name="lock" size={40} color={Colors.primary} />
             <Text style={styles.chatLockTitle}>Chat Locked</Text>
             <Text style={styles.chatLockSubtitle}>This chat is protected with biometric authentication</Text>
-            <TouchableOpacity style={styles.chatLockBtn} activeOpacity={0.85} onPress={handleBiometricUnlock}>
-              <Feather name="unlock" size={18} color="#fff" />
-              <Text style={styles.chatLockBtnText}>Unlock Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleBack} style={{ marginTop: 12 }}>
-              <Text style={[styles.chatLockSubtitle, { color: Colors.textSecondary }]}>Go Back</Text>
-            </TouchableOpacity>
+            <Button
+              title="Unlock Chat"
+              onPress={handleBiometricUnlock}
+              leftIcon={<Feather name="unlock" size={18} color="#fff" />}
+              backgroundColor={Colors.primary}
+              borderRadius={Radius.full}
+              paddingVertical={14}
+              paddingHorizontal={Spacing.xl}
+              width="auto"
+              style={{ marginTop: 8 }}
+              activeOpacity={0.85}
+            />
+            <Button
+              title="Go Back"
+              onPress={handleBack}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              paddingHorizontal={0}
+              width="auto"
+              style={{ marginTop: 12 }}
+            />
           </View>
         </View>
       )}
@@ -460,12 +478,6 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
     chatLockCard: { alignItems: 'center', gap: 12, paddingHorizontal: Spacing.xl },
     chatLockTitle: { ...Typography.body, fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
     chatLockSubtitle: { ...Typography.body, fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
-    chatLockBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: Colors.primary, borderRadius: Radius.full,
-      paddingHorizontal: Spacing.xl, paddingVertical: 14, marginTop: 8,
-    },
-    chatLockBtnText: { ...Typography.body, fontWeight: '700', color: '#fff', fontSize: 16 },
     toastContainer: {
       position: 'absolute', bottom: 80,
       left: 0, right: 0, alignItems: 'center', zIndex: 100,

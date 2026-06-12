@@ -8,6 +8,7 @@ import { getDocIcon, formatBytes } from './chatTypes';
 import { useReactionStore, EmojiReaction } from '../../store/reactionStore';
 import { extractFirstUrl, fetchLinkPreview, LinkPreview } from '../../utils/linkPreview';
 import { usePollStore } from '../../store/pollStore';
+import Button from '../ui/Button';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -1126,21 +1127,30 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             </Text>
             {!isMe && paymentData.mode === 'request' && paymentStatus === 'pending' && (
               <>
-                <TouchableOpacity
-                  style={styles.paymentPayBtn}
-                  activeOpacity={0.85}
+                <Button
+                  title={`Pay GH¢${paymentData.amount.toFixed(2)}`}
                   onPress={() => onPayPress?.(paymentData.amount, paymentData.requestId, message.id)}
-                >
-                  <Text style={styles.paymentPayBtnText}>Pay GH¢{paymentData.amount.toFixed(2)}</Text>
-                </TouchableOpacity>
+                  backgroundColor="#fff"
+                  textColor="#000"
+                  borderRadius={Radius.full}
+                  paddingVertical={10}
+                  fontSize={15}
+                  style={{ marginBottom: 4 }}
+                  activeOpacity={0.85}
+                />
                 {onDeclinePress && (
-                  <TouchableOpacity
-                    style={styles.paymentDeclineBtn}
-                    activeOpacity={0.85}
+                  <Button
+                    title="Decline"
                     onPress={() => onDeclinePress(paymentData.requestId, message.id)}
-                  >
-                    <Text style={styles.paymentDeclineBtnText}>Decline</Text>
-                  </TouchableOpacity>
+                    backgroundColor="transparent"
+                    textColor="#fff"
+                    borderRadius={Radius.full}
+                    paddingVertical={10}
+                    fontSize={15}
+                    fontWeight="600"
+                    style={{ borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', marginBottom: 4 }}
+                    activeOpacity={0.85}
+                  />
                 )}
               </>
             )}
@@ -1448,23 +1458,6 @@ const createStyles = (Colors: ThemeColors, isDark: boolean, fontSize = 15) => {
       marginTop: 2,
       marginBottom: Spacing.md,
     },
-    paymentPayBtn: {
-      backgroundColor: '#fff',
-      borderRadius: Radius.full,
-      paddingVertical: 10,
-      alignItems: 'center',
-      marginBottom: 4,
-    },
-    paymentPayBtnText: { color: '#000', fontWeight: '700', fontSize: 15 },
-    paymentDeclineBtn: {
-      borderRadius: Radius.full,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.35)',
-      paddingVertical: 10,
-      alignItems: 'center',
-      marginBottom: 4,
-    },
-    paymentDeclineBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
     paymentStatusBadge: {
       borderRadius: Radius.full,
       paddingVertical: 6,

@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { useChatThemeStore, ChatWallpaper, ChatFontSize } from '../../../store/chatThemeStore';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -673,12 +674,30 @@ export default function ChatThemeScreen() {
             <Text style={[styles.sliderLabel, { color: Colors.textSecondary }]}>Brightness</Text>
             <ColorSlider gradientColors={['#000000', hsbToHex(hue, sat, 1)]} value={bri} onChange={setBri} />
             <View style={styles.sheetActions}>
-              <TouchableOpacity style={styles.sheetBtnCancel} onPress={() => setHexVisible(false)} activeOpacity={0.8}>
-                <Text style={styles.sheetBtnCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.sheetBtnApply} onPress={handleApplyColor} activeOpacity={0.8}>
-                <Text style={styles.sheetBtnApplyText}>Apply</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                onPress={() => setHexVisible(false)}
+                backgroundColor={isDark ? Colors.surface : '#F3F4F6'}
+                textColor={Colors.textPrimary}
+                borderRadius={Radius.md}
+                paddingVertical={14}
+                width="auto"
+                style={{ flex: 1 }}
+                textStyle={Typography.button}
+                activeOpacity={0.8}
+              />
+              <Button
+                title="Apply"
+                onPress={handleApplyColor}
+                backgroundColor={Colors.primary}
+                textColor={Colors.white}
+                borderRadius={Radius.md}
+                paddingVertical={14}
+                width="auto"
+                style={{ flex: 1 }}
+                textStyle={Typography.button}
+                activeOpacity={0.8}
+              />
             </View>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -767,9 +786,5 @@ function createStyles(Colors: ThemeColors, isDark: boolean) {
     colorPreviewHex: { fontSize: 13, fontWeight: '600', marginTop: 8, letterSpacing: 1 },
     sliderLabel: { ...Typography.caption, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
     sheetActions: { flexDirection: 'row', gap: Spacing.md, marginTop: 8 },
-    sheetBtnCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: isDark ? Colors.surface : '#F3F4F6', alignItems: 'center' },
-    sheetBtnCancelText: { ...Typography.button, color: Colors.textPrimary },
-    sheetBtnApply: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: 'center' },
-    sheetBtnApplyText: { ...Typography.button, color: Colors.white },
   });
 }

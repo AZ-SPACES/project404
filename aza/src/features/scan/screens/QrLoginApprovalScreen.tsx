@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors } from '../../../theme';
 import { RootStackParamList } from '../../../navigation/types';
 import { authorizeQrLogin, fetchOAuthClientInfo } from '../../../services/api';
+import Button from '../../../components/ui/Button';
 
 type RouteType = RouteProp<RootStackParamList, 'QrLoginApproval'>;
 
@@ -100,9 +101,15 @@ const QrLoginApprovalScreen = () => {
               ? `${displayName} can now access your account with the permissions you approved.`
               : `You can now continue in the ${displayName}.`}
           </Text>
-          <TouchableOpacity style={styles.doneButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
+          <Button
+            title="Done"
+            onPress={() => navigation.goBack()}
+            backgroundColor={Colors.primary}
+            textColor={Colors.black}
+            borderRadius={26}
+            paddingVertical={0}
+            style={{ height: 52 }}
+          />
         </View>
       </SafeAreaView>
     );
@@ -184,21 +191,27 @@ const QrLoginApprovalScreen = () => {
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.approveButton, { backgroundColor: Colors.primary }]}
+          <Button
+            title={isThirdParty ? 'Approve Access' : 'Approve Login'}
             onPress={handleApprove}
+            loading={loading}
+            backgroundColor={Colors.primary}
+            textColor={Colors.black}
+            borderRadius={26}
+            paddingVertical={0}
+            style={{ height: 52 }}
+          />
+          <Button
+            title="Deny"
+            onPress={handleDeny}
             disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color={Colors.black} />
-              : <Text style={styles.approveText}>
-                  {isThirdParty ? 'Approve Access' : 'Approve Login'}
-                </Text>}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.denyButton} onPress={handleDeny} disabled={loading}>
-            <Text style={[styles.denyText, { color: Colors.textSecondary }]}>Deny</Text>
-          </TouchableOpacity>
+            backgroundColor="transparent"
+            fontWeight="600"
+            borderRadius={26}
+            paddingVertical={0}
+            style={{ height: 52, borderWidth: 0 }}
+            textStyle={{ color: Colors.textSecondary }}
+          />
         </View>
 
       </ScrollView>
@@ -321,27 +334,6 @@ function createStyles(Colors: ThemeColors) {
       width: '100%',
       gap: 12,
     },
-    approveButton: {
-      height: 52,
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    approveText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: Colors.black,
-    },
-    denyButton: {
-      height: 52,
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    denyText: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
     successCard: {
       flex: 1,
       alignItems: 'center',
@@ -361,19 +353,6 @@ function createStyles(Colors: ThemeColors) {
       textAlign: 'center',
       marginBottom: 40,
       lineHeight: 22,
-    },
-    doneButton: {
-      height: 52,
-      width: '100%',
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: Colors.primary,
-    },
-    doneButtonText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: Colors.black,
     },
   });
 }

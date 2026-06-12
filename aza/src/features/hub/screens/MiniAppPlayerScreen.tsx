@@ -11,7 +11,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -301,17 +300,19 @@ export default function MiniAppPlayerScreen() {
               />
 
               {/* Submit */}
-              <TouchableOpacity
-                style={[styles.submitBtn, (!selectedReason || reportLoading) && { opacity: 0.5 }]}
+              <Button
+                title="Submit"
                 onPress={submitReport}
-                disabled={!selectedReason || reportLoading}
+                disabled={!selectedReason}
+                loading={reportLoading}
+                backgroundColor={Colors.textPrimary}
+                textColor={Colors.background}
+                borderRadius={8}
+                paddingVertical={14}
+                fontSize={14}
+                fontWeight="500"
                 activeOpacity={0.8}
-              >
-                {reportLoading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.submitBtnText}>Submit</Text>
-                }
-              </TouchableOpacity>
+              />
             </KeyboardAvoidingView>
           </Animated.View>
         </View>
@@ -480,17 +481,6 @@ function createStyles(Colors: ThemeColors) {
       fontSize: 14,
       backgroundColor: Colors.surface,
       marginBottom: 20,
-    },
-    submitBtn: {
-      backgroundColor: Colors.textPrimary,
-      borderRadius: 8,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    submitBtnText: {
-      color: Colors.background,
-      fontSize: 14,
-      fontWeight: '500',
     },
     // Error state
     errorContainer: {

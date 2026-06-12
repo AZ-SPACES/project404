@@ -6,6 +6,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
+import Button from '../ui/Button';
 
 type Props = {
   visible: boolean;
@@ -101,24 +102,34 @@ export const PollCreatorSheet = memo(function PollCreatorSheet({ visible, onClos
             ))}
 
             {options.length < 4 && (
-              <TouchableOpacity style={[styles.addOptionBtn, { borderColor: Colors.primary }]} onPress={handleAddOption} activeOpacity={0.75}>
-                <Feather name="plus" size={16} color={Colors.primary} />
-                <Text style={[styles.addOptionText, { color: Colors.primary }]}>Add option</Text>
-              </TouchableOpacity>
+              <Button
+                title="Add option"
+                onPress={handleAddOption}
+                leftIcon={<Feather name="plus" size={16} color={Colors.primary} />}
+                backgroundColor="transparent"
+                textColor={Colors.primary}
+                borderRadius={Radius.md}
+                paddingVertical={10}
+                paddingHorizontal={14}
+                fontSize={14}
+                fontWeight="500"
+                width="auto"
+                style={[styles.addOptionBtn, { borderColor: Colors.primary }]}
+                activeOpacity={0.75}
+              />
             )}
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.createBtn, { backgroundColor: canCreate ? Colors.primary : Colors.border }]}
+            <Button
+              title="Create Poll"
               onPress={handleCreate}
+              backgroundColor={Colors.primary}
+              borderRadius={Radius.full}
+              paddingVertical={14}
               activeOpacity={0.85}
               disabled={!canCreate}
-            >
-              <Text style={[styles.createBtnText, { color: canCreate ? '#fff' : Colors.textSecondary }]}>
-                Create Poll
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -169,27 +180,14 @@ const styles = StyleSheet.create({
   },
   removeBtn: { padding: 4 },
   addOptionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     borderWidth: 1,
-    borderRadius: Radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     borderStyle: 'dashed',
     marginTop: 4,
     alignSelf: 'flex-start',
   },
-  addOptionText: { fontSize: 14, fontWeight: '500' },
   footer: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
     paddingTop: Spacing.sm,
   },
-  createBtn: {
-    borderRadius: Radius.full,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  createBtnText: { fontSize: 16, fontWeight: '700' },
 });

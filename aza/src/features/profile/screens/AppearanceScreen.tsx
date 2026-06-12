@@ -29,6 +29,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { searchUnsplash, triggerUnsplashDownload, UnsplashPhoto } from '../../../services/api';
 import {
   useDisplayContext,
@@ -898,12 +899,31 @@ export default function AppearanceScreen() {
             <Text style={styles.modalDesc}>Paste a direct link to an image (e.g., from Pexels, Unsplash)</Text>
             <TextInput style={styles.modalInput} value={linkInput} onChangeText={setLinkInput} placeholder="https://..." placeholderTextColor={Colors.textSecondary} autoCapitalize="none" autoCorrect={false} keyboardType="url" autoFocus={linkPromptVisible} />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.btnCancel} onPress={() => setLinkPromptVisible(false)} activeOpacity={0.8}>
-                <Text style={styles.btnCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.btnPrimary, !linkInput.trim() && styles.btnDisabled]} onPress={handleLinkSubmit} disabled={!linkInput.trim()} activeOpacity={0.8}>
-                <Text style={styles.btnPrimaryText}>Save</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                onPress={() => setLinkPromptVisible(false)}
+                backgroundColor={Colors.isDark ? Colors.surface : "#F3F4F6"}
+                textColor={Colors.textPrimary}
+                borderRadius={Radius.md}
+                paddingVertical={14}
+                width="auto"
+                style={{ flex: 1 }}
+                textStyle={Typography.button}
+                activeOpacity={0.8}
+              />
+              <Button
+                title="Save"
+                onPress={handleLinkSubmit}
+                disabled={!linkInput.trim()}
+                backgroundColor={Colors.primary}
+                textColor={Colors.white}
+                borderRadius={Radius.md}
+                paddingVertical={14}
+                width="auto"
+                style={{ flex: 1 }}
+                textStyle={[Typography.button, { fontWeight: "600" }]}
+                activeOpacity={0.8}
+              />
             </View>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -1120,11 +1140,6 @@ function createStyles(Colors: ThemeColors) {
     modalDesc: { ...Typography.body, color: Colors.textSecondary, textAlign: "center", marginBottom: Spacing.lg },
     modalInput: { ...Typography.body, backgroundColor: isDark ? Colors.surface : "#F9FAFB", borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, color: Colors.textPrimary, marginBottom: Spacing.xl },
     modalActions: { flexDirection: "row", gap: Spacing.md, width: "100%" },
-    btnCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: isDark ? Colors.surface : "#F3F4F6", alignItems: "center" },
-    btnCancelText: { ...Typography.button, color: Colors.textPrimary },
-    btnPrimary: { flex: 1, paddingVertical: 14, borderRadius: Radius.md, backgroundColor: Colors.primary, alignItems: "center" },
-    btnDisabled: { opacity: 0.5 },
-    btnPrimaryText: { ...Typography.button, color: Colors.white, fontWeight: "600" },
 
     // Unsplash picker
     unsplashHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.md, borderBottomWidth: 1, borderBottomColor: isDark ? Colors.border : "#E5E7EB" },

@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { queryKeys } from '../../../lib/queryKeys';
 import {
   getRecurringTransfers,
@@ -152,13 +153,19 @@ export default function RecurringTransfersScreen() {
           </View>
           <Text style={styles.emptyTitle}>No scheduled transfers</Text>
           <Text style={styles.emptySubtitle}>Automate recurring payments to save time</Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            activeOpacity={0.8}
+          <Button
+            title="Set one up"
             onPress={() => navigation.navigate('CreateRecurringTransfer')}
-          >
-            <Text style={styles.emptyButtonText}>Set one up</Text>
-          </TouchableOpacity>
+            backgroundColor={Colors.primary}
+            textColor={Colors.white}
+            borderRadius={Radius.lg}
+            paddingVertical={Spacing.md}
+            paddingHorizontal={Spacing.xl}
+            fontSize={14}
+            fontWeight="600"
+            width="auto"
+            activeOpacity={0.8}
+          />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -300,17 +307,6 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textSecondary,
       textAlign: 'center',
       marginBottom: Spacing.xl,
-    },
-    emptyButton: {
-      backgroundColor: Colors.primary,
-      borderRadius: Radius.lg,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.xl,
-    },
-    emptyButtonText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: Colors.white,
     },
     card: {
       backgroundColor: isDark ? Colors.surface : Colors.white,

@@ -1,8 +1,9 @@
 import React from 'react';
-import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Typography } from '../../../../../theme';
+import { Typography, Radius } from '../../../../../theme';
+import Button from '../../../../../components/ui/Button';
 import { RootStackParamList } from '../../../../../navigation/types';
 import { NavProps } from '../types';
 import StatusBadge from '../components/StatusBadge';
@@ -31,12 +32,15 @@ export default function UnderReviewPage({ merchant, Colors, styles }: NavProps) 
       )}
       <StatusBadge status={merchant?.status ?? 'KYB_SUBMITTED'} Colors={Colors} />
       {isMoreInfo && merchant?.id && (
-        <TouchableOpacity
-          style={[styles.primaryBtn, { marginTop: 24, width: '100%' }]}
+        <Button
+          title="Provide Information"
           onPress={() => navigation.navigate('MerchantKYBIntro', { merchantId: merchant.id })}
-        >
-          <Text style={[styles.primaryBtnText, { color: '#000' }]}>Provide Information</Text>
-        </TouchableOpacity>
+          backgroundColor={Colors.primary}
+          textColor="#000"
+          borderRadius={Radius.full}
+          paddingVertical={15}
+          style={{ marginTop: 24 }}
+        />
       )}
     </ScrollView>
   );

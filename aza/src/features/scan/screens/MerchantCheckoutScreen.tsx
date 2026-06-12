@@ -21,6 +21,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { getCheckoutSession, confirmCheckoutPayment } from '../../../services/api';
 import { extractErrorMessage } from '../../../utils/errorUtils';
@@ -231,9 +232,17 @@ export default function MerchantCheckoutScreen({ navigation, route }: Props) {
           </View>
           <Text style={styles.successAmount}>{displayTotal}</Text>
           <Text style={styles.successLabel}>sent to {merchantName}</Text>
-          <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.popToTop()}>
-            <Text style={styles.doneBtnText}>Done</Text>
-          </TouchableOpacity>
+          <Button
+            title="Done"
+            onPress={() => navigation.popToTop()}
+            backgroundColor={Colors.primary}
+            textColor="#000"
+            borderRadius={14}
+            paddingVertical={14}
+            paddingHorizontal={Spacing.xl * 2}
+            width="auto"
+            style={{ marginTop: Spacing.xl }}
+          />
         </View>
       </SafeAreaView>
     );
@@ -296,13 +305,14 @@ export default function MerchantCheckoutScreen({ navigation, route }: Props) {
             )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.payBtn, { backgroundColor: session.merchantBrandColor ?? Colors.primary }]}
+          <Button
+            title={`Pay ${displayTotal}`}
             onPress={() => setStep('pin')}
+            backgroundColor={session.merchantBrandColor ?? Colors.primary}
+            textColor="#000"
+            borderRadius={14}
             activeOpacity={0.85}
-          >
-            <Text style={styles.payBtnText}>Pay {displayTotal}</Text>
-          </TouchableOpacity>
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -419,12 +429,6 @@ function createStyles(Colors: ThemeColors) {
     expiryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.sm },
     expiryText: { ...Typography.caption, color: Colors.textSecondary },
 
-    payBtn: {
-      borderRadius: 14,
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
-    payBtnText: { fontSize: 16, fontWeight: '700', color: '#000' },
 
     // success
     successIconWrap: {
@@ -435,14 +439,6 @@ function createStyles(Colors: ThemeColors) {
     },
     successAmount: { ...Typography.h2, fontWeight: '700', color: Colors.textPrimary },
     successLabel: { ...Typography.body, color: Colors.textSecondary, marginTop: Spacing.xs },
-    doneBtn: {
-      marginTop: Spacing.xl,
-      backgroundColor: Colors.primary,
-      borderRadius: 14,
-      paddingHorizontal: Spacing.xl * 2,
-      paddingVertical: 14,
-    },
-    doneBtnText: { fontSize: 16, fontWeight: '700', color: '#000' },
 
     // pin
     pinContent: {
