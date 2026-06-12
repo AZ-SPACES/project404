@@ -27,6 +27,8 @@ public class RecurringTransferService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final AnomalyDetectionService anomalyDetectionService;
+    private final RiskEngineService riskEngineService;
 
     @Transactional
     public RecurringTransferResponse create(UUID userId, CreateRecurringTransferRequest req) {
@@ -172,6 +174,14 @@ public class RecurringTransferService {
         String note = rt.getNote() != null && !rt.getNote().isBlank()
                 ? rt.getNote()
                 : "Recurring transfer";
+        // Scored but never held — these are pre-authorized standing orders; a HIGH
+        // score still raises an alert via the risk engine.
+        AnomalyDetectionService.Result anomaly;
+        try {
+            anomaly = anomalyDetectionService.score(rt.getUserId(), recipient.getId(), rt.getAmount(), LocalDateTime.now());
+        } catch (Exception e) {
+            anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
+        }
         Transaction tx = Transaction.builder()
                 .senderId(rt.getUserId())
                 .recipientId(recipient.getId())
@@ -181,8 +191,12 @@ public class RecurringTransferService {
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .idempotencyKey("recurring:" + rt.getId() + ":" + rt.getTotalRuns())
                 .completedAt(LocalDateTime.now())
+                .anomalyScore(anomaly.score())
+                .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
         transactionRepository.save(tx);
+        userRepository.findById(rt.getUserId()).ifPresent(sender ->
+                riskEngineService.evaluateTransfer(tx, sender));
 
         rt.setTotalRuns(rt.getTotalRuns() + 1);
         rt.setSuccessfulRuns(rt.getSuccessfulRuns() + 1);

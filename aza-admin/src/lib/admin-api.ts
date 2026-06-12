@@ -1384,6 +1384,30 @@ export function enableMiniApp(appId: string): Promise<void> {
 
 // ── AI: Fraud Detection ───────────────────────────────────────────────────────
 
+/** HIGH-anomaly transfers intercepted before any money moved. */
+export function getHeldTransfers(page = 0, size = 20): Promise<Page<AdminTransaction>> {
+  return request(`/api/v1/admin/fraud/held?page=${page}&size=${size}`);
+}
+
+export function releaseHeldTransfer(id: string): Promise<unknown> {
+  return request(`/api/v1/admin/fraud/held/${id}/release`, { method: "POST" });
+}
+
+export function rejectHeldTransfer(id: string): Promise<unknown> {
+  return request(`/api/v1/admin/fraud/held/${id}/reject`, { method: "POST" });
+}
+
+export interface FraudAiAssessment {
+  verdict: "LIKELY_FRAUD" | "LIKELY_LEGITIMATE" | "UNCERTAIN";
+  confidence: number;
+  reasoning: string;
+}
+
+/** Claude second opinion on a held transfer — can take a minute; verdict is audit-logged. */
+export function getAiOpinion(id: string): Promise<FraudAiAssessment> {
+  return request(`/api/v1/admin/fraud/held/${id}/ai-opinion`, { method: "POST" });
+}
+
 export function getAnomalyFlaggedTransactions(
   page = 0,
   size = 20,
