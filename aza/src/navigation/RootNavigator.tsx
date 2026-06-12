@@ -6,6 +6,7 @@ import KYCNavigator from './KYCNavigator';
 import SetupNavigator from './SetupNavigator';
 import AppNavigator from './AppNavigator';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { ConsentUpdateGate } from '../components/ConsentUpdateGate';
 import { GeoBlockedScreen } from '../features/auth';
 
 const Stack = createNativeStackNavigator();
@@ -22,6 +23,7 @@ export default function RootNavigator() {
   }
 
   return (
+    <>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {userToken == null ? (
         <Stack.Group>
@@ -49,5 +51,8 @@ export default function RootNavigator() {
       {/* Always present — navigated to imperatively when geo-block is detected */}
       <Stack.Screen name="GeoBlocked" component={GeoBlockedScreen} />
     </Stack.Navigator>
+    {/* Re-consent prompt for users behind the current Terms/Privacy versions */}
+    <ConsentUpdateGate />
+    </>
   );
 }

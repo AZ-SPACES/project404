@@ -53,6 +53,8 @@ import EnableBiometricsScreen from "./src/features/onboarding/screens/EnableBiom
 import AppLockScreen from "./src/features/security/screens/AppLockScreen";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { subscribeAuthEvents } from "./src/providers/authEvents";
+import { GeoBlockedScreen } from "./src/features/auth";
 
 
 const linking = {
@@ -86,6 +88,15 @@ function AppContent() {
   const { checkPermissions } = useNotifications();
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [showBiometricsPrompt, setShowBiometricsPrompt] = useState(false);
+  const [isGeoBlocked, setIsGeoBlocked] = useState(false);
+
+  useEffect(() => {
+    return subscribeAuthEvents((e) => {
+      if (e.type === 'geoBlocked') {
+        setIsGeoBlocked(true);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // Only check if user is fully onboarded and logged in
@@ -131,28 +142,32 @@ function AppContent() {
           activeColorScheme === "dark" ? "light-content" : "dark-content"
         }
       />
-      <NavigationContainer
-        ref={navigationRef}
-        onReady={() => {
-          processNavigationQueue();
-        }}
-        theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}
-        linking={linking as any}
-      >
-        {isLocked ? (
-          <AppLockScreen />
-        ) : showBiometricsPrompt ? (
-          <EnableBiometricsScreen
-            onComplete={() => setShowBiometricsPrompt(false)}
-          />
-        ) : showNotificationPrompt ? (
-          <EnableNotificationsScreen
-            onComplete={() => setShowNotificationPrompt(false)}
-          />
-        ) : (
-          <RootNavigator />
-        )}
-      </NavigationContainer>
+      {isGeoBlocked ? (
+        <GeoBlockedScreen />
+      ) : (
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            processNavigationQueue();
+          }}
+          theme={activeColorScheme === "dark" ? DarkTheme : DefaultTheme}
+          linking={linking as any}
+        >
+          {isLocked ? (
+            <AppLockScreen />
+          ) : showBiometricsPrompt ? (
+            <EnableBiometricsScreen
+              onComplete={() => setShowBiometricsPrompt(false)}
+            />
+          ) : showNotificationPrompt ? (
+            <EnableNotificationsScreen
+              onComplete={() => setShowNotificationPrompt(false)}
+            />
+          ) : (
+            <RootNavigator />
+          )}
+        </NavigationContainer>
+      )}
       <OfflineBanner />
       <PrivacyOverlay />
     </View>

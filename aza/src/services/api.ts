@@ -2,7 +2,6 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
-import { navigate } from "../navigation/navigationRef";
 
 /**
  * File payload shape required by React Native's FormData for binary uploads.
@@ -74,8 +73,8 @@ export const getDeviceId = async (): Promise<string> => {
   if (existing) return existing;
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6]! & 0x0f) | 0x40; // UUID v4 version bits
-  bytes[8] = (bytes[8]! & 0x3f) | 0x80; // RFC 4122 variant bits
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   const id = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
   await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
@@ -410,6 +409,16 @@ export const requestMoney = (payload: {
   amount: number;
   note: string;
 }) => api.post("/api/v1/money-requests", payload);
+
+// --- Legal consent (DPA evidence) ---
+
+/** Bump these when the legal documents change; users re-accept and a new row is recorded server-side. */
+export const LEGAL_DOC_VERSIONS = { TERMS: "1.0", PRIVACY: "1.0" } as const;
+
+export const recordConsent = (docType: keyof typeof LEGAL_DOC_VERSIONS) =>
+  api.post("/api/v1/consents", { docType, version: LEGAL_DOC_VERSIONS[docType] });
+
+export const getMyConsents = () => api.get("/api/v1/consents/me");
 
 export const acceptMoneyRequest = (id: string, passcode: string) =>
   api.post(`/api/v1/money-requests/${id}/accept`, { passcode });
@@ -1079,19 +1088,30 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const sanitizeMessage = (msg: any) => {
+    const sanitizeMessage = (msg: any, status?: number) => {
       if (typeof msg !== 'string') return msg;
-      return msg.replace(/^(\[?[A-Za-z0-9_]+\]?)\s*[:\-]\s*/, "");
+      let clean = msg.replace(/^(\[?[A-Za-z0-9_]+\]?)\s*[:\-]\s*/, "");
+      
+      // Hide raw HTTP status codes from the UI
+      if (clean.includes("status code")) {
+        if (status === 401) return "Session expired or invalid credentials.";
+        if (status === 403) return "Access denied.";
+        if (status === 404) return "Resource not found.";
+        if (status === 429) return "Too many requests. Please try again later.";
+        if (status && status >= 500) return "Our servers are experiencing issues. Please try again later.";
+        return "An unexpected network error occurred.";
+      }
+      return clean;
     };
 
     if (error.response?.data?.message) {
-      error.response.data.message = sanitizeMessage(error.response.data.message);
+      error.response.data.message = sanitizeMessage(error.response.data.message, error.response?.status);
     }
     if (error.response?.data?.error) {
-      error.response.data.error = sanitizeMessage(error.response.data.error);
+      error.response.data.error = sanitizeMessage(error.response.data.error, error.response?.status);
     }
     if (error.message) {
-      error.message = sanitizeMessage(error.message);
+      error.message = sanitizeMessage(error.message, error.response?.status);
     }
 
     const originalRequest = error.config;
@@ -1193,9 +1213,13 @@ api.interceptors.response.use(
 
     // Handle 403 (Forbidden)
     if (error.response?.status === 403) {
+      const responseData = error.response?.data;
+      const isCloudflareHtmlBlock = typeof responseData === 'string' && 
+        responseData.toLowerCase().includes('cloudflare');
+
       // Geo-blocked — navigate to the "not available in your region" screen.
-      if (error.response?.data?.error === 'GEO_RESTRICTED') {
-        navigate('GeoBlocked');
+      if (responseData?.error === 'GEO_RESTRICTED' || isCloudflareHtmlBlock) {
+        emitAuthEvent({ type: 'geoBlocked' });
         return Promise.reject(error);
       }
       // Token is revoked or session is invalid — clear tokens and trigger logout.

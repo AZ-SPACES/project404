@@ -19,7 +19,7 @@ import { useAuth } from "../../../providers/AuthProvider";
 import { useSignupData, useSignupActions, useSignupLoading } from "../../../providers/SignUpProvider";
 import { useToast } from "../../../providers/ToastProvider";
 import * as SecureStore from "expo-secure-store";
-import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../../services/api";
+import { TOKEN_KEY, REFRESH_TOKEN_KEY, recordConsent } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 
@@ -56,9 +56,17 @@ export default function ConsentScreen() {
     navigation.navigate("PrivacyPolicy");
   };
 
+  // Append-only server-side record of which T&C/privacy version was accepted.
+  // Fire-and-forget: consent evidence must never block signup itself.
+  const recordConsents = () => {
+    recordConsent("TERMS").catch(() => {});
+    recordConsent("PRIVACY").catch(() => {});
+  };
+
   const handleContinue = async () => {
     if (userToken) {
       // Standalone case: User is already logged in, just finishing setup
+      recordConsents();
       setPasscode();
       return;
     }
@@ -82,6 +90,9 @@ export default function ConsentScreen() {
 
       await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+
+      // Token is stored, so these authenticate via the request interceptor
+      recordConsents();
 
       // hasPasscode=true because we just set it during signup
       login({ token: accessToken, hasPasscode: true, isKYCVerified: false });

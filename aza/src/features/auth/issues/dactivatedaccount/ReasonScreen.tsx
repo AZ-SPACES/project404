@@ -124,7 +124,6 @@ export default function Reason() {
             onPress={() => Alert.alert("Coming Soon", "Appeal submission will be available soon.")}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
-            borderRadius={30}
             paddingVertical={16}
             fontSize={Typography.button.fontSize}
             fontWeight={Typography.button.fontWeight}
