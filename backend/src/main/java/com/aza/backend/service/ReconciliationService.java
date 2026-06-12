@@ -40,6 +40,7 @@ public class ReconciliationService {
     private final MerchantRepository merchantRepository;
     private final TransactionRepository transactionRepository;
     private final AdminAuditService auditService;
+    private final StaffAlertService staffAlertService;
 
     // ── Safeguarding ──────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ public class ReconciliationService {
         }
         if (snapshot.isBreach()) {
             log.warn("SAFEGUARDING BREACH: float exceeds safeguarded balance by {}", snapshot.getVariance().negate());
+            alertBreach(snapshot);
         }
         return snapshot;
     }
@@ -69,8 +71,23 @@ public class ReconciliationService {
      */
     @Transactional
     public void takeScheduledSnapshot() {
-        snapshotRepository.findFirstByOrderByCreatedAtDesc().ifPresent(last ->
-                snapshotRepository.save(buildSnapshot(last.getSafeguardingBalance())));
+        snapshotRepository.findFirstByOrderByCreatedAtDesc().ifPresent(last -> {
+            SafeguardingSnapshot snapshot = snapshotRepository.save(buildSnapshot(last.getSafeguardingBalance()));
+            if (snapshot.isBreach()) {
+                log.warn("SAFEGUARDING BREACH (scheduled check): float exceeds safeguarded balance by {}",
+                        snapshot.getVariance().negate());
+                alertBreach(snapshot);
+            }
+        });
+    }
+
+    private void alertBreach(SafeguardingSnapshot snapshot) {
+        staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.FINANCE,
+                "SAFEGUARDING BREACH",
+                "Platform float (customer " + snapshot.getCustomerFloat() + " + merchant "
+                        + snapshot.getMerchantFloat() + " GHS) exceeds the safeguarded balance of "
+                        + snapshot.getSafeguardingBalance() + " GHS by "
+                        + snapshot.getVariance().negate() + " GHS. Top up the safeguarding account immediately.");
     }
 
     private SafeguardingSnapshot buildSnapshot(BigDecimal safeguardingBalance) {

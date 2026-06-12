@@ -42,6 +42,9 @@ public class SanctionsListEntry {
 
     private String country;
 
+    /** Disambiguator: a name match with a different DOB is suppressed; same DOB boosts the score. */
+    private java.time.LocalDate dateOfBirth;
+
     @Column(length = 500)
     private String notes;
 

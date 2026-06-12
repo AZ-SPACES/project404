@@ -17,6 +17,7 @@ public class BackOfficeScheduler {
     private final ApprovalService approvalService;
     private final ReconciliationService reconciliationService;
     private final ScreeningService screeningService;
+    private final com.aza.backend.service.AuditAnchorService auditAnchorService;
 
     /** 02:00 — expire maker-checker requests nobody actioned within 7 days. */
     @Scheduled(cron = "0 0 2 * * *")
@@ -40,5 +41,11 @@ public class BackOfficeScheduler {
         if (raised > 0) {
             log.warn("Daily screening raised {} new watchlist matches pending review", raised);
         }
+    }
+
+    /** 02:30 — hash-chain anchor for yesterday's admin audit entries. */
+    @Scheduled(cron = "0 30 2 * * *")
+    public void anchorAuditLog() {
+        auditAnchorService.anchorUpToYesterday();
     }
 }

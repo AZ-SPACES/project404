@@ -6,6 +6,7 @@ import {
   getStaff,
   getUsers,
   grantStaffRole,
+  isPendingApproval,
   revokeStaffRole,
   type AdminUser,
   type StaffMember,
@@ -57,7 +58,7 @@ function RoleBadge({
   );
 }
 
-function AddStaffPanel({ onClose }: { onClose: () => void }) {
+function AddStaffPanel({ onClose, onPending }: { onClose: () => void; onPending: (msg: string) => void }) {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -73,8 +74,11 @@ function AddStaffPanel({ onClose }: { onClose: () => void }) {
 
   const grant = useMutation({
     mutationFn: () => grantStaffRole(selected!.id, role),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
+      if (isPendingApproval(result)) {
+        onPending("Grant submitted — another ADMIN must approve it in Approvals.");
+      }
       onClose();
     },
     onError: (e: Error) => setError(e.message),
@@ -195,6 +199,7 @@ export default function StaffPage() {
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [revoking, setRevoking] = useState<string | null>(null);
 
   const { data: staff, isLoading } = useQuery<StaffMember[]>({
@@ -229,7 +234,16 @@ export default function StaffPage() {
         </button>
       </div>
 
-      {adding && <AddStaffPanel onClose={() => setAdding(false)} />}
+      {adding && <AddStaffPanel onClose={() => setAdding(false)} onPending={setNotice} />}
+
+      {notice && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-3 text-emerald-400 text-sm mb-6 flex items-center justify-between">
+          {notice}
+          <button onClick={() => setNotice("")}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6 flex items-center justify-between">

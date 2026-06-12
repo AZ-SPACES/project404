@@ -143,6 +143,18 @@ public class StaffRoleService {
         return result;
     }
 
+    /**
+     * Distinct users currently holding any staff role (incl. legacy enum admins).
+     * Used for the maker-checker bootstrap exception: with one staff member there
+     * is nobody to approve, so their actions execute directly until a second exists.
+     */
+    public long countActiveStaffUsers() {
+        Set<UUID> users = new HashSet<>();
+        staffRoleRepository.findByRevokedAtIsNull().forEach(r -> users.add(r.getUserId()));
+        userRepository.findByRole(User.UserRole.ADMIN).forEach(u -> users.add(u.getId()));
+        return users.size();
+    }
+
     private boolean isLastAdmin(UUID targetUserId) {
         boolean otherStaffAdmin = staffRoleRepository.findByRevokedAtIsNull().stream()
                 .anyMatch(r -> r.getRole() == StaffRole.Role.ADMIN && !r.getUserId().equals(targetUserId));

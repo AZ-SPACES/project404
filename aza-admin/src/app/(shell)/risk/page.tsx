@@ -4,14 +4,17 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getRiskAlerts,
+  getRiskRules,
   getRiskStats,
   updateRiskAlert,
+  updateRiskRules,
   resetUserRateLimit,
   resetIpRateLimit,
   resetAllRateLimits,
   RiskAlert,
   RiskStats,
   Page,
+  type RiskRules,
 } from "@/lib/admin-api";
 import {
   AlertTriangle,
@@ -26,6 +29,76 @@ import {
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function RiskRulesCard() {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<RiskRules | null>(null);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const { data: rules } = useQuery({
+    queryKey: ["riskRules"],
+    queryFn: getRiskRules,
+  });
+
+  const effective = draft ?? rules;
+
+  const save = useMutation({
+    mutationFn: () => updateRiskRules(draft!),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["riskRules"], updated);
+      setDraft(null);
+      setError("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  if (!effective) return null;
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5">
+      <p className="text-sm font-medium text-foreground mb-1">Monitoring rules</p>
+      <p className="text-xs text-foreground/40 mb-4">
+        Thresholds the transaction risk engine applies live — changes are audit-logged and take effect immediately.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-foreground/40 mb-1">Large transfer flag (GHS ≥)</label>
+          <input
+            type="number"
+            min="1"
+            step="0.01"
+            value={effective.largeTransferGhs}
+            onChange={(e) => setDraft({ ...effective, largeTransferGhs: e.target.value })}
+            className="w-44 px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none focus:border-foreground/30"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-foreground/40 mb-1">Max outgoing transfers / hour</label>
+          <input
+            type="number"
+            min="1"
+            value={effective.velocityMaxHourly}
+            onChange={(e) => setDraft({ ...effective, velocityMaxHourly: e.target.value })}
+            className="w-44 px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none focus:border-foreground/30"
+          />
+        </div>
+        <button
+          onClick={() => save.mutate()}
+          disabled={!draft || save.isPending}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black text-sm font-semibold disabled:opacity-40 transition-colors"
+        >
+          {save.isPending && <Loader2 size={14} className="animate-spin" />}
+          Save rules
+        </button>
+        {saved && <span className="text-xs text-emerald-400">Saved.</span>}
+        {error && <span className="text-xs text-red-400">{error}</span>}
+      </div>
+    </div>
+  );
 }
 
 const SEVERITY_MAP = {
@@ -164,6 +237,8 @@ export default function RiskPage() {
           ))}
         </div>
       )}
+
+      <RiskRulesCard />
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit">

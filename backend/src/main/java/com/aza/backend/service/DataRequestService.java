@@ -34,6 +34,7 @@ public class DataRequestService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final KycRecordRepository kycRecordRepository;
+    private final com.aza.backend.repository.UserConsentRepository consentRepository;
     private final UserService userService;
     private final AdminService adminService;
     private final AdminAuditService auditService;
@@ -100,6 +101,7 @@ public class DataRequestService {
                 target.getKycStatus() != null ? target.getKycStatus().name() : null));
         bundle.put("transactions", adminService.getUserTransactions(userId, 0, 1000).getContent());
         bundle.put("devices", userService.getDevices(target, null));
+        bundle.put("consents", consentRepository.findByUserIdOrderByAcceptedAtDesc(userId));
 
         auditService.log(admin, "EXPORT_USER_DATA", target, "DSAR access export");
         return bundle;

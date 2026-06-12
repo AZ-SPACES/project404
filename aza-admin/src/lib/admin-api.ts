@@ -395,7 +395,8 @@ export function updateUserStatus(userId: string, status: string, reason?: string
   });
 }
 
-export function updateUserRole(userId: string, role: string): Promise<AdminUser> {
+/** Granting ADMIN goes through maker-checker once a second staff member exists. */
+export function updateUserRole(userId: string, role: string): Promise<AdminUser | Approval> {
   return request(`/api/v1/admin/users/${userId}/role`, {
     method: "PATCH",
     body: JSON.stringify({ role }),
@@ -923,7 +924,10 @@ export function getSystemSettings(): Promise<SystemSettings> {
   return request("/api/v1/admin/settings");
 }
 
-export function updateSystemSettings(settings: Partial<Omit<SystemSettings, "platformVersion">>): Promise<SystemSettings> {
+/** Maker-checker once a second staff member exists: may return a pending Approval instead. */
+export function updateSystemSettings(
+  settings: Partial<Omit<SystemSettings, "platformVersion">>,
+): Promise<SystemSettings | Approval> {
   return request("/api/v1/admin/settings", {
     method: "PATCH",
     body: JSON.stringify(settings),
@@ -1498,11 +1502,16 @@ export function getStaff(): Promise<StaffMember[]> {
   return request("/api/v1/admin/staff");
 }
 
-export function grantStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember> {
+/** Maker-checker once a second staff member exists: may return a pending Approval instead. */
+export function grantStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember | Approval> {
   return request(`/api/v1/admin/staff/${userId}/roles`, {
     method: "POST",
     body: JSON.stringify({ role }),
   });
+}
+
+export function isPendingApproval(result: unknown): result is Approval {
+  return typeof result === "object" && result !== null && "actionType" in result && "summary" in result;
 }
 
 export function revokeStaffRole(userId: string, role: StaffRoleName): Promise<StaffMember> {
@@ -1535,7 +1544,12 @@ export async function downloadFile(path: string, filename: string): Promise<void
 
 export interface Approval {
   id: string;
-  actionType: "REVERSE_TRANSACTION" | "UPDATE_FEE_RULE" | "UPDATE_USER_LIMITS";
+  actionType:
+    | "REVERSE_TRANSACTION"
+    | "UPDATE_FEE_RULE"
+    | "UPDATE_USER_LIMITS"
+    | "GRANT_STAFF_ROLE"
+    | "UPDATE_SYSTEM_SETTINGS";
   targetId: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
@@ -1649,6 +1663,7 @@ export interface WatchlistEntry {
   fullName: string;
   entryType: "SANCTION" | "PEP";
   country: string | null;
+  dateOfBirth: string | null;
   notes: string | null;
   active: boolean;
   createdAt: string;
@@ -1699,12 +1714,64 @@ export function addWatchlistEntry(data: {
   fullName: string;
   entryType: string;
   country?: string;
+  dateOfBirth?: string;
   notes?: string;
 }): Promise<WatchlistEntry> {
   return request("/api/v1/admin/screening/list", {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+export function importUnList(): Promise<{ imported: number }> {
+  return request("/api/v1/admin/screening/list/import-un", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+// ── Risk rules ────────────────────────────────────────────────────────────────
+
+export interface RiskRules {
+  largeTransferGhs: string;
+  velocityMaxHourly: string;
+}
+
+export function getRiskRules(): Promise<RiskRules> {
+  return request("/api/v1/admin/risk/rules");
+}
+
+export function updateRiskRules(rules: Partial<RiskRules>): Promise<RiskRules> {
+  return request("/api/v1/admin/risk/rules", {
+    method: "PATCH",
+    body: JSON.stringify(rules),
+  });
+}
+
+// ── Audit log integrity anchors ───────────────────────────────────────────────
+
+export interface AuditAnchor {
+  id: string;
+  anchorDate: string;
+  entryCount: number;
+  contentHash: string;
+  prevHash: string;
+  createdAt: string;
+}
+
+export interface AnchorVerification {
+  date: string;
+  valid: boolean;
+  anchoredCount: number;
+  currentCount: number;
+}
+
+export function getAuditAnchors(): Promise<AuditAnchor[]> {
+  return request("/api/v1/admin/audit-anchors");
+}
+
+export function verifyAuditAnchors(): Promise<AnchorVerification[]> {
+  return request("/api/v1/admin/audit-anchors/verify", { method: "POST", body: JSON.stringify({}) });
 }
 
 export function importWatchlist(csv: string): Promise<{ imported: number }> {

@@ -43,6 +43,7 @@ class TransferServiceTest {
     @Mock private MerchantNotificationPreferenceRepository merchantNotificationPrefRepository;
     @Mock private AnomalyDetectionService anomalyDetectionService;
     @Mock private AuditService auditService;
+    @Mock private RiskEngineService riskEngineService;
 
     private final UUID senderId = UUID.randomUUID();
     private final UUID recipientId = UUID.randomUUID();
@@ -54,7 +55,8 @@ class TransferServiceTest {
                 transactionRepository, walletRepository, userRepository, userService,
                 merchantRepository, sessionRepository, checkoutService, rateLimitService,
                 webSocketPublisher, notificationService, emailService, smsService,
-                merchantNotificationPrefRepository, anomalyDetectionService, auditService);
+                merchantNotificationPrefRepository, anomalyDetectionService, auditService,
+                riskEngineService);
 
         ReflectionTestUtils.setField(transferService, "maxSingleAmount", new BigDecimal("10000"));
         ReflectionTestUtils.setField(transferService, "maxDailyAmount", new BigDecimal("50000"));

@@ -2,9 +2,12 @@ package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.StaffMemberResponse;
+import com.aza.backend.entity.PendingApproval;
 import com.aza.backend.entity.StaffRole;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.repository.UserRepository;
+import com.aza.backend.service.ApprovalService;
 import com.aza.backend.service.StaffRoleService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -25,19 +28,36 @@ import java.util.UUID;
 public class AdminStaffController {
 
     private final StaffRoleService staffRoleService;
+    private final ApprovalService approvalService;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<StaffMemberResponse>>> listStaff() {
         return ResponseEntity.ok(ApiResponse.success(staffRoleService.listStaff()));
     }
 
+    /**
+     * Maker-checker: grants go through approvals (minting power is the most
+     * sensitive action there is). Bootstrap exception: while only one staff
+     * member exists there is nobody to approve, so the grant executes directly —
+     * otherwise the second staff member could never be added.
+     */
     @PostMapping("/{userId}/roles")
-    public ResponseEntity<ApiResponse<StaffMemberResponse>> grantRole(
+    public ResponseEntity<ApiResponse<Object>> grantRole(
             @PathVariable UUID userId,
             @RequestBody RoleRequest request,
             @AuthenticationPrincipal User admin) {
-        return ResponseEntity.ok(ApiResponse.success(
-                staffRoleService.grantRole(admin, userId, parseRole(request.getRole()))));
+        StaffRole.Role role = parseRole(request.getRole());
+        if (staffRoleService.countActiveStaffUsers() <= 1) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    staffRoleService.grantRole(admin, userId, role)));
+        }
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND));
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.GRANT_STAFF_ROLE, userId,
+                new ApprovalService.GrantRolePayload(role.name()),
+                "Grant " + role + " to " + target.getEmail())));
     }
 
     @DeleteMapping("/{userId}/roles/{role}")
