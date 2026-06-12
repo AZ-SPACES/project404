@@ -34,6 +34,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
+    List<User> findByKycStatusAndKycReviewDueAtBefore(User.KycStatus status, LocalDateTime cutoff);
+
 
     @Query("SELECT u FROM User u WHERE " +
             "(LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

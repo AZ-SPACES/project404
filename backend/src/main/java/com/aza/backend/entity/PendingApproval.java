@@ -68,7 +68,12 @@ public class PendingApproval {
         UPDATE_USER_LIMITS,     // approver needs COMPLIANCE
         GRANT_STAFF_ROLE,       // approver needs ADMIN
         CHANGE_STAFF_ROLE,      // approver needs ADMIN
-        UPDATE_SYSTEM_SETTINGS  // approver needs ADMIN
+        UPDATE_SYSTEM_SETTINGS, // approver needs ADMIN
+        UNFREEZE_WALLET,        // approver needs FINANCE (freezing stays immediate)
+        REACTIVATE_USER,        // approver needs COMPLIANCE (suspending stays immediate)
+        APPROVE_KYC,            // approver needs COMPLIANCE (rejecting stays immediate)
+        BROADCAST_NOTIFICATION, // approver needs ADMIN
+        ENABLE_MINI_APP         // approver needs ADMIN (kill switch stays immediate)
     }
 
     public enum Status {

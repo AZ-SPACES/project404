@@ -28,6 +28,11 @@ const ACTION_LABELS: Record<string, string> = {
   GRANT_STAFF_ROLE: "Staff Role Grant",
   CHANGE_STAFF_ROLE: "Staff Role Change",
   UPDATE_SYSTEM_SETTINGS: "System Settings Change",
+  UNFREEZE_WALLET: "Wallet Unfreeze",
+  REACTIVATE_USER: "Account Reactivation",
+  APPROVE_KYC: "KYC Approval",
+  BROADCAST_NOTIFICATION: "Broadcast Notification",
+  ENABLE_MINI_APP: "Mini App Re-enable",
 };
 
 function fmt(iso: string | null) {

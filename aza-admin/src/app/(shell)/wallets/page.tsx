@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAdminWallets,
   freezeWallet,
+  isPendingApproval,
   AdminWallet,
   Page,
 } from "@/lib/admin-api";
@@ -23,6 +24,7 @@ function fmt(iso: string | null) {
 
 export default function WalletsPage() {
   const [page, setPage] = useState(0);
+  const [notice, setNotice] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<Page<AdminWallet>>({
@@ -40,7 +42,16 @@ export default function WalletsPage() {
         return { ...prev, content: prev.content.map(w => w.userId === userId ? { ...w, frozen } : w) };
       });
     },
-    onSuccess: (updated) => {
+    onSuccess: (updated, { userId, frozen }) => {
+      if (isPendingApproval(updated)) {
+        // Unfreeze queued for a second approver — revert the optimistic flip
+        queryClient.setQueryData<Page<AdminWallet>>(["wallets", page], (prev) => {
+          if (!prev) return prev;
+          return { ...prev, content: prev.content.map(w => w.userId === userId ? { ...w, frozen: !frozen } : w) };
+        });
+        setNotice("Unfreeze submitted — another FINANCE/ADMIN must approve it in Approvals.");
+        return;
+      }
       queryClient.setQueryData<Page<AdminWallet>>(["wallets", page], (prev) => {
         if (!prev) return prev;
         return { ...prev, content: prev.content.map(w => w.userId === updated.userId ? updated : w) };
@@ -61,6 +72,12 @@ export default function WalletsPage() {
         <h1 className="text-2xl font-semibold text-foreground mb-1">Wallets</h1>
         <p className="text-foreground/50 text-sm">All user wallets — freeze or unfreeze to restrict transactions</p>
       </div>
+
+      {notice && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-3 text-emerald-400 text-sm mb-6">
+          {notice}
+        </div>
+      )}
 
       {(error || freezeMutation.error) && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">

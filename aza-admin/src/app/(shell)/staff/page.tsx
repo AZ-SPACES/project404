@@ -356,12 +356,20 @@ export default function StaffPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 justify-end">
                   {member.roles.map((grant) => (
-                    <RoleBadge
+                    <span
                       key={grant.role}
-                      role={grant.role}
-                      revoking={revoking === `${member.userId}:${grant.role}`}
-                      onRevoke={() => revoke.mutate({ userId: member.userId, role: grant.role })}
-                    />
+                      title={
+                        grant.grantedAt
+                          ? `Granted ${new Date(grant.grantedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}${grant.grantedByEmail ? ` by ${grant.grantedByEmail}` : ""}`
+                          : "Legacy grant (pre staff-roles)"
+                      }
+                    >
+                      <RoleBadge
+                        role={grant.role}
+                        revoking={revoking === `${member.userId}:${grant.role}`}
+                        onRevoke={() => revoke.mutate({ userId: member.userId, role: grant.role })}
+                      />
+                    </span>
                   ))}
                   {member.roles.length > 0 && member.roles.length < 4 && (
                     <button
