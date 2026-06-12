@@ -673,18 +673,17 @@ export default function ProfileScreen() {
             })}
           </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.applyBtn, { opacity: selectedAvatarUrl ? 1 : 0.4 }]}
+          <Button
+            title="Apply"
             onPress={handleApplyAvatar}
-            disabled={!selectedAvatarUrl || avatarLoading}
+            disabled={!selectedAvatarUrl}
+            loading={avatarLoading}
+            backgroundColor={Colors.primary}
+            borderRadius={24}
+            fontWeight="600"
+            style={{ marginTop: 16 }}
             activeOpacity={0.8}
-          >
-            {avatarLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.applyBtnText}>Apply</Text>
-            )}
-          </TouchableOpacity>
+          />
         </Animated.View>
       </View>
     </SafeAreaView>
@@ -902,16 +901,7 @@ function createStyles(Colors: ThemeColors) {
     height: 20,
     alignItems: 'center',
     justifyContent: 'center' },
-  applyBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 24,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 16 },
-  applyBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600' } });
+ });
 }
 
 

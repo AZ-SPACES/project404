@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   StatusBar,
-  ActivityIndicator,
   Modal,
   Pressable,
   KeyboardAvoidingView,
@@ -21,6 +20,7 @@ import { useMutation } from '@tanstack/react-query';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { bulkTransfer } from '../../../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BulkTransfer'>;
@@ -206,18 +206,16 @@ export default function BulkTransferScreen() {
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: Colors.primary }]}
-          activeOpacity={0.85}
+        <Button
+          title="Send All"
           onPress={handleSendAll}
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={styles.sendBtnText}>Send All</Text>
-          )}
-        </TouchableOpacity>
+          loading={mutation.isPending}
+          backgroundColor={Colors.primary}
+          textColor={Colors.white}
+          borderRadius={Radius.lg}
+          fontWeight="600"
+          activeOpacity={0.85}
+        />
       </View>
 
       {/* Results modal */}
@@ -250,13 +248,16 @@ export default function BulkTransferScreen() {
                 </View>
               ))}
             </ScrollView>
-            <TouchableOpacity
-              style={[styles.resultsCloseBtn, { backgroundColor: Colors.primary }]}
+            <Button
+              title="Done"
               onPress={handleCloseResults}
+              backgroundColor={Colors.primary}
+              textColor={Colors.white}
+              borderRadius={Radius.lg}
+              fontWeight="600"
+              style={{ marginTop: Spacing.xl }}
               activeOpacity={0.85}
-            >
-              <Text style={styles.resultsCloseBtnText}>Done</Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </Modal>
@@ -366,17 +367,6 @@ function createStyles(Colors: ThemeColors) {
       paddingBottom: Spacing.xl,
       paddingTop: Spacing.md,
     },
-    sendBtn: {
-      borderRadius: Radius.lg,
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
-    sendBtnText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: Colors.white,
-      fontSize: 16,
-    },
     resultsContainer: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.5)',
@@ -427,18 +417,6 @@ function createStyles(Colors: ThemeColors) {
     resultBadgeText: {
       fontSize: 12,
       fontWeight: '700',
-    },
-    resultsCloseBtn: {
-      marginTop: Spacing.xl,
-      borderRadius: Radius.lg,
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
-    resultsCloseBtnText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: Colors.white,
-      fontSize: 16,
     },
   });
 }

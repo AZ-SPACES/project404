@@ -10,6 +10,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Feather } from '@react-native-vector-icons/feather';
+import Button from '../../ui/Button';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -163,12 +164,30 @@ function TextOverlayInner({
               onSubmitEditing={handleSubmit}
             />
             <View style={styles.inputActions}>
-              <TouchableOpacity onPress={onDismissInput} style={styles.inputBtn}>
-                <Text style={styles.inputBtnLabel}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSubmit} style={[styles.inputBtn, styles.inputBtnDone]}>
-                <Text style={[styles.inputBtnLabel, { color: '#174717' }]}>Add</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancel"
+                onPress={onDismissInput}
+                backgroundColor="transparent"
+                textColor="#fff"
+                borderRadius={8}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={15}
+                fontWeight="600"
+                width="auto"
+              />
+              <Button
+                title="Add"
+                onPress={handleSubmit}
+                backgroundColor="#B7EE7A"
+                textColor="#174717"
+                borderRadius={8}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={15}
+                fontWeight="600"
+                width="auto"
+              />
             </View>
           </View>
         </View>
@@ -226,18 +245,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
-  },
-  inputBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  inputBtnLabel: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  inputBtnDone: {
-    backgroundColor: '#B7EE7A',
   },
 });

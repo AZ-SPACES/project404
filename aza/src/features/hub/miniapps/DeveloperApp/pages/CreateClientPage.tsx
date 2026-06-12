@@ -7,6 +7,7 @@ import { Feather } from '@react-native-vector-icons/feather';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Spacing, Radius, Typography } from '../../../../../theme';
 import { NavProps } from '../types';
+import Button from '../../../../../components/ui/Button';
 import { registerDeveloperClient } from '../../../../../services/api';
 import { queryClient } from '../../../../../lib/queryClient';
 import { queryKeys } from '../../../../../lib/queryKeys';
@@ -140,15 +141,16 @@ export default function CreateClientPage({ goBack, navigate, Colors }: NavProps)
         })}
       </View>
 
-      <TouchableOpacity
-        style={[styles.submitBtn, { backgroundColor: Colors.primary, opacity: saving ? 0.7 : 1 }]}
+      <Button
+        title="Create app"
         onPress={handleCreate}
-        disabled={saving}
-      >
-        {saving
-          ? <ActivityIndicator color={Colors.black} />
-          : <Text style={[styles.submitText, { color: Colors.black }]}>Create app</Text>}
-      </TouchableOpacity>
+        loading={saving}
+        backgroundColor={Colors.primary}
+        textColor={Colors.black}
+        borderRadius={Radius.full}
+        paddingVertical={0}
+        style={{ height: 52 }}
+      />
     </ScrollView>
   );
 }
@@ -169,7 +171,5 @@ function createStyles(Colors: any) {
     scopeCardRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
     scopeLabel:    { fontSize: 14, fontWeight: '600' },
     scopeDesc:     { fontSize: 12 },
-    submitBtn:     { height: 52, borderRadius: Radius.full, justifyContent: 'center', alignItems: 'center' },
-    submitText:    { fontSize: 16, fontWeight: '700' },
   });
 }

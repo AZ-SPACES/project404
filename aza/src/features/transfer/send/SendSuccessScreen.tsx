@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useQuery } from '@tanstack/react-query';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
+import Button from '../../../components/ui/Button';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
@@ -323,53 +324,72 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
         ) : null}
 
         {/* Send Again quick action */}
-        <TouchableOpacity
-          style={styles.sendAgainBtn}
+        <Button
+          title={`Send Again to ${name}`}
           onPress={handleSendAgain}
+          leftIcon={<Feather name="refresh-cw" size={15} color={Colors.primary} />}
+          backgroundColor={Colors.primary + '12'}
+          textColor={Colors.primary}
+          borderRadius={12}
+          paddingVertical={13}
+          fontSize={14}
+          fontWeight="600"
+          width="auto"
+          style={{
+            marginHorizontal: Spacing.lg,
+            marginTop: Spacing.sm,
+            borderWidth: 1,
+            borderColor: Colors.primary + '30',
+          }}
           activeOpacity={0.75}
-        >
-          <Feather name="refresh-cw" size={15} color={Colors.primary} style={{ marginRight: 6 }} />
-          <Text style={styles.sendAgainText}>Send Again to {name}</Text>
-        </TouchableOpacity>
+        />
       </ScrollView>
 
       {/* Footer actions */}
       <View style={styles.footer}>
         <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnOutline]}
+          <Button
+            title="Download"
             onPress={handleDownload}
-            disabled={isDownloading || isSharing}
+            disabled={isSharing}
+            loading={isDownloading}
+            leftIcon={<Feather name="download" size={17} color={Colors.textPrimary} />}
+            backgroundColor={isDark ? Colors.surface : Colors.white}
+            borderRadius={12}
+            paddingVertical={14}
+            fontWeight="600"
+            width="auto"
+            style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+            textStyle={{ color: Colors.textPrimary }}
             activeOpacity={0.75}
-          >
-            {isDownloading
-              ? <ActivityIndicator size="small" color={Colors.textPrimary} />
-              : <>
-                  <Feather name="download" size={17} color={Colors.textPrimary} />
-                  <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>Download</Text>
-                </>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnSolid]}
+          />
+          <Button
+            title="Share Receipt"
             onPress={handleShare}
-            disabled={isDownloading || isSharing}
+            disabled={isDownloading}
+            loading={isSharing}
+            leftIcon={<Feather name="share-2" size={17} color="#fff" />}
+            backgroundColor={isDark ? Colors.surface : '#111827'}
+            textColor="#fff"
+            borderRadius={12}
+            paddingVertical={14}
+            fontWeight="600"
+            width="auto"
+            style={{ flex: 1 }}
             activeOpacity={0.75}
-          >
-            {isSharing
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <>
-                  <Feather name="share-2" size={17} color="#fff" />
-                  <Text style={[styles.actionBtnText, { color: '#fff' }]}>Share Receipt</Text>
-                </>
-            }
-          </TouchableOpacity>
+          />
         </View>
 
-        <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.7}>
-          <Text style={styles.doneBtnText}>Return to Dashboard</Text>
-        </TouchableOpacity>
+        <Button
+          title="Return to Dashboard"
+          onPress={handleDone}
+          backgroundColor="transparent"
+          fontWeight="600"
+          paddingVertical={Spacing.md}
+          paddingHorizontal={0}
+          textStyle={{ color: Colors.textSecondary }}
+          activeOpacity={0.7}
+        />
       </View>
     </SafeAreaView>
   );
@@ -478,14 +498,6 @@ function createStyles(Colors: ThemeColors) {
     },
 
     // Send again
-    sendAgainBtn: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      marginHorizontal: Spacing.lg, marginTop: Spacing.sm,
-      paddingVertical: 13,
-      backgroundColor: Colors.primary + '12',
-      borderRadius: 12, borderWidth: 1, borderColor: Colors.primary + '30',
-    },
-    sendAgainText: { ...Typography.body, fontWeight: '600', color: Colors.primary },
 
     // Footer
     footer: {
@@ -494,19 +506,5 @@ function createStyles(Colors: ThemeColors) {
       paddingBottom: Platform.OS === 'ios' ? 0 : Spacing.md,
     },
     actionRow: { flexDirection: 'row', gap: 12, marginBottom: Spacing.sm },
-    actionBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'center', borderRadius: 12, paddingVertical: 14, gap: 8,
-    },
-    actionBtnOutline: {
-      borderWidth: 1, borderColor: Colors.border,
-      backgroundColor: isDark ? Colors.surface : Colors.white,
-    },
-    actionBtnSolid: {
-      backgroundColor: isDark ? Colors.surface : '#111827',
-    },
-    actionBtnText: { ...Typography.button, fontWeight: '600' },
-    doneBtn: { alignItems: 'center', paddingVertical: Spacing.md },
-    doneBtnText: { ...Typography.button, fontWeight: '600', color: Colors.textSecondary },
   });
 }

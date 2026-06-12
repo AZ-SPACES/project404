@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { queryKeys } from '../../../lib/queryKeys';
 import { getBudgets, createOrUpdateBudget, deleteBudget } from '../../../services/api';
 import { CATEGORIES, CategoryKey } from '../../../utils/categories';
@@ -213,16 +214,18 @@ export default function BudgetManagementScreen() {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[styles.saveBtn, saveMutation.isPending && { opacity: 0.6 }]}
+            <Button
+              title="Save Budget"
               onPress={handleSave}
-              disabled={saveMutation.isPending}
+              loading={saveMutation.isPending}
+              backgroundColor="#111827"
+              borderRadius={8}
+              paddingVertical={14}
+              fontSize={14}
+              fontWeight="500"
+              style={{ marginTop: Spacing.md }}
               activeOpacity={0.8}
-            >
-              {saveMutation.isPending
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.saveBtnText}>Save Budget</Text>}
-            </TouchableOpacity>
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -302,10 +305,5 @@ function createStyles(Colors: ThemeColors) {
     periodChipText: { fontSize: 14, fontWeight: '500', color: Colors.textPrimary },
     periodChipTextActive: { color: '#fff' },
     
-    saveBtn: {
-      backgroundColor: '#111827', borderRadius: 8,
-      paddingVertical: 14, alignItems: 'center', marginTop: Spacing.md,
-    },
-    saveBtnText: { fontSize: 14, fontWeight: '500', color: '#fff' },
   });
 }
