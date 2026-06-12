@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearTokens } from "@/lib/admin-api";
+import { clearTokens, getStoredRoles, hasRole, type StaffRoleName } from "@/lib/admin-api";
 import { SupportWsProvider, useSupportWs } from "@/lib/support-ws-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -33,6 +33,8 @@ import {
   X,
   KeyRound,
   Megaphone,
+  ClipboardCheck,
+  FileSearch,
 } from "lucide-react";
 
 interface NavItem {
@@ -41,6 +43,8 @@ interface NavItem {
   icon: React.ElementType;
   exactMatch?: boolean;
   badge?: "inbox";
+  /** Staff roles that can use this area (mirrors backend @PreAuthorize). ADMIN always passes. */
+  roles?: StaffRoleName[];
 }
 
 interface NavSection {
@@ -53,61 +57,67 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/approvals", label: "Approvals", icon: ClipboardCheck, roles: ["FINANCE", "COMPLIANCE"] },
     ],
   },
   {
     label: "User Management",
     items: [
-      { href: "/kyc", label: "KYC Review", icon: ShieldCheck, exactMatch: true },
-      { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3 },
-      { href: "/users", label: "Users", icon: Users },
-      { href: "/wallets", label: "Wallets", icon: Wallet },
-      { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/kyc", label: "KYC Review", icon: ShieldCheck, exactMatch: true, roles: ["COMPLIANCE"] },
+      { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["COMPLIANCE"] },
+      { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
+      { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
+      { href: "/campaigns", label: "Campaigns", icon: Megaphone, roles: ["ADMIN"] },
     ],
   },
   {
     label: "Finance",
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-      { href: "/merchants", label: "Merchants", icon: Store },
-      { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck },
-      { href: "/miniapps", label: "Mini App Reports", icon: Flag },
-      { href: "/oauth-apps", label: "OAuth Apps", icon: KeyRound },
-      { href: "/disputes", label: "Disputes", icon: Scale },
-      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp },
-      { href: "/fees", label: "Fee Management", icon: Coins },
-      { href: "/reports", label: "Reports", icon: FileBarChart2 },
+      { href: "/merchants", label: "Merchants", icon: Store, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/miniapps", label: "Mini App Reports", icon: Flag, roles: ["ADMIN"] },
+      { href: "/oauth-apps", label: "OAuth Apps", icon: KeyRound, roles: ["ADMIN"] },
+      { href: "/disputes", label: "Disputes", icon: Scale, roles: ["SUPPORT", "FINANCE"] },
+      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp, roles: ["COMPLIANCE"] },
+      { href: "/fees", label: "Fee Management", icon: Coins, roles: ["FINANCE"] },
+      { href: "/reports", label: "Reports", icon: FileBarChart2, roles: ["FINANCE"] },
+      { href: "/reconciliation", label: "Reconciliation", icon: Scale, roles: ["FINANCE"] },
     ],
   },
   {
     label: "Compliance & Risk",
     items: [
-      { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck },
-      { href: "/risk", label: "Risk Management", icon: AlertTriangle },
-      { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert },
+      { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck, roles: ["COMPLIANCE"] },
+      { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["COMPLIANCE"] },
+      { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["COMPLIANCE"] },
+      { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["COMPLIANCE"] },
+      { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["COMPLIANCE", "FINANCE"] },
+      { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["COMPLIANCE", "SUPPORT"] },
     ],
   },
   {
     label: "Analytics",
     items: [
-      { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp },
-      { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2 },
-      { href: "/analytics/spending", label: "Spending", icon: PieChart },
+      { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp, roles: ["FINANCE"] },
+      { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2, roles: ["FINANCE"] },
+      { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["FINANCE"] },
     ],
   },
   {
     label: "Support",
     items: [
-      { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox" },
-      { href: "/support/analytics", label: "Analytics", icon: MessageSquare },
+      { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox", roles: ["SUPPORT"] },
+      { href: "/support/analytics", label: "Analytics", icon: MessageSquare, roles: ["SUPPORT"] },
     ],
   },
   {
     label: "Configuration",
     items: [
-      { href: "/notifications", label: "Notifications", icon: Bell },
-      { href: "/settings", label: "System Settings", icon: Settings },
-      { href: "/audit-log", label: "Audit Log", icon: ScrollText },
+      { href: "/notifications", label: "Notifications", icon: Bell, roles: ["ADMIN"] },
+      { href: "/staff", label: "Staff & Roles", icon: Users2, roles: ["ADMIN"] },
+      { href: "/settings", label: "System Settings", icon: Settings, roles: ["ADMIN"] },
+      { href: "/audit-log", label: "Audit Log", icon: ScrollText, roles: ["COMPLIANCE"] },
     ],
   },
 ];
@@ -125,6 +135,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [roles, setRoles] = useState<StaffRoleName[]>([]);
   const { unreadCount } = useSupportWs();
 
   useEffect(() => {
@@ -133,9 +144,21 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
+    setRoles(getStoredRoles());
     // eslint-disable-next-line
     setReady(true);
   }, [router]);
+
+  // Hide nav areas this staff member's roles can't use. Unknown roles (sessions
+  // from before staff roles existed) see everything; the backend still enforces.
+  function canSee(item: NavItem): boolean {
+    if (!item.roles || roles.length === 0) return true;
+    return hasRole(roles, item.roles);
+  }
+
+  const visibleSections = NAV_SECTIONS
+    .map((section) => ({ ...section, items: section.items.filter(canSee) }))
+    .filter((section) => section.items.length > 0);
 
   function logout() {
     clearTokens();
@@ -151,7 +174,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {NAV_SECTIONS.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.label}>
             <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
               {section.label}

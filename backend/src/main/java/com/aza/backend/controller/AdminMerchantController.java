@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -16,6 +17,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/merchants")
 @RequiredArgsConstructor
+// FINANCE owns settlements/payouts/fees; COMPLIANCE owns KYB review
+@PreAuthorize("hasAnyRole('ADMIN','FINANCE','COMPLIANCE')")
 public class AdminMerchantController {
 
     private final MerchantService merchantService;

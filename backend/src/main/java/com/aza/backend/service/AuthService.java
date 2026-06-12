@@ -57,6 +57,7 @@ public class AuthService {
     private final NotificationService notificationService;
     private final AuditService auditService;
     private final GeoLocationService geoLocationService;
+    private final ScreeningService screeningService;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -101,6 +102,9 @@ public class AuthService {
                 user, request.getDateOfBirth(), request.getEmploymentStatus());
 
         user = userRepository.save(user);
+
+        // Sanctions/PEP screening at the door; never blocks signup (daily batch is the backstop)
+        screeningService.screenNewUser(user);
 
         Wallet wallet = Wallet.builder()
                 .userId(user.getId())

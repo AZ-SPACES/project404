@@ -21,12 +21,33 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/risk")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
 public class AdminRiskController {
 
     private final RiskService riskService;
     private final RateLimitService rateLimitService;
     private final BehavioralDetectionService behavioralDetection;
+    private final com.aza.backend.service.RiskRuleService riskRuleService;
+
+    /** Tunable thresholds driving the transaction risk engine. */
+    @GetMapping("/rules")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getRules() {
+        return ResponseEntity.ok(ApiResponse.success(riskRuleService.getRules()));
+    }
+
+    @PatchMapping("/rules")
+    public ResponseEntity<ApiResponse<Map<String, String>>> updateRules(
+            @RequestBody RiskRulesRequest request,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(riskRuleService.updateRules(
+                admin, request.getLargeTransferGhs(), request.getVelocityMaxHourly())));
+    }
+
+    @Data
+    static class RiskRulesRequest {
+        private String largeTransferGhs;
+        private String velocityMaxHourly;
+    }
 
     @GetMapping("/alerts")
     public ResponseEntity<ApiResponse<Page<RiskAlertResponse>>> getAlerts(

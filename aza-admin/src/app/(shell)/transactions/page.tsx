@@ -90,15 +90,12 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 function TransactionDrawer({
   txId,
   onClose,
-  onReversed,
 }: {
   txId: string;
   onClose: () => void;
-  onReversed?: (tx: AdminTransaction) => void;
 }) {
-  const queryClient = useQueryClient();
   const [showReverseConfirm, setShowReverseConfirm] = useState(false);
-  const [reversed, setReversed] = useState(false);
+  const [reversalSubmitted, setReversalSubmitted] = useState(false);
 
   const { data: tx, isLoading, error } = useQuery<AdminTransaction>({
     queryKey: ["transaction", txId],
@@ -107,11 +104,10 @@ function TransactionDrawer({
 
   const reverseMutation = useMutation({
     mutationFn: () => reverseTransaction(txId),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(["transaction", txId], updated);
-      setReversed(true);
+    onSuccess: () => {
+      // Maker-checker: nothing changes until a second FINANCE/ADMIN approves.
+      setReversalSubmitted(true);
       setShowReverseConfirm(false);
-      onReversed?.(updated);
     },
   });
 
@@ -203,14 +199,14 @@ function TransactionDrawer({
                 </div>
               </div>
 
-              {reversed && (
+              {reversalSubmitted && (
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3 flex items-center gap-2 text-purple-400 text-sm">
                   <RotateCcw size={14} />
-                  Transaction reversed successfully.
+                  Reversal submitted — another FINANCE/ADMIN staff member must approve it in Approvals.
                 </div>
               )}
 
-              {tx.status === "COMPLETED" && !reversed && (
+              {tx.status === "COMPLETED" && !reversalSubmitted && (
                 <div>
                   {!showReverseConfirm ? (
                     <button
@@ -264,19 +260,11 @@ function TransactionDrawer({
 export default function TransactionsPage() {
   const [page, setPage] = useState(0);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<Page<AdminTransaction>>({
     queryKey: ["transactions", page],
     queryFn: () => getAdminTransactions(page, 20),
   });
-
-  function handleReversed(updated: AdminTransaction) {
-    queryClient.setQueryData<Page<AdminTransaction>>(["transactions", page], (prev) => {
-      if (!prev) return prev;
-      return { ...prev, content: prev.content.map(tx => tx.id === updated.id ? updated : tx) };
-    });
-  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -375,7 +363,6 @@ export default function TransactionsPage() {
         <TransactionDrawer
           txId={selectedTxId}
           onClose={() => setSelectedTxId(null)}
-          onReversed={handleReversed}
         />
       )}
     </div>

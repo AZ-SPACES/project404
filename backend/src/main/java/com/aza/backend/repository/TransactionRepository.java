@@ -78,6 +78,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     long countByInitiatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
+    long countByStatusAndInitiatedAtBetween(Transaction.TransactionStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'COMPLETED'")
     java.math.BigDecimal sumCompletedVolume();
 

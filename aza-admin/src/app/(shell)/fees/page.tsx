@@ -52,13 +52,11 @@ export default function FeesPage() {
       minFee: editDraft.minFee ?? null,
       maxFee: editDraft.maxFee ?? null,
     }),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<FeeRule[]>(["feeRules"], (prev) =>
-        prev ? prev.map(r => r.id === updated.id ? updated : r) : prev
-      );
+    onSuccess: () => {
+      // Maker-checker: the rule is unchanged until a second staff member approves.
       setEditing(null);
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => setSuccess(false), 5000);
     },
   });
 
@@ -103,7 +101,7 @@ export default function FeesPage() {
       {success && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-emerald-400 text-sm flex items-center gap-2">
           <CheckCircle2 size={16} />
-          Fee rule updated successfully.
+          Change submitted — another FINANCE/ADMIN staff member must approve it in Approvals.
         </div>
       )}
 

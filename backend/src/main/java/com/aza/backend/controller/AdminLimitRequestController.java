@@ -30,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/limit-requests")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
 public class AdminLimitRequestController {
 
     private final LimitIncreaseRequestRepository requestRepo;
