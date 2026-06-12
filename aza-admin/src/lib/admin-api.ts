@@ -1518,6 +1518,18 @@ export function revokeStaffRole(userId: string, role: StaffRoleName): Promise<St
   return request(`/api/v1/admin/staff/${userId}/roles/${role}`, { method: "DELETE" });
 }
 
+/** Atomic swap; maker-checker once a second staff member exists. */
+export function changeStaffRole(
+  userId: string,
+  fromRole: StaffRoleName,
+  toRole: StaffRoleName,
+): Promise<StaffMember | Approval> {
+  return request(`/api/v1/admin/staff/${userId}/change-role`, {
+    method: "POST",
+    body: JSON.stringify({ fromRole, toRole }),
+  });
+}
+
 // ── Authenticated file downloads ──────────────────────────────────────────────
 
 export async function downloadFile(path: string, filename: string): Promise<void> {
@@ -1549,6 +1561,7 @@ export interface Approval {
     | "UPDATE_FEE_RULE"
     | "UPDATE_USER_LIMITS"
     | "GRANT_STAFF_ROLE"
+    | "CHANGE_STAFF_ROLE"
     | "UPDATE_SYSTEM_SETTINGS";
   targetId: string;
   summary: string;

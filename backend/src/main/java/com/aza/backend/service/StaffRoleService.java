@@ -110,6 +110,33 @@ public class StaffRoleService {
     }
 
     /**
+     * Atomic role swap: grant the new role and revoke the old in one transaction,
+     * so there's no window where the person holds neither (or both, after a
+     * partial failure). Grant-first ordering means the last-ADMIN guard still
+     * fires on ADMIN→X swaps and rolls the whole change back.
+     */
+    @Transactional
+    public StaffMemberResponse changeRole(User admin, UUID targetUserId,
+                                          StaffRole.Role fromRole, StaffRole.Role toRole) {
+        if (fromRole == toRole) {
+            throw new AppException("SAME_ROLE", "From and to roles are identical", HttpStatus.BAD_REQUEST);
+        }
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND));
+        Set<StaffRole.Role> active = getActiveRoles(target);
+        if (!active.contains(fromRole)) {
+            throw new AppException("ROLE_NOT_HELD", "User does not hold " + fromRole, HttpStatus.NOT_FOUND);
+        }
+        if (active.contains(toRole)) {
+            throw new AppException("ROLE_ALREADY_GRANTED", "User already holds " + toRole, HttpStatus.CONFLICT);
+        }
+        grantRole(admin, targetUserId, toRole);
+        StaffMemberResponse result = revokeRole(admin, targetUserId, fromRole);
+        auditService.log(admin, "CHANGE_STAFF_ROLE", target, "from=" + fromRole + " to=" + toRole);
+        return result;
+    }
+
+    /**
      * Legacy USER/ADMIN toggle from the old enum endpoint, expressed as staff-role
      * grant/revoke. Idempotent: setting a state the user already has is a no-op.
      */

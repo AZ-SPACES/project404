@@ -136,6 +136,12 @@ public class ApprovalService {
             case GRANT_STAFF_ROLE ->
                     staffRoleService.grantRole(approver, approval.getTargetId(),
                             StaffRole.Role.valueOf(fromJson(approval.getPayload(), GrantRolePayload.class).getRole()));
+            case CHANGE_STAFF_ROLE -> {
+                ChangeRolePayload payload = fromJson(approval.getPayload(), ChangeRolePayload.class);
+                staffRoleService.changeRole(approver, approval.getTargetId(),
+                        StaffRole.Role.valueOf(payload.getFromRole()),
+                        StaffRole.Role.valueOf(payload.getToRole()));
+            }
             case UPDATE_SYSTEM_SETTINGS ->
                     settingService.updateSettings(
                             fromJson(approval.getPayload(), SystemSettingService.SystemSettingsRequest.class));
@@ -146,7 +152,7 @@ public class ApprovalService {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS -> StaffRole.Role.COMPLIANCE;
-            case GRANT_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS -> StaffRole.Role.ADMIN;
+            case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS -> StaffRole.Role.ADMIN;
         };
     }
 
@@ -155,6 +161,14 @@ public class ApprovalService {
     @lombok.AllArgsConstructor
     public static class GrantRolePayload {
         private String role;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class ChangeRolePayload {
+        private String fromRole;
+        private String toRole;
     }
 
     private PendingApproval getPending(UUID approvalId) {
