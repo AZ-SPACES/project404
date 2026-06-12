@@ -10,7 +10,8 @@
 
 export type AuthEvent =
   | { type: 'logout' }
-  | { type: 'tokenRotated'; accessToken: string };
+  | { type: 'tokenRotated'; accessToken: string }
+  | { type: 'geoBlocked' };
 
 type Listener = (e: AuthEvent) => void | Promise<void>;
 

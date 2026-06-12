@@ -1,113 +1,111 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, StatusBar, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
-import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import Button from '../../../components/ui/Button';
 
 const SUPPORT_EMAIL = 'support@aza.systems';
+const blockedVideo = require('../../../assets/videos/blocked.mp4');
 
 export default function GeoBlockedScreen() {
-  const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const player = useVideoPlayer(blockedVideo);
+
+  useEffect(() => {
+    if (player) {
+      player.loop = true;
+      player.play();
+      player.allowsExternalPlayback = false;
+    }
+  }, [player]);
 
   const handleContactSupport = () => {
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Region%20Access%20Issue`);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle={Colors.isDark ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-      />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" />
 
-      <View style={styles.body}>
-        <View style={styles.iconCircle}>
-          <Feather name="map-pin" size={40} color="#EF4444" />
-        </View>
-
-        <Text style={styles.title}>Not Available in Your Region</Text>
-
-        <Text style={styles.description}>
-          AZA is not currently available in your country or region. This may be due to
-          regulatory requirements.
-        </Text>
-
-        <Text style={styles.description}>
-          If you believe this is a mistake — for example, if you're using a VPN — please
-          disable it and try again.
-        </Text>
-
-        <View style={{ flex: 1 }} />
-
-        <Button
-          title="Contact Support"
-          onPress={handleContactSupport}
-          backgroundColor={Colors.primary}
-          textColor="#ffffff"
-          leftIcon={<Feather name="mail" size={18} color="#ffffff" />}
-          style={{ marginBottom: Spacing.md }}
+      {/* Background Video */}
+      <View style={styles.videoContainer}>
+        <VideoView
+          style={styles.video}
+          player={player}
+          contentFit="cover"
+          nativeControls={false}
+          allowsPictureInPicture={false}
         />
+        <View style={styles.overlay} />
+      </View>
 
-        <View style={styles.infoRow}>
-          <Feather name="info" size={14} color={Colors.textSecondary} />
-          <Text style={styles.infoText}>
-            Error code: GEO_RESTRICTED
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.contentContainer}>
+          <Text style={styles.title}>NOT AVAILABLE IN{"\n"}YOUR REGION</Text>
+          <Text style={styles.description}>
+            AZA is currently unavailable in your location due to regulatory restrictions.
+          </Text>
+          <Text style={[styles.description, { marginTop: 16 }]}>
+            If you are using a VPN or proxy, disabling it may restore your access.
           </Text>
         </View>
-      </View>
-    </SafeAreaView>
+
+        <View style={styles.footer}>
+          <Button
+            title="Contact Support"
+            onPress={handleContactSupport}
+            backgroundColor="#ffffff"
+            textColor="#111827"
+            leftIcon={<Feather name="mail" size={16} color="#111827" />}
+          />
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
-function createStyles(Colors: ThemeColors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    body: {
-      flex: 1,
-      alignItems: 'center',
-      paddingHorizontal: Spacing.xl,
-      paddingTop: 80,
-      paddingBottom: Spacing.xl,
-    },
-    iconCircle: {
-      width: 96,
-      height: 96,
-      borderRadius: 48,
-      backgroundColor: Colors.isDark ? 'rgba(239,68,68,0.15)' : '#FEE2E2',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: Spacing.xl,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: Colors.textPrimary,
-      marginBottom: Spacing.lg,
-      textAlign: 'center',
-    },
-    description: {
-      ...Typography.body,
-      color: Colors.textSecondary,
-      textAlign: 'center',
-      lineHeight: 22,
-      marginBottom: Spacing.lg,
-      paddingHorizontal: Spacing.sm,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.xs,
-      marginTop: Spacing.sm,
-    },
-    infoText: {
-      fontSize: 12,
-      color: Colors.textSecondary,
-      fontFamily: 'monospace',
-    },
-  });
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  videoContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  video: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  safeArea: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#ffffff',
+    lineHeight: 40,
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+  description: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#e5e7eb',
+    lineHeight: 22,
+    paddingRight: 24,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    paddingTop: 16,
+  },
+});

@@ -1,8 +1,6 @@
 import React from 'react';
 import { RootStackParamList } from './types';
-import { 
-  OnboardingScreen, 
-} from '../features/onboarding';
+import { OnboardingScreen, } from '../features/onboarding';
 import {
   LoginScreen,
   TotpLoginScreen,
