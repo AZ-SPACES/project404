@@ -63,9 +63,11 @@ public class PendingApproval {
     private String reviewNotes;
 
     public enum ActionType {
-        REVERSE_TRANSACTION,  // approver needs FINANCE
-        UPDATE_FEE_RULE,      // approver needs FINANCE
-        UPDATE_USER_LIMITS    // approver needs COMPLIANCE
+        REVERSE_TRANSACTION,    // approver needs FINANCE
+        UPDATE_FEE_RULE,        // approver needs FINANCE
+        UPDATE_USER_LIMITS,     // approver needs COMPLIANCE
+        GRANT_STAFF_ROLE,       // approver needs ADMIN
+        UPDATE_SYSTEM_SETTINGS  // approver needs ADMIN
     }
 
     public enum Status {

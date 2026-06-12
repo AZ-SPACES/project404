@@ -61,6 +61,24 @@ public class AccountingExportService {
             }
         }
 
+        // Refunds: the checkout entries in reverse — merchant gives back the net,
+        // fee revenue is reversed, and the customer is made whole.
+        for (CheckoutSession session : checkoutSessionRepository.findByStatusAndRefundedAtBetween(
+                CheckoutSession.SessionStatus.REFUNDED, start, end)) {
+            String date = session.getRefundedAt().toLocalDate().toString();
+            String ref = "refund-" + session.getId();
+            String desc = csvSafe("Refund: " + (session.getDescription() != null ? session.getDescription() : "Merchant checkout"));
+            BigDecimal gross = orZero(session.getAmount());
+            BigDecimal fee = orZero(session.getPlatformFee());
+            BigDecimal net = session.getNetAmount() != null ? session.getNetAmount() : gross.subtract(fee);
+
+            line(csv, date, ref, desc, ACC_MERCHANT_FLOAT, net, null);
+            if (fee.signum() > 0) {
+                line(csv, date, ref, desc, ACC_FEE_REVENUE, fee, null);
+            }
+            line(csv, date, ref, desc, ACC_CUSTOMER_FLOAT, null, gross);
+        }
+
         // Payouts: merchant balance leaves the platform via the settlement bank.
         for (MerchantPayout payout : payoutRepository.findByStatusAndCompletedAtBetween(
                 MerchantPayout.PayoutStatus.COMPLETED, start, end)) {

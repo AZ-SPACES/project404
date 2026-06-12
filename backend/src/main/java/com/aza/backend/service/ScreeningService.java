@@ -4,6 +4,7 @@ import com.aza.backend.dto.admin.ScreeningMatchResponse;
 import com.aza.backend.entity.RiskAlert;
 import com.aza.backend.entity.SanctionsListEntry;
 import com.aza.backend.entity.ScreeningMatch;
+import com.aza.backend.entity.StaffRole;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.RiskAlertRepository;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -38,6 +40,7 @@ public class ScreeningService {
     private final UserRepository userRepository;
     private final RiskAlertRepository riskAlertRepository;
     private final AdminAuditService auditService;
+    private final StaffAlertService staffAlertService;
 
     private static final int SCORE_THRESHOLD = 70;
 
@@ -45,7 +48,8 @@ public class ScreeningService {
 
     @Transactional
     public SanctionsListEntry addEntry(User admin, String listName, String fullName,
-                                       SanctionsListEntry.EntryType type, String country, String notes) {
+                                       SanctionsListEntry.EntryType type, String country,
+                                       LocalDate dateOfBirth, String notes) {
         if (listName == null || listName.isBlank() || fullName == null || fullName.isBlank()) {
             throw new AppException("INVALID_ENTRY", "List name and full name are required", HttpStatus.BAD_REQUEST);
         }
@@ -55,6 +59,7 @@ public class ScreeningService {
                 .normalizedName(normalize(fullName))
                 .entryType(type)
                 .country(country)
+                .dateOfBirth(dateOfBirth)
                 .notes(notes)
                 .addedBy(admin.getId())
                 .build());
@@ -63,7 +68,7 @@ public class ScreeningService {
         return entry;
     }
 
-    /** CSV lines: listName,fullName,type,country (type SANCTION|PEP; header row optional). */
+    /** CSV lines: listName,fullName,type[,country[,dateOfBirth]] (type SANCTION|PEP; header row optional). */
     @Transactional
     public int importEntries(User admin, String csv) {
         if (csv == null || csv.isBlank()) {
@@ -89,13 +94,126 @@ public class ScreeningService {
                     .fullName(cols[1].trim())
                     .normalizedName(normalize(cols[1]))
                     .entryType(type)
-                    .country(cols.length > 3 ? cols[3].trim() : null)
+                    .country(cols.length > 3 && !cols[3].isBlank() ? cols[3].trim() : null)
+                    .dateOfBirth(cols.length > 4 ? parseDob(cols[4].trim(), line) : null)
                     .addedBy(admin.getId())
                     .build());
             imported++;
         }
         auditService.log(admin, "IMPORT_WATCHLIST", null, "entries=" + imported);
         return imported;
+    }
+
+    private LocalDate parseDob(String raw, String line) {
+        if (raw.isBlank()) return null;
+        try {
+            return LocalDate.parse(raw);
+        } catch (Exception e) {
+            throw new AppException("INVALID_CSV", "Bad dateOfBirth (use YYYY-MM-DD) in line: " + line, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Imports the UN Security Council consolidated sanctions list from its
+     * published XML feed. Already-active (listName, normalizedName) pairs are
+     * skipped, so re-imports only add new designations.
+     */
+    @Transactional
+    public int importUnConsolidatedList(User admin, String url) {
+        String feedUrl = (url == null || url.isBlank())
+                ? "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
+                : url;
+        org.w3c.dom.Document doc;
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(20))
+                    .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                    .build();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(feedUrl))
+                    .timeout(java.time.Duration.ofSeconds(60))
+                    .GET()
+                    .build();
+            java.net.http.HttpResponse<byte[]> response =
+                    client.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200) {
+                throw new AppException("UN_FEED_ERROR",
+                        "UN list feed returned HTTP " + response.statusCode(), HttpStatus.BAD_GATEWAY);
+            }
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+            doc = factory.newDocumentBuilder().parse(new java.io.ByteArrayInputStream(response.body()));
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AppException("UN_FEED_ERROR", "Failed to fetch/parse UN list: " + e.getMessage(), HttpStatus.BAD_GATEWAY);
+        }
+
+        int imported = 0;
+        org.w3c.dom.NodeList individuals = doc.getElementsByTagName("INDIVIDUAL");
+        for (int i = 0; i < individuals.getLength(); i++) {
+            org.w3c.dom.Element individual = (org.w3c.dom.Element) individuals.item(i);
+            String fullName = String.join(" ",
+                            childText(individual, "FIRST_NAME"),
+                            childText(individual, "SECOND_NAME"),
+                            childText(individual, "THIRD_NAME"),
+                            childText(individual, "FOURTH_NAME"))
+                    .replaceAll("\\s+", " ").trim();
+            if (fullName.isBlank()) continue;
+            String normalized = normalize(fullName);
+            if (normalized.isBlank()
+                    || listRepository.existsByListNameAndNormalizedNameAndActiveTrue("UN", normalized)) {
+                continue;
+            }
+            listRepository.save(SanctionsListEntry.builder()
+                    .listName("UN")
+                    .fullName(fullName)
+                    .normalizedName(normalized)
+                    .entryType(SanctionsListEntry.EntryType.SANCTION)
+                    .country(nestedText(individual, "NATIONALITY", "VALUE"))
+                    .dateOfBirth(parseUnDob(individual))
+                    .addedBy(admin.getId())
+                    .build());
+            imported++;
+        }
+        auditService.log(admin, "IMPORT_UN_LIST", null, "entries=" + imported + " source=" + feedUrl);
+        return imported;
+    }
+
+    private static String childText(org.w3c.dom.Element parent, String tag) {
+        org.w3c.dom.NodeList nodes = parent.getElementsByTagName(tag);
+        if (nodes.getLength() == 0) return "";
+        // Direct child only — INDIVIDUAL contains nested structures reusing tag names
+        for (int i = 0; i < nodes.getLength(); i++) {
+            if (nodes.item(i).getParentNode() == parent) {
+                String text = nodes.item(i).getTextContent();
+                return text != null ? text.trim() : "";
+            }
+        }
+        return "";
+    }
+
+    private static String nestedText(org.w3c.dom.Element parent, String containerTag, String valueTag) {
+        org.w3c.dom.NodeList containers = parent.getElementsByTagName(containerTag);
+        if (containers.getLength() == 0) return null;
+        org.w3c.dom.NodeList values = ((org.w3c.dom.Element) containers.item(0)).getElementsByTagName(valueTag);
+        if (values.getLength() == 0) return null;
+        String text = values.item(0).getTextContent();
+        return text != null && !text.isBlank() ? text.trim() : null;
+    }
+
+    private static LocalDate parseUnDob(org.w3c.dom.Element individual) {
+        org.w3c.dom.NodeList dobs = individual.getElementsByTagName("INDIVIDUAL_DATE_OF_BIRTH");
+        if (dobs.getLength() == 0) return null;
+        String date = nestedText(individual, "INDIVIDUAL_DATE_OF_BIRTH", "DATE");
+        if (date == null) return null; // YEAR-only entries carry too little signal
+        try {
+            return LocalDate.parse(date.length() > 10 ? date.substring(0, 10) : date);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Transactional
@@ -125,8 +243,30 @@ public class ScreeningService {
         }
         if (raised > 0) {
             log.info("Screening raised {} new potential watchlist matches", raised);
+            staffAlertService.alertRole(StaffRole.Role.COMPLIANCE, "Watchlist matches pending review",
+                    raised + " new potential watchlist match(es) need review in Sanctions Screening.");
         }
         return raised;
+    }
+
+    /**
+     * Screens a single user (e.g. at registration). Never throws — screening
+     * problems must not block signup; the daily batch is the backstop.
+     */
+    public void screenNewUser(User user) {
+        try {
+            List<SanctionsListEntry> entries = listRepository.findByActiveTrue();
+            if (entries.isEmpty()) return;
+            int raised = screen(user, entries);
+            if (raised > 0) {
+                log.warn("New user {} matched {} watchlist entries at registration", user.getId(), raised);
+                staffAlertService.alertRole(StaffRole.Role.COMPLIANCE, "New signup matched watchlist",
+                        "A user who just registered matched " + raised
+                                + " watchlist entr" + (raised == 1 ? "y" : "ies") + " — review in Sanctions Screening.");
+            }
+        } catch (Exception e) {
+            log.error("Registration screening failed for user {}: {}", user.getId(), e.getMessage());
+        }
     }
 
     private int screen(User user, List<SanctionsListEntry> entries) {
@@ -135,6 +275,13 @@ public class ScreeningService {
         int raised = 0;
         for (SanctionsListEntry entry : entries) {
             int score = matchScore(userName, entry.getNormalizedName());
+            // DOB disambiguation: a name hit with a different birth date is noise;
+            // the same birth date makes it near-certain.
+            if (score > 0 && entry.getDateOfBirth() != null && user.getDateOfBirth() != null) {
+                score = entry.getDateOfBirth().equals(user.getDateOfBirth())
+                        ? Math.min(100, score + 15)
+                        : 0;
+            }
             if (score >= SCORE_THRESHOLD
                     && !matchRepository.existsByUserIdAndListEntryId(user.getId(), entry.getId())) {
                 matchRepository.save(ScreeningMatch.builder()

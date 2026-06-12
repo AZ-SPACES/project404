@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSystemSettings, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
+import { getSystemSettings, isPendingApproval, updateSystemSettings, SystemSettings } from "@/lib/admin-api";
 import {
   Settings, AlertCircle, CheckCircle2, Loader2, Save, AlertTriangle, Globe, X,
 } from "lucide-react";
@@ -271,6 +271,7 @@ export default function SettingsPage() {
   const [draft, setDraft] = useState<SystemSettings | null>(null);
   const [prevSettings, setPrevSettings] = useState<SystemSettings | undefined>(undefined);
   const [success, setSuccess] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   const { data: settings, isLoading, error } = useQuery<SystemSettings>({
     queryKey: ["systemSettings"],
@@ -285,6 +286,13 @@ export default function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: () => updateSystemSettings(draft!),
     onSuccess: (updated) => {
+      if (isPendingApproval(updated)) {
+        // Maker-checker: nothing applied until a second ADMIN approves
+        setPendingApproval(true);
+        setDraft(settings ?? null);
+        setTimeout(() => setPendingApproval(false), 6000);
+        return;
+      }
       queryClient.setQueryData(["systemSettings"], updated);
       setDraft(updated);
       setSuccess(true);
@@ -342,6 +350,11 @@ export default function SettingsPage() {
       {success && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 text-emerald-400 text-sm flex items-center gap-2">
           <CheckCircle2 size={16} />Settings saved successfully.
+        </div>
+      )}
+      {pendingApproval && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 text-yellow-400 text-sm flex items-center gap-2">
+          <CheckCircle2 size={16} />Change submitted — another ADMIN must approve it in Approvals.
         </div>
       )}
       {saveMutation.error && (

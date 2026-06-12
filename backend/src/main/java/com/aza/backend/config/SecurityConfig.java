@@ -1,5 +1,6 @@
 package com.aza.backend.config;
 
+import com.aza.backend.security.AdminIpAllowlistFilter;
 import com.aza.backend.security.AdminStepUpFilter;
 import com.aza.backend.security.JwtAuthenticationFilter;
 import com.aza.backend.security.filter.MerchantApiKeyFilter;
@@ -40,6 +41,7 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter;
     private final MerchantApiKeyFilter merchantApiKeyFilter;
     private final AdminStepUpFilter adminStepUpFilter;
+    private final AdminIpAllowlistFilter adminIpAllowlistFilter;
 
     @Value("${app.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
@@ -136,6 +138,8 @@ public class SecurityConfig {
                             response.sendError(401, "Unauthorized"))
                     .accessDeniedHandler((request, response, accessDeniedException) ->
                             response.sendError(403, "Forbidden")))
+            // Network gate first: admin paths can be pinned to office IPs (no-op when unset)
+            .addFilterBefore(adminIpAllowlistFilter, UsernamePasswordAuthenticationFilter.class)
             // JWT runs first; API key filter then skips if a valid JWT already authenticated the request
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(merchantApiKeyFilter, JwtAuthenticationFilter.class)

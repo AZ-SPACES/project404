@@ -81,13 +81,26 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserTransactions(userId, page, Math.min(size, 50))));
     }
 
-    /** Legacy USER/ADMIN toggle — now backed by staff_roles (grant/revoke ADMIN). */
+    /**
+     * Legacy USER/ADMIN toggle — backed by staff_roles. Granting ADMIN goes
+     * through maker-checker like the staff API (revoking stays direct: it
+     * reduces power and must never be blockable by the person losing it).
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{userId}/role")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserRole(
+    public ResponseEntity<ApiResponse<Object>> updateUserRole(
             @PathVariable UUID userId,
             @RequestBody AdminRoleRequest request,
             @AuthenticationPrincipal User admin) {
+        boolean granting = "ADMIN".equalsIgnoreCase(request.getRole());
+        if (granting && staffRoleService.countActiveStaffUsers() > 1) {
+            User target = userRepository.findById(userId)
+                    .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+            return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                    admin, com.aza.backend.entity.PendingApproval.ActionType.GRANT_STAFF_ROLE, userId,
+                    new com.aza.backend.service.ApprovalService.GrantRolePayload("ADMIN"),
+                    "Grant ADMIN to " + target.getEmail())));
+        }
         staffRoleService.setLegacyRole(admin, userId, request.getRole());
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
     }

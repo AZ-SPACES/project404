@@ -8,6 +8,7 @@ import {
   getScreeningMatches,
   getScreeningStats,
   getWatchlist,
+  importUnList,
   importWatchlist,
   reviewScreeningMatch,
   runScreening,
@@ -15,7 +16,7 @@ import {
   type ScreeningMatch,
   type WatchlistEntry,
 } from "@/lib/admin-api";
-import { Check, Loader2, Play, Plus, ShieldAlert, Upload, X } from "lucide-react";
+import { Check, Globe, Loader2, Play, Plus, ShieldAlert, Upload, X } from "lucide-react";
 
 const SCORE_STYLE = (score: number) =>
   score >= 100
@@ -110,8 +111,10 @@ function WatchlistManager() {
   const [fullName, setFullName] = useState("");
   const [entryType, setEntryType] = useState("SANCTION");
   const [country, setCountry] = useState("");
+  const [dob, setDob] = useState("");
   const [csv, setCsv] = useState("");
   const [error, setError] = useState("");
+  const [unResult, setUnResult] = useState<number | null>(null);
 
   const { data: entries } = useQuery<WatchlistEntry[]>({
     queryKey: ["watchlist"],
@@ -130,8 +133,25 @@ function WatchlistManager() {
   }
 
   const add = useMutation({
-    mutationFn: () => addWatchlistEntry({ listName, fullName, entryType, country: country || undefined }),
+    mutationFn: () => addWatchlistEntry({
+      listName,
+      fullName,
+      entryType,
+      country: country || undefined,
+      dateOfBirth: dob || undefined,
+    }),
     onSuccess: done,
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const unImport = useMutation({
+    mutationFn: importUnList,
+    onSuccess: (res) => {
+      setUnResult(res.imported);
+      setError("");
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+      queryClient.invalidateQueries({ queryKey: ["screeningStats"] });
+    },
     onError: (e: Error) => setError(e.message),
   });
 
@@ -168,9 +188,23 @@ function WatchlistManager() {
           >
             <Upload size={12} /> Import CSV
           </button>
+          <button
+            onClick={() => unImport.mutate()}
+            disabled={unImport.isPending}
+            title="Pull the UN Security Council consolidated sanctions list"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted text-xs disabled:opacity-50 transition-colors"
+          >
+            {unImport.isPending ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
+            Import UN list
+          </button>
         </div>
       </div>
 
+      {unResult !== null && (
+        <p className="text-sm text-emerald-400 mb-3">
+          UN list import added {unResult} new entr{unResult === 1 ? "y" : "ies"}.
+        </p>
+      )}
       {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
 
       {mode === "add" && (
@@ -207,6 +241,13 @@ function WatchlistManager() {
             value={country}
             onChange={(e) => setCountry(e.target.value)}
             placeholder="Country (optional)"
+            className="px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none focus:border-foreground/30"
+          />
+          <input
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+            title="Date of birth (optional) — suppresses matches with a different DOB"
             className="px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none focus:border-foreground/30"
           />
           <button

@@ -1,5 +1,6 @@
 package com.aza.backend.service;
 
+import com.aza.backend.entity.StaffRole;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class AdminStepUpService {
     private final TotpEncryptionService totpEncryptionService;
     private final PasswordEncoder passwordEncoder;
     private final AdminAuditService auditService;
+    private final StaffAlertService staffAlertService;
 
     private static final String ELEVATION_PREFIX = "admin:stepup:";
     private static final String ATTEMPTS_PREFIX = "admin:stepup:attempts:";
@@ -55,6 +57,13 @@ public class AdminStepUpService {
             redisTemplate.expire(attemptsKey, ATTEMPT_WINDOW);
         }
         if (attempts != null && attempts > MAX_ATTEMPTS) {
+            // Alert exactly once per window, on the first attempt past the limit.
+            if (attempts == MAX_ATTEMPTS + 1L) {
+                staffAlertService.alertRole(StaffRole.Role.ADMIN, "Step-up brute force blocked",
+                        "Account " + user.getEmail() + " exceeded " + MAX_ATTEMPTS
+                                + " admin step-up attempts in " + ATTEMPT_WINDOW.toMinutes()
+                                + " minutes and is temporarily locked out. If this wasn't them, their session may be compromised.");
+            }
             throw new AppException("TOO_MANY_ATTEMPTS",
                     "Too many verification attempts — try again later", HttpStatus.TOO_MANY_REQUESTS);
         }

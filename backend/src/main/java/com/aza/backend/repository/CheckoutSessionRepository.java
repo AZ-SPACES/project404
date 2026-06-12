@@ -16,6 +16,8 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     List<CheckoutSession> findByStatusAndCompletedAtBetween(CheckoutSession.SessionStatus status, LocalDateTime start, LocalDateTime end);
 
+    List<CheckoutSession> findByStatusAndRefundedAtBetween(CheckoutSession.SessionStatus status, LocalDateTime start, LocalDateTime end);
+
     Page<CheckoutSession> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId, Pageable pageable);
 
     Optional<CheckoutSession> findByIdempotencyKey(String idempotencyKey);

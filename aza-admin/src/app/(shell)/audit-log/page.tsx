@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getAuditLog, AuditLogEntry, Page } from "@/lib/admin-api";
-import { ScrollText, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  getAuditAnchors,
+  getAuditLog,
+  verifyAuditAnchors,
+  AuditLogEntry,
+  Page,
+  type AnchorVerification,
+} from "@/lib/admin-api";
+import { ScrollText, ChevronLeft, ChevronRight, Loader2, ShieldCheck, ShieldX } from "lucide-react";
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleString([], {
@@ -37,6 +44,57 @@ function ActionBadge({ action }: { action: string }) {
   );
 }
 
+function IntegrityCard() {
+  const [results, setResults] = useState<AnchorVerification[] | null>(null);
+
+  const { data: anchors } = useQuery({
+    queryKey: ["auditAnchors"],
+    queryFn: getAuditAnchors,
+  });
+
+  const verify = useMutation({
+    mutationFn: verifyAuditAnchors,
+    onSuccess: setResults,
+  });
+
+  const latest = anchors?.[0];
+  const invalid = results?.filter((r) => !r.valid) ?? [];
+
+  return (
+    <div className="rounded-xl border border-border px-5 py-4 mb-6 flex items-center gap-4">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground">Log integrity</p>
+        <p className="text-xs text-foreground/40">
+          {latest
+            ? `Hash-chained daily at 02:30 · last anchor ${latest.anchorDate} (${latest.entryCount} entries)`
+            : "No anchors yet — the first runs at 02:30 tonight"}
+        </p>
+        {results && (
+          <p className={`text-xs mt-1 ${invalid.length === 0 ? "text-emerald-400" : "text-red-400"}`}>
+            {invalid.length === 0
+              ? `All ${results.length} anchored day(s) verified — no tampering detected.`
+              : `TAMPERING DETECTED on: ${invalid.map((r) => r.date).join(", ")}`}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={() => verify.mutate()}
+        disabled={verify.isPending || !anchors || anchors.length === 0}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted text-xs disabled:opacity-30 transition-colors flex-shrink-0"
+      >
+        {verify.isPending ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : invalid.length > 0 ? (
+          <ShieldX size={12} className="text-red-400" />
+        ) : (
+          <ShieldCheck size={12} />
+        )}
+        Verify chain
+      </button>
+    </div>
+  );
+}
+
 export default function AuditLogPage() {
   const [page, setPage] = useState(0);
 
@@ -51,6 +109,8 @@ export default function AuditLogPage() {
         <h1 className="text-2xl font-semibold text-foreground mb-1">Audit Log</h1>
         <p className="text-foreground/50 text-sm">All admin actions, newest first</p>
       </div>
+
+      <IntegrityCard />
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">

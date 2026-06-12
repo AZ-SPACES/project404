@@ -37,6 +37,8 @@ public class ApprovalService {
     private final AdminService adminService;
     private final FeeService feeService;
     private final UserLimitsService userLimitsService;
+    private final SystemSettingService settingService;
+    private final StaffAlertService staffAlertService;
     private final ObjectMapper objectMapper;
 
     private static final int EXPIRY_DAYS = 7;
@@ -54,6 +56,8 @@ public class ApprovalService {
                 .build());
         auditService.log(requester, "SUBMIT_FOR_APPROVAL", null,
                 "action=" + actionType + " target=" + targetId + " approvalId=" + approval.getId());
+        staffAlertService.alertRole(requiredRole(actionType), "Approval needed",
+                requester.getEmail() + " requested: " + summary);
         return toResponse(approval);
     }
 
@@ -129,6 +133,12 @@ public class ApprovalService {
             case UPDATE_USER_LIMITS ->
                     userLimitsService.applyLimits(approver, approval.getTargetId(),
                             fromJson(approval.getPayload(), UserLimitsPayload.class));
+            case GRANT_STAFF_ROLE ->
+                    staffRoleService.grantRole(approver, approval.getTargetId(),
+                            StaffRole.Role.valueOf(fromJson(approval.getPayload(), GrantRolePayload.class).getRole()));
+            case UPDATE_SYSTEM_SETTINGS ->
+                    settingService.updateSettings(
+                            fromJson(approval.getPayload(), SystemSettingService.SystemSettingsRequest.class));
         }
     }
 
@@ -136,7 +146,15 @@ public class ApprovalService {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS -> StaffRole.Role.COMPLIANCE;
+            case GRANT_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS -> StaffRole.Role.ADMIN;
         };
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class GrantRolePayload {
+        private String role;
     }
 
     private PendingApproval getPending(UUID approvalId) {

@@ -15,4 +15,6 @@ public interface SanctionsListEntryRepository extends JpaRepository<SanctionsLis
     List<SanctionsListEntry> findAllByOrderByCreatedAtDesc();
 
     long countByActiveTrue();
+
+    boolean existsByListNameAndNormalizedNameAndActiveTrue(String listName, String normalizedName);
 }

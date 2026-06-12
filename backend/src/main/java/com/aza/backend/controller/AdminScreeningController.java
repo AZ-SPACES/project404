@@ -67,10 +67,22 @@ public class AdminScreeningController {
     public ResponseEntity<ApiResponse<SanctionsListEntry>> addEntry(
             @RequestBody AddEntryRequest request,
             @AuthenticationPrincipal User admin) {
+        java.time.LocalDate dob = request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()
+                ? java.time.LocalDate.parse(request.getDateOfBirth())
+                : null;
         return ResponseEntity.ok(ApiResponse.success(screeningService.addEntry(
                 admin, request.getListName(), request.getFullName(),
                 SanctionsListEntry.EntryType.valueOf(request.getEntryType().toUpperCase()),
-                request.getCountry(), request.getNotes())));
+                request.getCountry(), dob, request.getNotes())));
+    }
+
+    /** Pulls the UN Security Council consolidated list from its public XML feed. */
+    @PostMapping("/list/import-un")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> importUnList(
+            @RequestBody(required = false) ImportUnRequest request,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(Map.of("imported",
+                screeningService.importUnConsolidatedList(admin, request != null ? request.getUrl() : null))));
     }
 
     @PostMapping("/list/import")
@@ -101,7 +113,13 @@ public class AdminScreeningController {
         private String fullName;
         private String entryType;
         private String country;
+        private String dateOfBirth; // YYYY-MM-DD
         private String notes;
+    }
+
+    @Data
+    static class ImportUnRequest {
+        private String url;
     }
 
     @Data
