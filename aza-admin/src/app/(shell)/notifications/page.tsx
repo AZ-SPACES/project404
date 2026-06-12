@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { broadcastNotification } from "@/lib/admin-api";
+import { broadcastNotification, isPendingApproval } from "@/lib/admin-api";
 import {
   Bell,
   Users,
@@ -52,17 +52,47 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
   const [imageUrl, setImageUrl] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [sent, setSent] = useState<number | null>(null);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   const sendMutation = useMutation({
     mutationFn: () =>
       broadcastNotification(title.trim(), body.trim(), audience, imageUrl.trim() || undefined),
     onSuccess: (res) => {
-      setSent(res.sent);
+      if (isPendingApproval(res)) {
+        // Maker-checker: another ADMIN must approve before anything is sent
+        setPendingApproval(true);
+        setConfirming(false);
+        return;
+      }
+      setSent((res as { sent: number }).sent);
       setConfirming(false);
     },
   });
 
   const canSend = title.trim().length > 0 && body.trim().length > 0;
+
+  if (pendingApproval) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+        <div className="relative bg-card border border-border rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center">
+          <div className="w-14 h-14 rounded-full bg-yellow-500/15 border border-yellow-500/25 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 size={28} className="text-yellow-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Submitted for Approval</h3>
+          <p className="text-foreground/50 text-sm mb-6">
+            Nothing has been sent yet — another ADMIN must approve this broadcast in Approvals.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black font-semibold text-sm transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (sent !== null) {
     return (

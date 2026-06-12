@@ -375,6 +375,8 @@ public class KycService {
             record.setVerificationProvider("MANUAL");
             record.setVerificationReference("ADMIN-" + UUID.randomUUID().toString().substring(0, 8));
             updateUserKycStatus(user, User.KycStatus.VERIFIED);
+            // Periodic review cycle: verification isn't one-and-done
+            user.setKycReviewDueAt(LocalDateTime.now().plusYears(1));
             log.info("KYC manually approved for user {}", userId);
         } else {
             record.setStatus(KycRecord.KycStatus.REJECTED);

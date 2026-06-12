@@ -36,11 +36,48 @@ public class RiskEngineService {
         try {
             checkLargeTransfer(tx, sender);
             checkVelocity(tx, sender);
+            checkStructuring(tx, sender);
             evaluateAnomaly(tx, sender, false);
             recordDecisionLog(tx, sender, false);
         } catch (Exception e) {
             log.error("Risk evaluation failed for transaction {}: {}", tx.getId(), e.getMessage());
         }
+    }
+
+    /**
+     * Structuring (smurfing): repeatedly sending amounts just *under* the
+     * large-transfer threshold to stay off the radar. Three or more transfers in
+     * 24h, each in the 70–100% band of the threshold, is the classic pattern —
+     * regulators expect this rule explicitly.
+     */
+    private void checkStructuring(Transaction tx, User sender) {
+        BigDecimal threshold = riskRuleService.largeTransferThresholdGhs();
+        BigDecimal bandFloor = threshold.multiply(new BigDecimal("0.70"));
+        if (tx.getAmount().compareTo(bandFloor) < 0 || tx.getAmount().compareTo(threshold) >= 0) {
+            return; // outside the just-under-threshold band (≥ threshold is caught by the large-transfer rule)
+        }
+        long inBand24h = transactionRepository.countCompletedDebitsInAmountRange(
+                sender.getId(), bandFloor, threshold, LocalDateTime.now().minusHours(24));
+        if (inBand24h < 3) return;
+
+        flaggedRepository.save(FlaggedTransaction.builder()
+                .transactionId(tx.getId())
+                .userId(sender.getId())
+                .amount(tx.getAmount())
+                .flagReason("Possible structuring: " + inBand24h + " transfers in 24h just under the GHS "
+                        + threshold.toPlainString() + " threshold")
+                .riskScore(85)
+                .build());
+        riskAlertRepository.save(RiskAlert.builder()
+                .userId(sender.getId())
+                .alertType(RiskAlert.AlertType.UNUSUAL_PATTERN)
+                .severity(RiskAlert.Severity.HIGH)
+                .description(inBand24h + " transfers in the last 24h each between GHS "
+                        + bandFloor.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " and GHS "
+                        + threshold.toPlainString() + " — classic threshold-avoidance pattern")
+                .transactionId(tx.getId())
+                .riskScore(85)
+                .build());
     }
 
     /**

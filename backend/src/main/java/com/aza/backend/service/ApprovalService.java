@@ -38,6 +38,9 @@ public class ApprovalService {
     private final FeeService feeService;
     private final UserLimitsService userLimitsService;
     private final SystemSettingService settingService;
+    private final KycService kycService;
+    private final MiniAppReportService miniAppReportService;
+    private final BroadcastNotificationService broadcastNotificationService;
     private final StaffAlertService staffAlertService;
     private final ObjectMapper objectMapper;
 
@@ -145,14 +148,28 @@ public class ApprovalService {
             case UPDATE_SYSTEM_SETTINGS ->
                     settingService.updateSettings(
                             fromJson(approval.getPayload(), SystemSettingService.SystemSettingsRequest.class));
+            case UNFREEZE_WALLET ->
+                    adminService.freezeWallet(approval.getTargetId(), false);
+            case REACTIVATE_USER ->
+                    adminService.updateUserStatus(approval.getTargetId(), "ACTIVE",
+                            fromJson(approval.getPayload(), ReasonPayload.class).getReason());
+            case APPROVE_KYC ->
+                    kycService.reviewRecord(approval.getTargetId(), true, "");
+            case BROADCAST_NOTIFICATION ->
+                    broadcastNotificationService.broadcast(fromJson(approval.getPayload(),
+                            com.aza.backend.dto.admin.BroadcastNotificationRequest.class));
+            case ENABLE_MINI_APP ->
+                    miniAppReportService.enableApp(
+                            fromJson(approval.getPayload(), EnableMiniAppPayload.class).getAppId());
         }
     }
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
-            case REVERSE_TRANSACTION, UPDATE_FEE_RULE -> StaffRole.Role.FINANCE;
-            case UPDATE_USER_LIMITS -> StaffRole.Role.COMPLIANCE;
-            case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS -> StaffRole.Role.ADMIN;
+            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET -> StaffRole.Role.FINANCE;
+            case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC -> StaffRole.Role.COMPLIANCE;
+            case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
+                 BROADCAST_NOTIFICATION, ENABLE_MINI_APP -> StaffRole.Role.ADMIN;
         };
     }
 
@@ -169,6 +186,20 @@ public class ApprovalService {
     public static class ChangeRolePayload {
         private String fromRole;
         private String toRole;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class ReasonPayload {
+        private String reason;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class EnableMiniAppPayload {
+        private String appId;
     }
 
     private PendingApproval getPending(UUID approvalId) {

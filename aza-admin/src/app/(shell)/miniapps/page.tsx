@@ -8,6 +8,7 @@ import {
   resolveMiniAppReport,
   getDisabledMiniApps,
   enableMiniApp,
+  isPendingApproval,
   MiniAppReport,
   MiniAppReportStats,
   DisabledMiniApp,
@@ -47,6 +48,7 @@ export default function MiniAppsPage() {
   const [resolving, setResolving] = useState<MiniAppReport | null>(null);
   const [resolution, setResolution] = useState("");
   const [disableApp, setDisableApp] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const { data: stats } = useQuery<MiniAppReportStats>({
     queryKey: ["miniAppStats"],
@@ -60,7 +62,12 @@ export default function MiniAppsPage() {
 
   const enableMutation = useMutation({
     mutationFn: (appId: string) => enableMiniApp(appId),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (isPendingApproval(result)) {
+        // Maker-checker: re-enabling a killed app needs a second ADMIN
+        setNotice("Re-enable submitted — another ADMIN must approve it in Approvals.");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["disabledMiniApps"] });
     },
   });
@@ -91,6 +98,13 @@ export default function MiniAppsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Mini App Reports</h1>
         <p className="text-foreground/40 text-sm mt-1">User-submitted reports about mini apps</p>
       </div>
+
+      {notice && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-3 text-emerald-400 text-sm flex items-center justify-between">
+          {notice}
+          <button onClick={() => setNotice("")}><X size={14} /></button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[

@@ -20,7 +20,9 @@ public class AdminAuditLogController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminAuditLogEntry>>> getLogs(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(auditService.getLogs(page, Math.min(size, 100))));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) java.util.UUID adminId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                auditService.getLogs(page, Math.min(size, 100), adminId)));
     }
 }

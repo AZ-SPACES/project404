@@ -23,6 +23,9 @@ public class AdminWalletController {
 
     private final AdminService adminService;
     private final AdminAuditService auditService;
+    private final com.aza.backend.service.ApprovalService approvalService;
+    private final com.aza.backend.service.StaffRoleService staffRoleService;
+    private final com.aza.backend.repository.UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminWalletResponse>>> getWallets(
@@ -31,12 +34,23 @@ public class AdminWalletController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getWallets(page, Math.min(size, 50))));
     }
 
+    /**
+     * Freezing is immediate (incident response can't wait on approval);
+     * UNfreezing is risk-increasing and goes through maker-checker.
+     */
     @PostMapping("/{userId}/freeze")
-    public ResponseEntity<ApiResponse<AdminWalletResponse>> freezeWallet(
+    public ResponseEntity<ApiResponse<Object>> freezeWallet(
             @PathVariable UUID userId,
             @RequestBody Map<String, Boolean> body,
             @AuthenticationPrincipal User admin) {
         boolean freeze = Boolean.TRUE.equals(body.get("freeze"));
+        if (!freeze && staffRoleService.countActiveStaffUsers() > 1) {
+            User unfreezeTarget = userRepository.findById(userId)
+                    .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+            return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                    admin, com.aza.backend.entity.PendingApproval.ActionType.UNFREEZE_WALLET,
+                    userId, null, "Unfreeze wallet of " + unfreezeTarget.getEmail())));
+        }
         AdminWalletResponse response = adminService.freezeWallet(userId, freeze);
         String action = freeze ? "FREEZE_WALLET" : "UNFREEZE_WALLET";
         User target = new User();

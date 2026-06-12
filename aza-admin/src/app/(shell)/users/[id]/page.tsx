@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getUserDetail,
   updateUserStatus,
+  isPendingApproval,
   updateUserRole,
   getKycRecord,
   getUserTransactions,
@@ -117,6 +118,7 @@ export default function UserDetailPage() {
   const queryClient = useQueryClient();
 
   const [statusModal, setStatusModal] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [reason, setReason] = useState("");
 
@@ -167,7 +169,12 @@ export default function UserDetailPage() {
   const statusMutation = useMutation({
     mutationFn: () => updateUserStatus(userId, newStatus, reason),
     onSuccess: (updated) => {
-      queryClient.setQueryData(["user", userId], updated);
+      if (isPendingApproval(updated)) {
+        // Maker-checker: reactivation needs a second COMPLIANCE/ADMIN
+        setPendingNotice("Reactivation submitted — another COMPLIANCE/ADMIN must approve it in Approvals.");
+      } else {
+        queryClient.setQueryData(["user", userId], updated);
+      }
       setStatusModal(false);
       setReason("");
     },
@@ -179,6 +186,11 @@ export default function UserDetailPage() {
       return updateUserRole(userId, next);
     },
     onSuccess: (updated) => {
+      if (isPendingApproval(updated)) {
+        // Maker-checker: granting ADMIN needs a second ADMIN
+        setPendingNotice("ADMIN grant submitted — another ADMIN must approve it in Approvals.");
+        return;
+      }
       queryClient.setQueryData(["user", userId], updated);
     },
   });
@@ -214,6 +226,11 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {pendingNotice && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-yellow-400 text-sm">
+          {pendingNotice}
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <Link href="/users" className="text-foreground/40 hover:text-foreground transition-colors"><ArrowLeft size={20} /></Link>
         <div className="flex-1">

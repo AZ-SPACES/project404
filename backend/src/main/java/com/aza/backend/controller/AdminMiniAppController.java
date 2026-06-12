@@ -24,6 +24,8 @@ import java.util.UUID;
 public class AdminMiniAppController {
 
     private final MiniAppReportService reportService;
+    private final com.aza.backend.service.ApprovalService approvalService;
+    private final com.aza.backend.service.StaffRoleService staffRoleService;
 
     @GetMapping("/reports")
     public ResponseEntity<ApiResponse<Page<MiniAppReportResponse>>> getReports(
@@ -62,8 +64,18 @@ public class AdminMiniAppController {
         return ResponseEntity.ok(ApiResponse.success(reportService.disableApp(appId, reason, admin)));
     }
 
+    /** Maker-checker: re-enabling a killed app needs a second ADMIN. Disabling stays immediate. */
     @PostMapping("/{appId}/enable")
-    public ResponseEntity<ApiResponse<Void>> enableApp(@PathVariable String appId) {
+    public ResponseEntity<ApiResponse<Object>> enableApp(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin) {
+        if (staffRoleService.countActiveStaffUsers() > 1) {
+            return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                    admin, com.aza.backend.entity.PendingApproval.ActionType.ENABLE_MINI_APP,
+                    admin.getId(),
+                    new com.aza.backend.service.ApprovalService.EnableMiniAppPayload(appId),
+                    "Re-enable mini app \"" + appId + "\"")));
+        }
         reportService.enableApp(appId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
