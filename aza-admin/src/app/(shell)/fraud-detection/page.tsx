@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAnomalyFlaggedTransactions,
   getAdminTransaction,
+  getAiOpinion,
+  getHeldTransfers,
+  releaseHeldTransfer,
+  rejectHeldTransfer,
   AdminTransaction,
   Page,
+  type FraudAiAssessment,
 } from "@/lib/admin-api";
 import {
   ShieldAlert,
@@ -65,6 +70,7 @@ function StatusBadge({ status }: { status: string }) {
     FAILED: "bg-red-500/10 text-red-400 border-red-500/20",
     CANCELLED: "bg-muted/50 text-foreground/40 border-border",
     REVERSED: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    HELD_FOR_REVIEW: "bg-orange-500/10 text-orange-400 border-orange-500/20",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${map[status] ?? "bg-muted/50 text-foreground/40 border-border"}`}>
@@ -198,6 +204,121 @@ const RISK_FILTERS = [
   { label: "Medium risk", value: "MEDIUM" },
 ];
 
+function HeldTransfersSection() {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState("");
+  const [acting, setActing] = useState<string | null>(null);
+  const [opinions, setOpinions] = useState<Record<string, FraudAiAssessment>>({});
+  const [askingAi, setAskingAi] = useState<string | null>(null);
+
+  const { data: held } = useQuery<Page<AdminTransaction>>({
+    queryKey: ["fraud-held"],
+    queryFn: () => getHeldTransfers(0, 50),
+  });
+
+  const decide = useMutation({
+    mutationFn: ({ id, release }: { id: string; release: boolean }) =>
+      release ? releaseHeldTransfer(id) : rejectHeldTransfer(id),
+    onMutate: ({ id, release }) => {
+      setError("");
+      setActing(`${id}:${release}`);
+    },
+    onSettled: () => setActing(null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fraud-held"] }),
+    onError: (e: Error) => setError(e.message),
+  });
+
+  async function askAi(id: string) {
+    setAskingAi(id);
+    setError("");
+    try {
+      const assessment = await getAiOpinion(id);
+      setOpinions((prev) => ({ ...prev, [id]: assessment }));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "AI assessment failed");
+    } finally {
+      setAskingAi(null);
+    }
+  }
+
+  const VERDICT_STYLES: Record<string, string> = {
+    LIKELY_FRAUD: "bg-red-500/10 text-red-400 border-red-500/20",
+    LIKELY_LEGITIMATE: "bg-green-500/10 text-green-400 border-green-500/20",
+    UNCERTAIN: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  };
+
+  if (!held || held.content.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-5 mb-8">
+      <div className="flex items-center gap-2 mb-1">
+        <Clock size={16} className="text-orange-400" />
+        <h2 className="font-medium text-foreground">Held for review ({held.totalElements})</h2>
+      </div>
+      <p className="text-xs text-foreground/40 mb-4">
+        High-anomaly transfers intercepted before any money moved. Release executes the transfer; reject
+        cancels it and notifies the sender.
+      </p>
+      {error && <p className="text-sm text-red-400 mb-3">{error}</p>}
+      <div className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
+        {held.content.map((tx) => (
+          <div key={tx.id} className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground font-medium truncate">
+                  {tx.senderName} → {tx.recipientName} ·{" "}
+                  GHS {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-foreground/40 truncate">
+                  Score {tx.anomalyScore != null ? `${Math.round(tx.anomalyScore * 100)}%` : "—"} ·
+                  initiated {fmt(tx.initiatedAt)}{tx.note ? ` · "${tx.note}"` : ""}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => askAi(tx.id)}
+                  disabled={askingAi !== null}
+                  title="Ask Claude for a second opinion (takes up to a minute)"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 text-foreground/60 border border-border text-xs font-medium hover:bg-muted hover:text-foreground disabled:opacity-30 transition-colors"
+                >
+                  {askingAi === tx.id ? <Loader2 size={12} className="animate-spin" /> : <ShieldAlert size={12} />}
+                  AI opinion
+                </button>
+                <button
+                  onClick={() => decide.mutate({ id: tx.id, release: true })}
+                  disabled={decide.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-medium hover:bg-green-500/20 disabled:opacity-30 transition-colors"
+                >
+                  {acting === `${tx.id}:true` ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                  Release
+                </button>
+                <button
+                  onClick={() => decide.mutate({ id: tx.id, release: false })}
+                  disabled={decide.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/20 disabled:opacity-30 transition-colors"
+                >
+                  {acting === `${tx.id}:false` ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                  Reject
+                </button>
+              </div>
+            </div>
+            {opinions[tx.id] && (
+              <div className="mt-3 ml-1 rounded-lg border border-border bg-muted/10 px-4 py-3">
+                <span
+                  className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border mb-2 ${VERDICT_STYLES[opinions[tx.id].verdict] ?? VERDICT_STYLES.UNCERTAIN}`}
+                >
+                  {opinions[tx.id].verdict.replace("_", " ")} · {opinions[tx.id].confidence}% confidence
+                </span>
+                <p className="text-xs text-foreground/60 leading-relaxed">{opinions[tx.id].reasoning}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function FraudDetectionPage() {
   const [page, setPage] = useState(0);
   const [riskLevel, setRiskLevel] = useState("");
@@ -238,6 +359,8 @@ export default function FraudDetectionPage() {
           ))}
         </div>
       </div>
+
+      <HeldTransfersSection />
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">

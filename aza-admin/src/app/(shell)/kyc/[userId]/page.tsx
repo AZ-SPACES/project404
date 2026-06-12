@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getKycRecord, reviewKyc, type KycRecord } from "@/lib/admin-api";
+import { getKycRecord, isPendingApproval, reviewKyc, type KycRecord } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Check, X, Loader2, ZoomIn } from "lucide-react";
@@ -42,7 +42,7 @@ export default function KycReviewPage() {
 
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
-  const [done, setDone] = useState<"approved" | "rejected" | null>(null);
+  const [done, setDone] = useState<"approved" | "rejected" | "pending" | null>(null);
 
   const { data: record, isLoading, error } = useQuery<KycRecord>({
     queryKey: ["kycRecord", userId],
@@ -52,8 +52,9 @@ export default function KycReviewPage() {
   const reviewMutation = useMutation({
     mutationFn: ({ approved, reason }: { approved: boolean; reason: string }) =>
       reviewKyc(userId, approved, reason),
-    onSuccess: (_data, { approved }) => {
-      setDone(approved ? "approved" : "rejected");
+    onSuccess: (data, { approved }) => {
+      // Maker-checker: approvals need a second COMPLIANCE/ADMIN
+      setDone(isPendingApproval(data) ? "pending" : approved ? "approved" : "rejected");
     },
   });
 
@@ -61,10 +62,18 @@ export default function KycReviewPage() {
 
   if (done) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${done === "approved" ? "bg-emerald-400/15" : "bg-red-400/15"}`}>
-        {done === "approved" ? <Check size={28} className="text-emerald-400" /> : <X size={28} className="text-red-400" />}
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+        done === "approved" ? "bg-emerald-400/15" : done === "pending" ? "bg-yellow-400/15" : "bg-red-400/15"
+      }`}>
+        {done === "approved" ? <Check size={28} className="text-emerald-400" />
+          : done === "pending" ? <Check size={28} className="text-yellow-400" />
+          : <X size={28} className="text-red-400" />}
       </div>
-      <p className="text-foreground font-medium">KYC {done === "approved" ? "approved" : "rejected"} successfully.</p>
+      <p className="text-foreground font-medium">
+        {done === "approved" ? "KYC approved successfully."
+          : done === "pending" ? "Approval submitted — another COMPLIANCE/ADMIN must approve it in Approvals."
+          : "KYC rejected successfully."}
+      </p>
       <Link href="/kyc" className="text-[#B7EE7A] text-sm hover:underline">← Back to queue</Link>
     </div>
   );

@@ -109,6 +109,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox", roles: ["SUPPORT"] },
       { href: "/support/analytics", label: "Analytics", icon: MessageSquare, roles: ["SUPPORT"] },
+      { href: "/complaints", label: "Complaints", icon: MessageSquare, roles: ["SUPPORT"] },
     ],
   },
   {

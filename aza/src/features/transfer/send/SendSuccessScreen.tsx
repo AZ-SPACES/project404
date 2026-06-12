@@ -69,6 +69,8 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const txAmount: number  = tx?.amount  ? Number(tx.amount)   : amount;
   const txNote: string    = tx?.note    ?? note ?? '';
   const txStatus: string  = tx?.status  ?? 'COMPLETED';
+  // Fraud interception: confirmation can park the transfer for compliance review
+  const isHeld = txStatus === 'HELD_FOR_REVIEW';
   const txCategory: string | undefined = tx?.category ?? routeCategory;
   const txRecipientName: string = tx?.recipientName ?? name;
   const txCurrency: string = tx?.currency ?? 'GHS';
@@ -185,17 +187,19 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
         {/* Capturable receipt area — everything inside this View is captured for download/share */}
         <View ref={receiptRef} collapsable={false} style={styles.captureArea}>
 
-          {/* Success header */}
+          {/* Success / under-review header */}
           <View style={styles.headerArea}>
-            <View style={styles.iconOuter}>
-              <View style={styles.iconInner}>
-                <Feather name="check" size={28} color="#FFFFFF" />
+            <View style={[styles.iconOuter, isHeld && styles.iconOuterHeld]}>
+              <View style={[styles.iconInner, isHeld && styles.iconInnerHeld]}>
+                <Feather name={isHeld ? 'shield' : 'check'} size={28} color="#FFFFFF" />
               </View>
             </View>
-            <Text style={styles.title}>Payment Sent</Text>
+            <Text style={styles.title}>{isHeld ? 'Transfer Under Review' : 'Payment Sent'}</Text>
             <Text style={styles.subtitle}>
               <Text style={styles.subtitleBold}>{formatCurrency(txAmount, txCurrency)}</Text>
-              {' '}successfully sent to {txRecipientName}
+              {isHeld
+                ? ` to ${txRecipientName} is being reviewed for your security. No money has left your wallet — we'll notify you once it's cleared.`
+                : ` successfully sent to ${txRecipientName}`}
             </Text>
             <Text style={styles.dateText}>{formattedDateTime}</Text>
           </View>
@@ -395,6 +399,12 @@ function createStyles(Colors: ThemeColors) {
       width: 58, height: 58, borderRadius: 29,
       backgroundColor: Colors.primary,
       alignItems: 'center', justifyContent: 'center',
+    },
+    iconOuterHeld: {
+      backgroundColor: isDark ? 'rgba(249,115,22,0.15)' : '#FDEEDF',
+    },
+    iconInnerHeld: {
+      backgroundColor: '#EA7C28',
     },
     title: { ...Typography.h2, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.xs },
     subtitle: {

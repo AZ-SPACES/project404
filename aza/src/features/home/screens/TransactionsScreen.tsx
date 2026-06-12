@@ -102,6 +102,15 @@ function resolveStatusMeta(tx: Transaction, Colors: ThemeColors): StatusMeta {
         iconColor: Colors.textSecondary,
         labelColor: Colors.textSecondary,
       };
+    case "HELD_FOR_REVIEW":
+      return {
+        label: "Under review",
+        sublabel: "Held for a security review — no money has left your wallet. We'll notify you once it's cleared.",
+        iconName: "shield",
+        iconBg: "rgba(249,115,22,0.12)",
+        iconColor: "#EA7C28",
+        labelColor: "#EA7C28",
+      };
     default: // COMPLETED
       return {
         label: "Completed",

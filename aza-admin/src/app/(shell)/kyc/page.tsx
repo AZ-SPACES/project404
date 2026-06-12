@@ -1,9 +1,47 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getPendingKyc, type KycRecord } from "@/lib/admin-api";
+import { getKycReviewsDue, getPendingKyc, type KycRecord, type KycReviewDue } from "@/lib/admin-api";
 import Link from "next/link";
-import { Loader2, ChevronRight, ShieldAlert } from "lucide-react";
+import { CalendarClock, Loader2, ChevronRight, ShieldAlert } from "lucide-react";
+
+function ReviewsDueCard() {
+  const { data: due } = useQuery<KycReviewDue[]>({
+    queryKey: ["kycReviewsDue"],
+    queryFn: getKycReviewsDue,
+  });
+
+  if (!due || due.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <CalendarClock size={16} className="text-amber-400" />
+        <h2 className="font-medium text-foreground">Periodic reviews overdue ({due.length})</h2>
+      </div>
+      <p className="text-xs text-foreground/40 mb-3">
+        Verified over a year ago — re-verify identity documents and re-screen. Approving again resets the cycle.
+      </p>
+      <div className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
+        {due.map((u) => (
+          <Link
+            key={u.userId}
+            href={`/kyc/${u.userId}`}
+            className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/30 transition-colors"
+          >
+            <div>
+              <p className="text-sm text-foreground font-medium">{u.name || u.email}</p>
+              <p className="text-xs text-foreground/40">
+                {u.email} · due {new Date(u.reviewDueAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+            <ChevronRight size={14} className="text-foreground/30" />
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function KycBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -33,6 +71,7 @@ export default function KycQueuePage() {
 
   return (
     <div className="space-y-6">
+      <ReviewsDueCard />
       <div>
         <h1 className="text-2xl font-semibold text-foreground">KYC Review</h1>
         <p className="text-foreground/40 text-sm mt-1">

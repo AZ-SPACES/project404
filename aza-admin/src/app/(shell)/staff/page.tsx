@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  changeStaffRole,
   getStaff,
   getUsers,
   grantStaffRole,
@@ -12,7 +13,7 @@ import {
   type StaffMember,
   type StaffRoleName,
 } from "@/lib/admin-api";
-import { Loader2, Search, ShieldCheck, UserPlus, Users2, X } from "lucide-react";
+import { ArrowLeftRight, Loader2, Search, ShieldCheck, UserPlus, Users2, X } from "lucide-react";
 
 const ALL_ROLES: StaffRoleName[] = ["SUPPORT", "COMPLIANCE", "FINANCE", "ADMIN"];
 
@@ -195,11 +196,76 @@ function AddStaffPanel({ onClose, onPending }: { onClose: () => void; onPending:
   );
 }
 
+function ChangeRolePanel({
+  member,
+  onDone,
+}: {
+  member: StaffMember;
+  onDone: (pendingMsg?: string) => void;
+}) {
+  const held = member.roles.map((r) => r.role);
+  const [fromRole, setFromRole] = useState<StaffRoleName>(held[0]);
+  const [toRole, setToRole] = useState<StaffRoleName>(
+    ALL_ROLES.find((r) => !held.includes(r)) ?? "SUPPORT",
+  );
+  const [error, setError] = useState("");
+
+  const change = useMutation({
+    mutationFn: () => changeStaffRole(member.userId, fromRole, toRole),
+    onSuccess: (result) => {
+      onDone(isPendingApproval(result)
+        ? "Role change submitted — another ADMIN must approve it in Approvals."
+        : undefined);
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        change.mutate();
+      }}
+      className="flex flex-wrap items-center gap-2 mt-3 pl-13"
+    >
+      <select
+        value={fromRole}
+        onChange={(e) => setFromRole(e.target.value as StaffRoleName)}
+        className="px-3 py-1.5 rounded-lg bg-background border border-border text-xs outline-none"
+      >
+        {held.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+      <ArrowLeftRight size={12} className="text-foreground/40" />
+      <select
+        value={toRole}
+        onChange={(e) => setToRole(e.target.value as StaffRoleName)}
+        className="px-3 py-1.5 rounded-lg bg-background border border-border text-xs outline-none"
+      >
+        {ALL_ROLES.filter((r) => !held.includes(r)).map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+      <button
+        type="submit"
+        disabled={change.isPending || held.includes(toRole)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black text-xs font-semibold disabled:opacity-40 transition-colors"
+      >
+        {change.isPending && <Loader2 size={12} className="animate-spin" />}
+        Change role
+      </button>
+      {error && <span className="text-xs text-red-400">{error}</span>}
+    </form>
+  );
+}
+
 export default function StaffPage() {
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [changing, setChanging] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
 
   const { data: staff, isLoading } = useQuery<StaffMember[]>({
@@ -268,35 +334,65 @@ export default function StaffPage() {
       ) : (
         <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
           {staff.map((member) => (
-            <div key={member.userId} className="flex items-center gap-4 px-5 py-4">
-              {member.profileImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={member.profileImageUrl}
-                  alt=""
-                  className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck size={15} className="text-foreground/30" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground truncate">{member.name}</div>
-                <div className="text-xs text-foreground/40 truncate">
-                  {member.email} {member.handle ? `· @${member.handle}` : ""}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 justify-end">
-                {member.roles.map((grant) => (
-                  <RoleBadge
-                    key={grant.role}
-                    role={grant.role}
-                    revoking={revoking === `${member.userId}:${grant.role}`}
-                    onRevoke={() => revoke.mutate({ userId: member.userId, role: grant.role })}
+            <div key={member.userId} className="px-5 py-4">
+              <div className="flex items-center gap-4">
+                {member.profileImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={member.profileImageUrl}
+                    alt=""
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                   />
-                ))}
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-muted/50 flex items-center justify-center flex-shrink-0">
+                    <ShieldCheck size={15} className="text-foreground/30" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{member.name}</div>
+                  <div className="text-xs text-foreground/40 truncate">
+                    {member.email} {member.handle ? `· @${member.handle}` : ""}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                  {member.roles.map((grant) => (
+                    <span
+                      key={grant.role}
+                      title={
+                        grant.grantedAt
+                          ? `Granted ${new Date(grant.grantedAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}${grant.grantedByEmail ? ` by ${grant.grantedByEmail}` : ""}`
+                          : "Legacy grant (pre staff-roles)"
+                      }
+                    >
+                      <RoleBadge
+                        role={grant.role}
+                        revoking={revoking === `${member.userId}:${grant.role}`}
+                        onRevoke={() => revoke.mutate({ userId: member.userId, role: grant.role })}
+                      />
+                    </span>
+                  ))}
+                  {member.roles.length > 0 && member.roles.length < 4 && (
+                    <button
+                      onClick={() => setChanging(changing === member.userId ? null : member.userId)}
+                      title="Change a role (atomic swap, no access gap)"
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs text-foreground/40 border border-border hover:text-foreground hover:bg-muted/30 transition-colors"
+                    >
+                      <ArrowLeftRight size={11} />
+                      Change
+                    </button>
+                  )}
+                </div>
               </div>
+              {changing === member.userId && (
+                <ChangeRolePanel
+                  member={member}
+                  onDone={(pendingMsg) => {
+                    setChanging(null);
+                    if (pendingMsg) setNotice(pendingMsg);
+                    queryClient.invalidateQueries({ queryKey: ["staff"] });
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>

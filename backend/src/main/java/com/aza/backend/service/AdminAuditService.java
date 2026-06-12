@@ -27,9 +27,12 @@ public class AdminAuditService {
                 .build());
     }
 
-    public Page<AdminAuditLogEntry> getLogs(int page, int size) {
-        return repo.findAllByOrderByTimestampDesc(PageRequest.of(page, size))
-                .map(this::toEntry);
+    public Page<AdminAuditLogEntry> getLogs(int page, int size, java.util.UUID adminId) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<AdminAuditLog> logs = adminId != null
+                ? repo.findByAdminIdOrderByTimestampDesc(adminId, pageable)
+                : repo.findAllByOrderByTimestampDesc(pageable);
+        return logs.map(this::toEntry);
     }
 
     private AdminAuditLogEntry toEntry(AdminAuditLog log) {

@@ -29,6 +29,7 @@ public class RegulatoryService {
     private final WalletRepository walletRepository;
     private final MerchantRepository merchantRepository;
     private final DisputeRepository disputeRepository;
+    private final com.aza.backend.repository.ComplaintRepository complaintRepository;
     private final AdminAuditService auditService;
 
     public String generateStrXml(User admin, UUID flaggedId) {
@@ -114,6 +115,8 @@ public class RegulatoryService {
         csv.append("total_float_ghs,").append(customerFloat.add(merchantFloat)).append('\n');
         csv.append("disputes_opened_in_period,").append(disputesOpened).append('\n');
         csv.append("disputes_resolved_in_period,").append(disputesResolved).append('\n');
+        csv.append("complaints_received_in_period,").append(complaintRepository.countByCreatedAtBetween(start, end)).append('\n');
+        csv.append("complaints_resolved_in_period,").append(complaintRepository.countByResolvedAtBetween(start, end)).append('\n');
         csv.append("transactions_flagged_in_period,").append(flagged).append('\n');
         csv.append("strs_filed_in_period,").append(strsFiled).append('\n');
 

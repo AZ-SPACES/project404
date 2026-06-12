@@ -105,12 +105,25 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(adminService.getUserDetail(userId)));
     }
 
+    /**
+     * Suspending/deactivating is immediate (protective); REACTIVATING a
+     * suspended account is risk-increasing and goes through maker-checker.
+     */
     @PreAuthorize("hasAnyRole('ADMIN','COMPLIANCE')")
     @PatchMapping("/{userId}/status")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUserStatus(
+    public ResponseEntity<ApiResponse<Object>> updateUserStatus(
             @PathVariable UUID userId,
             @RequestBody AdminUserStatusRequest request,
             @AuthenticationPrincipal User admin) {
+        if ("ACTIVE".equalsIgnoreCase(request.getStatus())
+                && staffRoleService.countActiveStaffUsers() > 1) {
+            User reactivateTarget = userRepository.findById(userId)
+                    .orElseThrow(() -> new com.aza.backend.exception.AppException("User not found"));
+            return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                    admin, com.aza.backend.entity.PendingApproval.ActionType.REACTIVATE_USER, userId,
+                    new com.aza.backend.service.ApprovalService.ReasonPayload(request.getReason()),
+                    "Reactivate account of " + reactivateTarget.getEmail())));
+        }
         AdminUserResponse result = adminService.updateUserStatus(userId, request.getStatus(), request.getReason());
         User target = userRepository.findById(userId).orElse(null);
         String action = switch (request.getStatus().toUpperCase()) {
