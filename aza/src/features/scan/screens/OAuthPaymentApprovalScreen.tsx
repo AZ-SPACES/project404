@@ -11,6 +11,7 @@ import { useAppTheme, Spacing, Radius, Typography } from '../../../theme';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { usePreventScreenCapture } from '../../../hooks/usePreventScreenCapture';
 import { getCheckoutSession, confirmCheckoutPayment } from '../../../services/api';
 import { extractErrorMessage } from '../../../utils/errorUtils';
@@ -168,13 +169,17 @@ export default function OAuthPaymentApprovalScreen({ navigation, route }: Props)
           <Text style={[styles.successTo, { color: Colors.textSecondary }]}>
             to {session.merchantName ?? `@${session.merchantHandle}`}
           </Text>
-          <TouchableOpacity
-            style={[styles.doneBtn, { backgroundColor: Colors.primary }]}
+          <Button
+            title="Done"
             onPress={() => navigation.goBack()}
+            backgroundColor={Colors.primary}
+            textColor={Colors.background}
+            borderRadius={Radius.lg}
+            paddingVertical={14}
+            paddingHorizontal={40}
+            width="auto"
             activeOpacity={0.8}
-          >
-            <Text style={[styles.doneBtnText, { color: Colors.background }]}>Done</Text>
-          </TouchableOpacity>
+          />
         </View>
       </SafeAreaView>
     );
@@ -306,8 +311,6 @@ function createStyles(Colors: any) {
     successTitle:           { fontSize: 22, fontWeight: '800', marginBottom: 4 },
     successAmount:          { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
     successTo:              { fontSize: 14, marginTop: 4, marginBottom: Spacing.xl },
-    doneBtn:                { paddingHorizontal: 40, paddingVertical: 14, borderRadius: Radius.lg },
-    doneBtnText:            { fontSize: 16, fontWeight: '700' },
     errorTitle:             { fontSize: 18, fontWeight: '700', marginTop: Spacing.md, marginBottom: 6 },
     errorMsg:               { fontSize: 14, textAlign: 'center' },
   });

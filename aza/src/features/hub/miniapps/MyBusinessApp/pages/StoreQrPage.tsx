@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, Alert, Clipboard, Modal, Image, Share, Linking } from 'react-native';
+import { ScrollView, View, Text, Alert, Clipboard, Modal, Image, Share, Linking } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 
 export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavProps) {
   const [copied, setCopied] = useState(false);
@@ -142,39 +143,54 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
 
         {/* Action Buttons */}
         <View style={{ width: '100%', gap: Spacing.xs, marginBottom: Spacing.md }}>
-          <TouchableOpacity
-            style={[styles.primaryBtn, { width: '100%', borderRadius: 8 }]}
+          <Button
+            title="Show POS Mode"
             onPress={() => setPosMode(true)}
-          >
-            <Feather name="maximize-2" size={16} color={Colors.secondary} />
-            <Text style={[styles.primaryBtnText, { color: Colors.secondary, marginLeft: Spacing.xs }]}>Show POS Mode</Text>
-          </TouchableOpacity>
+            leftIcon={<Feather name="maximize-2" size={16} color={Colors.secondary} />}
+            backgroundColor={Colors.primary}
+            textColor={Colors.secondary}
+            borderRadius={8}
+            paddingVertical={15}
+          />
 
           <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-            <TouchableOpacity
-              style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+            <Button
+              title={copied ? 'Copied!' : 'Copy Link'}
               onPress={handleCopy}
-            >
-              <Feather name={copied ? "check" : "copy"} size={16} color={Colors.textPrimary} />
-              <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>{copied ? 'Copied!' : 'Copy Link'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+              leftIcon={<Feather name={copied ? "check" : "copy"} size={16} color={Colors.textPrimary} />}
+              backgroundColor="transparent"
+              textColor={Colors.textPrimary}
+              borderRadius={8}
+              paddingVertical={15}
+              fontWeight="600"
+              width="auto"
+              style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+            />
+            <Button
+              title="Share"
               onPress={handleShare}
-            >
-              <Feather name="share-2" size={16} color={Colors.textPrimary} />
-              <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Share</Text>
-            </TouchableOpacity>
+              leftIcon={<Feather name="share-2" size={16} color={Colors.textPrimary} />}
+              backgroundColor="transparent"
+              textColor={Colors.textPrimary}
+              borderRadius={8}
+              paddingVertical={15}
+              fontWeight="600"
+              width="auto"
+              style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+            />
           </View>
 
-          <TouchableOpacity
-            style={[styles.secondaryBtn, { width: '100%', borderColor: Colors.border, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+          <Button
+            title="Save / Print Poster"
             onPress={handlePrint}
-          >
-            <Feather name="printer" size={16} color={Colors.textPrimary} />
-            <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Save / Print Poster</Text>
-          </TouchableOpacity>
+            leftIcon={<Feather name="printer" size={16} color={Colors.textPrimary} />}
+            backgroundColor="transparent"
+            textColor={Colors.textPrimary}
+            borderRadius={8}
+            paddingVertical={15}
+            fontWeight="600"
+            style={{ borderWidth: 1, borderColor: Colors.border }}
+          />
         </View>
       </ScrollView>
 
@@ -207,17 +223,17 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={{
-              paddingVertical: 14,
-              paddingHorizontal: 36,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 8,
-            }}
+          <Button
+            title="Close POS"
             onPress={() => setPosMode(false)}
-          >
-            <Text style={{ color: '#000000', fontWeight: '700', fontSize: 15 }}>Close POS</Text>
-          </TouchableOpacity>
+            backgroundColor="#FFFFFF"
+            textColor="#000000"
+            borderRadius={8}
+            paddingVertical={14}
+            paddingHorizontal={36}
+            fontSize={15}
+            width="auto"
+          />
         </View>
       </Modal>
     </View>

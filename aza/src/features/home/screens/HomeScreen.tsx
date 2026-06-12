@@ -35,6 +35,7 @@ import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS, QUICK_ACTIONS_REG
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useNotificationCountQuery } from "../../notifications/hooks/useNotificationQueries";
 import { TransactionItem } from "../../../components/ui/TransactionItem";
+import Button from "../../../components/ui/Button";
 import { ActionTarget } from "../components/ActionTarget";
 import { useWallet } from "../../../hooks/useWallet";
 import { cancelTransfer } from "../../../services/api";
@@ -427,14 +428,21 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.incompleteActionsRow}>
-              <TouchableOpacity
-                style={styles.incompleteCancelBtn}
+              <Button
+                title="Cancel transfer"
                 onPress={() => handleCancelIncomplete(incompleteTransfer.id)}
-              >
-                <Text style={styles.incompleteCancelBtnText}>Cancel transfer</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.incompleteResumeBtn}
+                backgroundColor={isDark ? Colors.background : Colors.surface}
+                textColor={Colors.textPrimary}
+                borderRadius={radii.sm}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={13}
+                fontWeight="500"
+                width="auto"
+                style={{ borderWidth: 1, borderColor: Colors.border }}
+              />
+              <Button
+                title="Resume"
                 onPress={() =>
                   navigation.navigate("SendPin", {
                     id: incompleteTransfer.id,
@@ -444,9 +452,15 @@ export default function HomeScreen() {
                     identifier: incompleteTransfer.recipientId || "",
                   })
                 }
-              >
-                <Text style={styles.incompleteResumeBtnText}>Resume</Text>
-              </TouchableOpacity>
+                backgroundColor={Colors.primary}
+                textColor={Colors.white}
+                borderRadius={radii.sm}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={13}
+                fontWeight="500"
+                width="auto"
+              />
             </View>
           </View>
         )}
@@ -465,25 +479,38 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={[styles.incompleteActionsRow, { marginTop: Spacing.sm }]}>
-              <TouchableOpacity
-                style={[styles.incompleteCancelBtn, { flex: 1, alignItems: 'center' }]}
+              <Button
+                title={actionLoading === "decline" ? "Declining..." : "Decline"}
                 onPress={() => handleDeclineRequest(pendingMoneyRequest.id)}
                 disabled={!!actionLoading}
-              >
-                <Text style={styles.incompleteCancelBtnText}>
-                  {actionLoading === "decline" ? "Declining..." : "Decline"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.incompleteResumeBtn, { flex: 1, alignItems: 'center' }]}
+                backgroundColor={isDark ? Colors.background : Colors.surface}
+                textColor={Colors.textPrimary}
+                borderRadius={radii.sm}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={13}
+                fontWeight="500"
+                width="auto"
+                style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                textStyle={{ color: Colors.textPrimary }}
+              />
+              <Button
+                title="Pay Now"
                 onPress={() => {
                   setActionError(null);
                   setPinVisible(true);
                 }}
                 disabled={!!actionLoading}
-              >
-                <Text style={styles.incompleteResumeBtnText}>Pay Now</Text>
-              </TouchableOpacity>
+                backgroundColor={Colors.primary}
+                textColor={Colors.white}
+                borderRadius={radii.sm}
+                paddingVertical={8}
+                paddingHorizontal={16}
+                fontSize={13}
+                fontWeight="500"
+                width="auto"
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
         )}
@@ -877,32 +904,6 @@ function createStyles(Colors: ThemeColors, radii: Radii) {
       flexDirection: "row",
       justifyContent: "flex-end",
       gap: Spacing.sm,
-    },
-    incompleteCancelBtn: {
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: radii.sm,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      backgroundColor: isDark ? Colors.background : Colors.surface,
-    },
-    incompleteCancelBtnText: {
-      ...Typography.body,
-      fontSize: 13,
-      fontWeight: "500",
-      color: Colors.textPrimary,
-    },
-    incompleteResumeBtn: {
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: radii.sm,
-      backgroundColor: Colors.primary,
-    },
-    incompleteResumeBtnText: {
-      ...Typography.body,
-      fontSize: 13,
-      fontWeight: "500",
-      color: Colors.white,
     },
   });
 }

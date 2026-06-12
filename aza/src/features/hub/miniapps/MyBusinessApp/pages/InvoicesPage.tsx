@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 import StatusBadge from '../components/StatusBadge';
 
 function CreateModal({ visible, onClose, onCreated, Colors }: any) {
@@ -81,25 +82,28 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
             <Text style={labelStyle}>Description (optional)</Text>
             <TextInput style={inputStyle} value={description} onChangeText={setDescription} placeholder="Service description…" placeholderTextColor={Colors.textSecondary} />
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: canSubmit ? Colors.primary : Colors.border,
-                borderRadius: 12,
-                padding: Spacing.md,
-                alignItems: 'center',
-                marginTop: Spacing.lg,
-              }}
+            <Button
+              title="Create Invoice"
               onPress={submit}
-              disabled={!canSubmit || saving}
-            >
-              {saving ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Invoice</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!canSubmit}
+              loading={saving}
+              backgroundColor={Colors.primary}
+              borderRadius={12}
+              paddingVertical={Spacing.md}
+              fontSize={15}
+              style={{ marginTop: Spacing.lg }}
+            />
 
-            <TouchableOpacity onPress={onClose} style={{ marginTop: Spacing.md, alignItems: 'center' }}>
-              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              style={{ marginTop: Spacing.md }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -153,23 +157,17 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
     <View style={{ flex: 1 }}>
       <InternalHeader title="Invoices" onBack={goBack} Colors={Colors} styles={styles} />
 
-      <TouchableOpacity
-        style={{
-          marginHorizontal: Spacing.md,
-          marginTop: Spacing.sm,
-          backgroundColor: Colors.primary,
-          borderRadius: Radius.md,
-          padding: Spacing.md,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: Spacing.xs,
-        }}
+      <Button
+        title="New Invoice"
         onPress={() => setCreating(true)}
-      >
-        <Feather name="plus" size={16} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>New Invoice</Text>
-      </TouchableOpacity>
+        leftIcon={<Feather name="plus" size={16} color="#fff" />}
+        backgroundColor={Colors.primary}
+        borderRadius={Radius.md}
+        paddingVertical={Spacing.md}
+        fontSize={14}
+        width="auto"
+        style={{ marginHorizontal: Spacing.md, marginTop: Spacing.sm }}
+      />
 
       {loading ? (
         <View style={[styles.center, { marginTop: Spacing.xl }]}><ActivityIndicator color={Colors.primary} /></View>
@@ -215,29 +213,32 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
               {(inv.status === 'DRAFT' || inv.status === 'SENT') && (
                 <View style={{ flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.sm }}>
                   {inv.status === 'DRAFT' && (
-                    <TouchableOpacity
-                      style={{
-                        flex: 1, backgroundColor: Colors.primary, borderRadius: 8,
-                        padding: 10, alignItems: 'center',
-                      }}
+                    <Button
+                      title="Send"
                       onPress={() => handleSend(inv)}
-                      disabled={actionLoading === inv.id}
-                    >
-                      {actionLoading === inv.id ? <ActivityIndicator size="small" color="#fff" /> : (
-                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Send</Text>
-                      )}
-                    </TouchableOpacity>
+                      loading={actionLoading === inv.id}
+                      backgroundColor={Colors.primary}
+                      borderRadius={8}
+                      paddingVertical={10}
+                      fontSize={13}
+                      fontWeight="600"
+                      width="auto"
+                      style={{ flex: 1 }}
+                    />
                   )}
-                  <TouchableOpacity
-                    style={{
-                      flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: 8,
-                      padding: 10, alignItems: 'center',
-                    }}
+                  <Button
+                    title="Cancel"
                     onPress={() => handleCancel(inv)}
                     disabled={actionLoading === inv.id}
-                  >
-                    <Text style={{ color: Colors.textSecondary, fontWeight: '600', fontSize: 13 }}>Cancel</Text>
-                  </TouchableOpacity>
+                    backgroundColor="transparent"
+                    fontSize={13}
+                    fontWeight="600"
+                    borderRadius={8}
+                    paddingVertical={10}
+                    width="auto"
+                    style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                    textStyle={{ color: Colors.textSecondary }}
+                  />
                 </View>
               )}
             </View>

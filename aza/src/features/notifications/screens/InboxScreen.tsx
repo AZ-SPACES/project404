@@ -17,6 +17,7 @@ import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, Typography, Spacing, Radius, ThemeColors } from "../../../theme";
 import { useToast } from "../../../providers/ToastProvider";
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { useNotificationsQuery, NotificationItem } from '../hooks/useNotificationQueries';
 import { useMarkAllReadMutation, useMarkReadMutation, useDeleteAllNotificationsMutation } from '../hooks/useNotificationMutations';
 
@@ -112,20 +113,33 @@ export default function InboxScreen() {
 
         <View style={styles.headerActions}>
           {notifications.length > 0 && (
-            <TouchableOpacity
-              style={styles.actionButtonOutline}
+            <Button
+              title="Clear"
               onPress={handleDeleteAllNotifications}
-            >
-              <Text style={styles.actionButtonOutlineText}>Clear</Text>
-            </TouchableOpacity>
+              backgroundColor={Colors.surface}
+              textColor={Colors.textPrimary}
+              borderRadius={Radius.md}
+              paddingVertical={Spacing.sm}
+              paddingHorizontal={Spacing.md}
+              fontSize={14}
+              fontWeight="500"
+              width="auto"
+              style={{ borderWidth: 1, borderColor: Colors.border }}
+            />
           )}
           {notifications.some(n => !n.isRead) && (
-            <TouchableOpacity
-              style={styles.actionButtonPrimary}
+            <Button
+              title="Mark read"
               onPress={handleClearNotifications}
-            >
-              <Text style={styles.actionButtonPrimaryText}>Mark read</Text>
-            </TouchableOpacity>
+              backgroundColor={Colors.primary}
+              textColor={Colors.white}
+              borderRadius={Radius.md}
+              paddingVertical={Spacing.sm}
+              paddingHorizontal={Spacing.md}
+              fontSize={14}
+              fontWeight="500"
+              width="auto"
+            />
           )}
         </View>
       </View>
@@ -152,12 +166,18 @@ export default function InboxScreen() {
           <Text style={[Typography.body, { color: Colors.error, marginBottom: Spacing.md }]}>
             Failed to load notifications
           </Text>
-          <TouchableOpacity
-            style={styles.actionButtonPrimary}
+          <Button
+            title="Retry"
             onPress={() => refetch()}
-          >
-            <Text style={styles.actionButtonPrimaryText}>Retry</Text>
-          </TouchableOpacity>
+            backgroundColor={Colors.primary}
+            textColor={Colors.white}
+            borderRadius={Radius.md}
+            paddingVertical={Spacing.sm}
+            paddingHorizontal={Spacing.md}
+            fontSize={14}
+            fontWeight="500"
+            width="auto"
+          />
         </View>
       )}
 
@@ -226,32 +246,6 @@ function createStyles(Colors: ThemeColors) {
     headerActions: {
       flexDirection: 'row',
       gap: 12
-    },
-    actionButtonPrimary: {
-      backgroundColor: Colors.primary,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
-      borderRadius: Radius.md,
-      justifyContent: 'center',
-    },
-    actionButtonPrimaryText: {
-      ...Typography.body,
-      fontWeight: "500",
-      color: Colors.white
-    },
-    actionButtonOutline: {
-      backgroundColor: Colors.surface,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
-      borderRadius: Radius.md,
-      justifyContent: 'center',
-    },
-    actionButtonOutlineText: {
-      ...Typography.body,
-      fontWeight: "500",
-      color: Colors.textPrimary
     },
     titleSection: {
       paddingHorizontal: Spacing.lg,

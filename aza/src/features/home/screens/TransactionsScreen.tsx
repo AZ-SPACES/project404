@@ -438,12 +438,18 @@ export function TransactionsScreen() {
                 style={{ marginTop: 12 }}
               />
             )}
-            <TouchableOpacity
-              style={styles.cancelPinBtn}
+            <Button
+              title="Cancel"
               onPress={() => { setPinVisible(false); setPin(""); setActionError(null); }}
-            >
-              <Text style={[styles.cancelPinText, { color: Colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={Spacing.sm}
+              paddingHorizontal={Spacing.lg}
+              width="auto"
+              style={{ alignSelf: "center", marginTop: Spacing.md }}
+            />
           </View>
         ) : isPayable ? (
           <View style={styles.actionRow}>
@@ -705,8 +711,8 @@ export function TransactionsScreen() {
               </View>
 
               <View style={styles.filterActions}>
-                <TouchableOpacity
-                  style={[styles.filterBtn, styles.filterBtnClear]}
+                <Button
+                  title="Clear"
                   onPress={() => {
                     setPendingMin('');
                     setPendingMax('');
@@ -722,11 +728,17 @@ export function TransactionsScreen() {
                     setTxStatus('All');
                     setFilterModalVisible(false);
                   }}
-                >
-                  <Text style={[styles.filterBtnText, { color: Colors.textSecondary }]}>Clear</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterBtn, { backgroundColor: Colors.primary, flex: 2 }]}
+                  backgroundColor={isDark ? Colors.background : '#F3F4F6'}
+                  textColor={Colors.textSecondary}
+                  borderRadius={Radius.lg}
+                  paddingVertical={14}
+                  fontSize={14}
+                  fontWeight="600"
+                  width="auto"
+                  style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                />
+                <Button
+                  title="Apply"
                   onPress={() => {
                     setMinAmount(pendingMin);
                     setMaxAmount(pendingMax);
@@ -736,9 +748,15 @@ export function TransactionsScreen() {
                     setTxStatus(pendingStatus);
                     setFilterModalVisible(false);
                   }}
-                >
-                  <Text style={[styles.filterBtnText, { color: Colors.white }]}>Apply</Text>
-                </TouchableOpacity>
+                  backgroundColor={Colors.primary}
+                  textColor={Colors.white}
+                  borderRadius={Radius.lg}
+                  paddingVertical={14}
+                  fontSize={14}
+                  fontWeight="600"
+                  width="auto"
+                  style={{ flex: 2 }}
+                />
               </View>
             </ScrollView>
           </View>
@@ -1034,21 +1052,6 @@ function createStyles(Colors: ThemeColors) {
       marginTop: Spacing.xl,
       marginBottom: Spacing.md,
     },
-    filterBtn: {
-      flex: 1,
-      borderRadius: Radius.lg,
-      paddingVertical: 14,
-      alignItems: 'center' as const,
-    },
-    filterBtnClear: {
-      backgroundColor: isDark ? Colors.background : '#F3F4F6',
-      borderWidth: 1,
-      borderColor: Colors.border,
-    },
-    filterBtnText: {
-      ...Typography.body,
-      fontWeight: '600' as const,
-    },
 
     // Bottom sheet
     overlay: {
@@ -1144,16 +1147,6 @@ function createStyles(Colors: ThemeColors) {
       width: 0,
       height: 0,
       opacity: 0,
-    },
-    cancelPinBtn: {
-      alignSelf: "center",
-      marginTop: Spacing.md,
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.lg,
-    },
-    cancelPinText: {
-      ...Typography.body,
-      fontSize: 14,
     },
     actionRow: {
       flexDirection: "row",

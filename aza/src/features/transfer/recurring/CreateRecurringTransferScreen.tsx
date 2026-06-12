@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   StatusBar,
-  ActivityIndicator,
   Modal,
   Pressable,
   Alert,
@@ -22,6 +21,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 import { queryKeys } from '../../../lib/queryKeys';
 import { createRecurringTransfer } from '../../../services/api';
 
@@ -283,20 +283,16 @@ export default function CreateRecurringTransferScreen() {
 
       {/* Bottom action */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: Colors.primary }]}
-          activeOpacity={0.85}
+        <Button
+          title={step === 3 ? 'Schedule Transfer' : 'Continue'}
           onPress={step === 3 ? handleSubmit : handleNext}
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={styles.actionButtonText}>
-              {step === 3 ? 'Schedule Transfer' : 'Continue'}
-            </Text>
-          )}
-        </TouchableOpacity>
+          loading={mutation.isPending}
+          backgroundColor={Colors.primary}
+          textColor={Colors.white}
+          borderRadius={Radius.lg}
+          fontWeight="600"
+          activeOpacity={0.85}
+        />
       </View>
 
       {/* Date picker modal */}
@@ -346,9 +342,14 @@ export default function CreateRecurringTransferScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={[styles.pickerApply, { backgroundColor: Colors.primary }]} onPress={applyDatePicker}>
-              <Text style={styles.pickerApplyText}>Done</Text>
-            </TouchableOpacity>
+            <Button
+              title="Done"
+              onPress={applyDatePicker}
+              backgroundColor={Colors.primary}
+              textColor={Colors.white}
+              borderRadius={Radius.lg}
+              fontWeight="600"
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -504,17 +505,6 @@ function createStyles(Colors: ThemeColors) {
       paddingBottom: Spacing.xl,
       paddingTop: Spacing.md,
     },
-    actionButton: {
-      borderRadius: Radius.lg,
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
-    actionButtonText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: Colors.white,
-      fontSize: 16,
-    },
     modalBackdrop: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
@@ -561,17 +551,6 @@ function createStyles(Colors: ThemeColors) {
       color: Colors.textPrimary,
       minWidth: 48,
       textAlign: 'center',
-    },
-    pickerApply: {
-      borderRadius: Radius.lg,
-      paddingVertical: 16,
-      alignItems: 'center',
-    },
-    pickerApplyText: {
-      ...Typography.body,
-      fontWeight: '600',
-      color: Colors.white,
-      fontSize: 16,
     },
   });
 }

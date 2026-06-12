@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert, Clipboard, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
-import { Spacing } from '../../../../../theme';
+import { Spacing, Radius } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
 import {
@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 
 export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
   // Main view states
@@ -384,12 +385,28 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         )}
 
                         <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
-                          <TouchableOpacity style={[styles.primaryBtn, { flex: 1, borderRadius: 8 }]} onPress={() => handleUpdateKey(k.id)} disabled={updating}>
-                            {updating ? <ActivityIndicator color={Colors.secondary} /> : <Text style={[styles.primaryBtnText, { color: Colors.secondary }]}>Save</Text>}
-                          </TouchableOpacity>
-                          <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8 }]} onPress={() => setEditingKeyId(null)}>
-                            <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Cancel</Text>
-                          </TouchableOpacity>
+                          <Button
+                            title="Save"
+                            onPress={() => handleUpdateKey(k.id)}
+                            loading={updating}
+                            backgroundColor={Colors.primary}
+                            textColor={Colors.secondary}
+                            borderRadius={8}
+                            paddingVertical={15}
+                            width="auto"
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            title="Cancel"
+                            onPress={() => setEditingKeyId(null)}
+                            backgroundColor="transparent"
+                            textColor={Colors.textPrimary}
+                            fontWeight="600"
+                            borderRadius={8}
+                            paddingVertical={15}
+                            width="auto"
+                            style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                          />
                         </View>
                       </View>
                     );
@@ -416,12 +433,28 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
-                          <TouchableOpacity style={[styles.primaryBtn, { flex: 1, borderRadius: 8 }]} onPress={() => handleRollKey(k.id)} disabled={rolling}>
-                            {rolling ? <ActivityIndicator color={Colors.secondary} /> : <Text style={[styles.primaryBtnText, { color: Colors.secondary }]}>Confirm Rollover</Text>}
-                          </TouchableOpacity>
-                          <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8 }]} onPress={() => setRollingKeyId(null)}>
-                            <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Cancel</Text>
-                          </TouchableOpacity>
+                          <Button
+                            title="Confirm Rollover"
+                            onPress={() => handleRollKey(k.id)}
+                            loading={rolling}
+                            backgroundColor={Colors.primary}
+                            textColor={Colors.secondary}
+                            borderRadius={8}
+                            paddingVertical={15}
+                            width="auto"
+                            style={{ flex: 1 }}
+                          />
+                          <Button
+                            title="Cancel"
+                            onPress={() => setRollingKeyId(null)}
+                            backgroundColor="transparent"
+                            textColor={Colors.textPrimary}
+                            fontWeight="600"
+                            borderRadius={8}
+                            paddingVertical={15}
+                            width="auto"
+                            style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                          />
                         </View>
                       </View>
                     );
@@ -732,26 +765,45 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm }}>
-                    <TouchableOpacity style={[styles.primaryBtn, { flex: 1, borderRadius: 8 }]} onPress={handleCreate} disabled={creating}>
-                      {creating ? <ActivityIndicator color={Colors.secondary} /> : <Text style={[styles.primaryBtnText, { color: Colors.secondary }]}>Create</Text>}
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8 }]} onPress={() => setShowForm(false)}>
-                      <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Cancel</Text>
-                    </TouchableOpacity>
+                    <Button
+                      title="Create"
+                      onPress={handleCreate}
+                      loading={creating}
+                      backgroundColor={Colors.primary}
+                      textColor={Colors.secondary}
+                      borderRadius={8}
+                      paddingVertical={15}
+                      width="auto"
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title="Cancel"
+                      onPress={() => setShowForm(false)}
+                      backgroundColor="transparent"
+                      textColor={Colors.textPrimary}
+                      fontWeight="600"
+                      borderRadius={8}
+                      paddingVertical={15}
+                      width="auto"
+                      style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                    />
                   </View>
                 </View>
               ) : (
                 activeKeysCount < 10 && (
-                  <TouchableOpacity
-                    style={[styles.addBtn, { borderColor: Colors.primary }]}
+                  <Button
+                    title={`Create ${activeTab === 'LIVE' ? 'Live' : 'Test'} API Key`}
                     onPress={handleShowForm}
+                    leftIcon={<Feather name="plus" size={18} color={Colors.primary} />}
+                    backgroundColor="transparent"
+                    textColor={Colors.primary}
+                    fontSize={14}
+                    fontWeight="600"
+                    borderRadius={Radius.md}
+                    paddingVertical={Spacing.md}
+                    style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.primary, marginTop: Spacing.md }}
                     accessibilityRole="button"
-                  >
-                    <Feather name="plus" size={18} color={Colors.primary} />
-                    <Text style={[styles.addBtnText, { color: Colors.primary }]}>
-                      Create {activeTab === 'LIVE' ? 'Live' : 'Test'} API Key
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 )
               )}
             </ScrollView>
@@ -816,17 +868,17 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
               )}
 
               {hasMoreLogs && (
-                <TouchableOpacity
-                  style={[styles.secondaryBtn, { borderColor: Colors.border, marginVertical: Spacing.md, borderRadius: 8 }]}
+                <Button
+                  title="Load More Logs"
                   onPress={() => loadLogs(logsPage + 1)}
-                  disabled={logsLoading}
-                >
-                  {logsLoading ? (
-                    <ActivityIndicator color={Colors.textPrimary} />
-                  ) : (
-                    <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Load More Logs</Text>
-                  )}
-                </TouchableOpacity>
+                  loading={logsLoading}
+                  backgroundColor={Colors.textPrimary}
+                  textColor={Colors.textPrimary}
+                  fontWeight="600"
+                  borderRadius={8}
+                  paddingVertical={15}
+                  style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.border, marginVertical: Spacing.md }}
+                />
               )}
             </ScrollView>
           )}

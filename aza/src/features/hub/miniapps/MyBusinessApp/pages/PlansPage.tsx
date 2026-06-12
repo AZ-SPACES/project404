@@ -17,6 +17,7 @@ import { queryClient } from '../../../../../lib/queryClient';
 import { extractErrorMessage } from '../../../../../utils/errorUtils';
 import InternalHeader from '../components/InternalHeader';
 import StatusBadge from '../components/StatusBadge';
+import Button from '../../../../../components/ui/Button';
 
 const INTERVALS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY'];
 const INTERVAL_LABELS: Record<string, string> = {
@@ -114,22 +115,28 @@ function PlanModal({ visible, plan, onClose, onSaved, Colors }: any) {
               ))}
             </ScrollView>
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: canSubmit ? Colors.primary : Colors.border,
-                borderRadius: 12, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.lg,
-              }}
+            <Button
+              title={plan?.id ? 'Save Changes' : 'Create Plan'}
               onPress={submit}
-              disabled={!canSubmit || saving}
-            >
-              {saving ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{plan?.id ? 'Save Changes' : 'Create Plan'}</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!canSubmit}
+              loading={saving}
+              backgroundColor={Colors.primary}
+              borderRadius={12}
+              paddingVertical={Spacing.md}
+              fontSize={15}
+              style={{ marginTop: Spacing.lg }}
+            />
 
-            <TouchableOpacity onPress={onClose} style={{ marginTop: Spacing.md, alignItems: 'center' }}>
-              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              style={{ marginTop: Spacing.md }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -203,22 +210,28 @@ function SubscribeModal({ visible, plans, onClose, onSaved, Colors }: any) {
             <Text style={labelStyle}>Customer Email</Text>
             <TextInput style={inputStyle(Colors)} value={customerEmail} onChangeText={setCustomerEmail} placeholder="ama@example.com" keyboardType="email-address" autoCapitalize="none" placeholderTextColor={Colors.textSecondary} />
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: canSubmit ? Colors.primary : Colors.border,
-                borderRadius: 12, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.lg,
-              }}
+            <Button
+              title="Add Subscriber"
               onPress={submit}
-              disabled={!canSubmit || saving}
-            >
-              {saving ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Add Subscriber</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!canSubmit}
+              loading={saving}
+              backgroundColor={Colors.primary}
+              borderRadius={12}
+              paddingVertical={Spacing.md}
+              fontSize={15}
+              style={{ marginTop: Spacing.lg }}
+            />
 
-            <TouchableOpacity onPress={onClose} style={{ marginTop: Spacing.md, alignItems: 'center' }}>
-              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              style={{ marginTop: Spacing.md }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -315,22 +328,20 @@ export default function PlansPage({ goBack, Colors, styles }: NavProps) {
         ))}
       </View>
 
-      <TouchableOpacity
-        style={{
-          marginHorizontal: Spacing.md, marginTop: Spacing.sm,
-          backgroundColor: Colors.primary, borderRadius: Radius.md, padding: Spacing.md,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs,
-        }}
+      <Button
+        title={tab === 'plans' ? 'New Plan' : 'Add Subscriber'}
         onPress={() => {
           if (tab === 'plans') { setEditingPlan(null); setPlanModalVisible(true); }
           else setSubscribeVisible(true);
         }}
-      >
-        <Feather name="plus" size={16} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-          {tab === 'plans' ? 'New Plan' : 'Add Subscriber'}
-        </Text>
-      </TouchableOpacity>
+        leftIcon={<Feather name="plus" size={16} color="#fff" />}
+        backgroundColor={Colors.primary}
+        borderRadius={Radius.md}
+        paddingVertical={Spacing.md}
+        fontSize={14}
+        width="auto"
+        style={{ marginHorizontal: Spacing.md, marginTop: Spacing.sm }}
+      />
 
       {loading ? (
         <View style={[styles.center, { marginTop: Spacing.xl }]}><ActivityIndicator color={Colors.primary} /></View>

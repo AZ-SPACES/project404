@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 
 function CreateModal({ visible, onClose, onCreated, Colors }: any) {
   const [code, setCode] = useState('');
@@ -94,22 +95,28 @@ function CreateModal({ visible, onClose, onCreated, Colors }: any) {
             <Text style={labelStyle}>Max uses (optional)</Text>
             <TextInput style={inputStyle} value={maxUses} onChangeText={setMaxUses} placeholder="Unlimited" keyboardType="number-pad" placeholderTextColor={Colors.textSecondary} />
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: canSubmit ? Colors.primary : Colors.border,
-                borderRadius: 12, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.lg,
-              }}
+            <Button
+              title="Create Code"
               onPress={submit}
-              disabled={!canSubmit || saving}
-            >
-              {saving ? <ActivityIndicator color="#fff" /> : (
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Create Code</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!canSubmit}
+              loading={saving}
+              backgroundColor={Colors.primary}
+              borderRadius={12}
+              paddingVertical={Spacing.md}
+              fontSize={15}
+              style={{ marginTop: Spacing.lg }}
+            />
 
-            <TouchableOpacity onPress={onClose} style={{ marginTop: Spacing.md, alignItems: 'center' }}>
-              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor="transparent"
+              textColor={Colors.textSecondary}
+              fontSize={14}
+              fontWeight="normal"
+              paddingVertical={0}
+              style={{ marginTop: Spacing.md }}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -174,23 +181,17 @@ export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) 
     <View style={{ flex: 1 }}>
       <InternalHeader title="Discount Codes" onBack={goBack} Colors={Colors} styles={styles} />
 
-      <TouchableOpacity
-        style={{
-          marginHorizontal: Spacing.md,
-          marginTop: Spacing.sm,
-          backgroundColor: Colors.primary,
-          borderRadius: Radius.md,
-          padding: Spacing.md,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: Spacing.xs,
-        }}
+      <Button
+        title="New Code"
         onPress={() => setCreating(true)}
-      >
-        <Feather name="plus" size={16} color="#fff" />
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>New Code</Text>
-      </TouchableOpacity>
+        leftIcon={<Feather name="plus" size={16} color="#fff" />}
+        backgroundColor={Colors.primary}
+        borderRadius={Radius.md}
+        paddingVertical={Spacing.md}
+        fontSize={14}
+        width="auto"
+        style={{ marginHorizontal: Spacing.md, marginTop: Spacing.sm }}
+      />
 
       {loading ? (
         <View style={[styles.center, { marginTop: Spacing.xl }]}><ActivityIndicator color={Colors.primary} /></View>
