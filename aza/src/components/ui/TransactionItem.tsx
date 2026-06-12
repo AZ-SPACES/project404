@@ -19,6 +19,8 @@ function resolveStatusChip(status: string | undefined, isPending: boolean | unde
     case 'PENDING':   return { label: 'Pending',   bg: 'rgba(245,158,11,0.12)', color: '#D97706' };
     case 'FAILED':    return { label: 'Failed',    bg: 'rgba(234,67,53,0.10)',  color: Colors.error };
     case 'CANCELLED': return { label: 'Cancelled', bg: 'rgba(107,114,128,0.12)', color: Colors.textSecondary };
+    case 'HELD_FOR_REVIEW':
+      return { label: 'Under review', bg: 'rgba(249,115,22,0.12)', color: '#EA7C28' };
     default:          return null;
   }
 }

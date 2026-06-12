@@ -29,13 +29,93 @@ public class RiskEngineService {
     private final FlaggedTransactionRepository flaggedRepository;
     private final RiskAlertRepository riskAlertRepository;
     private final TransactionRepository transactionRepository;
+    private final StaffAlertService staffAlertService;
+    private final com.aza.backend.repository.RiskDecisionLogRepository decisionLogRepository;
 
     public void evaluateTransfer(Transaction tx, User sender) {
         try {
             checkLargeTransfer(tx, sender);
             checkVelocity(tx, sender);
+            evaluateAnomaly(tx, sender, false);
+            recordDecisionLog(tx, sender, false);
         } catch (Exception e) {
             log.error("Risk evaluation failed for transaction {}: {}", tx.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Persists the feature snapshot for MEDIUM/HIGH transactions — the training
+     * dataset for a future learned model. COMPLIANCE decisions become the labels
+     * via recordHeldOutcome.
+     */
+    public void recordDecisionLog(Transaction tx, User sender, boolean held) {
+        try {
+            String level = tx.getAnomalyRiskLevel();
+            if (!"MEDIUM".equals(level) && !"HIGH".equals(level)) return;
+            if (decisionLogRepository.findByTransactionId(tx.getId()).isPresent()) return;
+            decisionLogRepository.save(com.aza.backend.entity.RiskDecisionLog.builder()
+                    .transactionId(tx.getId())
+                    .userId(sender.getId())
+                    .amount(tx.getAmount())
+                    .anomalyScore(tx.getAnomalyScore())
+                    .riskLevel(level)
+                    .held(held)
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to record risk decision log for {}: {}", tx.getId(), e.getMessage());
+        }
+    }
+
+    /** Stamps the human label onto the decision log when COMPLIANCE decides a held transfer. */
+    public void recordHeldOutcome(java.util.UUID transactionId, com.aza.backend.entity.RiskDecisionLog.Outcome outcome) {
+        try {
+            decisionLogRepository.findByTransactionId(transactionId).ifPresent(entry -> {
+                entry.setOutcome(outcome);
+                entry.setDecidedAt(LocalDateTime.now());
+                decisionLogRepository.save(entry);
+            });
+        } catch (Exception e) {
+            log.warn("Failed to record held outcome for {}: {}", transactionId, e.getMessage());
+        }
+    }
+
+    /**
+     * Surfaces a HIGH behavioral anomaly score in the compliance queues. When the
+     * transfer was intercepted (held=true) COMPLIANCE is alerted to come release
+     * or reject it; when it completed anyway (merchant POS, automated flows) the
+     * flag is informational.
+     */
+    public void evaluateAnomaly(Transaction tx, User sender, boolean held) {
+        try {
+            if (!"HIGH".equals(tx.getAnomalyRiskLevel())) return;
+            int score = tx.getAnomalyScore() != null
+                    ? (int) Math.round(tx.getAnomalyScore() * 100) : 60;
+            flaggedRepository.save(FlaggedTransaction.builder()
+                    .transactionId(tx.getId())
+                    .userId(sender.getId())
+                    .amount(tx.getAmount())
+                    .flagReason((held ? "HELD: " : "") + "High behavioral anomaly score")
+                    .riskScore(score)
+                    .build());
+            riskAlertRepository.save(RiskAlert.builder()
+                    .userId(sender.getId())
+                    .alertType(RiskAlert.AlertType.UNUSUAL_PATTERN)
+                    .severity(held ? RiskAlert.Severity.CRITICAL : RiskAlert.Severity.HIGH)
+                    .description((held ? "Transfer HELD for review: " : "")
+                            + "GHS " + tx.getAmount().toPlainString()
+                            + " scored " + score + "/100 on behavioral anomaly checks")
+                    .transactionId(tx.getId())
+                    .riskScore(score)
+                    .build());
+            if (held) {
+                staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.COMPLIANCE,
+                        "Transfer held for review",
+                        "A transfer of GHS " + tx.getAmount().toPlainString()
+                                + " was held on a high anomaly score (" + score
+                                + "/100). Release or reject it in Fraud Detection.");
+            }
+        } catch (Exception e) {
+            log.error("Anomaly reporting failed for transaction {}: {}", tx.getId(), e.getMessage());
         }
     }
 

@@ -205,25 +205,26 @@ public class AiService {
             String requestJson = objectMapper.writeValueAsString(body);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://claude-3-5-sonnet.p.rapidapi.com/"))
-                    .timeout(Duration.ofSeconds(20))
-                    .header("x-rapidapi-key", apiKey)
-                    .header("x-rapidapi-host", "claude-3-5-sonnet.p.rapidapi.com")
-                    .header("Content-Type", "application/json")
+                    .uri(URI.create("https://api.anthropic.com/v1/messages"))
+                    .timeout(Duration.ofSeconds(60))
+                    .header("x-api-key", apiKey)
+                    .header("anthropic-version", "2023-06-01")
+                    .header("content-type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                     .build();
 
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                log.warn("Anthropic API returned {}", response.statusCode());
+                log.warn("Anthropic API returned {}: {}", response.statusCode(), response.body());
                 return null;
             }
 
             JsonNode root = objectMapper.readTree(response.body());
-            JsonNode content = root.path("content");
-            if (content.isArray() && !content.isEmpty()) {
-                return content.get(0).path("text").asText(null);
+            for (JsonNode block : root.path("content")) {
+                if ("text".equals(block.path("type").asText())) {
+                    return block.path("text").asText(null);
+                }
             }
             return null;
         } catch (Exception e) {

@@ -323,6 +323,14 @@ public class TransferService {
         }
 
         Merchant merchant = merchantRepository.findByIdForUpdate(transaction.getRecipientId()).orElse(null);
+
+        // HIGH-anomaly P2P transfers stop here: no money moves until COMPLIANCE
+        // releases or rejects the hold. Merchant payments complete (point-of-sale
+        // UX can't wait on review) but still raise an alert via the risk engine.
+        if (merchant == null && "HIGH".equals(transaction.getAnomalyRiskLevel())) {
+            return holdForReview(transaction, sender);
+        }
+
         if (merchant != null) {
             // Debit sender
             senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
@@ -466,6 +474,108 @@ public class TransferService {
         }
     }
 
+    // ==================== HELD-FOR-REVIEW (fraud interception) ====================
+
+    private TransferResponse holdForReview(Transaction transaction, User sender) {
+        transaction.setStatus(Transaction.TransactionStatus.HELD_FOR_REVIEW);
+        transactionRepository.save(transaction);
+        riskEngineService.evaluateAnomaly(transaction, sender, true);
+        riskEngineService.recordDecisionLog(transaction, sender, true);
+        notificationService.sendNotification(sender.getId(),
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Transfer under review",
+                "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                        + " is being reviewed for your security. We'll notify you once it's cleared.",
+                null, null);
+        User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
+    }
+
+    /** COMPLIANCE decision: execute the held transfer. Fails (and stays held) if the sender has since spent the funds. */
+    @Transactional
+    public TransferResponse releaseHeldTransfer(UUID transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+        if (transaction.getStatus() != Transaction.TransactionStatus.HELD_FOR_REVIEW) {
+            throw new AppException("NOT_HELD", "Transaction is not held for review", HttpStatus.CONFLICT);
+        }
+        User sender = userRepository.findById(transaction.getSenderId())
+                .orElseThrow(() -> new AppException("Sender not found"));
+        Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
+                .orElseThrow(() -> new AppException("Sender wallet not found"));
+        validateBalance(senderWallet, transaction.getAmount());
+        Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
+                .orElseThrow(() -> new AppException("Recipient wallet not found"));
+        User recipient = userRepository.findById(transaction.getRecipientId())
+                .orElseThrow(() -> new AppException("Recipient not found"));
+
+        senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
+        recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
+        walletRepository.save(senderWallet);
+        walletRepository.save(recipientWallet);
+        sender.setBalance(senderWallet.getBalance());
+        recipient.setBalance(recipientWallet.getBalance());
+        userRepository.save(sender);
+        userRepository.save(recipient);
+
+        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
+        transaction.setCompletedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+
+        riskEngineService.recordHeldOutcome(transaction.getId(),
+                com.aza.backend.entity.RiskDecisionLog.Outcome.RELEASED);
+
+        webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                Map.of(
+                        "transactionId", transaction.getId().toString(),
+                        "amount", transaction.getAmount().toString(),
+                        "from", sender.getFirstName() + " " + sender.getLastName(),
+                        "note", transaction.getNote() != null ? transaction.getNote() : ""
+                ));
+        notificationService.sendMoneyReceivedNotification(
+                recipient.getId(),
+                sender.getFirstName() + " " + sender.getLastName(),
+                transaction.getAmount().toString(),
+                transaction.getId().toString());
+        notificationService.sendNotification(sender.getId(),
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Transfer cleared",
+                "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                        + " has been reviewed and completed.",
+                null, null);
+
+        return buildTransferResponse(transaction, sender, recipient, sender.getId());
+    }
+
+    /** COMPLIANCE decision: cancel the held transfer; no funds ever moved. */
+    @Transactional
+    public TransferResponse rejectHeldTransfer(UUID transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+        if (transaction.getStatus() != Transaction.TransactionStatus.HELD_FOR_REVIEW) {
+            throw new AppException("NOT_HELD", "Transaction is not held for review", HttpStatus.CONFLICT);
+        }
+        transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
+        transaction.setCancelledAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+
+        riskEngineService.recordHeldOutcome(transaction.getId(),
+                com.aza.backend.entity.RiskDecisionLog.Outcome.REJECTED);
+
+        User sender = userRepository.findById(transaction.getSenderId()).orElse(null);
+        if (sender != null) {
+            notificationService.sendNotification(sender.getId(),
+                    com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                    "Transfer declined",
+                    "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                            + " was declined after a security review. No funds left your wallet. Contact support if you believe this is a mistake.",
+                    null, null);
+        }
+        User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
+        return buildTransferResponse(transaction, sender, recipient,
+                sender != null ? sender.getId() : transaction.getSenderId());
+    }
+
     // ==================== CANCEL TRANSFER ====================
 
     @Transactional
@@ -601,6 +711,22 @@ public class TransferService {
             throw new AppException("Accepting this request would exceed your daily transfer limit of GHS " + payerDailyLimit);
         }
 
+        // Request acceptance moves money like any transfer — score it like one,
+        // and intercept HIGH anomalies the same way.
+        AnomalyDetectionService.Result anomaly;
+        try {
+            anomaly = anomalyDetectionService.score(payer.getId(), transaction.getRecipientId(),
+                    transaction.getAmount(), LocalDateTime.now());
+        } catch (Exception e) {
+            anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
+        }
+        transaction.setAnomalyScore(anomaly.score());
+        transaction.setAnomalyRiskLevel(anomaly.riskLevel());
+        if ("HIGH".equals(anomaly.riskLevel())) {
+            transaction.setAcceptedAt(LocalDateTime.now());
+            return holdForReview(transaction, payer);
+        }
+
         // Execute transfer
         Wallet payerWallet = walletRepository.findByUserIdForUpdate(payer.getId())
                 .orElseThrow(() -> new AppException("Wallet not found"));
@@ -629,6 +755,7 @@ public class TransferService {
         transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
+        riskEngineService.evaluateTransfer(transaction, payer);
 
         webSocketPublisher.publishNotification(requester.getId(), WebSocketEventType.TRANSFER_UPDATE,
                 Map.of(
@@ -1017,6 +1144,13 @@ public class TransferService {
             merchantRepository.save(merchant);
         }
 
+        AnomalyDetectionService.Result anomaly;
+        try {
+            anomaly = anomalyDetectionService.score(sender.getId(), recipientId, amount, LocalDateTime.now());
+        } catch (Exception e) {
+            anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
+        }
+
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipientId)
@@ -1025,8 +1159,11 @@ public class TransferService {
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .completedAt(LocalDateTime.now())
+                .anomalyScore(anomaly.score())
+                .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
         transaction = transactionRepository.save(transaction);
+        riskEngineService.evaluateTransfer(transaction, sender);
         return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
 }

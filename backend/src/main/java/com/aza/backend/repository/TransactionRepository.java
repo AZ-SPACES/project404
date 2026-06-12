@@ -76,6 +76,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     long countByStatus(Transaction.TransactionStatus status);
 
+    Page<Transaction> findByStatusOrderByInitiatedAtDesc(Transaction.TransactionStatus status, Pageable pageable);
+
     long countByInitiatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     long countByStatusAndInitiatedAtBetween(Transaction.TransactionStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
