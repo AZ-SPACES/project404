@@ -63,7 +63,9 @@ public class Transaction {
     }
 
     public enum TransactionStatus {
-        DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED, REVERSED
+        DRAFT, PENDING, COMPLETED, FAILED, CANCELLED, DECLINED, REVERSED,
+        /** HIGH-anomaly transfer intercepted at confirmation; COMPLIANCE releases or rejects it. */
+        HELD_FOR_REVIEW
     }
 
     public enum TransactionCategory {

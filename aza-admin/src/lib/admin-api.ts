@@ -301,7 +301,8 @@ export function getPendingKyc(): Promise<KycRecord[]> {
   return request("/api/v1/admin/kyc/pending");
 }
 
-export function reviewKyc(userId: string, approve: boolean, reason: string): Promise<KycRecord> {
+/** Approving goes through maker-checker once 2+ staff exist — may return a pending Approval. */
+export function reviewKyc(userId: string, approve: boolean, reason: string): Promise<KycRecord | Approval> {
   return request(`/api/v1/admin/kyc/review/${userId}`, {
     method: "POST",
     body: JSON.stringify({ approve, reason }),
@@ -388,7 +389,8 @@ export function revokeUserSession(userId: string, sessionId: string): Promise<st
   return request(`/api/v1/admin/users/${userId}/sessions/${sessionId}`, { method: "DELETE" });
 }
 
-export function updateUserStatus(userId: string, status: string, reason?: string): Promise<AdminUser> {
+/** Reactivation (status ACTIVE) goes through maker-checker — may return a pending Approval. */
+export function updateUserStatus(userId: string, status: string, reason?: string): Promise<AdminUser | Approval> {
   return request(`/api/v1/admin/users/${userId}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status, reason }),
@@ -513,7 +515,8 @@ export function getAdminWallets(page = 0, size = 20): Promise<Page<AdminWallet>>
   return request(`/api/v1/admin/wallets?page=${page}&size=${size}`);
 }
 
-export function freezeWallet(userId: string, freeze: boolean): Promise<AdminWallet> {
+/** Unfreezing goes through maker-checker — may return a pending Approval. */
+export function freezeWallet(userId: string, freeze: boolean): Promise<AdminWallet | Approval> {
   return request(`/api/v1/admin/wallets/${userId}/freeze`, {
     method: "POST",
     body: JSON.stringify({ freeze }),
@@ -552,8 +555,10 @@ export interface AuditLogEntry {
   timestamp: string;
 }
 
-export function getAuditLog(page = 0, size = 20): Promise<Page<AuditLogEntry>> {
-  return request(`/api/v1/admin/audit-log?page=${page}&size=${size}`);
+export function getAuditLog(page = 0, size = 20, adminId?: string): Promise<Page<AuditLogEntry>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (adminId) params.set("adminId", adminId);
+  return request(`/api/v1/admin/audit-log?`);
 }
 
 // ── Broadcast Notifications ───────────────────────────────────────────────────
@@ -1375,7 +1380,8 @@ export function disableMiniApp(appId: string, reason?: string): Promise<Disabled
   });
 }
 
-export function enableMiniApp(appId: string): Promise<void> {
+/** Re-enabling goes through maker-checker — may return a pending Approval. */
+export function enableMiniApp(appId: string): Promise<void | Approval> {
   return request(`/api/v1/admin/miniapps/${encodeURIComponent(appId)}/enable`, {
     method: "POST",
     body: JSON.stringify({}),
@@ -1383,6 +1389,30 @@ export function enableMiniApp(appId: string): Promise<void> {
 }
 
 // ── AI: Fraud Detection ───────────────────────────────────────────────────────
+
+/** HIGH-anomaly transfers intercepted before any money moved. */
+export function getHeldTransfers(page = 0, size = 20): Promise<Page<AdminTransaction>> {
+  return request(`/api/v1/admin/fraud/held?page=${page}&size=${size}`);
+}
+
+export function releaseHeldTransfer(id: string): Promise<unknown> {
+  return request(`/api/v1/admin/fraud/held/${id}/release`, { method: "POST" });
+}
+
+export function rejectHeldTransfer(id: string): Promise<unknown> {
+  return request(`/api/v1/admin/fraud/held/${id}/reject`, { method: "POST" });
+}
+
+export interface FraudAiAssessment {
+  verdict: "LIKELY_FRAUD" | "LIKELY_LEGITIMATE" | "UNCERTAIN";
+  confidence: number;
+  reasoning: string;
+}
+
+/** Claude second opinion on a held transfer — can take a minute; verdict is audit-logged. */
+export function getAiOpinion(id: string): Promise<FraudAiAssessment> {
+  return request(`/api/v1/admin/fraud/held/${id}/ai-opinion`, { method: "POST" });
+}
 
 export function getAnomalyFlaggedTransactions(
   page = 0,
@@ -1518,6 +1548,18 @@ export function revokeStaffRole(userId: string, role: StaffRoleName): Promise<St
   return request(`/api/v1/admin/staff/${userId}/roles/${role}`, { method: "DELETE" });
 }
 
+/** Atomic swap; maker-checker once a second staff member exists. */
+export function changeStaffRole(
+  userId: string,
+  fromRole: StaffRoleName,
+  toRole: StaffRoleName,
+): Promise<StaffMember | Approval> {
+  return request(`/api/v1/admin/staff/${userId}/change-role`, {
+    method: "POST",
+    body: JSON.stringify({ fromRole, toRole }),
+  });
+}
+
 // ── Authenticated file downloads ──────────────────────────────────────────────
 
 export async function downloadFile(path: string, filename: string): Promise<void> {
@@ -1549,7 +1591,13 @@ export interface Approval {
     | "UPDATE_FEE_RULE"
     | "UPDATE_USER_LIMITS"
     | "GRANT_STAFF_ROLE"
-    | "UPDATE_SYSTEM_SETTINGS";
+    | "CHANGE_STAFF_ROLE"
+    | "UPDATE_SYSTEM_SETTINGS"
+    | "UNFREEZE_WALLET"
+    | "REACTIVATE_USER"
+    | "APPROVE_KYC"
+    | "BROADCAST_NOTIFICATION"
+    | "ENABLE_MINI_APP";
   targetId: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
@@ -1764,6 +1812,66 @@ export interface AnchorVerification {
   valid: boolean;
   anchoredCount: number;
   currentCount: number;
+}
+
+// ── KYC periodic reviews ──────────────────────────────────────────────────────
+
+export interface KycReviewDue {
+  userId: string;
+  name: string;
+  email: string;
+  reviewDueAt: string;
+}
+
+export function getKycReviewsDue(): Promise<KycReviewDue[]> {
+  return request("/api/v1/admin/kyc/reviews-due");
+}
+
+// ── Complaints register ───────────────────────────────────────────────────────
+
+export interface Complaint {
+  id: string;
+  userId: string | null;
+  complainantName: string | null;
+  complainantContact: string | null;
+  channel: "APP" | "EMAIL" | "PHONE" | "IN_PERSON" | "SOCIAL_MEDIA";
+  subject: string;
+  details: string;
+  status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+  ackDueAt: string;
+  resolveDueAt: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  resolution: string | null;
+  createdAt: string;
+}
+
+export function getComplaints(status?: string, page = 0, size = 20): Promise<Page<Complaint>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/complaints?${params}`);
+}
+
+export function getComplaintStats(): Promise<{ open: number; acknowledged: number }> {
+  return request("/api/v1/admin/complaints/stats");
+}
+
+export function createComplaint(data: {
+  userId?: string;
+  complainantName?: string;
+  complainantContact?: string;
+  channel: string;
+  subject: string;
+  details: string;
+}): Promise<Complaint> {
+  return request("/api/v1/admin/complaints", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateComplaintStatus(id: string, status: string, resolution?: string): Promise<Complaint> {
+  return request(`/api/v1/admin/complaints/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status, resolution }),
+  });
 }
 
 export function getAuditAnchors(): Promise<AuditAnchor[]> {

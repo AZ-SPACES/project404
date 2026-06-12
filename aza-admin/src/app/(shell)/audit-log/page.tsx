@@ -5,10 +5,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   getAuditAnchors,
   getAuditLog,
+  getStaff,
   verifyAuditAnchors,
   AuditLogEntry,
   Page,
   type AnchorVerification,
+  type StaffMember,
 } from "@/lib/admin-api";
 import { ScrollText, ChevronLeft, ChevronRight, Loader2, ShieldCheck, ShieldX } from "lucide-react";
 
@@ -97,17 +99,38 @@ function IntegrityCard() {
 
 export default function AuditLogPage() {
   const [page, setPage] = useState(0);
+  const [staffFilter, setStaffFilter] = useState("");
+
+  const { data: staff } = useQuery<StaffMember[]>({
+    queryKey: ["staff"],
+    queryFn: getStaff,
+  });
 
   const { data, isLoading, error } = useQuery<Page<AuditLogEntry>>({
-    queryKey: ["auditLog", page],
-    queryFn: () => getAuditLog(page, 20),
+    queryKey: ["auditLog", page, staffFilter],
+    queryFn: () => getAuditLog(page, 20, staffFilter || undefined),
   });
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground mb-1">Audit Log</h1>
-        <p className="text-foreground/50 text-sm">All admin actions, newest first</p>
+      <div className="mb-8 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground mb-1">Audit Log</h1>
+          <p className="text-foreground/50 text-sm">All admin actions, newest first</p>
+        </div>
+        <select
+          value={staffFilter}
+          onChange={(e) => {
+            setStaffFilter(e.target.value);
+            setPage(0);
+          }}
+          className="px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none"
+        >
+          <option value="">All staff</option>
+          {staff?.map((m) => (
+            <option key={m.userId} value={m.userId}>{m.name}</option>
+          ))}
+        </select>
       </div>
 
       <IntegrityCard />

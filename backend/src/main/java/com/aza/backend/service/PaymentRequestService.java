@@ -49,6 +49,8 @@ public class PaymentRequestService {
     private final NotificationService notificationService;
     private final UserService userService;
     private final SmsService smsService;
+    private final AnomalyDetectionService anomalyDetectionService;
+    private final RiskEngineService riskEngineService;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -202,6 +204,15 @@ public class PaymentRequestService {
             userRepository.save(requester);
         });
 
+        // Scored for the fraud queues; chat payment requests complete inline (the
+        // PAID status/chat flow can't park mid-payment) so HIGH alerts rather than holds.
+        AnomalyDetectionService.Result anomaly;
+        try {
+            anomaly = anomalyDetectionService.score(payer.getId(), pr.getRequesterId(), pr.getAmount(), LocalDateTime.now());
+        } catch (Exception e) {
+            anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
+        }
+
         Transaction transaction = Transaction.builder()
                 .senderId(payer.getId())
                 .recipientId(pr.getRequesterId())
@@ -210,8 +221,11 @@ public class PaymentRequestService {
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .completedAt(LocalDateTime.now())
+                .anomalyScore(anomaly.score())
+                .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
         transaction = transactionRepository.save(transaction);
+        riskEngineService.evaluateTransfer(transaction, payer);
 
         pr.setStatus(PaymentRequest.PaymentRequestStatus.PAID);
         pr.setPaidAt(LocalDateTime.now());

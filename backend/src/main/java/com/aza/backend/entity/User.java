@@ -108,6 +108,9 @@ public class User {
     @Enumerated(EnumType.STRING)
     private TwoFactorMethod defaultTwoFactorMethod;
 
+    /** Periodic KYC re-verification deadline; set to +1 year on each approval. */
+    private LocalDateTime kycReviewDueAt;
+
     @Builder.Default
     private Boolean forcePasswordReset = false;
 

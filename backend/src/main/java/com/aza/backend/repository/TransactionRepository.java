@@ -76,9 +76,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     long countByStatus(Transaction.TransactionStatus status);
 
+    Page<Transaction> findByStatusOrderByInitiatedAtDesc(Transaction.TransactionStatus status, Pageable pageable);
+
     long countByInitiatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     long countByStatusAndInitiatedAtBetween(Transaction.TransactionStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.amount >= :min AND t.amount < :max AND t.completedAt >= :since")
+    long countCompletedDebitsInAmountRange(@Param("userId") UUID userId,
+                                           @Param("min") java.math.BigDecimal min,
+                                           @Param("max") java.math.BigDecimal max,
+                                           @Param("since") java.time.LocalDateTime since);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'COMPLETED'")
     java.math.BigDecimal sumCompletedVolume();

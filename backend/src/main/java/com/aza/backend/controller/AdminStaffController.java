@@ -60,6 +60,26 @@ public class AdminStaffController {
                 "Grant " + role + " to " + target.getEmail())));
     }
 
+    /** Atomic swap (grant new + revoke old in one transaction); maker-checker with the same bootstrap exception. */
+    @PostMapping("/{userId}/change-role")
+    public ResponseEntity<ApiResponse<Object>> changeRole(
+            @PathVariable UUID userId,
+            @RequestBody ChangeRoleRequest request,
+            @AuthenticationPrincipal User admin) {
+        StaffRole.Role fromRole = parseRole(request.getFromRole());
+        StaffRole.Role toRole = parseRole(request.getToRole());
+        if (staffRoleService.countActiveStaffUsers() <= 1) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    staffRoleService.changeRole(admin, userId, fromRole, toRole)));
+        }
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("USER_NOT_FOUND", "User not found", HttpStatus.NOT_FOUND));
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.CHANGE_STAFF_ROLE, userId,
+                new ApprovalService.ChangeRolePayload(fromRole.name(), toRole.name()),
+                "Change " + target.getEmail() + " from " + fromRole + " to " + toRole)));
+    }
+
     @DeleteMapping("/{userId}/roles/{role}")
     public ResponseEntity<ApiResponse<StaffMemberResponse>> revokeRole(
             @PathVariable UUID userId,
@@ -80,5 +100,11 @@ public class AdminStaffController {
     @Data
     static class RoleRequest {
         private String role;
+    }
+
+    @Data
+    static class ChangeRoleRequest {
+        private String fromRole;
+        private String toRole;
     }
 }

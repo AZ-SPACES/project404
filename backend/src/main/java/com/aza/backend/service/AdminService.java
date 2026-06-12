@@ -412,11 +412,20 @@ public class AdminService {
 
     // ── AI Admin: Fraud Detection ─────────────────────────────────────────────
 
+    public Page<AdminTransactionResponse> getHeldTransactions(int page, int size) {
+        return mapWithParties(transactionRepository.findByStatusOrderByInitiatedAtDesc(
+                Transaction.TransactionStatus.HELD_FOR_REVIEW, PageRequest.of(page, size)));
+    }
+
     public Page<AdminTransactionResponse> getFlaggedTransactions(String riskLevel, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
         Page<Transaction> txPage = (riskLevel != null && !riskLevel.isBlank())
                 ? transactionRepository.findByAnomalyRiskLevel(riskLevel.toUpperCase(), pageable)
                 : transactionRepository.findFlaggedTransactions(pageable);
+        return mapWithParties(txPage);
+    }
+
+    private Page<AdminTransactionResponse> mapWithParties(Page<Transaction> txPage) {
 
         return txPage.map(tx -> {
             User sender = userRepository.findById(tx.getSenderId()).orElse(null);
