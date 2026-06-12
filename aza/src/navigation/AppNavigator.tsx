@@ -4,42 +4,12 @@ import { useAuth } from '../providers/AuthProvider';
 import { RootStackParamList } from './types';
 import MainTabsNavigator from './MainTabsNavigator';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
-import {
-  TalkToUsScreen,
-  EmailUsScreen,
-  ChatWithUsScreen,
-  ChatbotScreen,
-  HelpAndSupportScreen,
-  HelpTopicScreen,
-} from '../features/customercare';
-import {
-  ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen,
-  AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen,
-  SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen,
-  BroadcastScreen, SavedMessagesScreen, ChatBackupScreen,
-} from '../features/chat';
+import { TalkToUsScreen, EmailUsScreen, ChatWithUsScreen, ChatbotScreen, HelpAndSupportScreen, HelpTopicScreen,} from '../features/customercare';
+import { ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen, SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen, BroadcastScreen, SavedMessagesScreen, ChatBackupScreen,} from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
 import { MiniAppPlayerScreen } from '../features/hub';
-import {
-  SendContactScreen,
-  SendAmountScreen,
-  SendConfirmScreen,
-  SendPinScreen,
-  SendSuccessScreen,
-  RequestContactScreen,
-  RequestAmountScreen,
-  DetailsScreen,
-  SpendingScreen,
-  FinancialDashboardScreen,
-  BudgetManagementScreen,
-  AiAssistantScreen,
-} from '../features/transfer';
-import { 
-  WithdrawScreen, 
-  StatementDownloadScreen, 
-  TransactionsScreen,
-  ReversalRequestScreen
-} from '../features/home';
+import { SendContactScreen, SendAmountScreen, SendConfirmScreen, SendPinScreen, SendSuccessScreen, RequestContactScreen, RequestAmountScreen, DetailsScreen, SpendingScreen, FinancialDashboardScreen, BudgetManagementScreen, AiAssistantScreen,} from '../features/transfer';
+import { WithdrawScreen, StatementDownloadScreen, TransactionsScreen, ReversalRequestScreen,} from '../features/home';
 
 // Wrap the entire transfer flow so a crash in any send/receive screen
 // shows the error boundary instead of taking down the whole app.
@@ -50,36 +20,7 @@ function SendPinWithBoundary(props: React.ComponentProps<typeof SendPinScreen>) 
 function SendSuccessWithBoundary(props: React.ComponentProps<typeof SendSuccessScreen>) { return <ErrorBoundary><SendSuccessScreen {...props} /></ErrorBoundary>; }
 function RequestContactWithBoundary(props: React.ComponentProps<typeof RequestContactScreen>) { return <ErrorBoundary><RequestContactScreen {...props} /></ErrorBoundary>; }
 function RequestAmountWithBoundary(props: React.ComponentProps<typeof RequestAmountScreen>) { return <ErrorBoundary><RequestAmountScreen {...props} /></ErrorBoundary>; }
-import {
-  ProfileScreen,
-  AppearanceScreen,
-  NotificationSettingsScreen,
-  SecurityAndPrivacyScreen,
-  AppSecurityScreen,
-  SecureAccountScreen,
-  LogoutEverywhereScreen,
-  DevicesScreen,
-  TwoStepVerificationScreen,
-  TotpSetupScreen,
-  DisableTotpScreen,
-  RecoveryCodesScreen,
-  ManageRecoveryCodesScreen,
-  AccountRecoveryContactsScreen,
-  SmsSetupScreen,
-  DisableSmsScreen,
-  PasskeySetupScreen,
-  DisablePasskeyScreen,
-  AzaAppSetupScreen,
-  ChangePasswordScreen,
-  FindMeByScreen,
-  BillForwardingIntroScreen,
-  BillForwardingDetailsScreen,
-  PersonalDetailsScreen,
-  PersonalInformationScreen,
-  ChangeEmailScreen,
-  ChangePhoneScreen,
-  DeleteAccountScreen
-} from '../features/profile';
+import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen, AppSecurityScreen, SecureAccountScreen, LogoutEverywhereScreen, DevicesScreen, TwoStepVerificationScreen, TotpSetupScreen, DisableTotpScreen, RecoveryCodesScreen, ManageRecoveryCodesScreen, AccountRecoveryContactsScreen, SmsSetupScreen, DisableSmsScreen, PasskeySetupScreen, DisablePasskeyScreen, AzaAppSetupScreen, ChangePasswordScreen, FindMeByScreen, BillForwardingIntroScreen, BillForwardingDetailsScreen, PersonalDetailsScreen, PersonalInformationScreen, ChangeEmailScreen, ChangePhoneScreen, DeleteAccountScreen} from '../features/profile';
 import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
 import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
 import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
@@ -88,21 +29,11 @@ import RecurringTransfersScreen from '../features/transfer/recurring/RecurringTr
 import CreateRecurringTransferScreen from '../features/transfer/recurring/CreateRecurringTransferScreen';
 import BulkTransferScreen from '../features/transfer/send/BulkTransferScreen';
 import SpendingCategoriesScreen from '../features/home/screens/SpendingCategoriesScreen';
-import {
-  ReasonScreen,
-  RefundScreen,
-  StatementScreen,
-  TermsOfServiceScreen,
-  PrivacyPolicyScreen,
-  AppLoginApprovalScreen,
-  GenerateRecoveryCodeScreen,
-} from '../features/auth';
+import { ReasonScreen, RefundScreen, StatementScreen, TermsOfServiceScreen, PrivacyPolicyScreen, AppLoginApprovalScreen, GenerateRecoveryCodeScreen,} from '../features/auth';
 import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScreen';
 import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
 import OAuthPaymentApprovalScreen from '../features/scan/screens/OAuthPaymentApprovalScreen';
 import { InboxScreen } from '../features/notifications';
-
-
 import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
 import CreatePasscodeScreen from '../features/security/screens/CreatePasscodeScreen';
 import ConfirmPasscodeScreen from '../features/auth/signup/ConfirmPasscodeScreen';
@@ -147,22 +78,10 @@ export default function AppNavigator() {
       <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
       <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
       <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
-      <Stack.Screen 
-        name="Details" 
-        component={DetailsScreen} 
-        options={{ presentation: 'modal' }}
-      />
+      <Stack.Screen name="Details" component={DetailsScreen} options={{ presentation: 'modal' }}/>
       <Stack.Screen name="Spending" component={SpendingScreen} />
-      <Stack.Screen 
-        name="Withdraw" 
-        component={WithdrawScreen} 
-        options={{ presentation: 'modal' }}
-      />
-      <Stack.Screen 
-        name="StatementDownload" 
-        component={StatementDownloadScreen} 
-        options={{ presentation: 'modal' }}
-      />
+      <Stack.Screen name="Withdraw" component={WithdrawScreen} options={{ presentation: 'modal' }}/>
+      <Stack.Screen name="StatementDownload" component={StatementDownloadScreen} options={{ presentation: 'modal' }}/>
       <Stack.Screen name="Transactions" component={TransactionsScreen} />
       <Stack.Screen name="ReversalRequest" component={ReversalRequestScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
@@ -226,11 +145,7 @@ export default function AppNavigator() {
       <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
-      <Stack.Screen
-        name="MiniApp"
-        component={MiniAppPlayerScreen}
-        options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
-      />
+      <Stack.Screen name="MiniApp" component={MiniAppPlayerScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}/>
       <Stack.Screen name="MerchantBusinessName" component={MerchantBusinessNameScreen} />
       <Stack.Screen name="MerchantBusinessCategory" component={MerchantBusinessCategoryScreen} />
       <Stack.Screen name="MerchantBusinessContact" component={MerchantBusinessContactScreen} />
