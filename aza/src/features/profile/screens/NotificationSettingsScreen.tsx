@@ -15,6 +15,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../
 import { useToast } from '../../../providers/ToastProvider';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { BackButton } from '../../../components/ui/BackButton';
+import Button from '../../../components/ui/Button';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "NotificationSettings">;
 
@@ -559,16 +560,19 @@ export default function NotificationSettingsScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.silentSaveBtn, { backgroundColor: Colors.primary }]}
+                <Button
+                  title="Save silent hours"
                   onPress={() => saveSilentHours(true)}
-                  disabled={savingSilent}
+                  loading={savingSilent}
+                  backgroundColor={Colors.primary}
+                  textColor={Colors.white}
+                  borderRadius={Radius.md}
+                  paddingVertical={11}
+                  fontSize={14}
+                  fontWeight="600"
+                  style={{ marginTop: Spacing.sm }}
                   activeOpacity={0.8}
-                >
-                  <Text style={[styles.silentSaveBtnText, { color: Colors.white }]}>
-                    {savingSilent ? 'Saving…' : 'Save silent hours'}
-                  </Text>
-                </TouchableOpacity>
+                />
               </>
             )}
           </View>
@@ -779,16 +783,6 @@ function createStyles(Colors: ThemeColors) {
       borderRadius: Radius.sm,
       paddingHorizontal: 8,
       paddingVertical: 5,
-    },
-    silentSaveBtn: {
-      borderRadius: Radius.md,
-      paddingVertical: 11,
-      alignItems: 'center',
-      marginTop: Spacing.sm,
-    },
-    silentSaveBtnText: {
-      fontSize: 14,
-      fontWeight: '600',
     },
     pickerOverlay: {
       flex: 1,

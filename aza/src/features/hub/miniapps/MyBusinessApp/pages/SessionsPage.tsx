@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
+import Button from '../../../../../components/ui/Button';
 import StatusBadge from '../components/StatusBadge';
 
 export default function SessionsPage({ navigate, goBack, Colors, styles }: NavProps) {
@@ -298,40 +299,55 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                       </TouchableOpacity>
 
                       <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                        <TouchableOpacity
-                          style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+                        <Button
+                          title={copied ? 'Copied!' : 'Copy Link'}
                           onPress={() => handleCopy(selectedSession)}
-                        >
-                          <Feather name={copied ? "check" : "copy"} size={16} color={Colors.textPrimary} />
-                          <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>{copied ? 'Copied!' : 'Copy Link'}</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+                          leftIcon={<Feather name={copied ? "check" : "copy"} size={16} color={Colors.textPrimary} />}
+                          backgroundColor="transparent"
+                          textColor={Colors.textPrimary}
+                          borderRadius={8}
+                          paddingVertical={12}
+                          fontWeight="600"
+                          width="auto"
+                          style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                        />
+                        <Button
+                          title="Share"
                           onPress={() => handleShare(selectedSession)}
-                        >
-                          <Feather name="share-2" size={16} color={Colors.textPrimary} />
-                          <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Share</Text>
-                        </TouchableOpacity>
+                          leftIcon={<Feather name="share-2" size={16} color={Colors.textPrimary} />}
+                          backgroundColor="transparent"
+                          textColor={Colors.textPrimary}
+                          borderRadius={8}
+                          paddingVertical={12}
+                          fontWeight="600"
+                          width="auto"
+                          style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                        />
                       </View>
 
-                      <TouchableOpacity
-                        style={[styles.secondaryBtn, { width: '100%', borderColor: Colors.border, borderRadius: 8, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}
+                      <Button
+                        title="Save / Print Poster"
                         onPress={() => handlePrint(selectedSession)}
-                      >
-                        <Feather name="printer" size={16} color={Colors.textPrimary} />
-                        <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Save / Print Poster</Text>
-                      </TouchableOpacity>
+                        leftIcon={<Feather name="printer" size={16} color={Colors.textPrimary} />}
+                        backgroundColor="transparent"
+                        textColor={Colors.textPrimary}
+                        borderRadius={8}
+                        paddingVertical={12}
+                        fontWeight="600"
+                        style={{ borderWidth: 1, borderColor: Colors.border }}
+                      />
 
-                      <TouchableOpacity
-                        style={{ width: '100%', borderWidth: 1, borderColor: '#ef4444', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
+                      <Button
+                        title="Expire Link"
                         onPress={() => handleExpire(selectedSession)}
-                        disabled={expiring}
-                      >
-                        {expiring ? <ActivityIndicator color="#ef4444" /> : (
-                          <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Expire Link</Text>
-                        )}
-                      </TouchableOpacity>
+                        loading={expiring}
+                        backgroundColor="#ef4444"
+                        textColor="#ef4444"
+                        borderRadius={8}
+                        paddingVertical={12}
+                        fontSize={14}
+                        style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: '#ef4444' }}
+                      />
                     </View>
                   </View>
                 ) : (
@@ -377,22 +393,17 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                     </View>
 
                     {selectedSession.status === 'COMPLETED' && (
-                      <TouchableOpacity
-                        style={{
-                          marginTop: Spacing.md,
-                          borderWidth: 1,
-                          borderColor: '#ef4444',
-                          borderRadius: 10,
-                          padding: Spacing.md,
-                          alignItems: 'center',
-                        }}
+                      <Button
+                        title="Issue Refund"
                         onPress={() => handleRefund(selectedSession)}
-                        disabled={refunding}
-                      >
-                        {refunding ? <ActivityIndicator color="#ef4444" /> : (
-                          <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 14 }}>Issue Refund</Text>
-                        )}
-                      </TouchableOpacity>
+                        loading={refunding}
+                        backgroundColor="#ef4444"
+                        textColor="#ef4444"
+                        borderRadius={10}
+                        paddingVertical={Spacing.md}
+                        fontSize={14}
+                        style={{ marginTop: Spacing.md, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#ef4444' }}
+                      />
                     )}
                   </View>
                 )}
@@ -433,17 +444,17 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                 ) : null}
               </View>
 
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 14,
-                  paddingHorizontal: 36,
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 8,
-                }}
+              <Button
+                title="Close POS"
                 onPress={() => setPosMode(false)}
-              >
-                <Text style={{ color: '#000000', fontWeight: '700', fontSize: 15 }}>Close POS</Text>
-              </TouchableOpacity>
+                backgroundColor="#FFFFFF"
+                textColor="#000000"
+                borderRadius={8}
+                paddingVertical={14}
+                paddingHorizontal={36}
+                fontSize={15}
+                width="auto"
+              />
             </View>
           </Modal>
         </Modal>

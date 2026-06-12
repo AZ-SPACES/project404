@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Feather } from '@react-native-vector-icons/feather';
 import * as ImageManipulator from 'expo-image-manipulator';
+import Button from '../../ui/Button';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const PREVIEW_PADDING = 24;
@@ -410,22 +411,33 @@ function CropOverlayInner({ imageUri, onApply, onCancel }: CropOverlayProps) {
 
       {/* Action bar */}
       <View style={styles.actionBar}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.applyBtn, processing && { opacity: 0.5 }]}
-          onPress={handleApply}
+        <Button
+          title="Cancel"
+          onPress={onCancel}
+          backgroundColor="rgba(255,255,255,0.1)"
+          textColor="#fff"
+          borderRadius={10}
+          paddingVertical={12}
+          paddingHorizontal={28}
+          fontSize={15}
+          fontWeight="600"
+          width="auto"
           activeOpacity={0.7}
-          disabled={processing}
-        >
-          {processing ? (
-            <ActivityIndicator size="small" color="#174717" />
-          ) : (
-            <Text style={styles.applyText}>Apply</Text>
-          )}
-        </TouchableOpacity>
+        />
+        <Button
+          title="Apply"
+          onPress={handleApply}
+          backgroundColor="#B7EE7A"
+          textColor="#174717"
+          borderRadius={10}
+          paddingVertical={12}
+          paddingHorizontal={28}
+          fontSize={15}
+          width="auto"
+          style={{ minWidth: 100 }}
+          activeOpacity={0.7}
+          loading={processing}
+        />
       </View>
     </View>
   );
@@ -533,29 +545,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     marginTop: 24,
-  },
-  cancelBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  cancelText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  applyBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#B7EE7A',
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  applyText: {
-    color: '#174717',
-    fontSize: 15,
-    fontWeight: '700',
   },
 });

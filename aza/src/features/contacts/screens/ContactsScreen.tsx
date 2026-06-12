@@ -24,7 +24,6 @@ import {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { Feather } from '@react-native-vector-icons/feather';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
-import { AntDesign } from '@react-native-vector-icons/ant-design';
 import {
   useAppTheme,
   ThemeColors,
@@ -42,7 +41,6 @@ import { useContactStore } from "../../../store/contactStore";
 import { usePresenceStore } from "../../../store/presenceStore";
 import { usePresenceSeed } from "../../../hooks/usePresenceSeed";
 
-import { Contact as BackendContact } from "../types";
 import { CloseButton } from '../../../components/ui/CloseButton';
 
 const AZA_ICON = require("../../../assets/aza-z.png");
@@ -76,10 +74,6 @@ export default function ContactsScreen() {
     contacts: backendContacts,
     fetchContacts,
     isLoading,
-    toggleFavorite,
-    addContactByUserId,
-    findUserByHandle,
-    searchGlobal,
     blockedUsers,
     fetchBlockedUsers,
     unblockUser,
@@ -135,15 +129,12 @@ export default function ContactsScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [inviteQuery, setInviteQuery] = useState("");
-  const [addUserQuery, setAddUserQuery] = useState("");
   const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(
     null,
   );
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showBlockedModal, setShowBlockedModal] = useState(false);
-  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
-  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
 
   const recipientSheetAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const recipientBackdropAnim = useRef(new Animated.Value(0)).current;
@@ -261,18 +252,30 @@ export default function ContactsScreen() {
             </View>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              style={{ backgroundColor: Colors.surface, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            <Button
+              title="Decline"
               onPress={() => rejectContactRequest(item.id)}
-            >
-              <Text style={[Typography.body, { color: Colors.textPrimary, fontWeight: '600' }]}>Decline</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              backgroundColor={Colors.surface}
+              textColor={Colors.textPrimary}
+              borderRadius={8}
+              paddingVertical={8}
+              paddingHorizontal={16}
+              fontSize={14}
+              fontWeight="600"
+              width="auto"
+            />
+            <Button
+              title="Accept"
               onPress={() => approveContactRequest(item.id)}
-            >
-              <Text style={[Typography.body, { color: Colors.secondary, fontWeight: '600' }]}>Accept</Text>
-            </TouchableOpacity>
+              backgroundColor={Colors.primary}
+              textColor={Colors.secondary}
+              borderRadius={8}
+              paddingVertical={8}
+              paddingHorizontal={16}
+              fontSize={14}
+              fontWeight="600"
+              width="auto"
+            />
           </View>
         </View>
       );
@@ -655,17 +658,23 @@ export default function ContactsScreen() {
                         {item.handle && <Text style={[Typography.body, { color: Colors.textSecondary }]}>@{item.handle}</Text>}
                       </View>
                     </View>
-                    <TouchableOpacity
-                      style={styles.unblockButton}
+                    <Button
+                      title="Unblock"
                       onPress={() => {
                         Alert.alert("Unblock", `Are you sure you want to unblock ${item.displayName}?`, [
                           { text: "Cancel", style: "cancel" },
                           { text: "Unblock", onPress: () => unblockUser(item.blockedUserId) }
                         ]);
                       }}
-                    >
-                      <Text style={styles.unblockButtonText}>Unblock</Text>
-                    </TouchableOpacity>
+                      backgroundColor={Colors.isDark ? Colors.surface : "#f3f4f6"}
+                      textColor={Colors.textPrimary}
+                      borderRadius={Radius.full}
+                      paddingVertical={Spacing.sm}
+                      paddingHorizontal={Spacing.md}
+                      fontSize={12}
+                      fontWeight="600"
+                      width="auto"
+                    />
                   </View>
                 )}
                 contentContainerStyle={{ padding: Spacing.lg }}
@@ -1166,20 +1175,9 @@ function createStyles(Colors: ThemeColors) {
       height: 40,
       borderRadius: 20,
     },
-    unblockButton: {
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
-      backgroundColor: isDark ? Colors.surface : "#f3f4f6",
-      borderRadius: Radius.full,
-    },
     modalOverlay: {
       flex: 1,
       justifyContent: 'flex-end' as const,
-    },
-    unblockButtonText: {
-      ...Typography.caption,
-      fontWeight: "600",
-      color: Colors.textPrimary,
     },
   });
 }

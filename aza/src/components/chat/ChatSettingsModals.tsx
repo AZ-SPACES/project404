@@ -5,6 +5,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import { CloseButton } from '../ui/CloseButton';
+import Button from '../ui/Button';
 
 // ----------------------------------------------------------------------------
 // Block Contact Modal
@@ -36,12 +37,30 @@ export const BlockContactModal = ({ visible, contactName, isDark, Colors, onClos
             This contact will not be notified.
           </Text>
           <View style={styles.dialogActions}>
-            <TouchableOpacity style={styles.btnCancel} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.btnCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnDanger} onPress={onBlock} activeOpacity={0.8}>
-              <Text style={styles.btnDangerText}>Block</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              backgroundColor={isDark ? Colors.surface : '#F3F4F6'}
+              textColor={Colors.textPrimary}
+              borderRadius={Radius.md}
+              paddingVertical={14}
+              width="auto"
+              style={{ flex: 1 }}
+              textStyle={Typography.button}
+              activeOpacity={0.8}
+            />
+            <Button
+              title="Block"
+              onPress={onBlock}
+              backgroundColor={Colors.error}
+              textColor={Colors.white}
+              borderRadius={Radius.md}
+              paddingVertical={14}
+              width="auto"
+              style={{ flex: 1 }}
+              textStyle={Typography.button}
+              activeOpacity={0.8}
+            />
           </View>
         </View>
       </View>
@@ -101,14 +120,16 @@ export const ReportModal = ({ visible, contactName, isDark, Colors, onClose, onR
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <TouchableOpacity 
-            style={[styles.btnPrimary, !selectedReason && styles.btnDisabled]} 
-            onPress={handleReport} 
+          <Button
+            title="Submit Report"
+            onPress={handleReport}
             disabled={!selectedReason}
+            backgroundColor={Colors.primary}
+            textColor={Colors.white}
+            borderRadius={Radius.full}
+            textStyle={[Typography.button, { fontWeight: '600' }]}
             activeOpacity={0.8}
-          >
-            <Text style={styles.btnPrimaryText}>Submit Report</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     </Modal>
@@ -281,22 +302,6 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => StyleSheet.create
     gap: Spacing.md,
     width: '100%',
   },
-  btnCancel: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: Radius.md,
-    backgroundColor: isDark ? Colors.surface : '#F3F4F6',
-    alignItems: 'center',
-  },
-  btnCancelText: { ...Typography.button, color: Colors.textPrimary },
-  btnDanger: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.error,
-    alignItems: 'center',
-  },
-  btnDangerText: { ...Typography.button, color: Colors.white },
   sheet: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
@@ -357,20 +362,6 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) => StyleSheet.create
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.primary,
-  },
-  btnPrimary: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-  btnPrimaryText: {
-    ...Typography.button,
-    color: Colors.white,
-    fontWeight: '600',
   },
   themeList: {
     paddingVertical: Spacing.md,

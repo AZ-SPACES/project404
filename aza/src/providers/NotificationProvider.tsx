@@ -13,7 +13,7 @@ import { useCallStore } from '../store/callStore';
 type NotificationContextType = {
   checkPermissions: () => Promise<Notifications.PermissionResponse | { status: string }>;
   requestPermissions: () => Promise<Notifications.PermissionResponse | { status: string }>;
-  registerForNotifications: () => Promise<boolean>;
+  registerForNotifications: (requestIfNotGranted?: boolean) => Promise<boolean>;
   sendLocalNotification: (title: string, body: string, data?: Record<string, unknown>) => Promise<string | undefined>;
 };
 
@@ -242,6 +242,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } else if (userToken !== null) {
       // Trigger initial fetch of notification count via React Query
       queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
+      void registerForNotifications(false);
     }
     prevTokenRef.current = userToken;
   }, [userToken]);
@@ -262,14 +263,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const registerForNotifications = async (): Promise<boolean> => {
+  const registerForNotifications = async (requestIfNotGranted: boolean = true): Promise<boolean> => {
     try {
       const { status: existingStatus } = await checkPermissions();
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await requestPermissions();
-        finalStatus = status;
+        if (requestIfNotGranted) {
+          const { status } = await requestPermissions();
+          finalStatus = status;
+        } else {
+          return false;
+        }
       }
 
       if (finalStatus !== 'granted') {

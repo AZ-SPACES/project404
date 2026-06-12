@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Alert, Clipboard, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
-import { Spacing } from '../../../../../theme';
+import { Spacing, Radius } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtDate } from '../helpers';
 import {
@@ -16,6 +16,7 @@ import { queryKeys } from '../../../../../lib/queryKeys';
 import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
+import Button from '../../../../../components/ui/Button';
 import { extractErrorMessage } from '../../../../../utils/errorUtils';
 
 const ALL_EVENTS = [
@@ -250,12 +251,28 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
-                    <TouchableOpacity style={[styles.primaryBtn, { flex: 1, borderRadius: 8 }]} onPress={() => handleSaveEdit(w.id)} disabled={updating}>
-                      {updating ? <ActivityIndicator color={Colors.secondary} /> : <Text style={[styles.primaryBtnText, { color: Colors.secondary }]}>Save</Text>}
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border, borderRadius: 8 }]} onPress={() => setEditingWebhookId(null)}>
-                      <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Cancel</Text>
-                    </TouchableOpacity>
+                    <Button
+                      title="Save"
+                      onPress={() => handleSaveEdit(w.id)}
+                      loading={updating}
+                      backgroundColor={Colors.primary}
+                      textColor={Colors.secondary}
+                      borderRadius={8}
+                      paddingVertical={15}
+                      width="auto"
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title="Cancel"
+                      onPress={() => setEditingWebhookId(null)}
+                      backgroundColor="transparent"
+                      textColor={Colors.textPrimary}
+                      fontWeight="600"
+                      borderRadius={8}
+                      paddingVertical={15}
+                      width="auto"
+                      style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                    />
                   </View>
                 </View>
               );
@@ -412,20 +429,44 @@ export default function WebhooksPage({ goBack, Colors, styles }: NavProps) {
               </View>
 
               <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-                <TouchableOpacity style={[styles.primaryBtn, { flex: 1 }]} onPress={handleCreate} disabled={creating}>
-                  {creating ? <ActivityIndicator color={Colors.secondary} /> : <Text style={[styles.primaryBtnText, { color: Colors.secondary }]}>Add</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.secondaryBtn, { flex: 1, borderColor: Colors.border }]} onPress={() => setShowForm(false)}>
-                  <Text style={[styles.secondaryBtnText, { color: Colors.textPrimary }]}>Cancel</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Add"
+                  onPress={handleCreate}
+                  loading={creating}
+                  backgroundColor={Colors.primary}
+                  textColor={Colors.secondary}
+                  borderRadius={Radius.full}
+                  paddingVertical={15}
+                  width="auto"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Cancel"
+                  onPress={() => setShowForm(false)}
+                  backgroundColor="transparent"
+                  textColor={Colors.textPrimary}
+                  fontWeight="600"
+                  borderRadius={Radius.full}
+                  paddingVertical={15}
+                  width="auto"
+                  style={{ flex: 1, borderWidth: 1, borderColor: Colors.border }}
+                />
               </View>
             </View>
           ) : (
             webhooks.length < 5 && (
-              <TouchableOpacity style={[styles.addBtn, { borderColor: Colors.primary }]} onPress={() => setShowForm(true)}>
-                <Feather name="plus" size={18} color={Colors.primary} />
-                <Text style={[styles.addBtnText, { color: Colors.primary }]}>Add Endpoint</Text>
-              </TouchableOpacity>
+              <Button
+                title="Add Endpoint"
+                onPress={() => setShowForm(true)}
+                leftIcon={<Feather name="plus" size={18} color={Colors.primary} />}
+                backgroundColor="transparent"
+                textColor={Colors.primary}
+                fontSize={14}
+                fontWeight="600"
+                borderRadius={Radius.md}
+                paddingVertical={Spacing.md}
+                style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: Colors.primary, marginTop: Spacing.md }}
+              />
             )
           )}
         </ScrollView>

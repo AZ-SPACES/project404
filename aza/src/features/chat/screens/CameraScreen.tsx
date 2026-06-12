@@ -56,9 +56,19 @@ export default function CameraScreen() {
           width="auto"
           style={{ marginTop: 12 }}
         />
-        <TouchableOpacity style={styles.permissionBackBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Text style={styles.permissionBackText}>Go Back</Text>
-        </TouchableOpacity>
+        <Button
+          title="Go Back"
+          onPress={() => navigation.goBack()}
+          backgroundColor="transparent"
+          textColor="#888"
+          fontSize={14}
+          fontWeight="normal"
+          paddingVertical={8}
+          paddingHorizontal={0}
+          width="auto"
+          style={{ marginTop: 8 }}
+          activeOpacity={0.8}
+        />
       </View>
     );
   }
@@ -368,13 +378,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
-  },
-  permissionBackBtn: {
-    marginTop: 8,
-    paddingVertical: 8,
-  },
-  permissionBackText: {
-    color: '#888',
-    fontSize: 14,
   },
 });

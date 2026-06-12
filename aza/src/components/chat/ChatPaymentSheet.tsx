@@ -9,6 +9,7 @@ import { useAppTheme, Spacing, Radius, Typography } from '../../theme';
 import { useTransferStore } from '../../store/transferStore';
 import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import Button from '../ui/Button';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -333,14 +334,17 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
 
             {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
-            <TouchableOpacity
-              style={[styles.ctaBtn, { backgroundColor: canConfirm && !isLoading ? Colors.primary : '#2C2C2E' }]}
+            <Button
+              title={ctaLabel}
               onPress={handleAmountConfirm}
+              backgroundColor={Colors.primary}
+              borderRadius={Radius.full}
+              fontSize={17}
+              style={{ marginTop: Spacing.sm }}
               activeOpacity={0.85}
-              disabled={!canConfirm || isLoading}
-            >
-              <Text style={styles.ctaBtnText}>{ctaLabel}</Text>
-            </TouchableOpacity>
+              disabled={!canConfirm}
+              loading={isLoading}
+            />
           </>
         )}
 
@@ -412,9 +416,18 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
               <Text style={styles.errorText}>{errorMsg}</Text>
             ) : null}
 
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleClose} activeOpacity={0.7}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+            <Button
+              title="Cancel"
+              onPress={handleClose}
+              backgroundColor="transparent"
+              textColor="#8E8E93"
+              fontSize={15}
+              fontWeight="normal"
+              paddingVertical={12}
+              paddingHorizontal={Spacing.xl}
+              width="auto"
+              activeOpacity={0.7}
+            />
           </>
         )}
 
@@ -472,8 +485,6 @@ const styles = StyleSheet.create({
   keypad: { flexDirection: 'row', flexWrap: 'wrap', width: '100%', marginBottom: Spacing.md },
   keypadKey: { width: '33.33%', height: 64, alignItems: 'center', justifyContent: 'center' },
   keypadKeyText: { color: '#fff', fontSize: 28, fontWeight: '300' },
-  ctaBtn: { width: '100%', borderRadius: Radius.full, paddingVertical: 16, alignItems: 'center', marginTop: Spacing.sm },
-  ctaBtnText: { color: '#fff', ...Typography.body, fontWeight: '700', fontSize: 17 },
   errorText: { color: '#FF453A', ...Typography.caption, fontSize: 13, marginBottom: Spacing.sm, textAlign: 'center' },
 
   // PIN
@@ -493,8 +504,6 @@ const styles = StyleSheet.create({
   pinDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#fff' },
   pinCursor: { width: 2, height: 24, backgroundColor: '#30D158' },
   verifyingText: { color: '#8E8E93', ...Typography.body, fontSize: 14, marginBottom: Spacing.md },
-  cancelBtn: { paddingVertical: 12, paddingHorizontal: Spacing.xl },
-  cancelBtnText: { color: '#8E8E93', ...Typography.body, fontSize: 15 },
 
   // Success
   successContent: { alignItems: 'center', paddingVertical: Spacing.xl * 2 },
