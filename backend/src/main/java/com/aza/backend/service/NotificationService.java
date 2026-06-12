@@ -27,6 +27,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.aza.backend.exception.AppException;
 
 @Service
@@ -40,6 +45,7 @@ public class NotificationService {
     private final WebSocketPublisher webSocketPublisher;
 
     private final ObjectMapper objectMapper;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -469,6 +475,12 @@ public class NotificationService {
 
         for (FcmToken fcmToken : tokens) {
             try {
+                String tokenString = fcmToken.getToken();
+                if (tokenString.startsWith("ExponentPushToken[") || tokenString.startsWith("ExpoPushToken[")) {
+                    sendExpoPush(fcmToken, title, body, data);
+                    continue;
+                }
+
                 // Convert data map to String map for FCM
                 Map<String, String> fcmData = new HashMap<>();
                 if (data != null) {
@@ -516,14 +528,66 @@ public class NotificationService {
 
             } catch (FirebaseMessagingException e) {
                 // Token is invalid/expired — remove it
-                if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
+                if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED ||
+                    e.getMessagingErrorCode() == MessagingErrorCode.INVALID_ARGUMENT) {
                     fcmTokenRepository.delete(fcmToken);
-                    log.info("Removed stale FCM token for device {}", fcmToken.getDeviceId());
+                    log.info("Removed stale/invalid FCM token for device {}: {}", fcmToken.getDeviceId(), e.getMessagingErrorCode());
                 } else {
                     log.error("FCM push failed for device {}: {}",
                             fcmToken.getDeviceId(), e.getMessage());
                 }
             }
+        }
+    }
+
+    private void sendExpoPush(FcmToken fcmToken, String title, String body, Map<String, Object> data) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("to", fcmToken.getToken());
+            payload.put("title", title);
+            payload.put("body", body);
+            if (data != null) {
+                payload.put("data", data);
+            }
+
+            if (data != null && "INCOMING_CALL".equals(data.get("type"))) {
+                payload.put("priority", "high");
+                // Optional: For older Android devices with Expo to pop notifications in foreground
+                payload.put("_displayInForeground", true);
+            }
+
+            if (data != null && "NEW_MESSAGE".equals(data.get("type"))) {
+                payload.put("categoryId", "CHAT_MESSAGE");
+            }
+
+            String jsonPayload = objectMapper.writeValueAsString(payload);
+            
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://exp.host/--/api/v2/push/send"))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            log.debug("Expo push response for device {}: {}", fcmToken.getDeviceId(), response.body());
+            
+            // Check for DeviceNotRegistered to clean up dead tokens
+            if (response.body() != null && response.body().contains("DeviceNotRegistered")) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode details = root.path("data").path("details");
+                if ("DeviceNotRegistered".equals(details.path("error").asText())) {
+                    fcmTokenRepository.delete(fcmToken);
+                    log.info("Removed stale Expo token for device {}", fcmToken.getDeviceId());
+                    return;
+                }
+            }
+            
+            fcmToken.setLastUsedAt(LocalDateTime.now());
+            fcmTokenRepository.save(fcmToken);
+        } catch (Exception e) {
+            log.error("Expo push failed for device {}: {}", fcmToken.getDeviceId(), e.getMessage());
         }
     }
 
