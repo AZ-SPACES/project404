@@ -14,6 +14,8 @@ import java.util.UUID;
 
 public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession, UUID> {
 
+    List<CheckoutSession> findByStatusAndCompletedAtBetween(CheckoutSession.SessionStatus status, LocalDateTime start, LocalDateTime end);
+
     Page<CheckoutSession> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId, Pageable pageable);
 
     Optional<CheckoutSession> findByIdempotencyKey(String idempotencyKey);

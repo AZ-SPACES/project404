@@ -33,6 +33,8 @@ import {
   X,
   KeyRound,
   Megaphone,
+  ClipboardCheck,
+  FileSearch,
 } from "lucide-react";
 
 interface NavItem {
@@ -55,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/approvals", label: "Approvals", icon: ClipboardCheck, roles: ["FINANCE", "COMPLIANCE"] },
     ],
   },
   {
@@ -79,6 +82,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp, roles: ["COMPLIANCE"] },
       { href: "/fees", label: "Fee Management", icon: Coins, roles: ["FINANCE"] },
       { href: "/reports", label: "Reports", icon: FileBarChart2, roles: ["FINANCE"] },
+      { href: "/reconciliation", label: "Reconciliation", icon: Scale, roles: ["FINANCE"] },
     ],
   },
   {
@@ -87,6 +91,9 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck, roles: ["COMPLIANCE"] },
       { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["COMPLIANCE"] },
       { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["COMPLIANCE"] },
+      { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["COMPLIANCE"] },
+      { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["COMPLIANCE", "FINANCE"] },
+      { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["COMPLIANCE", "SUPPORT"] },
     ],
   },
   {
