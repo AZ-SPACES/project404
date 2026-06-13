@@ -431,6 +431,58 @@ public class OAuthService {
         tokenRepository.revokeAllForUserAndClient(user, client);
     }
 
+    // ── Consent page helpers ──────────────────────────────────────────────────
+
+    /**
+     * Returns the client info and scopes stored for a pending consent state.
+     * Called by the aza.systems/oauth/consent page before showing the login form.
+     */
+    public record PendingConsentInfo(String clientId, String appName, String appDescription,
+                                     String logoUrl, String websiteUrl, List<String> scopes) {}
+
+    public PendingConsentInfo getPendingConsentInfo(String pendingStateKey) {
+        String redisKey = "oauth:pending:" + pendingStateKey;
+        String json = redisTemplate.opsForValue().get(redisKey);
+        if (json == null) {
+            throw new AppException("OAUTH_EXPIRED", "Authorization request has expired or is invalid.", HttpStatus.GONE);
+        }
+        Map<?, ?> data;
+        try {
+            data = objectMapper.readValue(json, Map.class);
+        } catch (Exception e) {
+            throw new AppException("OAUTH_INVALID", "Invalid authorization state.", HttpStatus.BAD_REQUEST);
+        }
+        String clientId = (String) data.get("clientId");
+        String scope    = (String) data.get("scope");
+        OAuthClient client = clientRepository.findByClientIdAndActiveTrue(clientId)
+                .orElseThrow(() -> new AppException("OAUTH_CLIENT_NOT_FOUND", "Client not found.", HttpStatus.NOT_FOUND));
+        List<String> scopes = Arrays.asList(scope.split("[\\s,]+"));
+        return new PendingConsentInfo(
+                client.getClientId(), client.getAppName(), client.getAppDescription(),
+                client.getLogoUrl(), client.getWebsiteUrl(), scopes);
+    }
+
+    /**
+     * Authenticates the user with their Aza credentials, then immediately approves
+     * the pending consent. Returns the redirect URI with the auth code appended.
+     * Used by the web consent page — combines login + approve into one step.
+     */
+    @Transactional
+    public String approveConsentWithCredentials(String pendingStateKey, String identifier, String password) {
+        User user = userRepository.findByUsernameOrEmailOrPhoneNumber(identifier, identifier, identifier)
+                .orElseThrow(() -> new AppException("OAUTH_AUTH_FAILED", "Invalid username or password.", HttpStatus.UNAUTHORIZED));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AppException("OAUTH_AUTH_FAILED", "Invalid username or password.", HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!user.isEnabled()) {
+            throw new AppException("OAUTH_AUTH_FAILED", "Your account is not active.", HttpStatus.UNAUTHORIZED);
+        }
+
+        return approveConsent(user, pendingStateKey);
+    }
+
     // ── Admin ─────────────────────────────────────────────────────────────────
 
     public record AdminOAuthStats(long totalClients, long activeClients, long suspendedClients, long activeTokens) {}

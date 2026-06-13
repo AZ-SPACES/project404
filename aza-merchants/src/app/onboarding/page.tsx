@@ -10,6 +10,8 @@ import {
   saveKyb,
   uploadKybDocument,
   submitKyb,
+  createMobileHandoff,
+  getMobileKybStatus,
   KybDocument,
 } from "@/lib/merchant-api";
 import {
@@ -20,6 +22,9 @@ import {
   ChevronRight,
   FileText,
   ArrowLeft,
+  Smartphone,
+  Copy,
+  Check,
 } from "lucide-react";
 
 type Step = "register" | "kyb" | "documents";
@@ -66,6 +71,13 @@ export default function OnboardingPage() {
   const [documents, setDocuments] = useState<KybDocument[]>([]);
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // mobile handoff
+  const [mobileToken, setMobileToken] = useState<string | null>(null);
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
+  const [mobileLinkLoading, setMobileLinkLoading] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -135,6 +147,41 @@ export default function OnboardingPage() {
     }, 500);
     return () => clearTimeout(t);
   }, [businessHandle]);
+
+  const openMobileHandoff = async () => {
+    setMobileLinkLoading(true);
+    try {
+      const { token } = await createMobileHandoff();
+      setMobileToken(token);
+      setMobileModalOpen(true);
+      // Poll every 4 seconds for new uploads from the phone
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await getMobileKybStatus(token);
+          if (status.uploadedDocTypes.length > 0) {
+            const kyb = await getKyb();
+            setDocuments(kyb.documents ?? []);
+          }
+          if (status.complete) {
+            clearInterval(pollRef.current!);
+          }
+        } catch {
+          clearInterval(pollRef.current!);
+        }
+      }, 4000);
+    } catch (e: any) {
+      setError(e.message ?? "Could not create mobile session");
+    } finally {
+      setMobileLinkLoading(false);
+    }
+  };
+
+  const closeMobileModal = () => {
+    setMobileModalOpen(false);
+    setMobileToken(null);
+    setLinkCopied(false);
+    if (pollRef.current) clearInterval(pollRef.current);
+  };
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -412,8 +459,20 @@ export default function OnboardingPage() {
           {step === "documents" && (
             <div>
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-white">Upload documents</h2>
-                <p className="text-white/45 text-sm mt-1">All documents required before submission</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Upload documents</h2>
+                    <p className="text-white/45 text-sm mt-1">All documents required before submission</p>
+                  </div>
+                  <button
+                    onClick={openMobileHandoff}
+                    disabled={mobileLinkLoading}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/6 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {mobileLinkLoading ? <Loader2 size={12} className="animate-spin" /> : <Smartphone size={12} />}
+                    Continue on mobile
+                  </button>
+                </div>
               </div>
               <div className="space-y-3">
                 {DOC_SLOTS.map((slot) => {
@@ -489,6 +548,72 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
+
+      {/* ── Mobile handoff modal ── */}
+      {mobileModalOpen && mobileToken && (() => {
+        const mobileUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${mobileToken}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=ffffff&bgcolor=0f0f0f&data=${encodeURIComponent(mobileUrl)}`;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+            <div className="bg-[#181818] border border-white/10 rounded-2xl p-6 w-full max-w-sm">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Smartphone size={16} className="text-[#B7EE7A]" />
+                    <h2 className="text-base font-bold text-white">Scan on your phone</h2>
+                  </div>
+                  <p className="text-white/40 text-xs">Use your phone's camera to scan documents. Link expires in 15 minutes.</p>
+                </div>
+                <button onClick={closeMobileModal} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/8 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* QR Code */}
+              <div className="flex justify-center mb-5">
+                <div className="p-3 rounded-xl bg-[#0f0f0f] border border-white/8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrUrl} alt="QR code" width={220} height={220} className="rounded-lg" />
+                </div>
+              </div>
+
+              {/* Progress from phone */}
+              <div className="mb-4 space-y-1.5">
+                {DOC_SLOTS.map((slot) => {
+                  const done = documents.some((d) => d.type === slot.type);
+                  return (
+                    <div key={slot.type} className="flex items-center gap-2 text-xs">
+                      {done
+                        ? <CheckCircle2 size={13} className="text-[#B7EE7A] flex-shrink-0" />
+                        : <div className="w-3.5 h-3.5 rounded-full border border-white/15 flex-shrink-0" />}
+                      <span className={done ? "text-white/40 line-through" : "text-white/60"}>{slot.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Copy link */}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(mobileUrl);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-white/10 bg-white/4 hover:bg-white/8 text-white/60 hover:text-white text-xs font-medium transition-colors"
+              >
+                {linkCopied ? <Check size={12} className="text-[#B7EE7A]" /> : <Copy size={12} />}
+                {linkCopied ? "Copied!" : "Copy link instead"}
+              </button>
+
+              {documents.every((_, i) => i >= 0) && DOC_SLOTS.every((s) => documents.some((d) => d.type === s.type)) && (
+                <div className="mt-4 px-4 py-3 rounded-xl bg-[#B7EE7A]/8 border border-[#B7EE7A]/20 text-[#B7EE7A] text-xs text-center font-medium">
+                  All documents received! You can close this.
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

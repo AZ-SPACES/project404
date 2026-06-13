@@ -1153,3 +1153,45 @@ export async function uploadLogo(file: File): Promise<Merchant> {
   const body = await res.json();
   return body.data;
 }
+
+// ─── Mobile KYB handoff ───────────────────────────────────────────────────────
+
+export async function createMobileHandoff(): Promise<{ token: string }> {
+  return request<{ token: string }>("/api/v1/merchant/kyb/mobile-handoff", { method: "POST" });
+}
+
+export interface MobileKybContext {
+  businessName: string;
+  pendingDocTypes: string[];
+  uploadedDocTypes: string[];
+}
+
+export async function getMobileKybContext(token: string): Promise<MobileKybContext> {
+  const res = await fetch(`${BASE_URL}/api/v1/public/kyb-mobile/${token}`);
+  if (!res.ok) throw new Error("Invalid or expired mobile session");
+  const body = await res.json();
+  return body.data;
+}
+
+export async function getMobileKybStatus(token: string): Promise<{ pendingDocTypes: string[]; uploadedDocTypes: string[]; complete: boolean }> {
+  const res = await fetch(`${BASE_URL}/api/v1/public/kyb-mobile/${token}/status`);
+  if (!res.ok) throw new Error("Invalid or expired mobile session");
+  const body = await res.json();
+  return body.data;
+}
+
+export async function uploadMobileKybDocument(token: string, file: File, docType: string): Promise<KybDocument> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("type", docType);
+  const res = await fetch(`${BASE_URL}/api/v1/public/kyb-mobile/${token}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Upload failed (${res.status})`);
+  }
+  const body = await res.json();
+  return body.data;
+}
