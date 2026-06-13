@@ -4,6 +4,27 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@keyframes kenBurnsA {
+  from { transform: scale(1)    translate(0,     0);    }
+  to   { transform: scale(1.12) translate(-2%,  -1.5%); }
+}
+@keyframes kenBurnsB {
+  from { transform: scale(1)    translate(0,     0);    }
+  to   { transform: scale(1.1)  translate(2%,   -1%);  }
+}
+@keyframes kenBurnsC {
+  from { transform: scale(1.06) translate(-1%,  0.5%); }
+  to   { transform: scale(1)    translate(1.5%, -1%);  }
+}
+@keyframes slideFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
 

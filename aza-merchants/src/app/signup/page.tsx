@@ -12,7 +12,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { FloatingPaths } from "@/components/floating-paths";
+import { AuthSlideshow } from "@/components/auth-slideshow";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -58,22 +58,20 @@ export default function SignupPage() {
   return (
     <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
       {/* Left panel */}
-      <div className="relative hidden h-full flex-col border-r border-border bg-secondary dark:bg-secondary/20 p-10 lg:flex">
-        <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background" />
+      <div className="relative hidden h-full flex-col p-10 lg:flex overflow-hidden">
+        <AuthSlideshow />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/25" />
         <img src="/logo.png" alt="AZA Merchants" className="mr-auto h-7 w-auto relative z-10" />
         <div className="z-10 mt-auto">
           <blockquote className="space-y-2">
-            <p className="text-xl text-foreground">
+            <p className="text-xl text-white">
               &ldquo;Start accepting payments in minutes. No paperwork, no delays — just results.&rdquo;
             </p>
-            <footer className="font-mono font-semibold text-sm text-muted-foreground">
+            <footer className="font-mono font-semibold text-sm text-white/50">
               ~ AZA Merchants
             </footer>
           </blockquote>
-        </div>
-        <div className="absolute inset-0">
-          <FloatingPaths position={1} />
-          <FloatingPaths position={-1} />
         </div>
       </div>
 
