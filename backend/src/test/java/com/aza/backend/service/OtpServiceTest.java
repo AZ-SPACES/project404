@@ -6,10 +6,13 @@ import com.aza.backend.util.RateLimitService;
 import com.aza.backend.util.SmsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Duration;
 
@@ -17,21 +20,24 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class OtpServiceTest {
 
-    private OtpService otpService;
+    @Autowired OtpService otpService;
 
-    @Mock private StringRedisTemplate redisTemplate;
-    @Mock private SmsService smsService;
-    @Mock private EmailService emailService;
-    @Mock private RateLimitService rateLimitService;
-    @Mock private ValueOperations<String, String> valueOps;
+    @MockitoBean StringRedisTemplate redisTemplate;
+    @MockitoBean SmsService smsService;
+    @MockitoBean EmailService emailService;
+    @MockitoBean RateLimitService rateLimitService;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
+
+    @SuppressWarnings("unchecked")
+    private ValueOperations<String, String> valueOps = mock(ValueOperations.class);
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        otpService = new OtpService(redisTemplate, smsService, emailService, rateLimitService);
     }
 
     @Test

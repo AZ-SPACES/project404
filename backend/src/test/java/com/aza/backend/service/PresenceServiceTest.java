@@ -10,11 +10,14 @@ import com.aza.backend.repository.ContactRepository;
 import com.aza.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -26,39 +29,39 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class PresenceServiceTest {
 
-    private PresenceService presenceService;
+    @Autowired PresenceService presenceService;
 
-    @Mock private StringRedisTemplate redisTemplate;
-    @Mock private UserRepository userRepository;
-    @Mock private ChatRepository chatRepository;
-    @Mock private ContactRepository contactRepository;
-    @Mock private BlockedUserRepository blockedUserRepository;
-    @Mock private WebSocketPublisher webSocketPublisher;
-    @Mock private ValueOperations<String, String> valueOps;
-    @Mock private SetOperations<String, String> setOps;
+    @MockitoBean StringRedisTemplate redisTemplate;
+    @MockitoBean UserRepository userRepository;
+    @MockitoBean ChatRepository chatRepository;
+    @MockitoBean ContactRepository contactRepository;
+    @MockitoBean BlockedUserRepository blockedUserRepository;
+    @MockitoBean WebSocketPublisher webSocketPublisher;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
-    private final UUID userId = UUID.randomUUID();
+    @SuppressWarnings("unchecked")
+    private final ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+    @SuppressWarnings("unchecked")
+    private final SetOperations<String, String> setOps = mock(SetOperations.class);
+
+    private final UUID userId    = UUID.randomUUID();
     private final UUID partnerId = UUID.randomUUID();
     private User user;
-
     private String userKey;
     private String connsKey;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
         when(redisTemplate.opsForSet()).thenReturn(setOps);
-
-        presenceService = new PresenceService(
-                redisTemplate, userRepository, chatRepository,
-                contactRepository, blockedUserRepository, webSocketPublisher);
         ReflectionTestUtils.setField(presenceService, "ttlSeconds", 65);
 
         user = User.builder().id(userId).build();
-        userKey = "presence:user:" + userId;
+        userKey  = "presence:user:" + userId;
         connsKey = "presence:conns:" + userId;
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -108,8 +111,7 @@ class PresenceServiceTest {
     @Test
     void closingLastSocket_marksOfflineAndPersistsLastSeen() {
         when(setOps.size(connsKey)).thenReturn(0L);
-        when(valueOps.get("presence:lastseen:" + userId))
-                .thenReturn("2026-06-11T10:00:00");
+        when(valueOps.get("presence:lastseen:" + userId)).thenReturn("2026-06-11T10:00:00");
 
         presenceService.connectionClosed(userId, "ws-1", "device-1");
 
@@ -124,7 +126,6 @@ class PresenceServiceTest {
 
     @Test
     void heartbeat_afterTtlLapse_recoversOnlineState() {
-        // Key expired (e.g. delayed heartbeat) but the socket is still alive.
         when(redisTemplate.hasKey(userKey)).thenReturn(false);
 
         presenceService.heartbeat(userId, "device-1");
@@ -151,8 +152,7 @@ class PresenceServiceTest {
     @Test
     void sweeper_flipsStaleOnlineUsersToOffline() {
         user.setOnlineStatus(User.OnlineStatus.ONLINE);
-        when(userRepository.findAllByOnlineStatus(User.OnlineStatus.ONLINE))
-                .thenReturn(List.of(user));
+        when(userRepository.findAllByOnlineStatus(User.OnlineStatus.ONLINE)).thenReturn(List.of(user));
         when(redisTemplate.hasKey(userKey)).thenReturn(false);
 
         presenceService.sweepStalePresence();
@@ -167,8 +167,7 @@ class PresenceServiceTest {
     @Test
     void sweeper_leavesGenuinelyOnlineUsersAlone() {
         user.setOnlineStatus(User.OnlineStatus.ONLINE);
-        when(userRepository.findAllByOnlineStatus(User.OnlineStatus.ONLINE))
-                .thenReturn(List.of(user));
+        when(userRepository.findAllByOnlineStatus(User.OnlineStatus.ONLINE)).thenReturn(List.of(user));
         when(redisTemplate.hasKey(userKey)).thenReturn(true);
 
         presenceService.sweepStalePresence();
@@ -187,7 +186,6 @@ class PresenceServiceTest {
         presenceService.connectionOpened(userId, "ws-1", "device-1");
 
         verify(webSocketPublisher, never()).publishPresenceToUser(any(), any(), any());
-        // DB mirror still flips so admin views stay accurate.
         assertEquals(User.OnlineStatus.ONLINE, user.getOnlineStatus());
     }
 
@@ -203,8 +201,7 @@ class PresenceServiceTest {
 
         verify(webSocketPublisher).publishPresenceToUser(
                 eq(partnerId), eq(WebSocketEventType.USER_ONLINE), any());
-        verify(webSocketPublisher, never()).publishPresenceToUser(
-                eq(blockedPartner), any(), any());
+        verify(webSocketPublisher, never()).publishPresenceToUser(eq(blockedPartner), any(), any());
     }
 
     @Test
@@ -241,8 +238,7 @@ class PresenceServiceTest {
 
     @Test
     void getPresenceBatch_capsRequestSize() {
-        List<UUID> ids = java.util.stream.Stream.generate(UUID::randomUUID)
-                .limit(250).toList();
+        List<UUID> ids = java.util.stream.Stream.generate(UUID::randomUUID).limit(250).toList();
         when(userRepository.findAllById(anyList())).thenReturn(List.of());
 
         presenceService.getPresenceBatch(partnerId, ids);

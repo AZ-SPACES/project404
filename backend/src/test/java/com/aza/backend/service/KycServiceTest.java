@@ -12,8 +12,12 @@ import com.aza.backend.util.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
@@ -23,23 +27,25 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class KycServiceTest {
 
-    private KycService kycService;
+    @Autowired KycService kycService;
 
-    @Mock private KycRecordRepository kycRecordRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private CloudinaryService cloudinaryService;
-    @Mock private EmailService emailService;
-    @Mock private NotificationService notificationService;
+    @MockitoBean KycRecordRepository kycRecordRepository;
+    @MockitoBean UserRepository userRepository;
+    @MockitoBean CloudinaryService cloudinaryService;
+    @MockitoBean EmailService emailService;
+    @MockitoBean NotificationService notificationService;
+    @MockitoBean ReferralService referralService;
+    @MockitoBean StringRedisTemplate stringRedisTemplate;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        kycService = new KycService(kycRecordRepository, userRepository,
-                cloudinaryService, emailService, notificationService);
         ReflectionTestUtils.setField(kycService, "autoVerify", false);
     }
 
@@ -47,10 +53,9 @@ class KycServiceTest {
 
     @Test
     void getStatus_noRecord_returnsNotStarted() {
-        User user = user();
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
-        KycStatusResponse status = kycService.getStatus(user);
+        KycStatusResponse status = kycService.getStatus(user());
 
         assertEquals("NOT_STARTED", status.getStatus());
         assertEquals(0, status.getCompletionPercentage());
@@ -58,17 +63,15 @@ class KycServiceTest {
 
     @Test
     void getStatus_withRecord_reflectsCompletedSteps() {
-        User user = user();
         KycRecord record = KycRecord.builder()
                 .userId(userId)
                 .biometricConsent(true)
                 .fundsSource("salary")
                 .idNumber("GHA-123456")
                 .build();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
-        KycStatusResponse status = kycService.getStatus(user);
+        KycStatusResponse status = kycService.getStatus(user());
 
         assertTrue(status.isConsentGiven());
         assertTrue(status.isFundsSourceSubmitted());
@@ -79,28 +82,20 @@ class KycServiceTest {
 
     @Test
     void recordConsent_alreadyConsentedNotPending_throws() {
-        User user = user();
-        KycRecord record = KycRecord.builder()
-                .userId(userId)
-                .biometricConsent(true)
-                .build();
-        // Status defaults to PENDING via @Builder.Default, so change it to UNDER_REVIEW
+        KycRecord record = KycRecord.builder().userId(userId).biometricConsent(true).build();
         record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
-        assertThrows(AppException.class, () -> kycService.recordConsent(user, "1.2.3.4"));
+        assertThrows(AppException.class, () -> kycService.recordConsent(user(), "1.2.3.4"));
     }
 
     @Test
     void recordConsent_firstTime_savesConsentAndUpdatesUserStatus() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
-        kycService.recordConsent(user, "1.2.3.4");
+        kycService.recordConsent(user(), "1.2.3.4");
 
         assertTrue(record.getBiometricConsent());
         assertNotNull(record.getConsentIpAddress());
@@ -111,29 +106,25 @@ class KycServiceTest {
 
     @Test
     void submitFundsSource_invalidSource_throws() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
         KycFundsSourceRequest req = new KycFundsSourceRequest();
         req.setFundsSource("lottery_winnings");
 
-        assertThrows(AppException.class, () -> kycService.submitFundsSource(user, req));
+        assertThrows(AppException.class, () -> kycService.submitFundsSource(user(), req));
     }
 
     @Test
     void submitFundsSource_validSource_savesRecord() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
         KycFundsSourceRequest req = new KycFundsSourceRequest();
         req.setFundsSource("salary");
 
-        kycService.submitFundsSource(user, req);
+        kycService.submitFundsSource(user(), req);
 
         verify(kycRecordRepository).save(argThat(r -> "salary".equals(r.getFundsSource())));
     }
@@ -161,7 +152,6 @@ class KycServiceTest {
     void submitKyc_alreadySubmitted_throws() {
         KycRecord record = fullyPopulatedRecord();
         record.setSubmittedAt(java.time.LocalDateTime.now());
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
         assertThrows(AppException.class, () -> kycService.submitKyc(user()));
@@ -170,14 +160,11 @@ class KycServiceTest {
     @Test
     void submitKyc_autoVerifyEnabled_setsVerifiedStatus() {
         ReflectionTestUtils.setField(kycService, "autoVerify", true);
-
-        User user = user();
         KycRecord record = fullyPopulatedRecord();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
-        kycService.submitKyc(user);
+        kycService.submitKyc(user());
 
         ArgumentCaptor<KycRecord> captor = ArgumentCaptor.forClass(KycRecord.class);
         verify(kycRecordRepository).save(captor.capture());
@@ -187,14 +174,11 @@ class KycServiceTest {
 
     @Test
     void submitKyc_manualReview_setsUnderReviewStatus() {
-        // autoVerify is false (default in setUp)
-        User user = user();
         KycRecord record = fullyPopulatedRecord();
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
-        kycService.submitKyc(user);
+        kycService.submitKyc(user());
 
         ArgumentCaptor<KycRecord> captor = ArgumentCaptor.forClass(KycRecord.class);
         verify(kycRecordRepository).save(captor.capture());
@@ -208,21 +192,17 @@ class KycServiceTest {
     void reviewRecord_notUnderReview_throws() {
         KycRecord record = KycRecord.builder().userId(userId).build();
         record.setStatus(KycRecord.KycStatus.VERIFIED);
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
-        assertThrows(AppException.class,
-                () -> kycService.reviewRecord(userId, true, null));
+        assertThrows(AppException.class, () -> kycService.reviewRecord(userId, true, null));
     }
 
     @Test
     void reviewRecord_approve_setsVerifiedAndNotifiesUser() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
         record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user()));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
         kycService.reviewRecord(userId, true, null);
@@ -234,12 +214,10 @@ class KycServiceTest {
 
     @Test
     void reviewRecord_reject_setsRejectedWithReason() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
         record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user()));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
         kycService.reviewRecord(userId, false, "ID document unclear");
@@ -255,7 +233,6 @@ class KycServiceTest {
     void resubmit_notRejected_throws() {
         KycRecord record = KycRecord.builder().userId(userId).build();
         record.setStatus(KycRecord.KycStatus.UNDER_REVIEW);
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
 
         assertThrows(AppException.class, () -> kycService.resubmit(user()));
@@ -263,16 +240,14 @@ class KycServiceTest {
 
     @Test
     void resubmit_rejected_resetsRecordAndUserStatus() {
-        User user = user();
         KycRecord record = KycRecord.builder().userId(userId).build();
         record.setStatus(KycRecord.KycStatus.REJECTED);
         record.setRejectionReason("Blurry ID");
         record.setSubmittedAt(java.time.LocalDateTime.now());
-
         when(kycRecordRepository.findByUserId(userId)).thenReturn(Optional.of(record));
         when(kycRecordRepository.save(any())).thenReturn(record);
 
-        kycService.resubmit(user);
+        kycService.resubmit(user());
 
         assertEquals(KycRecord.KycStatus.PENDING, record.getStatus());
         assertNull(record.getRejectionReason());
