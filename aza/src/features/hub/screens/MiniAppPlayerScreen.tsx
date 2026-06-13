@@ -57,7 +57,7 @@ export default function MiniAppPlayerScreen() {
   const [reportDetails, setReportDetails] = React.useState('');
   const [reportLoading, setReportLoading] = React.useState(false);
   const insets = useSafeAreaInsets();
-  const disabledAppIds = useDisabledMiniApps();
+  const { disabled, maintenance } = useDisabledMiniApps();
 
   const app = getMiniApp(appId);
 
@@ -141,16 +141,27 @@ export default function MiniAppPlayerScreen() {
     );
   }
 
-  if (disabledAppIds.includes(appId)) {
+  if (disabled.has(appId)) {
     return (
       <View style={[styles.notFoundSafeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{app.name} is temporarily unavailable.</Text>
-          <Button
-            title="Go Back"
-            onPress={handleClose}
-            width="auto"
-          />
+          <Text style={styles.errorText}>{app.name} is currently unavailable.</Text>
+          <Button title="Go Back" onPress={handleClose} width="auto" />
+        </View>
+      </View>
+    );
+  }
+
+  if (maintenance.has(appId)) {
+    const msg = maintenance.get(appId);
+    return (
+      <View style={[styles.notFoundSafeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.maintenanceTitle}>{app.name} is under maintenance</Text>
+          <Text style={styles.maintenanceBody}>
+            {msg ?? "We're doing some maintenance — this app will be back shortly."}
+          </Text>
+          <Button title="Go Back" onPress={handleClose} width="auto" />
         </View>
       </View>
     );
@@ -488,10 +499,24 @@ function createStyles(Colors: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: Spacing.md,
+      paddingHorizontal: Spacing.xl,
     },
     errorText: {
       ...Typography.body,
       color: Colors.textSecondary,
+      textAlign: 'center',
+    },
+    maintenanceTitle: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: Colors.textPrimary,
+      textAlign: 'center',
+    },
+    maintenanceBody: {
+      ...Typography.body,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
     },
   });
 }
