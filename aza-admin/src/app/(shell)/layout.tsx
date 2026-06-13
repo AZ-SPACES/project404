@@ -35,6 +35,9 @@ import {
   Megaphone,
   ClipboardCheck,
   FileSearch,
+  Globe,
+  Activity,
+  Layers,
 } from "lucide-react";
 
 interface NavItem {
@@ -104,6 +107,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp, roles: ["FINANCE"] },
       { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2, roles: ["FINANCE"] },
       { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["FINANCE"] },
+      { href: "/analytics", label: "Webhooks & Geo", icon: Globe, exactMatch: true, roles: ["ADMIN", "FINANCE"] },
     ],
   },
   {
@@ -112,6 +116,13 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox", roles: ["SUPPORT"] },
       { href: "/support/analytics", label: "Analytics", icon: MessageSquare, roles: ["SUPPORT"] },
       { href: "/complaints", label: "Complaints", icon: MessageSquare, roles: ["SUPPORT"] },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/bulk-ops", label: "Bulk Operations", icon: Layers, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/health", label: "Platform Health", icon: Activity, roles: ["ADMIN"] },
     ],
   },
   {

@@ -2194,3 +2194,111 @@ export function updateDataRequestStatus(id: string, status: string, notes?: stri
 export function downloadUserDataExport(userId: string): Promise<void> {
   return downloadFile(`/api/v1/admin/data-requests/user/${userId}/export`, `user-data-${userId}.json`);
 }
+
+// ── Statement generator ────────────────────────────────────────────────────────
+
+export function downloadUserStatementPdf(userId: string, from: string, to: string): Promise<void> {
+  return downloadFile(
+    `/api/v1/admin/statements/${userId}/pdf?from=${from}&to=${to}`,
+    `statement-${userId}-${from}-${to}.pdf`
+  );
+}
+
+export function downloadUserStatementCsv(userId: string, from: string, to: string): Promise<void> {
+  return downloadFile(
+    `/api/v1/admin/statements/${userId}/csv?from=${from}&to=${to}`,
+    `statement-${userId}-${from}-${to}.csv`
+  );
+}
+
+// ── Platform health ────────────────────────────────────────────────────────────
+
+export interface HealthMetrics {
+  jvm: { heapUsedMb: number; heapTotalMb: number; heapMaxMb: number; heapUsedPct: number; processors: number };
+  db: { status: string; activeConnections: number; idleConnections: number; totalConnections: number; poolMax: number };
+  redis: { status: string; usedMemoryMb: number; peakMemoryMb: number; maxMemoryMb: number };
+  threads: { active: number; daemon: number };
+}
+
+export function getHealthMetrics(): Promise<HealthMetrics> {
+  return request("/api/v1/admin/health/metrics");
+}
+
+// ── Webhook analytics ─────────────────────────────────────────────────────────
+
+export interface WebhookAnalytics {
+  total: number;
+  delivered: number;
+  failed: number;
+  pending: number;
+  successRate: number;
+  avgAttempts: number;
+  byEventType: { eventType: string; total: number; delivered: number; failed: number; successRate: number }[];
+}
+
+export function getWebhookAnalytics(): Promise<WebhookAnalytics> {
+  return request("/api/v1/admin/analytics/webhooks");
+}
+
+// ── Geo analytics ─────────────────────────────────────────────────────────────
+
+export interface GeoAnalytics {
+  topLocations: { location: string; sessions: number }[];
+  totalSessions: number;
+  sessionsWithLocation: number;
+  unknownSessions: number;
+}
+
+export function getGeoAnalytics(top = 20): Promise<GeoAnalytics> {
+  return request(`/api/v1/admin/analytics/geo?top=${top}`);
+}
+
+// ── Bulk operations ────────────────────────────────────────────────────────────
+
+export function bulkSuspendUsers(userIds: string[], reason: string): Promise<{ suspended: number }> {
+  return request("/api/v1/admin/bulk/suspend", {
+    method: "POST",
+    body: JSON.stringify({ userIds, reason }),
+  });
+}
+
+export function bulkActivateUsers(userIds: string[]): Promise<{ activated: number }> {
+  return request("/api/v1/admin/bulk/activate", {
+    method: "POST",
+    body: JSON.stringify({ userIds }),
+  });
+}
+
+export function bulkNotifyUsers(userIds: string[], title: string, body: string): Promise<{ sent: number }> {
+  return request("/api/v1/admin/bulk/notify", {
+    method: "POST",
+    body: JSON.stringify({ userIds, title, body }),
+  });
+}
+
+export function bulkKycApprove(userIds: string[]): Promise<{ approved: number }> {
+  return request("/api/v1/admin/bulk/kyc-approve", {
+    method: "POST",
+    body: JSON.stringify({ userIds }),
+  });
+}
+
+// ── Per-user risk history ─────────────────────────────────────────────────────
+
+export interface FlaggedTx {
+  id: string;
+  transactionId: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  flagReason: string;
+  riskScore: number;
+  status: "PENDING_REVIEW" | "CLEARED" | "REPORTED";
+  flaggedAt: string;
+  reviewedAt: string | null;
+  notes: string | null;
+}
+
+export function getUserRiskHistory(userId: string, page = 0, size = 20): Promise<Page<FlaggedTx>> {
+  return request(`/api/v1/admin/users/${userId}/risk-history?page=${page}&size=${size}`);
+}

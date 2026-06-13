@@ -7,6 +7,8 @@ import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminUserStatusRequest;
 import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
+import com.aza.backend.entity.FlaggedTransaction;
+import com.aza.backend.repository.FlaggedTransactionRepository;
 import com.aza.backend.repository.NotificationRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.AdminAuditService;
@@ -35,6 +37,7 @@ public class AdminUserController {
     private final com.aza.backend.service.StaffRoleService staffRoleService;
     private final com.aza.backend.service.ApprovalService approvalService;
     private final NotificationRepository notificationRepository;
+    private final FlaggedTransactionRepository flaggedTxRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> getUsers(
@@ -151,6 +154,17 @@ public class AdminUserController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.success(
                 notificationRepository.findAllByUserIdOrderByCreatedAtDesc(
+                        userId, PageRequest.of(page, Math.min(size, 50)))));
+    }
+
+    /** Flagged transactions for a user — their risk history. */
+    @GetMapping("/{userId}/risk-history")
+    public ResponseEntity<ApiResponse<Page<FlaggedTransaction>>> getRiskHistory(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                flaggedTxRepository.findAllByUserIdOrderByFlaggedAtDesc(
                         userId, PageRequest.of(page, Math.min(size, 50)))));
     }
 
