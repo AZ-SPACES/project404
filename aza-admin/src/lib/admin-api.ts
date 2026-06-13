@@ -1373,6 +1373,29 @@ export function getDisabledMiniApps(): Promise<DisabledMiniApp[]> {
   return request("/api/v1/admin/miniapps/disabled");
 }
 
+export interface AdminMiniApp {
+  appId: string;
+  name: string;
+  category: string;
+  description: string;
+  status: "ACTIVE" | "MAINTENANCE" | "DISABLED";
+  reason: string | null;
+  statusSetBy: string | null;
+  statusSetAt: string | null;
+}
+
+export function getAllMiniApps(): Promise<AdminMiniApp[]> {
+  return request("/api/v1/admin/miniapps");
+}
+
+/** Puts the app under maintenance and notifies all users (push + in-app). */
+export function setMiniAppMaintenance(appId: string, message?: string): Promise<AdminMiniApp> {
+  return request(`/api/v1/admin/miniapps/${encodeURIComponent(appId)}/maintenance`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
 export function disableMiniApp(appId: string, reason?: string): Promise<DisabledMiniApp> {
   return request(`/api/v1/admin/miniapps/${encodeURIComponent(appId)}/disable`, {
     method: "POST",

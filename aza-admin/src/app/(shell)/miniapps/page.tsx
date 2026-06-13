@@ -6,15 +6,17 @@ import {
   getMiniAppReports,
   getMiniAppReportStats,
   resolveMiniAppReport,
-  getDisabledMiniApps,
+  getAllMiniApps,
+  setMiniAppMaintenance,
+  disableMiniApp,
   enableMiniApp,
   isPendingApproval,
   MiniAppReport,
   MiniAppReportStats,
-  DisabledMiniApp,
+  AdminMiniApp,
   Page,
 } from "@/lib/admin-api";
-import { Flag, CheckCircle2, XCircle, Clock, Loader2, X, Ban } from "lucide-react";
+import { Flag, CheckCircle2, XCircle, Clock, Loader2, X, Ban, Wrench, LayoutGrid } from "lucide-react";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
@@ -39,15 +41,37 @@ function StatusBadge({ status }: { status: MiniAppReport["status"] }) {
   return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
 }
 
+const APP_STATUS_MAP = {
+  ACTIVE:      { label: "Active",      cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  MAINTENANCE: { label: "Maintenance", cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  DISABLED:    { label: "Disabled",    cls: "text-red-400 bg-red-500/10 border-red-500/20" },
+};
+
+function AppStatusBadge({ status }: { status: AdminMiniApp["status"] }) {
+  const cfg = APP_STATUS_MAP[status];
+  return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
+}
+
 type FilterStatus = "ALL" | "OPEN" | "RESOLVED" | "DISMISSED";
+
+type AppAction =
+  | { type: "maintenance"; app: AdminMiniApp }
+  | { type: "disable"; app: AdminMiniApp };
 
 export default function MiniAppsPage() {
   const queryClient = useQueryClient();
+
+  // Reports section state
   const [filter, setFilter] = useState<FilterStatus>("OPEN");
   const [page, setPage] = useState(0);
   const [resolving, setResolving] = useState<MiniAppReport | null>(null);
   const [resolution, setResolution] = useState("");
-  const [disableApp, setDisableApp] = useState(false);
+  const [disableWithReport, setDisableWithReport] = useState(false);
+
+  // Catalog section state
+  const [appAction, setAppAction] = useState<AppAction | null>(null);
+  const [actionMessage, setActionMessage] = useState("");
+
   const [notice, setNotice] = useState("");
 
   const { data: stats } = useQuery<MiniAppReportStats>({
@@ -55,20 +79,40 @@ export default function MiniAppsPage() {
     queryFn: getMiniAppReportStats,
   });
 
-  const { data: disabledApps } = useQuery<DisabledMiniApp[]>({
-    queryKey: ["disabledMiniApps"],
-    queryFn: getDisabledMiniApps,
+  const { data: allApps, isLoading: appsLoading } = useQuery<AdminMiniApp[]>({
+    queryKey: ["allMiniApps"],
+    queryFn: getAllMiniApps,
+  });
+
+  const maintenanceMutation = useMutation({
+    mutationFn: ({ appId, message }: { appId: string; message: string }) =>
+      setMiniAppMaintenance(appId, message || undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allMiniApps"] });
+      setAppAction(null);
+      setActionMessage("");
+    },
+  });
+
+  const disableAppMutation = useMutation({
+    mutationFn: ({ appId, reason }: { appId: string; reason: string }) =>
+      disableMiniApp(appId, reason || undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allMiniApps"] });
+      setAppAction(null);
+      setActionMessage("");
+    },
   });
 
   const enableMutation = useMutation({
     mutationFn: (appId: string) => enableMiniApp(appId),
     onSuccess: (result) => {
       if (isPendingApproval(result)) {
-        // Maker-checker: re-enabling a killed app needs a second ADMIN
         setNotice("Re-enable submitted — another ADMIN must approve it in Approvals.");
+        queryClient.invalidateQueries({ queryKey: ["allMiniApps"] });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["disabledMiniApps"] });
+      queryClient.invalidateQueries({ queryKey: ["allMiniApps"] });
     },
   });
 
@@ -79,14 +123,14 @@ export default function MiniAppsPage() {
 
   const resolveMutation = useMutation({
     mutationFn: ({ action }: { action: "RESOLVE" | "DISMISS" }) =>
-      resolveMiniAppReport(resolving!.id, action, resolution, action === "RESOLVE" && disableApp),
+      resolveMiniAppReport(resolving!.id, action, resolution, action === "RESOLVE" && disableWithReport),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["miniAppReports"] });
       queryClient.invalidateQueries({ queryKey: ["miniAppStats"] });
-      queryClient.invalidateQueries({ queryKey: ["disabledMiniApps"] });
+      queryClient.invalidateQueries({ queryKey: ["allMiniApps"] });
       setResolving(null);
       setResolution("");
-      setDisableApp(false);
+      setDisableWithReport(false);
     },
   });
 
@@ -95,8 +139,8 @@ export default function MiniAppsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mini App Reports</h1>
-        <p className="text-foreground/40 text-sm mt-1">User-submitted reports about mini apps</p>
+        <h1 className="text-2xl font-bold tracking-tight">Mini Apps</h1>
+        <p className="text-foreground/40 text-sm mt-1">Manage availability and review user reports</p>
       </div>
 
       {notice && (
@@ -106,6 +150,97 @@ export default function MiniAppsPage() {
         </div>
       )}
 
+      {/* ── Catalog ─────────────────────────────────────────────────────────── */}
+      <div className="bg-muted/30 border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <LayoutGrid size={14} className="text-foreground/50" />
+          <h2 className="text-sm font-semibold">All Mini Apps</h2>
+          <span className="text-xs text-foreground/40">Toggle maintenance or disable apps platform-wide</span>
+        </div>
+
+        {appsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={22} className="animate-spin text-foreground/40" />
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-foreground/40 text-xs uppercase tracking-wider">
+                <th className="text-left px-4 py-3">App</th>
+                <th className="text-left px-4 py-3">Category</th>
+                <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3 max-w-xs">Note / Message</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {(allApps ?? []).map((app) => (
+                <tr key={app.appId} className="hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{app.name}</p>
+                    <p className="text-foreground/40 text-xs">{app.description}</p>
+                  </td>
+                  <td className="px-4 py-3 text-foreground/50">{app.category}</td>
+                  <td className="px-4 py-3">
+                    <AppStatusBadge status={app.status} />
+                  </td>
+                  <td className="px-4 py-3 text-foreground/50 max-w-xs truncate text-xs">
+                    {app.reason ?? "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
+                      {app.status === "ACTIVE" && (
+                        <>
+                          <button
+                            onClick={() => { setAppAction({ type: "maintenance", app }); setActionMessage(""); }}
+                            className="text-xs text-amber-400 hover:underline"
+                          >
+                            Maintenance
+                          </button>
+                          <button
+                            onClick={() => { setAppAction({ type: "disable", app }); setActionMessage(""); }}
+                            className="text-xs text-red-400 hover:underline"
+                          >
+                            Disable
+                          </button>
+                        </>
+                      )}
+                      {app.status === "MAINTENANCE" && (
+                        <>
+                          <button
+                            onClick={() => { setAppAction({ type: "disable", app }); setActionMessage(""); }}
+                            className="text-xs text-red-400 hover:underline"
+                          >
+                            Disable
+                          </button>
+                          <button
+                            disabled={enableMutation.isPending}
+                            onClick={() => enableMutation.mutate(app.appId)}
+                            className="text-xs text-emerald-400 hover:underline disabled:opacity-50"
+                          >
+                            End maintenance
+                          </button>
+                        </>
+                      )}
+                      {app.status === "DISABLED" && (
+                        <button
+                          disabled={enableMutation.isPending}
+                          onClick={() => enableMutation.mutate(app.appId)}
+                          className="text-xs text-emerald-400 hover:underline disabled:opacity-50"
+                        >
+                          Re-enable
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* ── Report stats ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total",     value: stats?.total     ?? "—", icon: Flag,          cls: "text-foreground/60" },
@@ -121,6 +256,12 @@ export default function MiniAppsPage() {
             <p className="text-2xl font-bold">{value}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── Reports table ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        <Flag size={14} className="text-foreground/50" />
+        <h2 className="text-sm font-semibold">User Reports</h2>
       </div>
 
       <div className="flex gap-1 bg-muted/30 border border-border rounded-lg p-1 w-fit">
@@ -168,12 +309,12 @@ export default function MiniAppsPage() {
                   </td>
                   <td className="px-4 py-3">{REASON_LABELS[r.reason] ?? r.reason}</td>
                   <td className="px-4 py-3 text-foreground/50 max-w-xs truncate">{r.details ?? "—"}</td>
-  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                   <td className="px-4 py-3 text-foreground/40 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
                   <td className="px-4 py-3">
                     {r.status === "OPEN" && (
                       <button
-                        onClick={() => { setResolving(r); setResolution(""); setDisableApp(false); }}
+                        onClick={() => { setResolving(r); setResolution(""); setDisableWithReport(false); }}
                         className="text-xs text-[#B7EE7A] hover:underline"
                       >
                         Review
@@ -209,48 +350,104 @@ export default function MiniAppsPage() {
         )}
       </div>
 
-      <div className="bg-muted/30 border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <Ban size={14} className="text-red-400" />
-          <h2 className="text-sm font-semibold">Disabled Apps</h2>
-          <span className="text-xs text-foreground/40">
-            Hidden from the mobile hub for all users
-          </span>
-        </div>
-        {!disabledApps || disabledApps.length === 0 ? (
-          <div className="text-center py-8 text-foreground/30 text-sm">No apps are currently disabled</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-foreground/40 text-xs uppercase tracking-wider">
-                <th className="text-left px-4 py-3">App</th>
-                <th className="text-left px-4 py-3">Reason</th>
-                <th className="text-left px-4 py-3">Disabled</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {disabledApps.map((d) => (
-                <tr key={d.appId} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-mono text-foreground/70">{d.appId}</td>
-                  <td className="px-4 py-3 text-foreground/50 max-w-xs truncate">{d.reason ?? "—"}</td>
-                  <td className="px-4 py-3 text-foreground/40 whitespace-nowrap">{fmtDate(d.disabledAt)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      disabled={enableMutation.isPending}
-                      onClick={() => enableMutation.mutate(d.appId)}
-                      className="text-xs text-emerald-400 hover:underline disabled:opacity-50"
-                    >
-                      Re-enable
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* ── App action modal (maintenance / disable) ─────────────────────── */}
+      {appAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                {appAction.type === "maintenance" ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Wrench size={16} className="text-amber-400" />
+                      <h2 className="text-lg font-semibold">Set Maintenance Mode</h2>
+                    </div>
+                    <p className="text-foreground/40 text-sm">{appAction.app.name}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Ban size={16} className="text-red-400" />
+                      <h2 className="text-lg font-semibold">Disable App</h2>
+                    </div>
+                    <p className="text-foreground/40 text-sm">{appAction.app.name}</p>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setAppAction(null)}
+                className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
+            {appAction.type === "maintenance" ? (
+              <>
+                <p className="text-sm text-foreground/50 mb-4">
+                  The app will appear greyed-out in the hub with a maintenance notice. All users will
+                  receive a push notification with your message.
+                </p>
+                <label className="block text-xs text-foreground/40 uppercase tracking-wider mb-1.5">
+                  User-facing message (optional)
+                </label>
+                <textarea
+                  className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-foreground/20 mb-4"
+                  rows={3}
+                  placeholder="e.g. We're upgrading CediRates — it'll be back in ~30 minutes."
+                  value={actionMessage}
+                  onChange={(e) => setActionMessage(e.target.value)}
+                />
+                {maintenanceMutation.error && (
+                  <p className="text-red-400 text-sm mb-3">{(maintenanceMutation.error as Error).message}</p>
+                )}
+                <button
+                  disabled={maintenanceMutation.isPending}
+                  onClick={() => maintenanceMutation.mutate({ appId: appAction.app.appId, message: actionMessage })}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {maintenanceMutation.isPending
+                    ? <Loader2 size={16} className="animate-spin" />
+                    : <Wrench size={16} />}
+                  Set maintenance &amp; notify users
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-foreground/50 mb-4">
+                  The app will be hidden from the hub for all users immediately. Re-enabling requires a
+                  second admin to approve.
+                </p>
+                <label className="block text-xs text-foreground/40 uppercase tracking-wider mb-1.5">
+                  Internal reason (optional)
+                </label>
+                <textarea
+                  className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-foreground/20 mb-4"
+                  rows={3}
+                  placeholder="e.g. Violates TOS section 4.2"
+                  value={actionMessage}
+                  onChange={(e) => setActionMessage(e.target.value)}
+                />
+                {disableAppMutation.error && (
+                  <p className="text-red-400 text-sm mb-3">{(disableAppMutation.error as Error).message}</p>
+                )}
+                <button
+                  disabled={disableAppMutation.isPending}
+                  onClick={() => disableAppMutation.mutate({ appId: appAction.app.appId, reason: actionMessage })}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {disableAppMutation.isPending
+                    ? <Loader2 size={16} className="animate-spin" />
+                    : <Ban size={16} />}
+                  Disable platform-wide
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Report review modal ──────────────────────────────────────────────── */}
       {resolving && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4">
@@ -289,8 +486,8 @@ export default function MiniAppsPage() {
             <label className="flex items-center gap-2 mb-4 text-sm text-foreground/70 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={disableApp}
-                onChange={(e) => setDisableApp(e.target.checked)}
+                checked={disableWithReport}
+                onChange={(e) => setDisableWithReport(e.target.checked)}
                 className="accent-red-500"
               />
               Also disable <span className="font-mono">{resolving.appId}</span> platform-wide

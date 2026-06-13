@@ -52,7 +52,7 @@ export default function HubScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'All' | MiniAppCategory>('All');
-  const disabledAppIds = useDisabledMiniApps();
+  const { disabled, maintenance } = useDisabledMiniApps();
 
   const openApp = useCallback((appId: string) => {
     navigation.navigate('MiniApp', { appId });
@@ -60,12 +60,12 @@ export default function HubScreen() {
 
   const filteredApps = React.useMemo(() => {
     return MINI_APP_REGISTRY.filter((app) => {
-      if (disabledAppIds.includes(app.id)) return false;
+      if (disabled.has(app.id)) return false;
       const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || app.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory, disabledAppIds]);
+  }, [searchQuery, activeCategory, disabled]);
 
   return (
     <View style={styles.container}>
@@ -153,7 +153,14 @@ export default function HubScreen() {
             ) : (
               <View style={styles.grid}>
                 {filteredApps.map((app) => (
-                  <AppTile key={app.id} app={app} onPress={openApp} styles={styles} Colors={Colors} />
+                  <AppTile
+                    key={app.id}
+                    app={app}
+                    onPress={openApp}
+                    inMaintenance={maintenance.has(app.id)}
+                    styles={styles}
+                    Colors={Colors}
+                  />
                 ))}
               </View>
             )}
@@ -168,31 +175,46 @@ export default function HubScreen() {
 interface TileProps {
   app: MiniAppEntry;
   onPress: (id: string) => void;
+  inMaintenance: boolean;
   styles: ReturnType<typeof createStyles>;
   Colors: ThemeColors;
 }
 
-function AppTile({ app, onPress, styles, Colors }: TileProps) {
+function AppTile({ app, onPress, inMaintenance, styles, Colors }: TileProps) {
   return (
     <TouchableOpacity
-      style={styles.tile}
-      activeOpacity={0.75}
+      style={[styles.tile, inMaintenance && styles.tileMaintenance]}
+      activeOpacity={inMaintenance ? 0.5 : 0.75}
       onPress={() => onPress(app.id)}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${app.name}`}
+      accessibilityLabel={inMaintenance ? `${app.name} — under maintenance` : `Open ${app.name}`}
+      accessibilityState={{ disabled: inMaintenance }}
     >
       <View style={[styles.tileIcon, app.color ? { backgroundColor: app.color } : undefined]}>
         {typeof app.icon === 'string' ? (
-          <Text style={styles.tileEmoji}>{app.icon}</Text>
+          <Text style={[styles.tileEmoji, inMaintenance && { opacity: 0.45 }]}>{app.icon}</Text>
         ) : (
-          <Image 
-            source={app.icon} 
-            style={app.color ? { width: 32, height: 32 } : { width: '100%', height: '100%' }} 
-            resizeMode={app.color ? "contain" : "cover"} 
+          <Image
+            source={app.icon}
+            style={[
+              app.color ? { width: 32, height: 32 } : { width: '100%', height: '100%' },
+              inMaintenance && { opacity: 0.45 },
+            ]}
+            resizeMode={app.color ? 'contain' : 'cover'}
           />
         )}
+        {inMaintenance && (
+          <View style={styles.maintenanceBadge}>
+            <Feather name="tool" size={8} color="#fff" />
+          </View>
+        )}
       </View>
-      <Text style={styles.tileName} numberOfLines={2}>{app.name}</Text>
+      <Text style={[styles.tileName, inMaintenance && { color: Colors.textSecondary }]} numberOfLines={2}>
+        {app.name}
+      </Text>
+      {inMaintenance && (
+        <Text style={styles.tileMaintenanceLabel} numberOfLines={1}>Maintenance</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -301,12 +323,34 @@ function createStyles(Colors: ThemeColors) {
       overflow: 'hidden',
     },
     tileEmoji: { fontSize: 32 },
+    tileMaintenance: {
+      opacity: 0.6,
+    },
+    maintenanceBadge: {
+      position: 'absolute',
+      bottom: 2,
+      right: 2,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: '#d97706',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     tileName: {
       ...Typography.caption,
       color: Colors.textPrimary,
       textAlign: 'center',
       fontWeight: '600',
       lineHeight: 16,
+    },
+    tileMaintenanceLabel: {
+      ...Typography.caption,
+      fontSize: 9,
+      color: '#d97706',
+      textAlign: 'center',
+      fontWeight: '600',
+      marginTop: 1,
     },
     emptyState: {
       alignItems: 'center',

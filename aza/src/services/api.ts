@@ -868,6 +868,9 @@ export const reportMiniApp = (appId: string, reason: string, details?: string) =
 export const getDisabledMiniApps = () =>
   api.get('/api/v1/miniapps/disabled');
 
+export const getMiniAppStatuses = () =>
+  api.get('/api/v1/miniapps/statuses');
+
 // --- Dispute / Reversal Endpoints ---
 
 export const createDispute = (payload: { transactionId: string; category: string; description: string }) =>
