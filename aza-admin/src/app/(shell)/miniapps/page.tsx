@@ -79,9 +79,10 @@ export default function MiniAppsPage() {
     queryFn: getMiniAppReportStats,
   });
 
-  const { data: allApps, isLoading: appsLoading } = useQuery<AdminMiniApp[]>({
+  const { data: allApps, isLoading: appsLoading, error: appsError } = useQuery<AdminMiniApp[]>({
     queryKey: ["allMiniApps"],
     queryFn: getAllMiniApps,
+    retry: 1,
   });
 
   const maintenanceMutation = useMutation({
@@ -161,6 +162,11 @@ export default function MiniAppsPage() {
         {appsLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 size={22} className="animate-spin text-foreground/40" />
+          </div>
+        ) : appsError ? (
+          <div className="text-center py-10 text-red-400 text-sm space-y-1">
+            <p>Could not load mini apps — backend may need a restart.</p>
+            <p className="text-foreground/30 text-xs">{(appsError as Error).message}</p>
           </div>
         ) : (
           <table className="w-full text-sm">

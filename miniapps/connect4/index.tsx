@@ -1,0 +1,31 @@
+import React from 'react';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { MiniAppProps, resolveTheme } from '../types';
+
+export default function Connect4App({ theme }: MiniAppProps) {
+  const colors = resolveTheme(theme);
+
+  return (
+    <View style={styles.container}>
+      <WebView
+        source={{ uri: 'https://kenrick95.github.io/c4/' }}
+        style={styles.webview}
+        domStorageEnabled
+        javaScriptEnabled
+        startInLoadingState
+        renderLoading={() => (
+          <View style={[StyleSheet.absoluteFill, styles.loader, { backgroundColor: colors.background }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  webview: { flex: 1 },
+  loader: { justifyContent: 'center', alignItems: 'center' },
+});
