@@ -371,8 +371,18 @@ export default function MiniAppsPage() {
               {(allApps ?? []).map((app) => (
                 <tr key={app.appId} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{app.name}</p>
-                    <p className="text-foreground/40 text-xs">{app.description}</p>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={`/miniapp-icons/${app.appId}.png`}
+                        alt=""
+                        className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <div>
+                        <p className="font-medium">{app.name}</p>
+                        <p className="text-foreground/40 text-xs">{app.description}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-foreground/50">{app.category}</td>
                   <td className="px-4 py-3">
