@@ -114,6 +114,8 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();
                     // Discount validation is public — no auth needed
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/checkout/discount/validate").permitAll();
+                    // Promo code validation is public — redeem requires auth (handled by catch-all)
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/promos/validate").permitAll();
                     // Team invite acceptance is public (email-based verification)
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/merchant/team/accept/*").permitAll();
                     // Public merchant profile by handle — for customer payment pages
