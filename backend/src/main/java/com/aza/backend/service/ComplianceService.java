@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -78,6 +79,14 @@ public class ComplianceService {
         flaggedRepository.save(ft);
 
         return toResponse(ft);
+    }
+
+    public List<FlaggedTransactionResponse> getAllFlaggedForExport(String status, String from, String to) {
+        FlaggedTransaction.FlagStatus flagStatus = (status != null && !status.isBlank())
+                ? FlaggedTransaction.FlagStatus.valueOf(status.toUpperCase()) : null;
+        LocalDateTime fromDt = (from != null && !from.isBlank()) ? LocalDate.parse(from).atStartOfDay() : null;
+        LocalDateTime toDt = (to != null && !to.isBlank()) ? LocalDate.parse(to).atTime(23, 59, 59) : null;
+        return flaggedRepository.exportSearch(flagStatus, fromDt, toDt).stream().map(this::toResponse).toList();
     }
 
     private FlaggedTransactionResponse toResponse(FlaggedTransaction ft) {

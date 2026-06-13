@@ -12,4 +12,8 @@ public interface MerchantPayoutRepository extends JpaRepository<MerchantPayout, 
     Page<MerchantPayout> findAllByMerchantIdOrderByRequestedAtDesc(UUID merchantId, Pageable pageable);
 
     java.util.List<MerchantPayout> findByStatusAndCompletedAtBetween(MerchantPayout.PayoutStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    Page<MerchantPayout> findAllByOrderByRequestedAtDesc(Pageable pageable);
+
+    Page<MerchantPayout> findAllByStatusOrderByRequestedAtDesc(MerchantPayout.PayoutStatus status, Pageable pageable);
 }

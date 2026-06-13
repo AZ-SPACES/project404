@@ -6,6 +6,7 @@ import {
   getFlaggedTransactions,
   getComplianceStats,
   reviewFlaggedTransaction,
+  exportAmlRegisterCsv,
   FlaggedTransaction,
   ComplianceStats,
   Page,
@@ -19,6 +20,7 @@ import {
   Loader2,
   X,
   AlertCircle,
+  Download,
 } from "lucide-react";
 
 function fmtDate(iso: string) {
@@ -78,6 +80,8 @@ export default function CompliancePage() {
     },
   });
 
+  const [exportBusy, setExportBusy] = useState(false);
+
   const tabs: { key: ActiveFilter; label: string }[] = [
     { key: "ALL", label: "All" },
     { key: "PENDING_REVIEW", label: "Pending Review" },
@@ -87,9 +91,23 @@ export default function CompliancePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Compliance & AML</h1>
-        <p className="text-foreground/40 text-sm mt-0.5">Anti-money laundering monitoring and suspicious activity reports</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Compliance & AML</h1>
+          <p className="text-foreground/40 text-sm mt-0.5">Anti-money laundering monitoring and suspicious activity reports</p>
+        </div>
+        <button
+          onClick={async () => {
+            setExportBusy(true);
+            try { await exportAmlRegisterCsv({ status: filter === "ALL" ? undefined : filter }); }
+            finally { setExportBusy(false); }
+          }}
+          disabled={exportBusy}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm bg-muted/30 border border-border text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40 flex-shrink-0"
+        >
+          {exportBusy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          Export AML Register
+        </button>
       </div>
 
       {compStats && (

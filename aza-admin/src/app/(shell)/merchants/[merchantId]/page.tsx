@@ -17,6 +17,7 @@ import {
   getMerchantDisputesByMerchant,
   getMerchantBulkTransfers,
   getMerchantAuditLogByMerchant,
+  getMerchantWebhookDeliveries,
   resetUserRateLimit,
   AdminMerchant,
   MerchantKyb,
@@ -27,6 +28,7 @@ import {
   MerchantCustomer,
   MerchantBulkTransfer,
   MerchantAuditLogEntry,
+  WebhookDeliveryRow,
   Dispute,
   Page,
 } from "@/lib/admin-api";
@@ -179,7 +181,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 type Modal = "kyb_approve" | "kyb_reject" | "kyb_more_info" | "suspend" | "activate" | "reject_merchant" | "fee_rate" | null;
-type Tab = "overview" | "kyb" | "payouts" | "sessions" | "invoices" | "settlements" | "customers" | "disputes" | "bulk-transfers" | "audit-log";
+type Tab = "overview" | "kyb" | "payouts" | "sessions" | "invoices" | "settlements" | "customers" | "disputes" | "bulk-transfers" | "webhooks" | "audit-log";
 
 export default function MerchantDetailPage() {
   const { merchantId } = useParams<{ merchantId: string }>();
@@ -201,6 +203,7 @@ export default function MerchantDetailPage() {
   const [customersPage, setCustomersPage] = useState(0);
   const [merchantDisputesPage, setMerchantDisputesPage] = useState(0);
   const [bulkTransfersPage, setBulkTransfersPage] = useState(0);
+  const [webhooksPage, setWebhooksPage] = useState(0);
   const [auditLogPage, setAuditLogPage] = useState(0);
 
   const showToast = (msg: string) => {
@@ -274,6 +277,12 @@ export default function MerchantDetailPage() {
     queryKey: ["merchantAuditLog", merchantId, auditLogPage],
     queryFn: () => getMerchantAuditLogByMerchant(merchantId, auditLogPage),
     enabled: tab === "audit-log",
+  });
+
+  const { data: webhookDeliveries, isLoading: webhooksLoading } = useQuery<Page<WebhookDeliveryRow>>({
+    queryKey: ["merchantWebhooks", merchantId, webhooksPage],
+    queryFn: () => getMerchantWebhookDeliveries(merchantId, webhooksPage),
+    enabled: tab === "webhooks",
   });
 
   // Mutations
@@ -372,6 +381,7 @@ export default function MerchantDetailPage() {
     { id: "customers",      label: "Customers",      icon: Users },
     { id: "disputes",       label: "Disputes",       icon: Scale },
     { id: "bulk-transfers", label: "Bulk Transfers", icon: ArrowLeftRight },
+    { id: "webhooks",       label: "Webhooks",       icon: Webhook },
     { id: "audit-log",      label: "Audit Log",      icon: ScrollText },
   ];
 
@@ -1089,6 +1099,79 @@ export default function MerchantDetailPage() {
                   <button onClick={() => setBulkTransfersPage(p => p - 1)} disabled={bulkTransfersPage === 0 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronLeft size={14} /></button>
                   <span className="text-xs text-foreground/40">{bulkTransfersPage + 1} / {bulkTransfers.totalPages}</span>
                   <button onClick={() => setBulkTransfersPage(p => p + 1)} disabled={bulkTransfersPage >= bulkTransfers.totalPages - 1 || bulkTransfersLoading} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30"><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── WEBHOOKS TAB ── */}
+      {tab === "webhooks" && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <Webhook size={15} className="text-foreground/40" />
+            <h2 className="text-sm font-semibold text-foreground">Webhook Delivery Log</h2>
+          </div>
+          {webhooksLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="animate-spin text-foreground/30" size={20} />
+            </div>
+          ) : !webhookDeliveries || webhookDeliveries.content.length === 0 ? (
+            <p className="text-center text-foreground/30 text-sm py-10">No webhook deliveries recorded.</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">Event Type</th>
+                    <th className="text-center px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">Status</th>
+                    <th className="text-center px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 hidden md:table-cell">HTTP</th>
+                    <th className="text-center px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30 hidden md:table-cell">Attempts</th>
+                    <th className="text-right px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-foreground/30">Sent</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {webhookDeliveries.content.map((d) => (
+                    <tr key={d.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-3">
+                        <span className="text-xs font-mono text-foreground/70">{d.eventType}</span>
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                          d.status === "SUCCESS"
+                            ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                            : d.status === "FAILED"
+                            ? "text-red-400 bg-red-500/10 border-red-500/20"
+                            : "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                        }`}>
+                          {d.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-center hidden md:table-cell">
+                        <span className={`text-xs font-mono ${d.responseStatusCode && d.responseStatusCode < 300 ? "text-emerald-400" : "text-red-400"}`}>
+                          {d.responseStatusCode ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-center hidden md:table-cell">
+                        <span className="text-xs text-foreground/50">{d.attemptCount}</span>
+                      </td>
+                      <td className="px-5 py-3 text-right text-xs text-foreground/35">
+                        {d.createdAt ? new Date(d.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {webhookDeliveries.totalPages > 1 && (
+                <div className="flex justify-center items-center gap-3 px-5 py-4 border-t border-border">
+                  <button onClick={() => setWebhooksPage(p => p - 1)} disabled={webhooksPage === 0} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="text-xs text-foreground/40">{webhooksPage + 1} / {webhookDeliveries.totalPages}</span>
+                  <button onClick={() => setWebhooksPage(p => p + 1)} disabled={webhooksPage >= webhookDeliveries.totalPages - 1} className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30">
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
               )}
             </>
