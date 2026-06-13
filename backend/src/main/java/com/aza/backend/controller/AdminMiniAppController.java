@@ -5,9 +5,13 @@ import com.aza.backend.dto.admin.AdminMiniAppResponse;
 import com.aza.backend.dto.admin.DisabledMiniAppResponse;
 import com.aza.backend.dto.admin.MiniAppReportResponse;
 import com.aza.backend.dto.admin.MiniAppReportStatsResponse;
+import com.aza.backend.dto.miniapp.MiniAppDetailResponse;
 import com.aza.backend.entity.DisabledMiniApp;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.MiniAppReportService;
+import com.aza.backend.service.MiniAppService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,6 +30,7 @@ import java.util.UUID;
 public class AdminMiniAppController {
 
     private final MiniAppReportService reportService;
+    private final MiniAppService miniAppService;
     private final com.aza.backend.service.ApprovalService approvalService;
     private final com.aza.backend.service.StaffRoleService staffRoleService;
 
@@ -102,6 +107,44 @@ public class AdminMiniAppController {
         }
         reportService.enableApp(appId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // ── Developer app review ───────────────────────────────────────────────
+
+    @GetMapping("/submissions")
+    public ResponseEntity<ApiResponse<Page<MiniAppDetailResponse>>> getSubmissions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.getSubmissions(page, size)));
+    }
+
+    @PostMapping("/submissions/{appId}/approve")
+    public ResponseEntity<ApiResponse<MiniAppDetailResponse>> approve(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.approve(appId, admin)));
+    }
+
+    @PostMapping("/submissions/{appId}/reject")
+    public ResponseEntity<ApiResponse<MiniAppDetailResponse>> reject(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin,
+            @Valid @RequestBody RejectRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.reject(appId, request.getReason(), admin)));
+    }
+
+    @PostMapping("/submissions/{appId}/suspend")
+    public ResponseEntity<ApiResponse<MiniAppDetailResponse>> suspend(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin,
+            @Valid @RequestBody RejectRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.suspend(appId, request.getReason(), admin)));
+    }
+
+    @Data
+    static class RejectRequest {
+        @NotBlank
+        private String reason;
     }
 
     @Data

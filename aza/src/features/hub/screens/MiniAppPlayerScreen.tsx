@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@react-native-vector-icons/feather';
 import { AntDesign } from '@react-native-vector-icons/ant-design';
@@ -21,7 +24,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { getMiniApp } from '../miniapps/registry';
-import { reportMiniApp } from '../../../services/api';
+import { useCommunityMiniApps } from '../../../hooks/useCommunityMiniApps';
+import { useMiniAppConsent } from '../../../hooks/useMiniAppConsent';
+import ConsentSheet from '../../../components/miniapp/ConsentSheet';
+import { AZA_SDK_JS } from '../sdk/azaSDK';
+import { getSdkUser, getSdkBalance, sdkPayment, reportMiniApp } from '../../../services/api';
 import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 import { useToast } from '../../../providers/ToastProvider';
 import { CloseButton } from '../../../components/ui/CloseButton';
@@ -58,8 +65,9 @@ export default function MiniAppPlayerScreen() {
   const [reportLoading, setReportLoading] = React.useState(false);
   const insets = useSafeAreaInsets();
   const { disabled, maintenance } = useDisabledMiniApps();
+  const { communityApps } = useCommunityMiniApps();
 
-  const app = getMiniApp(appId);
+  const app = getMiniApp(appId) ?? communityApps.find(a => a.id === appId);
 
   const handleClose = () => navigation.goBack();
 
@@ -167,7 +175,6 @@ export default function MiniAppPlayerScreen() {
     );
   }
 
-  const MiniAppComponent = app.component;
   const miniAppTheme = {
     background: Colors.background,
     surface: Colors.surface,
@@ -224,7 +231,16 @@ export default function MiniAppPlayerScreen() {
       <View style={styles.divider} />
 
       <View style={styles.content}>
-        <MiniAppComponent onClose={handleClose} theme={miniAppTheme} />
+        {app.component ? (
+          <app.component onClose={handleClose} theme={miniAppTheme} />
+        ) : app.url ? (
+          <CommunityWebApp app={app} onClose={handleClose} Colors={Colors} styles={styles} />
+        ) : (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>This app cannot be opened.</Text>
+            <Button title="Go Back" onPress={handleClose} width="auto" />
+          </View>
+        )}
       </View>
 
       {/* ── Dropdown menu ── */}
@@ -339,6 +355,291 @@ export default function MiniAppPlayerScreen() {
     </View>
   );
 }
+
+interface CommunityWebAppProps {
+  app: NonNullable<ReturnType<typeof getMiniApp>>;
+  onClose: () => void;
+  Colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+}
+
+interface PendingPayment {
+  id: string;
+  amount: number;
+  recipientIdentifier: string;
+  note?: string;
+  idempotencyKey: string;
+}
+
+function CommunityWebApp({ app, onClose, Colors, styles }: CommunityWebAppProps) {
+  const perms = app.requestedPermissions ?? [];
+  const { consentStatus, grant, deny } = useMiniAppConsent(app.id, perms);
+  const [showConsent, setShowConsent] = React.useState(false);
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const webViewRef = useRef<WebView>(null);
+
+  React.useEffect(() => {
+    if (consentStatus === 'needs_consent') setShowConsent(true);
+  }, [consentStatus]);
+
+  const handleDeny = () => {
+    deny();
+    setShowConsent(false);
+    onClose();
+  };
+
+  const handleGrant = async (permissions: string[]) => {
+    await grant(permissions);
+    setShowConsent(false);
+  };
+
+  const replyToWebView = useCallback((id: string, result: any) => {
+    webViewRef.current?.injectJavaScript(
+      `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(JSON.stringify({ id, result }))}}));true;`
+    );
+  }, []);
+
+  const replyErrorToWebView = useCallback((id: string, error: string) => {
+    webViewRef.current?.injectJavaScript(
+      `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(JSON.stringify({ id, error }))}}));true;`
+    );
+  }, []);
+
+  // PostMessage bridge: native side handles SDK method calls
+  const handleMessage = useCallback(async (event: WebViewMessageEvent) => {
+    let msg: { id: string; method: string; params: Record<string, any> };
+    try { msg = JSON.parse(event.nativeEvent.data); } catch { return; }
+    const { id, method, params } = msg;
+
+    try {
+      switch (method) {
+        case 'getUser': {
+          const res = await getSdkUser(app.id);
+          replyToWebView(id, res.data?.data);
+          break;
+        }
+        case 'getBalance': {
+          const res = await getSdkBalance(app.id);
+          replyToWebView(id, res.data?.data);
+          break;
+        }
+        case 'requestPayment': {
+          // Security gate: require explicit user confirmation before any payment
+          if (!params.amount || !params.recipientIdentifier || !params.idempotencyKey) {
+            replyErrorToWebView(id, 'Missing required payment fields');
+            return;
+          }
+          // Store the pending payment with its bridge callback id — confirmed or cancelled below
+          setPendingPayment({
+            id,
+            amount: params.amount,
+            recipientIdentifier: params.recipientIdentifier,
+            note: params.note,
+            idempotencyKey: params.idempotencyKey,
+          });
+          break;
+        }
+        case 'close':
+          onClose();
+          replyToWebView(id, null);
+          break;
+        case 'share':
+          Share.share({ title: params.title ?? app.name, message: params.message ?? '' });
+          replyToWebView(id, null);
+          break;
+        default:
+          replyErrorToWebView(id, 'Unknown SDK method: ' + method);
+      }
+    } catch (err: any) {
+      replyErrorToWebView(id, err?.message ?? 'SDK error');
+    }
+  }, [app.id, onClose, replyToWebView, replyErrorToWebView]);
+
+  const confirmPayment = async () => {
+    if (!pendingPayment) return;
+    setPaymentLoading(true);
+    try {
+      const res = await sdkPayment(app.id, {
+        amount: pendingPayment.amount,
+        recipientIdentifier: pendingPayment.recipientIdentifier,
+        note: pendingPayment.note,
+        idempotencyKey: pendingPayment.idempotencyKey,
+      });
+      replyToWebView(pendingPayment.id, res.data?.data);
+    } catch (err: any) {
+      replyErrorToWebView(pendingPayment.id, err?.message ?? 'Payment failed');
+    } finally {
+      setPaymentLoading(false);
+      setPendingPayment(null);
+    }
+  };
+
+  const cancelPayment = () => {
+    if (pendingPayment) {
+      replyErrorToWebView(pendingPayment.id, 'User cancelled payment');
+    }
+    setPendingPayment(null);
+  };
+
+  if (consentStatus === 'loading') {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
+
+  const canOpen = consentStatus === 'granted' || consentStatus === 'not_applicable';
+
+  return (
+    <>
+      {canOpen ? (
+        <WebView
+          ref={webViewRef}
+          source={{ uri: app.url! }}
+          injectedJavaScriptBeforeContentLoaded={AZA_SDK_JS}
+          onMessage={handleMessage}
+          style={{ flex: 1 }}
+          javaScriptEnabled
+          domStorageEnabled
+          // Block all non-HTTPS origins — prevents JS injection from data: / file: / http:
+          originWhitelist={['https://*']}
+          // Prevent file system access from the WebView
+          allowFileAccess={false}
+          allowUniversalAccessFromFileURLs={false}
+          // Allow only same-origin file URLs (none)
+          allowFileAccessFromFileURLs={false}
+          startInLoadingState
+          renderLoading={() => (
+            <View style={[StyleSheet.absoluteFill, styles.errorContainer]}>
+              <ActivityIndicator color={Colors.primary} />
+            </View>
+          )}
+          onError={() => {}}
+        />
+      ) : null}
+
+      {/* Consent gate */}
+      <ConsentSheet
+        visible={showConsent}
+        appName={app.name}
+        appIcon={app.icon}
+        developerName={app.developerName}
+        requestedPermissions={perms}
+        onGrant={handleGrant}
+        onDeny={handleDeny}
+      />
+
+      {/* Native payment confirmation — must show before any money moves */}
+      <Modal visible={!!pendingPayment} transparent animationType="slide" onRequestClose={cancelPayment}>
+        <View style={payStyles.overlay}>
+          <View style={[payStyles.sheet, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
+            <Text style={[payStyles.title, { color: Colors.textPrimary }]}>Payment Request</Text>
+            <Text style={[payStyles.appName, { color: Colors.textSecondary }]}>{app.name} is requesting a payment</Text>
+
+            <View style={[payStyles.amountBox, { backgroundColor: Colors.background, borderColor: Colors.border }]}>
+              <Text style={[payStyles.amountLabel, { color: Colors.textSecondary }]}>Amount</Text>
+              <Text style={[payStyles.amount, { color: Colors.textPrimary }]}>
+                GHS {(pendingPayment?.amount ?? 0).toFixed(2)}
+              </Text>
+            </View>
+
+            <View style={[payStyles.row, { borderBottomColor: Colors.border }]}>
+              <Text style={[payStyles.rowLabel, { color: Colors.textSecondary }]}>To</Text>
+              <Text style={[payStyles.rowValue, { color: Colors.textPrimary }]}>{pendingPayment?.recipientIdentifier}</Text>
+            </View>
+            {pendingPayment?.note ? (
+              <View style={[payStyles.row, { borderBottomColor: Colors.border }]}>
+                <Text style={[payStyles.rowLabel, { color: Colors.textSecondary }]}>Note</Text>
+                <Text style={[payStyles.rowValue, { color: Colors.textPrimary }]}>{pendingPayment.note}</Text>
+              </View>
+            ) : null}
+
+            <Text style={[payStyles.warning, { color: Colors.textSecondary }]}>
+              This payment cannot be reversed once confirmed.
+            </Text>
+
+            <View style={payStyles.actions}>
+              <TouchableOpacity
+                style={[payStyles.cancelBtn, { borderColor: Colors.border }]}
+                onPress={cancelPayment}
+                disabled={paymentLoading}
+              >
+                <Text style={[payStyles.cancelText, { color: Colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[payStyles.confirmBtn, { backgroundColor: Colors.primary }]}
+                onPress={confirmPayment}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={payStyles.confirmText}>Confirm</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const payStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  appName: { fontSize: 13, marginBottom: 20 },
+  amountBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  amountLabel: { fontSize: 12, marginBottom: 4 },
+  amount: { fontSize: 32, fontWeight: '700' },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  rowLabel: { fontSize: 14 },
+  rowValue: { fontSize: 14, fontWeight: '600' },
+  warning: { fontSize: 12, textAlign: 'center', marginVertical: 16, lineHeight: 18 },
+  actions: { flexDirection: 'row', gap: 12 },
+  cancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelText: { fontSize: 15, fontWeight: '600' },
+  confirmBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+});
 
 function createStyles(Colors: ThemeColors) {
   return StyleSheet.create({
