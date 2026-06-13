@@ -1157,7 +1157,8 @@ export async function uploadLogo(file: File): Promise<Merchant> {
 // ─── Mobile KYB handoff ───────────────────────────────────────────────────────
 
 export async function createMobileHandoff(): Promise<{ token: string }> {
-  return request<{ token: string }>("/api/v1/merchant/kyb/mobile-handoff", { method: "POST" });
+  const body = await request<{ success: boolean; data: { token: string } }>("/api/v1/merchant/kyb/mobile-handoff", { method: "POST" });
+  return body.data;
 }
 
 export interface MobileKybContext {
