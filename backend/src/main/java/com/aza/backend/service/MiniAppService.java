@@ -10,7 +10,6 @@ import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.MiniAppConsentRepository;
 import com.aza.backend.repository.MiniAppRepository;
-import com.aza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,7 +31,6 @@ public class MiniAppService {
 
     private final MiniAppRepository miniAppRepository;
     private final MiniAppConsentRepository consentRepository;
-    private final UserRepository userRepository;
     private final TransferService transferService;
     private final NotificationService notificationService;
 
@@ -189,12 +187,14 @@ public class MiniAppService {
             String body = approved
                     ? "Your mini app has been approved and is now available to all Aza users."
                     : (reason != null ? reason : "Your app did not meet our guidelines.");
+            Map<String, Object> data = new java.util.HashMap<>();
+            data.put("type", "MINI_APP_REVIEW");
+            data.put("appId", app.getId());
+            data.put("approved", String.valueOf(approved));
             notificationService.sendNotification(
                     app.getSubmittedBy(),
                     Notification.NotificationType.SYSTEM_BROADCAST,
-                    title, body,
-                    Map.of("type", "MINI_APP_REVIEW", "appId", app.getId(),
-                           "approved", String.valueOf(approved)));
+                    title, body, data);
         } catch (Exception e) {
             log.warn("Failed to notify developer of mini app review: {}", e.getMessage());
         }

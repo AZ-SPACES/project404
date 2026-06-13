@@ -13,6 +13,7 @@ import {
   getMiniAppSubmissions,
   approveMiniApp,
   rejectMiniApp,
+  suspendMiniApp,
   isPendingApproval,
   MiniAppReport,
   MiniAppReportStats,
@@ -122,11 +123,13 @@ export default function MiniAppsPage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ appId, reason }: { appId: string; reason: string }) => rejectMiniApp(appId, reason),
+    mutationFn: ({ appId, reason, action }: { appId: string; reason: string; action: "reject" | "suspend" }) =>
+      action === "suspend" ? suspendMiniApp(appId, reason) : rejectMiniApp(appId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["miniAppSubmissions"] });
       setReviewTarget(null);
       setReviewReason("");
+      setReviewAction(null);
     },
   });
 
@@ -752,7 +755,7 @@ export default function MiniAppsPage() {
 
             <button
               disabled={!reviewReason.trim() || rejectMutation.isPending}
-              onClick={() => rejectMutation.mutate({ appId: reviewTarget.id, reason: reviewReason })}
+              onClick={() => rejectMutation.mutate({ appId: reviewTarget.id, reason: reviewReason, action: reviewAction! })}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 ${
                 reviewAction === "reject" ? "bg-red-700 hover:bg-red-600" : "bg-orange-700 hover:bg-orange-600"
               }`}

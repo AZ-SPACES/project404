@@ -6,7 +6,7 @@ import {
 import { Feather } from '@react-native-vector-icons/feather';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMyMiniApps, resubmitMiniApp } from '../../../../../services/api';
-import { Spacing, Radius, Typography } from '../../../../../theme';
+import { ThemeColors, Spacing, Radius, Typography } from '../../../../../theme';
 import { NavProps, MiniAppData } from '../types';
 
 const STATUS_META: Record<MiniAppData['status'], { label: string; color: string }> = {
@@ -48,8 +48,8 @@ export default function MiniAppsListPage({ navigate, Colors }: NavProps) {
           style={[styles.newBtn, { backgroundColor: Colors.primary }]}
           onPress={() => navigate('miniapp_submit')}
         >
-          <Feather name="plus" size={16} color={Colors.black ?? '#000'} />
-          <Text style={[styles.newBtnText, { color: Colors.black ?? '#000' }]}>Submit app</Text>
+          <Feather name="plus" size={16} color={Colors.black} />
+          <Text style={[styles.newBtnText, { color: Colors.black }]}>Submit app</Text>
         </TouchableOpacity>
       </View>
 
@@ -107,7 +107,7 @@ export default function MiniAppsListPage({ navigate, Colors }: NavProps) {
   );
 }
 
-function createStyles(Colors: any) {
+function createStyles(Colors: ThemeColors) {
   return StyleSheet.create({
     content: { padding: Spacing.lg, paddingBottom: Spacing.xl * 2 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
