@@ -4,7 +4,7 @@ import {
   Animated, Dimensions, Image, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
-import { useAppTheme, Typography, Spacing, Radius } from '../../theme';
+import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -141,7 +141,7 @@ export default function ConsentSheet({
   );
 }
 
-function createStyles(Colors: ReturnType<typeof import('../../theme').useAppTheme>['colors']) {
+function createStyles(Colors: ThemeColors) {
   return StyleSheet.create({
     backdrop: {
       backgroundColor: 'rgba(0,0,0,0.45)',
