@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,4 +22,8 @@ public interface ComplaintRepository extends JpaRepository<Complaint, UUID> {
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
     long countByResolvedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByStatusAndAckDueAtBefore(Complaint.Status status, LocalDate date);
+
+    long countByStatusInAndResolveDueAtBefore(java.util.List<Complaint.Status> statuses, LocalDate date);
 }

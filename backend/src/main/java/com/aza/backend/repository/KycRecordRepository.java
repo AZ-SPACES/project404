@@ -30,4 +30,8 @@ public interface KycRecordRepository extends JpaRepository<KycRecord, UUID> {
 
     @Query("SELECT COUNT(k) FROM KycRecord k WHERE k.submittedAt >= :since")
     long countBySubmittedAtAfter(@Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(k) FROM KycRecord k WHERE k.status = :status AND k.submittedAt < :cutoff")
+    long countByStatusAndSubmittedAtBefore(@Param("status") KycRecord.KycStatus status,
+                                           @Param("cutoff") LocalDateTime cutoff);
 }

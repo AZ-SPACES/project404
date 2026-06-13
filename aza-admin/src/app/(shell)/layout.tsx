@@ -41,6 +41,11 @@ import {
   Gift,
   RefreshCw,
   CreditCard,
+  Timer,
+  UserX,
+  Wrench,
+  UsersRound,
+  Mail,
 } from "lucide-react";
 
 interface NavItem {
@@ -74,6 +79,8 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
       { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
       { href: "/campaigns", label: "Campaigns", icon: Megaphone, roles: ["ADMIN"] },
+      { href: "/waitlist", label: "Waitlist", icon: UsersRound, roles: ["ADMIN", "SUPPORT"] },
+      { href: "/closure-requests", label: "Closure Requests", icon: UserX, roles: ["ADMIN", "COMPLIANCE"] },
     ],
   },
   {
@@ -102,6 +109,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/devices", label: "Device Management", icon: ShieldCheck, roles: ["COMPLIANCE", "SUPPORT"] },
       { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["COMPLIANCE", "FINANCE"] },
       { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["COMPLIANCE", "SUPPORT"] },
+      { href: "/sla", label: "SLA Dashboard", icon: Timer, roles: ["ADMIN", "COMPLIANCE", "SUPPORT"] },
     ],
   },
   {
@@ -110,6 +118,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp, roles: ["FINANCE"] },
       { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2, roles: ["FINANCE"] },
       { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["FINANCE"] },
+      { href: "/analytics/onboarding", label: "Onboarding Funnel", icon: UsersRound, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
       { href: "/analytics", label: "Webhooks & Geo", icon: Globe, exactMatch: true, roles: ["ADMIN", "FINANCE"] },
     ],
   },
@@ -137,6 +146,8 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/notifications", label: "Notifications", icon: Bell, roles: ["ADMIN"] },
       { href: "/staff", label: "Staff & Roles", icon: Users2, roles: ["ADMIN"] },
       { href: "/settings", label: "System Settings", icon: Settings, roles: ["ADMIN"] },
+      { href: "/maintenance", label: "Maintenance Mode", icon: Wrench, roles: ["ADMIN"] },
+      { href: "/templates", label: "Email Templates", icon: Mail, roles: ["ADMIN"] },
       { href: "/audit-log", label: "Audit Log", icon: ScrollText, roles: ["COMPLIANCE"] },
     ],
   },

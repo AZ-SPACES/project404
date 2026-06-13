@@ -5,11 +5,16 @@ import com.aza.backend.dto.user.DeactivateRequest;
 import com.aza.backend.dto.user.PrivacySettingsRequest;
 import com.aza.backend.dto.user.SilentHoursRequest;
 import com.aza.backend.dto.user.UpdateProfileRequest;
+import com.aza.backend.entity.AccountClosureRequest;
 import com.aza.backend.entity.User;
+import com.aza.backend.exception.AppException;
+import com.aza.backend.repository.AccountClosureRequestRepository;
+import org.springframework.http.HttpStatus;
 import com.aza.backend.service.ContactService;
 import com.aza.backend.service.PresenceService;
 import com.aza.backend.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +33,7 @@ public class UserController {
 
     private final UserService userService;
     private final ContactService contactService;
+    private final AccountClosureRequestRepository closureRequestRepository;
     private final PresenceService presenceService;
     private final ObjectMapper objectMapper;
     private final com.aza.backend.service.SystemSettingService settingService;
@@ -278,5 +284,26 @@ public class UserController {
             @RequestParam String firstName,
             @RequestParam String lastName) {
         return ResponseEntity.ok(ApiResponse.success(userService.suggestUsernames(firstName, lastName)));
+    }
+
+    // ==================== ACCOUNT CLOSURE REQUEST ====================
+
+    @PostMapping("/me/request-closure")
+    public ResponseEntity<ApiResponse<AccountClosureRequest>> requestClosure(
+            @AuthenticationPrincipal User user,
+            @RequestBody ClosureRequest request) {
+        if (closureRequestRepository.existsByUserIdAndStatus(user.getId(), AccountClosureRequest.Status.PENDING)) {
+            throw new AppException("CLOSURE_PENDING", "You already have a pending closure request", HttpStatus.CONFLICT);
+        }
+        AccountClosureRequest req = AccountClosureRequest.builder()
+                .userId(user.getId())
+                .reason(request.getReason())
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(closureRequestRepository.save(req)));
+    }
+
+    @Data
+    static class ClosureRequest {
+        private String reason;
     }
 }

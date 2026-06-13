@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -16,4 +18,6 @@ public interface DataRequestRepository extends JpaRepository<DataRequest, UUID> 
     Page<DataRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     long countByStatus(DataRequest.Status status);
+
+    long countByStatusInAndDueDateBefore(List<DataRequest.Status> statuses, LocalDate date);
 }
