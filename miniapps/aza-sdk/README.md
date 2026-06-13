@@ -8,10 +8,18 @@ The Aza native app injects `window.aza` into your WebView automatically — you 
 
 ## Installation
 
+**From npm (public):**
 ```bash
 npm install @jumpspaces/aza-miniapp-sdk
-# or
-yarn add @jumpspaces/aza-miniapp-sdk
+```
+
+**From GitHub Packages (AZ-SPACES org members):**
+```bash
+# Add to your project's .npmrc:
+# @az-spaces:registry=https://npm.pkg.github.com/
+# //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+
+npm install @az-spaces/aza-miniapp-sdk
 ```
 
 ---
