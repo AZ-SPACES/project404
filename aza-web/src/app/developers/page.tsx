@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Terminal, Activity, ArrowRight, LogIn, UserPlus } from "lucide-react";
+import { BookOpen, Terminal, Activity, ArrowRight, LogIn, UserPlus, Layers } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Developers | Aza",
-  description: "Build on the Aza platform. Explore the REST API, read integration guides, and monitor system status.",
+  description: "Build on the Aza platform. Integrate payments, build Mini Apps, explore the REST API, and monitor system status.",
 };
 
 const sections = [
   {
+    href: "/developers/guides?doc=miniapps-intro",
+    icon: Layers,
+    title: "Mini Apps",
+    description: "Build web apps that run inside Aza. Users pay with one tap — no new account, no card details.",
+    cta: "Start building",
+  },
+  {
     href: "/developers/guides",
     icon: BookOpen,
-    title: "Guides",
+    title: "API Guides",
     description: "Step-by-step integration guides for payments, webhooks, OAuth, and more.",
     cta: "Read the docs",
   },
@@ -94,7 +101,7 @@ export default function DevelopersPage() {
       </div>
 
       {/* Section cards */}
-      <div className="max-w-4xl mx-auto w-full px-6 pb-20 grid gap-4 sm:grid-cols-3">
+      <div className="max-w-4xl mx-auto w-full px-6 pb-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {sections.map(({ href, icon: Icon, title, description, cta }) => (
           <Link
             key={href}

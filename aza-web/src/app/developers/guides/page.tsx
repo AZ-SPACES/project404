@@ -296,6 +296,18 @@ const navigationGroups = [
       { id: 'changelog',       label: 'Changelog' },
     ],
   },
+  {
+    title: 'Mini Apps',
+    items: [
+      { id: 'miniapps-intro',       label: 'What are Mini Apps?' },
+      { id: 'miniapps-sdk',         label: 'SDK Reference' },
+      { id: 'miniapps-permissions', label: 'Permissions' },
+      { id: 'miniapps-payments',    label: 'Payments' },
+      { id: 'miniapps-local-dev',   label: 'Local Development' },
+      { id: 'miniapps-submit',      label: 'Submit Your App' },
+      { id: 'miniapps-security',    label: 'Security' },
+    ],
+  },
 ];
 
 // ── Doc Articles ──────────────────────────────────────────────────────────────
@@ -2384,6 +2396,695 @@ System.out.println("API version: " + version);
 
 int major = Integer.parseInt(version.split("\\.")[0]);
 if (major < 1) throw new RuntimeException("Unsupported API version: " + version);`,
+    },
+  },
+
+  // ── Mini Apps ─────────────────────────────────────────────────────────────────
+
+  'miniapps-intro': {
+    id: 'miniapps-intro',
+    category: 'Mini Apps',
+    title: 'What are Mini Apps?',
+    subtitle: 'Build web apps that run inside Aza',
+    lastUpdated: 'June 2026',
+    description: 'Mini apps are web apps that run inside the Aza mobile app. Your users are already authenticated and already have a wallet — they can pay you in one tap without creating a new account or entering card details.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">How it works</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`Your web app (any HTTPS URL)
+       │
+       │  Loaded in Aza WebView
+       ▼
+  window.aza injected before your page loads
+       │
+       ├── window.aza.getUser()        → name, username, avatar
+       ├── window.aza.getBalance()     → live GHS wallet balance
+       └── window.aza.requestPayment() → native confirmation dialog`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">For developers</h3>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm">
+          <li>Build a normal web app with any framework (React, Vue, vanilla JS)</li>
+          <li>Deploy it to any HTTPS host (Vercel, Netlify, your own server)</li>
+          <li>Submit the URL via the <strong>Aza Developer dashboard</strong> inside the app</li>
+          <li>Once approved, your app is live to all Aza users in the Hub</li>
+          <li>Payments go directly to your Aza wallet — no separate merchant setup needed</li>
+        </ul>
+
+        <h3 className="text-base font-bold text-gray-900">Install the SDK</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700">{`npm install @az-spaces/aza-miniapp-sdk`}</pre>
+        <p className="text-sm">The SDK is types + helpers only — no runtime code is shipped. <code>window.aza</code> is always the bridge injected by Aza.</p>
+
+        <h3 className="text-base font-bold text-gray-900">App lifecycle</h3>
+        <Table
+          headers={['Status', 'Description']}
+          rows={[
+            ['DRAFT',          'Saved but not submitted. Edit freely.'],
+            ['PENDING_REVIEW', 'Locked for editing. Review takes 2–5 business days.'],
+            ['ACTIVE',         'Live in the Aza Hub. All users can find and launch it.'],
+            ['REJECTED',       'Rejection reason shown in Developer dashboard. Fix and resubmit.'],
+            ['SUSPENDED',      'Temporarily removed by Aza admin. Contact support.'],
+          ]}
+        />
+
+        <Note>
+          You submit your app from inside the <strong>Aza mobile app</strong> — Hub → Developer → Mini Apps tab → New App. You need an Aza account to submit.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Mini apps don't use the REST API directly.
+# The SDK runs client-side in the Aza WebView.
+# See the JS tab for the quick start.`,
+      js: `// Install: npm install @az-spaces/aza-miniapp-sdk
+
+import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
+
+// Resolves once window.aza is ready (before your page loads)
+const aza = await waitForAza();
+
+const user = await aza.getUser();
+console.log(\`Hello, \${user.firstName}!\`);
+
+// Request a payment
+const result = await aza.requestPayment({
+  amount: 5.00,
+  recipientIdentifier: 'your_aza_username',
+  note: 'Premium access',
+  idempotencyKey: crypto.randomUUID(),
+});
+
+if (result.status === 'COMPLETED') {
+  unlockFeature();
+}`,
+      python: `# Mini apps are web apps — the SDK is JavaScript only.
+# Your backend can verify payments via the Aza API:
+
+import requests
+
+# Verify a transaction after receiving the transactionId from the client
+tx_id = 'tx_abc123'  # received from aza.requestPayment() result
+resp = requests.get(
+    f'https://api.aza.systems/api/v1/merchant/sessions/{tx_id}',
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+)
+data = resp.json()['data']
+if data['status'] == 'COMPLETED':
+    grant_access(data['reference'])`,
+      java: `// Mini apps are web apps — the SDK is JavaScript only.
+// Your backend can verify payments via the Aza REST API:
+
+import java.net.URI;
+import java.net.http.*;
+
+// Verify a transactionId returned by aza.requestPayment()
+String txId = "tx_abc123";
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/sessions/" + txId))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+
+System.out.println(res.body());
+// {"status":"COMPLETED","amount":5.00,...}`,
+    },
+  },
+
+  'miniapps-sdk': {
+    id: 'miniapps-sdk',
+    category: 'Mini Apps',
+    title: 'SDK Reference',
+    subtitle: 'Full API reference for window.aza',
+    lastUpdated: 'June 2026',
+    description: 'The @az-spaces/aza-miniapp-sdk package provides TypeScript types and helper functions. The actual runtime is the window.aza bridge injected by Aza — you ship no runtime code.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Entry points</h3>
+        <Table
+          headers={['Function', 'Returns', 'Description']}
+          rows={[
+            ['waitForAza(timeoutMs?)', 'Promise<AzaSDK>', 'Waits for the bridge. Resolves immediately if already ready.'],
+            ['getAza()', 'AzaSDK', 'Synchronous. Throws if bridge not present yet.'],
+            ['isInsideAza()', 'boolean', 'True when running inside the Aza WebView.'],
+            ['useAza(timeoutMs?)', 'AzaHookState', 'React hook. Returns loading / ready / unavailable.'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">AzaSDK methods</h3>
+        <Table
+          headers={['Method', 'Permission required', 'Returns']}
+          rows={[
+            ['getUser()', 'USER_PROFILE (implicit)', 'Promise<AzaUser>'],
+            ['getBalance()', 'READ_BALANCE', 'Promise<AzaBalance>'],
+            ['requestPayment(params)', 'MAKE_PAYMENTS', 'Promise<AzaPaymentResult>'],
+            ['close()', '—', 'Promise<void>'],
+            ['share(options)', '—', 'Promise<void>'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">AzaUser</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`interface AzaUser {
+  username: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  phone?: string;   // only if USER_PHONE granted
+  email?: string;   // only if USER_EMAIL granted
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">AzaPaymentRequest</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`interface AzaPaymentRequest {
+  amount: number;               // GHS
+  recipientIdentifier: string;  // your Aza username/phone/email
+  note?: string;                // max 200 chars, shown on receipt
+  idempotencyKey: string;       // unique per payment attempt
+}`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">useAza React hook</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`type AzaHookState =
+  | { status: 'loading' }
+  | { status: 'ready'; aza: AzaSDK }
+  | { status: 'unavailable'; error: AzaNotAvailableError };`}</pre>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# The SDK is client-side JavaScript only.
+# See the JS/TS tab for usage.`,
+      js: `import { waitForAza, getAza, isInsideAza, useAza } from '@az-spaces/aza-miniapp-sdk';
+
+// ── waitForAza ────────────────────────────────────────
+const aza = await waitForAza();          // default 5 s timeout
+const aza2 = await waitForAza(10_000);  // 10 s timeout
+
+// ── isInsideAza ───────────────────────────────────────
+if (!isInsideAza()) {
+  document.body.innerHTML = '<p>Open in Aza</p>';
+}
+
+// ── getAza (sync) ─────────────────────────────────────
+button.addEventListener('click', () => {
+  const aza = getAza(); // safe after bridge is ready
+  aza.close();
+});
+
+// ── useAza (React) ────────────────────────────────────
+import { useAza } from '@az-spaces/aza-miniapp-sdk';
+
+function App() {
+  const { status, aza } = useAza();
+  if (status === 'loading')     return <Spinner />;
+  if (status === 'unavailable') return <p>Open in Aza</p>;
+  return <Dashboard aza={aza} />;
+}`,
+      python: `# SDK is JavaScript only. No Python equivalent.`,
+      java: `// SDK is JavaScript only. No Java equivalent.`,
+    },
+  },
+
+  'miniapps-permissions': {
+    id: 'miniapps-permissions',
+    category: 'Mini Apps',
+    title: 'Permissions',
+    subtitle: 'Declare what your app needs — users control the rest',
+    lastUpdated: 'June 2026',
+    description: 'Permissions are declared at submission time. Users see them on a consent sheet on first launch. Undeclared permissions throw at runtime; unused declared permissions are grounds for rejection.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Permission reference</h3>
+        <Table
+          headers={['Key', 'What it grants', 'Notes']}
+          rows={[
+            ['USER_PROFILE',      'username, firstName, lastName, avatarUrl', 'Implicit — always included'],
+            ['USER_PHONE',        'phone field on AzaUser',                   'Request only if you contact or verify users'],
+            ['USER_EMAIL',        'email field on AzaUser',                   'Request only if you send receipts or emails'],
+            ['MAKE_PAYMENTS',     'aza.requestPayment()',                      'Required for any paid features'],
+            ['READ_BALANCE',      'aza.getBalance()',                          'Request only if you show a balance indicator'],
+            ['READ_TRANSACTIONS', 'Transaction history',                       'Coming soon'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Principle of least privilege</h3>
+        <p className="text-sm">Only declare what you actively use. The review team rejects apps with permissions that have no matching usage in the code.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Handling denied consent</h3>
+        <p className="text-sm">Users can deny permissions on the consent sheet. Always handle the error case gracefully — don&apos;t assume all permissions were granted.</p>
+
+        <Warn>
+          Adding a new permission after your app is live requires a re-submission. The app goes back to PENDING_REVIEW and existing users see the consent sheet again with the new permissions listed.
+        </Warn>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Permissions are declared in the Aza Developer dashboard.
+# No API call needed — they're set at submission time.`,
+      js: `import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
+
+const aza = await waitForAza();
+
+// Always handle the case where a permission was denied
+try {
+  const user = await aza.getUser();
+
+  // phone is undefined if USER_PHONE was not granted
+  if (!user.phone) {
+    showManualPhoneInput();
+  }
+} catch (err) {
+  // USER_PROFILE denied (very rare) or bridge error
+  showErrorScreen(err.message);
+}
+
+// For payments — handle both cancel and permission-denied
+try {
+  await aza.requestPayment({ amount: 5.00, ... });
+} catch (err) {
+  if (err.message === 'User cancelled payment') {
+    // normal — user tapped Cancel
+  } else if (err.message.includes('permission')) {
+    showUI('Payment access was denied. Please reinstall the app and allow payments.');
+  } else {
+    showUI('Payment failed: ' + err.message);
+  }
+}`,
+      python: `# Permissions are JavaScript/SDK-level only.
+# No server-side configuration needed.`,
+      java: `// Permissions are JavaScript/SDK-level only.
+// No server-side configuration needed.`,
+    },
+  },
+
+  'miniapps-payments': {
+    id: 'miniapps-payments',
+    category: 'Mini Apps',
+    title: 'Payments',
+    subtitle: 'Accept payments from Aza users with one tap',
+    lastUpdated: 'June 2026',
+    description: 'requestPayment() shows a native confirmation dialog. No money moves until the user taps Confirm. The Promise resolves only after confirmation — rejection means cancel or error.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Payment flow</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`1. Your app calls aza.requestPayment({ amount, recipientIdentifier, ... })
+2. Aza shows native confirmation dialog (amount, recipient, note)
+3. User taps Confirm → payment processes → Promise resolves
+   User taps Cancel  → Promise rejects with "User cancelled payment"`}</pre>
+
+        <h3 className="text-base font-bold text-gray-900">Idempotency</h3>
+        <p className="text-sm">Generate a fresh <code>idempotencyKey</code> (UUID) for every new payment intent. Reuse the same key on retries — Aza returns the original result without charging again.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Payment result statuses</h3>
+        <Table
+          headers={['Status', 'Meaning']}
+          rows={[
+            ['COMPLETED', 'Money moved successfully'],
+            ['PENDING',   'Processing — poll your server or wait for webhook'],
+            ['FAILED',    'Payment attempted but failed (system error)'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Server-side verification</h3>
+        <p className="text-sm">For anything of value, verify the <code>transactionId</code> on your server before granting access. A client can fake a success response — your server should not.</p>
+
+        <Note>
+          Payments go to the <code>recipientIdentifier</code> Aza account — usually your own. Requires <strong>MAKE_PAYMENTS</strong> permission to be declared and consented.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Verify a payment on your backend after the client reports success
+curl -X GET https://api.aza.systems/api/v1/merchant/sessions/TX_ID \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
+
+const aza = await waitForAza();
+
+async function handlePurchase() {
+  // Generate a key once per payment intent
+  const idempotencyKey = crypto.randomUUID();
+
+  try {
+    const result = await aza.requestPayment({
+      amount: 5.00,
+      recipientIdentifier: 'your_aza_username',
+      note: 'Premium access – June 2026',
+      idempotencyKey,
+    });
+
+    if (result.status === 'COMPLETED') {
+      // Verify on your server before unlocking
+      await verifyOnServer(result.transactionId);
+      unlockPremium();
+    }
+  } catch (err) {
+    if (err.message === 'User cancelled payment') return;
+    if (err.message.toLowerCase().includes('insufficient')) {
+      alert('Not enough balance. Please top up your Aza wallet.');
+      return;
+    }
+    alert('Payment failed: ' + err.message);
+  }
+}
+
+// Retry with same key (safe — won't double-charge)
+async function retryPayment(key: string) {
+  return aza.requestPayment({
+    amount: 5.00,
+    recipientIdentifier: 'your_aza_username',
+    note: 'Premium access',
+    idempotencyKey: key, // same key as original attempt
+  });
+}`,
+      python: `import requests
+
+# Verify transactionId from the client on your server
+def verify_mini_app_payment(transaction_id: str) -> bool:
+    resp = requests.get(
+        f'https://api.aza.systems/api/v1/merchant/sessions/{transaction_id}',
+        headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    )
+    data = resp.json().get('data', {})
+    return data.get('status') == 'COMPLETED'`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// Verify transactionId from the mini app client on your server
+public boolean verifyMiniAppPayment(String transactionId) throws Exception {
+    var client = HttpClient.newHttpClient();
+    var res = client.send(
+        HttpRequest.newBuilder()
+            .uri(URI.create(
+                "https://api.aza.systems/api/v1/merchant/sessions/" + transactionId))
+            .header("X-Api-Key", "sk_live_YOUR_KEY")
+            .GET().build(),
+        HttpResponse.BodyHandlers.ofString());
+
+    // Parse JSON and check status == "COMPLETED"
+    return res.body().contains("\"status\":\"COMPLETED\"");
+}`,
+    },
+  },
+
+  'miniapps-local-dev': {
+    id: 'miniapps-local-dev',
+    category: 'Mini Apps',
+    title: 'Local Development',
+    subtitle: 'Develop without a real device using a mock bridge',
+    lastUpdated: 'June 2026',
+    description: 'window.aza is only injected inside the Aza WebView. In a regular browser it will be undefined. Install a mock bridge during development so all SDK calls work normally on localhost.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Mock bridge pattern</h3>
+        <p className="text-sm">Create a <code>src/aza-mock.ts</code> file and import it before any component code. Vite/webpack strip it from production builds automatically because <code>import.meta.env.DEV</code> is statically <code>false</code>.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Testing on a real device</h3>
+        <p className="text-sm">The Aza WebView only loads HTTPS URLs. Use <strong>ngrok</strong> to tunnel your local dev server:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`npm run dev          # starts at http://localhost:5173
+ngrok http 5173      # creates https://xxxx.ngrok.io`}</pre>
+        <p className="text-sm">Use the ngrok HTTPS URL when submitting a draft app. The real Aza bridge is injected, so no mock is needed.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Simulating edge cases</h3>
+        <Table
+          headers={['Scenario', 'Mock change']}
+          rows={[
+            ['No balance',            'getBalance: async () => ({ balance: 0 })'],
+            ['Payment cancelled',     'requestPayment: async () => { throw new Error(\'User cancelled payment\') }'],
+            ['Insufficient funds',    'requestPayment: async () => { throw new Error(\'Insufficient funds\') }'],
+            ['Bridge timeout',        'Remove the mock entirely — waitForAza() rejects after 5 s'],
+            ['Phone not granted',     'Omit phone field from getUser() return value'],
+          ]}
+        />
+
+        <Note>
+          Never ship the mock to production. The <code>import.meta.env.DEV</code> guard ensures it is tree-shaken out of your production build automatically.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# No curl needed — this is all client-side JavaScript.`,
+      js: `// src/aza-mock.ts — import FIRST in main.tsx/main.ts
+import type { AzaSDK } from '@az-spaces/aza-miniapp-sdk';
+
+if (import.meta.env.DEV && !window.aza) {
+  const mock: AzaSDK = {
+    version: 'mock',
+
+    getUser: async () => ({
+      username: 'testuser',
+      firstName: 'Kwame',
+      lastName: 'Asante',
+      avatarUrl: null,
+      phone: '+233501234567',
+      email: 'kwame@example.com',
+    }),
+
+    getBalance: async () => ({ balance: 100.00 }),
+
+    requestPayment: async (p) => {
+      await new Promise(r => setTimeout(r, 600)); // simulate latency
+      return {
+        transactionId: \`mock-\${Date.now()}\`,
+        status: 'COMPLETED',
+        amount: p.amount,
+        recipientUsername: p.recipientIdentifier,
+        note: p.note ?? null,
+      };
+    },
+
+    close: async () => console.log('[mock] close()'),
+    share: async (o) => console.log('[mock] share()', o),
+  };
+
+  (window as any).aza = mock;
+  console.info('[aza-mock] Mock bridge installed.');
+}
+
+// src/main.tsx
+import './aza-mock'; // ← must be first import
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(<App />);`,
+      python: `# Local development uses a JavaScript mock only.
+# No Python setup required.`,
+      java: `// Local development uses a JavaScript mock only.
+// No Java setup required.`,
+    },
+  },
+
+  'miniapps-submit': {
+    id: 'miniapps-submit',
+    category: 'Mini Apps',
+    title: 'Submit Your App',
+    subtitle: 'From deployed URL to live in the Aza Hub',
+    lastUpdated: 'June 2026',
+    description: 'Submit your mini app from the Aza mobile app. Once approved it is live to all Aza users. Review takes 2–5 business days.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Before you submit — checklist</h3>
+        <ul className="list-disc pl-5 space-y-1 text-sm">
+          <li>App is live at an HTTPS URL (not localhost, not http://)</li>
+          <li>Loads correctly at 375 × 812 px (iPhone 14 viewport)</li>
+          <li>No <code>window.aza</code> mock present in the production build</li>
+          <li>Only declared permissions are called in code</li>
+          <li>Payments use unique <code>idempotencyKey</code> per attempt</li>
+          <li>Payment errors (cancel, insufficient funds) are handled gracefully</li>
+          <li>No mixed-content warnings (all assets use HTTPS)</li>
+        </ul>
+
+        <h3 className="text-base font-bold text-gray-900">How to submit</h3>
+        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
+          <li>Open Aza → Hub → Developer → <strong>Mini Apps tab</strong></li>
+          <li>Tap <strong>New App</strong></li>
+          <li>Fill in the form (App ID, name, description, URL, permissions, category)</li>
+          <li>Tap <strong>Submit for Review</strong></li>
+        </ol>
+
+        <h3 className="text-base font-bold text-gray-900">Submission fields</h3>
+        <Table
+          headers={['Field', 'Required', 'Notes']}
+          rows={[
+            ['App ID',       'Yes', 'Lowercase slug. Permanent — choose carefully.'],
+            ['Name',         'Yes', 'Max 60 chars. No "Aza" unless partnered.'],
+            ['Description',  'Yes', 'What the app does. Max 500 chars. Be specific.'],
+            ['URL',          'Yes', 'Live HTTPS URL. Must load your app directly.'],
+            ['Permissions',  'Yes', 'Only tick what you actively use in code.'],
+            ['Category',     'Yes', 'payments, shopping, services, education, etc.'],
+            ['Icon URL',     'No',  'Square PNG/JPG, min 256×256 px, HTTPS.'],
+            ['Support URL',  'No',  'Where users can get help.'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Common rejection reasons</h3>
+        <Table
+          headers={['Reason', 'Fix']}
+          rows={[
+            ['APP_URL_NOT_REACHABLE',  'Check hosting, SSL cert, no login required'],
+            ['UNDECLARED_PERMISSION',  'Add the missing permission and resubmit'],
+            ['UNUSED_PERMISSION',      'Remove the permission and all SDK calls for it'],
+            ['MIXED_CONTENT',          'Fix all http:// asset URLs to use https://'],
+            ['BROKEN_LAYOUT',          'Test on a real phone at 375px width'],
+          ]}
+        />
+
+        <Note>
+          <strong>URL-only deploys</strong> don&apos;t require re-review. Push new code to the same URL any time. Only re-submit when changing metadata (description, permissions, URL, category).
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Submission is done via the Aza mobile app, not the API.
+# After approval, verify your app is live:
+curl -X GET https://api.aza.systems/api/v1/miniapps \\
+  | grep your-app-id`,
+      js: `// Verify your app is live after approval
+const res = await fetch('https://api.aza.systems/api/v1/miniapps');
+const apps = await res.json();
+
+const mine = apps.find(a => a.id === 'your-app-id');
+console.log(mine?.status); // 'ACTIVE'`,
+      python: `import requests
+
+# Check if your app is live after approval
+apps = requests.get(
+    'https://api.aza.systems/api/v1/miniapps'
+).json()
+
+mine = next((a for a in apps if a['id'] == 'your-app-id'), None)
+print(mine['status'] if mine else 'not found')`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+// Check if your app is live after approval
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/miniapps"))
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+
+// Parse JSON and find your app by id
+System.out.println(res.body());`,
+    },
+  },
+
+  'miniapps-security': {
+    id: 'miniapps-security',
+    category: 'Mini Apps',
+    title: 'Security',
+    subtitle: 'Requirements and best practices for mini apps',
+    lastUpdated: 'June 2026',
+    description: 'Mini apps run in a sandboxed WebView. These rules are enforced at review time and at runtime. Violations result in rejection or suspension.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">HTTPS is mandatory</h3>
+        <p className="text-sm">All mini app URLs must use <code>https://</code>. All resources loaded by your app (scripts, images, fonts, API calls) must also be HTTPS. A single mixed-content asset will trigger a browser warning and rejection.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Recommended CSP</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`Content-Security-Policy:
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: https:;
+  connect-src 'self' https://api.aza.systems;
+  frame-ancestors 'none';`}</pre>
+        <p className="text-sm"><strong>Do not use <code>unsafe-eval</code></strong> — it enables code injection and is grounds for rejection.</p>
+
+        <h3 className="text-base font-bold text-gray-900">What NOT to do</h3>
+        <Table
+          headers={['Rule', 'Why']}
+          rows={[
+            ['Never overwrite window.aza', 'Grounds for suspension. The bridge is injected by Aza — don\'t proxy or replace it.'],
+            ['Never fake a payment UI', 'A UI that looks like the native confirmation but isn\'t is a permanent ban.'],
+            ['Never log raw user objects to third-party analytics', 'User data stays with you and your users.'],
+            ['Never use unsafe-eval', 'Enables XSS. Rejected at review.'],
+            ['Never load unverified third-party scripts', 'Use SRI hashes if loading from a CDN.'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Rate limits</h3>
+        <Table
+          headers={['Method', 'Limit']}
+          rows={[
+            ['getUser()',        '30 calls/minute'],
+            ['getBalance()',     '10 calls/minute'],
+            ['requestPayment()', '5 calls/minute'],
+          ]}
+        />
+        <p className="text-sm">Cache results in state rather than calling on every render.</p>
+
+        <Warn>
+          If you discover a security vulnerability in the Aza mini app platform, report it to <strong>security@aza.systems</strong> before disclosing publicly.
+        </Warn>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Security is enforced client-side and at review time.
+# No API calls needed for security setup.`,
+      js: `// Cache user data — don't call getUser() on every render
+import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
+import { useState, useEffect } from 'react';
+
+function useAzaUser() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    waitForAza()
+      .then(aza => aza.getUser())
+      .then(setUser)
+      .catch(console.error);
+  }, []); // empty deps — run once
+
+  return user;
+}
+
+// ── Never do this ─────────────────────────────────────
+// window.aza = myProxy;         // ❌ grounds for suspension
+// eval(untrustedCode);          // ❌ rejected at review
+// logToAnalytics(user);         // ❌ don't send raw PII to third parties
+
+// ── SRI for CDN scripts ───────────────────────────────
+// In your HTML, pin third-party scripts:
+// <script src="https://cdn.example.com/lib.js"
+//   integrity="sha384-HASH"
+//   crossorigin="anonymous"></script>`,
+      python: `# Security requirements apply to the web app (JS/HTML/CSS).
+# Your server should also verify payments server-side:
+
+import hmac, hashlib
+
+def verify_webhook(raw_body: bytes, header: str, secret: str) -> bool:
+    parts = dict(p.split('=', 1) for p in header.split(','))
+    timestamp, v1 = parts.get('t'), parts.get('v1')
+    if not timestamp or not v1:
+        return False
+    expected = hmac.new(
+        secret.encode(), f'{timestamp}.'.encode() + raw_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(v1, expected)`,
+      java: `// Security requirements apply to the web app (JS/HTML/CSS).
+// Your server should verify payments and webhook signatures:
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
+public static boolean verifyWebhook(
+        String rawBody, String signatureHeader, String secret) throws Exception {
+    Map<String, String> parts = new HashMap<>();
+    for (String p : signatureHeader.split(",")) {
+        String[] kv = p.split("=", 2);
+        parts.put(kv[0], kv[1]);
+    }
+    String timestamp = parts.get("t");
+    String v1        = parts.get("v1");
+    if (timestamp == null || v1 == null) return false;
+
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(new SecretKeySpec(secret.getBytes(), "HmacSHA256"));
+    byte[] sig = mac.doFinal((timestamp + "." + rawBody).getBytes());
+    String expected = HexFormat.of().formatHex(sig);
+    return MessageDigest.isEqual(v1.getBytes(), expected.getBytes());
+}`,
     },
   },
 };
