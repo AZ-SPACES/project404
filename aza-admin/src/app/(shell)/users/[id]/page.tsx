@@ -12,14 +12,18 @@ import {
   getUserTransactions,
   getUserSessions,
   getUserNotifications,
+  getUserRiskHistory,
   revokeUserSession,
   updateUserLimits,
   blockDevice,
+  downloadUserStatementPdf,
+  downloadUserStatementCsv,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
   type UserSession,
   type UserNotification,
+  type FlaggedTx,
   type Page,
 } from "@/lib/admin-api";
 import Image from "next/image";
@@ -39,6 +43,9 @@ import {
   Ban,
   ChevronLeft,
   ChevronRight,
+  FileText,
+  Download,
+  AlertTriangle,
 } from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
@@ -170,6 +177,33 @@ export default function UserDetailPage() {
     enabled: !!userId,
     retry: false,
   });
+
+  const [riskPage, setRiskPage] = useState(0);
+  const { data: riskHistory } = useQuery<Page<FlaggedTx>>({
+    queryKey: ["userRiskHistory", userId, riskPage],
+    queryFn: () => getUserRiskHistory(userId, riskPage, 10),
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [stmtFrom, setStmtFrom] = useState(threeMonthsAgo);
+  const [stmtTo, setStmtTo] = useState(today);
+  const [stmtBusy, setStmtBusy] = useState<"pdf" | "csv" | null>(null);
+
+  async function handleStatementDownload(format: "pdf" | "csv") {
+    setStmtBusy(format);
+    try {
+      if (format === "pdf") {
+        await downloadUserStatementPdf(userId, stmtFrom, stmtTo);
+      } else {
+        await downloadUserStatementCsv(userId, stmtFrom, stmtTo);
+      }
+    } finally {
+      setStmtBusy(null);
+    }
+  }
 
   const [revokeTarget, setRevokeTarget] = useState<UserSession | null>(null);
   const revokeMutation = useMutation({
@@ -584,6 +618,84 @@ export default function UserDetailPage() {
           {limitsMutation.isPending && <Loader2 size={14} className="animate-spin" />}
           Save Limits
         </button>
+      </div>
+
+      {/* Statement Generator */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <FileText size={14} className="text-foreground/30" />
+          <p className="text-foreground/30 text-xs uppercase tracking-wider">Generate Statement</p>
+        </div>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="text-xs text-foreground/40 block mb-1">From</label>
+            <input type="date" value={stmtFrom} onChange={e => setStmtFrom(e.target.value)}
+              className="bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none" />
+          </div>
+          <div>
+            <label className="text-xs text-foreground/40 block mb-1">To</label>
+            <input type="date" value={stmtTo} onChange={e => setStmtTo(e.target.value)}
+              className="bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none" />
+          </div>
+          <button onClick={() => handleStatementDownload("pdf")} disabled={!!stmtBusy}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#B7EE7A]/10 text-[#B7EE7A] border border-[#B7EE7A]/20 text-sm font-medium hover:bg-[#B7EE7A]/20 disabled:opacity-50 transition-colors">
+            {stmtBusy === "pdf" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            PDF
+          </button>
+          <button onClick={() => handleStatementDownload("csv")} disabled={!!stmtBusy}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/30 border border-border text-foreground/70 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+            {stmtBusy === "csv" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Risk History */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle size={14} className="text-foreground/30" />
+          <p className="text-foreground/30 text-xs uppercase tracking-wider">Risk History</p>
+        </div>
+        {!riskHistory || riskHistory.content.length === 0 ? (
+          <p className="text-foreground/40 text-sm py-2 text-center">No flagged transactions for this user.</p>
+        ) : (
+          <div className="space-y-1">
+            {riskHistory.content.map((f) => (
+              <div key={f.id} className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+                <div className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg ${
+                  f.riskScore >= 80 ? "bg-red-500/15 text-red-400" :
+                  f.riskScore >= 50 ? "bg-amber-500/15 text-amber-400" :
+                  "bg-yellow-500/10 text-yellow-400"
+                }`}>{f.riskScore}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground text-sm font-medium">GHS {Number(f.amount).toFixed(2)}</p>
+                  <p className="text-foreground/50 text-xs mt-0.5 truncate">{f.flagReason}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    f.status === "CLEARED" ? "bg-emerald-500/10 text-emerald-400" :
+                    f.status === "REPORTED" ? "bg-red-500/10 text-red-400" :
+                    "bg-amber-500/10 text-amber-400"
+                  }`}>{f.status.replace("_", " ")}</span>
+                  <span className="text-[10px] text-foreground/25">{new Date(f.flaggedAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+            {riskHistory.totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <button onClick={() => setRiskPage(p => p - 1)} disabled={riskPage === 0}
+                  className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors">
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="text-xs text-foreground/40">{riskPage + 1} / {riskHistory.totalPages}</span>
+                <button onClick={() => setRiskPage(p => p + 1)} disabled={riskPage >= riskHistory.totalPages - 1}
+                  className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors">
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-5">

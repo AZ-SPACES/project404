@@ -13,6 +13,7 @@ import java.util.UUID;
 @Repository
 public interface FlaggedTransactionRepository extends JpaRepository<FlaggedTransaction, UUID> {
     Page<FlaggedTransaction> findAllByOrderByFlaggedAtDesc(Pageable pageable);
+    Page<FlaggedTransaction> findAllByUserIdOrderByFlaggedAtDesc(UUID userId, Pageable pageable);
     Page<FlaggedTransaction> findAllByStatusOrderByFlaggedAtDesc(FlaggedTransaction.FlagStatus status, Pageable pageable);
     long countByStatus(FlaggedTransaction.FlagStatus status);
     long countByFlaggedAtAfter(LocalDateTime since);
