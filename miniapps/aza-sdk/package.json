@@ -1,5 +1,5 @@
 {
-  "name": "@aza/miniapp-sdk",
+  "name": "@jumpspaces/aza-miniapp-sdk",
   "version": "1.0.0",
   "description": "SDK for building Aza Mini Apps. Provides TypeScript types and bridge helpers for window.aza.",
   "main": "dist/index.js",
@@ -7,9 +7,9 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "files": ["dist"],

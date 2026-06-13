@@ -1,4 +1,4 @@
-# @aza/miniapp-sdk
+# @jumpspaces/aza-miniapp-sdk
 
 TypeScript SDK for building **Aza Mini Apps**.
 
@@ -9,9 +9,9 @@ The Aza native app injects `window.aza` into your WebView automatically — you 
 ## Installation
 
 ```bash
-npm install @aza/miniapp-sdk
+npm install @jumpspaces/aza-miniapp-sdk
 # or
-yarn add @aza/miniapp-sdk
+yarn add @jumpspaces/aza-miniapp-sdk
 ```
 
 ---
@@ -19,7 +19,7 @@ yarn add @aza/miniapp-sdk
 ## Quick start
 
 ```ts
-import { waitForAza } from '@aza/miniapp-sdk';
+import { waitForAza } from '@jumpspaces/aza-miniapp-sdk';
 
 const aza = await waitForAza();
 const user = await aza.getUser();
@@ -60,7 +60,7 @@ if (isInsideAza()) {
 React hook version.
 
 ```tsx
-import { useAza } from '@aza/miniapp-sdk';
+import { useAza } from '@jumpspaces/aza-miniapp-sdk';
 
 function App() {
   const { status, aza } = useAza();
