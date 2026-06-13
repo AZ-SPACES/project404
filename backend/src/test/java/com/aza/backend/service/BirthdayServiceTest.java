@@ -4,44 +4,35 @@ import com.aza.backend.entity.User;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.EmailService;
 import com.aza.backend.util.SmsService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class BirthdayServiceTest {
 
-    private BirthdayService birthdayService;
+    @Autowired BirthdayService birthdayService;
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private EmailService emailService;
-
-    @Mock
-    private SmsService smsService;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        birthdayService = new BirthdayService(userRepository, emailService, smsService);
-    }
+    @MockitoBean UserRepository userRepository;
+    @MockitoBean EmailService emailService;
+    @MockitoBean SmsService smsService;
+    @MockitoBean StringRedisTemplate stringRedisTemplate;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
     @Test
     void testProcessBirthdays_SendsEmailAndSms() {
-        // Arrange
         LocalDate today = LocalDate.now();
-        int month = today.getMonthValue();
-        int day = today.getDayOfMonth();
-
         User user = new User();
         user.setId(UUID.randomUUID());
         user.setFirstName("Alice");
@@ -50,32 +41,25 @@ class BirthdayServiceTest {
         user.setDateOfBirth(today.minusYears(25));
         user.setStatus(User.AccountStatus.ACTIVE);
 
-        List<User> users = new ArrayList<>();
-        users.add(user);
+        when(userRepository.findActiveUsersByBirthdayMonthAndDay(
+                today.getMonthValue(), today.getDayOfMonth()))
+                .thenReturn(List.of(user));
 
-        when(userRepository.findActiveUsersByBirthdayMonthAndDay(month, day)).thenReturn(users);
-
-        // Act
         birthdayService.processBirthdays();
 
-        // Assert
-        verify(emailService, times(1)).sendBirthdayEmail("alice@example.com", "Alice");
-        verify(smsService, times(1)).sendBirthdaySms("+2331234567", "Alice");
+        verify(emailService).sendBirthdayEmail("alice@example.com", "Alice");
+        verify(smsService).sendBirthdaySms("+2331234567", "Alice");
     }
 
     @Test
     void testProcessBirthdays_NoBirthdaysToday() {
-        // Arrange
         LocalDate today = LocalDate.now();
-        int month = today.getMonthValue();
-        int day = today.getDayOfMonth();
+        when(userRepository.findActiveUsersByBirthdayMonthAndDay(
+                today.getMonthValue(), today.getDayOfMonth()))
+                .thenReturn(List.of());
 
-        when(userRepository.findActiveUsersByBirthdayMonthAndDay(month, day)).thenReturn(new ArrayList<>());
-
-        // Act
         birthdayService.processBirthdays();
 
-        // Assert
         verify(emailService, never()).sendBirthdayEmail(anyString(), anyString());
         verify(smsService, never()).sendBirthdaySms(anyString(), anyString());
     }

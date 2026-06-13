@@ -7,10 +7,13 @@ import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.*;
 import com.aza.backend.util.CloudinaryService;
 import com.aza.backend.util.EmailService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -20,45 +23,37 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class MerchantServiceTest {
 
-    private MerchantService merchantService;
+    @Autowired MerchantService merchantService;
 
-    @Mock private MerchantRepository merchantRepository;
-    @Mock private KybRecordRepository kybRecordRepository;
-    @Mock private KybDocumentRepository kybDocumentRepository;
-    @Mock private MerchantApiKeyRepository apiKeyRepository;
-    @Mock private MerchantApiLogRepository apiLogRepository;
-    @Mock private WebhookEndpointRepository webhookRepository;
-    @Mock private WebhookDeliveryRepository webhookDeliveryRepository;
-    @Mock private MerchantPayoutRepository payoutRepository;
-    @Mock private UserService userService;
-    @Mock private WalletRepository walletRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private CloudinaryService cloudinaryService;
-    @Mock private NotificationService notificationService;
-    @Mock private EmailService emailService;
-    @Mock private MerchantNotificationPreferenceRepository notificationPrefRepository;
-    @Mock private CheckoutSessionRepository checkoutSessionRepository;
-    @Mock private MerchantAuditLogRepository auditLogRepository;
-    @Mock private DisputeRepository disputeRepository;
-    @Mock private MerchantInvoiceRepository invoiceRepository;
-    @Mock private CheckoutService checkoutService;
-    @Mock private MerchantSettlementService merchantSettlementService;
+    @MockitoBean MerchantRepository merchantRepository;
+    @MockitoBean KybRecordRepository kybRecordRepository;
+    @MockitoBean KybDocumentRepository kybDocumentRepository;
+    @MockitoBean MerchantApiKeyRepository apiKeyRepository;
+    @MockitoBean MerchantApiLogRepository apiLogRepository;
+    @MockitoBean WebhookEndpointRepository webhookRepository;
+    @MockitoBean WebhookDeliveryRepository webhookDeliveryRepository;
+    @MockitoBean MerchantPayoutRepository payoutRepository;
+    @MockitoBean UserService userService;
+    @MockitoBean WalletRepository walletRepository;
+    @MockitoBean UserRepository userRepository;
+    @MockitoBean CloudinaryService cloudinaryService;
+    @MockitoBean NotificationService notificationService;
+    @MockitoBean EmailService emailService;
+    @MockitoBean MerchantNotificationPreferenceRepository notificationPrefRepository;
+    @MockitoBean CheckoutSessionRepository checkoutSessionRepository;
+    @MockitoBean MerchantAuditLogRepository auditLogRepository;
+    @MockitoBean DisputeRepository disputeRepository;
+    @MockitoBean MerchantInvoiceRepository invoiceRepository;
+    @MockitoBean CheckoutService checkoutService;
+    @MockitoBean MerchantSettlementService merchantSettlementService;
+    @MockitoBean StringRedisTemplate stringRedisTemplate;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
     private final UUID userId = UUID.randomUUID();
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        merchantService = new MerchantService(
-                merchantRepository, kybRecordRepository, kybDocumentRepository,
-                apiKeyRepository, apiLogRepository, webhookRepository, webhookDeliveryRepository,
-                payoutRepository, userService, walletRepository, userRepository,
-                cloudinaryService, notificationService, emailService, notificationPrefRepository,
-                checkoutSessionRepository, auditLogRepository, disputeRepository, invoiceRepository,
-                checkoutService, merchantSettlementService);
-    }
 
     // ── isHandleAvailable ─────────────────────────────────────────────────────
 
@@ -103,8 +98,7 @@ class MerchantServiceTest {
         when(merchantRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         AppException ex = assertThrows(AppException.class,
-                () -> merchantService.register(userId,
-                        registerRequest("INVALID HANDLE!", "My Shop")));
+                () -> merchantService.register(userId, registerRequest("INVALID HANDLE!", "My Shop")));
 
         assertEquals("INVALID_HANDLE", ex.getCode());
     }
@@ -115,8 +109,7 @@ class MerchantServiceTest {
         when(merchantRepository.existsByBusinessHandle("taken_shop")).thenReturn(true);
 
         AppException ex = assertThrows(AppException.class,
-                () -> merchantService.register(userId,
-                        registerRequest("taken_shop", "My Shop")));
+                () -> merchantService.register(userId, registerRequest("taken_shop", "My Shop")));
 
         assertEquals("HANDLE_TAKEN", ex.getCode());
     }

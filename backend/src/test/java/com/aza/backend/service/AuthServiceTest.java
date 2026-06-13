@@ -9,11 +9,14 @@ import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -23,43 +26,42 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ActiveProfiles("test")
 class AuthServiceTest {
 
-    private AuthService authService;
+    @Autowired AuthService authService;
 
-    @Mock private UserRepository userRepository;
-    @Mock private WalletRepository walletRepository;
-    @Mock private RefreshTokenRepository refreshTokenRepository;
-    @Mock private TransactionRepository transactionRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private JwtUtil jwtUtil;
-    @Mock private StringRedisTemplate redisTemplate;
-    @Mock private EmailService emailService;
-    @Mock private RateLimitService rateLimitService;
-    @Mock private UserService userService;
-    @Mock private OtpService otpService;
-    @Mock private BiometricService biometricService;
-    @Mock private TotpService totpService;
-    @Mock private TotpEncryptionService totpEncryptionService;
-    @Mock private RecoveryCodeRepository recoveryCodeRepository;
-    @Mock private NotificationService notificationService;
-    @Mock private AuditService auditService;
-    @Mock private GeoLocationService geoLocationService;
-    @Mock private ScreeningService screeningService;
-    @Mock private ValueOperations<String, String> valueOps;
+    @MockitoBean UserRepository userRepository;
+    @MockitoBean WalletRepository walletRepository;
+    @MockitoBean RefreshTokenRepository refreshTokenRepository;
+    @MockitoBean TransactionRepository transactionRepository;
+    @MockitoBean PasswordEncoder passwordEncoder;
+    @MockitoBean JwtUtil jwtUtil;
+    @MockitoBean StringRedisTemplate redisTemplate;
+    @MockitoBean EmailService emailService;
+    @MockitoBean RateLimitService rateLimitService;
+    @MockitoBean UserService userService;
+    @MockitoBean OtpService otpService;
+    @MockitoBean BiometricService biometricService;
+    @MockitoBean TotpService totpService;
+    @MockitoBean TotpEncryptionService totpEncryptionService;
+    @MockitoBean RecoveryCodeRepository recoveryCodeRepository;
+    @MockitoBean NotificationService notificationService;
+    @MockitoBean AuditService auditService;
+    @MockitoBean GeoLocationService geoLocationService;
+    @MockitoBean ScreeningService screeningService;
+    @MockitoBean ReferralService referralService;
+    @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
+
+    @SuppressWarnings("unchecked")
+    private ValueOperations<String, String> valueOps = mock(ValueOperations.class);
 
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        authService = new AuthService(
-                userRepository, walletRepository, refreshTokenRepository, transactionRepository,
-                passwordEncoder, jwtUtil, redisTemplate, emailService, rateLimitService,
-                userService, otpService, biometricService, totpService, totpEncryptionService,
-                recoveryCodeRepository, notificationService, auditService, geoLocationService,
-                screeningService);
     }
 
     // ── Signup ────────────────────────────────────────────────────────────────
@@ -101,7 +103,6 @@ class AuthServiceTest {
 
         authService.signup(signupRequest("new@example.com", "+233200000002"), "1.2.3.4");
 
-        // save is called twice: once to persist the user, once inside finalizeLogin
         verify(userRepository, times(2)).save(any(User.class));
         verify(walletRepository).save(any(Wallet.class));
         verify(emailService).sendSignupNotification(anyString(), anyString());
@@ -133,11 +134,8 @@ class AuthServiceTest {
     @Test
     void preLogin_inactiveAccount_throwsForbidden() {
         User user = User.builder()
-                .id(userId)
-                .email("alice@example.com")
-                .passwordHash("hashed")
-                .status(User.AccountStatus.SUSPENDED)
-                .build();
+                .id(userId).email("alice@example.com").passwordHash("hashed")
+                .status(User.AccountStatus.SUSPENDED).build();
         when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
 
@@ -152,7 +150,6 @@ class AuthServiceTest {
         User user = activeUser();
         user.setTwoFactorEnabled(true);
         user.setTwoFactorSecret("encrypted-secret");
-
         when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
         when(refreshTokenRepository.countByUserId(userId)).thenReturn(0L);
@@ -190,12 +187,10 @@ class AuthServiceTest {
 
     @Test
     void logoutEverywhere_revokesAllSessionsAndBiometricTokens() {
-        User user = activeUser();
-
-        authService.logoutEverywhere(user);
+        authService.logoutEverywhere(activeUser());
 
         verify(refreshTokenRepository).deleteAllByUserId(userId);
-        verify(biometricService).revokeAllBiometricTokens(user);
+        verify(biometricService).revokeAllBiometricTokens(any());
     }
 
     // ── Refresh Token ─────────────────────────────────────────────────────────
@@ -204,9 +199,9 @@ class AuthServiceTest {
     void refreshToken_invalidToken_throws() {
         when(jwtUtil.isInvalid("bad")).thenReturn(true);
 
-        RefreshTokenRequest badReq = new RefreshTokenRequest();
-        badReq.setRefreshToken("bad");
-        assertThrows(AppException.class, () -> authService.refreshToken(badReq));
+        RefreshTokenRequest req = new RefreshTokenRequest();
+        req.setRefreshToken("bad");
+        assertThrows(AppException.class, () -> authService.refreshToken(req));
     }
 
     @Test
@@ -230,9 +225,7 @@ class AuthServiceTest {
         req.setCurrentPassword("wrong");
         req.setNewPassword("NewSecure123!");
 
-        assertThrows(AppException.class,
-                () -> authService.changePassword(user, req, "1.2.3.4"));
-
+        assertThrows(AppException.class, () -> authService.changePassword(user, req, "1.2.3.4"));
         verify(userRepository, never()).save(any());
     }
 
@@ -240,10 +233,7 @@ class AuthServiceTest {
 
     @Test
     void disableTotp_notEnabled_throws() {
-        User user = activeUser();
-        // twoFactorSecret defaults to null
-
-        assertThrows(AppException.class, () -> authService.disableTotp(user, "123456"));
+        assertThrows(AppException.class, () -> authService.disableTotp(activeUser(), "123456"));
         verify(userRepository, never()).save(any());
     }
 
@@ -265,23 +255,16 @@ class AuthServiceTest {
 
     @Test
     void setDefaultTwoFactorMethod_totpNotSetUp_throws() {
-        User user = activeUser();
-        // twoFactorSecret is null → TOTP not enabled
-
         assertThrows(AppException.class,
-                () -> authService.setDefaultTwoFactorMethod(user, "TOTP"));
+                () -> authService.setDefaultTwoFactorMethod(activeUser(), "TOTP"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private User activeUser() {
         return User.builder()
-                .id(userId)
-                .email("alice@example.com")
-                .firstName("Alice")
-                .lastName("Smith")
-                .passwordHash("hashed")
-                .status(User.AccountStatus.ACTIVE)
+                .id(userId).email("alice@example.com").firstName("Alice").lastName("Smith")
+                .passwordHash("hashed").status(User.AccountStatus.ACTIVE)
                 .kycStatus(User.KycStatus.VERIFIED)
                 .build();
     }
