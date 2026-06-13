@@ -9,6 +9,7 @@ import com.aza.backend.entity.Wallet;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.repository.RecoveryCodeRepository;
 import com.aza.backend.service.DeviceService;
+import com.aza.backend.service.ReferralService;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
@@ -59,6 +60,7 @@ public class AuthService {
     private final AuditService auditService;
     private final GeoLocationService geoLocationService;
     private final ScreeningService screeningService;
+    private final ReferralService referralService;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -102,10 +104,16 @@ public class AuthService {
         userService.applyDateOfBirthAndEmployment(
                 user, request.getDateOfBirth(), request.getEmploymentStatus());
 
+        // Generate unique referral code for this new user
+        user.setReferralCode(referralService.generateCode());
+
         user = userRepository.save(user);
 
         // Sanctions/PEP screening at the door; never blocks signup (daily batch is the backstop)
         screeningService.screenNewUser(user);
+
+        // Track referral if the user provided someone else's invite code
+        referralService.applyReferral(user, request.getReferralCode());
 
         Wallet wallet = Wallet.builder()
                 .userId(user.getId())

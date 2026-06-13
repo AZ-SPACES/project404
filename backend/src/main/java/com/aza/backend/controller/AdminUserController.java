@@ -7,7 +7,9 @@ import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminUserStatusRequest;
 import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
+import com.aza.backend.entity.AccountRecoveryContact;
 import com.aza.backend.entity.FlaggedTransaction;
+import com.aza.backend.repository.AccountRecoveryContactRepository;
 import com.aza.backend.repository.FlaggedTransactionRepository;
 import com.aza.backend.repository.NotificationRepository;
 import com.aza.backend.repository.UserRepository;
@@ -38,6 +40,7 @@ public class AdminUserController {
     private final com.aza.backend.service.ApprovalService approvalService;
     private final NotificationRepository notificationRepository;
     private final FlaggedTransactionRepository flaggedTxRepository;
+    private final AccountRecoveryContactRepository recoveryContactRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> getUsers(
@@ -155,6 +158,15 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(
                 notificationRepository.findAllByUserIdOrderByCreatedAtDesc(
                         userId, PageRequest.of(page, Math.min(size, 50)))));
+    }
+
+    /** Account recovery contacts configured by a user (their trusted helpers). */
+    @GetMapping("/{userId}/recovery-contacts")
+    public ResponseEntity<ApiResponse<java.util.List<AccountRecoveryContact>>> getRecoveryContacts(
+            @PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                recoveryContactRepository.findAllByUserIdAndStatusNot(
+                        userId, AccountRecoveryContact.Status.REMOVED)));
     }
 
     /** Flagged transactions for a user — their risk history. */

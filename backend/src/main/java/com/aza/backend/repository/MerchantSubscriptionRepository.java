@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface MerchantSubscriptionRepository extends JpaRepository<MerchantSubscription, UUID> {
     Page<MerchantSubscription> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId, Pageable pageable);
+    Page<MerchantSubscription> findAllByStatusOrderByCreatedAtDesc(MerchantSubscription.SubscriptionStatus status, Pageable pageable);
     Page<MerchantSubscription> findAllByPlanIdOrderByCreatedAtDesc(UUID planId, Pageable pageable);
     Optional<MerchantSubscription> findByIdAndMerchantId(UUID id, UUID merchantId);
 }

@@ -1,6 +1,8 @@
 package com.aza.backend.repository;
 
 import com.aza.backend.entity.RecurringTransfer;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +15,8 @@ import java.util.UUID;
 public interface RecurringTransferRepository extends JpaRepository<RecurringTransfer, UUID> {
 
     List<RecurringTransfer> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    Page<RecurringTransfer> findAllByStatus(RecurringTransfer.Status status, Pageable pageable);
 
     List<RecurringTransfer> findAllByStatusAndNextRunAtBefore(
             RecurringTransfer.Status status, LocalDateTime cutoff);

@@ -174,6 +174,10 @@ public class User {
     @Column(precision = 15, scale = 2)
     private java.math.BigDecimal customSingleTransactionLimitGhs;
 
+    // --- Referral ---
+    @Column(name = "referral_code", unique = true, length = 12)
+    private String referralCode;
+
     // --- Metadata ---
     @CreationTimestamp
     private LocalDateTime createdAt;
