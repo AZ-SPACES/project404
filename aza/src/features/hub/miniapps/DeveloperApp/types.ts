@@ -1,6 +1,6 @@
 import { ThemeColors } from '../../../../theme';
 
-export type Page = 'list' | 'create' | 'detail';
+export type Page = 'list' | 'create' | 'detail' | 'miniapps' | 'miniapp_submit' | 'miniapp_detail';
 
 export interface OAuthClientData {
   id: string;
@@ -22,4 +22,22 @@ export interface NavProps {
   navigate: (page: Page, params?: any) => void;
   goBack: () => void;
   Colors: ThemeColors;
+}
+
+export interface MiniAppData {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  iconUrl: string;
+  url: string;
+  developerName: string;
+  supportUrl: string | null;
+  version: string;
+  status: 'DRAFT' | 'PENDING_REVIEW' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
+  requestedPermissions: string[];
+  createdAt: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
 }
