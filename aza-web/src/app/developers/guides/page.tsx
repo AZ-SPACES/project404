@@ -3119,14 +3119,21 @@ public static boolean verifyWebhook(
         </ol>
 
         <h3 className="text-base font-bold text-gray-900">Register your OAuth client</h3>
-        <p className="text-sm">OAuth clients are registered by the Aza team. Email <strong>developers@aza.systems</strong> with:</p>
-        <ul className="list-disc pl-5 space-y-1 text-sm">
-          <li>Your app name and logo URL</li>
-          <li>Allowed redirect URIs (exact match, HTTPS only)</li>
-          <li>Scopes you need (see the Scopes guide)</li>
-          <li>Your website URL</li>
-        </ul>
-        <p className="text-sm">You will receive a <code>client_id</code> and <code>client_secret</code> in reply.</p>
+        <p className="text-sm">Registration is self-service. Sign in to your Aza account, then call <code>POST /api/v1/developer/clients</code> with your Aza JWT. You receive a <code>client_id</code> and <code>client_secret</code> immediately.</p>
+        <Table
+          headers={['Field', 'Required', 'Notes']}
+          rows={[
+            ['appName',       'Yes', 'Shown to users on the consent page'],
+            ['redirectUris',  'Yes', 'HTTPS only, exact match — omit for QR-only clients'],
+            ['scopes',        'Yes', 'List of scopes your app will request'],
+            ['appDescription','No',  'Short description shown on the consent page'],
+            ['logoUrl',       'No',  'HTTPS URL to your app logo (shown on consent page)'],
+            ['websiteUrl',    'No',  'Your app\'s homepage'],
+          ]}
+        />
+        <Note>
+          For a <strong>QR-only client</strong> (like a web IDE), you can pass an empty <code>redirectUris</code> list — no redirect URI is needed for the QR flow.
+        </Note>
 
         <Note>
           <strong>PKCE is required.</strong> Generate a random 43–128 character <code>code_verifier</code>, hash it with SHA-256, and base64url-encode the result as <code>code_challenge</code>. Store the verifier server-side — you'll need it for token exchange.
@@ -3154,7 +3161,22 @@ public static boolean verifyWebhook(
       </div>
     ),
     codeSnippets: {
-      curl: `# Step 1 — initiate the OAuth flow from your server
+      curl: `# Register your OAuth client (one-time, using your Aza JWT)
+curl -X POST https://api.aza.systems/api/v1/developer/clients \\
+  -H "Authorization: Bearer YOUR_AZA_JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "appName":      "My IDE",
+    "appDescription": "A web IDE for Aza Mini App developers",
+    "logoUrl":      "https://myide.com/logo.png",
+    "websiteUrl":   "https://myide.com",
+    "redirectUris": ["https://myide.com/auth/callback"],
+    "scopes":       ["identity", "email"]
+  }'
+# Response: { "data": { "clientId": "...", "clientSecret": "..." } }
+# Store clientSecret securely — it is only returned once.
+
+# Step 1 — initiate the OAuth flow from your server
 curl -X POST https://api.aza.systems/oauth/authorize \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -3853,7 +3875,7 @@ OAuthUserInfo getUserInfo(String accessToken) {
             ['redirect_uri',  'You provide this during registration (HTTPS, exact match)'],
           ]}
         />
-        <p className="text-sm">Email <strong>developers@aza.systems</strong> to register your OAuth client. Include your app name, logo, website, allowed redirect URIs, and required scopes.</p>
+        <p className="text-sm">Registration is self-service — call <code>POST /api/v1/developer/clients</code> with your Aza JWT. See the <strong>Overview &amp; Concepts</strong> guide for the full field list.</p>
 
         <h3 className="text-base font-bold text-gray-900">Recommended architecture</h3>
         <p className="text-sm">For a web IDE (or any browser-based app), use a thin <strong>server-side session layer</strong> to hold tokens. Never put <code>client_secret</code> or raw tokens in the browser.</p>
