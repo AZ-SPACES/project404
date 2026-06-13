@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -24,6 +27,7 @@ public class AdminHealthController {
 
     private final DataSource dataSource;
     private final StringRedisTemplate redisTemplate;
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
 
     @GetMapping("/metrics")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMetrics() {
@@ -93,6 +97,23 @@ public class AdminHealthController {
                         .filter(s -> s.length > 0).count()
         ));
 
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @GetMapping("/circuit-breakers")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> circuitBreakers() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        circuitBreakerRegistry.getAllCircuitBreakers().forEach(cb -> {
+            var metrics = cb.getMetrics();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", cb.getName());
+            m.put("state", cb.getState().name());
+            m.put("failureRate", metrics.getFailureRate());
+            m.put("slowCallRate", metrics.getSlowCallRate());
+            m.put("bufferedCalls", metrics.getNumberOfBufferedCalls());
+            m.put("failedCalls", metrics.getNumberOfFailedCalls());
+            result.add(m);
+        });
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

@@ -65,4 +65,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     @Query("SELECT s FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED ORDER BY s.completedAt ASC")
     List<CheckoutSession> findAllCompletedSessions(@Param("merchantId") UUID merchantId);
+
+    @Query("SELECT s.merchantId, COUNT(s), SUM(CASE WHEN s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED THEN 1 ELSE 0 END), MAX(s.completedAt) FROM CheckoutSession s GROUP BY s.merchantId")
+    List<Object[]> merchantCheckoutSummary();
 }

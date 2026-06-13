@@ -5,14 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getReconBreaks,
   getSafeguardingHistory,
+  getLedgerCheck,
   importStatement,
   resolveReconBreak,
   takeSafeguardingSnapshot,
   type Page,
   type ReconBreak,
   type SafeguardingSnapshot,
+  type LedgerCheck,
 } from "@/lib/admin-api";
-import { AlertTriangle, CheckCircle2, Landmark, Loader2, Scale, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Landmark, Loader2, Scale, Upload, BookOpen, RefreshCw } from "lucide-react";
 
 function ghs(value: number) {
   return `GHS ${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -114,6 +116,71 @@ function SafeguardingCard() {
   );
 }
 
+function LedgerCheckCard() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery<LedgerCheck>({
+    queryKey: ["ledgerCheck"],
+    queryFn: getLedgerCheck,
+  });
+
+  const refresh = useMutation({
+    mutationFn: getLedgerCheck,
+    onSuccess: (fresh) => {
+      queryClient.setQueryData(["ledgerCheck"], fresh);
+    },
+  });
+
+  return (
+    <div className="rounded-xl border border-border p-5 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <BookOpen size={16} className="text-foreground/40" />
+          <h2 className="font-medium text-foreground">Ledger Check</h2>
+        </div>
+        <button
+          onClick={() => refresh.mutate()}
+          disabled={refresh.isPending || isLoading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted text-xs transition-colors disabled:opacity-50"
+        >
+          {refresh.isPending ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <RefreshCw size={12} />
+          )}
+          Refresh
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="h-20 bg-muted/20 rounded-lg animate-pulse" />
+      ) : data ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 text-sm">
+            <div className="rounded-lg bg-muted/20 px-4 py-3">
+              <p className="text-xs text-foreground/40 mb-1">Total Wallet Balance</p>
+              <p className="font-medium text-foreground">{ghs(data.totalWalletBalance)}</p>
+            </div>
+            <div className="rounded-lg bg-muted/20 px-4 py-3">
+              <p className="text-xs text-foreground/40 mb-1">Frozen Wallet Balance</p>
+              <p className="font-medium text-foreground">{ghs(data.frozenWalletBalance)}</p>
+            </div>
+            <div className="rounded-lg bg-muted/20 px-4 py-3">
+              <p className="text-xs text-foreground/40 mb-1">Completed Transfer Volume</p>
+              <p className="font-medium text-foreground">{ghs(data.completedTransferVolume)}</p>
+            </div>
+          </div>
+          <p className="text-xs text-foreground/30">
+            Recorded at {fmt(data.recordedAt)}
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-foreground/40">Click Refresh to load ledger data</p>
+      )}
+    </div>
+  );
+}
+
 function ImportCard() {
   const queryClient = useQueryClient();
   const [label, setLabel] = useState("");
@@ -207,6 +274,7 @@ export default function ReconciliationPage() {
       </div>
 
       <SafeguardingCard />
+      <LedgerCheckCard />
       <ImportCard />
 
       <div className="flex items-center gap-2 mb-4">
