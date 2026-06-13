@@ -11,11 +11,14 @@ import com.aza.backend.service.AdminService;
 import com.aza.backend.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -34,9 +37,53 @@ public class AdminDashboardController {
 
     @GetMapping("/transactions")
     public ResponseEntity<ApiResponse<Page<AdminTransactionResponse>>> getTransactions(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        boolean hasFilters = query != null || status != null || type != null || from != null || to != null;
+        if (hasFilters) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    adminService.searchTransactions(query, status, type, from, to, page, Math.min(size, 50))));
+        }
         return ResponseEntity.ok(ApiResponse.success(adminService.getTransactions(page, Math.min(size, 50))));
+    }
+
+    @GetMapping(value = "/transactions/export", produces = "text/csv")
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
+    public ResponseEntity<String> exportTransactions(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
+        List<AdminTransactionResponse> rows = adminService.exportTransactions(status, type, from, to);
+        StringBuilder csv = new StringBuilder("id,sender,senderHandle,recipient,recipientHandle,amount,type,status,initiatedAt,completedAt,category\n");
+        for (AdminTransactionResponse r : rows) {
+            csv.append(escapeCsv(r.getId())).append(",")
+               .append(escapeCsv(r.getSenderName())).append(",")
+               .append(escapeCsv(r.getSenderHandle())).append(",")
+               .append(escapeCsv(r.getRecipientName())).append(",")
+               .append(escapeCsv(r.getRecipientHandle())).append(",")
+               .append(r.getAmount()).append(",")
+               .append(escapeCsv(r.getType())).append(",")
+               .append(escapeCsv(r.getStatus())).append(",")
+               .append(r.getInitiatedAt() != null ? r.getInitiatedAt().toString() : "").append(",")
+               .append(r.getCompletedAt() != null ? r.getCompletedAt().toString() : "").append(",")
+               .append(escapeCsv(r.getCategory())).append("\n");
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"transactions.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv.toString());
+    }
+
+    private static String escapeCsv(String v) {
+        if (v == null) return "";
+        if (v.contains(",") || v.contains("\"") || v.contains("\n")) return "\"" + v.replace("\"", "\"\"") + "\"";
+        return v;
     }
 
     @GetMapping("/transactions/{id}")

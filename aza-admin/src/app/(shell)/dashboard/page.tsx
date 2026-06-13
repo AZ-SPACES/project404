@@ -1,8 +1,43 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getStats, getLiveStats, type AdminStats, type LiveStats } from "@/lib/admin-api";
+import { getStats, getLiveStats, getRevenueAnalytics, type AdminStats, type LiveStats, type MonthlyRevenue } from "@/lib/admin-api";
 import { Users, ShieldCheck, ShieldAlert, DollarSign, TrendingUp, Loader2, Activity, Store, Banknote } from "lucide-react";
+
+function Sparkline({ data, color = "#B7EE7A" }: { data: number[]; color?: string }) {
+  if (!data.length) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const w = 80, h = 28;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / range) * h;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SparkCard({ label, value, sub, data, color }: {
+  label: string; value: string; sub?: string; data: number[]; color?: string;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 flex items-start justify-between gap-3">
+      <div>
+        <p className="text-foreground/50 text-xs font-medium uppercase tracking-wider">{label}</p>
+        <p className="text-2xl font-semibold mt-1.5 text-foreground">{value}</p>
+        {sub && <p className="text-foreground/40 text-xs mt-1">{sub}</p>}
+      </div>
+      <div className="flex-shrink-0 mt-1">
+        <Sparkline data={data} color={color} />
+      </div>
+    </div>
+  );
+}
 
 function StatCard({
   label, value, sub, icon: Icon, color = "text-foreground",
@@ -60,6 +95,13 @@ export default function DashboardPage() {
     queryFn: getLiveStats,
     refetchInterval: 30_000,
   });
+
+  const { data: revenueData } = useQuery({
+    queryKey: ["revenueAnalytics", 6],
+    queryFn: () => getRevenueAnalytics(6),
+  });
+
+  const monthly: MonthlyRevenue[] = revenueData?.monthly ?? [];
 
   if (statsError) return <p className="text-red-400">{(statsError as Error).message}</p>;
   if (!stats) return (
@@ -153,6 +195,35 @@ export default function DashboardPage() {
             <LiveCard label="Users Online" value={liveStats.onlineUsers} icon={Users} />
             <LiveCard label="Transactions (1h)" value={liveStats.transactionsLastHour} icon={Activity} />
             <LiveCard label="Pending KYC" value={liveStats.pendingKycCount} icon={ShieldAlert} />
+          </div>
+        </section>
+      )}
+
+      {monthly.length >= 2 && (
+        <section>
+          <h2 className="text-xs uppercase tracking-widest text-foreground/30 font-medium mb-4">Trends (last {monthly.length} months)</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SparkCard
+              label="Transaction Volume"
+              value={fmtGhs(monthly[monthly.length - 1].volume)}
+              sub={`${monthly[monthly.length - 1].month}`}
+              data={monthly.map(m => m.volume)}
+              color="#B7EE7A"
+            />
+            <SparkCard
+              label="Transaction Count"
+              value={fmt(monthly[monthly.length - 1].count)}
+              sub={`${monthly[monthly.length - 1].month}`}
+              data={monthly.map(m => m.count)}
+              color="#60a5fa"
+            />
+            <SparkCard
+              label="Avg Transaction"
+              value={fmtGhs(monthly[monthly.length - 1].avgTransaction)}
+              sub={`${monthly[monthly.length - 1].month}`}
+              data={monthly.map(m => m.avgTransaction)}
+              color="#a78bfa"
+            />
           </div>
         </section>
       )}

@@ -74,6 +74,13 @@ public class AdminRiskController {
 
     // ==================== RATE LIMIT MANAGEMENT ====================
 
+    /** Count of active rate-limit keys currently tracked in Redis. */
+    @GetMapping("/rate-limits/stats")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getRateLimitStats() {
+        long active = rateLimitService.countActiveKeys();
+        return ResponseEntity.ok(ApiResponse.success(Map.of("activeKeys", active)));
+    }
+
     /** Reset sliding-window counters + behavioral block for a specific user. */
     @DeleteMapping("/rate-limits/user/{userId}")
     public ResponseEntity<ApiResponse<String>> resetUserRateLimit(@PathVariable UUID userId) {

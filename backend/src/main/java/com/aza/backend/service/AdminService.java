@@ -91,60 +91,72 @@ public class AdminService {
         return toAdminUserResponse(user);
     }
 
+    private AdminTransactionResponse toAdminTransactionResponse(Transaction tx) {
+        User sender = userRepository.findById(tx.getSenderId()).orElse(null);
+        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        return AdminTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .senderId(tx.getSenderId().toString())
+                .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
+                .senderHandle(sender != null ? sender.getUsername() : null)
+                .recipientId(tx.getRecipientId().toString())
+                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                .amount(tx.getAmount())
+                .note(tx.getNote())
+                .type(tx.getType().name())
+                .status(tx.getStatus().name())
+                .initiatedAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
+                .cancelledAt(tx.getCancelledAt())
+                .category(tx.getCategory() != null ? tx.getCategory().name() : null)
+                .anomalyScore(tx.getAnomalyScore())
+                .anomalyRiskLevel(tx.getAnomalyRiskLevel())
+                .build();
+    }
+
     public Page<AdminTransactionResponse> getTransactions(int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
         return transactionRepository.findAllOrderByInitiatedAtDesc(pageable)
-                .map(tx -> {
-                    User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-                    User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
-                    return AdminTransactionResponse.builder()
-                            .id(tx.getId().toString())
-                            .senderId(tx.getSenderId().toString())
-                            .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
-                            .senderHandle(sender != null ? sender.getUsername() : null)
-                            .recipientId(tx.getRecipientId().toString())
-                            .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                            .recipientHandle(recipient != null ? recipient.getUsername() : null)
-                            .amount(tx.getAmount())
-                            .note(tx.getNote())
-                            .type(tx.getType().name())
-                            .status(tx.getStatus().name())
-                            .initiatedAt(tx.getInitiatedAt())
-                            .completedAt(tx.getCompletedAt())
-                            .cancelledAt(tx.getCancelledAt())
-                            .category(tx.getCategory() != null ? tx.getCategory().name() : null)
-                            .anomalyScore(tx.getAnomalyScore())
-                            .anomalyRiskLevel(tx.getAnomalyRiskLevel())
-                            .build();
-                });
+                .map(this::toAdminTransactionResponse);
+    }
+
+    public Page<AdminTransactionResponse> searchTransactions(
+            String query, String status, String type, String from, String to, int page, int size) {
+        Transaction.TransactionStatus txStatus = (status != null && !status.isBlank())
+                ? Transaction.TransactionStatus.valueOf(status.toUpperCase()) : null;
+        Transaction.TransactionType txType = (type != null && !type.isBlank())
+                ? Transaction.TransactionType.valueOf(type.toUpperCase()) : null;
+        LocalDateTime fromDt = (from != null && !from.isBlank()) ? LocalDate.parse(from).atStartOfDay() : null;
+        LocalDateTime toDt = (to != null && !to.isBlank()) ? LocalDate.parse(to).atTime(23, 59, 59) : null;
+        PageRequest pageable = PageRequest.of(page, size);
+
+        if (query != null && !query.isBlank()) {
+            List<UUID> userIds = userRepository.adminSearchUsers(query, PageRequest.of(0, 100))
+                    .stream().map(User::getId).toList();
+            if (userIds.isEmpty()) return org.springframework.data.domain.Page.empty(pageable);
+            return transactionRepository.adminSearchByUserIds(userIds, txStatus, txType, fromDt, toDt, pageable)
+                    .map(this::toAdminTransactionResponse);
+        }
+        return transactionRepository.adminSearch(txStatus, txType, fromDt, toDt, pageable)
+                .map(this::toAdminTransactionResponse);
+    }
+
+    public List<AdminTransactionResponse> exportTransactions(
+            String status, String type, String from, String to) {
+        Transaction.TransactionStatus txStatus = (status != null && !status.isBlank())
+                ? Transaction.TransactionStatus.valueOf(status.toUpperCase()) : null;
+        Transaction.TransactionType txType = (type != null && !type.isBlank())
+                ? Transaction.TransactionType.valueOf(type.toUpperCase()) : null;
+        LocalDateTime fromDt = (from != null && !from.isBlank()) ? LocalDate.parse(from).atStartOfDay() : null;
+        LocalDateTime toDt = (to != null && !to.isBlank()) ? LocalDate.parse(to).atTime(23, 59, 59) : null;
+        return transactionRepository.adminSearchAll(txStatus, txType, fromDt, toDt)
+                .stream().map(this::toAdminTransactionResponse).toList();
     }
 
     public Page<AdminTransactionResponse> getUserTransactions(UUID userId, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
-        return transactionRepository.findAllByUserId(userId, pageable)
-                .map(tx -> {
-                    User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-                    User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
-                    return AdminTransactionResponse.builder()
-                            .id(tx.getId().toString())
-                            .senderId(tx.getSenderId().toString())
-                            .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
-                            .senderHandle(sender != null ? sender.getUsername() : null)
-                            .recipientId(tx.getRecipientId().toString())
-                            .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                            .recipientHandle(recipient != null ? recipient.getUsername() : null)
-                            .amount(tx.getAmount())
-                            .note(tx.getNote())
-                            .type(tx.getType().name())
-                            .status(tx.getStatus().name())
-                            .initiatedAt(tx.getInitiatedAt())
-                            .completedAt(tx.getCompletedAt())
-                            .cancelledAt(tx.getCancelledAt())
-                            .category(tx.getCategory() != null ? tx.getCategory().name() : null)
-                            .anomalyScore(tx.getAnomalyScore())
-                            .anomalyRiskLevel(tx.getAnomalyRiskLevel())
-                            .build();
-                });
+        return transactionRepository.findAllByUserId(userId, pageable).map(this::toAdminTransactionResponse);
     }
 
     public AdminStatsResponse getStats() {

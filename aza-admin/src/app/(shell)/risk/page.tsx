@@ -6,6 +6,7 @@ import {
   getRiskAlerts,
   getRiskRules,
   getRiskStats,
+  getRateLimitStats,
   updateRiskAlert,
   updateRiskRules,
   resetUserRateLimit,
@@ -159,6 +160,12 @@ export default function RiskPage() {
   const { data: riskStats } = useQuery<RiskStats>({
     queryKey: ["riskStats"],
     queryFn: getRiskStats,
+  });
+
+  const { data: rlStats } = useQuery<{ activeKeys: number }>({
+    queryKey: ["rateLimitStats"],
+    queryFn: getRateLimitStats,
+    refetchInterval: 30_000,
   });
 
   const { data, isLoading, error } = useQuery<Page<RiskAlert>>({
@@ -332,9 +339,17 @@ export default function RiskPage() {
       )}
 
       <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <RefreshCw size={15} className="text-foreground/40" />
-          <h2 className="text-sm font-semibold text-foreground">Rate Limit Management</h2>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={15} className="text-foreground/40" />
+            <h2 className="text-sm font-semibold text-foreground">Rate Limit Management</h2>
+          </div>
+          {rlStats != null && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border border-border rounded-lg">
+              <span className="text-[10px] text-foreground/40 uppercase tracking-wider font-medium">Active keys</span>
+              <span className="text-sm font-semibold text-foreground">{rlStats.activeKeys.toLocaleString()}</span>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">

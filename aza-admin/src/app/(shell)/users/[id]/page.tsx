@@ -11,12 +11,15 @@ import {
   getKycRecord,
   getUserTransactions,
   getUserSessions,
+  getUserNotifications,
   revokeUserSession,
   updateUserLimits,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
   type UserSession,
+  type UserNotification,
+  type Page,
 } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,6 +34,9 @@ import {
   ArrowDownLeft,
   Smartphone,
   Monitor,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
@@ -153,6 +159,14 @@ export default function UserDetailPage() {
     retry: false,
     // Online flags track a 65s server-side TTL — keep the panel live.
     refetchInterval: 30_000,
+  });
+
+  const [notifPage, setNotifPage] = useState(0);
+  const { data: notifications } = useQuery<Page<UserNotification>>({
+    queryKey: ["userNotifications", userId, notifPage],
+    queryFn: () => getUserNotifications(userId, notifPage, 10),
+    enabled: !!userId,
+    retry: false,
   });
 
   const [revokeTarget, setRevokeTarget] = useState<UserSession | null>(null);
@@ -488,6 +502,48 @@ export default function UserDetailPage() {
           {limitsMutation.isPending && <Loader2 size={14} className="animate-spin" />}
           Save Limits
         </button>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Bell size={14} className="text-foreground/30" />
+          <p className="text-foreground/30 text-xs uppercase tracking-wider">Notification History</p>
+        </div>
+        {!notifications || notifications.content.length === 0 ? (
+          <p className="text-foreground/40 text-sm py-2 text-center">No notifications sent to this user.</p>
+        ) : (
+          <div className="space-y-2">
+            {notifications.content.map((n) => (
+              <div key={n.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${n.isRead ? "bg-foreground/20" : "bg-[#B7EE7A]"}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground font-medium leading-snug">{n.title}</p>
+                  <p className="text-xs text-foreground/50 mt-0.5 leading-relaxed">{n.body}</p>
+                  <p className="text-[10px] text-foreground/25 mt-1">{new Date(n.createdAt).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+            {notifications.totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={() => setNotifPage(p => p - 1)}
+                  disabled={notifPage === 0}
+                  className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="text-xs text-foreground/40">{notifPage + 1} / {notifications.totalPages}</span>
+                <button
+                  onClick={() => setNotifPage(p => p + 1)}
+                  disabled={notifPage >= notifications.totalPages - 1}
+                  className="p-1.5 rounded-lg bg-muted/30 hover:bg-muted disabled:opacity-30 transition-colors"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-5">

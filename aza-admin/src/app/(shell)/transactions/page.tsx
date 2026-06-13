@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAdminTransactions,
+  searchAdminTransactions,
+  exportAdminTransactionsCsv,
   getAdminTransaction,
   reverseTransaction,
   AdminTransaction,
@@ -19,6 +21,9 @@ import {
   X,
   Loader2,
   RotateCcw,
+  Download,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
 
 function fmt(iso: string | null) {
@@ -261,17 +266,130 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
 
+  // Filters
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const hasFilters = query || statusFilter || typeFilter || fromDate || toDate;
+  const toIso = (d: string) => d ? new Date(d).toISOString() : undefined;
+
   const { data, isLoading, error } = useQuery<Page<AdminTransaction>>({
-    queryKey: ["transactions", page],
-    queryFn: () => getAdminTransactions(page, 20),
+    queryKey: ["transactions", page, { query, statusFilter, typeFilter, fromDate, toDate }],
+    queryFn: () => hasFilters
+      ? searchAdminTransactions({
+          query: query || undefined,
+          status: statusFilter || undefined,
+          type: typeFilter || undefined,
+          from: toIso(fromDate),
+          to: toIso(toDate),
+          page,
+          size: 20,
+        })
+      : getAdminTransactions(page, 20),
   });
+
+  async function handleExport() {
+    setExportBusy(true);
+    try {
+      await exportAdminTransactionsCsv({
+        status: statusFilter || undefined,
+        type: typeFilter || undefined,
+        from: toIso(fromDate),
+        to: toIso(toDate),
+      });
+    } finally {
+      setExportBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground mb-1">Transactions</h1>
-        <p className="text-foreground/50 text-sm">All platform transactions, newest first — click a row to view details</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground mb-1">Transactions</h1>
+          <p className="text-foreground/50 text-sm">All platform transactions, newest first — click a row to view details</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm border transition-colors ${showFilters ? "bg-[#B7EE7A]/15 border-[#B7EE7A]/30 text-[#B7EE7A]" : "bg-muted/30 border-border text-foreground/60 hover:text-foreground"}`}
+          >
+            <SlidersHorizontal size={14} />
+            Filters
+            {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#B7EE7A]" />}
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exportBusy}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm bg-muted/30 border border-border text-foreground/60 hover:text-foreground transition-colors disabled:opacity-40"
+          >
+            {exportBusy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Export CSV
+          </button>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="bg-card border border-border rounded-xl p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="relative lg:col-span-2">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30" />
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(0); }}
+              placeholder="Search by name or handle…"
+              className="w-full pl-8 pr-3 py-2 bg-muted/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/20"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+            className="px-3 py-2 bg-muted/30 border border-border rounded-lg text-sm text-foreground focus:outline-none"
+          >
+            <option value="">All statuses</option>
+            {["COMPLETED","PENDING","FAILED","CANCELLED","DECLINED","REVERSED"].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <select
+            value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value); setPage(0); }}
+            className="px-3 py-2 bg-muted/30 border border-border rounded-lg text-sm text-foreground focus:outline-none"
+          >
+            <option value="">All types</option>
+            {["TRANSFER","DEPOSIT","WITHDRAWAL","PAYMENT","REFUND"].map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <div className="flex gap-2 lg:col-span-1 items-center">
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setPage(0); }}
+              className="flex-1 px-2 py-2 bg-muted/30 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+            />
+            <span className="text-foreground/30 text-xs">–</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setPage(0); }}
+              className="flex-1 px-2 py-2 bg-muted/30 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+            />
+          </div>
+          {hasFilters && (
+            <button
+              onClick={() => { setQuery(""); setStatusFilter(""); setTypeFilter(""); setFromDate(""); setToDate(""); setPage(0); }}
+              className="text-xs text-foreground/40 hover:text-foreground transition-colors underline underline-offset-2 text-left"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm mb-6">

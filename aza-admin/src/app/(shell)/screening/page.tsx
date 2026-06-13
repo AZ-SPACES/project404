@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addWatchlistEntry,
+  addEddNote,
   deactivateWatchlistEntry,
   getScreeningMatches,
   getScreeningStats,
@@ -16,7 +17,7 @@ import {
   type ScreeningMatch,
   type WatchlistEntry,
 } from "@/lib/admin-api";
-import { Check, Globe, Loader2, Play, Plus, ShieldAlert, Upload, X } from "lucide-react";
+import { Check, Globe, Loader2, Play, Plus, ShieldAlert, Upload, X, FileText } from "lucide-react";
 
 const SCORE_STYLE = (score: number) =>
   score >= 100
@@ -96,6 +97,98 @@ function MatchQueue() {
                   False positive
                 </button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EddPanel() {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<ScreeningMatch | null>(null);
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
+
+  const { data: confirmed, isLoading } = useQuery<Page<ScreeningMatch>>({
+    queryKey: ["screeningConfirmed"],
+    queryFn: () => getScreeningMatches("CONFIRMED", 0, 50),
+  });
+
+  const submit = useMutation({
+    mutationFn: () => addEddNote(selected!.id, notes),
+    onSuccess: () => {
+      setError("");
+      setNotes("");
+      setSelected(null);
+      queryClient.invalidateQueries({ queryKey: ["screeningConfirmed"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const items = confirmed?.content ?? [];
+
+  return (
+    <div className="rounded-xl border border-border p-5 mb-6">
+      <div className="flex items-center gap-2 mb-1">
+        <FileText size={15} className="text-foreground/40" />
+        <h2 className="font-medium text-foreground">Enhanced Due Diligence (EDD)</h2>
+      </div>
+      <p className="text-xs text-foreground/40 mb-4">
+        Append EDD documentation to confirmed PEP/sanctions matches.
+      </p>
+      {isLoading ? (
+        <div className="h-16 bg-muted/30 rounded-xl animate-pulse" />
+      ) : items.length === 0 ? (
+        <p className="text-sm text-foreground/40 py-4 text-center">No confirmed matches requiring EDD.</p>
+      ) : (
+        <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+          {items.map((m) => (
+            <div key={m.id} className="px-4 py-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground font-medium truncate">
+                    {m.userName ?? m.userId} ↔ {m.listEntryName}
+                  </p>
+                  <p className="text-xs text-foreground/40">{m.listName} · {m.entryType}</p>
+                  {m.notes && (
+                    <p className="text-xs text-foreground/50 mt-1 whitespace-pre-line line-clamp-3">{m.notes}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setSelected(m === selected ? null : m); setNotes(""); setError(""); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted text-xs transition-colors flex-shrink-0"
+                >
+                  <FileText size={11} />
+                  Add EDD note
+                </button>
+              </div>
+              {selected?.id === m.id && (
+                <div className="pt-2 space-y-2">
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Document your enhanced due-diligence findings…"
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm outline-none focus:border-foreground/30 resize-none"
+                  />
+                  {error && <p className="text-xs text-red-400">{error}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submit.mutate()}
+                      disabled={submit.isPending || !notes.trim()}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#B7EE7A] hover:bg-[#B7EE7A]/90 text-black text-xs font-semibold disabled:opacity-50 transition-colors"
+                    >
+                      {submit.isPending && <Loader2 size={12} className="animate-spin" />}
+                      Append note
+                    </button>
+                    <button onClick={() => setSelected(null)} className="px-3 py-2 rounded-lg bg-muted/30 text-xs text-foreground/50">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -360,6 +453,7 @@ export default function ScreeningPage() {
       )}
 
       <MatchQueue />
+      <EddPanel />
       <WatchlistManager />
     </div>
   );

@@ -114,4 +114,9 @@ public class RateLimitService {
         Long deleted = redisTemplate.delete(keys);
         return deleted != null ? deleted : 0;
     }
+
+    public long countActiveKeys() {
+        Set<String> keys = redisTemplate.keys("ratelimit:*");
+        return keys != null ? keys.size() : 0;
+    }
 }

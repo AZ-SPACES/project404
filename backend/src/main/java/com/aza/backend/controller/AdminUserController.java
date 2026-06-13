@@ -5,12 +5,16 @@ import com.aza.backend.dto.admin.AdminRoleRequest;
 import com.aza.backend.dto.admin.AdminTransactionResponse;
 import com.aza.backend.dto.admin.AdminUserResponse;
 import com.aza.backend.dto.admin.AdminUserStatusRequest;
+import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.NotificationRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.AdminAuditService;
 import com.aza.backend.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,6 +34,7 @@ public class AdminUserController {
     private final com.aza.backend.service.UserService userService;
     private final com.aza.backend.service.StaffRoleService staffRoleService;
     private final com.aza.backend.service.ApprovalService approvalService;
+    private final NotificationRepository notificationRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> getUsers(
@@ -137,6 +142,16 @@ public class AdminUserController {
         }
         auditService.log(admin, action, target, details);
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @GetMapping("/{userId}/notifications")
+    public ResponseEntity<ApiResponse<Page<Notification>>> getUserNotifications(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                notificationRepository.findAllByUserIdOrderByCreatedAtDesc(
+                        userId, PageRequest.of(page, Math.min(size, 50)))));
     }
 
     /** Maker-checker: limit changes are submitted for a second COMPLIANCE/ADMIN to approve. */

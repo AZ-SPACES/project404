@@ -99,6 +99,48 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT t FROM Transaction t ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllOrderByInitiatedAtDesc(Pageable pageable);
 
+    // ── Admin transaction search ──────────────────────────────────────────────
+
+    @Query("SELECT t FROM Transaction t WHERE " +
+           "(:status IS NULL OR t.status = :status) " +
+           "AND (:type IS NULL OR t.type = :type) " +
+           "AND (:from IS NULL OR t.initiatedAt >= :from) " +
+           "AND (:to IS NULL OR t.initiatedAt <= :to) " +
+           "ORDER BY t.initiatedAt DESC")
+    Page<Transaction> adminSearch(
+            @Param("status") Transaction.TransactionStatus status,
+            @Param("type") Transaction.TransactionType type,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query("SELECT t FROM Transaction t WHERE " +
+           "(t.senderId IN :userIds OR t.recipientId IN :userIds) " +
+           "AND (:status IS NULL OR t.status = :status) " +
+           "AND (:type IS NULL OR t.type = :type) " +
+           "AND (:from IS NULL OR t.initiatedAt >= :from) " +
+           "AND (:to IS NULL OR t.initiatedAt <= :to) " +
+           "ORDER BY t.initiatedAt DESC")
+    Page<Transaction> adminSearchByUserIds(
+            @Param("userIds") List<UUID> userIds,
+            @Param("status") Transaction.TransactionStatus status,
+            @Param("type") Transaction.TransactionType type,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
+
+    @Query("SELECT t FROM Transaction t WHERE " +
+           "(:status IS NULL OR t.status = :status) " +
+           "AND (:type IS NULL OR t.type = :type) " +
+           "AND (:from IS NULL OR t.initiatedAt >= :from) " +
+           "AND (:to IS NULL OR t.initiatedAt <= :to) " +
+           "ORDER BY t.initiatedAt DESC")
+    List<Transaction> adminSearchAll(
+            @Param("status") Transaction.TransactionStatus status,
+            @Param("type") Transaction.TransactionType type,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.initiatedAt > :since")
     long countByInitiatedAtAfter(@Param("since") java.time.LocalDateTime since);
 

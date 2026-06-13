@@ -101,10 +101,25 @@ public class AdminScreeningController {
         return ResponseEntity.ok(ApiResponse.success("Entry deactivated"));
     }
 
+    /** Append enhanced due-diligence notes to a confirmed match (does not change status). */
+    @PatchMapping("/matches/{id}/edd")
+    public ResponseEntity<ApiResponse<ScreeningMatchResponse>> addEddNote(
+            @PathVariable UUID id,
+            @RequestBody EddRequest request,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(
+                screeningService.appendEddNote(admin, id, request.getEddNotes())));
+    }
+
     @Data
     static class ReviewRequest {
         private boolean confirmed;
         private String notes;
+    }
+
+    @Data
+    static class EddRequest {
+        private String eddNotes;
     }
 
     @Data

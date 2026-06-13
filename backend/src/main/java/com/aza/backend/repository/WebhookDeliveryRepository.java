@@ -12,4 +12,6 @@ public interface WebhookDeliveryRepository extends JpaRepository<WebhookDelivery
     List<WebhookDelivery> findAllByStatusAndNextRetryAtBefore(
             WebhookDelivery.DeliveryStatus status, LocalDateTime now);
     List<WebhookDelivery> findAllByEndpointIdOrderByCreatedAtDesc(UUID endpointId);
+
+    Page<WebhookDelivery> findAllByEndpointIdInOrderByCreatedAtDesc(List<UUID> endpointIds, Pageable pageable);
 }

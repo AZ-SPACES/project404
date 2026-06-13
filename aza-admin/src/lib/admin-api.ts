@@ -497,6 +497,35 @@ export function getAdminTransactions(page = 0, size = 20): Promise<Page<AdminTra
   return request(`/api/v1/admin/dashboard/transactions?page=${page}&size=${size}`);
 }
 
+export function searchAdminTransactions(params: {
+  query?: string;
+  status?: string;
+  type?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}): Promise<Page<AdminTransaction>> {
+  const qs = new URLSearchParams({ page: String(params.page ?? 0), size: String(params.size ?? 20) });
+  if (params.query) qs.set("query", params.query);
+  if (params.status) qs.set("status", params.status);
+  if (params.type) qs.set("type", params.type);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return request(`/api/v1/admin/dashboard/transactions?${qs}`);
+}
+
+export function exportAdminTransactionsCsv(params: {
+  status?: string; type?: string; from?: string; to?: string;
+}): Promise<void> {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set("status", params.status);
+  if (params.type) qs.set("type", params.type);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return downloadFile(`/api/v1/admin/dashboard/transactions/export?${qs}`, "transactions.csv");
+}
+
 // ── Wallets ───────────────────────────────────────────────────────────────────
 
 export interface AdminWallet {
@@ -558,7 +587,7 @@ export interface AuditLogEntry {
 export function getAuditLog(page = 0, size = 20, adminId?: string): Promise<Page<AuditLogEntry>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (adminId) params.set("adminId", adminId);
-  return request(`/api/v1/admin/audit-log?`);
+  return request(`/api/v1/admin/audit-log?${params}`);
 }
 
 // ── Broadcast Notifications ───────────────────────────────────────────────────
@@ -782,6 +811,14 @@ export function reviewFlaggedTransaction(id: string, action: "CLEAR" | "REPORT",
     method: "POST",
     body: JSON.stringify({ action, notes }),
   });
+}
+
+export function exportAmlRegisterCsv(params: { status?: string; from?: string; to?: string }): Promise<void> {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set("status", params.status);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return downloadFile(`/api/v1/admin/compliance/flagged/export?${qs}`, "aml-register.csv");
 }
 
 // ── Disputes ──────────────────────────────────────────────────────────────────
@@ -1241,6 +1278,10 @@ export function resetAllRateLimits(): Promise<{ keysDeleted: number }> {
   return request("/api/v1/admin/risk/rate-limits", { method: "DELETE" });
 }
 
+export function getRateLimitStats(): Promise<{ activeKeys: number }> {
+  return request("/api/v1/admin/risk/rate-limits/stats");
+}
+
 // ── Limit Increase Requests ───────────────────────────────────────────────────
 
 export interface LimitRequest {
@@ -1624,6 +1665,98 @@ export function changeStaffRole(
   return request(`/api/v1/admin/staff/${userId}/change-role`, {
     method: "POST",
     body: JSON.stringify({ fromRole, toRole }),
+  });
+}
+
+// ── Global payouts (cross-merchant) ──────────────────────────────────────────
+
+export interface GlobalPayout {
+  id: string;
+  merchantId: string;
+  merchantName: string;
+  amount: number;
+  currency: string;
+  status: string;
+  note: string | null;
+  requestedAt: string | null;
+  completedAt: string | null;
+}
+
+export function getGlobalPayouts(page = 0, size = 20, status?: string): Promise<Page<GlobalPayout>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/merchants/payouts/all?${params}`);
+}
+
+// ── Webhook deliveries per merchant ──────────────────────────────────────────
+
+export interface WebhookDeliveryRow {
+  id: string;
+  endpointId: string;
+  eventType: string;
+  status: string;
+  attemptCount: number;
+  responseStatusCode: number | null;
+  createdAt: string | null;
+  lastAttemptAt: string | null;
+}
+
+export function getMerchantWebhookDeliveries(merchantId: string, page = 0, size = 20, status?: string): Promise<Page<WebhookDeliveryRow>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/merchants/${merchantId}/webhook-deliveries?${params}`);
+}
+
+// ── User notification history ─────────────────────────────────────────────────
+
+export interface UserNotification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export function getUserNotifications(userId: string, page = 0, size = 20): Promise<Page<UserNotification>> {
+  return request(`/api/v1/admin/users/${userId}/notifications?page=${page}&size=${size}`);
+}
+
+// ── Screening EDD notes ───────────────────────────────────────────────────────
+
+export function addEddNote(matchId: string, eddNotes: string): Promise<ScreeningMatch> {
+  return request(`/api/v1/admin/screening/matches/${matchId}/edd`, {
+    method: "PATCH",
+    body: JSON.stringify({ eddNotes }),
+  });
+}
+
+// ── Regulatory filing calendar ────────────────────────────────────────────────
+
+export interface RegulatoryFilingRecord {
+  id: string;
+  type: "BOG_MONTHLY_RETURNS" | "STR_BATCH" | "ACCOUNTING_JOURNAL";
+  period: string;
+  notes: string | null;
+  filedByEmail: string;
+  filedAt: string;
+}
+
+export function getRegulatoryFilings(type?: string): Promise<RegulatoryFilingRecord[]> {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+  return request(`/api/v1/admin/regulatory/filings?${params}`);
+}
+
+export function markFiled(data: {
+  type: string;
+  period: string;
+  notes?: string;
+}): Promise<RegulatoryFilingRecord> {
+  return request("/api/v1/admin/regulatory/filings", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 

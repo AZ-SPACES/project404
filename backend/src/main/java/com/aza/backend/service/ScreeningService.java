@@ -353,6 +353,17 @@ public class ScreeningService {
         return toResponse(match, target);
     }
 
+    public ScreeningMatchResponse appendEddNote(User admin, UUID matchId, String eddNotes) {
+        ScreeningMatch match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new com.aza.backend.exception.AppException("NOT_FOUND", "Match not found", org.springframework.http.HttpStatus.NOT_FOUND));
+        String existing = match.getNotes() != null ? match.getNotes() : "";
+        String stamp = "[EDD " + java.time.LocalDate.now() + " " + admin.getEmail() + "] ";
+        match.setNotes(existing.isBlank() ? stamp + eddNotes : existing + "\n" + stamp + eddNotes);
+        matchRepository.save(match);
+        User target = userRepository.findById(match.getUserId()).orElse(null);
+        return toResponse(match, target);
+    }
+
     public Page<ScreeningMatchResponse> listMatches(String status, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
         Page<ScreeningMatch> matches = (status == null || status.isBlank())
