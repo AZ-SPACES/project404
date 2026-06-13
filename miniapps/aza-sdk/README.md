@@ -1,8 +1,24 @@
-# @jumpspaces/aza-miniapp-sdk
+# @az-spaces/aza-miniapp-sdk
 
 TypeScript SDK for building **Aza Mini Apps**.
 
 The Aza native app injects `window.aza` into your WebView automatically — you don't ship any runtime code. This package gives you full TypeScript types and helpers so your IDE autocompletes correctly and your code is type-safe.
+
+---
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](./docs/01-getting-started.md) | Scaffold, deploy, and submit your first mini app |
+| [SDK Reference](./docs/02-sdk-reference.md) | Full API reference for all SDK methods |
+| [Permissions](./docs/03-permissions.md) | What to declare and how to handle denied consent |
+| [Payments](./docs/04-payments.md) | Accept payments, idempotency, server verification |
+| [Local Development](./docs/05-local-development.md) | Mock bridge, ngrok tunnel, hot reload |
+| [Submission Guide](./docs/06-submission-guide.md) | Review criteria, rejection reasons, update workflow |
+| [Security](./docs/07-security.md) | HTTPS, CSP, rate limits, what not to do |
+| [Example: React + Vite](./docs/examples/react-vite.md) | Full working mini app with payments |
+| [Example: Vanilla JS](./docs/examples/vanilla-js.md) | No-framework single-file app |
 
 ---
 
