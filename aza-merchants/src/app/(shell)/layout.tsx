@@ -9,7 +9,7 @@ declare global {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearTokens, getChatbaseToken, getMe, Merchant } from "@/lib/merchant-api";
+import { logout as apiLogout, getChatbaseToken, getMe, Merchant } from "@/lib/merchant-api";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard,
@@ -156,8 +156,8 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
       });
   }, [router]);
 
-  function logout() {
-    clearTokens();
+  async function logout() {
+    await apiLogout().catch(() => {});
     router.replace("/login");
   }
 
