@@ -21,7 +21,7 @@ export function useDisabledMiniApps(): MiniAppStatusMap {
   const { data } = useQuery({
     queryKey: queryKeys.disabledMiniApps(),
     queryFn: () => getMiniAppStatuses().then(r => (r.data?.data ?? []) as MiniAppStatus[]),
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const statuses = data ?? [];

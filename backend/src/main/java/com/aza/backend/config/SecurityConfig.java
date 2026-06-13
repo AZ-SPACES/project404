@@ -102,6 +102,8 @@ public class SecurityConfig {
                             "/oauth/revoke",
                             "/oauth/userinfo",
                             "/oauth/authorize",
+                            "/oauth/approve",
+                            "/oauth/pending/*",
                             "/oauth/qr/initiate",
                             "/oauth/qr/status/*",
                             "/oauth/qr/complete",
@@ -119,6 +121,10 @@ public class SecurityConfig {
                     // Statement verification — publicly accessible so employers/banks can verify
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify/page").permitAll();
+                    // Mobile KYB handoff — token-authenticated, no user session required
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*/status").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/public/kyb-mobile/*/upload").permitAll();
                     if (swaggerEnabled) {
                         // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
                         auth.requestMatchers(

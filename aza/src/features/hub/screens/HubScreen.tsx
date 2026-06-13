@@ -13,7 +13,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@react-native-vector-icons/feather';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
@@ -23,6 +23,8 @@ import { MINI_APP_REGISTRY } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
 import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 import { useCommunityMiniApps } from '../../../hooks/useCommunityMiniApps';
+import { queryClient } from '../../../lib/queryClient';
+import { queryKeys } from '../../../lib/queryKeys';
 
 type HubNavProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -55,6 +57,12 @@ export default function HubScreen() {
   const [activeCategory, setActiveCategory] = useState<'All' | MiniAppCategory>('All');
   const { disabled, maintenance } = useDisabledMiniApps();
   const { communityApps } = useCommunityMiniApps();
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.disabledMiniApps() });
+    }, []),
+  );
 
   const openApp = useCallback((appId: string) => {
     navigation.navigate('MiniApp', { appId });

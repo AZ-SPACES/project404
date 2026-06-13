@@ -45,6 +45,30 @@ public class OAuthController {
         return ResponseEntity.ok(ApiResponse.success(consentUrl));
     }
 
+    /**
+     * Called by the consent page to load app info before showing the login form.
+     * Public — no auth required.
+     */
+    @GetMapping("/pending/{state}")
+    public ResponseEntity<ApiResponse<OAuthService.PendingConsentInfo>> getPendingConsent(
+            @PathVariable String state) {
+        return ResponseEntity.ok(ApiResponse.success(oAuthService.getPendingConsentInfo(state)));
+    }
+
+    /**
+     * Called by the consent page after the user enters their Aza credentials.
+     * Authenticates the user, approves consent, and returns the redirect URL.
+     * Public — credentials are verified server-side.
+     */
+    @PostMapping("/approve")
+    public ResponseEntity<ApiResponse<String>> approveConsent(
+            @RequestParam String state,
+            @RequestParam String identifier,
+            @RequestParam String password) {
+        String redirectUrl = oAuthService.approveConsentWithCredentials(state, identifier, password);
+        return ResponseEntity.ok(ApiResponse.success(redirectUrl));
+    }
+
     // ── Token exchange ────────────────────────────────────────────────────────
 
     @PostMapping("/token")

@@ -308,6 +308,16 @@ const navigationGroups = [
       { id: 'miniapps-security',    label: 'Security' },
     ],
   },
+  {
+    title: 'OAuth / SSO',
+    items: [
+      { id: 'oauth-overview',    label: 'Overview & Concepts' },
+      { id: 'oauth-qr-login',    label: 'QR Login (Recommended)' },
+      { id: 'oauth-pkce-flow',   label: 'Auth Code + PKCE Flow' },
+      { id: 'oauth-scopes',      label: 'Scopes & Userinfo' },
+      { id: 'oauth-ide-guide',   label: 'IDE / Web App Integration' },
+    ],
+  },
 ];
 
 // ── Doc Articles ──────────────────────────────────────────────────────────────
@@ -3084,6 +3094,1047 @@ public static boolean verifyWebhook(
     byte[] sig = mac.doFinal((timestamp + "." + rawBody).getBytes());
     String expected = HexFormat.of().formatHex(sig);
     return MessageDigest.isEqual(v1.getBytes(), expected.getBytes());
+}`,
+    },
+  },
+
+  // ── OAuth Overview ────────────────────────────────────────────────────────
+  'oauth-overview': {
+    id: 'oauth-overview',
+    category: 'OAuth / SSO',
+    title: 'OAuth 2.0 Overview',
+    subtitle: 'Let users sign in with their Aza account',
+    lastUpdated: 'Jun 2026',
+    description: 'Aza supports OAuth 2.0 Authorization Code flow with PKCE, letting third-party apps authenticate users via their Aza credentials. Users click "Login with Aza", approve the consent page, and your app receives a short-lived access token.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">How it works</h3>
+        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
+          <li>Your server calls <code>POST /oauth/authorize</code> with your <code>client_id</code>, requested scopes, PKCE challenge, and a redirect URI. The API returns a consent URL.</li>
+          <li>You redirect the user's browser to <code>https://aza.systems/oauth/consent?state=…</code>.</li>
+          <li>The user sees your app name, logo, and the permissions you requested. They enter their Aza credentials and click <strong>Allow</strong>.</li>
+          <li>Aza redirects the browser to your <code>redirect_uri</code> with <code>?code=…&state=…</code>.</li>
+          <li>Your server exchanges the code for tokens via <code>POST /oauth/token</code>. No browser involved — server-to-server.</li>
+          <li>Call <code>GET /oauth/userinfo</code> (Bearer token) to get the user's profile.</li>
+        </ol>
+
+        <h3 className="text-base font-bold text-gray-900">Register your OAuth client</h3>
+        <p className="text-sm">OAuth clients are registered by the Aza team. Email <strong>developers@aza.systems</strong> with:</p>
+        <ul className="list-disc pl-5 space-y-1 text-sm">
+          <li>Your app name and logo URL</li>
+          <li>Allowed redirect URIs (exact match, HTTPS only)</li>
+          <li>Scopes you need (see the Scopes guide)</li>
+          <li>Your website URL</li>
+        </ul>
+        <p className="text-sm">You will receive a <code>client_id</code> and <code>client_secret</code> in reply.</p>
+
+        <Note>
+          <strong>PKCE is required.</strong> Generate a random 43–128 character <code>code_verifier</code>, hash it with SHA-256, and base64url-encode the result as <code>code_challenge</code>. Store the verifier server-side — you'll need it for token exchange.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Token lifetimes</h3>
+        <Table
+          headers={['Token', 'TTL', 'Notes']}
+          rows={[
+            ['Auth code',     '60 seconds',  'One-time use. Exchange immediately after redirect.'],
+            ['Access token',  '1 hour',      'Pass as Bearer header to /oauth/userinfo.'],
+            ['Refresh token', '30 days',     'Use POST /oauth/token with grant_type=refresh_token.'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Endpoints at a glance</h3>
+        <div className="space-y-2">
+          <Endpoint method="POST" path="/oauth/authorize" />
+          <Endpoint method="GET"  path="/oauth/pending/{state}" />
+          <Endpoint method="POST" path="/oauth/approve" />
+          <Endpoint method="POST" path="/oauth/token" />
+          <Endpoint method="GET"  path="/oauth/userinfo" />
+          <Endpoint method="POST" path="/oauth/revoke" />
+        </div>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Step 1 — initiate the OAuth flow from your server
+curl -X POST https://api.aza.systems/oauth/authorize \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "clientId":        "your_client_id",
+    "redirectUri":     "https://yourapp.com/callback",
+    "scopes":          ["identity", "email"],
+    "codeChallenge":   "BASE64URL_SHA256_OF_VERIFIER",
+    "codeChallengeMethod": "S256",
+    "state":           "random_csrf_token"
+  }'
+
+# Response: { "data": "https://aza.systems/oauth/consent?state=abc123" }
+# → redirect the user's browser to that URL`,
+      js: `import crypto from 'node:crypto';
+
+// Generate PKCE pair
+function generatePKCE() {
+  const verifier = crypto.randomBytes(48).toString('base64url');
+  const challenge = crypto
+    .createHash('sha256')
+    .update(verifier)
+    .digest('base64url');
+  return { verifier, challenge };
+}
+
+// Step 1: initiate (server-side)
+async function startOAuth(req, res) {
+  const { verifier, challenge } = generatePKCE();
+  const state = crypto.randomBytes(16).toString('hex');
+
+  // Store verifier + state in session for later exchange
+  req.session.pkceVerifier = verifier;
+  req.session.oauthState   = state;
+
+  const r = await fetch('https://api.aza.systems/oauth/authorize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clientId:            process.env.AZA_CLIENT_ID,
+      redirectUri:         'https://yourapp.com/callback',
+      scopes:              ['identity', 'email'],
+      codeChallenge:       challenge,
+      codeChallengeMethod: 'S256',
+      state,
+    }),
+  });
+  const { data: consentUrl } = await r.json();
+  res.redirect(consentUrl); // → aza.systems/oauth/consent?state=...
+}`,
+      python: `import os, secrets, hashlib, base64
+import requests
+from flask import session, redirect
+
+def generate_pkce():
+    verifier  = secrets.token_urlsafe(48)
+    digest    = hashlib.sha256(verifier.encode()).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
+    return verifier, challenge
+
+def start_oauth():
+    verifier, challenge = generate_pkce()
+    state = secrets.token_hex(16)
+
+    session['pkce_verifier'] = verifier
+    session['oauth_state']   = state
+
+    resp = requests.post('https://api.aza.systems/oauth/authorize', json={
+        'clientId':            os.environ['AZA_CLIENT_ID'],
+        'redirectUri':         'https://yourapp.com/callback',
+        'scopes':              ['identity', 'email'],
+        'codeChallenge':       challenge,
+        'codeChallengeMethod': 'S256',
+        'state':               state,
+    })
+    consent_url = resp.json()['data']
+    return redirect(consent_url)`,
+      java: `import java.security.*;
+import java.util.Base64;
+
+// Generate PKCE verifier + challenge
+public static String[] generatePKCE() throws Exception {
+    byte[] verifierBytes = new byte[48];
+    new SecureRandom().nextBytes(verifierBytes);
+    String verifier  = Base64.getUrlEncoder().withoutPadding()
+                              .encodeToString(verifierBytes);
+    byte[] digest    = MessageDigest.getInstance("SHA-256")
+                                    .digest(verifier.getBytes());
+    String challenge = Base64.getUrlEncoder().withoutPadding()
+                              .encodeToString(digest);
+    return new String[]{verifier, challenge};
+}
+
+// POST /oauth/authorize
+// Body: {"clientId":"...","redirectUri":"...","scopes":["identity","email"],
+//        "codeChallenge":"...","codeChallengeMethod":"S256","state":"..."}
+// Response: {"data": "https://aza.systems/oauth/consent?state=..."}`,
+    },
+  },
+
+  // ── QR Login ─────────────────────────────────────────────────────────────
+  'oauth-qr-login': {
+    id: 'oauth-qr-login',
+    category: 'OAuth / SSO',
+    title: 'QR Login',
+    subtitle: 'Let users sign in by scanning a code with their Aza app',
+    lastUpdated: 'Jun 2026',
+    description: 'The recommended login method for web IDEs and desktop apps. No redirect URI, no password form, no PKCE. The user scans a QR code with the Aza mobile app and is instantly logged in — same UX as WhatsApp Web.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">How it works</h3>
+        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
+          <li>Your server calls <code>POST /oauth/qr/initiate</code> with your <code>client_id</code>, <code>client_secret</code>, and scopes.</li>
+          <li>You get back a <code>challengeToken</code>, a <code>sessionSecret</code>, a base64 QR image, and a 90-second TTL.</li>
+          <li>Display the QR image in the browser. Store <code>sessionSecret</code> server-side — never send it to the browser.</li>
+          <li>Poll <code>GET /oauth/qr/status/{'{challengeToken}'}</code> every 2 seconds.</li>
+          <li>When status becomes <code>APPROVED</code> (user scanned + approved in Aza app), call <code>POST /oauth/qr/complete</code> server-side.</li>
+          <li>You receive an <code>access_token</code> and <code>refresh_token</code>. Call <code>GET /oauth/userinfo</code> to get the user profile.</li>
+        </ol>
+
+        <Note>
+          <strong>No redirect URI needed.</strong> The QR flow is entirely polling-based — there is no browser redirect, so you don't need to register a callback URL.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
+        <div className="space-y-2">
+          <Endpoint method="POST" path="/oauth/qr/initiate" />
+          <Endpoint method="GET"  path="/oauth/qr/status/{challengeToken}" />
+          <Endpoint method="POST" path="/oauth/qr/complete" />
+        </div>
+
+        <h3 className="text-base font-bold text-gray-900">QR session lifetime</h3>
+        <Table
+          headers={['Field', 'Value']}
+          rows={[
+            ['TTL',             '90 seconds'],
+            ['Status values',   'PENDING → APPROVED or EXPIRED'],
+            ['Poll interval',   '2 seconds recommended'],
+            ['One-time use',    'challengeToken is invalidated after /qr/complete'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Drop-in React component</h3>
+        <p className="text-sm">
+          Copy <code>AzaQrLogin.tsx</code> into your project. It handles QR display, countdown, polling, and the complete handshake. You only need to wire up two server-side proxy routes.
+        </p>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs space-y-1">
+          <p className="font-bold text-gray-700">Usage</p>
+          <p className="text-gray-600">{`import { AzaQrLogin } from './AzaQrLogin';`}</p>
+          <p className="text-gray-600">{``}</p>
+          <p className="text-gray-600">{`<AzaQrLogin`}</p>
+          <p className="text-gray-600">{`  onSuccess={(user) => router.push('/ide')}`}</p>
+          <p className="text-gray-600">{`/>`}</p>
+        </div>
+
+        <h3 className="text-base font-bold text-gray-900">Server-side proxy routes</h3>
+        <p className="text-sm">The component calls two routes on <em>your</em> server to keep <code>client_secret</code> out of the browser:</p>
+        <Table
+          headers={['Route', 'What it does']}
+          rows={[
+            ['POST /api/aza-auth/qr/start',    'Calls /oauth/qr/initiate, stores sessionSecret in session, returns { challengeToken, qrImageBase64, ttlSeconds } to browser'],
+            ['POST /api/aza-auth/qr/complete', 'Reads sessionSecret from session, calls /oauth/qr/complete, fetches /oauth/userinfo, sets session cookie, returns { user }'],
+          ]}
+        />
+
+        <Warn>
+          Never return <code>sessionSecret</code> to the browser. It is the proof-of-ownership token that authorises the complete call — treat it like a password.
+        </Warn>
+
+        <h3 className="text-base font-bold text-gray-900">What the user sees in Aza</h3>
+        <p className="text-sm">When the user opens the Aza app and scans the QR, a sheet appears showing your app name and logo with an <strong>Allow</strong> button. Tapping Allow triggers the APPROVED status immediately.</p>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Step 1 — initiate a QR session (server-side)
+curl -X POST https://api.aza.systems/oauth/qr/initiate \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "clientId":     "your_client_id",
+    "clientSecret": "your_client_secret",
+    "scopes":       ["identity", "email"]
+  }'
+
+# Response:
+# {
+#   "data": {
+#     "challengeToken": "uuid-...",
+#     "sessionSecret":  "keep-this-server-side",
+#     "qrImageBase64":  "iVBORw0KGgo...",
+#     "ttlSeconds":     90,
+#     "expiresAt":      "2026-06-13T12:00:30Z"
+#   }
+# }
+
+# Step 2 — poll for status (can run from browser, no secret)
+curl https://api.aza.systems/oauth/qr/status/CHALLENGE_TOKEN
+# { "data": { "status": "PENDING" } }   ← keep polling
+# { "data": { "status": "APPROVED" } }  ← proceed to complete
+# { "data": { "status": "EXPIRED" } }   ← show "scan again"
+
+# Step 3 — complete (server-side, needs sessionSecret)
+curl -X POST https://api.aza.systems/oauth/qr/complete \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "challengeToken": "uuid-...",
+    "sessionSecret":  "keep-this-server-side",
+    "clientId":       "your_client_id",
+    "clientSecret":   "your_client_secret"
+  }'
+# → returns access_token + refresh_token`,
+      js: `// Express.js — two proxy routes the AzaQrLogin component expects
+
+import express from 'express';
+const router = express.Router();
+
+const AZA = 'https://api.aza.systems';
+const CLIENT_ID     = process.env.AZA_CLIENT_ID;
+const CLIENT_SECRET = process.env.AZA_CLIENT_SECRET;
+
+// POST /api/aza-auth/qr/start
+router.post('/qr/start', async (req, res) => {
+  const r = await fetch(\`\${AZA}/oauth/qr/initiate\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      clientId:     CLIENT_ID,
+      clientSecret: CLIENT_SECRET,
+      scopes:       ['identity', 'email'],
+    }),
+  });
+  const { data } = await r.json();
+
+  // Keep sessionSecret on the server — never send it to the browser
+  req.session.azaSessionSecret  = data.sessionSecret;
+  req.session.azaChallengeToken = data.challengeToken;
+
+  res.json({
+    challengeToken: data.challengeToken,
+    qrImageBase64:  data.qrImageBase64,
+    ttlSeconds:     data.ttlSeconds,
+  });
+});
+
+// POST /api/aza-auth/qr/complete
+router.post('/qr/complete', async (req, res) => {
+  const { challengeToken } = req.body;
+
+  // Verify the token matches what we issued
+  if (challengeToken !== req.session.azaChallengeToken)
+    return res.status(400).json({ message: 'Token mismatch' });
+
+  // Exchange for OAuth tokens (server-to-server)
+  const r = await fetch(\`\${AZA}/oauth/qr/complete\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      challengeToken,
+      sessionSecret: req.session.azaSessionSecret,
+      clientId:      CLIENT_ID,
+      clientSecret:  CLIENT_SECRET,
+    }),
+  });
+  const tokens = await r.json();
+  if (!r.ok) return res.status(401).json({ message: 'QR login failed' });
+
+  // Fetch user profile
+  const userRes = await fetch(\`\${AZA}/oauth/userinfo\`, {
+    headers: { Authorization: \`Bearer \${tokens.access_token}\` },
+  });
+  const user = await userRes.json();
+
+  // Store tokens in session
+  req.session.azaUser         = user;
+  req.session.azaAccessToken  = tokens.access_token;
+  req.session.azaRefreshToken = tokens.refresh_token;
+
+  res.json({ user });
+});
+
+export default router;`,
+      python: `# Flask — two proxy routes the AzaQrLogin component expects
+
+import os, requests
+from flask import Blueprint, session, request, jsonify
+
+aza_qr = Blueprint('aza_qr', __name__, url_prefix='/api/aza-auth')
+AZA    = 'https://api.aza.systems'
+
+@aza_qr.route('/qr/start', methods=['POST'])
+def qr_start():
+    resp = requests.post(f'{AZA}/oauth/qr/initiate', json={
+        'clientId':     os.environ['AZA_CLIENT_ID'],
+        'clientSecret': os.environ['AZA_CLIENT_SECRET'],
+        'scopes':       ['identity', 'email'],
+    })
+    data = resp.json()['data']
+
+    # Keep sessionSecret server-side
+    session['aza_session_secret']  = data['sessionSecret']
+    session['aza_challenge_token'] = data['challengeToken']
+
+    return jsonify({
+        'challengeToken': data['challengeToken'],
+        'qrImageBase64':  data['qrImageBase64'],
+        'ttlSeconds':     data['ttlSeconds'],
+    })
+
+@aza_qr.route('/qr/complete', methods=['POST'])
+def qr_complete():
+    challenge_token = request.json.get('challengeToken')
+
+    if challenge_token != session.get('aza_challenge_token'):
+        return jsonify({'message': 'Token mismatch'}), 400
+
+    resp = requests.post(f'{AZA}/oauth/qr/complete', json={
+        'challengeToken': challenge_token,
+        'sessionSecret':  session['aza_session_secret'],
+        'clientId':       os.environ['AZA_CLIENT_ID'],
+        'clientSecret':   os.environ['AZA_CLIENT_SECRET'],
+    })
+    if not resp.ok:
+        return jsonify({'message': 'QR login failed'}), 401
+
+    tokens = resp.json()
+    user   = requests.get(f'{AZA}/oauth/userinfo',
+        headers={'Authorization': f"Bearer {tokens['access_token']}"}).json()
+
+    session['aza_user']          = user
+    session['aza_access_token']  = tokens['access_token']
+    session['aza_refresh_token'] = tokens['refresh_token']
+
+    return jsonify({'user': user})`,
+      java: `// Spring Boot — two proxy endpoints
+
+@RestController
+@RequestMapping("/api/aza-auth")
+@RequiredArgsConstructor
+public class AzaQrProxyController {
+
+    private final WebClient webClient;
+
+    @Value("\${aza.client-id}")     private String clientId;
+    @Value("\${aza.client-secret}") private String clientSecret;
+
+    private static final String AZA = "https://api.aza.systems";
+
+    // POST /api/aza-auth/qr/start
+    @PostMapping("/qr/start")
+    public Map<String, Object> qrStart(HttpSession session) {
+        var data = webClient.post().uri(AZA + "/oauth/qr/initiate")
+            .bodyValue(Map.of("clientId", clientId, "clientSecret", clientSecret,
+                              "scopes", List.of("identity", "email")))
+            .retrieve().bodyToMono(QrInitiateResponse.class).block();
+
+        // Keep sessionSecret server-side
+        session.setAttribute("azaSessionSecret",  data.getSessionSecret());
+        session.setAttribute("azaChallengeToken", data.getChallengeToken());
+
+        return Map.of(
+            "challengeToken", data.getChallengeToken(),
+            "qrImageBase64",  data.getQrImageBase64(),
+            "ttlSeconds",     data.getTtlSeconds()
+        );
+    }
+
+    // POST /api/aza-auth/qr/complete
+    @PostMapping("/qr/complete")
+    public Map<String, Object> qrComplete(@RequestBody Map<String, String> body,
+                                          HttpSession session) {
+        String challengeToken = body.get("challengeToken");
+        if (!challengeToken.equals(session.getAttribute("azaChallengeToken")))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token mismatch");
+
+        var tokens = webClient.post().uri(AZA + "/oauth/qr/complete")
+            .bodyValue(Map.of(
+                "challengeToken", challengeToken,
+                "sessionSecret",  session.getAttribute("azaSessionSecret"),
+                "clientId",       clientId,
+                "clientSecret",   clientSecret))
+            .retrieve().bodyToMono(OAuthTokenResponse.class).block();
+
+        var user = webClient.get().uri(AZA + "/oauth/userinfo")
+            .header("Authorization", "Bearer " + tokens.getAccessToken())
+            .retrieve().bodyToMono(OAuthUserInfo.class).block();
+
+        session.setAttribute("azaUser",         user);
+        session.setAttribute("azaAccessToken",  tokens.getAccessToken());
+        session.setAttribute("azaRefreshToken", tokens.getRefreshToken());
+
+        return Map.of("user", user);
+    }
+}`,
+    },
+  },
+
+  // ── PKCE Flow ────────────────────────────────────────────────────────────
+  'oauth-pkce-flow': {
+    id: 'oauth-pkce-flow',
+    category: 'OAuth / SSO',
+    title: 'Auth Code + PKCE Flow',
+    subtitle: 'Token exchange and refresh',
+    lastUpdated: 'Jun 2026',
+    description: 'After the user approves on the consent page, Aza redirects back to your redirect_uri with a one-time auth code. Your server must exchange this code within 60 seconds.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Callback handling</h3>
+        <p className="text-sm">Your redirect_uri will receive:</p>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs break-all">
+          https://yourapp.com/callback?code=AUTH_CODE&state=YOUR_STATE
+        </div>
+        <p className="text-sm">Always verify <code>state</code> matches what you stored in the session before proceeding.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Exchange the code</h3>
+        <Endpoint method="POST" path="/oauth/token" />
+        <Table
+          headers={['Field', 'Value']}
+          rows={[
+            ['grant_type',    'authorization_code'],
+            ['code',          'The auth code from the callback'],
+            ['redirect_uri',  'Must exactly match the registered URI'],
+            ['client_id',     'Your OAuth client ID'],
+            ['client_secret', 'Your OAuth client secret'],
+            ['code_verifier', 'The original PKCE verifier you generated in step 1'],
+          ]}
+        />
+        <p className="text-sm">Response contains <code>access_token</code>, <code>refresh_token</code>, <code>expires_in</code>, and <code>token_type: "Bearer"</code>.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Refresh the access token</h3>
+        <p className="text-sm">When the access token expires (1 hour), exchange the refresh token:</p>
+        <Table
+          headers={['Field', 'Value']}
+          rows={[
+            ['grant_type',    'refresh_token'],
+            ['refresh_token', 'The refresh token from the previous exchange'],
+            ['client_id',     'Your OAuth client ID'],
+            ['client_secret', 'Your OAuth client secret'],
+          ]}
+        />
+
+        <Warn>
+          Never expose your <code>client_secret</code> in client-side code. All token exchanges must happen server-to-server.
+        </Warn>
+
+        <h3 className="text-base font-bold text-gray-900">Revoke a token</h3>
+        <Endpoint method="POST" path="/oauth/revoke" />
+        <p className="text-sm">Pass <code>client_id</code>, <code>client_secret</code>, and <code>token</code> (access or refresh token) as form params to invalidate it immediately.</p>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Step 2 — exchange auth code for tokens (server-side only)
+curl -X POST https://api.aza.systems/oauth/token \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "grant_type":    "authorization_code",
+    "code":          "AUTH_CODE_FROM_CALLBACK",
+    "redirect_uri":  "https://yourapp.com/callback",
+    "client_id":     "your_client_id",
+    "client_secret": "your_client_secret",
+    "code_verifier": "YOUR_PKCE_VERIFIER"
+  }'
+
+# Refresh an expired access token
+curl -X POST https://api.aza.systems/oauth/token \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "grant_type":    "refresh_token",
+    "refresh_token": "REFRESH_TOKEN",
+    "client_id":     "your_client_id",
+    "client_secret": "your_client_secret"
+  }'`,
+      js: `// Step 2: handle the callback (server-side)
+async function handleCallback(req, res) {
+  const { code, state } = req.query;
+
+  // CSRF check
+  if (state !== req.session.oauthState) {
+    return res.status(400).send('Invalid state');
+  }
+
+  // Exchange code for tokens
+  const r = await fetch('https://api.aza.systems/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type:    'authorization_code',
+      code,
+      redirect_uri:  'https://yourapp.com/callback',
+      client_id:     process.env.AZA_CLIENT_ID,
+      client_secret: process.env.AZA_CLIENT_SECRET,
+      code_verifier: req.session.pkceVerifier,
+    }),
+  });
+  const tokens = await r.json();
+
+  // Store tokens securely (server-side session / DB, never in cookies)
+  req.session.azaAccessToken  = tokens.access_token;
+  req.session.azaRefreshToken = tokens.refresh_token;
+  req.session.azaTokenExpiry  = Date.now() + tokens.expires_in * 1000;
+
+  res.redirect('/dashboard');
+}`,
+      python: `import os
+import requests
+from flask import session, redirect, request
+
+def oauth_callback():
+    code  = request.args.get('code')
+    state = request.args.get('state')
+
+    # CSRF check
+    if state != session.get('oauth_state'):
+        return 'Invalid state', 400
+
+    resp = requests.post('https://api.aza.systems/oauth/token', json={
+        'grant_type':    'authorization_code',
+        'code':          code,
+        'redirect_uri':  'https://yourapp.com/callback',
+        'client_id':     os.environ['AZA_CLIENT_ID'],
+        'client_secret': os.environ['AZA_CLIENT_SECRET'],
+        'code_verifier': session['pkce_verifier'],
+    })
+    tokens = resp.json()
+
+    session['aza_access_token']  = tokens['access_token']
+    session['aza_refresh_token'] = tokens['refresh_token']
+
+    return redirect('/dashboard')`,
+      java: `// Handle callback — exchange code for tokens
+@GetMapping("/callback")
+public String callback(@RequestParam String code,
+                       @RequestParam String state,
+                       HttpSession session) throws Exception {
+
+    if (!state.equals(session.getAttribute("oauthState")))
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid state");
+
+    Map<String,String> body = Map.of(
+        "grant_type",    "authorization_code",
+        "code",          code,
+        "redirect_uri",  "https://yourapp.com/callback",
+        "client_id",     clientId,
+        "client_secret", clientSecret,
+        "code_verifier", (String) session.getAttribute("pkceVerifier")
+    );
+
+    var res = httpClient.post()
+        .uri("https://api.aza.systems/oauth/token")
+        .bodyValue(body)
+        .retrieve()
+        .bodyToMono(OAuthTokenResponse.class)
+        .block();
+
+    session.setAttribute("azaAccessToken",  res.getAccessToken());
+    session.setAttribute("azaRefreshToken", res.getRefreshToken());
+    return "redirect:/dashboard";
+}`,
+    },
+  },
+
+  // ── Scopes & Userinfo ───────────────────────────────────────────────────
+  'oauth-scopes': {
+    id: 'oauth-scopes',
+    category: 'OAuth / SSO',
+    title: 'Scopes & Userinfo',
+    subtitle: 'What you can request and how to read it',
+    lastUpdated: 'Jun 2026',
+    description: 'Scopes define exactly what your app can access. Always request the minimum set you need — users see each permission on the consent page, and fewer permissions means faster approval.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Available scopes</h3>
+        <Table
+          headers={['Scope', 'What you get', 'Userinfo field']}
+          rows={[
+            ['identity',      'Name, username, profile picture',  'id, username, fullName, avatarUrl'],
+            ['email',         'Email address',                     'email, emailVerified'],
+            ['phone',         'Phone number',                      'phoneNumber, phoneVerified'],
+            ['wallet:read',   'Current wallet balance',            'walletBalance, currency'],
+            ['payment',       'Initiate a payment request',        'n/a — triggers payment flow'],
+          ]}
+        />
+
+        <Note>
+          <code>identity</code> is always included when any scope is approved — it provides the stable user ID you use to identify the user in your database.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Fetch the user profile</h3>
+        <Endpoint method="GET" path="/oauth/userinfo" />
+        <p className="text-sm">Pass the access token as a <code>Bearer</code> header. Returns only the fields covered by the approved scopes.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Example response</h3>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs">
+          {`{
+  "id":            "usr_abc123",
+  "username":      "kofi_mensah",
+  "fullName":      "Kofi Mensah",
+  "avatarUrl":     "https://cdn.aza.systems/avatars/...",
+  "email":         "kofi@example.com",
+  "emailVerified": true,
+  "phoneNumber":   "+233201234567",
+  "phoneVerified": true,
+  "walletBalance": 450.00,
+  "currency":      "GHS"
+}`}
+        </div>
+
+        <h3 className="text-base font-bold text-gray-900">Using the user ID as a stable identifier</h3>
+        <p className="text-sm">Use <code>id</code> (not <code>username</code> or <code>email</code>) as the primary key to link your user record to the Aza user. Usernames and emails can change; the ID never does.</p>
+
+        <Warn>
+          Do not store the raw access token in your database long-term. Store the refresh token, and request a fresh access token on demand. Access tokens expire after 1 hour.
+        </Warn>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Fetch the authenticated user's profile
+curl -X GET https://api.aza.systems/oauth/userinfo \\
+  -H "Authorization: Bearer ACCESS_TOKEN"
+
+# Response:
+# {
+#   "id": "usr_abc123",
+#   "username": "kofi_mensah",
+#   "fullName": "Kofi Mensah",
+#   "email": "kofi@example.com",
+#   "walletBalance": 450.00,
+#   "currency": "GHS"
+# }`,
+      js: `// Fetch user info with the access token
+async function getAzaUser(accessToken) {
+  const res = await fetch('https://api.aza.systems/oauth/userinfo', {
+    headers: { Authorization: \`Bearer \${accessToken}\` },
+  });
+  if (!res.ok) throw new Error('Token may have expired');
+  return res.json();
+}
+
+// Example: create or update local user record
+async function loginWithAza(session) {
+  const azaUser = await getAzaUser(session.azaAccessToken);
+
+  // Use azaUser.id as the stable link — never email/username
+  await db.users.upsert({
+    where:  { azaId: azaUser.id },
+    create: { azaId: azaUser.id, name: azaUser.fullName, email: azaUser.email },
+    update: { name: azaUser.fullName, email: azaUser.email },
+  });
+}`,
+      python: `import requests
+
+def get_aza_user(access_token: str) -> dict:
+    resp = requests.get(
+        'https://api.aza.systems/oauth/userinfo',
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+# Create or update your local user
+def login_with_aza(session):
+    user = get_aza_user(session['aza_access_token'])
+    # upsert by user['id'] — stable identifier
+    return user`,
+      java: `// Fetch userinfo
+OAuthUserInfo getUserInfo(String accessToken) {
+    return webClient.get()
+        .uri("https://api.aza.systems/oauth/userinfo")
+        .header("Authorization", "Bearer " + accessToken)
+        .retrieve()
+        .bodyToMono(OAuthUserInfo.class)
+        .block();
+}
+
+// OAuthUserInfo record:
+// record OAuthUserInfo(String id, String username, String fullName,
+//                      String email, boolean emailVerified,
+//                      String phoneNumber, BigDecimal walletBalance,
+//                      String currency) {}`,
+    },
+  },
+
+  // ── IDE / Web App Integration Guide ─────────────────────────────────────
+  'oauth-ide-guide': {
+    id: 'oauth-ide-guide',
+    category: 'OAuth / SSO',
+    title: 'IDE / Web App Integration',
+    subtitle: 'End-to-end "Login with Aza" for a web application',
+    lastUpdated: 'Jun 2026',
+    description: 'A complete walkthrough for integrating Aza OAuth into a web application — specifically a web IDE — so users can authenticate with their Aza credentials before accessing the app.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">What you need from Aza</h3>
+        <Table
+          headers={['Item', 'How to get it']}
+          rows={[
+            ['client_id',     'Provided by the Aza team after registration'],
+            ['client_secret', 'Provided by the Aza team — keep this secret'],
+            ['redirect_uri',  'You provide this during registration (HTTPS, exact match)'],
+          ]}
+        />
+        <p className="text-sm">Email <strong>developers@aza.systems</strong> to register your OAuth client. Include your app name, logo, website, allowed redirect URIs, and required scopes.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Recommended architecture</h3>
+        <p className="text-sm">For a web IDE (or any browser-based app), use a thin <strong>server-side session layer</strong> to hold tokens. Never put <code>client_secret</code> or raw tokens in the browser.</p>
+        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
+          <li>User visits your app → unauthenticated → redirect to <code>/login</code>.</li>
+          <li>Your server calls <code>POST /oauth/authorize</code> → gets a consent URL → redirects the browser.</li>
+          <li>User logs in at <code>aza.systems/oauth/consent</code> and approves permissions.</li>
+          <li>Aza redirects to <code>https://your-ide.com/auth/callback?code=…&state=…</code>.</li>
+          <li>Your server exchanges the code for tokens (server-to-server) → stores them in the session.</li>
+          <li>Your server redirects the user into the IDE. All subsequent requests carry your session cookie — no OAuth tokens in the browser.</li>
+        </ol>
+
+        <h3 className="text-base font-bold text-gray-900">Scopes for an IDE</h3>
+        <p className="text-sm">Typically you only need:</p>
+        <ul className="list-disc pl-5 space-y-1 text-sm">
+          <li><code>identity</code> — stable user ID, username, name, avatar</li>
+          <li><code>email</code> — email address (for notifications, license matching)</li>
+        </ul>
+        <p className="text-sm">Request <code>wallet:read</code> or <code>payment</code> only if your IDE has billing features that need them.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Session management</h3>
+        <p className="text-sm">Store the access token and refresh token in your server-side session (e.g. Redis). Before each protected request, check if the access token has expired and refresh it silently:</p>
+        <ol className="list-decimal pl-5 space-y-1 text-sm">
+          <li>If <code>Date.now() &gt; tokenExpiry - 60_000</code>, call <code>POST /oauth/token</code> with <code>grant_type: refresh_token</code>.</li>
+          <li>Update <code>access_token</code> and <code>expires_in</code> in the session.</li>
+          <li>If the refresh token itself has expired (30-day TTL), force the user to re-login.</li>
+        </ol>
+
+        <Note>
+          <strong>Same-site cookies:</strong> Set your session cookie with <code>SameSite=Lax; Secure; HttpOnly</code> so it isn't sent on cross-origin redirects from aza.systems, but is sent on the GET redirect back to your callback.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Signing out</h3>
+        <p className="text-sm">Call <code>POST /oauth/revoke</code> to invalidate the Aza tokens, then clear your local session. This logs the user out of your app and de-authorises your client's access to their Aza account.</p>
+
+        <Warn>
+          Do not skip token revocation on logout. If you only clear the local session, the refresh token stays valid for 30 days and can be replayed from any device with access to it.
+        </Warn>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Complete flow summary
+
+# 1. Initiate (server → Aza)
+curl -X POST https://api.aza.systems/oauth/authorize \\
+  -H "Content-Type: application/json" \\
+  -d '{"clientId":"…","redirectUri":"https://your-ide.com/auth/callback",
+       "scopes":["identity","email"],"codeChallenge":"…",
+       "codeChallengeMethod":"S256","state":"CSRF_TOKEN"}'
+# → redirect browser to returned consent URL
+
+# 2. Exchange (server → Aza, after callback)
+curl -X POST https://api.aza.systems/oauth/token \\
+  -H "Content-Type: application/json" \\
+  -d '{"grant_type":"authorization_code","code":"AUTH_CODE",
+       "redirectUri":"https://your-ide.com/auth/callback",
+       "client_id":"…","client_secret":"…","code_verifier":"…"}'
+
+# 3. Userinfo
+curl -X GET https://api.aza.systems/oauth/userinfo \\
+  -H "Authorization: Bearer ACCESS_TOKEN"
+
+# 4. Revoke on logout
+curl -X POST https://api.aza.systems/oauth/revoke \\
+  -d "client_id=…&client_secret=…&token=REFRESH_TOKEN"`,
+      js: `// Express.js — complete "Login with Aza" middleware
+
+import express  from 'express';
+import crypto   from 'node:crypto';
+import session  from 'express-session';
+
+const app = express();
+app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false,
+                  cookie: { httpOnly: true, secure: true, sameSite: 'lax' } }));
+
+// Guard: redirect unauthenticated users to login
+function requireAzaAuth(req, res, next) {
+  if (req.session.azaUser) return next();
+  res.redirect('/auth/login');
+}
+
+// Kick off the OAuth flow
+app.get('/auth/login', async (req, res) => {
+  const verifier  = crypto.randomBytes(48).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  const state     = crypto.randomBytes(16).toString('hex');
+
+  req.session.pkceVerifier = verifier;
+  req.session.oauthState   = state;
+
+  const r = await fetch('https://api.aza.systems/oauth/authorize', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId: process.env.AZA_CLIENT_ID,
+      redirectUri: 'https://your-ide.com/auth/callback',
+      scopes: ['identity', 'email'], codeChallenge: challenge,
+      codeChallengeMethod: 'S256', state }),
+  });
+  const { data: consentUrl } = await r.json();
+  res.redirect(consentUrl);
+});
+
+// OAuth callback
+app.get('/auth/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (state !== req.session.oauthState) return res.status(400).send('Bad state');
+
+  const tokens = await fetch('https://api.aza.systems/oauth/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grant_type: 'authorization_code', code,
+      redirect_uri: 'https://your-ide.com/auth/callback',
+      client_id: process.env.AZA_CLIENT_ID,
+      client_secret: process.env.AZA_CLIENT_SECRET,
+      code_verifier: req.session.pkceVerifier }),
+  }).then(r => r.json());
+
+  const user = await fetch('https://api.aza.systems/oauth/userinfo',
+    { headers: { Authorization: \`Bearer \${tokens.access_token}\` } }).then(r => r.json());
+
+  req.session.azaUser         = user;
+  req.session.azaAccessToken  = tokens.access_token;
+  req.session.azaRefreshToken = tokens.refresh_token;
+  req.session.azaTokenExpiry  = Date.now() + tokens.expires_in * 1000;
+
+  res.redirect('/ide');
+});
+
+// Logout
+app.post('/auth/logout', async (req, res) => {
+  if (req.session.azaRefreshToken) {
+    await fetch('https://api.aza.systems/oauth/revoke', {
+      method: 'POST',
+      body: new URLSearchParams({ client_id: process.env.AZA_CLIENT_ID,
+        client_secret: process.env.AZA_CLIENT_SECRET,
+        token: req.session.azaRefreshToken }),
+    });
+  }
+  req.session.destroy();
+  res.redirect('/');
+});
+
+// Protected IDE route
+app.get('/ide', requireAzaAuth, (req, res) => {
+  res.send(\`Hello, \${req.session.azaUser.fullName}!\`);
+});`,
+      python: `# Flask — complete "Login with Aza" blueprint
+
+import os, secrets, hashlib, base64
+import requests
+from flask import Blueprint, session, redirect, request, url_for
+from functools import wraps
+
+aza_auth = Blueprint('aza_auth', __name__)
+AZA_API  = 'https://api.aza.systems'
+
+def require_aza_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'aza_user' not in session:
+            return redirect(url_for('aza_auth.login'))
+        return f(*args, **kwargs)
+    return decorated
+
+@aza_auth.route('/auth/login')
+def login():
+    verifier  = secrets.token_urlsafe(48)
+    digest    = hashlib.sha256(verifier.encode()).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b'=').decode()
+    state     = secrets.token_hex(16)
+
+    session['pkce_verifier'] = verifier
+    session['oauth_state']   = state
+
+    resp = requests.post(f'{AZA_API}/oauth/authorize', json={
+        'clientId':            os.environ['AZA_CLIENT_ID'],
+        'redirectUri':         'https://your-ide.com/auth/callback',
+        'scopes':              ['identity', 'email'],
+        'codeChallenge':       challenge,
+        'codeChallengeMethod': 'S256',
+        'state':               state,
+    })
+    return redirect(resp.json()['data'])
+
+@aza_auth.route('/auth/callback')
+def callback():
+    code, state = request.args.get('code'), request.args.get('state')
+    if state != session.pop('oauth_state', None):
+        return 'Invalid state', 400
+
+    tokens = requests.post(f'{AZA_API}/oauth/token', json={
+        'grant_type':    'authorization_code',
+        'code':          code,
+        'redirect_uri':  'https://your-ide.com/auth/callback',
+        'client_id':     os.environ['AZA_CLIENT_ID'],
+        'client_secret': os.environ['AZA_CLIENT_SECRET'],
+        'code_verifier': session.pop('pkce_verifier'),
+    }).json()
+
+    user = requests.get(f'{AZA_API}/oauth/userinfo',
+        headers={'Authorization': f"Bearer {tokens['access_token']}"}).json()
+
+    session['aza_user']          = user
+    session['aza_access_token']  = tokens['access_token']
+    session['aza_refresh_token'] = tokens['refresh_token']
+    return redirect('/ide')
+
+@aza_auth.route('/auth/logout', methods=['POST'])
+def logout():
+    if rt := session.get('aza_refresh_token'):
+        requests.post(f'{AZA_API}/oauth/revoke', data={
+            'client_id':     os.environ['AZA_CLIENT_ID'],
+            'client_secret': os.environ['AZA_CLIENT_SECRET'],
+            'token':         rt,
+        })
+    session.clear()
+    return redirect('/')`,
+      java: `// Spring Boot — complete "Login with Aza" controller
+
+@Controller
+@RequiredArgsConstructor
+public class AzaOAuthController {
+
+    private final WebClient webClient;
+
+    @Value("\${aza.client-id}")     private String clientId;
+    @Value("\${aza.client-secret}") private String clientSecret;
+    private static final String REDIRECT = "https://your-ide.com/auth/callback";
+
+    @GetMapping("/auth/login")
+    public String login(HttpSession session) throws Exception {
+        String[] pkce      = generatePKCE();
+        String   state     = UUID.randomUUID().toString();
+        session.setAttribute("pkceVerifier", pkce[0]);
+        session.setAttribute("oauthState",   state);
+
+        String consentUrl = webClient.post()
+            .uri("https://api.aza.systems/oauth/authorize")
+            .bodyValue(Map.of("clientId", clientId,
+                "redirectUri", REDIRECT, "scopes", List.of("identity","email"),
+                "codeChallenge", pkce[1], "codeChallengeMethod", "S256", "state", state))
+            .retrieve().bodyToMono(ApiResponse.class).block().getData();
+
+        return "redirect:" + consentUrl;
+    }
+
+    @GetMapping("/auth/callback")
+    public String callback(@RequestParam String code, @RequestParam String state,
+                           HttpSession session) {
+        if (!state.equals(session.getAttribute("oauthState")))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bad state");
+
+        var tokens = webClient.post()
+            .uri("https://api.aza.systems/oauth/token")
+            .bodyValue(Map.of("grant_type", "authorization_code", "code", code,
+                "redirect_uri", REDIRECT, "client_id", clientId,
+                "client_secret", clientSecret,
+                "code_verifier", session.getAttribute("pkceVerifier")))
+            .retrieve().bodyToMono(OAuthTokenResponse.class).block();
+
+        var user = webClient.get()
+            .uri("https://api.aza.systems/oauth/userinfo")
+            .header("Authorization", "Bearer " + tokens.getAccessToken())
+            .retrieve().bodyToMono(OAuthUserInfo.class).block();
+
+        session.setAttribute("azaUser",         user);
+        session.setAttribute("azaAccessToken",  tokens.getAccessToken());
+        session.setAttribute("azaRefreshToken", tokens.getRefreshToken());
+        return "redirect:/ide";
+    }
+
+    @PostMapping("/auth/logout")
+    public String logout(HttpSession session) {
+        String rt = (String) session.getAttribute("azaRefreshToken");
+        if (rt != null) {
+            webClient.post().uri("https://api.aza.systems/oauth/revoke")
+                .bodyValue(Map.of("client_id", clientId,
+                    "client_secret", clientSecret, "token", rt))
+                .retrieve().toBodilessEntity().block();
+        }
+        session.invalidate();
+        return "redirect:/";
+    }
 }`,
     },
   },
