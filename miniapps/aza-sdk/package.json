@@ -1,0 +1,34 @@
+{
+  "name": "@aza/miniapp-sdk",
+  "version": "1.0.0",
+  "description": "SDK for building Aza Mini Apps. Provides TypeScript types and bridge helpers for window.aza.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "@types/react": "^18.0.0"
+  },
+  "keywords": ["aza", "miniapp", "sdk", "fintech", "ghana"],
+  "license": "MIT"
+}

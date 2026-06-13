@@ -15,7 +15,8 @@
       "@miniapps/radio":             ["../miniapps/radio/index"],
       "@miniapps/notepad":           ["../miniapps/notepad/index"],
       "@miniapps/cedirates":         ["../miniapps/cedirates/index"],
-      "@miniapps/salifu-and-master": ["../miniapps/salifu-and-master/index"]
+      "@miniapps/salifu-and-master": ["../miniapps/salifu-and-master/index"],
+      "@aza/miniapp-sdk":            ["../miniapps/aza-sdk/src/index"]
     }
   }
 }
