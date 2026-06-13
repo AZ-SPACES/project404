@@ -584,6 +584,7 @@ public class UserService {
                 })
                 .map(token -> DeviceResponse.builder()
                         .id(token.getId().toString())
+                        .deviceId(token.getDeviceId())
                         .deviceName(token.getDeviceName())
                         .deviceOs(token.getDeviceOs())
                         .ipAddress(token.getIpAddress())

@@ -14,6 +14,7 @@ import {
   getUserNotifications,
   revokeUserSession,
   updateUserLimits,
+  blockDevice,
   type AdminUser,
   type KycRecord,
   type AdminTransaction,
@@ -35,6 +36,7 @@ import {
   Smartphone,
   Monitor,
   Bell,
+  Ban,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -178,6 +180,25 @@ export default function UserDetailPage() {
     },
   });
 
+  const [blockTarget, setBlockTarget] = useState<UserSession | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+  const [blockToast, setBlockToast] = useState<string | null>(null);
+  const blockMutation = useMutation({
+    mutationFn: () => blockDevice(blockTarget!.deviceId!, {
+      associatedUserId: userId,
+      deviceName: blockTarget!.deviceName ?? undefined,
+      deviceOs: blockTarget!.deviceOs ?? undefined,
+      reason: blockReason || undefined,
+    }),
+    onSuccess: () => {
+      setBlockTarget(null);
+      setBlockReason("");
+      setBlockToast("Device blocked — session terminated immediately");
+      setTimeout(() => setBlockToast(null), 3500);
+      queryClient.invalidateQueries({ queryKey: ["userSessions", userId] });
+    },
+  });
+
   const userTxs: AdminTransaction[] = txPage?.content ?? [];
 
   const statusMutation = useMutation({
@@ -240,6 +261,12 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      {blockToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm px-4 py-3 rounded-xl shadow-2xl">
+          {blockToast}
+        </div>
+      )}
+
       {pendingNotice && (
         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-yellow-400 text-sm">
           {pendingNotice}
@@ -342,10 +369,21 @@ export default function UserDetailPage() {
                     {s.online ? "Online" : relativeTime(s.lastUsedAt)}
                   </span>
                 </span>
-                <button onClick={() => setRevokeTarget(s)}
-                  className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
-                  Revoke
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {s.deviceId && (
+                    <button
+                      onClick={() => { setBlockTarget(s); setBlockReason(""); }}
+                      title="Block this device across the platform"
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors flex items-center gap-1"
+                    >
+                      <Ban size={10} /> Block
+                    </button>
+                  )}
+                  <button onClick={() => setRevokeTarget(s)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                    Revoke
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -369,6 +407,50 @@ export default function UserDetailPage() {
                 {revokeMutation.isPending && <Loader2 size={14} className="animate-spin" />} Revoke
               </button>
               <button onClick={() => setRevokeTarget(null)}
+                className="px-4 py-2.5 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {blockTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-foreground font-semibold flex items-center gap-2">
+              <Ban size={16} className="text-amber-400" /> Block Device
+            </h3>
+            <div className="bg-muted/20 border border-border rounded-xl p-3 text-sm">
+              <p className="text-foreground font-medium">{blockTarget.deviceName ?? blockTarget.deviceOs ?? "Unknown device"}</p>
+              {blockTarget.deviceOs && <p className="text-foreground/40 text-xs mt-0.5">{blockTarget.deviceOs}</p>}
+            </div>
+            <p className="text-foreground/50 text-sm">
+              This blocks the device platform-wide — not just this user's session. Any account logged in on this device will be signed out immediately and cannot log back in.
+            </p>
+            <div>
+              <label className="text-xs font-semibold text-foreground/40 uppercase tracking-wider block mb-2">Reason (optional)</label>
+              <textarea
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                placeholder="Fraud, account takeover, compromised device…"
+                rows={2}
+                className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none resize-none"
+              />
+            </div>
+            {blockMutation.error && (
+              <p className="text-red-400 text-xs">{(blockMutation.error as Error).message}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => blockMutation.mutate()}
+                disabled={blockMutation.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/25 text-amber-400 font-semibold text-sm hover:bg-amber-500/25 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {blockMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+                Block Device
+              </button>
+              <button onClick={() => setBlockTarget(null)}
                 className="px-4 py-2.5 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground">
                 Cancel
               </button>
