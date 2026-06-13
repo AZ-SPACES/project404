@@ -34,8 +34,14 @@ export interface MiniAppMeta {
   /** Solid background color for the icon tile */
   color?: string;
   category: MiniAppCategory;
+  /** Community apps: remote HTTPS URL rendered in a WebView. */
+  url?: string;
+  /** Community apps: permissions the app declared to the platform. */
+  requestedPermissions?: string[];
+  developerName?: string;
 }
 
 export interface MiniAppEntry extends MiniAppMeta {
-  component: React.ComponentType<MiniAppProps>;
+  /** Native component — present for built-in apps. Absent for community (WebView) apps. */
+  component?: React.ComponentType<MiniAppProps>;
 }

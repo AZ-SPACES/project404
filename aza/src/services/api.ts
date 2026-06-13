@@ -871,6 +871,44 @@ export const getDisabledMiniApps = () =>
 export const getMiniAppStatuses = () =>
   api.get('/api/v1/miniapps/statuses');
 
+export const getCommunityMiniApps = () =>
+  api.get('/api/v1/miniapps');
+
+// --- Developer Mini App Endpoints ---
+
+export const getMyMiniApps = () => api.get('/api/v1/dev/miniapps');
+
+export const saveMiniApp = (data: {
+  id: string; name: string; description: string; category: string;
+  iconUrl: string; url: string; developerName: string; supportUrl?: string;
+  version: string; requestedPermissions: string[]; submitForReview: boolean;
+}) => api.put('/api/v1/dev/miniapps', data);
+
+export const resubmitMiniApp = (appId: string) =>
+  api.post(`/api/v1/dev/miniapps/${appId}/resubmit`);
+
+export const getMiniAppConsent = (appId: string) =>
+  api.get(`/api/v1/sdk/miniapps/${appId}/consent`);
+
+export const grantMiniAppConsent = (appId: string, permissions: string[]) =>
+  api.post(`/api/v1/sdk/miniapps/${appId}/consent`, { permissions });
+
+export const revokeMiniAppConsent = (appId: string) =>
+  api.delete(`/api/v1/sdk/miniapps/${appId}/consent`);
+
+export const getSdkUser = (appId: string) =>
+  api.get(`/api/v1/sdk/miniapps/${appId}/user`);
+
+export const getSdkBalance = (appId: string) =>
+  api.get(`/api/v1/sdk/miniapps/${appId}/balance`);
+
+export const sdkPayment = (appId: string, payload: {
+  amount: number;
+  recipientIdentifier: string;
+  note?: string;
+  idempotencyKey: string;
+}) => api.post(`/api/v1/sdk/miniapps/${appId}/payment`, payload);
+
 // --- Dispute / Reversal Endpoints ---
 
 export const createDispute = (payload: { transactionId: string; category: string; description: string }) =>

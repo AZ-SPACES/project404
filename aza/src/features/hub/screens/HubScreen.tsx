@@ -19,9 +19,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
 import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../providers/DisplayProvider';
 import { RootStackParamList } from '../../../navigation/types';
-import { MINI_APP_REGISTRY, getMiniApp } from '../miniapps/registry';
+import { MINI_APP_REGISTRY } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
 import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
+import { useCommunityMiniApps } from '../../../hooks/useCommunityMiniApps';
 
 type HubNavProp = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -53,19 +54,25 @@ export default function HubScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'All' | MiniAppCategory>('All');
   const { disabled, maintenance } = useDisabledMiniApps();
+  const { communityApps } = useCommunityMiniApps();
 
   const openApp = useCallback((appId: string) => {
     navigation.navigate('MiniApp', { appId });
   }, [navigation]);
 
+  const allApps = React.useMemo(
+    () => [...MINI_APP_REGISTRY, ...communityApps],
+    [communityApps],
+  );
+
   const filteredApps = React.useMemo(() => {
-    return MINI_APP_REGISTRY.filter((app) => {
+    return allApps.filter((app) => {
       if (disabled.has(app.id)) return false;
       const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || app.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory, disabled]);
+  }, [searchQuery, activeCategory, disabled, allApps]);
 
   return (
     <View style={styles.container}>

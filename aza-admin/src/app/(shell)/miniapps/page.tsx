@@ -10,13 +10,17 @@ import {
   setMiniAppMaintenance,
   disableMiniApp,
   enableMiniApp,
+  getMiniAppSubmissions,
+  approveMiniApp,
+  rejectMiniApp,
   isPendingApproval,
   MiniAppReport,
   MiniAppReportStats,
+  MiniAppSubmission,
   AdminMiniApp,
   Page,
 } from "@/lib/admin-api";
-import { Flag, CheckCircle2, XCircle, Clock, Loader2, X, Ban, Wrench, LayoutGrid } from "lucide-react";
+import { Flag, CheckCircle2, XCircle, Clock, Loader2, X, Ban, Wrench, LayoutGrid, Package, Check, ExternalLink } from "lucide-react";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
@@ -58,6 +62,28 @@ type AppAction =
   | { type: "maintenance"; app: AdminMiniApp }
   | { type: "disable"; app: AdminMiniApp };
 
+const SUBMISSION_STATUS_MAP = {
+  PENDING_REVIEW: { label: "Pending", cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  ACTIVE:         { label: "Live",    cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  REJECTED:       { label: "Rejected", cls: "text-red-400 bg-red-500/10 border-red-500/20" },
+  SUSPENDED:      { label: "Suspended", cls: "text-orange-400 bg-orange-500/10 border-orange-500/20" },
+  DRAFT:          { label: "Draft",   cls: "text-foreground/40 bg-muted/30 border-border" },
+};
+
+function SubmissionStatusBadge({ status }: { status: MiniAppSubmission["status"] }) {
+  const cfg = SUBMISSION_STATUS_MAP[status] ?? { label: status, cls: "text-foreground/40 bg-muted/30 border-border" };
+  return <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${cfg.cls}`}>{cfg.label}</span>;
+}
+
+const PERM_LABELS: Record<string, string> = {
+  USER_PROFILE:      "Profile",
+  USER_PHONE:        "Phone",
+  USER_EMAIL:        "Email",
+  MAKE_PAYMENTS:     "Payments",
+  READ_BALANCE:      "Balance",
+  READ_TRANSACTIONS: "Transactions",
+};
+
 export default function MiniAppsPage() {
   const queryClient = useQueryClient();
 
@@ -73,6 +99,36 @@ export default function MiniAppsPage() {
   const [actionMessage, setActionMessage] = useState("");
 
   const [notice, setNotice] = useState("");
+
+  // Submissions section state
+  const [subPage, setSubPage] = useState(0);
+  const [reviewTarget, setReviewTarget] = useState<MiniAppSubmission | null>(null);
+  const [reviewAction, setReviewAction] = useState<"reject" | "suspend" | null>(null);
+  const [reviewReason, setReviewReason] = useState("");
+
+  const { data: submissions, isLoading: subsLoading, error: subsError } = useQuery<Page<MiniAppSubmission>>({
+    queryKey: ["miniAppSubmissions", subPage],
+    queryFn: () => getMiniAppSubmissions(subPage, 20),
+    retry: 1,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (appId: string) => approveMiniApp(appId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["miniAppSubmissions"] });
+      setNotice("App approved and is now live.");
+    },
+    onError: (e: Error) => setNotice("Error: " + e.message),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ appId, reason }: { appId: string; reason: string }) => rejectMiniApp(appId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["miniAppSubmissions"] });
+      setReviewTarget(null);
+      setReviewReason("");
+    },
+  });
 
   const { data: stats } = useQuery<MiniAppReportStats>({
     queryKey: ["miniAppStats"],
@@ -150,6 +206,135 @@ export default function MiniAppsPage() {
           <button onClick={() => setNotice("")}><X size={14} /></button>
         </div>
       )}
+
+      {/* ── Developer Submissions ───────────────────────────────────────────── */}
+      <div className="bg-muted/30 border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <Package size={14} className="text-foreground/50" />
+          <h2 className="text-sm font-semibold">Developer Submissions</h2>
+          {submissions && (
+            <span className="ml-auto text-xs text-foreground/40">{submissions.totalElements} pending</span>
+          )}
+        </div>
+
+        {subsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={22} className="animate-spin text-foreground/40" />
+          </div>
+        ) : subsError ? (
+          <div className="text-center py-8 text-foreground/30 text-sm">Could not load submissions</div>
+        ) : (submissions?.content ?? []).length === 0 ? (
+          <div className="text-center py-10 text-foreground/30 text-sm">No pending submissions</div>
+        ) : (
+          <>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-foreground/40 text-xs uppercase tracking-wider">
+                  <th className="text-left px-4 py-3">App</th>
+                  <th className="text-left px-4 py-3">Developer</th>
+                  <th className="text-left px-4 py-3">Category</th>
+                  <th className="text-left px-4 py-3">Permissions</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="text-left px-4 py-3">Submitted</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {(submissions?.content ?? []).map((sub) => (
+                  <tr key={sub.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {sub.iconUrl ? (
+                          <img src={sub.iconUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center text-foreground/30">
+                            <Package size={14} />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium">{sub.name}</p>
+                          <p className="text-foreground/40 text-xs truncate max-w-[200px]">{sub.description}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-foreground/60">{sub.developerName}</td>
+                    <td className="px-4 py-3 text-foreground/50">{sub.category}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {sub.requestedPermissions.map((p) => (
+                          <span key={p} className="px-1.5 py-0.5 rounded text-xs bg-muted/50 text-foreground/60">
+                            {PERM_LABELS[p] ?? p}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3"><SubmissionStatusBadge status={sub.status} /></td>
+                    <td className="px-4 py-3 text-foreground/40 whitespace-nowrap text-xs">
+                      {sub.submittedAt ? fmtDate(sub.submittedAt) : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-3">
+                        <a
+                          href={sub.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-foreground/40 hover:text-foreground"
+                          title="Preview"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        {sub.status === "PENDING_REVIEW" && (
+                          <>
+                            <button
+                              onClick={() => approveMutation.mutate(sub.id)}
+                              disabled={approveMutation.isPending}
+                              className="text-xs text-emerald-400 hover:underline disabled:opacity-50 flex items-center gap-1"
+                            >
+                              <Check size={12} /> Approve
+                            </button>
+                            <button
+                              onClick={() => { setReviewTarget(sub); setReviewAction("reject"); setReviewReason(""); }}
+                              className="text-xs text-red-400 hover:underline"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {sub.status === "ACTIVE" && (
+                          <button
+                            onClick={() => { setReviewTarget(sub); setReviewAction("suspend"); setReviewReason(""); }}
+                            className="text-xs text-orange-400 hover:underline"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {submissions && submissions.totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm text-foreground/40">
+                <span>Page {subPage + 1} of {submissions.totalPages}</span>
+                <div className="flex gap-2">
+                  <button
+                    disabled={subPage === 0}
+                    onClick={() => setSubPage(p => p - 1)}
+                    className="px-3 py-1 rounded border border-border hover:bg-muted/50 disabled:opacity-30"
+                  >Previous</button>
+                  <button
+                    disabled={subPage + 1 >= submissions.totalPages}
+                    onClick={() => setSubPage(p => p + 1)}
+                    className="px-3 py-1 rounded border border-border hover:bg-muted/50 disabled:opacity-30"
+                  >Next</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* ── Catalog ─────────────────────────────────────────────────────────── */}
       <div className="bg-muted/30 border border-border rounded-xl overflow-hidden">
@@ -521,6 +706,66 @@ export default function MiniAppsPage() {
                 Dismiss
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Submission reject / suspend modal ──────────────────────────────── */}
+      {reviewTarget && reviewAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  {reviewAction === "reject" ? (
+                    <XCircle size={16} className="text-red-400" />
+                  ) : (
+                    <Ban size={16} className="text-orange-400" />
+                  )}
+                  <h2 className="text-lg font-semibold">
+                    {reviewAction === "reject" ? "Reject Submission" : "Suspend App"}
+                  </h2>
+                </div>
+                <p className="text-foreground/40 text-sm">{reviewTarget.name}</p>
+              </div>
+              <button
+                onClick={() => { setReviewTarget(null); setReviewReason(""); }}
+                className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="block text-xs text-foreground/40 uppercase tracking-wider mb-1.5">
+              {reviewAction === "reject" ? "Reason for rejection (shown to developer)" : "Reason for suspension (shown to developer)"}
+            </label>
+            <textarea
+              className="w-full bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-foreground/20 mb-4"
+              rows={3}
+              placeholder={reviewAction === "reject" ? "e.g. App URL returned 404, please resubmit" : "e.g. Reports of misleading content"}
+              value={reviewReason}
+              onChange={(e) => setReviewReason(e.target.value)}
+            />
+
+            {rejectMutation.error && (
+              <p className="text-red-400 text-sm mb-3">{(rejectMutation.error as Error).message}</p>
+            )}
+
+            <button
+              disabled={!reviewReason.trim() || rejectMutation.isPending}
+              onClick={() => rejectMutation.mutate({ appId: reviewTarget.id, reason: reviewReason })}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 ${
+                reviewAction === "reject" ? "bg-red-700 hover:bg-red-600" : "bg-orange-700 hover:bg-orange-600"
+              }`}
+            >
+              {rejectMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : reviewAction === "reject" ? (
+                <XCircle size={16} />
+              ) : (
+                <Ban size={16} />
+              )}
+              {reviewAction === "reject" ? "Reject & notify developer" : "Suspend & notify developer"}
+            </button>
           </div>
         </div>
       )}

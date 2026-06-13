@@ -1411,6 +1411,50 @@ export function enableMiniApp(appId: string): Promise<void | Approval> {
   });
 }
 
+// ── Mini app developer submissions ───────────────────────────────────────────
+
+export interface MiniAppSubmission {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  iconUrl: string;
+  url: string;
+  developerName: string;
+  supportUrl: string | null;
+  version: string;
+  status: "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "REJECTED" | "SUSPENDED";
+  requestedPermissions: string[];
+  createdAt: string;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+}
+
+export function getMiniAppSubmissions(page = 0, size = 20): Promise<Page<MiniAppSubmission>> {
+  return request(`/api/v1/admin/miniapps/submissions?page=${page}&size=${size}`);
+}
+
+export function approveMiniApp(appId: string): Promise<MiniAppSubmission> {
+  return request(`/api/v1/admin/miniapps/submissions/${encodeURIComponent(appId)}/approve`, {
+    method: "POST",
+  });
+}
+
+export function rejectMiniApp(appId: string, reason: string): Promise<MiniAppSubmission> {
+  return request(`/api/v1/admin/miniapps/submissions/${encodeURIComponent(appId)}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function suspendMiniApp(appId: string, reason: string): Promise<MiniAppSubmission> {
+  return request(`/api/v1/admin/miniapps/submissions/${encodeURIComponent(appId)}/suspend`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 // ── AI: Fraud Detection ───────────────────────────────────────────────────────
 
 /** HIGH-anomaly transfers intercepted before any money moved. */
