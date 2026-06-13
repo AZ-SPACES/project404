@@ -1,9 +1,11 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.admin.AdminMiniAppResponse;
 import com.aza.backend.dto.admin.DisabledMiniAppResponse;
 import com.aza.backend.dto.admin.MiniAppReportResponse;
 import com.aza.backend.dto.admin.MiniAppReportStatsResponse;
+import com.aza.backend.entity.DisabledMiniApp;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.MiniAppReportService;
 import lombok.Data;
@@ -50,9 +52,25 @@ public class AdminMiniAppController {
                         request.isDisableApp(), admin)));
     }
 
+    /** Full catalog with each app's current status (ACTIVE | MAINTENANCE | DISABLED). */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AdminMiniAppResponse>>> getAllApps() {
+        return ResponseEntity.ok(ApiResponse.success(reportService.getAllAppsForAdmin()));
+    }
+
     @GetMapping("/disabled")
     public ResponseEntity<ApiResponse<List<DisabledMiniAppResponse>>> getDisabledApps() {
         return ResponseEntity.ok(ApiResponse.success(reportService.getDisabledApps()));
+    }
+
+    /** Put an app under maintenance; all users get a push + in-app notification. */
+    @PostMapping("/{appId}/maintenance")
+    public ResponseEntity<ApiResponse<AdminMiniAppResponse>> setMaintenance(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin,
+            @RequestBody(required = false) MaintenanceRequest request) {
+        String message = request != null ? request.getMessage() : null;
+        return ResponseEntity.ok(ApiResponse.success(reportService.setMaintenance(appId, message, admin)));
     }
 
     @PostMapping("/{appId}/disable")
@@ -64,12 +82,18 @@ public class AdminMiniAppController {
         return ResponseEntity.ok(ApiResponse.success(reportService.disableApp(appId, reason, admin)));
     }
 
-    /** Maker-checker: re-enabling a killed app needs a second ADMIN. Disabling stays immediate. */
+    /**
+     * Maker-checker: re-enabling a killed app needs a second ADMIN. Ending
+     * maintenance is routine ops and takes effect immediately, as does disabling.
+     */
     @PostMapping("/{appId}/enable")
     public ResponseEntity<ApiResponse<Object>> enableApp(
             @PathVariable String appId,
             @AuthenticationPrincipal User admin) {
-        if (staffRoleService.countActiveStaffUsers() > 1) {
+        boolean isMaintenance = reportService.getStatusRecord(appId)
+                .map(d -> d.getStatus() == DisabledMiniApp.Status.MAINTENANCE)
+                .orElse(false);
+        if (!isMaintenance && staffRoleService.countActiveStaffUsers() > 1) {
             return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
                     admin, com.aza.backend.entity.PendingApproval.ActionType.ENABLE_MINI_APP,
                     admin.getId(),
@@ -90,5 +114,10 @@ public class AdminMiniAppController {
     @Data
     static class DisableRequest {
         private String reason;
+    }
+
+    @Data
+    static class MaintenanceRequest {
+        private String message; // shown to users in the notification and the hub
     }
 }

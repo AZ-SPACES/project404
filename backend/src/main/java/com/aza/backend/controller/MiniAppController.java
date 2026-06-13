@@ -31,4 +31,10 @@ public class MiniAppController {
     public ResponseEntity<ApiResponse<List<String>>> getDisabledApps() {
         return ResponseEntity.ok(ApiResponse.success(reportService.getDisabledAppIds()));
     }
+
+    /** Apps that are disabled or under maintenance; active apps are omitted. */
+    @GetMapping("/statuses")
+    public ResponseEntity<ApiResponse<List<com.aza.backend.dto.MiniAppStatusResponse>>> getStatuses() {
+        return ResponseEntity.ok(ApiResponse.success(reportService.getAppStatuses()));
+    }
 }
