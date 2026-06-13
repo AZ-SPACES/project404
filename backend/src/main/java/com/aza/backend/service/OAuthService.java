@@ -469,14 +469,15 @@ public class OAuthService {
      */
     @Transactional
     public String approveConsentWithCredentials(String pendingStateKey, String identifier, String password) {
-        User user = userRepository.findByUsernameOrEmailOrPhoneNumber(identifier, identifier, identifier)
+        User user = userRepository.findByEmailIgnoreCaseOrUsername(identifier, identifier)
+                .or(() -> userRepository.findByPhoneNumber(identifier))
                 .orElseThrow(() -> new AppException("OAUTH_AUTH_FAILED", "Invalid username or password.", HttpStatus.UNAUTHORIZED));
 
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new AppException("OAUTH_AUTH_FAILED", "Invalid username or password.", HttpStatus.UNAUTHORIZED);
         }
 
-        if (!user.isEnabled()) {
+        if (user.getStatus() != User.AccountStatus.ACTIVE) {
             throw new AppException("OAUTH_AUTH_FAILED", "Your account is not active.", HttpStatus.UNAUTHORIZED);
         }
 
