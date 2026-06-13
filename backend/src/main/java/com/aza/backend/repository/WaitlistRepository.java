@@ -19,4 +19,8 @@ public interface WaitlistRepository extends JpaRepository<WaitlistEntry, UUID> {
     java.util.Optional<WaitlistEntry> findByInviteCode(String inviteCode);
 
     java.util.List<WaitlistEntry> findAllByOrderByCreatedAtDesc(org.springframework.data.domain.Pageable pageable);
+
+    long countByConfirmationSent(boolean confirmationSent);
+
+    long countByInvitedAtIsNotNull();
 }

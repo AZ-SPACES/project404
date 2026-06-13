@@ -2401,3 +2401,166 @@ export interface RecoveryContact {
 export function getUserRecoveryContacts(userId: string): Promise<RecoveryContact[]> {
   return request(`/api/v1/admin/users/${userId}/recovery-contacts`);
 }
+
+// ── SLA Dashboard ─────────────────────────────────────────────────────────────
+
+export interface SlaDashboard {
+  kycPendingOver48h: number;
+  kycUnderReview: number;
+  kycPendingTotal: number;
+  complaintsBreachingAck: number;
+  complaintsBreachingResolve: number;
+  complaintsOpen: number;
+  dsarOverdue: number;
+  dsarOpen: number;
+  approvalsStale: number;
+  approvalsPending: number;
+}
+
+export function getSlaDashboard(): Promise<SlaDashboard> {
+  return request("/api/v1/admin/sla/dashboard");
+}
+
+// ── Account Closure Requests ──────────────────────────────────────────────────
+
+export interface ClosureRequest {
+  id: string;
+  userId: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reason: string;
+  notes: string | null;
+  processedBy: string | null;
+  processedAt: string | null;
+  requestedAt: string;
+}
+
+export function getClosureRequests(status?: string, page = 0, size = 20): Promise<Page<ClosureRequest>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/closure-requests?${params}`);
+}
+
+export function getClosureStats(): Promise<{ pending: number; approved: number; rejected: number }> {
+  return request("/api/v1/admin/closure-requests/stats");
+}
+
+export function approveClosureRequest(id: string, notes?: string): Promise<ClosureRequest> {
+  return request(`/api/v1/admin/closure-requests/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function rejectClosureRequest(id: string, notes: string): Promise<ClosureRequest> {
+  return request(`/api/v1/admin/closure-requests/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+// ── Onboarding Funnel ─────────────────────────────────────────────────────────
+
+export interface OnboardingFunnel {
+  totalSignedUp: number;
+  kycStarted: number;
+  docsSubmitted: number;
+  underReview: number;
+  kycPending: number;
+  kycVerified: number;
+  kycRejected: number;
+  kycStartedRate: number;
+  docsSubmittedRate: number;
+  verifiedRate: number;
+}
+
+export function getOnboardingFunnel(): Promise<OnboardingFunnel> {
+  return request("/api/v1/admin/analytics/onboarding/funnel");
+}
+
+// ── Email Templates ───────────────────────────────────────────────────────────
+
+export interface EmailTemplate {
+  id: string;
+  templateKey: string;
+  subject: string;
+  body: string;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export function getEmailTemplates(): Promise<EmailTemplate[]> {
+  return request("/api/v1/admin/templates");
+}
+
+export function createEmailTemplate(data: {
+  templateKey: string;
+  subject: string;
+  body: string;
+}): Promise<EmailTemplate> {
+  return request("/api/v1/admin/templates", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateEmailTemplate(
+  id: string,
+  data: { templateKey: string; subject: string; body: string }
+): Promise<EmailTemplate> {
+  return request(`/api/v1/admin/templates/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteEmailTemplate(id: string): Promise<string> {
+  return request(`/api/v1/admin/templates/${id}`, { method: "DELETE" });
+}
+
+// ── Waitlist management ───────────────────────────────────────────────────────
+
+export interface WaitlistStats {
+  total: number;
+  pending: number;
+  invited: number;
+  confirmationSent: number;
+}
+
+export function getWaitlistStats(): Promise<WaitlistStats> {
+  return request("/api/v1/admin/waitlist/stats");
+}
+
+export function getWaitlistEntries(page = 0, size = 50): Promise<WaitlistEntry[]> {
+  return request(`/api/v1/admin/waitlist?page=${page}&size=${size}`);
+}
+
+export interface WaitlistEntry {
+  id: string;
+  email: string;
+  ipAddress: string | null;
+  createdAt: string;
+  confirmationSent: boolean;
+  inviteCode: string | null;
+  invitedAt: string | null;
+}
+
+export function inviteWaitlistEntry(id: string): Promise<string> {
+  return request(`/api/v1/admin/waitlist/${id}/invite`, { method: "POST" });
+}
+
+export function batchInviteWaitlist(ids: string[]): Promise<{ invited: number }> {
+  return request("/api/v1/admin/waitlist/batch-invite", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export function deleteWaitlistEntry(id: string): Promise<string> {
+  return request(`/api/v1/admin/waitlist/${id}`, { method: "DELETE" });
+}
+
+// ── Maintenance mode (via settings) ──────────────────────────────────────────
+
+export function setMaintenanceMode(enabled: boolean): Promise<SystemSettings | Approval> {
+  return updateSystemSettings({ maintenanceMode: enabled });
+}
