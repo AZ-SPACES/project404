@@ -1,16 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
-import { getDisabledMiniApps } from '../services/api';
+import { getMiniAppStatuses } from '../services/api';
 import { queryKeys } from '../lib/queryKeys';
 
+export interface MiniAppStatus {
+  appId: string;
+  status: 'DISABLED' | 'MAINTENANCE';
+  message: string | null;
+}
+
+export interface MiniAppStatusMap {
+  disabled: Set<string>;
+  maintenance: Map<string, string | null>;
+}
+
 /**
- * Mini app IDs disabled platform-wide by an admin (kill switch).
- * Fails open: if the lookup errors, no apps are hidden.
+ * Platform status for every mini app that isn't fully active.
+ * Fails open — if the lookup errors, no apps are affected.
  */
-export function useDisabledMiniApps(): string[] {
+export function useDisabledMiniApps(): MiniAppStatusMap {
   const { data } = useQuery({
     queryKey: queryKeys.disabledMiniApps(),
-    queryFn: () => getDisabledMiniApps().then(r => (r.data?.data ?? []) as string[]),
+    queryFn: () => getMiniAppStatuses().then(r => (r.data?.data ?? []) as MiniAppStatus[]),
     staleTime: 60_000,
   });
-  return data ?? [];
+
+  const statuses = data ?? [];
+  const disabled = new Set(statuses.filter(s => s.status === 'DISABLED').map(s => s.appId));
+  const maintenance = new Map(
+    statuses.filter(s => s.status === 'MAINTENANCE').map(s => [s.appId, s.message]),
+  );
+  return { disabled, maintenance };
 }
