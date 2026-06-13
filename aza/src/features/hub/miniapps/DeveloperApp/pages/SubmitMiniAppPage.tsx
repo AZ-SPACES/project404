@@ -6,7 +6,7 @@ import {
 import { Feather } from '@react-native-vector-icons/feather';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { saveMiniApp } from '../../../../../services/api';
-import { Spacing, Radius, Typography } from '../../../../../theme';
+import { ThemeColors, Spacing, Radius, Typography } from '../../../../../theme';
 import { NavProps } from '../types';
 
 const CATEGORIES = [
@@ -52,7 +52,7 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['myMiniApps'] });
-      navigate('miniapps');
+      goBack();
     },
     onError: (e: any) => setError(e?.response?.data?.message ?? e.message ?? 'Failed to save'),
   });
@@ -257,7 +257,7 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
   );
 }
 
-function Field({ label, children, Colors, styles }: { label: string; children: React.ReactNode; Colors: any; styles: any }) {
+function Field({ label, children, Colors, styles }: { label: string; children: React.ReactNode; Colors: ThemeColors; styles: ReturnType<typeof createStyles> }) {
   return (
     <View style={styles.field}>
       <Text style={[styles.fieldLabel, { color: Colors.textSecondary }]}>{label}</Text>
@@ -266,7 +266,7 @@ function Field({ label, children, Colors, styles }: { label: string; children: R
   );
 }
 
-function createStyles(Colors: any) {
+function createStyles(Colors: ThemeColors) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.background },
     header: {
