@@ -30,6 +30,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByUsername(String username);
 
+    Optional<User> findByReferralCode(String referralCode);
+
     List<User> findByRole(User.UserRole role);
 
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);

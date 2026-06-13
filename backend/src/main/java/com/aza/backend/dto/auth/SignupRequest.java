@@ -42,4 +42,7 @@ public class SignupRequest {
 
     // Employment
     private String employmentStatus;  // STUDENT, FULL_TIME, etc.
+
+    // Referral
+    private String referralCode;
 }

@@ -5,6 +5,7 @@ import com.aza.backend.entity.KycRecord;
 import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.service.ReferralService;
 import com.aza.backend.repository.KycRecordRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
@@ -33,6 +34,7 @@ public class KycService {
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final ReferralService referralService;
 
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024; //10MB
     private static final long MAX_IMAGE_SIZE = 8 * 1024 * 1024; //8MB
@@ -378,6 +380,8 @@ public class KycService {
             // Periodic review cycle: verification isn't one-and-done
             user.setKycReviewDueAt(LocalDateTime.now().plusYears(1));
             log.info("KYC manually approved for user {}", userId);
+            // Reward referrer if this user was invited
+            referralService.rewardReferrer(userId);
         } else {
             record.setStatus(KycRecord.KycStatus.REJECTED);
             record.setRejectionReason(rejectionReason);

@@ -2302,3 +2302,102 @@ export interface FlaggedTx {
 export function getUserRiskHistory(userId: string, page = 0, size = 20): Promise<Page<FlaggedTx>> {
   return request(`/api/v1/admin/users/${userId}/risk-history?page=${page}&size=${size}`);
 }
+
+// ── Referral program ──────────────────────────────────────────────────────────
+
+export interface Referral {
+  id: string;
+  referrerId: string;
+  referredUserId: string;
+  code: string;
+  status: "PENDING" | "REWARDED" | "CANCELLED";
+  rewardAmount: number;
+  createdAt: string;
+  rewardedAt: string | null;
+}
+
+export interface ReferralStats {
+  total: number;
+  rewarded: number;
+  pending: number;
+  totalRewardsGhs: number;
+}
+
+export function getReferrals(page = 0, size = 20): Promise<Page<Referral>> {
+  return request(`/api/v1/admin/referrals?page=${page}&size=${size}`);
+}
+
+export function getReferralStats(): Promise<ReferralStats> {
+  return request("/api/v1/admin/referrals/stats");
+}
+
+export function rewardReferral(referredUserId: string): Promise<string> {
+  return request(`/api/v1/admin/referrals/${referredUserId}/reward`, { method: "POST" });
+}
+
+// ── Recurring transfers ───────────────────────────────────────────────────────
+
+export interface RecurringTransfer {
+  id: string;
+  userId: string;
+  recipientIdentifier: string;
+  amount: number;
+  note: string | null;
+  frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUALLY";
+  nextRunAt: string;
+  status: "ACTIVE" | "PAUSED" | "CANCELLED";
+  totalRuns: number;
+  successfulRuns: number;
+  lastRunAt: string | null;
+  lastFailureReason: string | null;
+  createdAt: string;
+}
+
+export function getRecurringTransfers(status?: string, page = 0, size = 20): Promise<Page<RecurringTransfer>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/recurring-transfers?${params}`);
+}
+
+export function cancelRecurringTransfer(id: string): Promise<RecurringTransfer> {
+  return request(`/api/v1/admin/recurring-transfers/${id}/cancel`, { method: "PATCH" });
+}
+
+// ── Merchant subscriptions ────────────────────────────────────────────────────
+
+export interface MerchantSubscription {
+  id: string;
+  planId: string;
+  merchantId: string;
+  customerId: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED";
+  nextBillingAt: string | null;
+  createdAt: string;
+  cancelledAt: string | null;
+}
+
+export function getSubscriptions(status?: string, page = 0, size = 20): Promise<Page<MerchantSubscription>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/subscriptions?${params}`);
+}
+
+export function cancelSubscription(id: string): Promise<MerchantSubscription> {
+  return request(`/api/v1/admin/subscriptions/${id}/cancel`, { method: "PATCH" });
+}
+
+// ── Account recovery contacts ─────────────────────────────────────────────────
+
+export interface RecoveryContact {
+  id: string;
+  userId: string;
+  contactUserId: string;
+  status: "PENDING" | "ACTIVE" | "REMOVED";
+  createdAt: string;
+}
+
+export function getUserRecoveryContacts(userId: string): Promise<RecoveryContact[]> {
+  return request(`/api/v1/admin/users/${userId}/recovery-contacts`);
+}

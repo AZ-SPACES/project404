@@ -38,6 +38,9 @@ import {
   Globe,
   Activity,
   Layers,
+  Gift,
+  RefreshCw,
+  CreditCard,
 } from "lucide-react";
 
 interface NavItem {
@@ -123,6 +126,9 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/bulk-ops", label: "Bulk Operations", icon: Layers, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/health", label: "Platform Health", icon: Activity, roles: ["ADMIN"] },
+      { href: "/referrals", label: "Referral Program", icon: Gift, roles: ["ADMIN", "FINANCE"] },
+      { href: "/recurring-transfers", label: "Recurring Transfers", icon: RefreshCw, roles: ["ADMIN", "COMPLIANCE", "FINANCE"] },
+      { href: "/subscriptions", label: "Subscriptions", icon: CreditCard, roles: ["ADMIN", "FINANCE"] },
     ],
   },
   {

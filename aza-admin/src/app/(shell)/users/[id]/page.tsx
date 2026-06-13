@@ -13,6 +13,7 @@ import {
   getUserSessions,
   getUserNotifications,
   getUserRiskHistory,
+  getUserRecoveryContacts,
   revokeUserSession,
   updateUserLimits,
   blockDevice,
@@ -24,6 +25,7 @@ import {
   type UserSession,
   type UserNotification,
   type FlaggedTx,
+  type RecoveryContact,
   type Page,
 } from "@/lib/admin-api";
 import Image from "next/image";
@@ -46,6 +48,7 @@ import {
   FileText,
   Download,
   AlertTriangle,
+  PhoneCall,
 } from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value?: string | number | boolean | null }) {
@@ -182,6 +185,13 @@ export default function UserDetailPage() {
   const { data: riskHistory } = useQuery<Page<FlaggedTx>>({
     queryKey: ["userRiskHistory", userId, riskPage],
     queryFn: () => getUserRiskHistory(userId, riskPage, 10),
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const { data: recoveryContacts = [] } = useQuery<RecoveryContact[]>({
+    queryKey: ["userRecoveryContacts", userId],
+    queryFn: () => getUserRecoveryContacts(userId),
     enabled: !!userId,
     retry: false,
   });
@@ -694,6 +704,32 @@ export default function UserDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <PhoneCall size={14} className="text-foreground/30" />
+          <p className="text-foreground/30 text-xs uppercase tracking-wider">Recovery Contacts</p>
+        </div>
+        {recoveryContacts.length === 0 ? (
+          <p className="text-foreground/40 text-sm py-2 text-center">No recovery contacts on file.</p>
+        ) : (
+          <div className="space-y-1">
+            {recoveryContacts.map((c) => (
+              <div key={c.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground text-sm font-mono">{c.contactUserId}</p>
+                  <p className="text-foreground/30 text-xs mt-0.5">Added {new Date(c.createdAt).toLocaleDateString()}</p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                  c.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                  c.status === "PENDING" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                  "bg-muted/50 text-foreground/40 border-border"
+                }`}>{c.status}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
