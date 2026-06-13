@@ -1,12 +1,16 @@
+// Business/developer apps have deep aza dependencies — they live here.
 import MyBusinessApp from './MyBusinessApp';
 import DeveloperApp from './DeveloperApp';
-import Play2048App from './Play2048App';
-import Snake from './Snakegame';
-import Connect4 from './Connect4';
-import Radio from './Radio';
-import Notepad from './Notepad';
-import CediratesApp from './CediratesApp';
-import SalifuAndMaster from './Salifuandmaster';
+
+// Standalone mini apps — self-contained packages in project404/miniapps/.
+import Play2048App from '@miniapps/play-2048';
+import SnakeApp from '@miniapps/snake';
+import Connect4App from '@miniapps/connect4';
+import RadioApp from '@miniapps/radio';
+import NotepadApp from '@miniapps/notepad';
+import CediratesApp from '@miniapps/cedirates';
+import SalifuAndMasterApp from '@miniapps/salifu-and-master';
+
 import { MiniAppEntry } from './types';
 
 export const MINI_APP_REGISTRY: MiniAppEntry[] = [
@@ -40,7 +44,7 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     description: 'Eat apples to grow your snake and avoid crashing into walls or yourself!',
     icon: require('../../../assets/snakegame.png'),
     category: 'Games',
-    component: Snake,
+    component: SnakeApp,
   },
   {
     id: 'connect4',
@@ -48,7 +52,7 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     description: 'Connect 4 in a row to win!',
     icon: require('../../../assets/connect4.png'),
     category: 'Games',
-    component: Connect4,
+    component: Connect4App,
   },
   {
     id: 'radio',
@@ -56,7 +60,7 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     description: 'Listen to the radio',
     icon: require('../../../assets/radio.png'),
     category: 'Entertainment',
-    component: Radio,
+    component: RadioApp,
   },
   {
     id: 'notepad',
@@ -64,7 +68,7 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     description: 'Take notes',
     icon: require('../../../assets/notepad.png'),
     category: 'Productivity',
-    component: Notepad,
+    component: NotepadApp,
   },
   {
     id: 'cedirates',
@@ -74,14 +78,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     category: 'Finance',
     component: CediratesApp,
   },
-    {
+  {
     id: 'salifu_and_master',
     name: 'Salifu and Master',
     description: 'Play Salifu and Master',
     icon: require('../../../assets/s&m.png'),
     category: 'Games',
-    component: SalifuAndMaster,
-  }
+    component: SalifuAndMasterApp,
+  },
 ];
 
 export function getMiniApp(id: string): MiniAppEntry | undefined {

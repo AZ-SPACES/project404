@@ -6,6 +6,16 @@
     "noImplicitReturns": true,
     "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
-    "jsx": "react-native"
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@miniapps/play-2048":         ["../miniapps/play-2048/index"],
+      "@miniapps/snake":             ["../miniapps/snake/index"],
+      "@miniapps/connect4":          ["../miniapps/connect4/index"],
+      "@miniapps/radio":             ["../miniapps/radio/index"],
+      "@miniapps/notepad":           ["../miniapps/notepad/index"],
+      "@miniapps/cedirates":         ["../miniapps/cedirates/index"],
+      "@miniapps/salifu-and-master": ["../miniapps/salifu-and-master/index"]
+    }
   }
 }

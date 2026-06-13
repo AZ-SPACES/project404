@@ -19,9 +19,22 @@ export interface MiniAppTheme {
   border: string;
 }
 
+const DEFAULT_THEME: MiniAppTheme = {
+  background: '#000000',
+  surface: '#111111',
+  primary: '#B7EE7A',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#AAAAAA',
+  border: '#333333',
+};
+
+export function resolveTheme(theme?: MiniAppTheme): MiniAppTheme {
+  return theme ?? DEFAULT_THEME;
+}
+
 export interface MiniAppProps {
   onClose: () => void;
-  /** Host app colors passed down for loading states and custom headers. */
+  /** Host app colors — used for loading states and custom headers. */
   theme?: MiniAppTheme;
 }
 
