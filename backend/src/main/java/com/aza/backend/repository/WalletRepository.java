@@ -25,4 +25,10 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
 
     @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w")
     java.math.BigDecimal sumTotalBalance();
+
+    @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w WHERE w.frozen = false OR w.frozen IS NULL")
+    java.math.BigDecimal sumAllBalances();
+
+    @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w")
+    java.math.BigDecimal sumAllBalancesIncludingFrozen();
 }

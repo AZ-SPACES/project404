@@ -2564,3 +2564,260 @@ export function deleteWaitlistEntry(id: string): Promise<string> {
 export function setMaintenanceMode(enabled: boolean): Promise<SystemSettings | Approval> {
   return updateSystemSettings({ maintenanceMode: enabled });
 }
+
+// ── KYC Document Expiry Tracker ───────────────────────────────────────────────
+
+export interface KycExpiryRecord {
+  userId: string;
+  idType: string;
+  idNumber: string | null;
+  idExpiryDate: string;
+  status: string;
+  submittedAt: string | null;
+}
+
+export interface KycExpiryStats {
+  expiringIn7Days: number;
+  expiringIn30Days: number;
+  alreadyExpired: number;
+}
+
+export function getKycExpiryStats(): Promise<KycExpiryStats> {
+  return request("/api/v1/admin/kyc/expiring/stats");
+}
+
+export function getExpiringKycDocs(days = 30): Promise<KycExpiryRecord[]> {
+  return request(`/api/v1/admin/kyc/expiring?days=${days}`);
+}
+
+// ── Velocity Alert Queue ──────────────────────────────────────────────────────
+
+export interface VelocityAlert {
+  userId: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  txCount: number;
+  windowHours: number;
+}
+
+export function getVelocityAlerts(hours = 1, threshold = 10): Promise<VelocityAlert[]> {
+  return request(`/api/v1/admin/risk/velocity-alerts?hours=${hours}&threshold=${threshold}`);
+}
+
+// ── Two-Factor Enrollment Stats ───────────────────────────────────────────────
+
+export interface TwoFactorStats {
+  totalUsers: number;
+  anyTwoFactor: number;
+  sms: number;
+  email: number;
+  app: number;
+  passkeys: number;
+  biometrics: number;
+  anyTwoFactorPct: number;
+  smsPct: number;
+  emailPct: number;
+  appPct: number;
+}
+
+export function getTwoFactorStats(): Promise<TwoFactorStats> {
+  return request("/api/v1/admin/analytics/2fa/stats");
+}
+
+// ── Wallet Ledger Check ───────────────────────────────────────────────────────
+
+export interface LedgerCheck {
+  totalWalletBalance: number;
+  frozenWalletBalance: number;
+  completedTransferVolume: number;
+  recordedAt: string;
+}
+
+export function getLedgerCheck(): Promise<LedgerCheck> {
+  return request("/api/v1/admin/recon/ledger-check");
+}
+
+// ── Fee Revenue Analytics ─────────────────────────────────────────────────────
+
+export interface FeeSummary {
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  allTime: number;
+}
+
+export interface DailyFee {
+  date: string;
+  fees: number;
+  txCount: number;
+}
+
+export function getFeeSummary(): Promise<FeeSummary> {
+  return request("/api/v1/admin/analytics/fees/summary");
+}
+
+export function getDailyFees(days = 30): Promise<DailyFee[]> {
+  return request(`/api/v1/admin/analytics/fees/daily?days=${days}`);
+}
+
+// ── Webhook Retry Dashboard ───────────────────────────────────────────────────
+
+export interface WebhookDelivery {
+  id: string;
+  endpointId: string;
+  checkoutSessionId: string;
+  eventType: string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | "ABANDONED";
+  attemptCount: number;
+  responseStatusCode: number | null;
+  nextRetryAt: string | null;
+  createdAt: string;
+  lastAttemptAt: string | null;
+}
+
+export interface WebhookStats {
+  pending: number;
+  failed: number;
+  abandoned: number;
+  success: number;
+}
+
+export function getWebhookDeliveries(
+  status?: string,
+  page = 0,
+  size = 20
+): Promise<Page<WebhookDelivery>> {
+  const p = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) p.set("status", status);
+  return request(`/api/v1/admin/webhooks/deliveries?${p}`);
+}
+
+export function getWebhookStats(): Promise<WebhookStats> {
+  return request("/api/v1/admin/webhooks/stats");
+}
+
+export function retryWebhookDelivery(id: string): Promise<WebhookDelivery> {
+  return request(`/api/v1/admin/webhooks/deliveries/${id}/retry`, { method: "POST" });
+}
+
+// ── Merchant Health Monitor ───────────────────────────────────────────────────
+
+export interface MerchantHealth {
+  merchantId: string;
+  businessName: string;
+  totalCheckouts: number;
+  successfulCheckouts: number;
+  successRate: number;
+  failedWebhooks: number;
+  lastTransactionAt: string | null;
+}
+
+export function getMerchantHealth(): Promise<MerchantHealth[]> {
+  return request("/api/v1/admin/merchants/health");
+}
+
+// ── Circuit Breaker Status ────────────────────────────────────────────────────
+
+export interface CircuitBreakerStatus {
+  name: string;
+  state: "CLOSED" | "OPEN" | "HALF_OPEN";
+  failureRate: number;
+  slowCallRate: number;
+  bufferedCalls: number;
+  failedCalls: number;
+  slowCalls: number;
+}
+
+export function getCircuitBreakers(): Promise<CircuitBreakerStatus[]> {
+  return request("/api/v1/admin/health/circuit-breakers");
+}
+
+// ── User Segmentation + Export ────────────────────────────────────────────────
+
+export interface SegmentFilter {
+  kycStatus?: string;
+  accountStatus?: string;
+  twoFactorEnabled?: boolean;
+  minBalance?: number;
+  maxBalance?: number;
+  lastActiveDays?: number;
+}
+
+export function segmentUsers(
+  filter: SegmentFilter,
+  page = 0,
+  size = 20
+): Promise<Page<AdminUser>> {
+  const p = new URLSearchParams({ page: String(page), size: String(size) });
+  if (filter.kycStatus) p.set("kycStatus", filter.kycStatus);
+  if (filter.accountStatus) p.set("accountStatus", filter.accountStatus);
+  if (filter.twoFactorEnabled !== undefined)
+    p.set("twoFactorEnabled", String(filter.twoFactorEnabled));
+  if (filter.minBalance !== undefined) p.set("minBalance", String(filter.minBalance));
+  if (filter.maxBalance !== undefined) p.set("maxBalance", String(filter.maxBalance));
+  if (filter.lastActiveDays !== undefined)
+    p.set("lastActiveDays", String(filter.lastActiveDays));
+  return request(`/api/v1/admin/users/segment?${p}`);
+}
+
+export function exportUserSegment(filter: SegmentFilter): Promise<void> {
+  const p = new URLSearchParams();
+  if (filter.kycStatus) p.set("kycStatus", filter.kycStatus);
+  if (filter.accountStatus) p.set("accountStatus", filter.accountStatus);
+  if (filter.twoFactorEnabled !== undefined)
+    p.set("twoFactorEnabled", String(filter.twoFactorEnabled));
+  if (filter.minBalance !== undefined) p.set("minBalance", String(filter.minBalance));
+  if (filter.maxBalance !== undefined) p.set("maxBalance", String(filter.maxBalance));
+  if (filter.lastActiveDays !== undefined)
+    p.set("lastActiveDays", String(filter.lastActiveDays));
+  return downloadFile(`/api/v1/admin/users/segment/export?${p}`, "users-segment.csv");
+}
+
+// ── Promo / Voucher Code Manager ──────────────────────────────────────────────
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  creditAmountGhs: number;
+  maxUses: number | null;
+  usedCount: number;
+  active: boolean;
+  expiresAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface PromoRedemption {
+  id: string;
+  userId: string;
+  creditAmountGhs: number;
+  redeemedAt: string;
+}
+
+export function getPromoCodes(): Promise<PromoCode[]> {
+  return request("/api/v1/admin/promos");
+}
+
+export function createPromoCode(data: {
+  code: string;
+  description?: string;
+  creditAmountGhs: number;
+  maxUses?: number;
+  expiresAt?: string;
+}): Promise<PromoCode> {
+  return request("/api/v1/admin/promos", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function togglePromoCode(id: string): Promise<PromoCode> {
+  return request(`/api/v1/admin/promos/${id}/toggle`, { method: "PATCH" });
+}
+
+export function deletePromoCode(id: string): Promise<string> {
+  return request(`/api/v1/admin/promos/${id}`, { method: "DELETE" });
+}
+
+export function getPromoRedemptions(id: string): Promise<PromoRedemption[]> {
+  return request(`/api/v1/admin/promos/${id}/redemptions`);
+}

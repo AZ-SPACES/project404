@@ -81,4 +81,7 @@ public class Transaction {
 
     @Column(length = 10, nullable = true)
     private String anomalyRiskLevel;
+
+    @Column(nullable = true, precision = 15, scale = 2)
+    private BigDecimal feeAmount;
 }

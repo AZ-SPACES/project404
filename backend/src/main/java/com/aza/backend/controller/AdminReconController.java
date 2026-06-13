@@ -4,6 +4,8 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.entity.ReconBreak;
 import com.aza.backend.entity.SafeguardingSnapshot;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.TransactionRepository;
+import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.service.ReconciliationService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,6 +28,8 @@ import java.util.UUID;
 public class AdminReconController {
 
     private final ReconciliationService reconciliationService;
+    private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
 
     // ── Safeguarding ──────────────────────────────────────────────────────────
 
@@ -74,6 +80,23 @@ public class AdminReconController {
             @AuthenticationPrincipal User admin) {
         return ResponseEntity.ok(ApiResponse.success(
                 reconciliationService.resolveBreak(admin, id, request.getNotes())));
+    }
+
+    // ── Ledger check ─────────────────────────────────────────────────────────
+
+    @GetMapping("/ledger-check")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> ledgerCheck() {
+        BigDecimal totalWalletBalance = walletRepository.sumAllBalancesIncludingFrozen();
+        BigDecimal unfrozenWalletBalance = walletRepository.sumAllBalances();
+        BigDecimal frozenWalletBalance = totalWalletBalance.subtract(unfrozenWalletBalance);
+        BigDecimal completedTransferVolume = transactionRepository.sumCompletedTransfers();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalWalletBalance", totalWalletBalance);
+        result.put("frozenWalletBalance", frozenWalletBalance);
+        result.put("completedTransferVolume", completedTransferVolume);
+        result.put("recordedAt", LocalDateTime.now());
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @Data

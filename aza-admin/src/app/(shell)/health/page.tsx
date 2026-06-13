@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getHealthMetrics, type HealthMetrics } from "@/lib/admin-api";
-import { Activity, Database, Cpu, Server, Loader2, RefreshCw } from "lucide-react";
+import { getHealthMetrics, getCircuitBreakers, type HealthMetrics, type CircuitBreakerStatus } from "@/lib/admin-api";
+import { Activity, Database, Cpu, Server, Loader2, RefreshCw, Zap } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 function StatusDot({ up }: { up: boolean }) {
@@ -28,6 +28,75 @@ function MetricRow({ label, value }: { label: string; value: string | number }) 
     <div className="flex items-center justify-between py-1.5">
       <span className="text-foreground/50 text-sm">{label}</span>
       <span className="text-foreground text-sm font-medium font-mono">{value}</span>
+    </div>
+  );
+}
+
+function CircuitBreakersCard() {
+  const { data, isLoading } = useQuery<CircuitBreakerStatus[]>({
+    queryKey: ["circuitBreakers"],
+    queryFn: getCircuitBreakers,
+    refetchInterval: 15_000,
+  });
+
+  const stateColors: Record<CircuitBreakerStatus["state"], string> = {
+    CLOSED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    OPEN: "bg-red-500/10 text-red-400 border-red-500/20",
+    HALF_OPEN: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  };
+
+  const stateDot: Record<CircuitBreakerStatus["state"], string> = {
+    CLOSED: "bg-emerald-400",
+    OPEN: "bg-red-400",
+    HALF_OPEN: "bg-yellow-400",
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Zap size={15} className="text-foreground/40" />
+        <h2 className="text-xs font-semibold text-foreground/50 uppercase tracking-wider">Circuit Breakers</h2>
+      </div>
+
+      {isLoading ? (
+        <div className="h-24 bg-muted/20 rounded-lg animate-pulse" />
+      ) : !data || data.length === 0 ? (
+        <p className="text-sm text-foreground/40">No circuit breakers registered</p>
+      ) : (
+        <div className="space-y-3">
+          {data.map((cb) => (
+            <div key={cb.name} className="rounded-xl border border-border p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex w-2 h-2 rounded-full ${stateDot[cb.state]}`} />
+                  <span className="text-sm font-medium text-foreground font-mono">{cb.name}</span>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full border ${stateColors[cb.state]}`}>
+                  {cb.state.replace("_", " ")}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs text-foreground/50">
+                <div>
+                  <span className="block text-foreground/30">Failure Rate</span>
+                  <span className={`font-medium ${cb.failureRate > 50 ? "text-red-400" : "text-foreground"}`}>
+                    {cb.failureRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-foreground/30">Slow Call Rate</span>
+                  <span className={`font-medium ${cb.slowCallRate > 50 ? "text-yellow-400" : "text-foreground"}`}>
+                    {cb.slowCallRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-foreground/30">Buffered Calls</span>
+                  <span className="font-medium text-foreground">{cb.bufferedCalls}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -83,6 +152,7 @@ export default function HealthPage() {
       )}
 
       {data && (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
           {/* JVM */}
@@ -185,6 +255,10 @@ export default function HealthPage() {
             </div>
           </div>
         </div>
+
+        {/* Circuit Breakers */}
+        <CircuitBreakersCard />
+        </>
       )}
     </div>
   );

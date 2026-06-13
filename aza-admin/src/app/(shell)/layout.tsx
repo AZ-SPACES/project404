@@ -46,6 +46,11 @@ import {
   Wrench,
   UsersRound,
   Mail,
+  CalendarClock,
+  Zap,
+  HeartPulse,
+  Filter,
+  Tag,
 } from "lucide-react";
 
 interface NavItem {
@@ -76,7 +81,9 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/kyc", label: "KYC Review", icon: ShieldCheck, exactMatch: true, roles: ["COMPLIANCE"] },
       { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["COMPLIANCE"] },
+      { href: "/kyc/expiring", label: "Doc Expiry", icon: CalendarClock, roles: ["COMPLIANCE"] },
       { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
+      { href: "/users/segment", label: "Segmentation", icon: Filter, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
       { href: "/campaigns", label: "Campaigns", icon: Megaphone, roles: ["ADMIN"] },
       { href: "/waitlist", label: "Waitlist", icon: UsersRound, roles: ["ADMIN", "SUPPORT"] },
@@ -89,6 +96,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/payouts", label: "Payouts", icon: Coins, roles: ["FINANCE"] },
       { href: "/merchants", label: "Merchants", icon: Store, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/merchants/health", label: "Merchant Health", icon: HeartPulse, roles: ["FINANCE", "ADMIN"] },
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["FINANCE", "COMPLIANCE"] },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag, roles: ["ADMIN"] },
       { href: "/oauth-apps", label: "OAuth Apps", icon: KeyRound, roles: ["ADMIN"] },
@@ -104,6 +112,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck, roles: ["COMPLIANCE"] },
       { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["COMPLIANCE"] },
+      { href: "/risk/velocity", label: "Velocity Alerts", icon: Zap, roles: ["COMPLIANCE", "ADMIN"] },
       { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["COMPLIANCE"] },
       { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["COMPLIANCE"] },
       { href: "/devices", label: "Device Management", icon: ShieldCheck, roles: ["COMPLIANCE", "SUPPORT"] },
@@ -120,6 +129,8 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["FINANCE"] },
       { href: "/analytics/onboarding", label: "Onboarding Funnel", icon: UsersRound, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
       { href: "/analytics", label: "Webhooks & Geo", icon: Globe, exactMatch: true, roles: ["ADMIN", "FINANCE"] },
+      { href: "/analytics/2fa", label: "2FA Enrollment", icon: ShieldCheck, roles: ["COMPLIANCE", "ADMIN"] },
+      { href: "/analytics/fees", label: "Fee Revenue", icon: Coins, roles: ["FINANCE"] },
     ],
   },
   {
@@ -138,6 +149,8 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/referrals", label: "Referral Program", icon: Gift, roles: ["ADMIN", "FINANCE"] },
       { href: "/recurring-transfers", label: "Recurring Transfers", icon: RefreshCw, roles: ["ADMIN", "COMPLIANCE", "FINANCE"] },
       { href: "/subscriptions", label: "Subscriptions", icon: CreditCard, roles: ["ADMIN", "FINANCE"] },
+      { href: "/webhooks", label: "Webhook Retries", icon: RefreshCw, roles: ["ADMIN"] },
+      { href: "/vouchers", label: "Promo Codes", icon: Tag, roles: ["ADMIN"] },
     ],
   },
   {

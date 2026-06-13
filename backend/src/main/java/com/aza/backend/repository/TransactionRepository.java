@@ -236,4 +236,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT t.category, COUNT(t), SUM(t.amount) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.category IS NOT NULL AND t.initiatedAt >= :since GROUP BY t.category ORDER BY SUM(t.amount) DESC")
     List<Object[]> getCategoryBreakdown(@Param("since") LocalDateTime since);
+
+    // ── Velocity alert queries ────────────────────────────────────────────────
+
+    @Query("SELECT t.senderId, COUNT(t) as txCount FROM Transaction t WHERE t.initiatedAt >= :since AND t.status NOT IN ('CANCELLED','FAILED') GROUP BY t.senderId HAVING COUNT(t) >= :threshold ORDER BY COUNT(t) DESC")
+    List<Object[]> findHighVelocitySenders(@Param("since") LocalDateTime since, @Param("threshold") long threshold);
+
+    // ── Fee revenue queries ───────────────────────────────────────────────────
+
+    @Query("SELECT COALESCE(SUM(t.feeAmount), 0) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :since")
+    BigDecimal sumFeesAfter(@Param("since") LocalDateTime since);
+
+    @Query("SELECT DATE(t.initiatedAt), COALESCE(SUM(t.feeAmount), 0), COUNT(t) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :since GROUP BY DATE(t.initiatedAt) ORDER BY DATE(t.initiatedAt)")
+    List<Object[]> dailyFeeRevenue(@Param("since") LocalDateTime since);
+
+    // ── Ledger check queries ──────────────────────────────────────────────────
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.type = 'TRANSFER' AND t.status = 'COMPLETED'")
+    BigDecimal sumCompletedTransfers();
 }

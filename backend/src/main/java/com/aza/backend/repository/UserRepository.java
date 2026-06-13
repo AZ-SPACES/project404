@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -90,5 +91,41 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u WHERE u.status = 'PENDING_DELETION' AND u.scheduledDeletionAt <= :now")
     List<User> findDueForErasure(@Param("now") LocalDateTime now);
+
+    // ── 2FA enrollment stats ──────────────────────────────────────────────────
+
+    long countByTwoFactorEnabledTrue();
+
+    long countBySmsTwoFactorEnabledTrue();
+
+    long countByEmailTwoFactorEnabledTrue();
+
+    long countByAppTwoFactorEnabledTrue();
+
+    long countByPasskeysEnabledTrue();
+
+    long countByBiometricsEnabledTrue();
+
+    // ── User segmentation ─────────────────────────────────────────────────────
+
+    @Query("""
+        SELECT u FROM User u
+        JOIN Wallet w ON w.userId = u.id
+        WHERE (:kycStatus IS NULL OR u.kycStatus = :kycStatus)
+        AND (:accountStatus IS NULL OR u.status = :accountStatus)
+        AND (:twoFactorEnabled IS NULL OR u.twoFactorEnabled = :twoFactorEnabled)
+        AND (:minBalance IS NULL OR w.balance >= :minBalance)
+        AND (:maxBalance IS NULL OR w.balance <= :maxBalance)
+        AND (:lastActiveCutoff IS NULL OR u.createdAt >= :lastActiveCutoff)
+        ORDER BY u.createdAt DESC
+        """)
+    Page<User> segmentUsers(
+        @Param("kycStatus") User.KycStatus kycStatus,
+        @Param("accountStatus") User.AccountStatus accountStatus,
+        @Param("twoFactorEnabled") Boolean twoFactorEnabled,
+        @Param("minBalance") BigDecimal minBalance,
+        @Param("maxBalance") BigDecimal maxBalance,
+        @Param("lastActiveCutoff") LocalDateTime lastActiveCutoff,
+        Pageable pageable);
 }
 
