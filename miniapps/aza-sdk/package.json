@@ -1,5 +1,5 @@
 {
-  "name": "@jumpspaces/aza-miniapp-sdk",
+  "name": "@az-spaces/aza-miniapp-sdk",
   "version": "1.0.0",
   "description": "SDK for building Aza Mini Apps. Provides TypeScript types and bridge helpers for window.aza.",
   "main": "dist/index.js",
@@ -16,7 +16,16 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "publish:npm": "npm publish --access public --registry https://registry.npmjs.org/",
+    "publish:github": "npm publish --access public --registry https://npm.pkg.github.com/"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AZ-SPACES/project404.git"
   },
   "peerDependencies": {
     "react": ">=17"
