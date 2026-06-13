@@ -25,6 +25,7 @@ import {
   Smartphone,
   Copy,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 
 type Step = "register" | "kyb" | "documents";
@@ -72,10 +73,14 @@ export default function OnboardingPage() {
   const [uploading, setUploading] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // admin note (shown when MORE_INFO_REQUIRED)
+  const [adminNote, setAdminNote] = useState<string | null>(null);
+
   // mobile handoff
   const [mobileToken, setMobileToken] = useState<string | null>(null);
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
   const [mobileLinkLoading, setMobileLinkLoading] = useState(false);
+  const [mobileError, setMobileError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -95,17 +100,19 @@ export default function OnboardingPage() {
         if (
           me.status === "KYB_SUBMITTED" ||
           me.status === "KYB_UNDER_REVIEW" ||
-          me.status === "MORE_INFO_REQUIRED" ||
           me.status === "REJECTED"
         ) {
           router.replace("/onboarding/status");
           return;
         }
         setBusinessName(me.businessName);
-        // PENDING_KYB or KYB_SUBMITTED — check kyb progress
+        // PENDING_KYB or MORE_INFO_REQUIRED — load saved kyb and resume
         try {
           const kyb = await getKyb();
           setDocuments(kyb.documents ?? []);
+          if (kyb.moreInfoRequest) setAdminNote(kyb.moreInfoRequest);
+
+          // Populate KYB fields if previously saved
           if (kyb.ownerFullName) {
             setOwnerFullName(kyb.ownerFullName ?? "");
             setRegistrationNumber(kyb.registrationNumber ?? "");
@@ -113,7 +120,17 @@ export default function OnboardingPage() {
             setRegisteredAddress(kyb.registeredAddress ?? "");
             setCity(kyb.city ?? "");
             setOwnerIdType(kyb.ownerIdType ?? "GHANA_CARD");
+          }
+
+          // Decide which step to resume on
+          const kybComplete = !!(kyb.ownerFullName && kyb.registeredAddress && kyb.taxIdNumber);
+          const hasDocuments = (kyb.documents ?? []).length > 0;
+
+          if (kybComplete || hasDocuments) {
             setStep("documents");
+          } else if (kyb.ownerFullName) {
+            // Partial KYB saved — put them back on KYB to finish
+            setStep("kyb");
           } else {
             setStep("kyb");
           }
@@ -170,7 +187,7 @@ export default function OnboardingPage() {
         }
       }, 4000);
     } catch (e: any) {
-      setError(e.message ?? "Could not create mobile session");
+      setMobileError(e.message ?? "Could not create mobile session");
     } finally {
       setMobileLinkLoading(false);
     }
@@ -402,6 +419,15 @@ export default function OnboardingPage() {
                 <h2 className="text-xl font-bold text-white">KYB verification</h2>
                 <p className="text-white/45 text-sm mt-1">Required to accept live payments</p>
               </div>
+              {adminNote && (
+                <div className="mb-5 flex gap-3 px-4 py-3.5 rounded-xl bg-amber-400/10 border border-amber-400/25">
+                  <AlertTriangle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-amber-400 text-sm font-semibold mb-0.5">Action required from reviewer</p>
+                    <p className="text-amber-300/80 text-sm">{adminNote}</p>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleKyb} className="space-y-4">
                 <Field label="Business type" required>
                   <select value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={inputCls}>
@@ -458,6 +484,15 @@ export default function OnboardingPage() {
           {/* ── Step 3: Documents ── */}
           {step === "documents" && (
             <div>
+              {adminNote && (
+                <div className="mb-5 flex gap-3 px-4 py-3.5 rounded-xl bg-amber-400/10 border border-amber-400/25">
+                  <AlertTriangle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-amber-400 text-sm font-semibold mb-0.5">Action required from reviewer</p>
+                    <p className="text-amber-300/80 text-sm">{adminNote}</p>
+                  </div>
+                </div>
+              )}
               <div className="mb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -465,7 +500,7 @@ export default function OnboardingPage() {
                     <p className="text-white/45 text-sm mt-1">All documents required before submission</p>
                   </div>
                   <button
-                    onClick={openMobileHandoff}
+                    onClick={() => { setMobileError(null); openMobileHandoff(); }}
                     disabled={mobileLinkLoading}
                     className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/6 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors disabled:opacity-50"
                   >
@@ -473,6 +508,9 @@ export default function OnboardingPage() {
                     Continue on mobile
                   </button>
                 </div>
+                {mobileError && (
+                  <p className="text-xs text-red-400 mt-2 text-right">{mobileError}</p>
+                )}
               </div>
               <div className="space-y-3">
                 {DOC_SLOTS.map((slot) => {

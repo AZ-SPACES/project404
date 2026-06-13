@@ -17,6 +17,14 @@ export function clearTokens() {
   localStorage.removeItem("aza_merchant_refresh_token");
 }
 
+export async function logout(): Promise<void> {
+  try {
+    await request("/api/v1/auth/logout", { method: "POST" });
+  } finally {
+    clearTokens();
+  }
+}
+
 // ─── Core fetch with auto-refresh ────────────────────────────────────────────
 
 let isRefreshing = false;

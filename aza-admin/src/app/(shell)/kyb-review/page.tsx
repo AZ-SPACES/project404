@@ -8,7 +8,7 @@ import { Loader2, ChevronRight, ShieldCheck } from "lucide-react";
 const STATUS_CFG: Record<string, { cls: string; label: string }> = {
   KYB_SUBMITTED:     { cls: "bg-blue-400/15 text-blue-400",    label: "Submitted" },
   KYB_UNDER_REVIEW:  { cls: "bg-amber-400/15 text-amber-400",  label: "Under Review" },
-  MORE_INFO_REQUIRED:{ cls: "bg-orange-400/15 text-orange-400",label: "Responded" },
+  MORE_INFO_REQUIRED:{ cls: "bg-orange-400/15 text-orange-400",label: "Info Requested" },
 };
 
 function KybBadge({ status }: { status: string }) {
@@ -73,7 +73,7 @@ export default function KybQueuePage() {
         <p className="text-foreground/40 text-sm mt-1">
           {records.length} submission{records.length !== 1 ? "s" : ""} awaiting review
           {responded > 0 && (
-            <span className="ml-2 text-orange-400">· {responded} responded to info request</span>
+            <span className="ml-2 text-orange-400">· {responded} awaiting merchant response</span>
           )}
         </p>
       </div>
@@ -88,7 +88,7 @@ export default function KybQueuePage() {
       )}
 
       {[
-        { label: "Responded to Info Request", items: records.filter((r) => r.status === "MORE_INFO_REQUIRED") },
+        { label: "Awaiting Merchant Response", items: records.filter((r) => r.status === "MORE_INFO_REQUIRED") },
         { label: "Under Review", items: records.filter((r) => r.status === "KYB_UNDER_REVIEW") },
         { label: "Submitted", items: records.filter((r) => r.status === "KYB_SUBMITTED") },
       ]

@@ -50,18 +50,15 @@ export default function LoginPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<"PENDING" | "APPROVED" | "EXPIRED">("PENDING");
+  const [qrCountdown, setQrCountdown] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const expireTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (expireTimerRef.current) {
-      clearTimeout(expireTimerRef.current);
-      expireTimerRef.current = null;
-    }
+    if (pollRef.current)      { clearInterval(pollRef.current);      pollRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    if (expireTimerRef.current){ clearTimeout(expireTimerRef.current); expireTimerRef.current = null; }
   }, []);
 
   const redirectAfterQrLogin = useCallback(async () => {
@@ -98,6 +95,10 @@ export default function LoginPage() {
     try {
       const session = await initiateQrLogin();
       setQrSession(session);
+      setQrCountdown(session.ttlSeconds);
+      countdownRef.current = setInterval(() => {
+        setQrCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
+      }, 1000);
 
       pollRef.current = setInterval(async () => {
         try {
@@ -261,8 +262,8 @@ export default function LoginPage() {
                       className="w-[200px] h-[200px]"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Code expires in {qrSession.ttlSeconds}s
+                  <p className={`text-xs ${qrCountdown < 15 ? "text-amber-400" : "text-muted-foreground"}`}>
+                    Code expires in {qrCountdown}s
                   </p>
                 </div>
               )}
