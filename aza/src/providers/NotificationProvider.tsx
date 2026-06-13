@@ -291,11 +291,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       const projectId =
-        Constants.expoConfig?.extra?.eas?.projectId ??
-        (Constants as Record<string, unknown>).easConfig as string | undefined;
-      const { data: pushToken } = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId: projectId as string } : undefined,
-      );
+        Constants.easConfig?.projectId ??
+        Constants.expoConfig?.extra?.eas?.projectId;
+
+      if (!projectId) {
+        console.error(
+          '[Push] Cannot register for push notifications: no EAS projectId found.\n' +
+          'Add it to app.json under expo.extra.eas.projectId, or run `npx eas-cli init`.'
+        );
+        return false;
+      }
+
+      const { data: pushToken } = await Notifications.getExpoPushTokenAsync({ projectId });
       const deviceId = await getDeviceId();
       const deviceName = Device.modelName ?? 'Unknown Device';
       const platform = Platform.OS;
@@ -303,7 +310,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       return true;
     } catch (e) {
-      console.warn('NotificationProvider: Could not register for notifications', e);
+      console.error('NotificationProvider: Could not register for push notifications', e);
       return false;
     }
   };

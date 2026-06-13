@@ -168,6 +168,14 @@ export default function MiniAppPlayerScreen() {
   }
 
   const MiniAppComponent = app.component;
+  const miniAppTheme = {
+    background: Colors.background,
+    surface: Colors.surface,
+    primary: Colors.primary,
+    textPrimary: Colors.textPrimary,
+    textSecondary: Colors.textSecondary,
+    border: Colors.border,
+  };
 
   const menuOpacity = menuAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
@@ -216,7 +224,7 @@ export default function MiniAppPlayerScreen() {
       <View style={styles.divider} />
 
       <View style={styles.content}>
-        <MiniAppComponent onClose={handleClose} />
+        <MiniAppComponent onClose={handleClose} theme={miniAppTheme} />
       </View>
 
       {/* ── Dropdown menu ── */}
