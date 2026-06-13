@@ -227,10 +227,14 @@ export function useAza(timeoutMs = 5_000): AzaHookState {
   return state;
 }
 
+// `require` is resolved by bundlers (webpack/vite/esbuild) at build time.
+// Declaring it here avoids a dependency on @types/node while staying type-safe.
+declare const require: undefined | ((id: string) => unknown);
+
 function _requireReact(): typeof import('react') | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require('react');
+    if (typeof require === 'undefined') return null;
+    return require('react') as typeof import('react');
   } catch {
     return null;
   }
