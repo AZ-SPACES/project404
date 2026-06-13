@@ -91,15 +91,18 @@ export default function DocumentCapture({ docLabel, onCapture, onCancel }: Props
         video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setPhase("scanning");
+      setPhase("scanning"); // video element renders after this; useEffect below attaches the stream
     } catch {
       setPhase("permission");
     }
   }, []);
+
+  // Attach stream once the video element is in the DOM (phase === "scanning")
+  useEffect(() => {
+    if (phase !== "scanning" || !videoRef.current || !streamRef.current) return;
+    videoRef.current.srcObject = streamRef.current;
+    videoRef.current.play().catch(() => {});
+  }, [phase]);
 
   const stopCamera = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -304,7 +307,7 @@ export default function DocumentCapture({ docLabel, onCapture, onCancel }: Props
 
       {/* Live video */}
       <div className="flex-1 relative overflow-hidden">
-        <video ref={videoRef} playsInline muted
+        <video ref={videoRef} autoPlay playsInline muted
           className="w-full h-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
