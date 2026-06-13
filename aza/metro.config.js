@@ -22,6 +22,8 @@ config.resolver.extraNodeModules = {
   '@miniapps/notepad':           path.join(miniappsRoot, 'notepad'),
   '@miniapps/cedirates':         path.join(miniappsRoot, 'cedirates'),
   '@miniapps/salifu-and-master': path.join(miniappsRoot, 'salifu-and-master'),
+  // SDK package — maps @aza/miniapp-sdk to the source entry point
+  '@aza/miniapp-sdk':            path.join(miniappsRoot, 'aza-sdk', 'src', 'index.ts'),
 };
 
 module.exports = config;
