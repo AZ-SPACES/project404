@@ -93,6 +93,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["COMPLIANCE"] },
       { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["COMPLIANCE"] },
       { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["COMPLIANCE"] },
+      { href: "/devices", label: "Device Management", icon: ShieldCheck, roles: ["COMPLIANCE", "SUPPORT"] },
       { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["COMPLIANCE", "FINANCE"] },
       { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["COMPLIANCE", "SUPPORT"] },
     ],

@@ -8,6 +8,7 @@ import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.repository.RecoveryCodeRepository;
+import com.aza.backend.service.DeviceService;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
@@ -232,6 +233,13 @@ public class AuthService {
                                        String deviceOs, String deviceId, String ipAddress, boolean isSignup) {
         if (user.getStatus() == User.AccountStatus.SUSPENDED || user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new AppException("Account is not active");
+        }
+
+        if (deviceId != null && !deviceId.isBlank() &&
+                Boolean.TRUE.equals(redisTemplate.hasKey(DeviceService.DEVICE_BLOCK_PREFIX + deviceId))) {
+            throw new AppException("DEVICE_BLOCKED",
+                    "This device has been blocked. Contact support if you believe this is an error.",
+                    org.springframework.http.HttpStatus.FORBIDDEN);
         }
 
         user.setLastLoginAt(LocalDateTime.now());

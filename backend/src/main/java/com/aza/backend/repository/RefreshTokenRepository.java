@@ -34,6 +34,26 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
 
     void deleteByExpiresAtBefore(java.time.LocalDateTime cutoff);
 
+    List<RefreshToken> findAllByDeviceId(String deviceId);
+
+    /** One row per distinct device_id — the most-recently-used session for each device. */
+    @Query(value = "SELECT DISTINCT ON (r.device_id) r.* FROM refresh_tokens r " +
+                   "WHERE r.device_id IS NOT NULL ORDER BY r.device_id, r.last_used_at DESC",
+           countQuery = "SELECT COUNT(DISTINCT device_id) FROM refresh_tokens WHERE device_id IS NOT NULL",
+           nativeQuery = true)
+    org.springframework.data.domain.Page<RefreshToken> findLatestSessionPerDevice(
+            org.springframework.data.domain.Pageable pageable);
+
+    /** Devices that have been used by more than {@code threshold} distinct user accounts. */
+    @Query(value = "SELECT r.device_id, r.device_name, r.device_os, COUNT(DISTINCT r.user_id) AS user_count, " +
+                   "MAX(r.last_used_at) AS last_seen " +
+                   "FROM refresh_tokens r WHERE r.device_id IS NOT NULL " +
+                   "GROUP BY r.device_id, r.device_name, r.device_os " +
+                   "HAVING COUNT(DISTINCT r.user_id) > :threshold " +
+                   "ORDER BY COUNT(DISTINCT r.user_id) DESC",
+           nativeQuery = true)
+    java.util.List<Object[]> findMultiUserDevices(@Param("threshold") long threshold);
+
     /**
      * Sets the resolved location for a session without touching other columns.
      * Used by the async geo lookup so it doesn't bump {@code lastUsedAt} via @UpdateTimestamp.

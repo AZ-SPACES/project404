@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DeviceResponse {
     private String id;
+    /** Client-generated device fingerprint — used by admin to block a device. */
+    private String deviceId;
     private String deviceName;
     private String deviceOs;
     private String ipAddress;

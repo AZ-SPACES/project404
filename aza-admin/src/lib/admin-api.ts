@@ -341,6 +341,7 @@ export interface AdminUser {
 
 export interface UserSession {
   id: string;
+  deviceId: string | null;
   deviceName: string | null;
   deviceOs: string | null;
   ipAddress: string | null;
@@ -1757,6 +1758,67 @@ export function markFiled(data: {
   return request("/api/v1/admin/regulatory/filings", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// ── Device management ─────────────────────────────────────────────────────────
+
+export interface DeviceRegistryRow {
+  deviceId: string;
+  deviceName: string | null;
+  deviceOs: string | null;
+  location: string | null;
+  lastSeenAt: string | null;
+  blocked: boolean;
+}
+
+export interface SuspiciousDevice {
+  deviceId: string;
+  deviceName: string | null;
+  deviceOs: string | null;
+  userCount: number;
+  lastSeenAt: string | null;
+  blocked: boolean;
+}
+
+export interface BlockedDevice {
+  id: string;
+  deviceId: string;
+  deviceName: string | null;
+  deviceOs: string | null;
+  associatedUserId: string | null;
+  reason: string | null;
+  blockedByEmail: string;
+  blockedAt: string;
+}
+
+export function getDeviceRegistry(page = 0, size = 20): Promise<Page<DeviceRegistryRow>> {
+  return request(`/api/v1/admin/devices?page=${page}&size=${size}`);
+}
+
+export function getSuspiciousDevices(threshold = 1): Promise<SuspiciousDevice[]> {
+  return request(`/api/v1/admin/devices/suspicious?threshold=${threshold}`);
+}
+
+export function getBlockedDevices(): Promise<BlockedDevice[]> {
+  return request("/api/v1/admin/devices/blocked");
+}
+
+export function blockDevice(deviceId: string, data: {
+  associatedUserId?: string;
+  deviceName?: string;
+  deviceOs?: string;
+  reason?: string;
+}): Promise<BlockedDevice> {
+  return request(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}/block`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function unblockDevice(deviceId: string): Promise<string> {
+  return request(`/api/v1/admin/devices/${encodeURIComponent(deviceId)}/block`, {
+    method: "DELETE",
   });
 }
 
