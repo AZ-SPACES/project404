@@ -23,7 +23,8 @@ export type Page =
   | 'settings'
   | 'team'
   | 'plans'
-  | 'products';
+  | 'products'
+  | 'analytics';
 
 export interface MerchantData {
   id: string;

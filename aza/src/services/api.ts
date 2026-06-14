@@ -1418,6 +1418,9 @@ export type UnsplashPhoto = {
   downloadLocation: string;
 };
 
+export const getMerchantAnalytics = (days = 30) =>
+  api.get(`/api/v1/merchant/analytics?days=${days}`);
+
 export const searchUnsplash = (query: string, page = 1) =>
   api.get<{ success: boolean; data: UnsplashPhoto[] }>('/api/v1/unsplash/search', {
     params: { query, page, perPage: 20 },

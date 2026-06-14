@@ -1689,6 +1689,36 @@ export function getGlobalPayouts(page = 0, size = 20, status?: string): Promise<
   return request(`/api/v1/admin/merchants/payouts/all?${params}`);
 }
 
+// ── User Withdrawals ──────────────────────────────────────────────────────────
+
+export interface UserWithdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  provider: string;
+  destination: string;
+  bankName: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+}
+
+export function getAdminWithdrawals(page = 0, size = 20, status?: string): Promise<Page<UserWithdrawal>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/withdrawals?${params}`);
+}
+
+export function reviewWithdrawal(id: string, action: "APPROVE" | "REJECT", note?: string): Promise<UserWithdrawal> {
+  return request(`/api/v1/admin/withdrawals/${id}/review`, {
+    method: "POST",
+    body: JSON.stringify({ action, note }),
+  });
+}
+
 // ── Webhook deliveries per merchant ──────────────────────────────────────────
 
 export interface WebhookDeliveryRow {

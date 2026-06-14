@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -47,6 +48,28 @@ public class WebhookService {
         }
     }
 
+    /**
+     * Blocks webhook delivery to loopback/private/link-local addresses to prevent SSRF.
+     * Called at delivery time so that DNS rebinding attacks during registration are also caught.
+     */
+    private void validateWebhookUrl(String urlString) {
+        try {
+            URI uri = URI.create(urlString);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) {
+                throw new com.aza.backend.exception.AppException("Webhook URLs must use HTTPS");
+            }
+            InetAddress addr = InetAddress.getByName(uri.getHost());
+            if (addr.isLoopbackAddress() || addr.isSiteLocalAddress()
+                    || addr.isLinkLocalAddress() || addr.isAnyLocalAddress()) {
+                throw new com.aza.backend.exception.AppException(
+                        "Webhook URL resolves to a private/internal address");
+            }
+        } catch (java.net.UnknownHostException e) {
+            throw new com.aza.backend.exception.AppException(
+                    "Cannot resolve webhook host: " + e.getMessage());
+        }
+    }
+
     private void deliver(WebhookDelivery delivery) {
         WebhookEndpoint endpoint = endpointRepository.findById(delivery.getEndpointId()).orElse(null);
         if (endpoint == null || !Boolean.TRUE.equals(endpoint.getIsActive())) {
@@ -59,6 +82,7 @@ public class WebhookService {
         delivery.setLastAttemptAt(LocalDateTime.now());
 
         try {
+            validateWebhookUrl(endpoint.getUrl());
             String signature = hmacSha256(delivery.getPayload(), endpoint.getSigningSecret());
 
             HttpRequest request = HttpRequest.newBuilder()
