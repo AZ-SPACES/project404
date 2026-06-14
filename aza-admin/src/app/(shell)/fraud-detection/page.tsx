@@ -89,9 +89,24 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 }
 
 function FraudDrawer({ txId, onClose }: { txId: string; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState("");
+
   const { data: tx, isLoading, error } = useQuery<AdminTransaction>({
     queryKey: ["transaction", txId],
     queryFn: () => getAdminTransaction(txId),
+  });
+
+  const decide = useMutation({
+    mutationFn: ({ release }: { release: boolean }) =>
+      release ? releaseHeldTransfer(txId) : rejectHeldTransfer(txId),
+    onMutate: () => setActionError(""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fraud-held"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction", txId] });
+      queryClient.invalidateQueries({ queryKey: ["fraud-flagged"] });
+    },
+    onError: (e: Error) => setActionError(e.message),
   });
 
   return (
@@ -190,6 +205,53 @@ function FraudDrawer({ txId, onClose }: { txId: string; onClose: () => void }) {
                   <DetailRow label="Completed">{fmt(tx.completedAt)}</DetailRow>
                 </div>
               </div>
+
+              {/* Release / Reject actions — only for intercepted transfers */}
+              {tx.status === "HELD_FOR_REVIEW" && (
+                <div className="space-y-3">
+                  <p className="text-xs text-foreground/40 leading-relaxed">
+                    This transfer was intercepted before any money moved.
+                    <strong className="text-foreground/60"> Release</strong> executes it;
+                    <strong className="text-foreground/60"> Reject</strong> cancels it and notifies the sender.
+                  </p>
+                  {actionError && (
+                    <p className="text-xs text-red-400">{actionError}</p>
+                  )}
+                  {decide.isSuccess ? (
+                    <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                      <CheckCircle2 size={14} />
+                      Decision recorded successfully.
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => decide.mutate({ release: true })}
+                        disabled={decide.isPending}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 text-sm font-medium hover:bg-green-500/20 disabled:opacity-40 transition-colors"
+                      >
+                        {decide.isPending && decide.variables?.release ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={14} />
+                        )}
+                        Release transfer
+                      </button>
+                      <button
+                        onClick={() => decide.mutate({ release: false })}
+                        disabled={decide.isPending}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 disabled:opacity-40 transition-colors"
+                      >
+                        {decide.isPending && !decide.variables?.release ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <XCircle size={14} />
+                        )}
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : null}
         </div>
