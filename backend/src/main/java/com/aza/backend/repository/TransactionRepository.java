@@ -259,4 +259,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Modifying
     @Query("UPDATE Transaction t SET t.initiationLocation = null WHERE t.initiatedAt < :cutoff AND t.initiationLocation IS NOT NULL")
     int nullifyOldLocations(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("SELECT t FROM Transaction t WHERE t.status = 'HELD_FOR_REVIEW' AND t.initiatedAt < :cutoff")
+    java.util.List<Transaction> findStaleHeldTransactions(@Param("cutoff") LocalDateTime cutoff);
 }

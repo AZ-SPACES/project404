@@ -568,6 +568,11 @@ public class TransferService {
     /** COMPLIANCE decision: cancel the held transfer; no funds ever moved. */
     @Transactional
     public TransferResponse rejectHeldTransfer(UUID transactionId) {
+        return rejectHeldTransfer(transactionId, false);
+    }
+
+    @Transactional
+    public TransferResponse rejectHeldTransfer(UUID transactionId, boolean timedOut) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
         if (transaction.getStatus() != Transaction.TransactionStatus.HELD_FOR_REVIEW) {
@@ -582,11 +587,15 @@ public class TransferService {
 
         User sender = userRepository.findById(transaction.getSenderId()).orElse(null);
         if (sender != null) {
+            String body = timedOut
+                    ? "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                            + " was cancelled because our security review wasn't completed within 48 hours. No funds left your wallet. Contact support to retry."
+                    : "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                            + " was declined after a security review. No funds left your wallet. Contact support if you believe this is a mistake.";
             notificationService.sendNotification(sender.getId(),
                     com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
                     "Transfer declined",
-                    "Your transfer of GHS " + transaction.getAmount().toPlainString()
-                            + " was declined after a security review. No funds left your wallet. Contact support if you believe this is a mistake.",
+                    body,
                     null, null);
         }
         User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
