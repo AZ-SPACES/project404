@@ -492,6 +492,7 @@ export interface AdminTransaction {
   category: string | null;
   anomalyScore: number | null;
   anomalyRiskLevel: string | null;
+  initiationLocation: string | null;
 }
 
 export function getAdminTransactions(page = 0, size = 20): Promise<Page<AdminTransaction>> {

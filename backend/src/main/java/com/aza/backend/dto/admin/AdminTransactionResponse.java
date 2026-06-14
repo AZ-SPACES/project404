@@ -27,4 +27,5 @@ public class AdminTransactionResponse {
     private Double anomalyScore;
     private String anomalyRiskLevel;
     private String direction; // "INCOMING" or "OUTGOING" relative to the requesting user
+    private String initiationLocation;
 }

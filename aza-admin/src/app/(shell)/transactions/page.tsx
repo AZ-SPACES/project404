@@ -187,6 +187,11 @@ function TransactionDrawer({
                       </span>
                     ) : <span className="text-foreground/25">Uncategorised</span>}
                   </DetailRow>
+                  {tx.initiationLocation && (
+                    <DetailRow label="Location">
+                      <span className="text-foreground/70 text-sm">{tx.initiationLocation}</span>
+                    </DetailRow>
+                  )}
                   {tx.anomalyRiskLevel && tx.anomalyRiskLevel !== "LOW" && (
                     <DetailRow label="Risk">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${

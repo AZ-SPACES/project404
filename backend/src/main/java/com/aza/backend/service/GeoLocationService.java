@@ -1,5 +1,7 @@
 package com.aza.backend.service;
 
+import com.aza.backend.entity.Notification;
+import com.aza.backend.entity.RefreshToken;
 import com.aza.backend.repository.RefreshTokenRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +29,7 @@ import java.util.UUID;
 public class GeoLocationService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final NotificationService notificationService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -39,6 +42,22 @@ public class GeoLocationService {
         if (location == null) return;
         try {
             refreshTokenRepository.updateLocation(refreshTokenId, location);
+
+            RefreshToken current = refreshTokenRepository.findById(refreshTokenId).orElse(null);
+            if (current != null) {
+                java.util.List<RefreshToken> allSessions = refreshTokenRepository.findAllByUserId(current.getUserId());
+                boolean isNewLocation = allSessions.stream()
+                        .filter(t -> t.getLocation() != null && !t.getId().equals(refreshTokenId))
+                        .noneMatch(t -> location.equals(t.getLocation()));
+                if (isNewLocation && allSessions.size() > 1) {
+                    notificationService.sendNotification(
+                            current.getUserId(),
+                            Notification.NotificationType.SECURITY_ALERT,
+                            "New login location",
+                            "We detected a login from " + location + ". If this wasn't you, go to Settings › Security to review your devices.",
+                            null, null);
+                }
+            }
         } catch (Exception e) {
             log.warn("Failed to persist location for session {}: {}", refreshTokenId, e.getMessage());
         }

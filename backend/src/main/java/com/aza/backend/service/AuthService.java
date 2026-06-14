@@ -264,6 +264,21 @@ public class AuthService {
 
         saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, deviceId, ipAddress, gpsLocation);
 
+        if (!isSignup && gpsLocation != null && !gpsLocation.isBlank()) {
+            List<RefreshToken> prevSessions = refreshTokenRepository.findAllByUserId(user.getId());
+            boolean isNewLocation = prevSessions.stream()
+                    .filter(t -> t.getLocation() != null && !t.getIpAddress().equals(ipAddress))
+                    .noneMatch(t -> gpsLocation.equals(t.getLocation()));
+            if (isNewLocation && prevSessions.size() > 1) {
+                notificationService.sendNotification(
+                        user.getId(),
+                        com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                        "New login location",
+                        "We detected a login from " + gpsLocation + ". If this wasn't you, go to Settings › Security to review your devices.",
+                        null, null);
+            }
+        }
+
         if (isSignup) {
             emailService.sendSignupNotification(user.getEmail(), user.getFirstName());
         } else {

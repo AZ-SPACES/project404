@@ -1,6 +1,9 @@
 package com.aza.backend.service;
 
+import com.aza.backend.entity.User;
+import com.aza.backend.repository.RefreshTokenRepository;
 import com.aza.backend.repository.TransactionRepository;
+import com.aza.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +18,16 @@ import java.util.UUID;
 public class AnomalyDetectionService {
 
     private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public record Result(double score, String riskLevel, String reason) {}
 
     public Result score(UUID userId, UUID recipientId, BigDecimal amount, LocalDateTime now) {
+        return score(userId, recipientId, amount, now, null);
+    }
+
+    public Result score(UUID userId, UUID recipientId, BigDecimal amount, LocalDateTime now, String initiationLocation) {
         double score = 0.0;
         List<String> flags = new ArrayList<>();
 
@@ -67,6 +76,33 @@ public class AnomalyDetectionService {
             flags.add("Unusual transfer time");
         }
 
+        // Factor 4: Unusual initiation location
+        if (initiationLocation != null && !initiationLocation.isBlank()) {
+            String txCountry = extractCountry(initiationLocation);
+
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && txCountry != null && user.getTaxCountry() != null
+                    && !txCountry.equalsIgnoreCase(user.getTaxCountry())) {
+                score += 0.25;
+                flags.add("Transfer initiated from " + txCountry + " (registered: " + user.getTaxCountry() + ")");
+            } else {
+                String lastLocation = refreshTokenRepository.findAllByUserId(userId).stream()
+                        .filter(t -> t.getLocation() != null)
+                        .map(com.aza.backend.entity.RefreshToken::getLocation)
+                        .findFirst().orElse(null);
+                if (lastLocation != null && !initiationLocation.equals(lastLocation)) {
+                    String lastCountry = extractCountry(lastLocation);
+                    if (txCountry != null && !txCountry.equalsIgnoreCase(lastCountry)) {
+                        score += 0.25;
+                        flags.add("Transfer initiated from unfamiliar country: " + txCountry);
+                    } else {
+                        score += 0.10;
+                        flags.add("Transfer initiated from unfamiliar location: " + initiationLocation);
+                    }
+                }
+            }
+        }
+
         score = Math.min(score, 1.0);
 
         String riskLevel;
@@ -76,5 +112,11 @@ public class AnomalyDetectionService {
 
         String reason = flags.isEmpty() ? null : String.join("; ", flags);
         return new Result(score, riskLevel, reason);
+    }
+
+    private static String extractCountry(String cityCountry) {
+        if (cityCountry == null) return null;
+        int comma = cityCountry.lastIndexOf(',');
+        return comma >= 0 ? cityCountry.substring(comma + 1).trim() : cityCountry.trim();
     }
 }
