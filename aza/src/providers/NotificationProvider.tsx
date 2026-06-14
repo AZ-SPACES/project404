@@ -124,9 +124,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           handleIncomingCallPush(data as CallPushData);
         }
 
-        if (type === 'MONEY_RECEIVED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
+        if (type === 'MONEY_RECEIVED' || type === 'TRANSFER_COMPLETED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
           queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        }
+
+        if (
+          type === 'PAYMENT_REQUEST_DECLINED' ||
+          type === 'PAYMENT_REQUEST_CANCELLED' ||
+          type === 'PAYMENT_REQUEST_EXPIRED'
+        ) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.notificationCount() });
         }
       });
 
@@ -205,6 +213,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           }
         } else if (type === 'MONEY_RECEIVED') {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Home' } });
+        } else if (type === 'TRANSFER_COMPLETED') {
+          navigate('App', { screen: 'Transactions', params: { balance: '' } });
+        } else if (type === 'MINI_APP_REVIEW') {
+          navigate('App', { screen: 'MainTabs', params: { screen: 'Hub' } });
+        } else if (
+          type === 'CONTACT_REQUEST_RECEIVED' ||
+          type === 'FRIEND_REQUEST' ||
+          type === 'CONTACT_REQUEST_ACCEPTED' ||
+          type === 'CONTACT_ACCEPTED' ||
+          type === 'FRIEND_REQUEST_ACCEPTED'
+        ) {
+          navigate('App', { screen: 'RequestPending' });
         } else if (typeof type === 'string' && type.includes('PAYMENT_REQUEST')) {
           navigate('App', { screen: 'MainTabs', params: { screen: 'Inbox' } });
         } else {

@@ -57,18 +57,27 @@ const linking = {
   prefixes: ["aza://", "https://aza.systems"],
   config: {
     screens: {
+      Auth: {
+        screens: {
+          Login: "login",
+        },
+      },
       App: {
         screens: {
-          // Payment link: aza://pay/naaddo (or https://aza.me/pay/naaddo) → SendAmount
-          // with the handle pre-filled as the recipient identifier. The screen
-          // then looks up the rest of the profile by handle.
           SendAmount: "pay/:identifier",
-          // OAuth payment approval: aza://checkout/:sessionId → OAuthPaymentApprovalScreen
           OAuthPaymentApproval: "checkout/:sessionId",
-          // Profile QR code: aza://me/naaddo → MyCode screen (via scan tab)
+          Transactions: "transactions",
+          SecurityAndPrivacy: "settings/security",
+          ManageRecoveryCodes: "settings/security/recovery-codes",
+          LimitsAndUsage: "limits",
+          HelpAndSupport: "support",
+          FinancialDashboard: "analytics",
+          AiAssistant: "ai",
+          ContactsProfile: "profile/:username",
           MainTabs: {
             screens: {
               Inbox: "inbox",
+              Hub: "hub",
             },
           },
         },
