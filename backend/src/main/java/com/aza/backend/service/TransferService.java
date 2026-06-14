@@ -20,7 +20,6 @@ import com.aza.backend.util.RateLimitService;
 import com.aza.backend.util.SmsService;
 import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -62,12 +61,7 @@ public class TransferService {
     private final AuditService auditService;
     private final RiskEngineService riskEngineService;
     private final FeeCalculationService feeCalculationService;
-
-    @Value("${transfer.max-single-amount:10000}")
-    private BigDecimal maxSingleAmount;
-
-    @Value("${transfer.max-daily-amount:50000}")
-    private BigDecimal maxDailyAmount;
+    private final LimitGuard limitGuard;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -185,10 +179,8 @@ public class TransferService {
             throw new AppException("KYC verification required before transfer");
         }
 
-        BigDecimal effectiveSingleLimit = sender.getCustomSingleTransactionLimitGhs() != null
-                ? sender.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
-        BigDecimal effectiveDailyLimit = sender.getCustomDailyLimitGhs() != null
-                ? sender.getCustomDailyLimitGhs() : maxDailyAmount;
+        BigDecimal effectiveSingleLimit = limitGuard.singleLimit(sender);
+        BigDecimal effectiveDailyLimit = limitGuard.dailyLimit(sender);
 
         if(request.getAmount().compareTo(effectiveSingleLimit) > 0) {
             throw new AppException("Amount exceeds max single transfer limit of GHS " + effectiveSingleLimit);
@@ -327,8 +319,7 @@ public class TransferService {
 
         // Re-check daily limit inside the locked context — prevents two concurrent
         // initiations from both passing the limit check before either commits.
-        BigDecimal effectiveDailyLimit = sender.getCustomDailyLimitGhs() != null
-                ? sender.getCustomDailyLimitGhs() : maxDailyAmount;
+        BigDecimal effectiveDailyLimit = limitGuard.dailyLimit(sender);
         LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal todayTotal = transactionRepository.getTotalSentToday(
@@ -687,8 +678,7 @@ public class TransferService {
         }
         rateLimitService.enforceRateLimit("request:" + requester.getId(), 20, Duration.ofHours(1));
 
-        BigDecimal requesterSingleLimit = requester.getCustomSingleTransactionLimitGhs() != null
-                ? requester.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
+        BigDecimal requesterSingleLimit = limitGuard.singleLimit(requester);
         if (request.getAmount().compareTo(requesterSingleLimit) > 0) {
             throw new AppException("Requested amount exceeds the single transfer limit of GHS " + requesterSingleLimit);
         }
@@ -769,10 +759,8 @@ public class TransferService {
             throw new AppException("Request is no longer pending");
         }
 
-        BigDecimal payerSingleLimit = payer.getCustomSingleTransactionLimitGhs() != null
-                ? payer.getCustomSingleTransactionLimitGhs() : maxSingleAmount;
-        BigDecimal payerDailyLimit = payer.getCustomDailyLimitGhs() != null
-                ? payer.getCustomDailyLimitGhs() : maxDailyAmount;
+        BigDecimal payerSingleLimit = limitGuard.singleLimit(payer);
+        BigDecimal payerDailyLimit = limitGuard.dailyLimit(payer);
 
         if (transaction.getAmount().compareTo(payerSingleLimit) > 0) {
             throw new AppException("Amount exceeds your single transfer limit of GHS " + payerSingleLimit);

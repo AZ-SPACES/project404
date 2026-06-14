@@ -3,14 +3,21 @@ package com.aza.backend.service;
 import com.aza.backend.dto.admin.FeeRuleResponse;
 import com.aza.backend.dto.admin.FeeStatsResponse;
 import com.aza.backend.entity.FeeRule;
+import com.aza.backend.entity.Transaction;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.FeeRuleRepository;
+import com.aza.backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +25,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FeeService {
 
+    private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
+    /** Types that move physical cash; everything else completed is "digital" for the ratio. */
+    private static final List<Transaction.TransactionType> CASH_TYPES =
+            List.of(Transaction.TransactionType.CASH_IN, Transaction.TransactionType.CASH_OUT);
+
     private final FeeRuleRepository feeRuleRepository;
+    private final TransactionRepository transactionRepository;
+    private final AgentRepository agentRepository;
 
     public List<FeeRuleResponse> getFeeRules() {
         return feeRuleRepository.findAllByOrderByTransactionTypeAscEffectiveFromAsc()
@@ -26,12 +40,32 @@ public class FeeService {
     }
 
     public FeeStatsResponse getStats() {
-        long activeRules = feeRuleRepository.countByActiveTrue();
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        LocalDateTime startOfMonth = startOfDay.withDayOfMonth(1);
+        LocalDateTime startOfNextMonth = startOfMonth.plusMonths(1);
+
+        BigDecimal revenueToday = transactionRepository.sumFeeBetween(startOfDay, endOfDay);
+        BigDecimal revenueMonth = transactionRepository.sumFeeBetween(startOfMonth, startOfNextMonth);
+        long feeBearingMonth = transactionRepository.countFeeBearingBetween(startOfMonth, startOfNextMonth);
+        BigDecimal avgFee = feeBearingMonth > 0
+                ? revenueMonth.divide(BigDecimal.valueOf(feeBearingMonth), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal totalMonth = transactionRepository.sumCompletedAmountBetween(startOfMonth, startOfNextMonth);
+        BigDecimal cashMonth = transactionRepository.sumCompletedAmountByTypesBetween(
+                CASH_TYPES, startOfMonth, startOfNextMonth);
+        BigDecimal digitalRatio = totalMonth.signum() > 0
+                ? totalMonth.subtract(cashMonth).divide(totalMonth, 4, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
         return FeeStatsResponse.builder()
-                .totalFeeRevenueToday(BigDecimal.ZERO)   // populated once fee collection is tracked
-                .totalFeeRevenueMonth(BigDecimal.ZERO)
-                .averageFeePerTransaction(BigDecimal.ZERO)
-                .activeFeeRules(activeRules)
+                .totalFeeRevenueToday(revenueToday)
+                .totalFeeRevenueMonth(revenueMonth)
+                .averageFeePerTransaction(avgFee)
+                .activeFeeRules(feeRuleRepository.countByActiveTrue())
+                .digitalRatioMonth(digitalRatio)
+                .agentCommissionPayable(agentRepository.sumCommissionAccrued())
                 .build();
     }
 

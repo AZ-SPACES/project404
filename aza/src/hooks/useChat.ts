@@ -42,6 +42,8 @@ export type UseChatResult = {
   spkSignatureValid: boolean;
   /** TOFU state for the peer's identity key — UI uses 'changed' to warn. */
   peerIdentityChange: 'first-seen' | 'unchanged' | 'changed' | null;
+  /** True if there are messages that could not be decrypted (e.g. from before this device linked) */
+  hasUndecryptableMessages: boolean;
   refresh: () => Promise<void>;
 };
 
@@ -129,6 +131,10 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const isOtherTyping = useChatStore((s) => (chatId ? !!s.typingByChat[chatId] : false));
   const peerKeys = useChatStore((s) => (otherUserId ? s.peerKeys[otherUserId] : undefined));
 
+  const hasUndecryptableMessages = useMemo(() => {
+    return thread?.some((m) => !m.decryptOk) ?? false;
+  }, [thread]);
+
   // Tick every 5 s when the thread has messages with a live TTL so the expiry
   // filter and the timer badge in the bubble stay current without waiting for
   // an unrelated re-render to fire first.
@@ -150,6 +156,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     return thread
       .filter(
         (m) =>
+          m.decryptOk &&
           !(typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now),
       )
       .map(toMessage);
@@ -259,6 +266,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     spkSignatureValid: !!peerKeys?.spkSignatureValid,
     /** TOFU result from the peer-identity cache; 'changed' means the user should be warned. */
     peerIdentityChange: peerKeys?.identityChange ?? null,
+    hasUndecryptableMessages,
     refresh,
   };
 }
