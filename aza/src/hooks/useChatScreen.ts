@@ -692,7 +692,8 @@ export function useChatScreen() {
     setTyping(next.length > 0);
   }, [setTyping]);
 
-  const handleSendAudio = useCallback((uri: string, duration: number) => {
+  const handleSendAudio = useCallback(async (uri: string, duration: number) => {
+    if (!chatId) return;
     const msgId = Date.now().toString();
     const newLocal: Message = {
       id: msgId, text: 'Voice message', sender: 'me',
@@ -701,7 +702,22 @@ export function useChatScreen() {
     };
     setLocalOnlyMessages(prev => [...prev, newLocal]);
     setReplyTo(null);
-  }, []);
+
+    const file = {
+      uri,
+      name: `voice_${Date.now()}.m4a`,
+      type: 'audio/mp4',
+    };
+    try {
+      const response = await uploadChatMedia(file, chatId, 'VOICE_NOTE');
+      const uploadedKey: string | undefined = response.data?.data?.mediaKey;
+      if (!uploadedKey) throw new Error('No mediaKey in upload response');
+      await sendMedia(uploadedKey, 'VOICE_NOTE', '');
+    } catch (e) {
+      console.warn('[chat] voice note upload/send failed', e);
+      setLocalOnlyMessages(prev => prev.filter(m => m.id !== msgId));
+    }
+  }, [chatId, sendMedia]);
 
   const handleCopy = useCallback(async () => {
     if (!selectedMessage) return;

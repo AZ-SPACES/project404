@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -42,6 +43,8 @@ public class ApprovalService {
     private final MiniAppReportService miniAppReportService;
     private final BroadcastNotificationService broadcastNotificationService;
     private final StaffAlertService staffAlertService;
+    private final AgentService agentService;
+    private final FloatService floatService;
     private final ObjectMapper objectMapper;
 
     private static final int EXPIRY_DAYS = 7;
@@ -161,13 +164,24 @@ public class ApprovalService {
             case ENABLE_MINI_APP ->
                     miniAppReportService.enableApp(
                             fromJson(approval.getPayload(), EnableMiniAppPayload.class).getAppId());
+            case APPROVE_AGENT ->
+                    agentService.activate(approval.getTargetId());
+            case MINT_FLOAT -> {
+                FloatMovementPayload p = fromJson(approval.getPayload(), FloatMovementPayload.class);
+                floatService.mint(approver, approval.getTargetId(), p.getAmount(), p.getReference());
+            }
+            case BURN_FLOAT -> {
+                FloatMovementPayload p = fromJson(approval.getPayload(), FloatMovementPayload.class);
+                floatService.burn(approver, approval.getTargetId(), p.getAmount(), p.getReference());
+            }
         }
     }
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
-            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET -> StaffRole.Role.FINANCE;
-            case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC -> StaffRole.Role.COMPLIANCE;
+            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
+                 MINT_FLOAT, BURN_FLOAT -> StaffRole.Role.FINANCE;
+            case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT -> StaffRole.Role.COMPLIANCE;
             case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
                  BROADCAST_NOTIFICATION, ENABLE_MINI_APP -> StaffRole.Role.ADMIN;
         };
@@ -200,6 +214,14 @@ public class ApprovalService {
     @lombok.AllArgsConstructor
     public static class EnableMiniAppPayload {
         private String appId;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class FloatMovementPayload {
+        private BigDecimal amount;
+        private String reference;
     }
 
     private PendingApproval getPending(UUID approvalId) {

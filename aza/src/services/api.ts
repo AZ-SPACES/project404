@@ -607,6 +607,25 @@ export const clearBypassToken = async (): Promise<void> => {
   await SecureStore.deleteItemAsync(BYPASS_TOKEN_KEY);
 };
 
+// --- Agent (cash network) Endpoints ---
+
+export const getAgent = () => api.get('/api/v1/agent/me');
+
+export const applyAgent = (data: { location?: string }) =>
+  api.post('/api/v1/agent/apply', data);
+
+export const agentCashIn = (data: {
+  customerIdentifier: string;
+  amount: number;
+  idempotencyKey?: string;
+}) => api.post('/api/v1/agent/cash-in', data);
+
+export const agentCashOut = (data: { code: string; idempotencyKey?: string }) =>
+  api.post('/api/v1/agent/cash-out/redeem', data);
+
+export const generateWithdrawalCode = (data: { amount: number }) =>
+  api.post('/api/v1/withdrawal-codes', data);
+
 // --- Merchant Endpoints ---
 
 export const getMerchant = () => api.get('/api/v1/merchant/me');

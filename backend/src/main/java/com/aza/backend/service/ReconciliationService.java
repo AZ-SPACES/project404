@@ -93,10 +93,15 @@ public class ReconciliationService {
     private SafeguardingSnapshot buildSnapshot(BigDecimal safeguardingBalance) {
         BigDecimal customerFloat = orZero(walletRepository.sumTotalBalance());
         BigDecimal merchantFloat = orZero(merchantRepository.sumTotalMerchantBalance());
+        // Agent float is part of customerFloat (agents are users with wallets); it is
+        // reported separately for visibility and not subtracted again from variance.
+        BigDecimal agentFloat = orZero(walletRepository.sumFloatForAgentStatus(
+                com.aza.backend.entity.Agent.Status.ACTIVE));
         BigDecimal variance = safeguardingBalance.subtract(customerFloat).subtract(merchantFloat);
         return SafeguardingSnapshot.builder()
                 .customerFloat(customerFloat)
                 .merchantFloat(merchantFloat)
+                .agentFloat(agentFloat)
                 .safeguardingBalance(safeguardingBalance)
                 .variance(variance)
                 .breach(variance.signum() < 0)

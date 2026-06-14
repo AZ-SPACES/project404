@@ -166,7 +166,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   );
 
   const sendMedia = useCallback(
-    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => {
+    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string) => {
       if (!chatId) return;
       await sendMediaStore(chatId, mediaKey, mediaType, caption);
     },

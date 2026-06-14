@@ -32,6 +32,11 @@ public class SafeguardingSnapshot {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal merchantFloat;
 
+    /** Float held by active agents — a subset of customerFloat, surfaced for visibility. */
+    @Column(nullable = false, precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal agentFloat = BigDecimal.ZERO;
+
     /** Balance of the safeguarding bank account — entered by FINANCE until a bank API exists. */
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal safeguardingBalance;

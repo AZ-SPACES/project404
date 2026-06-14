@@ -8,18 +8,19 @@ import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from '@react-native-vector-icons/feather';
 import { BackButton } from "../../../components/ui/BackButton";
-import { requestWithdrawal } from "../../../services/api";
+import { requestWithdrawal, generateWithdrawalCode } from "../../../services/api";
 
-type Provider = 'MTN' | 'Vodafone' | 'AirtelTigo' | 'Bank';
+type Provider = 'Agent' | 'MTN' | 'Vodafone' | 'AirtelTigo' | 'Bank';
 
 const PROVIDERS: { id: Provider; label: string; icon: string; color: string }[] = [
+  { id: 'Agent', label: 'Cash at an AZA agent', icon: 'user', color: '#13715B' },
   { id: 'MTN', label: 'MTN MoMo', icon: 'smartphone', color: '#FFCB05' },
   { id: 'Vodafone', label: 'Vodafone Cash', icon: 'smartphone', color: '#E60000' },
   { id: 'AirtelTigo', label: 'AirtelTigo Money', icon: 'smartphone', color: '#E8001C' },
   { id: 'Bank', label: 'Bank Transfer', icon: 'credit-card', color: '#60A5FA' },
 ];
 
-type Step = 'provider' | 'details' | 'passcode' | 'success';
+type Step = 'provider' | 'details' | 'passcode' | 'success' | 'agentCode';
 
 export function WithdrawScreen() {
   const { colors: Colors } = useAppTheme();
@@ -34,6 +35,11 @@ export function WithdrawScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState('');
+
+  // Agent cash-out: a one-time code the user shows an agent to collect cash.
+  const [code, setCode] = useState('');
+  const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
+  const [expiresAt, setExpiresAt] = useState('');
 
   function handleProviderSelect(p: Provider) {
     setProvider(p);
@@ -73,12 +79,36 @@ export function WithdrawScreen() {
     }
   }
 
+  async function handleGenerateCode() {
+    const amt = parseFloat(amount);
+    if (!amount || isNaN(amt) || amt < 1) { setError('Enter an amount of at least GHS 1.00'); return; }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result: any = await generateWithdrawalCode({ amount: amt });
+      const data = result?.data?.data ?? result?.data ?? result;
+      setCode(data?.code ?? '');
+      setEstimatedFee(data?.estimatedFee ?? null);
+      setExpiresAt(data?.expiresAt ?? '');
+      setStep('agentCode');
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.error?.message ??
+        e?.response?.data?.message ??
+        'Could not generate a code. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const providerInfo = PROVIDERS.find(p => p.id === provider);
 
   const headerTitle =
     step === 'provider' ? 'Withdraw' :
     step === 'details' ? providerInfo?.label ?? 'Withdraw' :
     step === 'passcode' ? 'Confirm withdrawal' :
+    step === 'agentCode' ? 'Your withdrawal code' :
     'Request submitted';
 
   return (
@@ -87,7 +117,7 @@ export function WithdrawScreen() {
         {/* Header */}
         <View style={styles.header}>
           <BackButton onPress={() => {
-            if (step === 'provider' || step === 'success') { navigation.goBack(); return; }
+            if (step === 'provider' || step === 'success' || step === 'agentCode') { navigation.goBack(); return; }
             if (step === 'details') { setStep('provider'); setError(null); }
             if (step === 'passcode') { setStep('details'); setPasscode(''); setError(null); }
           }} />
@@ -125,7 +155,9 @@ export function WithdrawScreen() {
           {step === 'details' && (
             <View style={{ gap: Spacing.md }}>
               <Text style={[styles.subtitle, { color: Colors.textSecondary }]}>
-                {provider === 'Bank'
+                {provider === 'Agent'
+                  ? 'Enter how much cash you want to collect. You’ll get a one-time code to show an agent.'
+                  : provider === 'Bank'
                   ? 'Enter your bank details and the amount'
                   : `Enter your ${providerInfo?.label} number and amount`}
               </Text>
@@ -143,20 +175,22 @@ export function WithdrawScreen() {
                 />
               </View>
 
-              {/* Destination */}
-              <View>
-                <Text style={[styles.label, { color: Colors.textSecondary }]}>
-                  {provider === 'Bank' ? 'Account Number' : 'Phone Number'}
-                </Text>
-                <TextInput
-                  value={destination}
-                  onChangeText={setDestination}
-                  keyboardType={provider === 'Bank' ? 'number-pad' : 'phone-pad'}
-                  placeholder={provider === 'Bank' ? '1234567890' : '0XX XXX XXXX'}
-                  placeholderTextColor={Colors.textSecondary + '60'}
-                  style={[styles.input, { backgroundColor: Colors.surface, borderColor: Colors.border, color: Colors.textPrimary }]}
-                />
-              </View>
+              {/* Destination — not needed when collecting cash from an agent */}
+              {provider !== 'Agent' && (
+                <View>
+                  <Text style={[styles.label, { color: Colors.textSecondary }]}>
+                    {provider === 'Bank' ? 'Account Number' : 'Phone Number'}
+                  </Text>
+                  <TextInput
+                    value={destination}
+                    onChangeText={setDestination}
+                    keyboardType={provider === 'Bank' ? 'number-pad' : 'phone-pad'}
+                    placeholder={provider === 'Bank' ? '1234567890' : '0XX XXX XXXX'}
+                    placeholderTextColor={Colors.textSecondary + '60'}
+                    style={[styles.input, { backgroundColor: Colors.surface, borderColor: Colors.border, color: Colors.textPrimary }]}
+                  />
+                </View>
+              )}
 
               {/* Bank name (bank transfers only) */}
               {provider === 'Bank' && (
@@ -175,11 +209,16 @@ export function WithdrawScreen() {
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               <TouchableOpacity
-                onPress={handleDetailsNext}
-                style={[styles.primaryBtn, { backgroundColor: Colors.primary }]}
+                onPress={provider === 'Agent' ? handleGenerateCode : handleDetailsNext}
+                disabled={submitting}
+                style={[styles.primaryBtn, { backgroundColor: Colors.primary, opacity: submitting ? 0.5 : 1 }]}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.primaryBtnText, { color: Colors.background }]}>Continue</Text>
+                {submitting
+                  ? <ActivityIndicator size="small" color={Colors.background} />
+                  : <Text style={[styles.primaryBtnText, { color: Colors.background }]}>
+                      {provider === 'Agent' ? 'Get withdrawal code' : 'Continue'}
+                    </Text>}
               </TouchableOpacity>
             </View>
           )}
@@ -280,6 +319,54 @@ export function WithdrawScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.primaryBtnText, { color: Colors.background }]}>Back to Home</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Agent cash-out: show the one-time code ─────────────────────── */}
+          {step === 'agentCode' && (
+            <View style={{ alignItems: 'center', gap: Spacing.lg, paddingTop: Spacing.md }}>
+              <Text style={[styles.subtitle, { color: Colors.textSecondary, textAlign: 'center' }]}>
+                Show this code to an AZA agent and they’ll hand you the cash.
+              </Text>
+
+              <View style={[styles.summaryCard, { backgroundColor: Colors.surface, borderColor: Colors.border, width: '100%', alignItems: 'center' }]}>
+                <Text style={{ fontSize: 34, fontWeight: '800', letterSpacing: 6, fontFamily: 'monospace', color: Colors.textPrimary }}>
+                  {code}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryCard, { backgroundColor: Colors.surface, borderColor: Colors.border, width: '100%' }]}>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: Colors.textSecondary }]}>Amount</Text>
+                  <Text style={[styles.summaryValue, { color: Colors.textPrimary }]}>GHS {parseFloat(amount).toFixed(2)}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: Colors.textSecondary }]}>Fee (approx.)</Text>
+                  <Text style={[styles.summaryValue, { color: Colors.textPrimary }]}>
+                    {estimatedFee != null ? `GHS ${Number(estimatedFee).toFixed(2)}` : '—'}
+                  </Text>
+                </View>
+                {expiresAt ? (
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: Colors.textSecondary }]}>Expires</Text>
+                    <Text style={[styles.summaryValue, { color: Colors.textPrimary }]}>
+                      {new Date(expiresAt).toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={[styles.notice, { color: Colors.textSecondary, textAlign: 'center' }]}>
+                This code can be used once and expires in 15 minutes. Only share it with the agent serving you.
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={[styles.primaryBtn, { backgroundColor: Colors.primary, width: '100%' }]}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.primaryBtnText, { color: Colors.background }]}>Done</Text>
               </TouchableOpacity>
             </View>
           )}
