@@ -54,6 +54,7 @@ export type Transaction = {
   recipientId?: string;
   completedAt?: string | null;
   currency?: string;
+  initiationLocation?: string | null;
 };
 
 export type Section = {
@@ -463,6 +464,9 @@ export function TransactionsScreen() {
           )}
           {!!selectedTx.note && (
             <DetailRow label="Note" value={selectedTx.note} Colors={Colors} multiline />
+          )}
+          {!!selectedTx.initiationLocation && (
+            <DetailRow label="Location" value={selectedTx.initiationLocation} Colors={Colors} />
           )}
           <DetailRow
             label="Reference"

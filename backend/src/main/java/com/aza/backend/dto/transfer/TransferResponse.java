@@ -24,4 +24,5 @@ public class TransferResponse {
     private String initiatedAt;
     private String completedAt;
     private String category;
+    private String initiationLocation;
 }

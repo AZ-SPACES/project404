@@ -253,7 +253,7 @@ public class TransferService {
 
         AnomalyDetectionService.Result anomaly;
         try {
-            anomaly = anomalyDetectionService.score(sender.getId(), recipientId, request.getAmount(), LocalDateTime.now());
+            anomaly = anomalyDetectionService.score(sender.getId(), recipientId, request.getAmount(), LocalDateTime.now(), request.getGpsLocation());
         } catch (Exception e) {
             anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
         }
@@ -916,6 +916,7 @@ public class TransferService {
                 .initiatedAt(t.getInitiatedAt() != null ? t.getInitiatedAt().toString() : null)
                 .completedAt(t.getCompletedAt() != null ? t.getCompletedAt().toString() : null)
                 .category(t.getCategory() != null ? t.getCategory().name() : null)
+                .initiationLocation(t.getInitiationLocation())
                 .build();
     }
 
@@ -991,6 +992,7 @@ public class TransferService {
                     .anomalyScore(t.getAnomalyScore())
                     .anomalyRiskLevel(t.getAnomalyRiskLevel())
                     .direction(t.getRecipientId().equals(userId) ? "INCOMING" : "OUTGOING")
+                    .initiationLocation(t.getInitiationLocation())
                     .build();
         });
     }

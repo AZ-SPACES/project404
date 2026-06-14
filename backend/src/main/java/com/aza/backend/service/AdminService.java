@@ -112,6 +112,7 @@ public class AdminService {
                 .category(tx.getCategory() != null ? tx.getCategory().name() : null)
                 .anomalyScore(tx.getAnomalyScore())
                 .anomalyRiskLevel(tx.getAnomalyRiskLevel())
+                .initiationLocation(tx.getInitiationLocation())
                 .build();
     }
 
@@ -318,6 +319,7 @@ public class AdminService {
                 .initiatedAt(tx.getInitiatedAt())
                 .completedAt(tx.getCompletedAt())
                 .cancelledAt(tx.getCancelledAt())
+                .initiationLocation(tx.getInitiationLocation())
                 .build();
     }
 
@@ -386,6 +388,7 @@ public class AdminService {
                 .initiatedAt(tx.getInitiatedAt())
                 .completedAt(tx.getCompletedAt())
                 .cancelledAt(tx.getCancelledAt())
+                .initiationLocation(tx.getInitiationLocation())
                 .build();
     }
 
@@ -460,6 +463,7 @@ public class AdminService {
                     .category(tx.getCategory() != null ? tx.getCategory().name() : null)
                     .anomalyScore(tx.getAnomalyScore())
                     .anomalyRiskLevel(tx.getAnomalyRiskLevel())
+                    .initiationLocation(tx.getInitiationLocation())
                     .build();
         });
     }

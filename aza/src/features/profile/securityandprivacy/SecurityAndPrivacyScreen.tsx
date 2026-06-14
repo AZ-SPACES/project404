@@ -14,6 +14,7 @@ import { useToast } from '../../../providers/ToastProvider';
 import { useAuth } from '../../../providers/AuthProvider';
 import { cancelAccountDeletion } from '../../../services/api';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../theme';
+import { isLocationEnabled, setLocationEnabled } from '../../../utils/deviceLocation';
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 
@@ -85,6 +86,16 @@ export function SecurityAndPrivacyScreen() {
   const { scheduledDeletionAt, login, userToken, hasPasscode, isKYCVerified } = useAuth();
   const [isResettingE2EE, setIsResettingE2EE] = React.useState(false);
   const [isCancellingDeletion, setIsCancellingDeletion] = React.useState(false);
+  const [locationEnabled, setLocationEnabledState] = React.useState(true);
+
+  React.useEffect(() => {
+    isLocationEnabled().then(setLocationEnabledState);
+  }, []);
+
+  const handleLocationToggle = React.useCallback(async (value: boolean) => {
+    setLocationEnabledState(value);
+    await setLocationEnabled(value);
+  }, []);
 
   const handleCancelDeletion = React.useCallback(() => {
     Alert.alert(
@@ -307,9 +318,19 @@ export function SecurityAndPrivacyScreen() {
 
 
           <SettingRow
-            iconType="Ionicons" 
-            iconName="id-card-outline" 
-            title="Biometric data" 
+            iconType="Feather"
+            iconName="map-pin"
+            title="Security location"
+            subtitle="Capture city-level location on login and transfers to detect suspicious activity and protect your account"
+            showSwitch
+            switchValue={locationEnabled}
+            onSwitchChange={handleLocationToggle}
+          />
+
+          <SettingRow
+            iconType="Ionicons"
+            iconName="id-card-outline"
+            title="Biometric data"
             subtitle="Allow Aza to store and use your selfie and ID for automated verification"
             showSwitch
             switchValue={profile.biometricData}
