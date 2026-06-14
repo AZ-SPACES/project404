@@ -2,7 +2,10 @@ package com.aza.backend.service;
 
 import com.aza.backend.dto.merchant.MerchantRegisterRequest;
 import com.aza.backend.dto.merchant.MerchantResponse;
+import com.aza.backend.dto.merchant.WebhookEndpointRequest;
 import com.aza.backend.entity.Merchant;
+import com.aza.backend.entity.MerchantApiKey;
+import com.aza.backend.entity.WebhookEndpoint;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.*;
 import com.aza.backend.util.CloudinaryService;
@@ -16,6 +19,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -148,6 +152,105 @@ class MerchantServiceTest {
                 && "new_shop".equals(m.getBusinessHandle())
                 && "New Shop".equals(m.getBusinessName())));
         assertNotNull(response);
+    }
+
+    // ── revokeApiKey ──────────────────────────────────────────────────────────
+
+    @Test
+    void revokeApiKey_keyBelongsToOtherMerchant_throwsForbidden() {
+        UUID myMerchantId = UUID.randomUUID();
+        UUID otherMerchantId = UUID.randomUUID();
+        Merchant myMerchant = Merchant.builder().id(myMerchantId).userId(userId).build();
+        MerchantApiKey key = MerchantApiKey.builder()
+                .id(UUID.randomUUID()).merchantId(otherMerchantId).build();
+        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.of(myMerchant));
+        when(apiKeyRepository.findById(key.getId())).thenReturn(Optional.of(key));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> merchantService.revokeApiKey(userId, key.getId()));
+
+        assertEquals("FORBIDDEN", ex.getCode());
+        verify(apiKeyRepository, never()).save(any());
+        verify(apiKeyRepository, never()).delete(any());
+    }
+
+    @Test
+    void revokeApiKey_activeKey_setsInactiveAndSendsEmail() {
+        UUID myMerchantId = UUID.randomUUID();
+        Merchant myMerchant = Merchant.builder().id(myMerchantId).userId(userId)
+                .businessName("My Shop").build();
+        MerchantApiKey key = MerchantApiKey.builder()
+                .id(UUID.randomUUID()).merchantId(myMerchantId)
+                .label("Production key").keyPrefix("aza_live_Ab").isActive(true).build();
+        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.of(myMerchant));
+        when(apiKeyRepository.findById(key.getId())).thenReturn(Optional.of(key));
+
+        merchantService.revokeApiKey(userId, key.getId());
+
+        verify(apiKeyRepository).save(argThat(k -> Boolean.FALSE.equals(k.getIsActive())));
+    }
+
+    // ── updateWebhookEndpoint ─────────────────────────────────────────────────
+
+    @Test
+    void updateWebhookEndpoint_endpointBelongsToOtherMerchant_throwsForbidden() {
+        UUID myMerchantId = UUID.randomUUID();
+        UUID otherMerchantId = UUID.randomUUID();
+        Merchant myMerchant = Merchant.builder().id(myMerchantId).userId(userId).build();
+        WebhookEndpoint endpoint = WebhookEndpoint.builder()
+                .id(UUID.randomUUID()).merchantId(otherMerchantId)
+                .url("https://other.example.com").build();
+        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.of(myMerchant));
+        when(webhookRepository.findById(endpoint.getId())).thenReturn(Optional.of(endpoint));
+
+        WebhookEndpointRequest req = new WebhookEndpointRequest();
+        AppException ex = assertThrows(AppException.class,
+                () -> merchantService.updateWebhookEndpoint(userId, endpoint.getId(), req));
+
+        assertEquals("FORBIDDEN", ex.getCode());
+        verify(webhookRepository, never()).save(any());
+    }
+
+    // ── validateApiKey ────────────────────────────────────────────────────────
+
+    @Test
+    void validateApiKey_expiredKey_returnsNull() {
+        MerchantApiKey key = MerchantApiKey.builder()
+                .id(UUID.randomUUID())
+                .expiresAt(LocalDateTime.now().minusDays(1))
+                .build();
+        when(apiKeyRepository.findByKeyHashAndIsActiveTrue("hash")).thenReturn(Optional.of(key));
+
+        assertNull(merchantService.validateApiKey("hash", "1.2.3.4", "agent"));
+    }
+
+    @Test
+    void validateApiKey_ipNotInWhitelist_throwsUnauthorized() {
+        MerchantApiKey key = MerchantApiKey.builder()
+                .id(UUID.randomUUID())
+                .ipWhitelist("10.0.0.1,10.0.0.2")
+                .build();
+        when(apiKeyRepository.findByKeyHashAndIsActiveTrue("hash")).thenReturn(Optional.of(key));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> merchantService.validateApiKey("hash", "1.2.3.4", "agent"));
+
+        assertEquals("UNAUTHORIZED_IP", ex.getCode());
+    }
+
+    @Test
+    void validateApiKey_ipInWhitelist_returnsKey() {
+        MerchantApiKey key = MerchantApiKey.builder()
+                .id(UUID.randomUUID())
+                .ipWhitelist("1.2.3.4,1.2.3.5")
+                .build();
+        when(apiKeyRepository.findByKeyHashAndIsActiveTrue("hash")).thenReturn(Optional.of(key));
+        when(apiKeyRepository.save(any())).thenReturn(key);
+
+        MerchantApiKey result = merchantService.validateApiKey("hash", "1.2.3.4", "agent");
+
+        assertNotNull(result);
+        verify(apiKeyRepository).save(argThat(k -> "1.2.3.4".equals(k.getLastUsedIp())));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
