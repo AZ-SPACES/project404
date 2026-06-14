@@ -22,7 +22,8 @@ export type Page =
   | 'audit_logs'
   | 'settings'
   | 'team'
-  | 'plans';
+  | 'plans'
+  | 'products';
 
 export interface MerchantData {
   id: string;

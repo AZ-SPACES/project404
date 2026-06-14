@@ -14,6 +14,7 @@ import {
   request2faSms,
   request2faEmail,
   verify2faOtp,
+  sendEmailReceipt,
   CheckoutSession,
   PromoInfo,
 } from "@/lib/pay-api";
@@ -32,6 +33,8 @@ import {
   RotateCcw,
   Copy,
   Printer,
+  Mail,
+  Send,
 } from "lucide-react";
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -257,6 +260,24 @@ function SuccessReceipt({
       } as Intl.DateTimeFormatOptions)
     : null;
   const [copied, setCopied] = useState(false);
+  const [receiptEmail, setReceiptEmail] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const handleSendEmail = async () => {
+    if (!receiptEmail.trim() || emailSending || emailSent) return;
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      await sendEmailReceipt(session.id, receiptEmail.trim());
+      setEmailSent(true);
+    } catch {
+      setEmailError("Could not send email. Try again.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -325,6 +346,35 @@ function SuccessReceipt({
             <span>Paid to</span>
             <span className="text-white/50">{session.merchantName ?? `@${session.merchantHandle}`}</span>
           </div>
+        </div>
+
+        {/* Email receipt */}
+        <div className="border-t border-white/5 pt-3 space-y-2">
+          {emailSent ? (
+            <p className="text-center text-xs text-emerald-400 py-1.5">Receipt sent to {receiptEmail}</p>
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/8 rounded-xl px-3 py-2">
+                <Mail size={12} className="text-white/25 flex-shrink-0" />
+                <input
+                  type="email"
+                  placeholder="Email receipt to yourself"
+                  value={receiptEmail}
+                  onChange={(e) => setReceiptEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendEmail()}
+                  className="flex-1 bg-transparent text-xs text-white placeholder:text-white/25 outline-none min-w-0"
+                />
+              </div>
+              <button
+                onClick={handleSendEmail}
+                disabled={!receiptEmail.trim() || emailSending}
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/8 hover:bg-white/12 disabled:opacity-30 transition-colors flex-shrink-0"
+              >
+                {emailSending ? <Loader2 size={13} className="animate-spin text-white/50" /> : <Send size={13} className="text-white/50" />}
+              </button>
+            </div>
+          )}
+          {emailError && <p className="text-xs text-red-400 text-center">{emailError}</p>}
         </div>
 
         <div className="border-t border-white/5 space-y-0">

@@ -134,3 +134,9 @@ export function validatePromoCode(code: string): Promise<PromoInfo> {
 export function redeemPromoCode(code: string, token: string): Promise<{ credited: number }> {
   return post("/api/v1/promos/redeem", { code }, token);
 }
+
+// ── Receipt email ─────────────────────────────────────────────────────────────
+
+export function sendEmailReceipt(sessionId: string, email: string): Promise<void> {
+  return post(`/api/v1/checkout/${sessionId}/receipt/email`, { email });
+}

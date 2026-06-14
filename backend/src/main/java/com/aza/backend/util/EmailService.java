@@ -567,4 +567,31 @@ public class EmailService {
             log.error("Failed to send deletion-completed email to {}: {}", email, e.getMessage());
         }
     }
+
+    public void sendCheckoutReceiptEmail(String to, String ref, java.math.BigDecimal amount,
+                                          String currency, String merchantName, String paidAt) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("ref", ref);
+            ctx.setVariable("amount", amount);
+            ctx.setVariable("currency", currency);
+            ctx.setVariable("merchantName", merchantName);
+            ctx.setVariable("paidAt", paidAt);
+            // Reuse the merchant-payment-received template structure but framed as customer receipt
+            String html = "<html><body style='font-family:sans-serif;background:#111;color:#fff;padding:32px'>" +
+                "<div style='max-width:480px;margin:0 auto'>" +
+                "<h2 style='color:#B7EE7A'>Payment Receipt</h2>" +
+                "<p>Your payment to <strong>" + merchantName + "</strong> was successful.</p>" +
+                "<table style='width:100%;border-collapse:collapse;margin:20px 0'>" +
+                "<tr><td style='padding:8px 0;color:#aaa'>Reference</td><td style='text-align:right;font-family:monospace'>" + ref + "</td></tr>" +
+                "<tr><td style='padding:8px 0;color:#aaa'>Amount</td><td style='text-align:right;font-weight:700;color:#B7EE7A'>" + currency + " " + amount + "</td></tr>" +
+                "<tr><td style='padding:8px 0;color:#aaa'>Paid to</td><td style='text-align:right'>" + merchantName + "</td></tr>" +
+                "<tr><td style='padding:8px 0;color:#aaa'>Date</td><td style='text-align:right'>" + paidAt + "</td></tr>" +
+                "</table>" +
+                "<p style='color:#555;font-size:12px'>Powered by AZA</p>" +
+                "</div></body></html>";
+            sendViaBrevo("AZA", senderEmail, to,
+                    "Payment Receipt – " + currency + " " + amount + " to " + merchantName, html, null, null);
+        });
+    }
 }

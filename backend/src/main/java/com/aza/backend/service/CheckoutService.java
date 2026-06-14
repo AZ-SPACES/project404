@@ -10,6 +10,7 @@ import com.aza.backend.repository.*;
 import com.aza.backend.repository.MerchantNotificationPreferenceRepository;
 import com.aza.backend.util.EmailService;
 import com.aza.backend.util.RateLimitService;
+import com.aza.backend.entity.Notification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,7 @@ public class CheckoutService {
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
     private final MerchantNotificationPreferenceRepository notificationPrefRepository;
+    private final NotificationService notificationService;
 
     @Value("${aza.pay.base-url:https://pay.aza.systems}")
     private String payBaseUrl;
@@ -232,12 +234,21 @@ public class CheckoutService {
         // Dispatch webhooks asynchronously
         scheduleWebhookDelivery(session, merchant);
 
+        String senderName = customer.getFirstName() + " " + customer.getLastName();
+        String ref = "CHK-" + sessionId.toString().substring(28).toUpperCase();
+
+        // Push notification to merchant owner (always fire — fast, no opt-out needed)
+        notificationService.sendNotification(
+                merchant.getUserId(),
+                Notification.NotificationType.MONEY_RECEIVED,
+                "Payment Received",
+                senderName + " paid " + merchant.getCurrency() + " " + session.getAmount() + " via " + merchant.getBusinessName(),
+                null);
+
         boolean sendInvoiceEmail = notificationPrefRepository.findByMerchantId(merchant.getId())
                 .map(com.aza.backend.entity.MerchantNotificationPreference::isEmailInvoicePaid)
                 .orElse(true);
         if (sendInvoiceEmail) {
-            String senderName = customer.getFirstName() + " " + customer.getLastName();
-            String ref = "CHK-" + sessionId.toString().substring(28).toUpperCase();
             userRepository.findById(merchant.getUserId()).ifPresent(owner ->
                     emailService.sendMerchantPaymentReceivedEmail(
                             owner.getEmail(), owner.getFirstName(),

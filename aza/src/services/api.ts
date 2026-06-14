@@ -718,6 +718,36 @@ export const getMerchantCustomers = (page = 0, size = 20) =>
 export const getMerchantDisputes = (page = 0, size = 20) =>
   api.get(`/api/v1/merchant/disputes?page=${page}&size=${size}`);
 
+export const respondToMerchantDispute = (disputeId: string, response: string) =>
+  api.post(`/api/v1/merchant/disputes/${disputeId}/respond`, { response });
+
+export const getCustomerSessions = (customerId: string, page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/customers/${customerId}/sessions?page=${page}&size=${size}`);
+
+export const getMerchantProducts = (page = 0, size = 50, active?: boolean) =>
+  api.get(`/api/v1/merchant/products?page=${page}&size=${size}${active !== undefined ? `&active=${active}` : ''}`);
+
+export const createMerchantProduct = (data: {
+  name: string; price: number; currency?: string;
+  description?: string; sku?: string; imageUrl?: string;
+}) => api.post('/api/v1/merchant/products', data);
+
+export const updateMerchantProduct = (id: string, data: {
+  name?: string; price?: number; description?: string;
+  sku?: string; imageUrl?: string; active?: boolean;
+}) => api.put(`/api/v1/merchant/products/${id}`, data);
+
+export const deleteMerchantProduct = (id: string) =>
+  api.delete(`/api/v1/merchant/products/${id}`);
+
+export const requestWithdrawal = (data: {
+  amount: number; provider: string; destination: string;
+  bankName?: string; passcode: string;
+}) => api.post('/api/v1/withdrawals', data);
+
+export const getWithdrawals = (page = 0, size = 20) =>
+  api.get(`/api/v1/withdrawals?page=${page}&size=${size}`);
+
 export const getMerchantAuditLogs = (page = 0, size = 30) =>
   api.get(`/api/v1/merchant/audit-logs?page=${page}&size=${size}`);
 
