@@ -61,6 +61,7 @@ public class TransferService {
     private final AnomalyDetectionService anomalyDetectionService;
     private final AuditService auditService;
     private final RiskEngineService riskEngineService;
+    private final FeeCalculationService feeCalculationService;
 
     @Value("${transfer.max-single-amount:10000}")
     private BigDecimal maxSingleAmount;
@@ -430,9 +431,26 @@ public class TransferService {
             Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
                     .orElseThrow(() -> new AppException("Recipient wallet not found"));
 
-            // Debit sender, credit recipient
-            senderWallet.setBalance(senderWallet.getBalance().subtract(transaction.getAmount()));
+            // Resolve the P2P fee from the fee engine: free for everyday transfers, 0.5%
+            // above the free tier. The fee leaves circulation the same way the merchant
+            // MDR does — the sender pays amount + fee, the recipient receives amount, and
+            // the fee surfaces as the bank-vs-float surplus AZA sweeps as revenue.
+            FeeCalculationService.FeeQuote quote =
+                    feeCalculationService.quote("P2P", transaction.getAmount(), sender.getId());
+            BigDecimal fee = quote.fee();
+            BigDecimal totalDebit = transaction.getAmount().add(fee);
+            if (senderWallet.getBalance().compareTo(totalDebit) < 0) {
+                transaction.setStatus(Transaction.TransactionStatus.FAILED);
+                transactionRepository.save(transaction);
+                throw new AppException("INSUFFICIENT_FUNDS",
+                        "Insufficient balance to cover the amount plus the GHS " + fee.toPlainString()
+                                + " fee", HttpStatus.BAD_REQUEST);
+            }
+
+            // Debit sender (amount + fee), credit recipient (amount)
+            senderWallet.setBalance(senderWallet.getBalance().subtract(totalDebit));
             recipientWallet.setBalance(recipientWallet.getBalance().add(transaction.getAmount()));
+            transaction.setFeeAmount(fee);
 
             walletRepository.save(senderWallet);
             walletRepository.save(recipientWallet);
@@ -451,6 +469,10 @@ public class TransferService {
             LocalDateTime completedAt = LocalDateTime.now();
             transaction.setCompletedAt(completedAt);
             transactionRepository.save(transaction);
+
+            // Consume the payer's rolling-monthly free P2P allowance (no-op for small
+            // everyday transfers, which stay free under the per-transaction tier).
+            feeCalculationService.recordMonthlyUsage("P2P", transaction.getAmount(), sender.getId());
 
             riskEngineService.evaluateTransfer(transaction, sender);
 
@@ -786,11 +808,15 @@ public class TransferService {
         Wallet requesterWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
                 .orElseThrow(() -> new AppException("Wallet not found"));
 
-        validateBalance(payerWallet, transaction.getAmount());
+        // Accepting a money request moves money like any P2P transfer — charge the same
+        // fee so requests can't be used to route around the P2P fee.
+        BigDecimal fee = feeCalculationService.quote("P2P", transaction.getAmount(), payer.getId()).fee();
+        validateBalance(payerWallet, transaction.getAmount().add(fee));
 
-        payerWallet.setBalance(payerWallet.getBalance().subtract(transaction.getAmount()));
+        payerWallet.setBalance(payerWallet.getBalance().subtract(transaction.getAmount().add(fee)));
         requesterWallet.setBalance(requesterWallet.getBalance().add(transaction.getAmount()));
- 
+        transaction.setFeeAmount(fee);
+
         walletRepository.save(payerWallet);
         walletRepository.save(requesterWallet);
 
@@ -807,6 +833,8 @@ public class TransferService {
         transaction.setAcceptedAt(LocalDateTime.now());
         transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
+
+        feeCalculationService.recordMonthlyUsage("P2P", transaction.getAmount(), payer.getId());
 
         riskEngineService.evaluateTransfer(transaction, payer);
 
@@ -1172,15 +1200,22 @@ public class TransferService {
             recipientId = merchant.getId();
         }
 
+        // P2P (user-recipient) bulk items carry the same fee as a normal transfer;
+        // merchant items settle via MDR and are not charged a consumer fee here.
+        BigDecimal fee = recipient != null
+                ? feeCalculationService.quote("P2P", amount, sender.getId()).fee()
+                : BigDecimal.ZERO;
+        BigDecimal totalDebit = amount.add(fee);
+
         // Lock and debit sender
         Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
                 .orElseThrow(() -> new AppException("Wallet not found"));
         if (Boolean.TRUE.equals(senderWallet.getFrozen()))
             throw new AppException("WALLET_FROZEN", "Your wallet has been frozen.", HttpStatus.FORBIDDEN);
-        if (senderWallet.getBalance().compareTo(amount) < 0)
+        if (senderWallet.getBalance().compareTo(totalDebit) < 0)
             throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance", HttpStatus.BAD_REQUEST);
 
-        senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
+        senderWallet.setBalance(senderWallet.getBalance().subtract(totalDebit));
         walletRepository.save(senderWallet);
         sender.setBalance(senderWallet.getBalance());
         userRepository.save(sender);
@@ -1214,10 +1249,14 @@ public class TransferService {
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .completedAt(LocalDateTime.now())
+                .feeAmount(fee)
                 .anomalyScore(anomaly.score())
                 .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
         transaction = transactionRepository.save(transaction);
+        if (recipient != null) {
+            feeCalculationService.recordMonthlyUsage("P2P", amount, sender.getId());
+        }
         riskEngineService.evaluateTransfer(transaction, sender);
         return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
