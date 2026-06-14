@@ -594,6 +594,32 @@ public class TransferService {
                 sender != null ? sender.getId() : transaction.getSenderId());
     }
 
+    @Transactional
+    public TransferResponse cancelPendingTransfer(UUID transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+        if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
+            throw new AppException("NOT_PENDING",
+                    "Only PENDING transactions can be cancelled this way. Use reject for HELD_FOR_REVIEW.", HttpStatus.CONFLICT);
+        }
+        transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
+        transaction.setCancelledAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+
+        User sender = userRepository.findById(transaction.getSenderId()).orElse(null);
+        if (sender != null) {
+            notificationService.sendNotification(sender.getId(),
+                    com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                    "Transfer cancelled",
+                    "Your pending transfer of GHS " + transaction.getAmount().toPlainString()
+                            + " was cancelled by our security team. No funds left your wallet. Contact support if you have questions.",
+                    null, null);
+        }
+        User recipient = userRepository.findById(transaction.getRecipientId()).orElse(null);
+        return buildTransferResponse(transaction, sender, recipient,
+                sender != null ? sender.getId() : transaction.getSenderId());
+    }
+
     // ==================== CANCEL TRANSFER ====================
 
     @Transactional

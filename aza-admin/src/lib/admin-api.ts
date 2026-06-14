@@ -1513,6 +1513,10 @@ export function rejectHeldTransfer(id: string): Promise<unknown> {
   return request(`/api/v1/admin/fraud/held/${id}/reject`, { method: "POST" });
 }
 
+export function cancelPendingTransfer(id: string): Promise<unknown> {
+  return request(`/api/v1/admin/fraud/pending/${id}/cancel`, { method: "POST" });
+}
+
 export interface FraudAiAssessment {
   verdict: "LIKELY_FRAUD" | "LIKELY_LEGITIMATE" | "UNCERTAIN";
   confidence: number;
