@@ -35,6 +35,8 @@ import { useTransferStore } from "../../../store/transferStore";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
+import { getWithdrawals } from "../../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 export type Transaction = {
   id: string;
@@ -188,6 +190,72 @@ function PinDots({ pin, scaleAnims, onPress, Colors }: PinDotsProps) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 const FILTERS: TransactionFilter[] = ["All", "Money In", "Money Out", "Pending", "Failed"];
+
+const W_STATUS: Record<string, { label: string; color: string }> = {
+  PENDING:   { label: "Pending Review", color: "#D97706" },
+  APPROVED:  { label: "Approved",       color: "#3B82F6" },
+  REJECTED:  { label: "Rejected",       color: "#EF4444" },
+  COMPLETED: { label: "Completed",      color: "#4ADE80" },
+};
+
+function WithdrawalSection({ Colors, styles }: { Colors: ThemeColors; styles: ReturnType<typeof createStyles> }) {
+  const { data } = useQuery({
+    queryKey: ["myWithdrawals"],
+    queryFn: async () => {
+      const r = await getWithdrawals(0, 5);
+      const d = (r as any)?.data?.data;
+      return (d?.content ?? []) as Array<{
+        id: string; amount: number; currency: string; provider: string;
+        destination: string; status: string; createdAt: string;
+      }>;
+    },
+    staleTime: 60_000,
+  });
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={{ marginHorizontal: Spacing.lg, marginBottom: Spacing.lg }}>
+      <Text style={[styles.sectionHeader, { marginBottom: Spacing.sm, paddingHorizontal: 0 }]}>
+        Withdrawal Requests
+      </Text>
+      <View style={[styles.detailCard, { marginBottom: 0 }]}>
+        {data.map((w, i) => {
+          const meta = W_STATUS[w.status] ?? { label: w.status, color: Colors.textSecondary };
+          return (
+            <View
+              key={w.id}
+              style={[
+                { flexDirection: "row", alignItems: "center", paddingVertical: 11 },
+                i < data.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border },
+              ]}
+            >
+              <View style={{
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: Colors.background,
+                alignItems: "center", justifyContent: "center", marginRight: 12,
+              }}>
+                <Feather name="log-out" size={15} color={Colors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.textPrimary }}>
+                  {w.provider} · {w.destination}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
+                  <Text style={{ fontSize: 11, color: meta.color, fontWeight: "600" }}>{meta.label}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.textPrimary, fontVariant: ["tabular-nums"] }}>
+                −{formatCurrency(w.amount)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 export function TransactionsScreen() {
   const { colors: Colors, isDark } = useAppTheme();
@@ -609,6 +677,9 @@ export function TransactionsScreen() {
                 );
               })}
             </ScrollView>
+
+            {/* Withdrawal requests */}
+            <WithdrawalSection Colors={Colors} styles={styles} />
           </>
         }
       />

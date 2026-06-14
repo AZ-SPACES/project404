@@ -2,6 +2,7 @@ package com.aza.backend.security.filter;
 
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantApiKey;
+import com.aza.backend.security.fingerprint.RequestFingerprintService;
 import com.aza.backend.service.MerchantService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,6 +25,7 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
     private static final String API_KEY_HEADER = "X-Api-Key";
 
     private final MerchantService merchantService;
+    private final RequestFingerprintService fingerprintService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -48,13 +50,9 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Get Client IP (supporting X-Forwarded-For)
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isBlank()) {
-            ipAddress = request.getRemoteAddr();
-        } else {
-            ipAddress = ipAddress.split(",")[0].trim();
-        }
+        // Use the centralised fingerprint service which only trusts X-Forwarded-For
+        // when the request arrives from a known proxy — prevents IP allowlist bypass.
+        String ipAddress = fingerprintService.getClientIp(request);
 
         String userAgent = request.getHeader("User-Agent");
         String keyHash = MerchantService.sha256Hex(apiKeyStr);

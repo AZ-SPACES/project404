@@ -235,6 +235,7 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
     {
       label: 'Business',
       items: [
+        { id: 'analytics', icon: 'bar-chart-2', label: 'Analytics', onPress: () => navigate('analytics') },
         { id: 'invoices', icon: 'file-text', label: 'Invoices', onPress: () => navigate('invoices') },
         { id: 'customers', icon: 'users', label: 'Customers', onPress: () => navigate('customers') },
         { id: 'products', icon: 'package', label: 'Products', onPress: () => navigate('products') },
@@ -406,6 +407,7 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
         {/* Quick links scrollable row */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm }}>
           <QuickPill icon="link" label="Payment Link" onPress={() => navigate('create_session')} Colors={Colors} />
+          <QuickPill icon="bar-chart-2" label="Analytics" onPress={() => navigate('analytics')} Colors={Colors} />
           <QuickPill icon="users" label="Customers" onPress={() => navigate('customers')} Colors={Colors} />
           <QuickPill icon="package" label="Products" onPress={() => navigate('products')} Colors={Colors} />
           <QuickPill icon="shield" label="Disputes" onPress={() => navigate('disputes')} Colors={Colors} />

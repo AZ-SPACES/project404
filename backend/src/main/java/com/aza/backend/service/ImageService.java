@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -48,9 +49,35 @@ public class ImageService {
     }
 
     /**
+     * Blocks requests to loopback, link-local, and private (RFC-1918 / RFC-4193) addresses
+     * to prevent SSRF via user-supplied image URLs.
+     */
+    private void validateNotPrivateHost(String urlString) {
+        try {
+            URI uri = URI.create(urlString);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("https") && !scheme.equalsIgnoreCase("http"))) {
+                throw new AppException("Image URL must use http or https");
+            }
+            InetAddress addr = InetAddress.getByName(uri.getHost());
+            if (addr.isLoopbackAddress() || addr.isSiteLocalAddress()
+                    || addr.isLinkLocalAddress() || addr.isAnyLocalAddress()
+                    || addr.isMulticastAddress()) {
+                throw new AppException(
+                        "Image URL resolves to a private or internal address and cannot be fetched");
+            }
+        } catch (java.net.UnknownHostException e) {
+            throw new AppException("Cannot resolve image URL host: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            throw new AppException("Malformed image URL");
+        }
+    }
+
+    /**
      * Download image bytes from an external URL.
      */
     public byte[] downloadImageBytes(String urlString) {
+        validateNotPrivateHost(urlString);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(urlString))
