@@ -137,11 +137,16 @@ public class AiService {
 
         List<Map<String, String>> messages = new ArrayList<>();
         if (history != null) {
-            for (AiChatMessage msg : history) {
-                messages.add(Map.of("role", msg.getRole(), "content", msg.getContent()));
-            }
+            // Cap history to the 20 most-recent exchanges and whitelist roles so a client
+            // cannot inject a "system" role to override the system prompt.
+            history.stream()
+                    .filter(msg -> msg != null && msg.getContent() != null && !msg.getContent().isBlank())
+                    .filter(msg -> "user".equals(msg.getRole()) || "assistant".equals(msg.getRole()))
+                    .limit(20)
+                    .forEach(msg -> messages.add(Map.of("role", msg.getRole(),
+                            "content", msg.getContent().substring(0, Math.min(msg.getContent().length(), 2000)))));
         }
-        messages.add(Map.of("role", "user", "content", message));
+        messages.add(Map.of("role", "user", "content", message.substring(0, Math.min(message.length(), 2000))));
 
         return callClaude(systemPrompt, messages, 400);
     }

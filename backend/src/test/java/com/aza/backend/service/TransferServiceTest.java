@@ -253,6 +253,34 @@ class TransferServiceTest {
         verify(walletRepository).save(wallet);
     }
 
+    // ── confirmTransfer ───────────────────────────────────────────────────────
+
+    @Test
+    void confirmTransfer_dailyLimitExceededAtConfirmTime_throwsAndFailsTransaction() {
+        // Simulates a race where two transfers were initiated concurrently and both
+        // passed the initiation-time limit check; the second one to confirm is rejected.
+        User sender = verifiedActiveUser();
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("1000.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.TRANSFER)
+                .build();
+
+        Wallet senderWallet = walletWithBalance("60000.00"); // plenty of balance
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        // Today's total already at 51000 (over the 50000 limit), including this tx
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(new BigDecimal("51000.00"));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> transferService.confirmTransfer(sender, tx.getId(), "1234"));
+
+        assertTrue(ex.getMessage().contains("Daily transfer limit"));
+        verify(transactionRepository).save(argThat(t -> t.getStatus() == Transaction.TransactionStatus.FAILED));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private User verifiedActiveUser() {

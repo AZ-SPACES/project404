@@ -8,6 +8,7 @@ import com.aza.backend.dto.ai.AiInsightResponse;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AiService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -56,11 +57,7 @@ public class AiController {
     @PostMapping("/chat")
     public ResponseEntity<ApiResponse<AiChatResponse>> chat(
             @AuthenticationPrincipal User user,
-            @RequestBody AiChatRequest request) {
-        if (request.getMessage() == null || request.getMessage().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("INVALID_REQUEST", "message is required"));
-        }
+            @Valid @RequestBody AiChatRequest request) {
         String response = aiService.chat(user.getId(), request.getMessage(), request.getHistory());
         if (response == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

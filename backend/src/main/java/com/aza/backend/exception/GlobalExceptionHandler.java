@@ -46,10 +46,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * DataIntegrityViolationException from JPA/Hibernate.
+     * Must be caught BEFORE RuntimeException so the raw constraint message never reaches the client.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("CONFLICT", "This action conflicts with existing data"));
+    }
+
+    /**
      * RuntimeException from legacy service code.
      * The message is passed through because existing services rely on it for user feedback.
      * Migrate callers to AppException to gain explicit status control.
-
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
