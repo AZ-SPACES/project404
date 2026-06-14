@@ -60,7 +60,8 @@ public class PromoController {
             @RequestBody RedeemRequest req,
             @AuthenticationPrincipal User user) {
 
-        PromoCode promo = promoCodeRepository.findByCodeIgnoreCase(req.code().trim())
+        // Lock the promo row to serialise concurrent redemptions of the same code
+        PromoCode promo = promoCodeRepository.findByCodeIgnoreCaseForUpdate(req.code().trim())
                 .orElseThrow(() -> new AppException("PROMO_NOT_FOUND", "Invalid promo code", HttpStatus.NOT_FOUND));
 
         if (!promo.isActive()) {
