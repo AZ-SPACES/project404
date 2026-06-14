@@ -1132,6 +1132,28 @@ export async function createBulkTransfer(data: {
   return body.data;
 }
 
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+export interface AnalyticsSummary {
+  todayRevenue: number;
+  sevenDayRevenue: number;
+  thirtyDayRevenue: number;
+  allTimeRevenue: number;
+  thirtyDaySessionCount: number;
+  thirtyDayCompletedCount: number;
+  conversionRate: number; // percentage 0-100
+  avgOrderValue: number;
+  dailySeries: { date: string; revenue: number; count: number }[];
+  topCustomers: { userId: string; displayName: string; totalPaid: number; paymentCount: number }[];
+}
+
+export async function getAnalytics(): Promise<AnalyticsSummary> {
+  const body = await request<{ success: boolean; data: AnalyticsSummary }>(
+    "/api/v1/merchant/analytics"
+  );
+  return body.data;
+}
+
 // ─── Chatbase identity token ──────────────────────────────────────────────────
 
 export async function getChatbaseToken(): Promise<string | null> {

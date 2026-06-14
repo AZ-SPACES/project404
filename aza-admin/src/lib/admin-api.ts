@@ -2821,3 +2821,119 @@ export function deletePromoCode(id: string): Promise<string> {
 export function getPromoRedemptions(id: string): Promise<PromoRedemption[]> {
   return request(`/api/v1/admin/promos/${id}/redemptions`);
 }
+
+// ── Rate Limit Config ─────────────────────────────────────────────────────────
+
+export interface RateLimitConfig {
+  id: string;
+  endpointPattern: string;
+  description: string | null;
+  maxRequests: number;
+  windowSeconds: number;
+  scope: "USER" | "IP" | "GLOBAL";
+  enabled: boolean;
+  createdAt: string;
+}
+
+export function getRateLimits(): Promise<RateLimitConfig[]> {
+  return request("/api/v1/admin/rate-limits");
+}
+
+export function createRateLimit(data: Omit<RateLimitConfig, "id" | "createdAt">): Promise<RateLimitConfig> {
+  return request("/api/v1/admin/rate-limits", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateRateLimit(id: string, data: Omit<RateLimitConfig, "id" | "createdAt">): Promise<RateLimitConfig> {
+  return request(`/api/v1/admin/rate-limits/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteRateLimit(id: string): Promise<void> {
+  return request(`/api/v1/admin/rate-limits/${id}`, { method: "DELETE" });
+}
+
+export function toggleRateLimit(id: string): Promise<RateLimitConfig> {
+  return request(`/api/v1/admin/rate-limits/${id}/toggle`, { method: "POST" });
+}
+
+// ── Live Transaction Monitor ──────────────────────────────────────────────────
+
+export function getLiveTransactions(page = 0, size = 30): Promise<Page<AdminTransaction>> {
+  return request(`/api/v1/admin/transactions?page=${page}&size=${size}`);
+}
+
+// ── Customer Service Toolkit ──────────────────────────────────────────────────
+
+export interface CSUser {
+  id: string;
+  email: string;
+  phoneNumber: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  status: string;
+  kycStatus: string;
+  createdAt: string;
+  locked: boolean;
+}
+
+export interface CSUserDetail extends CSUser {
+  walletBalance: number;
+  recentTransactions: AdminTransaction[];
+  devices: { id: string; deviceName: string; deviceOs: string; lastSeenAt: string | null }[];
+}
+
+export interface AdminNote {
+  id: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export function searchCSUsers(q: string, page = 0): Promise<Page<CSUser>> {
+  const params = new URLSearchParams({ q, page: String(page) });
+  return request(`/api/v1/admin/cs/users?${params}`);
+}
+
+export function getCSUserDetail(userId: string): Promise<CSUserDetail> {
+  return request(`/api/v1/admin/cs/users/${userId}`);
+}
+
+export function adjustBalance(
+  userId: string,
+  amount: number,
+  type: "CREDIT" | "DEBIT",
+  reason: string
+): Promise<{ newBalance: number }> {
+  return request(`/api/v1/admin/cs/users/${userId}/adjust-balance`, {
+    method: "POST",
+    body: JSON.stringify({ amount, type, reason }),
+  });
+}
+
+export function forceLogout(userId: string): Promise<void> {
+  return request(`/api/v1/admin/cs/users/${userId}/force-logout`, { method: "POST" });
+}
+
+export function lockUser(userId: string): Promise<void> {
+  return request(`/api/v1/admin/cs/users/${userId}/lock`, { method: "POST" });
+}
+
+export function unlockUser(userId: string): Promise<void> {
+  return request(`/api/v1/admin/cs/users/${userId}/unlock`, { method: "POST" });
+}
+
+export function addAdminNote(userId: string, note: string): Promise<AdminNote> {
+  return request(`/api/v1/admin/cs/users/${userId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export function getAdminNotes(userId: string): Promise<AdminNote[]> {
+  return request(`/api/v1/admin/cs/users/${userId}/notes`);
+}

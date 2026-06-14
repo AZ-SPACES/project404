@@ -34,6 +34,7 @@ import {
   SendHorizonal,
   Bell,
   Code2,
+  BarChart2,
 } from "lucide-react";
 
 interface NavItem {
@@ -50,7 +51,10 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/analytics", label: "Analytics", icon: BarChart2 },
+    ],
   },
   {
     label: "Payments",

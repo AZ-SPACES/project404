@@ -51,6 +51,8 @@ import {
   HeartPulse,
   Filter,
   Tag,
+  Gauge,
+  Headphones,
 } from "lucide-react";
 
 interface NavItem {
@@ -83,6 +85,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["COMPLIANCE"] },
       { href: "/kyc/expiring", label: "Doc Expiry", icon: CalendarClock, roles: ["COMPLIANCE"] },
       { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
+      { href: "/cs", label: "CS Toolkit", icon: Headphones, roles: ["ADMIN", "SUPPORT"] },
       { href: "/users/segment", label: "Segmentation", icon: Filter, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
       { href: "/campaigns", label: "Campaigns", icon: Megaphone, roles: ["ADMIN"] },
@@ -145,6 +148,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Operations",
     items: [
       { href: "/bulk-ops", label: "Bulk Operations", icon: Layers, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/monitor", label: "Live Monitor", icon: Activity, roles: ["ADMIN", "SUPPORT", "COMPLIANCE", "FINANCE"] },
       { href: "/health", label: "Platform Health", icon: Activity, roles: ["ADMIN"] },
       { href: "/referrals", label: "Referral Program", icon: Gift, roles: ["ADMIN", "FINANCE"] },
       { href: "/recurring-transfers", label: "Recurring Transfers", icon: RefreshCw, roles: ["ADMIN", "COMPLIANCE", "FINANCE"] },
@@ -157,6 +161,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Configuration",
     items: [
       { href: "/notifications", label: "Notifications", icon: Bell, roles: ["ADMIN"] },
+      { href: "/rate-limits", label: "Rate Limits", icon: Gauge, roles: ["ADMIN"] },
       { href: "/staff", label: "Staff & Roles", icon: Users2, roles: ["ADMIN"] },
       { href: "/settings", label: "System Settings", icon: Settings, roles: ["ADMIN"] },
       { href: "/maintenance", label: "Maintenance Mode", icon: Wrench, roles: ["ADMIN"] },
