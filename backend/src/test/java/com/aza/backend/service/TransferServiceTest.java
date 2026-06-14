@@ -49,6 +49,7 @@ class TransferServiceTest {
     @MockitoBean AnomalyDetectionService anomalyDetectionService;
     @MockitoBean AuditService auditService;
     @MockitoBean RiskEngineService riskEngineService;
+    @MockitoBean FeeCalculationService feeCalculationService;
     @MockitoBean StringRedisTemplate stringRedisTemplate;
     @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
@@ -61,6 +62,10 @@ class TransferServiceTest {
         ReflectionTestUtils.setField(transferService, "maxDailyAmount",  new BigDecimal("50000"));
         when(anomalyDetectionService.score(any(), any(), any(), any()))
                 .thenReturn(new AnomalyDetectionService.Result(0.0, "LOW", null));
+        // Default: no fee, so existing transfer assertions stay pre-fee. Fee-charging
+        // behaviour is covered explicitly in confirmTransfer_chargesP2pFee_*.
+        when(feeCalculationService.quote(any(), any(), any()))
+                .thenReturn(new FeeCalculationService.FeeQuote(BigDecimal.ZERO, null, true));
     }
 
     // ── getBalance ────────────────────────────────────────────────────────────
@@ -279,6 +284,103 @@ class TransferServiceTest {
 
         assertTrue(ex.getMessage().contains("Daily transfer limit"));
         verify(transactionRepository).save(argThat(t -> t.getStatus() == Transaction.TransactionStatus.FAILED));
+    }
+
+    @Test
+    void confirmTransfer_chargesP2pFee_debitsAmountPlusFee() {
+        User sender = verifiedActiveUser();
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("5000.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.TRANSFER)
+                .build();
+
+        Wallet senderWallet = walletWithBalance("60000.00");
+        Wallet recipientWallet = Wallet.builder()
+                .userId(recipientId).balance(new BigDecimal("0.00")).currency("GHS").frozen(false).build();
+        User recipient = User.builder().id(recipientId).firstName("Bob").lastName("Jones")
+                .email("bob@example.com").build();
+
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(walletRepository.findByUserIdForUpdate(recipientId)).thenReturn(Optional.of(recipientWallet));
+        when(merchantRepository.findByIdForUpdate(recipientId)).thenReturn(Optional.empty());
+        when(userRepository.findById(recipientId)).thenReturn(Optional.of(recipient));
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        // 0.5% of 5000 = 25, capped at the rule's GHS 10
+        when(feeCalculationService.quote(eq("P2P"), eq(new BigDecimal("5000.00")), eq(senderId)))
+                .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("10.00"), UUID.randomUUID(), false));
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        assertEquals(new BigDecimal("54990.00"), senderWallet.getBalance()); // 60000 - 5000 - 10 fee
+        assertEquals(new BigDecimal("5000.00"), recipientWallet.getBalance()); // recipient gets amount only
+        assertEquals(new BigDecimal("10.00"), tx.getFeeAmount());
+        assertEquals(Transaction.TransactionStatus.COMPLETED, tx.getStatus());
+        verify(feeCalculationService).recordMonthlyUsage("P2P", new BigDecimal("5000.00"), senderId);
+    }
+
+    @Test
+    void acceptMoneyRequest_chargesP2pFee_debitsPayerAmountPlusFee() {
+        User payer = verifiedActiveUser();
+        // In a money request the payer is the sender; the requester is the recipient.
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("5000.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.REQUEST).isRequest(true)
+                .build();
+
+        Wallet payerWallet = walletWithBalance("60000.00");
+        Wallet requesterWallet = Wallet.builder()
+                .userId(recipientId).balance(new BigDecimal("0.00")).currency("GHS").frozen(false).build();
+        User requester = User.builder().id(recipientId).firstName("Bob").lastName("Jones").build();
+
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(payerWallet));
+        when(walletRepository.findByUserIdForUpdate(recipientId)).thenReturn(Optional.of(requesterWallet));
+        when(userRepository.findById(recipientId)).thenReturn(Optional.of(requester));
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(feeCalculationService.quote(eq("P2P"), eq(new BigDecimal("5000.00")), eq(senderId)))
+                .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("10.00"), UUID.randomUUID(), false));
+
+        transferService.acceptMoneyRequest(payer, tx.getId(), "1234");
+
+        assertEquals(new BigDecimal("54990.00"), payerWallet.getBalance()); // 60000 - 5000 - 10 fee
+        assertEquals(new BigDecimal("5000.00"), requesterWallet.getBalance());
+        assertEquals(new BigDecimal("10.00"), tx.getFeeAmount());
+        verify(feeCalculationService).recordMonthlyUsage("P2P", new BigDecimal("5000.00"), senderId);
+    }
+
+    @Test
+    void executeSingleBulkItem_chargesP2pFee_forUserRecipient() {
+        User sender = verifiedActiveUser();
+        Wallet senderWallet = walletWithBalance("60000.00");
+        Wallet recipientWallet = Wallet.builder()
+                .userId(recipientId).balance(new BigDecimal("0.00")).currency("GHS").frozen(false).build();
+        User recipient = User.builder().id(recipientId).firstName("Bob").lastName("Jones")
+                .status(User.AccountStatus.ACTIVE).build();
+
+        when(userRepository.findByEmailOrPhoneNumber("bob@example.com", "bob@example.com"))
+                .thenReturn(Optional.of(recipient));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(walletRepository.findByUserIdForUpdate(recipientId)).thenReturn(Optional.of(recipientWallet));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+            Transaction t = inv.getArgument(0);
+            if (t.getId() == null) t.setId(UUID.randomUUID());
+            return t;
+        });
+        when(feeCalculationService.quote(eq("P2P"), eq(new BigDecimal("5000.00")), eq(senderId)))
+                .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("10.00"), UUID.randomUUID(), false));
+
+        transferService.executeSingleBulkItem(sender, "bob@example.com", new BigDecimal("5000.00"), "payroll");
+
+        assertEquals(new BigDecimal("54990.00"), senderWallet.getBalance()); // 60000 - 5000 - 10 fee
+        assertEquals(new BigDecimal("5000.00"), recipientWallet.getBalance());
+        verify(feeCalculationService).recordMonthlyUsage("P2P", new BigDecimal("5000.00"), senderId);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

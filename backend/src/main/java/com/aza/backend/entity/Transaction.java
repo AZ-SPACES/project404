@@ -59,7 +59,11 @@ public class Transaction {
     private LocalDateTime declinedAt;
 
     public enum TransactionType {
-        TRANSFER, REQUEST
+        TRANSFER, REQUEST,
+        /** Agent cash network: physical cash exchanged for wallet balance. */
+        CASH_IN, CASH_OUT,
+        /** Reserved for the merchant/biller/disbursement flows built on the same ledger. */
+        MERCHANT_PAYMENT, BILL_PAY, PAYOUT, DISBURSEMENT
     }
 
     public enum TransactionStatus {

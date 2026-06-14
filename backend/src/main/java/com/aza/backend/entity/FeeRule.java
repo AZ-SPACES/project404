@@ -47,11 +47,26 @@ public class FeeRule {
     @Column(precision = 15, scale = 2)
     private BigDecimal tierMaxAmount;
 
+    /** Flat amount added on top of the percentage/flat base (combined flat+percent rules). */
+    @Column(precision = 15, scale = 2)
+    private BigDecimal flatComponent;
+
+    /** A transaction at or below this amount is free (per-transaction free tier). */
+    @Column(precision = 15, scale = 2)
+    private BigDecimal freePerTxnThreshold;
+
+    /** The first this-much of value per calendar month is free for the payer (rolling-monthly free tier). */
+    @Column(precision = 15, scale = 2)
+    private BigDecimal freeMonthlyThreshold;
+
     @Builder.Default
     private Boolean active = true;
 
     @CreationTimestamp
     private LocalDateTime effectiveFrom;
+
+    /** When set, the rule stops applying at this time (version supersession). Null = open-ended. */
+    private LocalDateTime effectiveTo;
 
     public enum FeeType { FLAT, PERCENTAGE }
 }

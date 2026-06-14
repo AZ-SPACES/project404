@@ -11,4 +11,7 @@ import java.util.UUID;
 public interface FeeRuleRepository extends JpaRepository<FeeRule, UUID> {
     List<FeeRule> findAllByOrderByTransactionTypeAscEffectiveFromAsc();
     long countByActiveTrue();
+
+    /** Candidate rules for a transaction type; tier band and effective window are resolved in the service. */
+    List<FeeRule> findByTransactionTypeAndActiveTrue(String transactionType);
 }
