@@ -77,6 +77,7 @@ export function useChatScreen() {
     markRead,
     deleteMessage: deleteMessageRemote,
     peerIdentityChange,
+    hasUndecryptableMessages,
   } = useChat(id);
 
   const flatListRef = useRef<FlatList>(null);
@@ -90,6 +91,7 @@ export function useChatScreen() {
   const lastScreenshot = useChatStore(s => chatId ? s.lastScreenshotByChatId[chatId] : undefined);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [undecryptableWarningDismissed, setUndecryptableWarningDismissed] = useState(false);
 
   const lastScreenshotTsRef = useRef<number | undefined>(lastScreenshot?.ts);
   useEffect(() => {
@@ -1124,6 +1126,8 @@ export function useChatScreen() {
     showBlockModal, setShowBlockModal,
     showReportModal, setShowReportModal,
     keyWarningDismissed, setKeyWarningDismissed,
+    undecryptableWarningDismissed, setUndecryptableWarningDismissed,
+    hasUndecryptableMessages,
     paymentSheet, setPaymentSheet,
     fullScreenUri, setFullScreenUri,
     showGifPicker, setShowGifPicker,

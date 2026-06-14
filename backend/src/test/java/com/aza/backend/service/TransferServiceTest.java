@@ -17,7 +17,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -58,8 +57,8 @@ class TransferServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(transferService, "maxSingleAmount", new BigDecimal("10000"));
-        ReflectionTestUtils.setField(transferService, "maxDailyAmount",  new BigDecimal("50000"));
+        // Limits now come from LimitGuard (custom override ?? KYC-tier cap). Test users carry
+        // custom 10000/50000 overrides via verifiedActiveUser(), preserving prior expectations.
         when(anomalyDetectionService.score(any(), any(), any(), any()))
                 .thenReturn(new AnomalyDetectionService.Result(0.0, "LOW", null));
         // Default: no fee, so existing transfer assertions stay pre-fee. Fee-charging
@@ -390,6 +389,8 @@ class TransferServiceTest {
                 .id(senderId).firstName("Alice").lastName("Smith")
                 .email("alice@example.com")
                 .status(User.AccountStatus.ACTIVE).kycStatus(User.KycStatus.VERIFIED)
+                .customSingleTransactionLimitGhs(new BigDecimal("10000"))
+                .customDailyLimitGhs(new BigDecimal("50000"))
                 .build();
     }
 

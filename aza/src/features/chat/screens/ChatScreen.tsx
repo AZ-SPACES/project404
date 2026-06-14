@@ -45,6 +45,8 @@ export default function ChatScreen() {
     toastMessage, setToastMessage,
     showBlockModal, setShowBlockModal, showReportModal, setShowReportModal,
     keyWarningDismissed, setKeyWarningDismissed,
+    undecryptableWarningDismissed, setUndecryptableWarningDismissed,
+    hasUndecryptableMessages,
     paymentSheet,
     fullScreenUri, setFullScreenUri,
     showGifPicker, setShowGifPicker, handleSendSticker,
@@ -277,6 +279,18 @@ export default function ChatScreen() {
         </TouchableOpacity>
       )}
 
+      {hasUndecryptableMessages && !undecryptableWarningDismissed && (
+        <TouchableOpacity style={styles.historyBanner} activeOpacity={0.85} onPress={() => navigation.navigate('ChatBackup')}>
+          <Feather name="info" size={15} color={Colors.primary} style={{ flexShrink: 0 }} />
+          <Text style={styles.historyBannerText} numberOfLines={2}>
+            Some older messages can't be read on this device. Tap to restore from backup or sync from another device.
+          </Text>
+          <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={() => setUndecryptableWarningDismissed(true)}>
+            <Feather name="x" size={15} color={Colors.textSecondary} style={{ flexShrink: 0 }} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       {searchActive && (
         <View style={styles.searchBar}>
           <Feather name="search" size={16} color={Colors.textSecondary} style={{ marginRight: Spacing.sm }} />
@@ -458,6 +472,25 @@ const createScreenStyles = (Colors: ThemeColors, isDark: boolean) =>
       paddingVertical: 10,
     },
     keyChangeBannerText: {
+      ...Typography.caption,
+      flex: 1,
+      color: Colors.textPrimary,
+      fontWeight: '500',
+    },
+    historyBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+      backgroundColor: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(16,185,129,0.3)',
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 10,
+    },
+    historyBannerText: {
       ...Typography.caption,
       flex: 1,
       color: Colors.textPrimary,

@@ -18,6 +18,27 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
+    // ── Revenue & digital-ratio reporting ─────────────────────────────────────
+
+    @Query("SELECT COALESCE(SUM(t.feeAmount), 0) FROM Transaction t " +
+            "WHERE t.status = 'COMPLETED' AND t.completedAt >= :start AND t.completedAt < :end")
+    BigDecimal sumFeeBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(t) FROM Transaction t " +
+            "WHERE t.status = 'COMPLETED' AND t.feeAmount > 0 AND t.completedAt >= :start AND t.completedAt < :end")
+    long countFeeBearingBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.status = 'COMPLETED' AND t.completedAt >= :start AND t.completedAt < :end")
+    BigDecimal sumCompletedAmountBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.status = 'COMPLETED' AND t.type IN :types " +
+            "AND t.completedAt >= :start AND t.completedAt < :end")
+    BigDecimal sumCompletedAmountByTypesBetween(
+            @Param("types") java.util.Collection<Transaction.TransactionType> types,
+            @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     java.util.List<Transaction> findAllBySenderIdAndStatus(UUID senderId, Transaction.TransactionStatus status);
 
     /* Find all transactions where user is sender or recipient, ordered by most recent first. */
