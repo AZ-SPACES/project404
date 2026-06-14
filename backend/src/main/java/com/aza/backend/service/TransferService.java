@@ -322,6 +322,22 @@ public class TransferService {
             throw new AppException("Insufficient balance");
         }
 
+        // Re-check daily limit inside the locked context — prevents two concurrent
+        // initiations from both passing the limit check before either commits.
+        BigDecimal effectiveDailyLimit = sender.getCustomDailyLimitGhs() != null
+                ? sender.getCustomDailyLimitGhs() : maxDailyAmount;
+        LocalDateTime startOfDay = LocalDate.now(GHANA_TZ).atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        BigDecimal todayTotal = transactionRepository.getTotalSentToday(
+                sender.getId(), startOfDay, endOfDay, LocalDateTime.now(GHANA_TZ));
+        // Exclude this transaction itself (it is already PENDING and included in the sum)
+        BigDecimal totalExcludingSelf = todayTotal.subtract(transaction.getAmount());
+        if (totalExcludingSelf.add(transaction.getAmount()).compareTo(effectiveDailyLimit) > 0) {
+            transaction.setStatus(Transaction.TransactionStatus.FAILED);
+            transactionRepository.save(transaction);
+            throw new AppException("Daily transfer limit exceeded. Please try again tomorrow.");
+        }
+
         Merchant merchant = merchantRepository.findByIdForUpdate(transaction.getRecipientId()).orElse(null);
 
         // HIGH-anomaly P2P transfers stop here: no money moves until COMPLIANCE
