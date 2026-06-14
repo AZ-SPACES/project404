@@ -10,6 +10,7 @@ import {
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
 import { extractErrorMessage } from '../utils/errorUtils';
+import { getDeviceLocation } from '../utils/deviceLocation';
 
 type TransferStatus = 'idle' | 'initiating' | 'confirming' | 'requesting' | 'success' | 'error';
 
@@ -61,13 +62,17 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   initiateTransfer: async ({ recipientIdentifier, amount, note, category }) => {
     set({ status: 'initiating', error: null });
     try {
-      const idempotencyKey = generateIdempotencyKey();
+      const [idempotencyKey, gpsLocation] = await Promise.all([
+        Promise.resolve(generateIdempotencyKey()),
+        getDeviceLocation(),
+      ]);
       const res = await initiateTransferApi({
         recipientIdentifier,
         amount,
         note,
         idempotencyKey,
         ...(category ? { category } : {}),
+        ...(gpsLocation ? { gpsLocation } : {}),
       });
       const txId: string = res.data?.data?.id || res.data?.id;
       if (!txId) throw new Error('No transaction ID in response');

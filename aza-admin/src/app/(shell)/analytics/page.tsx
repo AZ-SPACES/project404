@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getWebhookAnalytics,
   getGeoAnalytics,
+  getTransactionGeoAnalytics,
   type WebhookAnalytics,
   type GeoAnalytics,
+  type TransactionGeoAnalytics,
 } from "@/lib/admin-api";
-import { Globe, Loader2, Webhook } from "lucide-react";
+import { Globe, Loader2, Webhook, ArrowRightLeft } from "lucide-react";
 
 function fmt(n: number) {
   return n.toLocaleString();
@@ -155,12 +157,72 @@ function GeoSection() {
   );
 }
 
+function TransactionGeoSection() {
+  const { data, isLoading } = useQuery<TransactionGeoAnalytics>({
+    queryKey: ["transactionGeoAnalytics"],
+    queryFn: () => getTransactionGeoAnalytics(20),
+    refetchInterval: 120_000,
+  });
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-32">
+      <Loader2 size={20} className="animate-spin text-foreground/30" />
+    </div>
+  );
+
+  if (!data) return null;
+
+  const maxTx = Math.max(...data.topLocations.map(l => l.transactions), 1);
+  const locationPct = data.totalTransactions > 0
+    ? Math.round((data.transactionsWithLocation / data.totalTransactions) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Total Transactions", value: fmt(data.totalTransactions) },
+          { label: "With Location", value: fmt(data.transactionsWithLocation) },
+          { label: "Unknown", value: fmt(data.unknownTransactions) },
+          { label: "Coverage", value: `${locationPct}%` },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-card border border-border rounded-xl p-4">
+            <p className="text-foreground/40 text-xs">{label}</p>
+            <p className="text-2xl font-semibold text-foreground mt-1">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {data.topLocations.length > 0 ? (
+        <div className="bg-card border border-border rounded-xl p-4">
+          <p className="text-xs text-foreground/40 uppercase tracking-wider mb-4">Top Initiation Locations</p>
+          <div className="space-y-3">
+            {data.topLocations.map((loc, i) => (
+              <div key={loc.location}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-foreground">{i + 1}. {loc.location}</span>
+                  <span className="text-xs text-foreground/50">{fmt(loc.transactions)} txns</span>
+                </div>
+                <PctBar pct={(loc.transactions / maxTx) * 100} color="#3b82f6" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl p-8 text-center text-foreground/30 text-sm">
+          No transaction location data yet — coverage builds as users transact with the app updated.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
-        <p className="text-foreground/40 text-sm mt-1">Webhook delivery health and geographic session distribution.</p>
+        <p className="text-foreground/40 text-sm mt-1">Webhook delivery health and geographic distribution of sessions and transactions.</p>
       </div>
 
       <section>
@@ -174,9 +236,17 @@ export default function AnalyticsPage() {
       <section>
         <div className="flex items-center gap-2 mb-4">
           <Globe size={15} className="text-foreground/40" />
-          <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Geographic Distribution</h2>
+          <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Geographic Distribution — Sessions</h2>
         </div>
         <GeoSection />
+      </section>
+
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <ArrowRightLeft size={15} className="text-foreground/40" />
+          <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wider">Geographic Distribution — Transactions</h2>
+        </div>
+        <TransactionGeoSection />
       </section>
     </div>
   );

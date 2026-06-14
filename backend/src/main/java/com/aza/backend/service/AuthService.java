@@ -190,7 +190,7 @@ public class AuthService {
             return null;
         }
 
-        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false);
+        return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, false, request.getGpsLocation());
     }
 
     @Transactional
@@ -239,6 +239,12 @@ public class AuthService {
 
     private AuthResponse finalizeLogin(User user, String deviceName,
                                        String deviceOs, String deviceId, String ipAddress, boolean isSignup) {
+        return finalizeLogin(user, deviceName, deviceOs, deviceId, ipAddress, isSignup, null);
+    }
+
+    private AuthResponse finalizeLogin(User user, String deviceName,
+                                       String deviceOs, String deviceId, String ipAddress, boolean isSignup,
+                                       String gpsLocation) {
         if (user.getStatus() == User.AccountStatus.SUSPENDED || user.getStatus() == User.AccountStatus.DEACTIVATED) {
             throw new AppException("Account is not active");
         }
@@ -256,7 +262,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, deviceId, ipAddress);
+        saveRefreshToken(user.getId(), refreshToken, accessToken, deviceName, deviceOs, deviceId, ipAddress, gpsLocation);
 
         if (isSignup) {
             emailService.sendSignupNotification(user.getEmail(), user.getFirstName());
@@ -810,6 +816,12 @@ public class AuthService {
 
     public void saveRefreshToken(UUID userId, String rawRefreshToken, String rawAccessToken,
                                  String deviceName, String deviceOs, String deviceId, String ipAddress) {
+        saveRefreshToken(userId, rawRefreshToken, rawAccessToken, deviceName, deviceOs, deviceId, ipAddress, null);
+    }
+
+    public void saveRefreshToken(UUID userId, String rawRefreshToken, String rawAccessToken,
+                                 String deviceName, String deviceOs, String deviceId, String ipAddress,
+                                 String gpsLocation) {
         Duration accessValidity = jwtUtil.getRemainingValidity(rawAccessToken);
         LocalDateTime accessExpiresAt = accessValidity.isZero()
                 ? LocalDateTime.now()
@@ -819,10 +831,9 @@ public class AuthService {
         RefreshToken rt = refreshTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
                 .orElse(new RefreshToken());
 
-        // Resolve location only for brand-new sessions or when the IP changed, to avoid an
-        // external lookup on every routine token refresh.
-        boolean shouldResolveLocation = rt.getLocation() == null
-                || !java.util.Objects.equals(rt.getIpAddress(), ipAddress);
+        boolean hasGpsLocation = gpsLocation != null && !gpsLocation.isBlank();
+        boolean shouldResolveLocation = !hasGpsLocation && (rt.getLocation() == null
+                || !java.util.Objects.equals(rt.getIpAddress(), ipAddress));
 
         rt.setUserId(userId);
         rt.setTokenHash(hashToken(rawRefreshToken));
@@ -833,6 +844,10 @@ public class AuthService {
         rt.setDeviceId(deviceId);
         rt.setIpAddress(ipAddress);
         rt.setExpiresAt(LocalDateTime.now().plusDays(30));
+
+        if (hasGpsLocation) {
+            rt.setLocation(gpsLocation);
+        }
 
         RefreshToken saved = refreshTokenRepository.save(rt);
 

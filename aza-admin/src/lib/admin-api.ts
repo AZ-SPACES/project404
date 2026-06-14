@@ -2283,6 +2283,17 @@ export function getGeoAnalytics(top = 20): Promise<GeoAnalytics> {
   return request(`/api/v1/admin/analytics/geo?top=${top}`);
 }
 
+export interface TransactionGeoAnalytics {
+  topLocations: { location: string; transactions: number }[];
+  totalTransactions: number;
+  transactionsWithLocation: number;
+  unknownTransactions: number;
+}
+
+export function getTransactionGeoAnalytics(top = 20): Promise<TransactionGeoAnalytics> {
+  return request(`/api/v1/admin/analytics/geo/transactions?top=${top}`);
+}
+
 // ── Bulk operations ────────────────────────────────────────────────────────────
 
 export function bulkSuspendUsers(userIds: string[], reason: string): Promise<{ suspended: number }> {

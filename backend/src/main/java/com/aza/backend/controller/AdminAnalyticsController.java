@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.entity.WebhookDelivery;
 import com.aza.backend.repository.RefreshTokenRepository;
+import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.WebhookDeliveryRepository;
 import com.aza.backend.service.AdminAnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class AdminAnalyticsController {
     private final AdminAnalyticsService adminAnalyticsService;
     private final WebhookDeliveryRepository webhookDeliveryRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TransactionRepository transactionRepository;
 
     @GetMapping("/cohorts")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCohorts(
@@ -125,6 +127,43 @@ public class AdminAnalyticsController {
         result.put("totalSessions", totalSessions);
         result.put("sessionsWithLocation", totalWithLocation);
         result.put("unknownSessions", totalSessions - totalWithLocation);
+
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /** Geo analytics: top locations from transaction initiations. */
+    @GetMapping("/geo/transactions")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getTransactionGeoAnalytics(
+            @RequestParam(defaultValue = "20") int top) {
+        List<com.aza.backend.entity.Transaction> txns =
+                transactionRepository.findAll(PageRequest.of(0, 10000)).getContent();
+
+        Map<String, Long> locationCounts = txns.stream()
+                .filter(t -> t.getInitiationLocation() != null && !t.getInitiationLocation().isBlank())
+                .collect(Collectors.groupingBy(
+                        com.aza.backend.entity.Transaction::getInitiationLocation,
+                        Collectors.counting()
+                ));
+
+        List<Map<String, Object>> topLocations = locationCounts.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(Math.min(top, 50))
+                .map(e -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("location", e.getKey());
+                    row.put("transactions", e.getValue());
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+        long totalWithLocation = locationCounts.values().stream().mapToLong(Long::longValue).sum();
+        long totalTransactions = txns.size();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("topLocations", topLocations);
+        result.put("totalTransactions", totalTransactions);
+        result.put("transactionsWithLocation", totalWithLocation);
+        result.put("unknownTransactions", totalTransactions - totalWithLocation);
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }

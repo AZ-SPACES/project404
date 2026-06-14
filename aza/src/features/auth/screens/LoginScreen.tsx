@@ -18,6 +18,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Device from 'expo-device';
 import { CloseButton } from '../../../components/ui/CloseButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
+import { getDeviceLocation } from '../../../utils/deviceLocation';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -66,12 +67,14 @@ const LoginScreen: React.FC = () => {
     setIsLoading(true);
     try {
       const identifier = useEmail ? email : phoneNumber;
-      const response = await api.post('/api/v1/auth/login', { 
-        identifier, 
+      const [deviceId, gpsLocation] = await Promise.all([getDeviceId(), getDeviceLocation()]);
+      const response = await api.post('/api/v1/auth/login', {
+        identifier,
         password,
         deviceName: Device.modelName ?? undefined,
         deviceOs: Device.osName ?? undefined,
-        deviceId: await getDeviceId(),
+        deviceId,
+        ...(gpsLocation ? { gpsLocation } : {}),
       });
       
       const payload = response.data?.data ?? response.data;

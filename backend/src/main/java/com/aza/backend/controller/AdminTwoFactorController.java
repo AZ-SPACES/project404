@@ -28,21 +28,23 @@ public class AdminTwoFactorController {
         long passkeys = userRepository.countByPasskeysEnabledTrue();
         long biometrics = userRepository.countByBiometricsEnabledTrue();
 
-        double pctEnrolled = totalUsers > 0
-                ? Math.round((anyTwoFactor * 1000.0 / totalUsers)) / 10.0
-                : 0.0;
+        double anyTwoFactorPct = totalUsers > 0 ? Math.round((anyTwoFactor * 1000.0 / totalUsers)) / 10.0 : 0.0;
+        double smsPct         = totalUsers > 0 ? Math.round((sms        * 1000.0 / totalUsers)) / 10.0 : 0.0;
+        double emailPct       = totalUsers > 0 ? Math.round((email      * 1000.0 / totalUsers)) / 10.0 : 0.0;
+        double appPct         = totalUsers > 0 ? Math.round((app        * 1000.0 / totalUsers)) / 10.0 : 0.0;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalUsers", totalUsers);
-        result.put("anyTwoFactorEnabled", anyTwoFactor);
-        result.put("pctEnrolled", pctEnrolled);
-        result.put("byMethod", Map.of(
-                "sms", sms,
-                "email", email,
-                "app", app,
-                "passkeys", passkeys,
-                "biometrics", biometrics
-        ));
+        result.put("anyTwoFactor", anyTwoFactor);
+        result.put("sms", sms);
+        result.put("email", email);
+        result.put("app", app);
+        result.put("passkeys", passkeys);
+        result.put("biometrics", biometrics);
+        result.put("anyTwoFactorPct", anyTwoFactorPct);
+        result.put("smsPct", smsPct);
+        result.put("emailPct", emailPct);
+        result.put("appPct", appPct);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 }
