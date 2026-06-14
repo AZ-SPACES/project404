@@ -270,6 +270,8 @@ public class TransferService {
                 .category(txCategory)
                 .anomalyScore(anomaly.score())
                 .anomalyRiskLevel(anomaly.riskLevel())
+                .initiationLocation(request.getGpsLocation() != null && !request.getGpsLocation().isBlank()
+                        ? request.getGpsLocation() : null)
                 .build();
 
         transaction = transactionRepository.save(transaction);

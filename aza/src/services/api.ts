@@ -393,6 +393,7 @@ export const initiateTransfer = (payload: {
   note: string;
   idempotencyKey: string;
   category?: string;
+  gpsLocation?: string;
 }) => api.post("/api/v1/transfers", payload);
 
 export const confirmTransfer = (id: string, passcode: string) =>

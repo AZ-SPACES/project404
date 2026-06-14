@@ -84,4 +84,7 @@ public class Transaction {
 
     @Column(nullable = true, precision = 15, scale = 2)
     private BigDecimal feeAmount;
+
+    @Column(length = 255)
+    private String initiationLocation;
 }

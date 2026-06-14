@@ -27,4 +27,7 @@ public class TransferRequest {
     private String idempotencyKey;
 
     private String category;
+
+    @Size(max = 255)
+    private String gpsLocation;
 }

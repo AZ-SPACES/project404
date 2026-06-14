@@ -15,4 +15,6 @@ public class LoginRequest {
     private String deviceName;
     private String deviceOs;
     private String deviceId;
+
+    private String gpsLocation;
 }
