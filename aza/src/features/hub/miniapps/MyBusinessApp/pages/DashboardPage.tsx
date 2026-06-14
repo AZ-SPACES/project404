@@ -1,14 +1,7 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-  StatusBar,
-  Animated,
-  Image,
-  ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, Dimensions,
+  StatusBar, Animated, Image, ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../../../../theme';
 import { useDisplayContext, ACCENT_PALETTES, BANNER_GRADIENTS } from '../../../../../providers/DisplayProvider';
 import { NavProps } from '../types';
-import { extractData, fmtAmount } from '../helpers';
-import { getMerchantReportSummary } from '../../../../../services/api';
+import { extractData, fmtAmount, fmtDate } from '../helpers';
+import { getMerchantReportSummary, getMerchantSessions } from '../../../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
 import { CATEGORY_LABELS } from '../constants';
@@ -27,60 +20,191 @@ import { ActionTarget } from '../../../../home/components/ActionTarget';
 import { getAdaptiveForeground } from '../../../../../utils/wallpaperContrast';
 
 const { height } = Dimensions.get('window');
+const MONO = 'Courier';
 
 function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
 }
+
+// ─── Quick action pill ───────────────────────────────────────────────────────
+
+function QuickPill({
+  icon, label, onPress, Colors,
+}: { icon: string; label: string; onPress: () => void; Colors: ThemeColors }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.72}
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 7,
+        paddingHorizontal: 14, paddingVertical: 9,
+        borderRadius: 99, borderWidth: 1,
+        borderColor: Colors.border,
+        backgroundColor: Colors.surface,
+      }}
+    >
+      <Feather name={icon as any} size={13} color={Colors.textPrimary} />
+      <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.textPrimary }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Session row (mini) ──────────────────────────────────────────────────────
+
+const SESSION_DOT: Record<string, string> = {
+  COMPLETED: '#4ADE80', PENDING: '#FBBF24', CANCELLED: '#F87171',
+  EXPIRED: '#9CA3AF', REFUNDED: '#C084FC',
+};
+
+function RecentSessionRow({ s, Colors }: { s: any; Colors: ThemeColors }) {
+  const dot = SESSION_DOT[s.status] ?? '#9CA3AF';
+  return (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 12, gap: Spacing.sm,
+    }}>
+      <View style={{
+        width: 36, height: 36, borderRadius: 10,
+        backgroundColor: dot + '18',
+        alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 13, fontWeight: '500', color: Colors.textPrimary }} numberOfLines={1}>
+          {s.description ?? 'Payment'}
+        </Text>
+        <Text style={{ fontSize: 11, color: Colors.textSecondary, marginTop: 1 }}>{fmtDate(s.createdAt)}</Text>
+      </View>
+      <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textPrimary, fontFamily: MONO }}>
+        {fmtAmount(s.amount, s.currency)}
+      </Text>
+    </View>
+  );
+}
+
+// ─── Stat card ───────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, sub, accent, Colors }: {
+  label: string; value: string; sub: string | undefined; accent: boolean | undefined; Colors: ThemeColors;
+}) {
+  return (
+    <View style={{
+      flex: 1, borderRadius: 14, borderWidth: 1,
+      borderColor: accent ? Colors.primary + '40' : Colors.border,
+      backgroundColor: accent ? Colors.primary + '0E' : Colors.surface,
+      padding: 12,
+    }}>
+      <Text style={{
+        fontSize: 9, fontWeight: '700', textTransform: 'uppercase',
+        letterSpacing: 0.7, color: Colors.textSecondary, marginBottom: 5,
+      }}>
+        {label}
+      </Text>
+      <Text style={{
+        fontSize: 14, fontWeight: '800', color: accent ? Colors.secondary : Colors.textPrimary,
+        fontFamily: MONO, marginBottom: 2,
+      }} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      {sub ? <Text style={{ fontSize: 10, color: Colors.textSecondary }}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+// ─── More sheet section ───────────────────────────────────────────────────────
+
+function SheetSection({
+  label, items, onSelect, Colors,
+}: {
+  label: string;
+  items: { id: string; icon: string; label: string; onPress: () => void }[];
+  onSelect: () => void;
+  Colors: ThemeColors;
+}) {
+  return (
+    <View>
+      <Text style={{
+        fontSize: 10, fontWeight: '700', color: Colors.textSecondary,
+        textTransform: 'uppercase', letterSpacing: 0.8,
+        marginBottom: 2, marginTop: 14, paddingHorizontal: 2,
+      }}>
+        {label}
+      </Text>
+      {items.map((item, idx) => (
+        <TouchableOpacity
+          key={item.id}
+          onPress={() => { onSelect(); item.onPress(); }}
+          activeOpacity={0.65}
+          style={{
+            flexDirection: 'row', alignItems: 'center',
+            paddingVertical: 11,
+            borderBottomWidth: idx < items.length - 1 ? StyleSheet.hairlineWidth : 0,
+            borderBottomColor: Colors.border,
+          }}
+        >
+          <View style={{
+            width: 36, height: 36, borderRadius: 10,
+            backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+            alignItems: 'center', justifyContent: 'center', marginRight: 14,
+          }}>
+            <Feather name={item.icon as any} size={17} color={Colors.textPrimary} />
+          </View>
+          <Text style={{ flex: 1, fontSize: 15, fontWeight: '500', color: Colors.textPrimary }}>{item.label}</Text>
+          <Feather name="chevron-right" size={15} color={Colors.textSecondary} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage({ merchant, navigate }: NavProps) {
   const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const {
-    homeBackground, homeDim, homeBlur, homeBannerGradient, accentId, balanceCardStyle,
-    homeLayout, balanceHiddenByDefault, reducedMotion, homeBgLuminance
+    homeBackground, homeDim, homeBlur, homeBannerGradient, accentId,
+    balanceCardStyle, homeLayout, balanceHiddenByDefault, reducedMotion, homeBgLuminance,
   } = useDisplayContext();
 
-  const animDuration = reducedMotion ? 0 : 300;
+  const animDuration = reducedMotion ? 0 : 280;
   const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
   const bannerGrad = homeBannerGradient === 'accent'
     ? [accentPalette.primary, accentPalette.gradientEnd]
     : (BANNER_GRADIENTS.find(g => g.id === homeBannerGradient)?.colors ?? [accentPalette.primary, accentPalette.gradientEnd]) as string[];
 
-  // Adaptive foreground: keeps text/icons readable over light wallpapers.
   const onImage = homeLayout === 'default' && !!homeBackground;
   const hasCardBacking = balanceCardStyle === 'card' || balanceCardStyle === 'glass';
-  const fg = getAdaptiveForeground({
-    luminance: homeBgLuminance,
-    dim: homeDim,
-    active: onImage,
-    cardBacking: hasCardBacking,
-  });
-    
+  const fg = getAdaptiveForeground({ luminance: homeBgLuminance, dim: homeDim, active: onImage, cardBacking: hasCardBacking });
+
   const [isBalanceVisible, setIsBalanceVisible] = React.useState(!balanceHiddenByDefault);
-  const [isMoreModalVisible, setIsMoreModalVisible] = React.useState(false);
-  const moreSheetAnim = React.useRef(new Animated.Value(height)).current;
-  const moreBackdropAnim = React.useRef(new Animated.Value(0)).current;
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const [profileOpen, setProfileOpen] = React.useState(false);
+  const sheetAnim = React.useRef(new Animated.Value(height)).current;
+  const backdropAnim = React.useRef(new Animated.Value(0)).current;
+  const profileSheetAnim = React.useRef(new Animated.Value(height)).current;
+  const profileBackdropAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    if (isMoreModalVisible) {
-      Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: height, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim]);
+    Animated.parallel([
+      Animated.timing(sheetAnim, { toValue: moreOpen ? 0 : height, duration: animDuration, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: moreOpen ? 1 : 0, duration: animDuration, useNativeDriver: true }),
+    ]).start();
+  }, [moreOpen]);
 
-  const greeting = getGreeting();
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(profileSheetAnim, { toValue: profileOpen ? 0 : height, duration: animDuration, useNativeDriver: true }),
+      Animated.timing(profileBackdropAnim, { toValue: profileOpen ? 1 : 0, duration: animDuration, useNativeDriver: true }),
+    ]).start();
+  }, [profileOpen]);
+
   const feePercent = ((merchant?.feeRateBps ?? 150) / 100).toFixed(2);
-  const formattedBalance = fmtAmount(merchant?.balance, merchant?.currency ?? 'GHS');
+  const balance = fmtAmount(merchant?.balance, merchant?.currency ?? 'GHS');
 
   const { data: summary } = useQuery({
     queryKey: queryKeys.merchantReportSummary(),
@@ -88,27 +212,34 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
     staleTime: 60_000,
   });
 
-  const statCards = summary ? [
+  const { data: recentSessions = [] } = useQuery({
+    queryKey: [...queryKeys.merchantSessions(), 'recent'],
+    queryFn: async () => { const r = await getMerchantSessions(0, 5); return extractData(r)?.content ?? []; },
+    staleTime: 60_000,
+  });
+
+  const statCards: { label: string; value: string; sub?: string; accent?: boolean }[] = summary ? [
     { label: 'Today', value: fmtAmount(summary.todayRevenue, merchant?.currency ?? 'GHS'), sub: `${summary.todayPayments ?? 0} payments` },
-    { label: '7 Days', value: fmtAmount(summary.sevenDayRevenue, merchant?.currency ?? 'GHS'), sub: `${summary.sevenDayPayments ?? 0} payments` },
+    { label: '7 Days', value: fmtAmount(summary.sevenDayRevenue, merchant?.currency ?? 'GHS'), sub: `${summary.sevenDayPayments ?? 0} payments`, accent: true },
     { label: '30 Days', value: fmtAmount(summary.thirtyDayRevenue, merchant?.currency ?? 'GHS'), sub: `${Math.round(summary.successRate ?? 0)}% success` },
   ] : [];
 
-  const actionHandlers = [
-    { id: 'link', icon: 'link', label: 'Payment Link', onPress: () => navigate('create_session') },
+  const quickLinks = [
+    { id: 'link', icon: 'link', label: 'New Link', onPress: () => navigate('create_session') },
     { id: 'transactions', icon: 'list', label: 'Transactions', onPress: () => navigate('sessions') },
-    { id: 'store_qr', icon: 'grid', label: 'Store QR', onPress: () => navigate('store_qr') },
+    { id: 'qr', icon: 'grid', label: 'Store QR', onPress: () => navigate('store_qr') },
   ];
 
-  const moreActionSections = [
+  // "More" sheet — business operations only
+  const moreSections = [
     {
       label: 'Business',
       items: [
         { id: 'invoices', icon: 'file-text', label: 'Invoices', onPress: () => navigate('invoices') },
         { id: 'customers', icon: 'users', label: 'Customers', onPress: () => navigate('customers') },
         { id: 'products', icon: 'package', label: 'Products', onPress: () => navigate('products') },
-        { id: 'settlements', icon: 'trending-up', label: 'Settlements', onPress: () => navigate('settlements') },
         { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
+        { id: 'settlements', icon: 'trending-up', label: 'Settlements', onPress: () => navigate('settlements') },
       ],
     },
     {
@@ -117,7 +248,17 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
         { id: 'plans', icon: 'repeat', label: 'Plans & Subscriptions', onPress: () => navigate('plans') },
         { id: 'disputes', icon: 'shield', label: 'Disputes', onPress: () => navigate('disputes') },
         { id: 'discount_codes', icon: 'tag', label: 'Discount Codes', onPress: () => navigate('discount_codes') },
-        { id: 'team', icon: 'users', label: 'Team', onPress: () => navigate('team') },
+      ],
+    },
+  ];
+
+  // Profile sheet — account, settings, dev
+  const profileSections = [
+    {
+      label: 'Account',
+      items: [
+        { id: 'settings', icon: 'settings', label: 'Business Settings', onPress: () => navigate('settings') },
+        { id: 'team', icon: 'users', label: 'Team Members', onPress: () => navigate('team') },
         { id: 'audit_logs', icon: 'clipboard', label: 'Audit Log', onPress: () => navigate('audit_logs') },
       ],
     },
@@ -128,69 +269,74 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
         { id: 'webhooks', icon: 'zap', label: 'Webhooks', onPress: () => navigate('webhooks') },
       ],
     },
-    {
-      label: 'Account',
-      items: [
-        { id: 'settings', icon: 'settings', label: 'Business Settings', onPress: () => navigate('settings') },
-      ],
-    },
   ];
 
   const headerRow = (
-    <View style={styles.header}>
-      <Text style={[Typography.h2, { color: fg.header.text, flex: 1 }]} adjustsFontSizeToFit numberOfLines={1}>
-        {`${greeting}${merchant?.businessName ? `, ${merchant.businessName}` : ""}`}
-      </Text>
-      <View style={styles.headerRight}>
-        <View style={styles.profilePicContainer}>
-          {merchant?.logoUrl ? (
-            <Image source={{ uri: merchant.logoUrl }} style={styles.profilePic} accessibilityLabel="Business logo" />
-          ) : (
-            <View style={[styles.profilePic, styles.profilePicPlaceholder, { backgroundColor: fg.header.pill }]}>
-              <Feather name="briefcase" size={20} color={fg.header.soft} />
-            </View>
-          )}
-        </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop: Spacing.md }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 12, color: fg.header.soft, fontWeight: '500', marginBottom: 1 }}>{getGreeting()}</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: fg.header.text }} numberOfLines={1} adjustsFontSizeToFit>
+          {merchant?.businessName ?? 'My Business'}
+        </Text>
       </View>
+      <TouchableOpacity
+        onPress={() => setProfileOpen(true)}
+        activeOpacity={0.72}
+        style={{
+          width: 44, height: 44, borderRadius: 14,
+          backgroundColor: 'rgba(0,0,0,0.22)',
+          overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+        }}
+      >
+        {merchant?.logoUrl ? (
+          <Image source={{ uri: merchant.logoUrl }} style={{ width: 44, height: 44 }} />
+        ) : (
+          <Feather name="briefcase" size={20} color={fg.header.soft} />
+        )}
+      </TouchableOpacity>
     </View>
   );
 
   const actionsRow = (
-    <View style={styles.actionsRow}>
-      {actionHandlers.slice(0, 3).map(a => (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: Spacing.xl, marginTop: Spacing.xl * 2 }}>
+      {quickLinks.map(a => (
         <ActionTarget key={a.id} icon={a.icon as any} label={a.label} onPress={a.onPress} color={fg.balance.text} circleColor={fg.balance.pill} />
       ))}
-      <ActionTarget icon="more-horizontal" label="More" onPress={() => setIsMoreModalVisible(true)} color={fg.balance.text} circleColor={fg.balance.pill} />
+      <ActionTarget icon="more-horizontal" label="More" onPress={() => setMoreOpen(true)} color={fg.balance.text} circleColor={fg.balance.pill} />
     </View>
   );
 
+  const businessCategory = merchant?.category
+    ? (CATEGORY_LABELS[merchant.category as keyof typeof CATEGORY_LABELS] ?? merchant.category)
+    : null;
+
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <StatusBar barStyle={fg.tone === 'dark-text' ? 'dark-content' : 'light-content'} backgroundColor="transparent" translucent />
 
+      {/* ── Hero section ───────────────────────────────────────────────────── */}
       {homeLayout === 'minimal' ? (
-        <View style={[styles.minimalBanner, { backgroundColor: accentPalette.primary }]}>
+        <View style={{ backgroundColor: accentPalette.primary, overflow: 'hidden' }}>
           <LinearGradient colors={bannerGrad as [string, string]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <SafeAreaView edges={['top']}>
             {headerRow}
-            <View style={styles.minimalBalanceRow}>
-              <View>
-                <Text style={[Typography.bodyLg, styles.accountType]}>Merchant Balance</Text>
-                <View style={styles.balanceRow}>
-                  <Text style={[Typography.h2, styles.balanceText]} numberOfLines={1} adjustsFontSizeToFit>
-                    {isBalanceVisible ? formattedBalance : "••••"}
-                  </Text>
-                  <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={22} color={Colors.white} />
-                  </TouchableOpacity>
-                </View>
+            <View style={{ paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.xs }}>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>Merchant Balance</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', fontFamily: MONO }}>
+                  {isBalanceVisible ? balance : '••••'}
+                </Text>
+                <TouchableOpacity onPress={() => setIsBalanceVisible(v => !v)} style={{ marginLeft: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Feather name={isBalanceVisible ? 'eye-off' : 'eye'} size={20} color="rgba(255,255,255,0.7)" />
+                </TouchableOpacity>
               </View>
             </View>
             {actionsRow}
           </SafeAreaView>
         </View>
       ) : (
-        <View style={styles.topSection}>
+        <View style={{ height: height * 0.52, backgroundColor: accentPalette.primary }}>
           {homeBackground ? (
             <Image source={{ uri: homeBackground }} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
@@ -198,331 +344,231 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
           )}
           {homeBlur > 0 && <BlurView intensity={homeBlur} tint="default" style={StyleSheet.absoluteFill} />}
           {homeDim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${homeDim})` }]} />}
-          {/* Contrast scrim — guarantees text legibility over busy/bright wallpapers */}
           {onImage && (
-            <LinearGradient
-              pointerEvents="none"
-              colors={fg.scrim}
-              locations={[0, 0.5, 1]}
-              style={StyleSheet.absoluteFill}
-            />
+            <LinearGradient pointerEvents="none" colors={fg.scrim} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} />
           )}
 
           <SafeAreaView edges={['top']}>
             {headerRow}
-
             <View style={[
-              balanceCardStyle !== 'flat' && styles.balanceCardWrapper,
-              balanceCardStyle === 'card' && styles.balanceCardSolid,
+              balanceCardStyle !== 'flat' && {
+                marginHorizontal: Spacing.md, marginBottom: Spacing.sm,
+                borderRadius: Radius.lg, overflow: 'hidden' as const,
+                paddingHorizontal: Spacing.sm, paddingVertical: Spacing.sm,
+              },
+              balanceCardStyle === 'card' && { backgroundColor: 'rgba(0,0,0,0.28)' },
             ]}>
               {balanceCardStyle === 'glass' && (
                 <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
               )}
-
-              <View style={styles.balanceSection}>
-                <Text style={[Typography.bodyLg, styles.accountType, { color: fg.balance.soft }]}>Merchant Balance</Text>
-                <View style={styles.balanceRow}>
-                  <Text style={[Typography.h1, styles.balanceText, { color: fg.balance.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {isBalanceVisible ? formattedBalance : "••••"}
+              <View style={{ alignItems: 'center', marginTop: Spacing.xl * 2 }}>
+                <Text style={{ fontSize: 12, color: fg.balance.soft, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                  Merchant Balance
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl }}>
+                  <Text style={{ fontSize: 34, fontWeight: '800', color: fg.balance.text, fontFamily: MONO, flexShrink: 1 }} numberOfLines={1} adjustsFontSizeToFit>
+                    {isBalanceVisible ? balance : '••••'}
                   </Text>
-                  <TouchableOpacity style={styles.eyeIcon} onPress={() => setIsBalanceVisible(!isBalanceVisible)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Feather name={isBalanceVisible ? "eye-off" : "eye"} size={Typography.h1.fontSize} color={fg.balance.text} />
+                  <TouchableOpacity onPress={() => setIsBalanceVisible(v => !v)} style={{ marginLeft: Spacing.md }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Feather name={isBalanceVisible ? 'eye-off' : 'eye'} size={22} color={fg.balance.text} />
                   </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: Spacing.sm }}>
-                    <Text style={[Typography.caption, styles.updateTime, { color: fg.balance.soft }]}>Volume: {fmtAmount(merchant?.totalVolume, merchant?.currency ?? 'GHS')}</Text>
-                    <Text style={[Typography.caption, styles.updateTime, { color: fg.balance.soft, marginLeft: Spacing.md }]}>Fee: {feePercent}%</Text>
+                <View style={{ flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.sm }}>
+                  <Text style={{ fontSize: 11, color: fg.balance.soft }}>
+                    Volume: {fmtAmount(merchant?.totalVolume, merchant?.currency ?? 'GHS')}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: fg.balance.soft }}>
+                    Fee: {feePercent}%
+                  </Text>
                 </View>
               </View>
-
               {actionsRow}
             </View>
           </SafeAreaView>
         </View>
       )}
 
-      <View style={styles.bottomSection}>
+      {/* ── Bottom section ─────────────────────────────────────────────────── */}
+      <ScrollView
+        style={{ flex: 1, marginTop: -16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: Colors.background }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: Spacing.xl * 3 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Stat cards */}
         {statCards.length > 0 && (
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
-            {statCards.map((s) => (
-              <View
-                key={s.label}
-                style={{
-                  flex: 1, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface,
-                  borderRadius: Radius.md, padding: Spacing.sm,
-                }}
-              >
-                <Text style={{ fontSize: 10, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {s.label}
-                </Text>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit>
-                  {s.value}
-                </Text>
-                <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 1 }}>{s.sub}</Text>
-              </View>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            {statCards.map(s => (
+              <StatCard key={s.label} label={s.label} value={s.value} sub={s.sub} accent={s.accent} Colors={Colors} />
             ))}
           </View>
         )}
 
-        <View style={styles.transactionsHeader}>
-          <Text style={[Typography.h3, styles.transactionsTitle]}>
-            Business Details
-          </Text>
+        {/* Quick links scrollable row */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }} contentContainerStyle={{ gap: Spacing.sm }}>
+          <QuickPill icon="link" label="Payment Link" onPress={() => navigate('create_session')} Colors={Colors} />
+          <QuickPill icon="users" label="Customers" onPress={() => navigate('customers')} Colors={Colors} />
+          <QuickPill icon="package" label="Products" onPress={() => navigate('products')} Colors={Colors} />
+          <QuickPill icon="shield" label="Disputes" onPress={() => navigate('disputes')} Colors={Colors} />
+          <QuickPill icon="download" label="Payouts" onPress={() => navigate('payouts')} Colors={Colors} />
+          <QuickPill icon="file-text" label="Invoices" onPress={() => navigate('invoices')} Colors={Colors} />
+        </ScrollView>
+
+        {/* Recent activity */}
+        <View style={{ marginBottom: Spacing.lg }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.textPrimary }}>Recent Activity</Text>
+            <TouchableOpacity onPress={() => navigate('sessions')}>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.secondary }}>See all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{
+            borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+            backgroundColor: Colors.surface, overflow: 'hidden',
+          }}>
+            {recentSessions.length === 0 ? (
+              <View style={{ paddingVertical: 28, alignItems: 'center', gap: 8 }}>
+                <Feather name="inbox" size={24} color={Colors.textSecondary} style={{ opacity: 0.4 }} />
+                <Text style={{ fontSize: 13, color: Colors.textSecondary }}>No transactions yet</Text>
+              </View>
+            ) : (
+              recentSessions.slice(0, 5).map((s: any, idx: number) => (
+                <View key={s.id} style={[
+                  { paddingHorizontal: Spacing.md },
+                  idx < recentSessions.slice(0, 5).length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border,
+                  },
+                ]}>
+                  <RecentSessionRow s={s} Colors={Colors} />
+                </View>
+              ))
+            )}
+          </View>
         </View>
 
-        <View style={styles.recentTransactionsList}>
-            <View style={[styles.infoCard, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
-              <View style={styles.infoCardHeader}>
-                <View style={styles.infoCardHeaderIcon}>
-                  <Feather name="briefcase" size={20} color={Colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[Typography.h3, styles.infoCardTitle, { color: Colors.textPrimary }]}>{merchant?.businessName}</Text>
-                  <Text style={[Typography.body, styles.infoCardHandle, { color: Colors.textSecondary }]}>@{merchant?.businessHandle}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.infoCardDivider} />
-              
-              <View style={styles.infoCardRow}>
-                <Text style={[Typography.body, { color: Colors.textSecondary }]}>Category</Text>
-                <Text style={[Typography.body, { color: Colors.textPrimary, fontWeight: '500' }]}>
-                  {merchant?.category ? (CATEGORY_LABELS[merchant.category as keyof typeof CATEGORY_LABELS] ?? merchant.category) : 'Uncategorized'}
-                </Text>
-              </View>
-              
-              <View style={styles.infoCardRow}>
-                <Text style={[Typography.body, { color: Colors.textSecondary }]}>Status</Text>
-                <StatusBadge status={merchant?.status ?? 'ACTIVE'} Colors={Colors} />
-              </View>
+        {/* Business info card */}
+        <View style={{ borderRadius: 16, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface, overflow: 'hidden' }}>
+          <View style={{ paddingHorizontal: Spacing.md, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border }}>
+            <View style={{
+              width: 42, height: 42, borderRadius: 12,
+              backgroundColor: Colors.primary + '22',
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 1, borderColor: Colors.primary + '30',
+            }}>
+              <Feather name="briefcase" size={18} color={Colors.secondary} />
             </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.textPrimary }} numberOfLines={1}>
+                {merchant?.businessName}
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>@{merchant?.businessHandle}</Text>
+            </View>
+            <StatusBadge status={merchant?.status ?? 'ACTIVE'} Colors={Colors} />
+          </View>
+          {[
+            { label: 'Category', value: businessCategory ?? 'Uncategorized' },
+            { label: 'Fee rate', value: `${feePercent}%` },
+            { label: 'Total volume', value: fmtAmount(merchant?.totalVolume, merchant?.currency ?? 'GHS') },
+          ].map((row, idx, arr) => (
+            <View key={row.label} style={{
+              paddingHorizontal: Spacing.md, paddingVertical: 13,
+              flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+              borderBottomWidth: idx < arr.length - 1 ? StyleSheet.hairlineWidth : 0,
+              borderBottomColor: Colors.border,
+            }}>
+              <Text style={{ fontSize: 13, color: Colors.textSecondary }}>{row.label}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: Colors.textPrimary }}>{row.value}</Text>
+            </View>
+          ))}
         </View>
+      </ScrollView>
+
+      {/* ── "More" bottom sheet ─────────────────────────────────────────────── */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={moreOpen ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} activeOpacity={1} onPress={() => setMoreOpen(false)} />
+        </Animated.View>
+        <Animated.View style={[{
+          backgroundColor: Colors.isDark ? '#1A1A1A' : Colors.white,
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border,
+          paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl,
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+        }, { transform: [{ translateY: sheetAnim }] }]}>
+          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 6 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border }} />
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center', marginBottom: 4 }}>
+            More
+          </Text>
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.48 }}>
+            {moreSections.map(section => (
+              <SheetSection
+                key={section.label}
+                label={section.label}
+                items={section.items}
+                onSelect={() => setMoreOpen(false)}
+                Colors={Colors}
+              />
+            ))}
+            <View style={{ height: Spacing.xl }} />
+          </ScrollView>
+        </Animated.View>
       </View>
 
-      <View style={StyleSheet.absoluteFill} pointerEvents={isMoreModalVisible ? 'auto' : 'none'}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: moreBackdropAnim }]}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMoreModalVisible(false)} />
+      {/* ── Profile / account sheet ─────────────────────────────────────────── */}
+      <View style={StyleSheet.absoluteFill} pointerEvents={profileOpen ? 'auto' : 'none'}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: profileBackdropAnim }]}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} activeOpacity={1} onPress={() => setProfileOpen(false)} />
         </Animated.View>
-        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: moreSheetAnim }] }]}>
-          <View style={styles.bottomSheetHandle} />
-          <Text style={[Typography.h3, styles.bottomSheetTitle]}>More Options</Text>
-          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.55 }}>
-            {moreActionSections.map((section) => (
-              <View key={section.label}>
-                <Text style={{
-                  fontSize: 11, fontWeight: '700', color: Colors.textSecondary,
-                  textTransform: 'uppercase', letterSpacing: 0.8,
-                  marginBottom: 4, marginTop: 8, paddingHorizontal: 4,
-                }}>
-                  {section.label}
-                </Text>
-                {section.items.map(action => (
-                  <TouchableOpacity
-                    key={action.id}
-                    style={styles.bottomSheetItem}
-                    onPress={() => { setIsMoreModalVisible(false); action.onPress(); }}
-                  >
-                    <View style={styles.bottomSheetIcon}>
-                      <Feather name={action.icon as any} size={20} color={Colors.textPrimary} />
-                    </View>
-                    <Text style={[Typography.body, styles.bottomSheetItemText]}>{action.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        <Animated.View style={[{
+          backgroundColor: Colors.isDark ? '#1A1A1A' : Colors.white,
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border,
+          paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl,
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+        }, { transform: [{ translateY: profileSheetAnim }] }]}>
+          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 10 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border }} />
+          </View>
+
+          {/* Business identity header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border, marginBottom: 4 }}>
+            <View style={{
+              width: 48, height: 48, borderRadius: 14,
+              backgroundColor: Colors.primary + '22',
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 1, borderColor: Colors.primary + '30',
+              overflow: 'hidden',
+            }}>
+              {merchant?.logoUrl
+                ? <Image source={{ uri: merchant.logoUrl }} style={{ width: 48, height: 48 }} />
+                : <Feather name="briefcase" size={20} color={Colors.secondary} />
+              }
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.textPrimary }} numberOfLines={1}>
+                {merchant?.businessName}
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.textSecondary }}>@{merchant?.businessHandle}</Text>
+            </View>
+            <StatusBadge status={merchant?.status ?? 'ACTIVE'} Colors={Colors} />
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.42 }}>
+            {profileSections.map(section => (
+              <SheetSection
+                key={section.label}
+                label={section.label}
+                items={section.items}
+                onSelect={() => setProfileOpen(false)}
+                Colors={Colors}
+              />
             ))}
+            <View style={{ height: Spacing.xl }} />
           </ScrollView>
         </Animated.View>
       </View>
     </View>
   );
-}
-
-function createStyles(Colors: ThemeColors) {
-  const isDark = Colors.isDark;
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    topSection: {
-      height: height * 0.55,
-      backgroundColor: Colors.primary,
-    },
-    minimalBanner: {
-      overflow: 'hidden',
-    },
-    minimalBalanceRow: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.sm,
-      paddingBottom: Spacing.xs,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.md,
-    },
-    headerRight: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    profilePicContainer: {
-    },
-    profilePic: {
-      width: 44,
-      height: 44,
-      borderRadius: Radius.full,
-    },
-    profilePicPlaceholder: {
-      backgroundColor: "rgba(0,0,0,0.28)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    balanceCardWrapper: {
-      marginHorizontal: Spacing.md,
-      marginBottom: Spacing.sm,
-      borderRadius: Radius.lg,
-      overflow: "hidden",
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: Spacing.sm,
-    },
-    balanceCardSolid: {
-      backgroundColor: "rgba(0,0,0,0.28)",
-    },
-    balanceSection: {
-      alignItems: "center",
-      marginTop: Spacing.xl * 2,
-    },
-    accountType: {
-      color: Colors.white,
-      marginBottom: Spacing.xs,
-    },
-    balanceRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: Spacing.xl,
-    },
-    balanceText: {
-      color: Colors.white,
-      flexShrink: 1,
-    },
-    eyeIcon: {
-      marginLeft: Spacing.md,
-    },
-    updateTime: {
-      color: "rgba(255,255,255,0.8)",
-    },
-    actionsRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      paddingHorizontal: Spacing.xl,
-      marginTop: Spacing.xl * 2,
-    },
-    bottomSection: {
-      flex: 1,
-      backgroundColor: Colors.background,
-      marginTop: -Spacing.lg,
-      borderTopLeftRadius: Radius.md,
-      borderTopRightRadius: Radius.md,
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.lg,
-    },
-    transactionsHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: Spacing.md,
-    },
-    transactionsTitle: {
-      color: Colors.textPrimary,
-    },
-    recentTransactionsList: {
-      marginTop: Spacing.sm,
-    },
-    infoCard: {
-      borderWidth: 1,
-      borderRadius: Radius.lg,
-      padding: Spacing.lg,
-      marginBottom: Spacing.md,
-    },
-    infoCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    infoCardHeaderIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: Radius.full,
-      backgroundColor: isDark ? Colors.background : Colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: Spacing.md,
-      borderWidth: 1,
-      borderColor: Colors.border,
-    },
-    infoCardTitle: {
-      marginBottom: 2,
-    },
-    infoCardHandle: {
-    },
-    infoCardDivider: {
-      height: 1,
-      backgroundColor: Colors.border,
-      marginBottom: Spacing.md,
-    },
-    infoCardRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-    },
-    modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.5)",
-    },
-    bottomSheet: {
-      backgroundColor: isDark ? Colors.surface : Colors.white,
-      borderTopLeftRadius: Radius.lg,
-      borderTopRightRadius: Radius.lg,
-      padding: Spacing.xl,
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-    },
-    bottomSheetHandle: {
-      width: 40,
-      height: 4,
-      backgroundColor: Colors.border,
-      borderRadius: Radius.full,
-      alignSelf: "center",
-      marginBottom: Spacing.lg,
-    },
-    bottomSheetTitle: {
-      color: Colors.textPrimary,
-      marginBottom: Spacing.lg,
-      textAlign: "center",
-    },
-    bottomSheetItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: Spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
-    },
-    bottomSheetIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: Radius.full,
-      backgroundColor: isDark ? Colors.background : Colors.surface,
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: Spacing.md,
-    },
-    bottomSheetItemText: {
-      color: Colors.textPrimary,
-      fontWeight: "500",
-    },
-  });
 }
