@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -214,6 +215,88 @@ class AuthServiceTest {
         assertThrows(AppException.class, () -> authService.refreshToken(req));
     }
 
+    @Test
+    void refreshToken_notInDatabase_throws() {
+        when(jwtUtil.isInvalid("token")).thenReturn(false);
+        when(jwtUtil.getTokenType("token")).thenReturn("REFRESH");
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+
+        RefreshTokenRequest req = new RefreshTokenRequest();
+        req.setRefreshToken("token");
+        assertThrows(AppException.class, () -> authService.refreshToken(req));
+    }
+
+    @Test
+    void refreshToken_expiredStoredToken_deletesAndThrows() {
+        RefreshToken expired = RefreshToken.builder()
+                .id(UUID.randomUUID())
+                .userId(userId)
+                .expiresAt(LocalDateTime.now().minusDays(1))
+                .deviceName("iPhone").deviceOs("iOS").deviceId("dev").ipAddress("1.2.3.4")
+                .build();
+        when(jwtUtil.isInvalid("token")).thenReturn(false);
+        when(jwtUtil.getTokenType("token")).thenReturn("REFRESH");
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expired));
+
+        RefreshTokenRequest req = new RefreshTokenRequest();
+        req.setRefreshToken("token");
+        assertThrows(AppException.class, () -> authService.refreshToken(req));
+
+        // Expired token must be purged so it cannot be retried
+        verify(refreshTokenRepository).delete(expired);
+    }
+
+    @Test
+    void refreshToken_suspendedUser_throws() {
+        RefreshToken stored = RefreshToken.builder()
+                .id(UUID.randomUUID()).userId(userId)
+                .expiresAt(LocalDateTime.now().plusDays(30))
+                .deviceName("iPhone").deviceOs("iOS").deviceId("dev").ipAddress("1.2.3.4")
+                .build();
+        User suspended = User.builder().id(userId).email("alice@example.com")
+                .status(User.AccountStatus.SUSPENDED).build();
+        when(jwtUtil.isInvalid("token")).thenReturn(false);
+        when(jwtUtil.getTokenType("token")).thenReturn("REFRESH");
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(stored));
+        when(jwtUtil.getUserIdFromToken("token")).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(suspended));
+
+        RefreshTokenRequest req = new RefreshTokenRequest();
+        req.setRefreshToken("token");
+        assertThrows(AppException.class, () -> authService.refreshToken(req));
+    }
+
+    @Test
+    void refreshToken_success_deletesOldAndIssuesNew() {
+        RefreshToken stored = RefreshToken.builder()
+                .id(UUID.randomUUID()).userId(userId)
+                .expiresAt(LocalDateTime.now().plusDays(30))
+                .deviceName("iPhone").deviceOs("iOS 17").deviceId("dev-1").ipAddress("1.2.3.4")
+                .build();
+        User user = activeUser();
+        when(jwtUtil.isInvalid("old-token")).thenReturn(false);
+        when(jwtUtil.getTokenType("old-token")).thenReturn("REFRESH");
+        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(stored));
+        when(jwtUtil.getUserIdFromToken("old-token")).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(jwtUtil.generateAccessToken(userId, user.getEmail())).thenReturn("new-access");
+        when(jwtUtil.generateRefreshToken(userId, user.getEmail())).thenReturn("new-refresh");
+        when(jwtUtil.getRemainingValidity("new-refresh")).thenReturn(Duration.ofDays(30));
+        when(refreshTokenRepository.findByUserIdAndDeviceId(any(), any())).thenReturn(Optional.empty());
+        when(refreshTokenRepository.save(any())).thenReturn(new RefreshToken());
+
+        RefreshTokenRequest req = new RefreshTokenRequest();
+        req.setRefreshToken("old-token");
+        AuthResponse response = authService.refreshToken(req);
+
+        // Old token rotated out
+        verify(refreshTokenRepository).delete(stored);
+        // New token session persisted
+        verify(refreshTokenRepository).save(any());
+        assertEquals("new-access", response.getAccessToken());
+        assertEquals("new-refresh", response.getRefreshToken());
+    }
+
     // ── Change Password ───────────────────────────────────────────────────────
 
     @Test
@@ -227,6 +310,25 @@ class AuthServiceTest {
 
         assertThrows(AppException.class, () -> authService.changePassword(user, req, "1.2.3.4"));
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changePassword_success_updatesHashAndRevokesAllSessions() {
+        User user = activeUser();
+        when(passwordEncoder.matches("OldPass1!", user.getPasswordHash())).thenReturn(true);
+        when(passwordEncoder.encode("NewPass1!")).thenReturn("new-hashed");
+
+        ChangePasswordRequest req = new ChangePasswordRequest();
+        req.setCurrentPassword("OldPass1!");
+        req.setNewPassword("NewPass1!");
+
+        authService.changePassword(user, req, "1.2.3.4");
+
+        assertEquals("new-hashed", user.getPasswordHash());
+        verify(userRepository).save(user);
+        // All sessions revoked after password change to prevent session hijacking
+        verify(refreshTokenRepository).deleteAllByUserId(userId);
+        verify(biometricService).revokeAllBiometricTokens(user);
     }
 
     // ── TOTP / 2FA ────────────────────────────────────────────────────────────
