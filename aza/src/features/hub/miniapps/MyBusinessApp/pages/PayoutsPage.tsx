@@ -51,8 +51,8 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
       <ScrollView contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled">
         <InternalHeader title="Payouts" onBack={goBack} Colors={Colors} styles={styles} />
 
-        <View style={[styles.balanceCard, { backgroundColor: Colors.primary, marginBottom: Spacing.lg }]}>
-          <Text style={[styles.balanceLabel, { color: Colors.secondary + 'BB' }]}>Available Balance</Text>
+        <View style={[styles.balanceCard, { backgroundColor: Colors.primary, marginBottom: Spacing.lg, borderColor: Colors.primary }]}>
+          <Text style={[styles.balanceLabel, { color: Colors.secondary + 'AA' }]}>Available to Withdraw</Text>
           <Text style={[styles.balanceAmount, { color: Colors.secondary }]}>
             {fmtAmount(merchant?.balance, merchant?.currency ?? 'GHS')}
           </Text>
@@ -65,16 +65,24 @@ export default function PayoutsPage({ merchant, goBack, onMerchantUpdate, Colors
 
         {!payoutsLoading && payouts.length > 0 && (
           <>
-            <Text style={[styles.sectionLabel, { color: Colors.textPrimary, marginTop: Spacing.xl }]}>Payout History</Text>
-            {payouts.map((p: any, i: number) => (
-              <View key={p.id ?? i} style={[styles.sessionRow, { borderColor: Colors.border, backgroundColor: Colors.surface }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>{fmtAmount(p.amount, p.currency)}</Text>
-                  <Text style={[styles.sessionDate, { color: Colors.textSecondary }]}>{fmtDate(p.createdAt)}</Text>
+            <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Payout History</Text>
+            <View style={styles.rowContainer}>
+              {payouts.map((p: any, i: number) => (
+                <View
+                  key={p.id ?? i}
+                  style={[
+                    styles.sessionRow,
+                    i < payouts.length - 1 && { borderBottomWidth: 1, borderBottomColor: Colors.border },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>{fmtAmount(p.amount, p.currency)}</Text>
+                    <Text style={[styles.sessionDate, { color: Colors.textSecondary }]}>{fmtDate(p.createdAt)}</Text>
+                  </View>
+                  <StatusBadge status={p.status ?? 'COMPLETED'} Colors={Colors} />
                 </View>
-                <StatusBadge status={p.status ?? 'COMPLETED'} Colors={Colors} />
-              </View>
-            ))}
+              ))}
+            </View>
           </>
         )}
       </ScrollView>

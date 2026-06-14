@@ -119,25 +119,31 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
-          {sessions.map((s: any) => (
-            <TouchableOpacity 
-              key={s.id} 
-              style={[styles.sessionRow, { borderColor: Colors.border, backgroundColor: Colors.surface }]}
-              onPress={() => setSelectedSession(s)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>
-                  {fmtAmount(s.amount, s.currency)}
-                </Text>
-                <Text style={[styles.sessionDesc, { color: Colors.textSecondary }]} numberOfLines={1}>
-                  {s.description ?? 'Payment'}
-                </Text>
-                <Text style={[styles.sessionDate, { color: Colors.textSecondary }]}>{fmtDate(s.createdAt)}</Text>
-              </View>
-              <StatusBadge status={s.status} Colors={Colors} />
-            </TouchableOpacity>
-          ))}
+        <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl * 2 }}>
+          <View style={[styles.rowContainer, { backgroundColor: Colors.surface }]}>
+            {sessions.map((s: any, idx: number) => (
+              <TouchableOpacity
+                key={s.id}
+                onPress={() => setSelectedSession(s)}
+                activeOpacity={0.65}
+                style={[
+                  styles.sessionRow,
+                  idx < sessions.length - 1 && { borderBottomWidth: 1, borderBottomColor: Colors.border },
+                ]}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.sessionAmount, { color: Colors.textPrimary }]}>
+                    {fmtAmount(s.amount, s.currency)}
+                  </Text>
+                  <Text style={[styles.sessionDesc, { color: Colors.textSecondary }]} numberOfLines={1}>
+                    {s.description ?? 'Payment'}
+                  </Text>
+                  <Text style={[styles.sessionDate, { color: Colors.textSecondary }]}>{fmtDate(s.createdAt)}</Text>
+                </View>
+                <StatusBadge status={s.status} Colors={Colors} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </ScrollView>
       )}
 
