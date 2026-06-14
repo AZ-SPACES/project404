@@ -135,8 +135,16 @@ public class MerchantController {
     public ResponseEntity<ApiResponse<Page<CheckoutSessionResponse>>> listSessions(
             @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String q) {
         UUID merchantId = resolveMerchantId(principal);
+        if (status != null || from != null || to != null || q != null) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q)));
+        }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));
     }
@@ -348,30 +356,46 @@ public class MerchantController {
     // ==================== ANALYTICS ====================
 
     @GetMapping("/analytics")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getAnalytics(@AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAnalytics(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "30") int days) {
+        int d = Math.min(Math.max(days, 7), 365);
         Merchant merchant = requireMerchant(user.getId());
         UUID merchantId = merchant.getId();
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
-        LocalDateTime start7 = now.minusDays(7);
-        LocalDateTime start30 = now.minusDays(30);
+        LocalDateTime periodStart = now.minusDays(d);
+        LocalDateTime prevPeriodStart = now.minusDays(d * 2L);
 
         BigDecimal todayRevenue = checkoutSessionRepository.sumRevenueBetween(merchantId, startOfToday, now.plusDays(1));
-        BigDecimal sevenDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, start7);
-        BigDecimal thirtyDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, start30);
+        BigDecimal sevenDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, now.minusDays(7));
+        BigDecimal periodRevenue = checkoutSessionRepository.sumRevenuePeriod(merchantId, periodStart, now.plusDays(1));
+        BigDecimal prevPeriodRevenue = checkoutSessionRepository.sumRevenuePeriod(merchantId, prevPeriodStart, periodStart);
         BigDecimal allTimeRevenue = checkoutSessionRepository.sumAllTimeRevenue(merchantId);
 
-        long thirtyDaySessionCount = checkoutSessionRepository.countTotalFrom(merchantId, start30);
-        long thirtyDayCompletedCount = checkoutSessionRepository.countCompletedFrom(merchantId, start30);
+        long periodSessionCount = checkoutSessionRepository.countTotalBetween(merchantId, periodStart, now.plusDays(1));
+        long periodCompletedCount = checkoutSessionRepository.countCompletedBetween(merchantId, periodStart, now.plusDays(1));
+        long prevSessionCount = checkoutSessionRepository.countTotalBetween(merchantId, prevPeriodStart, periodStart);
+        long prevCompletedCount = checkoutSessionRepository.countCompletedBetween(merchantId, prevPeriodStart, periodStart);
 
-        double conversionRate = thirtyDaySessionCount == 0 ? 0.0
-                : (double) thirtyDayCompletedCount / thirtyDaySessionCount * 100.0;
+        double conversionRate = periodSessionCount == 0 ? 0.0
+                : (double) periodCompletedCount / periodSessionCount * 100.0;
+        double prevConversionRate = prevSessionCount == 0 ? 0.0
+                : (double) prevCompletedCount / prevSessionCount * 100.0;
 
         BigDecimal avgOrderValue = checkoutSessionRepository.avgOrderValue(merchantId);
 
-        // Daily series: last 30 days
-        List<Object[]> dailyRaw = checkoutSessionRepository.getDailyRevenueByAmount(merchantId, start30);
+        // % changes vs previous period
+        double revenueChange = prevPeriodRevenue != null && prevPeriodRevenue.compareTo(BigDecimal.ZERO) > 0
+                ? periodRevenue.subtract(prevPeriodRevenue).divide(prevPeriodRevenue, 4, java.math.RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100)).doubleValue()
+                : (periodRevenue != null && periodRevenue.compareTo(BigDecimal.ZERO) > 0 ? 100.0 : 0.0);
+        double completedChange = prevCompletedCount > 0
+                ? ((double) (periodCompletedCount - prevCompletedCount) / prevCompletedCount) * 100.0
+                : (periodCompletedCount > 0 ? 100.0 : 0.0);
+
+        // Daily series
+        List<Object[]> dailyRaw = checkoutSessionRepository.getDailyRevenueByAmount(merchantId, periodStart);
         List<Map<String, Object>> dailySeries = new ArrayList<>();
         for (Object[] row : dailyRaw) {
             Map<String, Object> point = new HashMap<>();
@@ -382,18 +406,15 @@ public class MerchantController {
         }
 
         // Top customers (top 5 by total paid)
-        List<Object[]> topRaw = checkoutSessionRepository.topCustomers(
-                merchantId, PageRequest.of(0, 5));
+        List<Object[]> topRaw = checkoutSessionRepository.topCustomers(merchantId, PageRequest.of(0, 5));
         List<Map<String, Object>> topCustomers = new ArrayList<>();
         for (Object[] row : topRaw) {
             UUID customerId = (UUID) row[0];
             BigDecimal totalPaid = (BigDecimal) row[1];
             long paymentCount = ((Number) row[2]).longValue();
-
             String name = userRepository.findById(customerId)
                     .map(u -> u.getFirstName() != null ? u.getFirstName() + " " + u.getLastName() : u.getEmail())
                     .orElse(customerId.toString());
-
             Map<String, Object> c = new HashMap<>();
             c.put("userId", customerId);
             c.put("displayName", name);
@@ -403,18 +424,55 @@ public class MerchantController {
         }
 
         Map<String, Object> result = new HashMap<>();
+        result.put("days", d);
         result.put("todayRevenue", todayRevenue);
         result.put("sevenDayRevenue", sevenDayRevenue);
-        result.put("thirtyDayRevenue", thirtyDayRevenue);
+        result.put("periodRevenue", periodRevenue);
+        result.put("prevPeriodRevenue", prevPeriodRevenue);
+        result.put("revenueChange", revenueChange);
         result.put("allTimeRevenue", allTimeRevenue);
-        result.put("thirtyDaySessionCount", thirtyDaySessionCount);
-        result.put("thirtyDayCompletedCount", thirtyDayCompletedCount);
+        result.put("periodSessionCount", periodSessionCount);
+        result.put("periodCompletedCount", periodCompletedCount);
+        result.put("completedChange", completedChange);
         result.put("conversionRate", conversionRate);
+        result.put("prevConversionRate", prevConversionRate);
         result.put("avgOrderValue", avgOrderValue);
         result.put("dailySeries", dailySeries);
         result.put("topCustomers", topCustomers);
+        // Legacy fields for backward compat
+        result.put("thirtyDayRevenue", d == 30 ? periodRevenue : checkoutSessionRepository.sumNetAmountSince(merchantId, now.minusDays(30)));
+        result.put("thirtyDaySessionCount", d == 30 ? periodSessionCount : checkoutSessionRepository.countTotalFrom(merchantId, now.minusDays(30)));
+        result.put("thirtyDayCompletedCount", d == 30 ? periodCompletedCount : checkoutSessionRepository.countCompletedFrom(merchantId, now.minusDays(30)));
 
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    // ==================== CUSTOMER SESSIONS ====================
+
+    @GetMapping("/customers/{customerId}/sessions")
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<CheckoutSessionResponse>>> getCustomerSessions(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Merchant merchant = requireMerchant(user.getId());
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.listCustomerSessions(merchant.getId(), customerId, page, size)));
+    }
+
+    // ==================== DISPUTE RESPONSE ====================
+
+    @PostMapping("/disputes/{disputeId}/respond")
+    public ResponseEntity<ApiResponse<com.aza.backend.dto.merchant.MerchantDisputeResponse>> respondToDispute(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID disputeId,
+            @RequestBody java.util.Map<String, String> body) {
+        String response = body.get("response");
+        if (response == null || response.isBlank()) {
+            throw new com.aza.backend.exception.AppException("VALIDATION", "Response text is required", HttpStatus.BAD_REQUEST);
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.respondToDispute(user.getId(), disputeId, response.trim())));
     }
 
     // ==================== HELPERS ====================

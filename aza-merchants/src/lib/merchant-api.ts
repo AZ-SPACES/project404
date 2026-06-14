@@ -424,15 +424,17 @@ export async function getSessions(params: {
   status?: string;
   from?: string;
   to?: string;
+  q?: string;
 }): Promise<Page<CheckoutSession>> {
-  const q = new URLSearchParams();
-  if (params.page !== undefined) q.set("page", String(params.page));
-  if (params.size !== undefined) q.set("size", String(params.size));
-  if (params.status) q.set("status", params.status);
-  if (params.from) q.set("from", params.from);
-  if (params.to) q.set("to", params.to);
+  const qs = new URLSearchParams();
+  if (params.page !== undefined) qs.set("page", String(params.page));
+  if (params.size !== undefined) qs.set("size", String(params.size));
+  if (params.status) qs.set("status", params.status);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.q) qs.set("q", params.q);
   const body = await request<{ success: boolean; data: Page<CheckoutSession> }>(
-    `/api/v1/merchant/sessions?${q}`
+    `/api/v1/merchant/sessions?${qs}`
   );
   return body.data;
 }
@@ -685,6 +687,8 @@ export interface MerchantDispute {
   category: string | null;
   description: string | null;
   status: string;
+  merchantResponse: string | null;
+  merchantRespondedAt: string | null;
   createdAt: string;
   resolvedAt: string | null;
 }
@@ -1135,23 +1139,111 @@ export async function createBulkTransfer(data: {
 // ─── Analytics ───────────────────────────────────────────────────────────────
 
 export interface AnalyticsSummary {
+  days: number;
   todayRevenue: number;
   sevenDayRevenue: number;
+  // Current period
+  periodRevenue: number;
+  prevPeriodRevenue: number;
+  revenueChange: number;
+  // Legacy fields (kept for compatibility)
   thirtyDayRevenue: number;
   allTimeRevenue: number;
+  periodSessionCount: number;
+  periodCompletedCount: number;
+  completedChange: number;
   thirtyDaySessionCount: number;
   thirtyDayCompletedCount: number;
-  conversionRate: number; // percentage 0-100
+  conversionRate: number;
+  prevConversionRate: number;
   avgOrderValue: number;
   dailySeries: { date: string; revenue: number; count: number }[];
   topCustomers: { userId: string; displayName: string; totalPaid: number; paymentCount: number }[];
 }
 
-export async function getAnalytics(): Promise<AnalyticsSummary> {
+export async function getAnalytics(days = 30): Promise<AnalyticsSummary> {
   const body = await request<{ success: boolean; data: AnalyticsSummary }>(
-    "/api/v1/merchant/analytics"
+    `/api/v1/merchant/analytics?days=${days}`
   );
   return body.data;
+}
+
+// ─── Customer sessions ────────────────────────────────────────────────────────
+
+export async function getCustomerSessions(customerId: string, page = 0, size = 20): Promise<Page<CheckoutSession>> {
+  const body = await request<{ success: boolean; data: Page<CheckoutSession> }>(
+    `/api/v1/merchant/customers/${customerId}/sessions?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+// ─── Dispute response ─────────────────────────────────────────────────────────
+
+export async function respondToDispute(disputeId: string, response: string): Promise<MerchantDispute> {
+  const body = await request<{ success: boolean; data: MerchantDispute }>(
+    `/api/v1/merchant/disputes/${disputeId}/respond`,
+    { method: "POST", body: JSON.stringify({ response }) }
+  );
+  return body.data;
+}
+
+// ─── Product catalog ──────────────────────────────────────────────────────────
+
+export interface MerchantProduct {
+  id: string;
+  merchantId: string;
+  name: string;
+  description: string | null;
+  price: number;
+  currency: string;
+  imageUrl: string | null;
+  sku: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getProducts(page = 0, size = 20, active?: boolean): Promise<Page<MerchantProduct>> {
+  const q = new URLSearchParams({ page: String(page), size: String(size) });
+  if (active !== undefined) q.set("active", String(active));
+  const body = await request<{ success: boolean; data: Page<MerchantProduct> }>(
+    `/api/v1/merchant/products?${q}`
+  );
+  return body.data;
+}
+
+export async function createProduct(data: {
+  name: string;
+  description?: string;
+  price: number;
+  currency?: string;
+  imageUrl?: string;
+  sku?: string;
+}): Promise<MerchantProduct> {
+  const body = await request<{ success: boolean; data: MerchantProduct }>(
+    "/api/v1/merchant/products",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function updateProduct(id: string, data: Partial<{
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  sku: string | null;
+  active: boolean;
+}>): Promise<MerchantProduct> {
+  const body = await request<{ success: boolean; data: MerchantProduct }>(
+    `/api/v1/merchant/products/${id}`,
+    { method: "PUT", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  await request(`/api/v1/merchant/products/${id}`, { method: "DELETE" });
 }
 
 // ─── Chatbase identity token ──────────────────────────────────────────────────

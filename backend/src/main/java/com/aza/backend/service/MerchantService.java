@@ -1094,7 +1094,28 @@ public class MerchantService {
         }
         Page<Dispute> disputes = disputeRepository.findAllByTransactionIdInOrderByCreatedAtDesc(
                 transactionIds, PageRequest.of(page, Math.min(size, 50)));
-        return disputes.map(d -> MerchantDisputeResponse.builder()
+        return disputes.map(d -> toDisputeResponse(d));
+    }
+
+    public MerchantDisputeResponse respondToDispute(UUID userId, UUID disputeId, String response) {
+        Merchant merchant = requireMerchant(userId);
+        List<UUID> transactionIds = checkoutSessionRepository.findTransactionIdsByMerchantId(merchant.getId());
+        Dispute dispute = disputeRepository.findById(disputeId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Dispute not found", HttpStatus.NOT_FOUND));
+        if (!transactionIds.contains(dispute.getTransactionId())) {
+            throw new AppException("FORBIDDEN", "Dispute does not belong to this merchant", HttpStatus.FORBIDDEN);
+        }
+        dispute.setMerchantResponse(response);
+        dispute.setMerchantRespondedAt(LocalDateTime.now());
+        if (dispute.getStatus() == Dispute.DisputeStatus.OPEN) {
+            dispute.setStatus(Dispute.DisputeStatus.UNDER_REVIEW);
+        }
+        disputeRepository.save(dispute);
+        return toDisputeResponse(dispute);
+    }
+
+    private MerchantDisputeResponse toDisputeResponse(Dispute d) {
+        return MerchantDisputeResponse.builder()
                 .id(d.getId().toString())
                 .referenceId(d.getReferenceId())
                 .transactionId(d.getTransactionId().toString())
@@ -1103,9 +1124,11 @@ public class MerchantService {
                 .category(d.getCategory().name())
                 .description(d.getDescription())
                 .status(d.getStatus().name())
+                .merchantResponse(d.getMerchantResponse())
+                .merchantRespondedAt(d.getMerchantRespondedAt())
                 .createdAt(d.getCreatedAt())
                 .resolvedAt(d.getResolvedAt())
-                .build());
+                .build();
     }
 
     // ==================== AUDIT LOG ====================

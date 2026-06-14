@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getAnalytics, AnalyticsSummary } from "@/lib/merchant-api";
-import { Loader2, AlertCircle, BarChart2, TrendingUp, Users, Percent } from "lucide-react";
+import { Loader2, AlertCircle, BarChart2, TrendingUp, TrendingDown, Users, Percent } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 function fmtGHS(n: number) {
@@ -16,23 +16,35 @@ function fmtShort(n: number) {
 }
 
 function fmtDateLabel(iso: string) {
-  try {
-    return format(parseISO(iso), "MMM d");
-  } catch {
-    return iso;
-  }
+  try { return format(parseISO(iso), "MMM d"); }
+  catch { return iso; }
 }
 
-// ─── Summary Card ─────────────────────────────────────────────────────────────
+function ChangeChip({ pct }: { pct: number }) {
+  const up = pct >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
+      up ? "text-[#B7EE7A] bg-[#B7EE7A]/10" : "text-red-400 bg-red-400/10"
+    }`}>
+      <Icon size={10} />
+      {up ? "+" : ""}{pct.toFixed(1)}%
+    </span>
+  );
+}
 
 function SummaryCard({
   label,
   value,
+  change,
+  sub,
   icon: Icon,
   accent,
 }: {
   label: string;
   value: string;
+  change?: number;
+  sub?: string;
   icon: React.ElementType;
   accent?: boolean;
 }) {
@@ -42,14 +54,16 @@ function SummaryCard({
         <p className="text-xs text-foreground/40 font-medium">{label}</p>
         <Icon size={14} className={accent ? "text-[#B7EE7A]" : "text-foreground/20"} />
       </div>
-      <p className={`text-xl font-bold font-mono ${accent ? "text-[#B7EE7A]" : "text-foreground"}`}>
-        {value}
-      </p>
+      <div className="flex items-end gap-2">
+        <p className={`text-xl font-bold font-mono ${accent ? "text-[#B7EE7A]" : "text-foreground"}`}>
+          {value}
+        </p>
+        {change !== undefined && <ChangeChip pct={change} />}
+      </div>
+      {sub && <p className="text-[11px] text-foreground/30">{sub}</p>}
     </div>
   );
 }
-
-// ─── Bar Chart ───────────────────────────────────────────────────────────────
 
 function DailyBarChart({ series }: { series: AnalyticsSummary["dailySeries"] }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -66,7 +80,6 @@ function DailyBarChart({ series }: { series: AnalyticsSummary["dailySeries"] }) 
 
   return (
     <div className="relative">
-      {/* Tooltip */}
       {hovered !== null && series[hovered] && (
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <div className="bg-card border border-border rounded-lg px-3 py-1.5 text-xs text-foreground shadow-lg whitespace-nowrap">
@@ -76,24 +89,20 @@ function DailyBarChart({ series }: { series: AnalyticsSummary["dailySeries"] }) 
           </div>
         </div>
       )}
-
-      {/* Chart bars */}
       <div className="flex items-end gap-1 h-40">
         {series.map((day, i) => {
           const heightPct = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
           const isHovered = hovered === i;
-          // Show date label every 5 days (and the last day)
-          const showLabel = i % 5 === 0 || i === series.length - 1;
-
+          const showLabel = i % Math.max(1, Math.floor(series.length / 8)) === 0 || i === series.length - 1;
           return (
             <div
               key={day.date}
-              className="flex flex-col items-center flex-1 h-full group"
+              className="flex flex-col items-center flex-1 h-full"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
               <div className="flex items-end flex-1 w-full">
-                <div className="w-full relative">
+                <div className="w-full">
                   {day.revenue > 0 ? (
                     <div
                       className="w-full rounded-t transition-all duration-150"
@@ -105,10 +114,7 @@ function DailyBarChart({ series }: { series: AnalyticsSummary["dailySeries"] }) 
                       }}
                     />
                   ) : (
-                    <div
-                      className="w-full rounded-t"
-                      style={{ height: "2px", background: "rgba(255,255,255,0.06)" }}
-                    />
+                    <div className="w-full rounded-t" style={{ height: "2px", background: "rgba(255,255,255,0.06)" }} />
                   )}
                 </div>
               </div>
@@ -125,13 +131,7 @@ function DailyBarChart({ series }: { series: AnalyticsSummary["dailySeries"] }) 
   );
 }
 
-// ─── Top Customers Table ──────────────────────────────────────────────────────
-
-function TopCustomersTable({
-  customers,
-}: {
-  customers: AnalyticsSummary["topCustomers"];
-}) {
+function TopCustomersTable({ customers }: { customers: AnalyticsSummary["topCustomers"] }) {
   if (!customers || customers.length === 0) {
     return (
       <div className="py-10 text-center">
@@ -140,18 +140,14 @@ function TopCustomersTable({
       </div>
     );
   }
-
   return (
     <table className="w-full text-sm">
       <thead>
         <tr className="border-b border-border">
           {["#", "Customer", "Total Paid", "Payments"].map((h, i) => (
-            <th
-              key={h}
-              className={`px-5 py-3 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider ${
-                i === 0 ? "text-center w-10" : i >= 2 ? "text-right" : "text-left"
-              }`}
-            >
+            <th key={h} className={`px-5 py-3 text-[10px] font-semibold text-foreground/25 uppercase tracking-wider ${
+              i === 0 ? "text-center w-10" : i >= 2 ? "text-right" : "text-left"
+            }`}>
               {h}
             </th>
           ))}
@@ -164,17 +160,10 @@ function TopCustomersTable({
               <span className="text-xs font-bold text-foreground/30">{i + 1}</span>
             </td>
             <td className="px-5 py-3.5">
-              <p className="font-medium text-foreground/80 text-xs truncate max-w-[180px]">
-                {c.displayName || "Unknown"}
-              </p>
-              <p className="text-[10px] text-foreground/30 font-mono mt-0.5 truncate max-w-[180px]">
-                {c.userId}
-              </p>
+              <p className="font-medium text-foreground/80 text-xs truncate max-w-[180px]">{c.displayName || "Unknown"}</p>
             </td>
             <td className="px-5 py-3.5 text-right">
-              <span className="font-semibold text-foreground font-mono text-xs">
-                {fmtGHS(c.totalPaid)}
-              </span>
+              <span className="font-semibold text-foreground font-mono text-xs">{fmtGHS(c.totalPaid)}</span>
             </td>
             <td className="px-5 py-3.5 text-right">
               <span className="text-foreground/50 text-xs">{c.paymentCount}</span>
@@ -186,18 +175,23 @@ function TopCustomersTable({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const PERIOD_OPTIONS = [
+  { label: "7d", days: 7 },
+  { label: "30d", days: 30 },
+  { label: "90d", days: 90 },
+];
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [days, setDays] = useState(30);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (d: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getAnalytics();
+      const res = await getAnalytics(d);
       setData(res);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load analytics");
@@ -206,26 +200,47 @@ export default function AnalyticsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(days); }, [load, days]);
+
+  function selectPeriod(d: number) {
+    setDays(d);
+  }
+
+  const periodLabel = days === 7 ? "7 days" : days === 30 ? "30 days" : `${days} days`;
+  const prevLabel = `prev ${periodLabel}`;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-foreground">Analytics</h1>
-          <p className="text-foreground/40 text-sm mt-0.5">Last 30 days</p>
+          <p className="text-foreground/40 text-sm mt-0.5">Last {periodLabel}</p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-muted/30 border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors flex-shrink-0 disabled:opacity-40"
-        >
-          <BarChart2 size={14} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Period selector */}
+          <div className="flex bg-muted/30 p-1 rounded-xl gap-0.5">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.days}
+                onClick={() => selectPeriod(opt.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  days === opt.days ? "bg-[#174717] text-foreground" : "text-foreground/45 hover:text-foreground"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => load(days)}
+            disabled={loading}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-muted/30 border border-border text-sm text-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-40"
+          >
+            <BarChart2 size={14} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -241,7 +256,7 @@ export default function AnalyticsPage() {
         </div>
       ) : data ? (
         <>
-          {/* Revenue Summary Cards (4 across) */}
+          {/* Revenue cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <SummaryCard
               label="Today"
@@ -250,13 +265,17 @@ export default function AnalyticsPage() {
               accent
             />
             <SummaryCard
-              label="Last 7 days"
-              value={fmtShort(data.sevenDayRevenue)}
+              label={`Last ${periodLabel}`}
+              value={fmtShort(data.periodRevenue ?? data.thirtyDayRevenue)}
+              change={data.revenueChange}
+              sub={`vs ${prevLabel}`}
               icon={TrendingUp}
             />
             <SummaryCard
-              label="Last 30 days"
-              value={fmtShort(data.thirtyDayRevenue)}
+              label="Completed orders"
+              value={(data.periodCompletedCount ?? data.thirtyDayCompletedCount).toLocaleString()}
+              change={data.completedChange}
+              sub={`vs ${prevLabel}`}
               icon={TrendingUp}
             />
             <SummaryCard
@@ -266,60 +285,54 @@ export default function AnalyticsPage() {
             />
           </div>
 
-          {/* Conversion + Avg Order row (2 cards) */}
+          {/* Conversion + Avg Order */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Conversion Rate */}
             <div className="bg-card border border-border rounded-xl px-5 py-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-foreground/40 font-medium">Conversion rate (30d)</p>
+                <p className="text-xs text-foreground/40 font-medium">Conversion rate ({periodLabel})</p>
                 <Percent size={14} className="text-foreground/20" />
               </div>
-              <p className="text-2xl font-bold font-mono text-foreground">
-                {data.conversionRate.toFixed(1)}%
-              </p>
-              {/* Progress bar */}
+              <div className="flex items-end gap-2">
+                <p className="text-2xl font-bold font-mono text-foreground">{data.conversionRate.toFixed(1)}%</p>
+                {data.prevConversionRate !== undefined && (
+                  <ChangeChip pct={data.conversionRate - data.prevConversionRate} />
+                )}
+              </div>
               <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-[#B7EE7A] transition-all"
-                  style={{ width: `${Math.min(data.conversionRate, 100)}%` }}
-                />
+                <div className="h-full rounded-full bg-[#B7EE7A] transition-all" style={{ width: `${Math.min(data.conversionRate, 100)}%` }} />
               </div>
               <div className="flex justify-between text-xs text-foreground/35 pt-0.5">
-                <span>{data.thirtyDayCompletedCount.toLocaleString()} completed</span>
-                <span>{data.thirtyDaySessionCount.toLocaleString()} sessions</span>
+                <span>{(data.periodCompletedCount ?? data.thirtyDayCompletedCount).toLocaleString()} completed</span>
+                <span>{(data.periodSessionCount ?? data.thirtyDaySessionCount).toLocaleString()} sessions</span>
               </div>
             </div>
 
-            {/* Avg Order Value */}
             <div className="bg-card border border-border rounded-xl px-5 py-4 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-foreground/40 font-medium">Avg order value (30d)</p>
+                <p className="text-xs text-foreground/40 font-medium">Avg order value</p>
                 <TrendingUp size={14} className="text-foreground/20" />
               </div>
-              <p className="text-2xl font-bold font-mono text-foreground">
-                {fmtGHS(data.avgOrderValue)}
-              </p>
+              <p className="text-2xl font-bold font-mono text-foreground">{fmtGHS(data.avgOrderValue)}</p>
               <p className="text-xs text-foreground/30">
-                Across {data.thirtyDayCompletedCount.toLocaleString()} paid order
-                {data.thirtyDayCompletedCount !== 1 ? "s" : ""} in the last 30 days
+                Across {(data.periodCompletedCount ?? data.thirtyDayCompletedCount).toLocaleString()} paid orders
               </p>
             </div>
           </div>
 
-          {/* Daily Revenue Bar Chart */}
+          {/* Daily revenue chart */}
           <div className="bg-card border border-border rounded-xl px-5 py-5">
             <div className="mb-4">
               <p className="text-sm font-semibold text-foreground">Daily revenue</p>
-              <p className="text-xs text-foreground/35 mt-0.5">30-day view</p>
+              <p className="text-xs text-foreground/35 mt-0.5">{periodLabel} view</p>
             </div>
             <DailyBarChart series={data.dailySeries} />
           </div>
 
-          {/* Top Customers */}
+          {/* Top customers */}
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Top customers</p>
-              <p className="text-xs text-foreground/35 mt-0.5">By total spend, last 30 days</p>
+              <p className="text-xs text-foreground/35 mt-0.5">By total spend, all time</p>
             </div>
             <TopCustomersTable customers={data.topCustomers} />
           </div>

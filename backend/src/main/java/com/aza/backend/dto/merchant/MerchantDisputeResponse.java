@@ -19,6 +19,8 @@ public class MerchantDisputeResponse {
     private String category;
     private String description;
     private String status;
+    private String merchantResponse;
+    private LocalDateTime merchantRespondedAt;
     private LocalDateTime createdAt;
     private LocalDateTime resolvedAt;
 }

@@ -59,6 +59,11 @@ public class Dispute {
 
     private LocalDateTime resolvedAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String merchantResponse;
+
+    private LocalDateTime merchantRespondedAt;
+
     public enum DisputeCategory {
         UNAUTHORIZED, WRONG_AMOUNT, NOT_RECEIVED, DUPLICATE, SERVICE_ISSUE, OTHER
     }
