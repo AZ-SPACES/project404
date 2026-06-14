@@ -31,4 +31,10 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
 
     @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w")
     java.math.BigDecimal sumAllBalancesIncludingFrozen();
+
+    /** Float held by agents in a given status — a breakdown of customer float for safeguarding reporting. */
+    @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w " +
+            "WHERE w.userId IN (SELECT a.userId FROM Agent a WHERE a.status = :status)")
+    java.math.BigDecimal sumFloatForAgentStatus(
+            @org.springframework.data.repository.query.Param("status") com.aza.backend.entity.Agent.Status status);
 }

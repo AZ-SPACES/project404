@@ -73,7 +73,10 @@ public class PendingApproval {
         REACTIVATE_USER,        // approver needs COMPLIANCE (suspending stays immediate)
         APPROVE_KYC,            // approver needs COMPLIANCE (rejecting stays immediate)
         BROADCAST_NOTIFICATION, // approver needs ADMIN
-        ENABLE_MINI_APP         // approver needs ADMIN (kill switch stays immediate)
+        ENABLE_MINI_APP,        // approver needs ADMIN (kill switch stays immediate)
+        APPROVE_AGENT,          // approver needs COMPLIANCE (rejecting/suspending stays immediate)
+        MINT_FLOAT,             // approver needs FINANCE (creates e-money against a bank deposit)
+        BURN_FLOAT              // approver needs FINANCE (destroys e-money as bank money is wired out)
     }
 
     public enum Status {

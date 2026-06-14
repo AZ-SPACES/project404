@@ -174,6 +174,12 @@ public class User {
     @Column(precision = 15, scale = 2)
     private java.math.BigDecimal customSingleTransactionLimitGhs;
 
+    /** BoG e-money KYC tier; drives default transaction caps and the wallet-balance ceiling. */
+    @Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(length = 20)
+    @Builder.Default
+    private KycTier kycTier = KycTier.TIER_1;
+
     // --- Referral ---
     @Column(name = "referral_code", unique = true, length = 12)
     private String referralCode;

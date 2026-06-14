@@ -1,6 +1,7 @@
 // Business/developer apps have deep aza dependencies — they live here.
 import MyBusinessApp from './MyBusinessApp';
 import DeveloperApp from './DeveloperApp';
+import AzaAgentApp from './AzaAgentApp';
 
 // Standalone mini apps — self-contained packages in project404/miniapps/.
 import Play2048App from '@miniapps/play-2048';
@@ -29,6 +30,14 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/aza-developer.png'),
     category: 'Business',
     component: DeveloperApp,
+  },
+  {
+    id: 'aza_agent',
+    name: 'Aza Agent',
+    description: 'Take cash deposits and pay out withdrawals as an AZA agent',
+    icon: require('../../../assets/aza-business.png'),
+    category: 'Business',
+    component: AzaAgentApp,
   },
   {
     id: 'play_2048',

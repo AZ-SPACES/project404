@@ -39,6 +39,7 @@ public class AgentCashService {
     private final TransactionRepository transactionRepository;
     private final FeeCalculationService feeCalculationService;
     private final WithdrawalCodeService withdrawalCodeService;
+    private final LimitGuard limitGuard;
 
     /**
      * Agent hands the customer's deposit into the app: {@code amount} moves from the
@@ -79,6 +80,9 @@ public class AgentCashService {
         }
         Wallet customerWallet = walletRepository.findByUserIdForUpdate(customer.getId())
                 .orElseThrow(() -> new AppException("Customer wallet not found"));
+
+        // A deposit must keep the customer within their KYC tier's wallet ceiling.
+        limitGuard.enforceWalletCeiling(customer, customerWallet.getBalance().add(amount));
 
         // Move float -> customer (cash-in is free to the customer).
         agentWallet.setBalance(agentWallet.getBalance().subtract(amount));
@@ -137,6 +141,9 @@ public class AgentCashService {
 
         User customer = userRepository.findById(redeemed.getUserId())
                 .orElseThrow(() -> new AppException("Customer not found"));
+
+        // A withdrawal must stay within the customer's KYC tier single-transaction cap.
+        limitGuard.enforceSingle(customer, amount);
 
         BigDecimal fee = feeCalculationService.quote("CASH_OUT", amount, customer.getId()).fee();
         BigDecimal agentShare = fee

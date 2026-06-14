@@ -1,8 +1,10 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.agent.AgentApplyRequest;
 import com.aza.backend.dto.agent.AgentCashResponse;
 import com.aza.backend.dto.agent.AgentMeResponse;
+import com.aza.backend.dto.agent.AgentResponse;
 import com.aza.backend.dto.agent.CashInRequest;
 import com.aza.backend.dto.agent.CashOutRedeemRequest;
 import com.aza.backend.entity.User;
@@ -10,6 +12,7 @@ import com.aza.backend.entity.Wallet;
 import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.service.AgentCashService;
+import com.aza.backend.service.AgentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,8 +31,15 @@ import java.math.BigDecimal;
 public class AgentController {
 
     private final AgentCashService agentCashService;
+    private final AgentService agentService;
     private final AgentRepository agentRepository;
     private final WalletRepository walletRepository;
+
+    @PostMapping("/apply")
+    public ResponseEntity<ApiResponse<AgentResponse>> apply(
+            @RequestBody(required = false) AgentApplyRequest request, @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(agentService.apply(user, request)));
+    }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<AgentMeResponse>> me(@AuthenticationPrincipal User user) {
