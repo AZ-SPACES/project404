@@ -97,4 +97,50 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND s.customerId IS NOT NULL " +
            "GROUP BY s.customerId ORDER BY COALESCE(SUM(s.amount), 0) DESC")
     List<Object[]> topCustomers(@Param("merchantId") UUID merchantId, Pageable pageable);
+
+    // ── Filtered / search sessions ────────────────────────────────────────────
+
+    @Query("SELECT s FROM CheckoutSession s WHERE s.merchantId = :merchantId " +
+           "AND (:status IS NULL OR s.status = :status) " +
+           "AND (:from IS NULL OR s.createdAt >= :from) " +
+           "AND (:to IS NULL OR s.createdAt <= :to) " +
+           "AND (:q IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           "ORDER BY s.createdAt DESC")
+    Page<CheckoutSession> searchSessions(
+            @Param("merchantId") UUID merchantId,
+            @Param("status") CheckoutSession.SessionStatus status,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            @Param("q") String q,
+            Pageable pageable);
+
+    // ── Customer transaction history ──────────────────────────────────────────
+
+    Page<CheckoutSession> findAllByMerchantIdAndCustomerIdOrderByCreatedAtDesc(
+            UUID merchantId, UUID customerId, Pageable pageable);
+
+    // ── Previous period revenue (for analytics comparison) ────────────────────
+
+    @Query("SELECT COALESCE(SUM(s.amount), 0) FROM CheckoutSession s " +
+           "WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED " +
+           "AND s.completedAt >= :from AND s.completedAt < :to")
+    java.math.BigDecimal sumRevenuePeriod(
+            @Param("merchantId") UUID merchantId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("SELECT COUNT(s) FROM CheckoutSession s WHERE s.merchantId = :merchantId " +
+           "AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED " +
+           "AND s.completedAt >= :from AND s.completedAt < :to")
+    long countCompletedBetween(
+            @Param("merchantId") UUID merchantId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("SELECT COUNT(s) FROM CheckoutSession s WHERE s.merchantId = :merchantId " +
+           "AND s.createdAt >= :from AND s.createdAt < :to")
+    long countTotalBetween(
+            @Param("merchantId") UUID merchantId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }

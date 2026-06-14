@@ -7,7 +7,7 @@ import {
 } from "@/lib/merchant-api";
 import {
   Loader2, AlertCircle, CheckCircle2, Clock, XCircle, Ban,
-  ArrowLeftRight, X, Download, RotateCcw,
+  ArrowLeftRight, X, Download, RotateCcw, Search, Calendar,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -191,12 +191,23 @@ export default function TransactionsPage() {
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<CheckoutSession | null>(null);
+  const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const searchTimeout = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (p: number, s: string) => {
+  const load = useCallback(async (p: number, s: string, q: string, from: string, to: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getSessions({ page: p, size: 20, status: s !== "ALL" ? s : undefined });
+      const res = await getSessions({
+        page: p,
+        size: 20,
+        status: s !== "ALL" ? s : undefined,
+        q: q.trim() || undefined,
+        from: from || undefined,
+        to: to || undefined,
+      });
       setData(res);
       setPage(p);
     } catch (err: unknown) {
@@ -206,7 +217,22 @@ export default function TransactionsPage() {
     }
   }, []);
 
-  useEffect(() => { load(0, status); }, [load, status]);
+  useEffect(() => { load(0, status, search, fromDate, toDate); }, [load, status, fromDate, toDate]);
+
+  function handleSearchChange(val: string) {
+    setSearch(val);
+    if (searchTimeout[0]) clearTimeout(searchTimeout[0]);
+    searchTimeout[1](setTimeout(() => load(0, status, val, fromDate, toDate), 400));
+  }
+
+  function clearFilters() {
+    setSearch("");
+    setFromDate("");
+    setToDate("");
+    load(0, status, "", "", "");
+  }
+
+  const hasFilters = search || fromDate || toDate;
 
   async function handleRefund(id: string) {
     const updated = await refundSession(id);
@@ -241,9 +267,44 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {/* Filters */}
+      {/* Search + date filter row */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search description…"
+            className="w-full pl-8 pr-3 py-2 bg-muted/30 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#B7EE7A]/60 transition-all"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Calendar size={13} className="text-foreground/30" />
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="px-2.5 py-2 bg-muted/30 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-[#B7EE7A]/60 transition-all"
+          />
+          <span className="text-foreground/30 text-xs">–</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="px-2.5 py-2 bg-muted/30 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-[#B7EE7A]/60 transition-all"
+          />
+        </div>
+        {hasFilters && (
+          <button onClick={clearFilters} className="text-xs text-foreground/40 hover:text-foreground transition-colors flex items-center gap-1">
+            <X size={11} />Clear
+          </button>
+        )}
+      </div>
+
+      {/* Status filter tabs */}
       <div className="flex flex-wrap gap-3 items-center">
-        <FilterTabs options={STATUS_TABS} value={status} onChange={setStatus} />
+        <FilterTabs options={STATUS_TABS} value={status} onChange={(s) => { setStatus(s); load(0, s, search, fromDate, toDate); }} />
       </div>
 
       {error && (
@@ -325,11 +386,11 @@ export default function TransactionsPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => load(page - 1, status)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
+          <button onClick={() => load(page - 1, status, search, fromDate, toDate)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Previous
           </button>
           <span className="text-sm text-foreground/35">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => load(page + 1, status)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
+          <button onClick={() => load(page + 1, status, search, fromDate, toDate)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Next
           </button>
         </div>

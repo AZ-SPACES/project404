@@ -295,6 +295,41 @@ public class CheckoutService {
                 .map(s -> toResponse(s, merchant));
     }
 
+    public Page<CheckoutSessionResponse> searchMerchantSessions(
+            UUID merchantId, int page, int size,
+            String status, String from, String to, String q) {
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+
+        CheckoutSession.SessionStatus statusEnum = null;
+        if (status != null && !status.isBlank()) {
+            try { statusEnum = CheckoutSession.SessionStatus.valueOf(status.toUpperCase()); } catch (Exception ignored) {}
+        }
+        LocalDateTime fromDt = null;
+        LocalDateTime toDt = null;
+        if (from != null && !from.isBlank()) {
+            try { fromDt = LocalDateTime.parse(from + "T00:00:00"); } catch (Exception ignored) {}
+        }
+        if (to != null && !to.isBlank()) {
+            try { toDt = LocalDateTime.parse(to + "T23:59:59"); } catch (Exception ignored) {}
+        }
+        String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
+
+        return sessionRepository.searchSessions(
+                        merchantId, statusEnum, fromDt, toDt, qParam,
+                        PageRequest.of(page, Math.min(size, 50)))
+                .map(s -> toResponse(s, merchant));
+    }
+
+    public Page<CheckoutSessionResponse> listCustomerSessions(
+            UUID merchantId, UUID customerId, int page, int size) {
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        return sessionRepository.findAllByMerchantIdAndCustomerIdOrderByCreatedAtDesc(
+                        merchantId, customerId, PageRequest.of(page, Math.min(size, 50)))
+                .map(s -> toResponse(s, merchant));
+    }
+
     // ==================== SCHEDULED EXPIRY ====================
 
     @Scheduled(fixedDelay = 60_000) // every 60 seconds

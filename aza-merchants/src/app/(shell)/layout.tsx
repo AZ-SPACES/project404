@@ -35,6 +35,7 @@ import {
   Bell,
   Code2,
   BarChart2,
+  Package,
 } from "lucide-react";
 
 interface NavItem {
@@ -62,6 +63,7 @@ const NAV: NavSection[] = [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/payment-links", label: "Payment Links", icon: Link2 },
       { href: "/store-qr", label: "Store QR", icon: QrCode },
+      { href: "/products", label: "Products", icon: Package },
       { href: "/invoices", label: "Invoices", icon: FileText },
       { href: "/bulk-transfers", label: "Bulk Transfers", icon: SendHorizonal },
       { href: "/payouts", label: "Payouts", icon: ArrowDownToLine },
