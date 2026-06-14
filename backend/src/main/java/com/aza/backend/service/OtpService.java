@@ -30,6 +30,8 @@ public class OtpService {
         String otp = generateOtpCode();
         String key = getOtpKey(purpose, identifier);
         redisTemplate.opsForValue().set(key, otp, Duration.ofMinutes(5));
+        // Reset the failed-attempt counter so the user can verify the new code.
+        redisTemplate.delete("otp:attempts:" + purpose + ":" + identifier);
 
         if (identifier.contains("@")) {
             boolean sent = emailService.sendOtp(identifier, otp);
@@ -46,8 +48,10 @@ public class OtpService {
         int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
 
         if (attempts >= 5) {
+            // Invalidate the code so it can no longer be used, but keep the attempt counter
+            // alive for the full lockout window so requesting a fresh OTP doesn't reset it.
             redisTemplate.delete(getOtpKey(purpose, identifier));
-            redisTemplate.delete(attemptKey);
+            redisTemplate.expire(attemptKey, Duration.ofMinutes(15));
             throw new AppException("Too many failed OTP attempts. Request a new code.");
         }
 
