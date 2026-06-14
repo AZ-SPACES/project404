@@ -106,6 +106,7 @@ export default function DashboardPage({ merchant, navigate }: NavProps) {
       items: [
         { id: 'invoices', icon: 'file-text', label: 'Invoices', onPress: () => navigate('invoices') },
         { id: 'customers', icon: 'users', label: 'Customers', onPress: () => navigate('customers') },
+        { id: 'products', icon: 'package', label: 'Products', onPress: () => navigate('products') },
         { id: 'settlements', icon: 'trending-up', label: 'Settlements', onPress: () => navigate('settlements') },
         { id: 'payouts', icon: 'download', label: 'Payouts', onPress: () => navigate('payouts') },
       ],

@@ -31,6 +31,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import TeamPage from './pages/TeamPage';
 import PlansPage from './pages/PlansPage';
+import ProductsPage from './pages/ProductsPage';
 
 // Local interface just for the exported component props
 interface LocalMiniAppProps {
@@ -151,6 +152,8 @@ export default function MyBusinessApp({ onClose }: LocalMiniAppProps) {
         return <TeamPage {...navProps} />;
       case 'plans':
         return <PlansPage {...navProps} />;
+      case 'products':
+        return <ProductsPage {...navProps} />;
       default:
         return null;
     }
