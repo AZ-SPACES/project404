@@ -18,7 +18,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
 import { useContactStore } from "../../../store/contactStore";
-import { getContactDetails } from "../../../services/api";
+import { getContactDetails, getUserByHandle } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../../../lib/queryClient";
 import { queryKeys } from "../../../lib/queryKeys";
@@ -48,10 +48,11 @@ export default function ContactsProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<ContactsProfileRouteProp>();
   const { id, name = "User", username = "", avatar } = route.params || {};
+  const cleanHandle = username.startsWith('@') ? username.slice(1) : username;
 
   const { blockUser, toggleFavorite } = useContactStore();
 
-  const { data: contact, isLoading: loading } = useQuery({
+  const { data: contact, isLoading: contactLoading } = useQuery({
     queryKey: queryKeys.contactDetails(id!),
     queryFn: async () => {
       const { data } = await getContactDetails(id!);
@@ -61,15 +62,28 @@ export default function ContactsProfileScreen() {
     staleTime: 60_000,
   });
 
-  const displayName = contact?.displayName ?? name;
-  const displayHandle = contact?.handle ? `@${contact.handle}` : username;
+  // Deep-link path: no id, only a username from the URL — fetch the public profile.
+  const { data: publicProfile, isLoading: profileLoading } = useQuery({
+    queryKey: ['publicProfile', cleanHandle],
+    queryFn: async () => {
+      const { data } = await getUserByHandle(cleanHandle);
+      return (data.data ?? data) as { id: string; displayName: string; handle: string; profileImageUrl?: string } | null;
+    },
+    enabled: !id && !!cleanHandle,
+    staleTime: 60_000,
+  });
+
+  const loading = contactLoading || profileLoading;
+  const displayName = contact?.displayName ?? publicProfile?.displayName ?? name;
+  const displayHandle = contact?.handle ? `@${contact.handle}` : (publicProfile?.handle ? `@${publicProfile.handle}` : username);
   const displayAvatar =
     contact?.profileImageUrl ??
+    publicProfile?.profileImageUrl ??
     avatar ??
     `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
   const isFavorite = contact?.isFavorite ?? false;
   // contactUserId is the actual Aza user ID behind this contact entry
-  const targetUserId = contact?.contactUserId ?? id;
+  const targetUserId = contact?.contactUserId ?? publicProfile?.id ?? id;
 
   const initials = displayName
     .split(" ")
