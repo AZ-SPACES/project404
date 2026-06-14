@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import com.aza.backend.service.ContactService;
 import com.aza.backend.service.PresenceService;
 import com.aza.backend.service.UserService;
+import com.aza.backend.util.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,6 +39,7 @@ public class UserController {
     private final PresenceService presenceService;
     private final ObjectMapper objectMapper;
     private final com.aza.backend.service.SystemSettingService settingService;
+    private final RateLimitService rateLimitService;
 
     // ==================== CURRENT USER ====================
 
@@ -266,16 +269,19 @@ public class UserController {
 
     @GetMapping("/check-handle")
     public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
+        rateLimitService.enforceRateLimit("check:handle:" + handle.toLowerCase(), 5, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isUsernameAvailable(handle)));
     }
 
     @GetMapping("/check-email")
     public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam String email) {
+        rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase(), 5, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isEmailAvailable(email)));
     }
 
     @GetMapping("/check-phone")
     public ResponseEntity<ApiResponse<Boolean>> checkPhone(@RequestParam String phone) {
+        rateLimitService.enforceRateLimit("check:phone:" + phone, 5, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isPhoneAvailable(phone)));
     }
 
