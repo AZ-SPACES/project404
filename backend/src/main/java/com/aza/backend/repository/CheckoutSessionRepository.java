@@ -68,4 +68,33 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     @Query("SELECT s.merchantId, COUNT(s), SUM(CASE WHEN s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED THEN 1 ELSE 0 END), MAX(s.completedAt) FROM CheckoutSession s GROUP BY s.merchantId")
     List<Object[]> merchantCheckoutSummary();
+
+    // ── Merchant analytics ────────────────────────────────────────────────────
+
+    @Query("SELECT COALESCE(SUM(s.amount), 0) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    java.math.BigDecimal sumAllTimeRevenue(@Param("merchantId") UUID merchantId);
+
+    @Query("SELECT COUNT(s) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED AND s.completedAt >= :from")
+    long countCompletedFrom(@Param("merchantId") UUID merchantId, @Param("from") LocalDateTime from);
+
+    @Query("SELECT COUNT(s) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.createdAt >= :from")
+    long countTotalFrom(@Param("merchantId") UUID merchantId, @Param("from") LocalDateTime from);
+
+    @Query("SELECT COALESCE(AVG(s.amount), 0) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    java.math.BigDecimal avgOrderValue(@Param("merchantId") UUID merchantId);
+
+    @Query("SELECT COALESCE(SUM(s.amount), 0) FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED AND s.completedAt >= :from AND s.completedAt < :to")
+    java.math.BigDecimal sumRevenueBetween(@Param("merchantId") UUID merchantId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query(value = "SELECT CAST(s.completed_at AS DATE) AS day, SUM(s.amount) AS revenue, COUNT(*) AS cnt " +
+                   "FROM checkout_sessions s " +
+                   "WHERE s.merchant_id = :merchantId AND s.status = 'COMPLETED' AND s.completed_at >= :from " +
+                   "GROUP BY CAST(s.completed_at AS DATE) ORDER BY day", nativeQuery = true)
+    List<Object[]> getDailyRevenueByAmount(@Param("merchantId") UUID merchantId, @Param("from") LocalDateTime from);
+
+    @Query("SELECT s.customerId, COALESCE(SUM(s.amount), 0), COUNT(s) FROM CheckoutSession s " +
+           "WHERE s.merchantId = :merchantId AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED " +
+           "AND s.customerId IS NOT NULL " +
+           "GROUP BY s.customerId ORDER BY COALESCE(SUM(s.amount), 0) DESC")
+    List<Object[]> topCustomers(@Param("merchantId") UUID merchantId, Pageable pageable);
 }

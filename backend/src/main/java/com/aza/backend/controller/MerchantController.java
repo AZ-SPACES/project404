@@ -7,19 +7,27 @@ import com.aza.backend.entity.MerchantApiLog;
 import com.aza.backend.entity.MerchantAuditLog;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
+import com.aza.backend.repository.CheckoutSessionRepository;
 import com.aza.backend.repository.MerchantRepository;
+import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.CheckoutService;
 import com.aza.backend.service.MerchantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -30,6 +38,8 @@ public class MerchantController {
     private final MerchantService merchantService;
     private final CheckoutService checkoutService;
     private final MerchantRepository merchantRepository;
+    private final CheckoutSessionRepository checkoutSessionRepository;
+    private final UserRepository userRepository;
 
     // ==================== HANDLE CHECK ====================
 
@@ -333,6 +343,78 @@ public class MerchantController {
                 .supportEmail(merchant.getSupportEmail())
                 .build();
         return ResponseEntity.ok(ApiResponse.success(resp));
+    }
+
+    // ==================== ANALYTICS ====================
+
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAnalytics(@AuthenticationPrincipal User user) {
+        Merchant merchant = requireMerchant(user.getId());
+        UUID merchantId = merchant.getId();
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime start7 = now.minusDays(7);
+        LocalDateTime start30 = now.minusDays(30);
+
+        BigDecimal todayRevenue = checkoutSessionRepository.sumRevenueBetween(merchantId, startOfToday, now.plusDays(1));
+        BigDecimal sevenDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, start7);
+        BigDecimal thirtyDayRevenue = checkoutSessionRepository.sumNetAmountSince(merchantId, start30);
+        BigDecimal allTimeRevenue = checkoutSessionRepository.sumAllTimeRevenue(merchantId);
+
+        long thirtyDaySessionCount = checkoutSessionRepository.countTotalFrom(merchantId, start30);
+        long thirtyDayCompletedCount = checkoutSessionRepository.countCompletedFrom(merchantId, start30);
+
+        double conversionRate = thirtyDaySessionCount == 0 ? 0.0
+                : (double) thirtyDayCompletedCount / thirtyDaySessionCount * 100.0;
+
+        BigDecimal avgOrderValue = checkoutSessionRepository.avgOrderValue(merchantId);
+
+        // Daily series: last 30 days
+        List<Object[]> dailyRaw = checkoutSessionRepository.getDailyRevenueByAmount(merchantId, start30);
+        List<Map<String, Object>> dailySeries = new ArrayList<>();
+        for (Object[] row : dailyRaw) {
+            Map<String, Object> point = new HashMap<>();
+            point.put("date", row[0] != null ? row[0].toString() : null);
+            point.put("revenue", row[1] != null ? row[1] : BigDecimal.ZERO);
+            point.put("count", row[2] != null ? ((Number) row[2]).longValue() : 0L);
+            dailySeries.add(point);
+        }
+
+        // Top customers (top 5 by total paid)
+        List<Object[]> topRaw = checkoutSessionRepository.topCustomers(
+                merchantId, PageRequest.of(0, 5));
+        List<Map<String, Object>> topCustomers = new ArrayList<>();
+        for (Object[] row : topRaw) {
+            UUID customerId = (UUID) row[0];
+            BigDecimal totalPaid = (BigDecimal) row[1];
+            long paymentCount = ((Number) row[2]).longValue();
+
+            String name = userRepository.findById(customerId)
+                    .map(u -> u.getFirstName() != null ? u.getFirstName() + " " + u.getLastName() : u.getEmail())
+                    .orElse(customerId.toString());
+
+            Map<String, Object> c = new HashMap<>();
+            c.put("userId", customerId);
+            c.put("displayName", name);
+            c.put("totalPaid", totalPaid);
+            c.put("paymentCount", paymentCount);
+            topCustomers.add(c);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("todayRevenue", todayRevenue);
+        result.put("sevenDayRevenue", sevenDayRevenue);
+        result.put("thirtyDayRevenue", thirtyDayRevenue);
+        result.put("allTimeRevenue", allTimeRevenue);
+        result.put("thirtyDaySessionCount", thirtyDaySessionCount);
+        result.put("thirtyDayCompletedCount", thirtyDayCompletedCount);
+        result.put("conversionRate", conversionRate);
+        result.put("avgOrderValue", avgOrderValue);
+        result.put("dailySeries", dailySeries);
+        result.put("topCustomers", topCustomers);
+
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     // ==================== HELPERS ====================

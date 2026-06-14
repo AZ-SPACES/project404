@@ -31,6 +31,7 @@ import {
   Tag,
   RotateCcw,
   Copy,
+  Printer,
 } from "lucide-react";
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -265,67 +266,85 @@ function SuccessReceipt({
   };
 
   return (
-    <div className="px-5 py-5 space-y-4">
-      <div className="text-center space-y-2">
-        <div
-          className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
-          style={{ background: "#B7EE7A18", border: "1px solid #B7EE7A30" }}
-        >
-          <CheckCircle2 size={24} className="text-emerald-400" />
-        </div>
-        <div>
-          <p className="text-base font-semibold text-white">Payment successful</p>
-          {paidAt && <p className="text-xs text-white/30 mt-0.5">{paidAt}</p>}
-        </div>
-      </div>
-
-      <div className="bg-white/4 rounded-xl px-4 py-3 space-y-2">
-        {session.description && (
-          <p className="text-xs text-white/40 pb-2 border-b border-white/5">{session.description}</p>
-        )}
-        <div className="flex justify-between text-sm text-white/50">
-          <span>Subtotal</span>
-          <span className="font-mono">{fmtAmount(base, session.currency)}</span>
-        </div>
-        {tax > 0 && (
-          <div className="flex justify-between text-sm text-white/40">
-            <span>{session.taxLabel ?? "Tax"}</span>
-            <span className="font-mono">{fmtAmount(tax, session.currency)}</span>
+    <>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #receipt, #receipt * { visibility: visible; }
+          #receipt { position: fixed; top: 0; left: 0; width: 100%; background: #fff; color: #000; padding: 24px; }
+        }
+      `}</style>
+      <div id="receipt" className="px-5 py-5 space-y-4">
+        <div className="text-center space-y-2">
+          <div
+            className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
+            style={{ background: "#B7EE7A18", border: "1px solid #B7EE7A30" }}
+          >
+            <CheckCircle2 size={24} className="text-emerald-400" />
           </div>
-        )}
-        <div className="flex justify-between items-center pt-1.5 border-t border-white/8">
-          <span className="text-sm font-semibold text-white">Total paid</span>
-          <span className="text-lg font-bold" style={{ color: accent }}>
-            {fmtAmount(total, session.currency)}
-          </span>
-        </div>
-        {promoInfo && (
-          <div className="flex justify-between text-xs text-emerald-400/80 pt-1 border-t border-emerald-400/10">
-            <span>Promo {promoInfo.code}</span>
-            <span>+{fmtAmount(promoInfo.creditAmountGhs, "GHS")} wallet credit</span>
+          <div>
+            <p className="text-base font-semibold text-white">Payment successful</p>
+            {paidAt && <p className="text-xs text-white/30 mt-0.5">{paidAt}</p>}
           </div>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-xs text-white/30">
-          <span>Reference</span>
-          <span className="font-mono text-white/50">{ref}</span>
         </div>
-        <div className="flex justify-between text-xs text-white/30">
-          <span>Paid to</span>
-          <span className="text-white/50">{session.merchantName ?? `@${session.merchantHandle}`}</span>
+
+        <div className="bg-white/4 rounded-xl px-4 py-3 space-y-2">
+          {session.description && (
+            <p className="text-xs text-white/40 pb-2 border-b border-white/5">{session.description}</p>
+          )}
+          <div className="flex justify-between text-sm text-white/50">
+            <span>Subtotal</span>
+            <span className="font-mono">{fmtAmount(base, session.currency)}</span>
+          </div>
+          {tax > 0 && (
+            <div className="flex justify-between text-sm text-white/40">
+              <span>{session.taxLabel ?? "Tax"}</span>
+              <span className="font-mono">{fmtAmount(tax, session.currency)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center pt-1.5 border-t border-white/8">
+            <span className="text-sm font-semibold text-white">Total paid</span>
+            <span className="text-lg font-bold" style={{ color: accent }}>
+              {fmtAmount(total, session.currency)}
+            </span>
+          </div>
+          {promoInfo && (
+            <div className="flex justify-between text-xs text-emerald-400/80 pt-1 border-t border-emerald-400/10">
+              <span>Promo {promoInfo.code}</span>
+              <span>+{fmtAmount(promoInfo.creditAmountGhs, "GHS")} wallet credit</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs text-white/30">
+            <span>Reference</span>
+            <span className="font-mono text-white/50">{ref}</span>
+          </div>
+          <div className="flex justify-between text-xs text-white/30">
+            <span>Paid to</span>
+            <span className="text-white/50">{session.merchantName ?? `@${session.merchantHandle}`}</span>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 space-y-0">
+          <button
+            onClick={handleCopy}
+            className="w-full flex items-center justify-center gap-1.5 text-xs text-white/25 hover:text-white/45 transition-colors py-1.5"
+          >
+            <Copy size={11} />
+            {copied ? "Link copied!" : "Copy receipt link"}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="print:hidden w-full flex items-center justify-center gap-1.5 text-xs text-white/25 hover:text-white/45 transition-colors py-1.5 border-t border-white/5"
+          >
+            <Printer size={11} />
+            Print receipt
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={handleCopy}
-        className="w-full flex items-center justify-center gap-1.5 text-xs text-white/25 hover:text-white/45 transition-colors py-1.5 border-t border-white/5"
-      >
-        <Copy size={11} />
-        {copied ? "Link copied!" : "Copy receipt link"}
-      </button>
-    </div>
+    </>
   );
 }
 
