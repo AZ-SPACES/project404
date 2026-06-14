@@ -110,7 +110,22 @@ class OtpServiceTest {
                 () -> otpService.verifyOtp("user@example.com", "123456", "login"));
 
         assertTrue(ex.getMessage().contains("Too many"));
+        // OTP code is invalidated so it cannot be used after lockout
         verify(redisTemplate).delete("otp:login:user@example.com");
+        // Counter is preserved with extended TTL — not deleted — so a brute-forcer who
+        // requests a new OTP does not immediately get a fresh 5-attempt window
+        verify(redisTemplate, never()).delete("otp:attempts:login:user@example.com");
+        verify(redisTemplate).expire(eq("otp:attempts:login:user@example.com"), eq(Duration.ofMinutes(15)));
+    }
+
+    @Test
+    void sendOtp_resetsAttemptCounter() {
+        when(emailService.sendOtp(anyString(), anyString())).thenReturn(true);
+
+        otpService.sendOtp("user@example.com", "login");
+
+        // Sending a fresh OTP must clear any prior failed-attempt counter so the user
+        // can verify the new code even after a previous lockout.
         verify(redisTemplate).delete("otp:attempts:login:user@example.com");
     }
 
