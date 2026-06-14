@@ -78,6 +78,15 @@ public class AdminAiController {
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
+    @PostMapping("/fraud/pending/{id}/cancel")
+    public ResponseEntity<ApiResponse<TransferResponse>> cancelPending(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User admin) {
+        TransferResponse result = transferService.cancelPendingTransfer(id);
+        auditService.log(admin, "CANCEL_PENDING_TRANSFER", null, "transactionId=" + id);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
     @GetMapping("/analytics/categories")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getCategoryBreakdown(
             @RequestParam(defaultValue = "30") int days) {

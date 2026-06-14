@@ -9,6 +9,7 @@ import {
   getHeldTransfers,
   releaseHeldTransfer,
   rejectHeldTransfer,
+  cancelPendingTransfer,
   AdminTransaction,
   Page,
   type FraudAiAssessment,
@@ -98,8 +99,11 @@ function FraudDrawer({ txId, onClose }: { txId: string; onClose: () => void }) {
   });
 
   const decide = useMutation({
-    mutationFn: ({ release }: { release: boolean }) =>
-      release ? releaseHeldTransfer(txId) : rejectHeldTransfer(txId),
+    mutationFn: ({ action }: { action: "release" | "reject" | "cancel" }) => {
+      if (action === "release") return releaseHeldTransfer(txId);
+      if (action === "reject") return rejectHeldTransfer(txId);
+      return cancelPendingTransfer(txId);
+    },
     onMutate: () => setActionError(""),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fraud-held"] });
@@ -206,17 +210,41 @@ function FraudDrawer({ txId, onClose }: { txId: string; onClose: () => void }) {
                 </div>
               </div>
 
-              {/* Release / Reject actions — only for intercepted transfers */}
+              {/* Actions for PENDING (pre-confirmation) flagged transfers */}
+              {tx.status === "PENDING" && (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 text-xs text-foreground/50 leading-relaxed">
+                    This transfer hasn't been confirmed by the sender yet — no money has moved.
+                    <strong className="text-foreground/60"> Cancel</strong> will block it and notify the sender.
+                  </div>
+                  {actionError && <p className="text-xs text-red-400">{actionError}</p>}
+                  {decide.isSuccess ? (
+                    <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                      <CheckCircle2 size={14} />
+                      Transfer cancelled successfully.
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => decide.mutate({ action: "cancel" })}
+                      disabled={decide.isPending}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 disabled:opacity-40 transition-colors"
+                    >
+                      {decide.isPending ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                      Cancel transfer
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Release / Reject actions for intercepted (post-confirmation) transfers */}
               {tx.status === "HELD_FOR_REVIEW" && (
                 <div className="space-y-3">
-                  <p className="text-xs text-foreground/40 leading-relaxed">
-                    This transfer was intercepted before any money moved.
+                  <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-xs text-foreground/50 leading-relaxed">
+                    This transfer was intercepted after PIN confirmation — no money has moved yet.
                     <strong className="text-foreground/60"> Release</strong> executes it;
                     <strong className="text-foreground/60"> Reject</strong> cancels it and notifies the sender.
-                  </p>
-                  {actionError && (
-                    <p className="text-xs text-red-400">{actionError}</p>
-                  )}
+                  </div>
+                  {actionError && <p className="text-xs text-red-400">{actionError}</p>}
                   {decide.isSuccess ? (
                     <div className="flex items-center gap-2 text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                       <CheckCircle2 size={14} />
@@ -225,27 +253,19 @@ function FraudDrawer({ txId, onClose }: { txId: string; onClose: () => void }) {
                   ) : (
                     <div className="flex gap-3">
                       <button
-                        onClick={() => decide.mutate({ release: true })}
+                        onClick={() => decide.mutate({ action: "release" })}
                         disabled={decide.isPending}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 text-sm font-medium hover:bg-green-500/20 disabled:opacity-40 transition-colors"
                       >
-                        {decide.isPending && decide.variables?.release ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 size={14} />
-                        )}
-                        Release transfer
+                        {decide.isPending && decide.variables?.action === "release" ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                        Release
                       </button>
                       <button
-                        onClick={() => decide.mutate({ release: false })}
+                        onClick={() => decide.mutate({ action: "reject" })}
                         disabled={decide.isPending}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 disabled:opacity-40 transition-colors"
                       >
-                        {decide.isPending && !decide.variables?.release ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <XCircle size={14} />
-                        )}
+                        {decide.isPending && decide.variables?.action === "reject" ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
                         Reject
                       </button>
                     </div>
