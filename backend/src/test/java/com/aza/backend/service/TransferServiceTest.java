@@ -367,6 +367,8 @@ class TransferServiceTest {
                 .thenReturn(Optional.of(recipient));
         when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
         when(walletRepository.findByUserIdForUpdate(recipientId)).thenReturn(Optional.of(recipientWallet));
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
             Transaction t = inv.getArgument(0);
             if (t.getId() == null) t.setId(UUID.randomUUID());
@@ -380,6 +382,38 @@ class TransferServiceTest {
         assertEquals(new BigDecimal("54990.00"), senderWallet.getBalance()); // 60000 - 5000 - 10 fee
         assertEquals(new BigDecimal("5000.00"), recipientWallet.getBalance());
         verify(feeCalculationService).recordMonthlyUsage("P2P", new BigDecimal("5000.00"), senderId);
+    }
+
+    @Test
+    void executeSingleBulkItem_appliesMdr_forMerchantRecipient() {
+        User sender = verifiedActiveUser();
+        Wallet senderWallet = walletWithBalance("60000.00");
+        UUID merchantId = UUID.randomUUID();
+        Merchant merchant = Merchant.builder()
+                .id(merchantId).businessName("Store").businessHandle("store")
+                .status(Merchant.MerchantStatus.ACTIVE).userId(UUID.randomUUID())
+                .feeRateBps(100) // 1% MDR
+                .balance(new BigDecimal("0.00")).totalVolume(new BigDecimal("0.00")).build();
+
+        when(userRepository.findByEmailOrPhoneNumber("store", "store")).thenReturn(Optional.empty());
+        when(userRepository.findByUsername("store")).thenReturn(Optional.empty());
+        when(merchantRepository.findByBusinessHandle("store")).thenReturn(Optional.of(merchant));
+        when(merchantRepository.findByIdForUpdate(merchantId)).thenReturn(Optional.of(merchant));
+        when(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchant));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+            Transaction t = inv.getArgument(0);
+            if (t.getId() == null) t.setId(UUID.randomUUID());
+            return t;
+        });
+
+        transferService.executeSingleBulkItem(sender, "store", new BigDecimal("1000.00"), "supplier");
+
+        assertEquals(new BigDecimal("59000.00"), senderWallet.getBalance());  // 60000 - 1000 (no consumer fee)
+        assertEquals(new BigDecimal("990.00"), merchant.getBalance());        // 1000 - 1% MDR
+        assertEquals(new BigDecimal("1000.00"), merchant.getTotalVolume());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
