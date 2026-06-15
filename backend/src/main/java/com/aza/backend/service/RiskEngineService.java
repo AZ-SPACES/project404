@@ -81,6 +81,57 @@ public class RiskEngineService {
     }
 
     /**
+     * Cash-channel structuring: a customer breaking cash into repeated sub-threshold
+     * deposits or withdrawals — often across several agents — to stay under the
+     * reporting radar. Keyed on the customer (the cash-in recipient / cash-out sender),
+     * not the agent. Three or more in-band cash movements in 24h raises a flag that
+     * feeds the STR pipeline. Must never fail the cash transaction.
+     */
+    public void evaluateCashActivity(Transaction tx, java.util.UUID customerId) {
+        try {
+            boolean cashIn = tx.getType() == Transaction.TransactionType.CASH_IN;
+            if (!cashIn && tx.getType() != Transaction.TransactionType.CASH_OUT) return;
+
+            BigDecimal threshold = riskRuleService.largeTransferThresholdGhs();
+            BigDecimal bandFloor = threshold.multiply(new BigDecimal("0.70"));
+            if (tx.getAmount().compareTo(bandFloor) < 0 || tx.getAmount().compareTo(threshold) >= 0) {
+                return; // outside the just-under-threshold band
+            }
+
+            LocalDateTime since = LocalDateTime.now().minusHours(24);
+            long inBand24h = cashIn
+                    ? transactionRepository.countCashInDepositsInBand(customerId, bandFloor, threshold, since)
+                    : transactionRepository.countCashOutWithdrawalsInBand(customerId, bandFloor, threshold, since);
+            if (inBand24h < 3) return;
+
+            String channel = cashIn ? "cash deposits" : "cash withdrawals";
+            flaggedRepository.save(FlaggedTransaction.builder()
+                    .transactionId(tx.getId())
+                    .userId(customerId)
+                    .amount(tx.getAmount())
+                    .flagReason("Possible cash structuring: " + inBand24h + " " + channel
+                            + " in 24h just under the GHS " + threshold.toPlainString() + " threshold")
+                    .riskScore(85)
+                    .build());
+            riskAlertRepository.save(RiskAlert.builder()
+                    .userId(customerId)
+                    .alertType(RiskAlert.AlertType.UNUSUAL_PATTERN)
+                    .severity(RiskAlert.Severity.HIGH)
+                    .description(inBand24h + " " + channel + " in the last 24h each between GHS "
+                            + bandFloor.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " and GHS "
+                            + threshold.toPlainString() + " — possible cash structuring across agents")
+                    .transactionId(tx.getId())
+                    .riskScore(85)
+                    .build());
+            staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.COMPLIANCE,
+                    "Possible cash structuring",
+                    inBand24h + " sub-threshold " + channel + " by one customer in 24h — review for an STR.");
+        } catch (Exception e) {
+            log.error("Cash AML evaluation failed for transaction {}: {}", tx.getId(), e.getMessage());
+        }
+    }
+
+    /**
      * Persists the feature snapshot for MEDIUM/HIGH transactions — the training
      * dataset for a future learned model. COMPLIANCE decisions become the labels
      * via recordHeldOutcome.
