@@ -1188,8 +1188,18 @@ public class TransferService {
             recipientId = merchant.getId();
         }
 
+        // Bulk items respect the same KYC-tier limits as any other transfer, so bulk
+        // can't be used to bypass the single-transaction or daily caps.
+        limitGuard.enforceSingle(sender, amount);
+        LocalDateTime startOfBulkDay = LocalDate.now(GHANA_TZ).atStartOfDay();
+        BigDecimal sentToday = transactionRepository.getTotalSentToday(
+                sender.getId(), startOfBulkDay, startOfBulkDay.plusDays(1), LocalDateTime.now(GHANA_TZ));
+        if (sentToday.add(amount).compareTo(limitGuard.dailyLimit(sender)) > 0) {
+            throw new AppException("This transfer would exceed your daily transfer limit");
+        }
+
         // P2P (user-recipient) bulk items carry the same fee as a normal transfer;
-        // merchant items settle via MDR and are not charged a consumer fee here.
+        // merchant items settle via MDR (applied below), not a consumer fee.
         BigDecimal fee = recipient != null
                 ? feeCalculationService.quote("P2P", amount, sender.getId()).fee()
                 : BigDecimal.ZERO;
@@ -1216,8 +1226,13 @@ public class TransferService {
             recipient.setBalance(recipientWallet.getBalance());
             userRepository.save(recipient);
         } else {
-            Merchant merchant = merchantRepository.findById(recipientId).orElseThrow();
-            merchant.setBalance(merchant.getBalance().add(amount));
+            // Apply the merchant's MDR, exactly like a single store payment, so bulk
+            // payments to a merchant are charged consistently (the fee leaves circulation).
+            Merchant merchant = merchantRepository.findByIdForUpdate(recipientId).orElseThrow();
+            BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps())
+                    .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
+            BigDecimal platformFee = amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+            merchant.setBalance(merchant.getBalance().add(amount.subtract(platformFee)));
             merchant.setTotalVolume(merchant.getTotalVolume().add(amount));
             merchantRepository.save(merchant);
         }
