@@ -611,8 +611,14 @@ export const clearBypassToken = async (): Promise<void> => {
 
 export const getAgent = () => api.get('/api/v1/agent/me');
 
-export const applyAgent = (data: { location?: string }) =>
-  api.post('/api/v1/agent/apply', data);
+export const applyAgent = (data: {
+  location?: string;
+  businessName?: string;
+  contactPhone?: string;
+  idNumber?: string;
+  expectedMonthlyVolumeGhs?: number;
+  applicationNotes?: string;
+}) => api.post('/api/v1/agent/apply', data);
 
 export const agentCashIn = (data: {
   customerIdentifier: string;

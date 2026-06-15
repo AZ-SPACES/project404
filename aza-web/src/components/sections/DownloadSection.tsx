@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { StoreButton } from "@/components/ui/StoreButton";
+import QRCode from "qrcode";
 
 const appleIcon = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -12,82 +14,95 @@ const googleIcon = (
   </svg>
 );
 
-export function DownloadSection() {
+async function generateQR(url: string): Promise<string> {
+  try {
+    return await QRCode.toDataURL(url, {
+      width: 160,
+      margin: 1,
+      color: { dark: "#ffffff", light: "#174717" },
+      errorCorrectionLevel: "M",
+    });
+  } catch {
+    return "";
+  }
+}
+
+export async function DownloadSection() {
+  const qrDataUrl = await generateQR("https://aza.systems");
+
   return (
-    <section id="download" className="section-py" style={{ background: "var(--aza-bg)" }}>
-      <div className="max-w-[1160px] mx-auto px-4 sm:px-6">
-        <div
-          className="download-grid reveal rounded-xl p-8 md:p-12 lg:p-[80px_48px] grid gap-12 lg:gap-[80px] items-center relative overflow-hidden"
-          style={{ background: "#174717", gridTemplateColumns: "1fr auto" }}
-        >
-          <div className="relative z-10">
-            <div
-              className="inline-flex items-center gap-2 px-[14px] py-[6px] rounded-md text-[0.8rem] font-semibold mb-6"
-              style={{
-                background: "rgba(183,238,122,0.15)",
-                border: "1px solid rgba(183,238,122,0.3)",
-                color: "#B7EE7A",
-              }}
+    <section id="download" className="section-py" style={{ background: "#174717" }}>
+      <div className="max-w-[1080px] mx-auto px-4 sm:px-6">
+
+        {/* Centered heading */}
+        <div className="text-center mb-14 reveal">
+          <h2 className="apple-headline mb-4" style={{ color: "#ffffff" }}>
+            Ready to experience Aza?
+          </h2>
+          <p className="apple-body max-w-[440px] mx-auto mb-8" style={{ color: "rgba(255,255,255,0.65)" }}>
+            Be among the first to send money, chat with friends, and manage your finances — effortlessly.
+          </p>
+
+          {/* Primary CTA */}
+          <div className="flex gap-3 justify-center flex-wrap mb-12">
+            <Link
+              href="/#waitlist"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-[0.95rem] font-semibold transition-opacity hover:opacity-90"
+              style={{ background: "#B7EE7A", color: "#174717" }}
             >
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 7,
-                  height: 7,
-                  background: "#B7EE7A",
-                  borderRadius: 999,
-                  animation: "badgePulse 2s infinite",
-                  flexShrink: 0,
-                }}
-              />
-              Soon available worldwide
-            </div>
-            <h2
-              className="text-[clamp(1.8rem,3.5vw,2.5rem)] font-bold tracking-[-0.02em] mb-4 text-white"
-            >
-              Ready to experience Aza?
-            </h2>
-            <p
-              className="text-[1.05rem] leading-[1.7] mb-8 max-w-[480px]"
-              style={{ color: "rgba(255,255,255,0.75)" }}
-            >
-              Be among the first to send money, chat with friends, and manage
-              your finances — effortlessly, all in one place.
-            </p>
-            <div className="flex gap-4 flex-wrap">
-              <StoreButton label="Download on the App Store">
-                {appleIcon}
-                <div>
-                  <span className="block text-[0.7rem] opacity-70">Download on the</span>
-                  <span className="block text-[0.95rem] font-bold">App Store</span>
-                </div>
-              </StoreButton>
-              <StoreButton label="Get it on Google Play">
-                {googleIcon}
-                <div>
-                  <span className="block text-[0.7rem] opacity-70">Get it on</span>
-                  <span className="block text-[0.95rem] font-bold">Google Play</span>
-                </div>
-              </StoreButton>
-            </div>
+              Join the waitlist
+            </Link>
           </div>
 
-          {/* QR mockup */}
-          <div className="relative z-10 text-center hidden md:block">
-            <div className="w-[140px] h-[140px] bg-white rounded-xl p-3 mx-auto mb-2">
-              <div className="qr-inner w-full h-full relative">
-                <div className="absolute top-0 left-0 w-[22px] h-[22px]" style={{ border: "3px solid #174717", borderRight: "none", borderBottom: "none" }} />
-                <div className="absolute top-0 right-0 w-[22px] h-[22px]" style={{ border: "3px solid #174717", borderLeft: "none", borderBottom: "none" }} />
-                <div className="absolute bottom-0 left-0 w-[22px] h-[22px]" style={{ border: "3px solid #174717", borderRight: "none", borderTop: "none" }} />
-                <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-[6px] flex items-center justify-center text-[0.9rem] font-black"
-                  style={{ background: "#174717", color: "#B7EE7A" }}
-                >
-                  A
-                </div>
+          {/* Store buttons */}
+          <div className="flex gap-4 justify-center flex-wrap download-btns mb-12">
+            <StoreButton label="Download on the App Store">
+              {appleIcon}
+              <div>
+                <span className="block text-[0.7rem] opacity-70">Download on the</span>
+                <span className="block text-[0.95rem] font-bold">App Store</span>
               </div>
+            </StoreButton>
+            <StoreButton label="Get it on Google Play">
+              {googleIcon}
+              <div>
+                <span className="block text-[0.7rem] opacity-70">Get it on</span>
+                <span className="block text-[0.95rem] font-bold">Google Play</span>
+              </div>
+            </StoreButton>
+          </div>
+        </div>
+
+        {/* QR + stats row */}
+        <div className="flex items-center justify-center gap-16 flex-wrap reveal">
+          {/* QR */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-2xl p-3 shadow-xl" style={{ background: "#174717", border: "1px solid rgba(255,255,255,0.15)" }}>
+              {qrDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrDataUrl} alt="Scan to visit aza.systems" width={120} height={120} />
+              ) : (
+                <div className="w-[120px] h-[120px] flex items-center justify-center text-[0.7rem]" style={{ color: "#B7EE7A" }}>aza.systems</div>
+              )}
             </div>
-            <p className="text-[0.8rem]" style={{ color: "rgba(255,255,255,0.7)" }}>Scan to download</p>
+            <p className="text-[0.75rem]" style={{ color: "rgba(255,255,255,0.45)" }}>Scan to open</p>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden md:block w-px h-20" style={{ background: "rgba(255,255,255,0.15)" }} aria-hidden="true" />
+
+          {/* Stats */}
+          <div className="flex gap-10">
+            {[
+              { value: "₵0",      label: "Hidden fees"  },
+              { value: "<2s",     label: "Transfer time" },
+              { value: "256-bit", label: "Encryption"   },
+            ].map(({ value, label }) => (
+              <div key={label} className="text-center">
+                <span className="block text-[1.6rem] font-black tracking-[-0.04em]" style={{ color: "#B7EE7A" }}>{value}</span>
+                <span className="block text-[0.75rem] mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>{label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

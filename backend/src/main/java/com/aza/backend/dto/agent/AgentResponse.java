@@ -15,6 +15,11 @@ public class AgentResponse {
     private String tier;
     private String code;
     private String location;
+    private String businessName;
+    private String contactPhone;
+    private String idNumber;
+    private BigDecimal expectedMonthlyVolumeGhs;
+    private String applicationNotes;
     private BigDecimal floatBalance;
     private BigDecimal commissionAccruedGhs;
 }

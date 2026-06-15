@@ -47,6 +47,26 @@ public class Agent {
     @Column(length = 255)
     private String location;
 
+    /** Trading/business name the agent operates under. */
+    @Column(length = 255)
+    private String businessName;
+
+    /** Contact phone for the till, if different from the account phone. */
+    @Column(length = 32)
+    private String contactPhone;
+
+    /** National ID (Ghana Card) number provided on the application. */
+    @Column(length = 64)
+    private String idNumber;
+
+    /** Self-declared expected monthly cash turnover, used for risk and limit sizing. */
+    @Column(precision = 15, scale = 2)
+    private BigDecimal expectedMonthlyVolumeGhs;
+
+    /** Anything else the applicant wants the reviewer to know. */
+    @Column(columnDefinition = "TEXT")
+    private String applicationNotes;
+
     /** Optional cap on how much float the agent may hold. */
     @Column(precision = 15, scale = 2)
     private BigDecimal floatLimit;

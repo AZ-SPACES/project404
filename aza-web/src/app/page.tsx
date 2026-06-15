@@ -1,14 +1,27 @@
+import { SmoothScroll } from "@/components/SmoothScroll";
 import { CinematicHero } from "@/components/ui/cinematic-landing-hero";
 import { Navbar } from "@/components/Navbar";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { HeroSection } from "@/components/sections/HeroSection";
-import { FeaturesSection } from "@/components/sections/FeaturesSection";
+import { PressSection } from "@/components/sections/PressSection";
+import { StatsBannerSection } from "@/components/sections/StatsBannerSection";
+import { FeatureSpotlightSection } from "@/components/sections/FeatureSpotlightSection";
+import { ComparisonSection } from "@/components/sections/ComparisonSection";
+import { UseCasesSection } from "@/components/sections/UseCasesSection";
 import { HowItWorksSection } from "@/components/sections/HowItWorksSection";
+import { AvailabilitySection } from "@/components/sections/AvailabilitySection";
 import { SecuritySection } from "@/components/sections/SecuritySection";
+import { PartnerBarSection } from "@/components/sections/PartnerBarSection";
+import { MerchantSection } from "@/components/sections/MerchantSection";
+import { DemoSection } from "@/components/sections/DemoSection";
+import { FAQSection } from "@/components/sections/FAQSection";
 import { HubSection } from "@/components/sections/HubSection";
+import { TestimonialsSection } from "@/components/sections/TestimonialsSection";
+import { BlogSection } from "@/components/sections/BlogSection";
 import { DownloadSection } from "@/components/sections/DownloadSection";
 import { WaitlistSection } from "@/components/sections/Waitlist";
 import { CinematicFooter } from "@/components/ui/motion-footer";
+import { FloatingCTA } from "@/components/FloatingCTA";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://aza.systems";
 
@@ -30,16 +43,29 @@ export default function Home() {
           }),
         }}
       />
+      <SmoothScroll />
       <ScrollReveal />
       <Navbar />
+      <FloatingCTA />
 
       <main className="relative z-10 bg-background rounded-b-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <CinematicHero tagline1="Send money." tagline2="Effortlessly." />
         <HeroSection />
-        <FeaturesSection />
+        <PressSection />
+        <StatsBannerSection />
+        <FeatureSpotlightSection />
+        <ComparisonSection />
+        <UseCasesSection />
         <HowItWorksSection />
+        <AvailabilitySection />
         <SecuritySection />
+        <PartnerBarSection />
+        <MerchantSection />
+        <DemoSection />
+        <FAQSection />
         <HubSection />
+        <TestimonialsSection />
+        <BlogSection />
         <DownloadSection />
         <WaitlistSection />
       </main>

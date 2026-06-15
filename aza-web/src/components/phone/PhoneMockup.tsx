@@ -15,7 +15,7 @@ const IMAGES = [
 ];
 const AUTOPLAY_INTERVAL = 3200;
 
-export function PhoneMockup() {
+export function PhoneMockup({ hideDots = false }: { hideDots?: boolean }) {
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -74,22 +74,24 @@ export function PhoneMockup() {
       </div>
 
       {/* Slide dots */}
-      <div className="flex gap-2 justify-center" role="tablist" aria-label="Phone screens">
-        {IMAGES.map((_, i) => (
-          <button
-            key={i}
-            role="tab"
-            aria-selected={active === i}
-            aria-label={`Screen ${i + 1}`}
-            onClick={() => goTo(i)}
-            className="h-2 rounded-full transition-all"
-            style={{
-              width: active === i ? 24 : 8,
-              background: active === i ? "#174717" : "#DADCE0",
-            }}
-          />
-        ))}
-      </div>
+      {!hideDots && (
+        <div className="flex gap-2 justify-center" role="tablist" aria-label="Phone screens">
+          {IMAGES.map((_, i) => (
+            <button
+              key={i}
+              role="tab"
+              aria-selected={active === i}
+              aria-label={`Screen ${i + 1}`}
+              onClick={() => goTo(i)}
+              className="h-2 rounded-full transition-all"
+              style={{
+                width: active === i ? 24 : 8,
+                background: active === i ? "#174717" : "#DADCE0",
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="hero__glow" aria-hidden="true" />
     </div>
