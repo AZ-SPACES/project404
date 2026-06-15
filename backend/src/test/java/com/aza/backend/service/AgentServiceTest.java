@@ -6,6 +6,7 @@ import com.aza.backend.entity.Agent;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.AgentRepository;
+import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,8 @@ class AgentServiceTest {
 
     private final AgentRepository agentRepository = mock(AgentRepository.class);
     private final WalletRepository walletRepository = mock(WalletRepository.class);
-    private final AgentService service = new AgentService(agentRepository, walletRepository);
+    private final UserRepository userRepository = mock(UserRepository.class);
+    private final AgentService service = new AgentService(agentRepository, walletRepository, userRepository);
 
     private final UUID userId = UUID.randomUUID();
     private final UUID agentId = UUID.randomUUID();
