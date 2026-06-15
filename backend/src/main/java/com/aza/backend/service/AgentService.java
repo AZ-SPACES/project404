@@ -37,13 +37,19 @@ public class AgentService {
             throw new AppException("AGENT_EXISTS",
                     "You already have an agent application or account", HttpStatus.CONFLICT);
         });
-        Agent agent = agentRepository.save(Agent.builder()
+        Agent.AgentBuilder agent = Agent.builder()
                 .userId(user.getId())
                 .status(Agent.Status.PENDING)
-                .tier(Agent.Tier.STANDARD)
-                .location(request != null ? request.getLocation() : null)
-                .build());
-        return toResponse(agent);
+                .tier(Agent.Tier.STANDARD);
+        if (request != null) {
+            agent.location(request.getLocation())
+                    .businessName(request.getBusinessName())
+                    .contactPhone(request.getContactPhone())
+                    .idNumber(request.getIdNumber())
+                    .expectedMonthlyVolumeGhs(request.getExpectedMonthlyVolumeGhs())
+                    .applicationNotes(request.getApplicationNotes());
+        }
+        return toResponse(agentRepository.save(agent.build()));
     }
 
     /** Maker-checker target: a second COMPLIANCE/ADMIN approving APPROVE_AGENT activates the agent. */
@@ -90,6 +96,11 @@ public class AgentService {
                 .tier(a.getTier().name())
                 .code(a.getCode())
                 .location(a.getLocation())
+                .businessName(a.getBusinessName())
+                .contactPhone(a.getContactPhone())
+                .idNumber(a.getIdNumber())
+                .expectedMonthlyVolumeGhs(a.getExpectedMonthlyVolumeGhs())
+                .applicationNotes(a.getApplicationNotes())
                 .floatBalance(walletRepository.findByUserId(a.getUserId())
                         .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                 .commissionAccruedGhs(a.getCommissionAccruedGhs())

@@ -85,7 +85,7 @@ export function Header() {
               <a
                 key={l.href}
                 href={l.href}
-                className="inline-flex items-center text-[0.84rem] font-medium text-white/55 px-[11px] py-[5px] rounded-full transition-colors hover:text-white hover:bg-white/[0.09]"
+                className="inline-flex items-center text-[0.84rem] font-medium text-white/55 px-[11px] py-[5px] rounded-lg transition-colors hover:text-white hover:bg-white/[0.09]"
               >
                 {l.label}
               </a>
@@ -94,13 +94,13 @@ export function Header() {
             {/* Developers button */}
             <button
               onClick={openDevMenu}
-              className="inline-flex items-center gap-[5px] text-[0.84rem] font-semibold px-[11px] py-[5px] rounded-full transition-colors hover:bg-[rgba(183,238,122,0.1)]"
+              className="inline-flex items-center gap-[5px] text-[0.84rem] font-semibold px-[11px] py-[5px] rounded-lg transition-colors hover:bg-[rgba(183,238,122,0.1)]"
               style={{ color: '#B7EE7A' }}
             >
               <Code2 size={13} />
               Developers
               <span
-                className="px-[6px] py-[1px] text-[0.6rem] font-bold tracking-[0.07em] uppercase rounded-full"
+                className="px-[6px] py-[1px] text-[0.6rem] font-bold tracking-[0.07em] uppercase rounded"
                 style={{ background: 'rgba(183,238,122,0.15)', border: '1px solid rgba(183,238,122,0.3)', color: '#B7EE7A' }}
               >
                 Docs

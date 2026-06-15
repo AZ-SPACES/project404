@@ -309,6 +309,47 @@ export function reviewKyc(userId: string, approve: boolean, reason: string): Pro
   });
 }
 
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+export interface AgentRecord {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  userPhone: string | null;
+  status: "PENDING" | "ACTIVE" | "SUSPENDED" | "REJECTED";
+  tier: string;
+  code: string | null;
+  location: string | null;
+  businessName: string | null;
+  contactPhone: string | null;
+  idNumber: string | null;
+  expectedMonthlyVolumeGhs: number | null;
+  applicationNotes: string | null;
+  floatBalance: number;
+  commissionAccruedGhs: number;
+  createdAt: string | null;
+}
+
+export function getAgents(status?: string, page = 0, size = 20): Promise<Page<AgentRecord>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return request(`/api/v1/admin/agents?${params}`);
+}
+
+/** Approval is maker-checker: returns a pending Approval that a second COMPLIANCE/ADMIN must confirm. */
+export function approveAgent(id: string): Promise<Approval> {
+  return request(`/api/v1/admin/agents/${id}/approve`, { method: "POST" });
+}
+
+export function rejectAgent(id: string): Promise<AgentRecord> {
+  return request(`/api/v1/admin/agents/${id}/reject`, { method: "POST" });
+}
+
+export function suspendAgent(id: string): Promise<AgentRecord> {
+  return request(`/api/v1/admin/agents/${id}/suspend`, { method: "POST" });
+}
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {

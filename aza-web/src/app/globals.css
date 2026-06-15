@@ -201,7 +201,7 @@
 .badge-dot {
   display: inline-block;
   width: 7px; height: 7px;
-  background: var(--aza-accent);
+  background: #174717;
   border-radius: 999px;
   animation: badgePulse 2s infinite;
   flex-shrink: 0;
@@ -408,7 +408,7 @@
 .hero__glow {
   position: absolute;
   width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(183,238,122,0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(23,71,23,0.1) 0%, transparent 70%);
   border-radius: 50%;
   z-index: 0;
   animation: glowPulse 3s ease-in-out infinite;
@@ -495,14 +495,65 @@
 /* ============================================================
    SECTION SPACING
    ============================================================ */
-.section-py { padding-top: 80px; padding-bottom: 80px; }
+.section-py  { padding-top: 100px; padding-bottom: 100px; }
+.section-py-sm { padding-top: 64px; padding-bottom: 64px; }
 
 @media (max-width: 768px) {
-  .section-py { padding-top: 56px; padding-bottom: 56px; }
+  .section-py    { padding-top: 72px;  padding-bottom: 72px; }
+  .section-py-sm { padding-top: 48px;  padding-bottom: 48px; }
 }
 
 @media (max-width: 480px) {
-  .section-py { padding-top: 40px; padding-bottom: 40px; }
+  .section-py    { padding-top: 56px;  padding-bottom: 56px; }
+  .section-py-sm { padding-top: 36px;  padding-bottom: 36px; }
+}
+
+/* ============================================================
+   APPLE-STYLE SECTION BACKGROUNDS
+   Always-dark or always-light — independent of user theme
+   ============================================================ */
+.apple-dark  { background: #ffffff !important; }
+.apple-night { background: #f5f5f7 !important; }
+.apple-light { background: #f5f5f7 !important; }
+.apple-white { background: #ffffff !important; }
+
+/* Heading color overrides inside apple-dark / apple-night */
+.apple-dark  .apple-heading,
+.apple-night .apple-heading { color: #f5f5f7; }
+.apple-dark  .apple-sub,
+.apple-night .apple-sub     { color: #86868b; }
+
+.apple-light .apple-heading,
+.apple-white .apple-heading { color: #1d1d1f; }
+.apple-light .apple-sub,
+.apple-white .apple-sub     { color: #6e6e73; }
+
+/* ============================================================
+   APPLE-STYLE TYPOGRAPHY SCALE
+   ============================================================ */
+.apple-display {
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.apple-headline {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.apple-title {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.apple-body {
+  font-size: 1.0625rem;
+  line-height: 1.7;
 }
 
 /* ============================================================
@@ -743,6 +794,46 @@
   inset: 0;
   overflow: hidden;
   background: var(--background);
+}
+
+/* ============================================================
+   HERO PHONE — responsive scale + parallax wrapper
+   ============================================================ */
+.hero-phone-scale {
+  transform: scale(1.25);
+  transform-origin: top center;
+}
+@media (max-width: 768px) {
+  .hero-phone-scale { transform: scale(1.05); }
+}
+@media (max-width: 480px) {
+  .hero-phone-scale { transform: scale(0.88); }
+}
+
+/* ============================================================
+   HERO SCROLL HINT — Apple-style chevron bounce
+   ============================================================ */
+@keyframes scrollChevron {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50%       { transform: translateY(5px); opacity: 0.8; }
+}
+.hero-scroll-chevron {
+  animation: scrollChevron 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-chevron { animation: none; }
+}
+
+/* ============================================================
+   FEATURES BENTO — responsive collapse
+   ============================================================ */
+@media (max-width: 900px) {
+  .features-bento { grid-template-columns: 1fr 1fr !important; }
+  .features-bento > [style*="span 2"] { grid-column: span 2 !important; }
+}
+@media (max-width: 540px) {
+  .features-bento { grid-template-columns: 1fr !important; }
+  .features-bento > * { grid-column: span 1 !important; }
 }
 
 /* ============================================================

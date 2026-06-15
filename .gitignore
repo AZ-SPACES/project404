@@ -21,3 +21,4 @@ aza-web/.next
 turnserver.conf
 backend/docs
 docs
+.gitignore

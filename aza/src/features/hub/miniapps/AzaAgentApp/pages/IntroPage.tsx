@@ -6,14 +6,26 @@ import { errorMessage } from '../helpers';
 import { NavProps } from '../types';
 
 export default function IntroPage({ refresh, Colors, styles }: NavProps) {
+  const [businessName, setBusinessName] = useState('');
   const [location, setLocation] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [idNumber, setIdNumber] = useState('');
+  const [expectedVolume, setExpectedVolume] = useState('');
+  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const apply = async () => {
     setSubmitting(true);
     try {
-      const trimmed = location.trim();
-      await applyAgent(trimmed ? { location: trimmed } : {});
+      const volume = parseFloat(expectedVolume.replace(/,/g, ''));
+      const payload: Parameters<typeof applyAgent>[0] = {};
+      if (businessName.trim()) payload.businessName = businessName.trim();
+      if (location.trim()) payload.location = location.trim();
+      if (contactPhone.trim()) payload.contactPhone = contactPhone.trim();
+      if (idNumber.trim()) payload.idNumber = idNumber.trim();
+      if (Number.isFinite(volume) && volume > 0) payload.expectedMonthlyVolumeGhs = volume;
+      if (notes.trim()) payload.applicationNotes = notes.trim();
+      await applyAgent(payload);
       refresh();
       Alert.alert('Application submitted', 'We will review your application and notify you.');
     } catch (e) {
@@ -34,6 +46,15 @@ export default function IntroPage({ refresh, Colors, styles }: NavProps) {
         withdrawal you handle.
       </Text>
 
+      <Text style={styles.inputLabel}>Business / trading name (optional)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Adwoa Mobile Money"
+        placeholderTextColor={Colors.textSecondary}
+        value={businessName}
+        onChangeText={setBusinessName}
+      />
+
       <Text style={styles.inputLabel}>Where will you operate? (optional)</Text>
       <TextInput
         style={styles.input}
@@ -41,6 +62,46 @@ export default function IntroPage({ refresh, Colors, styles }: NavProps) {
         placeholderTextColor={Colors.textSecondary}
         value={location}
         onChangeText={setLocation}
+      />
+
+      <Text style={styles.inputLabel}>Contact phone for your till (optional)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. 024 123 4567"
+        placeholderTextColor={Colors.textSecondary}
+        value={contactPhone}
+        onChangeText={setContactPhone}
+        keyboardType="phone-pad"
+      />
+
+      <Text style={styles.inputLabel}>Ghana Card number (optional)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="GHA-XXXXXXXXX-X"
+        placeholderTextColor={Colors.textSecondary}
+        value={idNumber}
+        onChangeText={setIdNumber}
+        autoCapitalize="characters"
+      />
+
+      <Text style={styles.inputLabel}>Expected monthly cash volume in GHS (optional)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. 50000"
+        placeholderTextColor={Colors.textSecondary}
+        value={expectedVolume}
+        onChangeText={setExpectedVolume}
+        keyboardType="numeric"
+      />
+
+      <Text style={styles.inputLabel}>Anything else we should know? (optional)</Text>
+      <TextInput
+        style={[styles.input, { height: 88, textAlignVertical: 'top' }]}
+        placeholder="Tell us about your experience or business"
+        placeholderTextColor={Colors.textSecondary}
+        value={notes}
+        onChangeText={setNotes}
+        multiline
       />
 
       <TouchableOpacity

@@ -1,102 +1,134 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { PhoneMockup } from "@/components/phone/PhoneMockup";
 
-const stats = [
-  { value: "₵0",      label: "Hidden fees"  },
-  { value: "Instant", label: "Transfers"    },
-  { value: "256-bit", label: "AES Encryption" },
-];
+gsap.registerPlugin(ScrollTrigger);
 
 export function HeroSection() {
+  const phoneWrapRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(phoneWrapRef.current, {
+        y: -55,
+        ease: "none",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "bottom top",
+          scrub: 1.6,
+        },
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
-      className="relative overflow-hidden section-py"
-      style={{ paddingTop: "calc(14px + 44px + 80px)" }}
+      ref={sectionRef}
       id="home"
+      className="apple-dark relative overflow-hidden"
+      style={{ paddingTop: "calc(14px + 44px + 100px)", paddingBottom: "0" }}
     >
+      {/* Subtle green glow behind phone */}
       <div
-        className="hero-grid max-w-[1160px] mx-auto px-4 sm:px-6 grid gap-12 lg:gap-[80px] items-center"
-        style={{ gridTemplateColumns: "1fr 1fr" }}
-      >
-        {/* Content */}
-        <div className="max-w-[520px]">
-          <div
-            className="reveal inline-flex items-center gap-2 px-[14px] py-[6px] rounded-md text-[0.8rem] font-semibold mb-6"
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center bottom, rgba(23,71,23,0.07) 0%, transparent 60%)",
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Text block — centered */}
+      <div className="relative z-10 flex flex-col items-center text-center px-4 sm:px-6">
+
+        {/* Display headline */}
+        <h1
+          className="reveal apple-display mb-6 max-w-[820px]"
+          data-delay="60"
+          style={{ color: "#1d1d1f" }}
+        >
+          The money app<br />
+          <span style={{ color: "#174717" }}>built for Africa.</span>
+        </h1>
+
+        {/* Subtitle */}
+        <p
+          className="reveal apple-body max-w-[480px] mb-10"
+          data-delay="120"
+          style={{ color: "#6e6e73" }}
+        >
+          Send and receive money instantly. Chat with friends. Scan QR codes.
+          All in one app — secured with bank-level encryption.
+        </p>
+
+        {/* CTAs */}
+        <div className="reveal flex gap-3 flex-wrap justify-center mb-16" data-delay="180">
+          <Link
+            href="/#waitlist"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl text-[0.95rem] font-semibold transition-opacity hover:opacity-85"
+            style={{ background: "#B7EE7A", color: "#174717" }}
+          >
+            Join the waitlist
+          </Link>
+          <Link
+            href="#features"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-xl text-[0.95rem] font-semibold transition-opacity hover:opacity-80"
             style={{
-              background: "rgba(183,238,122,0.2)",
-              border: "1px solid rgba(183,238,122,0.5)",
+              background: "transparent",
               color: "#174717",
+              border: "1.5px solid rgba(23,71,23,0.3)",
             }}
           >
-            <span className="badge-dot" />
-            Soon available worldwide
-          </div>
-
-          <h1
-            className="reveal text-[clamp(2.4rem,5vw,3.5rem)] font-extrabold leading-[1.1] tracking-[-0.03em] mb-6"
-            data-delay="80"
-            style={{ color: "var(--aza-text)" }}
-          >
-            Send money.<br />
-            <span style={{ color: "#B7EE7A" }}>Effortlessly.</span>
-          </h1>
-
-          <p
-            className="reveal text-[1.1rem] leading-[1.7] mb-8"
-            data-delay="160"
-            style={{ color: "var(--aza-text-secondary)" }}
-          >
-            Aza lets you send and request money, chat with friends, scan QR
-            codes, and access powerful mini-apps — all in one secure platform.
-          </p>
-
-          <div className="hero-cta reveal flex gap-4 flex-wrap mb-8" data-delay="240">
-            <Link
-              href="/#waitlist"
-              className="inline-flex items-center gap-2 px-[30px] py-[15px] rounded-lg text-[1rem] font-semibold text-white transition-colors"
-              style={{ background: "#174717", boxShadow: "0 2px 8px rgba(23,71,23,0.15)" }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.38.07 2.34.74 3.15.8 1.2-.24 2.35-.93 3.64-.84 1.54.12 2.71.72 3.46 1.83-3.18 1.91-2.5 6.05.82 7.27-.57 1.47-1.3 2.93-2.7 3.82zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-              </svg>
-              Download for iOS
-            </Link>
-            <Link
-              href="/#waitlist"
-              className="inline-flex items-center gap-2 px-[30px] py-[15px] rounded-lg text-[1rem] font-semibold transition-colors"
-              style={{ background: "transparent", border: "1.5px solid var(--aza-border)", color: "var(--aza-text)" }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.85c.577.33.702 1.059.318 1.54l-.318.318L15.396 12l2.302-2.302.318.318c-.005-.005.005.005 0 0zM5.864 2.658L16.8 8.99 14.499 11.29 5.864 2.658z" />
-              </svg>
-              Download for Android
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="reveal flex items-center gap-4 sm:gap-6 flex-wrap" data-delay="320">
-            {stats.map(({ value, label }, i) => (
-              <div key={label} className="flex items-center gap-4 sm:gap-6">
-                {i > 0 && <div className="w-px h-9" style={{ background: "var(--aza-border)" }} />}
-                <div>
-                  <span className="block text-[1.5rem] font-black tracking-[-0.03em]" style={{ color: "var(--aza-text)" }}>
-                    {value}
-                  </span>
-                  <span className="block text-[0.8rem] font-medium" style={{ color: "var(--aza-text-secondary)" }}>
-                    {label}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+            Learn more
+          </Link>
         </div>
+      </div>
 
-        {/* Phone */}
-        <div className="hero-visual-order reveal-scale flex justify-center items-center relative" data-delay="100">
-          <PhoneMockup />
+      {/* Phone mockup */}
+      <div
+        ref={phoneWrapRef}
+        className="reveal-scale relative z-10 flex justify-center hero-phone-wrap"
+        data-delay="80"
+        style={{ marginBottom: "-60px" }}
+      >
+        <div className="hero-phone-scale">
+          <PhoneMockup hideDots />
         </div>
+      </div>
+
+      {/* Scroll hint */}
+      <div
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
+        aria-hidden="true"
+      >
+        <span className="text-[0.6rem] font-semibold tracking-[0.2em] uppercase" style={{ color: "#c7c7cc" }}>
+          Scroll
+        </span>
+        <svg
+          className="hero-scroll-chevron"
+          width="16"
+          height="9"
+          viewBox="0 0 16 9"
+          fill="none"
+        >
+          <path
+            d="M1 1l7 7 7-7"
+            stroke="#c7c7cc"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
     </section>
   );
