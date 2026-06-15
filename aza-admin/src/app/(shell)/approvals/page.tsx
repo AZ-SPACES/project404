@@ -33,6 +33,9 @@ const ACTION_LABELS: Record<string, string> = {
   APPROVE_KYC: "KYC Approval",
   BROADCAST_NOTIFICATION: "Broadcast Notification",
   ENABLE_MINI_APP: "Mini App Re-enable",
+  APPROVE_AGENT: "Agent Activation",
+  MINT_FLOAT: "Float Mint",
+  BURN_FLOAT: "Float Burn",
 };
 
 function fmt(iso: string | null) {
