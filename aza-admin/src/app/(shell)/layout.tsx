@@ -85,6 +85,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["COMPLIANCE"] },
       { href: "/kyc/expiring", label: "Doc Expiry", icon: CalendarClock, roles: ["COMPLIANCE"] },
       { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
+      { href: "/agents", label: "Agents", icon: Store, exactMatch: true, roles: ["COMPLIANCE"] },
       { href: "/cs", label: "CS Toolkit", icon: Headphones, roles: ["ADMIN", "SUPPORT"] },
       { href: "/users/segment", label: "Segmentation", icon: Filter, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
