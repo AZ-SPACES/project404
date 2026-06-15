@@ -40,6 +40,7 @@ public class AgentCashService {
     private final FeeCalculationService feeCalculationService;
     private final WithdrawalCodeService withdrawalCodeService;
     private final LimitGuard limitGuard;
+    private final RiskEngineService riskEngineService;
 
     /**
      * Agent hands the customer's deposit into the app: {@code amount} moves from the
@@ -112,6 +113,7 @@ public class AgentCashService {
                 .note("Cash deposit via agent")
                 .build());
 
+        riskEngineService.evaluateCashActivity(tx, customer.getId());
         return toResponse(tx, agent);
     }
 
@@ -185,6 +187,7 @@ public class AgentCashService {
                 .note("Cash withdrawal via agent")
                 .build());
 
+        riskEngineService.evaluateCashActivity(tx, customer.getId());
         return toResponse(tx, agent);
     }
 
