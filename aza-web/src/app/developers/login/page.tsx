@@ -250,6 +250,7 @@ export default function DevLoginPage() {
         Back to aza
       </Link>
 
+      <main>
       {/* Card */}
       <div
         className="w-full max-w-[420px] rounded-3xl p-8"
@@ -654,6 +655,7 @@ export default function DevLoginPage() {
           </>
         )}
       </div>
+      </main>
 
       <p className="mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
         © {new Date().getFullYear()} Aza · Developer Portal

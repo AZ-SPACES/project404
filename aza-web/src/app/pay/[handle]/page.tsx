@@ -34,7 +34,7 @@ type FetchResult =
 const fetchMerchant = cache(async (handle: string): Promise<FetchResult> => {
   try {
     const res = await fetch(
-      `${API_URL}/api/v1/merchant/public/${handle}`,
+      `${API_URL}/api/v1/merchant/public/${encodeURIComponent(handle)}`,
       { cache: "no-store" },
     );
     if (res.ok) {
@@ -132,7 +132,7 @@ function MerchantLogo({ merchant }: { merchant: MerchantPublic }) {
 function ServiceUnavailablePage({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm space-y-6">
+      <main className="w-full max-w-sm space-y-6">
         <div className="bg-white rounded-3xl shadow-xl shadow-black/6 overflow-hidden">
           <div className="h-2 w-full bg-red-400" />
           <div className="p-8 flex flex-col items-center gap-4 text-center">
@@ -159,7 +159,7 @@ function ServiceUnavailablePage({ handle }: { handle: string }) {
             Aza
           </a>
         </p>
-      </div>
+      </main>
     </div>
   );
 }
@@ -167,7 +167,7 @@ function ServiceUnavailablePage({ handle }: { handle: string }) {
 function NotAcceptingPage({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm space-y-6">
+      <main className="w-full max-w-sm space-y-6">
         <div className="bg-white rounded-3xl shadow-xl shadow-black/6 overflow-hidden">
           <div className="h-2 w-full bg-amber-400" />
           <div className="p-8 flex flex-col items-center gap-4 text-center">
@@ -195,7 +195,7 @@ function NotAcceptingPage({ handle }: { handle: string }) {
             Aza
           </a>
         </p>
-      </div>
+      </main>
     </div>
   );
 }
@@ -222,7 +222,7 @@ export default async function PayPage({
 
   return (
     <div className="min-h-screen bg-[#f5f7f5] flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm space-y-6">
+      <main className="w-full max-w-sm space-y-6">
         <div className="bg-white rounded-3xl shadow-xl shadow-black/6 overflow-hidden">
           <div className="h-2 w-full" style={{ backgroundColor: accent }} />
 
@@ -277,7 +277,7 @@ export default async function PayPage({
             Aza
           </a>
         </p>
-      </div>
+      </main>
     </div>
   );
 }

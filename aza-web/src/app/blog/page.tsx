@@ -47,6 +47,7 @@ export default function BlogPage() {
     <div className="min-h-screen" style={{ background: "#ffffff", color: "#1d1d1f" }}>
       <Navbar />
 
+      <main>
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-[100px] pb-12">
         <p className="text-[0.75rem] font-bold tracking-[0.15em] uppercase mb-4" style={{ color: "#174717" }}>
@@ -132,6 +133,7 @@ export default function BlogPage() {
           </Link>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t py-8" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
@@ -140,9 +142,11 @@ export default function BlogPage() {
             &copy; {new Date().getFullYear()} Aza Systems Ltd. Made in Ghana.
           </p>
           <div className="flex gap-5 text-[0.75rem]" style={{ color: "#6e6e73" }}>
+            <Link href="/about" className="hover:opacity-70 transition-opacity">About</Link>
+            <Link href="/agents" className="hover:opacity-70 transition-opacity">Agents</Link>
+            <Link href="/mini-apps" className="hover:opacity-70 transition-opacity">Mini Apps</Link>
             <Link href="/privacy-policy" className="hover:opacity-70 transition-opacity">Privacy</Link>
             <Link href="/terms-of-service" className="hover:opacity-70 transition-opacity">Terms</Link>
-            <Link href="/about" className="hover:opacity-70 transition-opacity">About</Link>
           </div>
         </div>
       </footer>

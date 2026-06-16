@@ -133,6 +133,7 @@ export default function StatusPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] font-sans antialiased">
+      <main>
       {/* Hero banner */}
       <div style={{ background: overallBg }} className="transition-all duration-700">
         <div className="max-w-3xl mx-auto px-6 py-12">
@@ -243,6 +244,7 @@ export default function StatusPage() {
           </Link>
         </div>
       </div>
+      </main>
     </div>
   );
 }

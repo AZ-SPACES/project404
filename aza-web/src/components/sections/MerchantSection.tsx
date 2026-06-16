@@ -94,13 +94,22 @@ export function MerchantSection() {
               ))}
             </ul>
 
-            <Link
-              href="/#waitlist"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-semibold transition-opacity hover:opacity-85 mt-auto self-start"
-              style={{ background: "#174717", color: "#B7EE7A" }}
-            >
-              Get early access
-            </Link>
+            <div className="flex items-center gap-4 mt-auto">
+              <Link
+                href="/#waitlist"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[0.875rem] font-semibold transition-opacity hover:opacity-85 self-start"
+                style={{ background: "#174717", color: "#B7EE7A" }}
+              >
+                Get early access
+              </Link>
+              <Link
+                href="/agents"
+                className="text-[0.85rem] font-semibold transition-opacity hover:opacity-70"
+                style={{ color: "#174717" }}
+              >
+                Find an agent
+              </Link>
+            </div>
           </div>
 
           {/* Business */}
