@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -42,17 +42,13 @@ export default function GuidesPage() {
 
 function GuidesContent() {
   const searchParams = useSearchParams();
-  const [activeDoc, setActiveDoc] = useState<string>('intro');
+  const [activeDoc, setActiveDoc] = useState<string>(() => {
+    const docParam = searchParams.get('doc');
+    return docParam && docMap[docParam] ? docParam : 'intro';
+  });
   const [activeCodeTab, setActiveCodeTab] = useState<CodeTab>('curl');
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const docParam = searchParams.get('doc');
-    if (docParam && docMap[docParam]) {
-      setActiveDoc(docParam);
-    }
-  }, [searchParams]);
 
   const handleSelectDoc = (docId: string) => {
     setActiveDoc(docId);
@@ -3111,11 +3107,11 @@ public static boolean verifyWebhook(
         <h3 className="text-base font-bold text-gray-900">How it works</h3>
         <ol className="list-decimal pl-5 space-y-1.5 text-sm">
           <li>Your server calls <code>POST /oauth/authorize</code> with your <code>client_id</code>, requested scopes, PKCE challenge, and a redirect URI. The API returns a consent URL.</li>
-          <li>You redirect the user's browser to <code>https://aza.systems/oauth/consent?state=…</code>.</li>
+          <li>You redirect the user&apos;s browser to <code>https://aza.systems/oauth/consent?state=…</code>.</li>
           <li>The user sees your app name, logo, and the permissions you requested. They enter their Aza credentials and click <strong>Allow</strong>.</li>
           <li>Aza redirects the browser to your <code>redirect_uri</code> with <code>?code=…&state=…</code>.</li>
           <li>Your server exchanges the code for tokens via <code>POST /oauth/token</code>. No browser involved — server-to-server.</li>
-          <li>Call <code>GET /oauth/userinfo</code> (Bearer token) to get the user's profile.</li>
+          <li>Call <code>GET /oauth/userinfo</code> (Bearer token) to get the user&apos;s profile.</li>
         </ol>
 
         <h3 className="text-base font-bold text-gray-900">Register your OAuth client</h3>
@@ -3136,7 +3132,7 @@ public static boolean verifyWebhook(
         </Note>
 
         <Note>
-          <strong>PKCE is required.</strong> Generate a random 43–128 character <code>code_verifier</code>, hash it with SHA-256, and base64url-encode the result as <code>code_challenge</code>. Store the verifier server-side — you'll need it for token exchange.
+          <strong>PKCE is required.</strong> Generate a random 43–128 character <code>code_verifier</code>, hash it with SHA-256, and base64url-encode the result as <code>code_challenge</code>. Store the verifier server-side — you&apos;ll need it for token exchange.
         </Note>
 
         <h3 className="text-base font-bold text-gray-900">Token lifetimes</h3>
@@ -3297,7 +3293,7 @@ public static String[] generatePKCE() throws Exception {
         </ol>
 
         <Note>
-          <strong>No redirect URI needed.</strong> The QR flow is entirely polling-based — there is no browser redirect, so you don't need to register a callback URL.
+          <strong>No redirect URI needed.</strong> The QR flow is entirely polling-based — there is no browser redirect, so you don&apos;t need to register a callback URL.
         </Note>
 
         <h3 className="text-base font-bold text-gray-900">Endpoints</h3>
@@ -3601,7 +3597,7 @@ public class AzaQrProxyController {
             ['code_verifier', 'The original PKCE verifier you generated in step 1'],
           ]}
         />
-        <p className="text-sm">Response contains <code>access_token</code>, <code>refresh_token</code>, <code>expires_in</code>, and <code>token_type: "Bearer"</code>.</p>
+        <p className="text-sm">Response contains <code>access_token</code>, <code>refresh_token</code>, <code>expires_in</code>, and <code>token_type: &quot;Bearer&quot;</code>.</p>
 
         <h3 className="text-base font-bold text-gray-900">Refresh the access token</h3>
         <p className="text-sm">When the access token expires (1 hour), exchange the refresh token:</p>
@@ -3905,11 +3901,11 @@ OAuthUserInfo getUserInfo(String accessToken) {
         </ol>
 
         <Note>
-          <strong>Same-site cookies:</strong> Set your session cookie with <code>SameSite=Lax; Secure; HttpOnly</code> so it isn't sent on cross-origin redirects from aza.systems, but is sent on the GET redirect back to your callback.
+          <strong>Same-site cookies:</strong> Set your session cookie with <code>SameSite=Lax; Secure; HttpOnly</code> so it isn&apos;t sent on cross-origin redirects from aza.systems, but is sent on the GET redirect back to your callback.
         </Note>
 
         <h3 className="text-base font-bold text-gray-900">Signing out</h3>
-        <p className="text-sm">Call <code>POST /oauth/revoke</code> to invalidate the Aza tokens, then clear your local session. This logs the user out of your app and de-authorises your client's access to their Aza account.</p>
+        <p className="text-sm">Call <code>POST /oauth/revoke</code> to invalidate the Aza tokens, then clear your local session. This logs the user out of your app and de-authorises your client&apos;s access to their Aza account.</p>
 
         <Warn>
           Do not skip token revocation on logout. If you only clear the local session, the refresh token stays valid for 30 days and can be replayed from any device with access to it.

@@ -148,7 +148,7 @@ export default function DevLoginPage() {
 
   useEffect(() => {
     if (mode === 'qr') {
-      startQrSession();
+      startQrSession(); // eslint-disable-line react-hooks/set-state-in-effect
     } else {
       stopQr();
     }

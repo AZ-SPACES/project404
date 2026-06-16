@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.aza.systems';
@@ -48,7 +49,7 @@ function ConsentContent() {
 
   useEffect(() => {
     if (!state) {
-      setLoadError('Missing authorization state. Please return to the app and try again.');
+      setLoadError('Missing authorization state. Please return to the app and try again.'); // eslint-disable-line react-hooks/set-state-in-effect
       return;
     }
     fetch(`${API}/oauth/pending/${state}`)
@@ -110,7 +111,8 @@ function ConsentContent() {
           {/* App identity */}
           <div className="flex flex-col items-center text-center mb-7">
             {client.logoUrl ? (
-              <img src={client.logoUrl} alt={client.appName}
+              <Image src={client.logoUrl} alt={client.appName} width={56} height={56}
+                   unoptimized
                    className="w-14 h-14 rounded-2xl object-cover mb-3"
                    style={{ border: '1px solid rgba(255,255,255,0.12)' }} />
             ) : (

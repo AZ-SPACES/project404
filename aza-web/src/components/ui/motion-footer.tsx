@@ -184,7 +184,7 @@ const MarqueeItem = () => (
   <div className="flex items-center space-x-12 px-6">
     <span>Send Effortlessly</span> <span className="opacity-40">✦</span>
     <span>Zero Hidden Fees</span> <span className="opacity-40">✦</span>
-    <span>Global Reach</span> <span className="opacity-40">✦</span>
+    <span>Built for Africa</span> <span className="opacity-40">✦</span>
     <span>Bank-grade Security</span> <span className="opacity-40">✦</span>
     <span>Instant Transfers</span> <span className="opacity-40">✦</span>
   </div>

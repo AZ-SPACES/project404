@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { ChevronDown, Mouse } from "lucide-react";
 
 export interface CinematicHeroProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -18,15 +19,14 @@ export function CinematicHero({
   ...props
 }: CinematicHeroProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(true);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [animationDone, setAnimationDone] = useState(false);
+  const isVisible = !prefersReducedMotion && !animationDone;
 
   useEffect(() => {
     // Skip the splash entirely for reduced-motion users — no scroll lock,
     // no multi-second animation holding the page hostage.
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setIsVisible(false);
-      return;
-    }
+    if (prefersReducedMotion) return;
 
     // Hide navbar and lock scroll while cinematic is active
     document.body.classList.add('cinematic-active');
@@ -64,7 +64,7 @@ export function CinematicHero({
                 // Restore scroll, reveal navbar, unmount component
                 document.body.classList.remove('cinematic-active');
                 document.body.style.overflow = '';
-                setIsVisible(false);
+                setAnimationDone(true);
               }
             });
           }
@@ -104,7 +104,7 @@ export function CinematicHero({
       document.body.classList.remove('cinematic-active');
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   if (!isVisible) return null;
 

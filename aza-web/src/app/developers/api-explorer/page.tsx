@@ -113,12 +113,14 @@ export default function ApiExplorerPage() {
   }, []);
 
   useEffect(() => {
+    // Auth gate: redirect if there's no session, otherwise hydrate from
+    // sessionStorage. Both require a real mount (no SSR/session access).
     const stored = sessionStorage.getItem('aza_dev_token');
     if (!stored) {
       router.replace('/developers/login');
       return;
     }
-    setToken(stored);
+    setToken(stored); // eslint-disable-line react-hooks/set-state-in-effect
     const savedKey = sessionStorage.getItem('aza_dev_api_key') ?? '';
     setApiKey(savedKey);
     setMounted(true);
