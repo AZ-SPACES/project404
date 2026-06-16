@@ -102,7 +102,7 @@ function ConsentContent() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12"
          style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <div className="w-full max-w-sm">
+      <main className="w-full max-w-sm">
 
         {/* Card */}
         <div className="rounded-2xl border p-8"
@@ -243,7 +243,7 @@ function ConsentContent() {
           You are authorising <strong className="text-white/40">{client.appName}</strong> to access your Aza account.
           You can revoke access at any time from Aza → Profile → Connected Apps.
         </p>
-      </div>
+      </main>
     </div>
   );
 }
@@ -252,7 +252,9 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center"
          style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <Loader2 size={24} className="animate-spin" style={{ color: '#B7EE7A' }} />
+      <main>
+        <Loader2 size={24} className="animate-spin" style={{ color: '#B7EE7A' }} />
+      </main>
     </div>
   );
 }
@@ -261,11 +263,11 @@ function ErrorScreen({ message }: { message: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6"
          style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <div className="text-center max-w-sm">
+      <main className="text-center max-w-sm">
         <AlertCircle size={32} className="mx-auto mb-3" style={{ color: '#fca5a5' }} />
         <p className="text-white font-semibold mb-1">Authorization failed</p>
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{message}</p>
-      </div>
+      </main>
     </div>
   );
 }

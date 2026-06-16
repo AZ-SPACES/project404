@@ -208,6 +208,7 @@ export default async function BlogPostPage({
     <div className="min-h-screen" style={{ background: "#ffffff", color: "#1d1d1f" }}>
       <Navbar />
 
+      <main>
       <article className="max-w-[680px] mx-auto px-6 pt-[100px] pb-20">
         {/* Back */}
         <Link
@@ -264,6 +265,7 @@ export default async function BlogPostPage({
           </Link>
         </div>
       </article>
+      </main>
 
       <footer className="border-t py-8" style={{ borderColor: "rgba(0,0,0,0.07)" }}>
         <div className="max-w-[680px] mx-auto px-6 flex items-center justify-between flex-wrap gap-4">
@@ -272,6 +274,8 @@ export default async function BlogPostPage({
           </p>
           <div className="flex gap-5 text-[0.75rem]" style={{ color: "#6e6e73" }}>
             <Link href="/blog" className="hover:opacity-70 transition-opacity">Blog</Link>
+            <Link href="/agents" className="hover:opacity-70 transition-opacity">Agents</Link>
+            <Link href="/mini-apps" className="hover:opacity-70 transition-opacity">Mini Apps</Link>
             <Link href="/privacy-policy" className="hover:opacity-70 transition-opacity">Privacy</Link>
             <Link href="/terms-of-service" className="hover:opacity-70 transition-opacity">Terms</Link>
           </div>

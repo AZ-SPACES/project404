@@ -1,37 +1,50 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
-  title: "About | Aza",
-  description: "Aza is a mobile-first fintech platform built for Africa — instant transfers, encrypted chat, QR payments, and a mini-app hub. Made in Ghana.",
-  alternates: { canonical: "/about" },
+  title: "Mini Apps | Aza",
+  description: "An app store inside your wallet. No installs, no new accounts — Aza Mini Apps run instantly inside the Aza app, and anyone can build one.",
+  alternates: { canonical: "/mini-apps" },
 };
+
+const APPS = [
+  { name: "Aza Business", desc: "Accept payments, manage payouts and API keys.", icon: "/hub-apps/aza-business.png", category: "Business" },
+  { name: "Aza Agent", desc: "Cash-in and cash-out dashboard for agents.", icon: "/hub-apps/aza-developer.png", category: "Business" },
+  { name: "CediRates", desc: "Live exchange rates and fuel prices.", icon: "/hub-apps/cedirates.png", category: "Finance" },
+  { name: "2048", desc: "Join the numbers and get to 2048!", icon: "/hub-apps/2048.png", category: "Games" },
+  { name: "Snake", desc: "Eat apples, grow your snake.", icon: "/hub-apps/snakegame.png", category: "Games" },
+  { name: "Connect 4", desc: "Connect 4 in a row to win.", icon: "/hub-apps/connect4.png", category: "Games" },
+  { name: "Radio", desc: "Listen to live radio stations.", icon: "/hub-apps/radio.png", category: "Entertainment" },
+  { name: "Notepad", desc: "Take notes quickly inside Aza.", icon: "/hub-apps/notepad.png", category: "Productivity" },
+];
 
 const PRINCIPLES = [
   {
     num: "01",
-    title: "Speed is the product.",
-    body: "Every second a transfer hangs is a second someone's waiting. We built Aza so that money moves as fast as a message.",
+    title: "No installs.",
+    body: "Mini apps open instantly inside Aza. There's nothing to download from a store and nothing left behind when you close it.",
   },
   {
     num: "02",
-    title: "Zero hidden costs.",
-    body: "Peer-to-peer transfers on Aza are free. No surprise charges, no percentage skimmed off the top. Free means free.",
+    title: "No new accounts.",
+    body: "Your Aza identity carries over. Sign in once, and every mini app you open already knows it's you — with your explicit consent.",
   },
   {
     num: "03",
-    title: "Security is not optional.",
-    body: "AES-256 encryption, TLS 1.3 in transit, E2EE chat, biometric auth, and Bank of Ghana–compliant KYC. Every layer matters.",
+    title: "You control what's shared.",
+    body: "Each app declares exactly what it needs — your profile, wallet balance, the ability to request a payment — and you approve it per app, not all at once.",
   },
   {
     num: "04",
-    title: "Built for Africa, by Africa.",
-    body: "Aza is designed for how people actually use money here — mobile-first, chat-first, and community-first.",
+    title: "Reviewed before launch.",
+    body: "Every submission is checked for security, permissions, and content before it goes live in the Hub.",
   },
 ];
 
-export default function AboutPage() {
+export default function MiniAppsPage() {
   return (
     <div className="min-h-screen" style={{ background: "#ffffff", color: "#1d1d1f" }}>
       <Navbar />
@@ -41,16 +54,16 @@ export default function AboutPage() {
       <section className="max-w-5xl mx-auto px-6 pt-[100px] pb-16">
         <div className="max-w-[720px]">
           <p className="text-[0.75rem] font-bold tracking-[0.15em] uppercase mb-5" style={{ color: "#174717" }}>
-            About Aza
+            Mini Apps
           </p>
           <h1
             className="font-black leading-tight mb-6"
             style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.04em", textWrap: "balance" }}
           >
-            The money app Africa&nbsp;deserves.
+            An app store,<br />inside your wallet.
           </h1>
           <p className="text-[1.1rem] leading-[1.7] max-w-[600px]" style={{ color: "#6e6e73" }}>
-            Aza is a mobile-first platform for instant peer-to-peer transfers, encrypted chat, QR payments, and a growing hub of mini apps — all in one place, free of charge.
+            Games, tools, and services that open in a tap and disappear when you&apos;re done — no installs, no new accounts, no switching apps.
           </p>
         </div>
       </section>
@@ -60,39 +73,34 @@ export default function AboutPage() {
         <div style={{ height: "1px", background: "rgba(0,0,0,0.07)" }} />
       </div>
 
-      {/* Story */}
+      {/* Showcase */}
       <section className="max-w-5xl mx-auto px-6 py-16">
-        <div className="grid gap-12" style={{ gridTemplateColumns: "1fr 1fr" }}>
-          <div>
-            <h2 className="font-black mb-5" style={{ fontSize: "1.5rem", letterSpacing: "-0.03em" }}>
-              Where it started.
-            </h2>
-            <p className="text-[0.95rem] leading-[1.75]" style={{ color: "#6e6e73" }}>
-              Aza started as a final-year project at KNUST, Ghana — built by someone who was tired of the friction in sending money to a friend across campus. Mobile money works, but it charges you. Bank transfers work, but they take hours. Chat apps are everywhere, but none of them let you pay inside the conversation.
-            </p>
-            <p className="text-[0.95rem] leading-[1.75] mt-4" style={{ color: "#6e6e73" }}>
-              So we built the thing we wanted. A fast, secure, free money app — with chat built in from the start.
-            </p>
-          </div>
-          <div>
-            <h2 className="font-black mb-5" style={{ fontSize: "1.5rem", letterSpacing: "-0.03em" }}>
-              Where we&apos;re going.
-            </h2>
-            <p className="text-[0.95rem] leading-[1.75]" style={{ color: "#6e6e73" }}>
-              Ghana first. Then Nigeria, Senegal, Côte d&apos;Ivoire, and beyond. We&apos;re building a platform that works the way Africans actually use money — mobile, chat-driven, and community-led.
-            </p>
-            <p className="text-[0.95rem] leading-[1.75] mt-4" style={{ color: "#6e6e73" }}>
-              Merchants, developers, and businesses are part of the plan too. A full API, mini-app platform, and business tools — all built on the same instant, zero-fee infrastructure.
-            </p>
-          </div>
-        </div>
+        <h2 className="font-black mb-10" style={{ fontSize: "1.6rem", letterSpacing: "-0.035em" }}>
+          What&apos;s in the Hub.
+        </h2>
+        <ul role="list" className="mini-apps-grid grid gap-4" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+          {APPS.map((app) => (
+            <li key={app.name} className="rounded-2xl p-5 flex flex-col gap-3" style={{ background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.06)" }}>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm">
+                <Image src={app.icon} alt={app.name} width={48} height={48} className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-bold" style={{ fontSize: "0.9rem", letterSpacing: "-0.02em" }}>{app.name}</span>
+                </div>
+                <p className="text-[0.8rem] leading-[1.5]" style={{ color: "#6e6e73" }}>{app.desc}</p>
+              </div>
+              <span className="text-[0.65rem] font-bold tracking-[0.1em] uppercase mt-auto" style={{ color: "#174717" }}>{app.category}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Principles */}
       <section style={{ background: "#f5f5f7" }}>
         <div className="max-w-5xl mx-auto px-6 py-16">
           <h2 className="font-black mb-10" style={{ fontSize: "1.8rem", letterSpacing: "-0.035em" }}>
-            What we believe.
+            Built around trust.
           </h2>
           <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             {PRINCIPLES.map((p) => (
@@ -106,27 +114,25 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Built in Ghana */}
+      {/* For developers */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <div className="rounded-2xl p-10 flex flex-col items-start gap-4" style={{ background: "#174717" }}>
           <span className="text-[0.75rem] font-bold tracking-[0.12em] uppercase" style={{ color: "#B7EE7A" }}>
-            Made in Ghana 🇬🇭
+            For developers
           </span>
           <h2 className="font-black leading-tight max-w-[520px]" style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", color: "#ffffff", letterSpacing: "-0.035em" }}>
-            Regulated by the Bank of Ghana. Built for Ghanaians first.
+            Anyone can build a mini app.
           </h2>
           <p className="text-[0.95rem] leading-[1.7] max-w-[520px]" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Aza operates under Bank of Ghana e-money regulations. KYC is powered by Ghana&apos;s National Identification Authority (NIA), and every transaction is logged, encrypted, and auditable.
+            Build with our TypeScript SDK, deploy to any HTTPS URL, and submit it from inside the app. Most reviews are done within 2–5 business days.
           </p>
           <Link
-            href="/security"
+            href="/developers/guides?doc=miniapps-intro"
             className="mt-2 inline-flex items-center gap-2 text-[0.875rem] font-semibold transition-opacity hover:opacity-80"
             style={{ color: "#B7EE7A" }}
           >
-            How we secure your money
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            Read the Mini Apps guide
+            <ArrowRight size={14} aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -156,16 +162,17 @@ export default function AboutPage() {
             &copy; {new Date().getFullYear()} Aza Systems Ltd. Made in Ghana.
           </p>
           <div className="flex gap-5 text-[0.75rem]" style={{ color: "#6e6e73" }}>
-            <Link href="/security" className="hover:opacity-70 transition-opacity">Security</Link>
-            <Link href="/agents" className="hover:opacity-70 transition-opacity">Agents</Link>
-            <Link href="/mini-apps" className="hover:opacity-70 transition-opacity">Mini Apps</Link>
             <Link href="/privacy-policy" className="hover:opacity-70 transition-opacity">Privacy</Link>
             <Link href="/terms-of-service" className="hover:opacity-70 transition-opacity">Terms</Link>
+            <Link href="/about" className="hover:opacity-70 transition-opacity">About</Link>
           </div>
         </div>
       </footer>
 
       <style>{`
+        @media (max-width: 900px) {
+          .mini-apps-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
         @media (max-width: 640px) {
           .grid { grid-template-columns: 1fr !important; }
         }

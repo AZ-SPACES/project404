@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 const categories = [
   { key: "all",           label: "All"           },
@@ -43,6 +44,16 @@ export function HubSection() {
           <p className="apple-body max-w-[420px] mx-auto" style={{ color: "#6e6e73" }}>
             Games, tools, and services — no installs, no new accounts, no switching apps.
           </p>
+          <Link
+            href="/mini-apps"
+            className="inline-flex items-center gap-1.5 mt-4 text-[0.85rem] font-semibold transition-opacity hover:opacity-70"
+            style={{ color: "#174717" }}
+          >
+            See what&apos;s inside
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2.5 6h7M6 2.5L9.5 6 6 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
 
         {/* Filter pills */}
@@ -72,7 +83,7 @@ export function HubSection() {
             style={{ background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.06)" }}
           >
             <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-md">
-              <Image src={featured.icon} alt="" width={56} height={56} className="w-full h-full object-cover" />
+              <Image src={featured.icon} alt={featured.name} width={56} height={56} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">

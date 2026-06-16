@@ -62,6 +62,7 @@ export default function DevelopersPage() {
         </Link>
       </div>
 
+      <main>
       {/* Hero */}
       <div className="flex flex-col items-center justify-center text-center px-6 pt-20 pb-16">
         <div
@@ -138,6 +139,7 @@ export default function DevelopersPage() {
           </Link>
         ))}
       </div>
+      </main>
 
       {/* Footer */}
       <div className="mt-auto text-center pb-8 text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>

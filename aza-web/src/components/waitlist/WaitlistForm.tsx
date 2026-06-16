@@ -27,7 +27,7 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
         disabled={status === "loading"}
         onChange={onChange}
         aria-label="Email address"
-        className="w-full h-[60px] pl-6 pr-[150px] rounded-xl outline-none transition-all duration-200 placeholder-zinc-500 disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full h-[60px] pl-6 pr-[150px] rounded-xl outline-none transition-all duration-200 placeholder-zinc-500 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#27272a]"
         style={{
           backgroundColor: "#27272a",
           color: "#ffffff",

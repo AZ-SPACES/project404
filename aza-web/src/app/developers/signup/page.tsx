@@ -109,6 +109,7 @@ export default function DevSignupPage() {
         Back to aza
       </Link>
 
+      <main>
       <div
         className="w-full max-w-[440px] rounded-3xl p-8"
         style={{
@@ -323,6 +324,7 @@ export default function DevSignupPage() {
           </form>
         )}
       </div>
+      </main>
 
       <p className="mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
         © {new Date().getFullYear()} Aza · Developer Portal

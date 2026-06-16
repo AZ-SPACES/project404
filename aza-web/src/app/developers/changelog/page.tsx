@@ -129,6 +129,7 @@ export default function ChangelogPage() {
         </Link>
       </div>
 
+      <main>
       {/* Hero */}
       <div className="flex flex-col items-center text-center px-6 pt-16 pb-12">
         <div
@@ -224,6 +225,7 @@ export default function ChangelogPage() {
           </div>
         ))}
       </div>
+      </main>
 
       {/* Footer */}
       <div className="mt-auto text-center pb-8 text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>

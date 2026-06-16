@@ -317,11 +317,35 @@ export function CinematicFooter() {
 
               {/* Secondary Text Links */}
               <div className="flex flex-wrap justify-center gap-3 md:gap-6 w-full mt-2">
+                <MagneticButton as="a" href="/about" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  About
+                </MagneticButton>
+                <MagneticButton as="a" href="/blog" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Blog
+                </MagneticButton>
+                <MagneticButton as="a" href="/agents" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Agents
+                </MagneticButton>
+                <MagneticButton as="a" href="/mini-apps" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Mini Apps
+                </MagneticButton>
+                <MagneticButton as="a" href="/developers" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Developers
+                </MagneticButton>
+                <MagneticButton as="a" href="/security" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Security
+                </MagneticButton>
+                <MagneticButton as="a" href="/compliance" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Compliance
+                </MagneticButton>
                 <MagneticButton as="a" href="/privacy-policy" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Privacy Policy
                 </MagneticButton>
                 <MagneticButton as="a" href="/terms-of-service" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Terms of Service
+                </MagneticButton>
+                <MagneticButton as="a" href="/cookie-policy" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Cookie Policy
                 </MagneticButton>
                 <MagneticButton as="a" href="mailto:support@aza.systems" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Contact Support
