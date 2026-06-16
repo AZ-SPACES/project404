@@ -47,7 +47,10 @@
       "url": "https://u.expo.dev/5bc1e514-f750-4844-9281-1d745fa9b8e0",
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "plugins": [
       "expo-updates",

@@ -39,6 +39,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("types") java.util.Collection<Transaction.TransactionType> types,
             @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    // ── Cash-channel AML (structuring) ────────────────────────────────────────
+
+    /** Sub-threshold cash deposits to a customer (the cash-in recipient) since a point in time. */
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.type = 'CASH_IN' AND t.status = 'COMPLETED' " +
+            "AND t.recipientId = :customerId AND t.amount >= :floor AND t.amount < :ceiling AND t.completedAt >= :since")
+    long countCashInDepositsInBand(@Param("customerId") UUID customerId, @Param("floor") BigDecimal floor,
+                                   @Param("ceiling") BigDecimal ceiling, @Param("since") LocalDateTime since);
+
+    /** Sub-threshold cash withdrawals by a customer (the cash-out sender) since a point in time. */
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.type = 'CASH_OUT' AND t.status = 'COMPLETED' " +
+            "AND t.senderId = :customerId AND t.amount >= :floor AND t.amount < :ceiling AND t.completedAt >= :since")
+    long countCashOutWithdrawalsInBand(@Param("customerId") UUID customerId, @Param("floor") BigDecimal floor,
+                                       @Param("ceiling") BigDecimal ceiling, @Param("since") LocalDateTime since);
+
     java.util.List<Transaction> findAllBySenderIdAndStatus(UUID senderId, Transaction.TransactionStatus status);
 
     /* Find all transactions where user is sender or recipient, ordered by most recent first. */

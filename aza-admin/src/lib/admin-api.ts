@@ -1935,7 +1935,10 @@ export interface Approval {
     | "REACTIVATE_USER"
     | "APPROVE_KYC"
     | "BROADCAST_NOTIFICATION"
-    | "ENABLE_MINI_APP";
+    | "ENABLE_MINI_APP"
+    | "APPROVE_AGENT"
+    | "MINT_FLOAT"
+    | "BURN_FLOAT";
   targetId: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";

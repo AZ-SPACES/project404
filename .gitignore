@@ -16,6 +16,7 @@ backend/_env.bin
 aza-admin/.env.local
 aza-admin/.next
 aza-web/.next
+*.tsbuildinfo
 
 .DS_Store
 turnserver.conf

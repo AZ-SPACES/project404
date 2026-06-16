@@ -7,6 +7,7 @@ import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.AgentRepository;
+import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 /**
@@ -30,6 +32,10 @@ public class AgentService {
 
     private final AgentRepository agentRepository;
     private final WalletRepository walletRepository;
+    private final UserRepository userRepository;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 
     @Transactional
     public AgentResponse apply(User user, AgentApplyRequest request) {
@@ -57,7 +63,26 @@ public class AgentService {
     public void activate(UUID agentId) {
         Agent agent = require(agentId);
         agent.setStatus(Agent.Status.ACTIVE);
+        if (agent.getCode() == null || agent.getCode().isBlank()) {
+            agent.setCode(generateCode());
+        }
         agentRepository.save(agent);
+    }
+
+    /** A short, human-readable till code (e.g. AZA-7K4PQM) assigned when the agent goes live. */
+    private String generateCode() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            StringBuilder sb = new StringBuilder("AZA-");
+            for (int i = 0; i < 6; i++) {
+                sb.append(CODE_ALPHABET.charAt(RANDOM.nextInt(CODE_ALPHABET.length())));
+            }
+            String code = sb.toString();
+            if (agentRepository.findByCode(code).isEmpty()) {
+                return code;
+            }
+        }
+        throw new AppException("CODE_GENERATION_FAILED",
+                "Could not allocate a unique agent code", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Transactional
@@ -89,7 +114,7 @@ public class AgentService {
     }
 
     private AgentResponse toResponse(Agent a) {
-        return AgentResponse.builder()
+        AgentResponse.AgentResponseBuilder builder = AgentResponse.builder()
                 .id(a.getId().toString())
                 .userId(a.getUserId().toString())
                 .status(a.getStatus().name())
@@ -104,6 +129,14 @@ public class AgentService {
                 .floatBalance(walletRepository.findByUserId(a.getUserId())
                         .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                 .commissionAccruedGhs(a.getCommissionAccruedGhs())
-                .build();
+                .createdAt(a.getCreatedAt() != null ? a.getCreatedAt().toString() : null);
+        userRepository.findById(a.getUserId()).ifPresent(u -> {
+            String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " "
+                    + (u.getLastName() != null ? u.getLastName() : "")).trim();
+            builder.userName(name.isBlank() ? null : name)
+                    .userEmail(u.getEmail())
+                    .userPhone(u.getPhoneNumber());
+        });
+        return builder.build();
     }
 }
