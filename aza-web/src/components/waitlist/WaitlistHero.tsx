@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { WaitlistBackground } from "./WaitlistBackground";
 import { WaitlistForm } from "./WaitlistForm";
 import { WaitlistSuccess, WaitlistSharePrompt } from "./WaitlistSuccess";
 import { useConfetti } from "@/hooks/useConfetti";
-import { WAITLIST_COUNT_LABEL } from "@/lib/constants";
+import { WAITLIST_COUNT_FALLBACK_LABEL } from "@/lib/constants";
 import Image from "next/image";
 import azaZ from "../../app/assets/aza-z.png";
 
@@ -16,8 +16,20 @@ export function WaitlistHero() {
   const [status, setStatus]     = useState<Status>("idle");
   const [error, setError]       = useState("");
   const [position, setPosition] = useState<number | undefined>();
+  const [countLabel, setCountLabel] = useState<string>(WAITLIST_COUNT_FALLBACK_LABEL);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { fire } = useConfetti(canvasRef);
+
+  useEffect(() => {
+    fetch("/api/waitlist/count")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data?.total === "number") setCountLabel(data.total.toLocaleString());
+      })
+      .catch(() => {
+        // keep the fallback label on network/parse failure
+      });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -133,7 +145,7 @@ export function WaitlistHero() {
               ))}
             </div>
             <p className="text-[0.8rem] font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
-              <span style={{ color: "#B7EE7A", fontWeight: 700 }}>{WAITLIST_COUNT_LABEL}</span> people already waiting
+              <span style={{ color: "#B7EE7A", fontWeight: 700 }}>{countLabel}</span> people already waiting
             </p>
           </div>
         )}

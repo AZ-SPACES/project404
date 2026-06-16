@@ -25,7 +25,7 @@ public class WaitlistService {
     @Value("${app.base-url:https://aza.systems}")
     private String appBaseUrl;
 
-    public void register(String rawEmail, String ipAddress) {
+    public long register(String rawEmail, String ipAddress) {
         String email = rawEmail.toLowerCase().trim();
 
         if (waitlistRepository.existsByEmail(email)) {
@@ -49,6 +49,12 @@ public class WaitlistService {
                 log.warn("Waitlist confirmation email failed for entry {}: {}", entryId, e.getMessage());
             }
         });
+
+        return waitlistRepository.countByCreatedAtLessThanEqual(entry.getCreatedAt());
+    }
+
+    public long count() {
+        return waitlistRepository.count();
     }
 
     public void invite(UUID id) {

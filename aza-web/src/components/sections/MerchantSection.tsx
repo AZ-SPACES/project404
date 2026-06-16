@@ -20,7 +20,7 @@ const BUSINESS = [
   "Merchant payment links",
   "REST API & webhooks",
   "Real-time dashboard",
-  "Same-day payouts",
+  "Bulk payouts to up to 100 recipients",
   "KYB in under 24 h",
   "Dedicated account manager",
 ];

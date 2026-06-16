@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     let position: number | undefined;
     try {
       const data = await upstream.json();
-      if (typeof data?.position === "number") position = data.position;
+      if (typeof data?.data?.position === "number") position = data.data.position;
     } catch {
       // backend didn't return JSON or no position field — that's fine
     }
