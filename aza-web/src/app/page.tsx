@@ -1,7 +1,7 @@
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { CinematicHero } from "@/components/ui/cinematic-landing-hero";
-import { Navbar } from "@/components/Navbar";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { Navbar } from "@/components/layout/Navbar";
+import { ScrollReveal } from "@/components/layout/ScrollReveal";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { PressSection } from "@/components/sections/PressSection";
 import { StatsBannerSection } from "@/components/sections/StatsBannerSection";
