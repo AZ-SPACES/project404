@@ -60,7 +60,7 @@ export function FAQSection() {
               Questions,<br />answered.
             </h2>
             <p className="apple-body" style={{ color: "#6e6e73" }}>
-              Can't find what you're looking for?{" "}
+              Can&apos;t find what you&apos;re looking for?{" "}
               <a href="mailto:support@aza.systems" className="underline underline-offset-2" style={{ color: "#174717" }}>
                 Contact support
               </a>

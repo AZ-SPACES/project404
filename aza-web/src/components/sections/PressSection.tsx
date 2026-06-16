@@ -18,10 +18,10 @@ export function PressSection() {
       <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none" style={{ background: "linear-gradient(to left, #fff, transparent)" }} aria-hidden="true" />
 
       <p className="text-center text-[0.68rem] font-semibold tracking-widest uppercase mb-3" style={{ color: "#c7c7cc" }}>
-        As featured in
+        Covered by journalists at
       </p>
 
-      <div className="flex" style={{ animation: "pressMarquee 32s linear infinite" }}>
+      <div className="press-marquee-track flex" style={{ animation: "pressMarquee 32s linear infinite" }}>
         {doubled.map((name, i) => (
           <span
             key={i}
@@ -36,6 +36,7 @@ export function PressSection() {
       <style>{`
         @keyframes pressMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         @media (prefers-reduced-motion: reduce) { @keyframes pressMarquee { from, to { transform: none; } } }
+        .press-marquee-track:hover { animation-play-state: paused; }
       `}</style>
     </section>
   );

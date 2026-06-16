@@ -75,10 +75,10 @@ export default function AboutPage() {
           </div>
           <div>
             <h2 className="font-black mb-5" style={{ fontSize: "1.5rem", letterSpacing: "-0.03em" }}>
-              Where we're going.
+              Where we&apos;re going.
             </h2>
             <p className="text-[0.95rem] leading-[1.75]" style={{ color: "#6e6e73" }}>
-              Ghana first. Then Nigeria, Senegal, Côte d'Ivoire, and beyond. We're building a platform that works the way Africans actually use money — mobile, chat-driven, and community-led.
+              Ghana first. Then Nigeria, Senegal, Côte d&apos;Ivoire, and beyond. We&apos;re building a platform that works the way Africans actually use money — mobile, chat-driven, and community-led.
             </p>
             <p className="text-[0.95rem] leading-[1.75] mt-4" style={{ color: "#6e6e73" }}>
               Merchants, developers, and businesses are part of the plan too. A full API, mini-app platform, and business tools — all built on the same instant, zero-fee infrastructure.

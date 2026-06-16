@@ -122,7 +122,7 @@ export function ComparisonSection() {
             </thead>
 
             <tbody>
-              {ROWS.map((row, i) => (
+              {ROWS.map((row) => (
                 <tr
                   key={row.label}
                   style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}

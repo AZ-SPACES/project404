@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -69,7 +70,7 @@ export function BlogSection() {
           <h2 className="apple-headline" style={{ color: "#1d1d1f" }}>
             From the team.
           </h2>
-          <a
+          <Link
             href="/blog"
             className="hidden sm:inline-flex items-center gap-1.5 text-[0.875rem] font-semibold transition-opacity hover:opacity-70"
             style={{ color: "#174717" }}
@@ -78,14 +79,15 @@ export function BlogSection() {
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </a>
+          </Link>
         </div>
 
         <div ref={gridRef} className="blog-grid grid gap-4" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
           {POSTS.map((p) => (
-            <article
+            <Link
               key={p.id}
-              className="blog-card rounded-2xl p-6 flex flex-col gap-4 group cursor-pointer"
+              href={`/blog/${p.id}`}
+              className="blog-card rounded-2xl p-6 flex flex-col gap-4 group"
               style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.06)" }}
             >
               <div className="flex items-center justify-between">
@@ -102,7 +104,7 @@ export function BlogSection() {
 
               <div className="flex-1">
                 <h3
-                  className="font-bold leading-snug mb-2 transition-colors group-hover:opacity-70"
+                  className="font-bold leading-snug mb-2 transition-opacity group-hover:opacity-70"
                   style={{ fontSize: "1rem", color: "#1d1d1f", letterSpacing: "-0.02em" }}
                 >
                   {p.title}
@@ -126,7 +128,7 @@ export function BlogSection() {
                   </svg>
                 </span>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </div>

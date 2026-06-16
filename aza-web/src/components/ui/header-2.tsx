@@ -2,31 +2,62 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
+import { useActiveSection } from '@/components/ui/use-active-section';
 import { DeveloperMenu } from '@/components/ui/developer-menu';
+import { HubMenu } from '@/components/ui/hub-menu';
 import { Sun, Moon, Code2 } from 'lucide-react';
 
+// Leading "/" makes these resolve correctly from any page, not just the homepage —
+// a bare "#features" only works if you're already on "/".
 const navLinks = [
-  { label: 'Features',     href: '#features'    },
-  { label: 'How it works', href: '#how-it-works' },
-  { label: 'Security',     href: '#security'     },
-  { label: 'Hub',          href: '#hub'          },
+  { label: 'Features',     href: '/#features'     },
+  { label: 'How it works', href: '/#how-it-works'  },
+  { label: 'Security',     href: '/#security'      },
+  { label: 'Hub',          href: '/#hub'            },
+  { label: 'FAQ',          href: '/#faq'            },
 ];
 
+const sectionIds = navLinks.map((l) => l.href.replace('/#', ''));
+
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0e2a0e]';
+
 export function Header() {
-  const [open,       setOpen]       = React.useState(false);
-  const [devOpen,    setDevOpen]    = React.useState(false);
-  const [theme,      setTheme]      = React.useState<'light' | 'dark'>('light');
+  const [open,        setOpen]        = React.useState(false);
+  const [devOpen,     setDevOpen]     = React.useState(false);
+  const [hubMenuOpen, setHubMenuOpen] = React.useState(false);
+  const [theme,       setTheme]       = React.useState<'light' | 'dark'>('light');
   const scrolled = useScroll(20);
+  const pathname = usePathname();
+  const activeSection = useActiveSection(sectionIds);
+  const isDevelopersPage = pathname?.startsWith('/developers') ?? false;
+  const hubCloseTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cta = isDevelopersPage
+    ? { href: '/developers/login', label: 'Log in' }
+    : { href: '/#waitlist', label: 'Join waitlist' };
+
+  const openHubMenu = () => {
+    if (hubCloseTimer.current) clearTimeout(hubCloseTimer.current);
+    setHubMenuOpen(true);
+  };
+  const closeHubMenuDelayed = () => {
+    hubCloseTimer.current = setTimeout(() => setHubMenuOpen(false), 150);
+  };
 
   React.useEffect(() => {
+    // One-time hydration of the persisted theme after mount — the blocking
+    // inline script in the root layout already set the DOM attribute pre-paint
+    // to avoid a flash, this just syncs React state so the icon matches.
     const saved =
       localStorage.getItem('aza-theme') ??
       document.documentElement.getAttribute('data-theme') ??
       'light';
-    setTheme(saved as 'light' | 'dark');
+    setTheme(saved as 'light' | 'dark'); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
   // Mobile menu scroll lock (dev menu manages its own)
@@ -34,6 +65,13 @@ export function Header() {
     if (!devOpen) document.body.style.overflow = open ? 'hidden' : '';
     return () => { if (!devOpen) document.body.style.overflow = ''; };
   }, [open, devOpen]);
+
+  React.useEffect(() => {
+    if (!hubMenuOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setHubMenuOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [hubMenuOpen]);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -81,20 +119,48 @@ export function Header() {
             className="hidden md:flex items-center gap-[1px] flex-1 justify-center"
             aria-label="Main navigation"
           >
-            {navLinks.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="inline-flex items-center text-[0.84rem] font-medium text-white/55 px-[11px] py-[5px] rounded-lg transition-colors hover:text-white hover:bg-white/[0.09]"
-              >
-                {l.label}
-              </a>
-            ))}
+            {navLinks.map((l) => {
+              const isActive = activeSection === l.href.replace('/#', '');
+              const linkEl = (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  aria-current={isActive ? 'true' : undefined}
+                  onFocus={l.label === 'Hub' ? openHubMenu : undefined}
+                  className={cn(
+                    'inline-flex items-center text-[0.84rem] font-medium px-[11px] py-[5px] rounded-lg transition-colors',
+                    focusRing,
+                    isActive ? 'text-white bg-white/[0.09]' : 'text-white/55 hover:text-white hover:bg-white/[0.09]',
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+
+              if (l.label !== 'Hub') return linkEl;
+
+              return (
+                <div
+                  key={l.href}
+                  className="relative"
+                  onMouseEnter={openHubMenu}
+                  onMouseLeave={closeHubMenuDelayed}
+                >
+                  {linkEl}
+                  <HubMenu open={hubMenuOpen} onClose={() => setHubMenuOpen(false)} />
+                </div>
+              );
+            })}
 
             {/* Developers button */}
             <button
               onClick={openDevMenu}
-              className="inline-flex items-center gap-[5px] text-[0.84rem] font-semibold px-[11px] py-[5px] rounded-lg transition-colors hover:bg-[rgba(183,238,122,0.1)]"
+              aria-current={isDevelopersPage ? 'true' : undefined}
+              className={cn(
+                'inline-flex items-center gap-[5px] text-[0.84rem] font-semibold px-[11px] py-[5px] rounded-lg transition-colors',
+                focusRing,
+                isDevelopersPage ? 'bg-[rgba(183,238,122,0.16)]' : 'hover:bg-[rgba(183,238,122,0.1)]',
+              )}
               style={{ color: '#B7EE7A' }}
             >
               <Code2 size={13} />
@@ -113,24 +179,33 @@ export function Header() {
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 transition-colors hover:text-white hover:bg-white/[0.08]"
+              className={cn(
+                'w-8 h-8 rounded-full flex items-center justify-center text-white/60 transition-colors hover:text-white hover:bg-white/[0.08]',
+                focusRing,
+              )}
             >
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
             <Link
-              href="/#waitlist"
-              className="hidden md:inline-flex items-center text-[0.85rem] font-bold px-[18px] py-2 rounded-lg transition-opacity hover:opacity-90 ml-1"
+              href={cta.href}
+              className={cn(
+                'hidden md:inline-flex items-center text-[0.85rem] font-bold px-[18px] py-2 rounded-lg transition-opacity hover:opacity-90 ml-1',
+                focusRing,
+              )}
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
-              Join waitlist
+              {cta.label}
             </Link>
 
             <button
               onClick={() => setOpen((o) => !o)}
               aria-label="Toggle menu"
               aria-expanded={open}
-              className="md:hidden w-9 h-9 flex items-center justify-center rounded-full text-white/70 transition-colors hover:text-white hover:bg-white/[0.08]"
+              className={cn(
+                'md:hidden w-9 h-9 flex items-center justify-center rounded-full text-white/70 transition-colors hover:text-white hover:bg-white/[0.08]',
+                focusRing,
+              )}
             >
               <MenuToggleIcon open={open} className="size-5" duration={300} />
             </button>
@@ -151,21 +226,34 @@ export function Header() {
             )}
             style={{ background: '#0e2a0e' }}
           >
-            {navLinks.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="text-[0.9rem] font-medium text-white/55 px-4 py-[9px] rounded-2xl transition-colors hover:text-white hover:bg-white/[0.09]"
-              >
-                {l.label}
-              </a>
-            ))}
+            {navLinks.map((l) => {
+              const isActive = activeSection === l.href.replace('/#', '');
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  aria-current={isActive ? 'true' : undefined}
+                  className={cn(
+                    'text-[0.9rem] font-medium px-4 py-[9px] rounded-2xl transition-colors',
+                    focusRing,
+                    isActive ? 'text-white bg-white/[0.09]' : 'text-white/55 hover:text-white hover:bg-white/[0.09]',
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
 
             {/* Developers in mobile menu */}
             <button
               onClick={openDevMenu}
-              className="text-left inline-flex items-center gap-2 text-[0.9rem] font-semibold px-4 py-[9px] rounded-2xl transition-colors hover:bg-[rgba(183,238,122,0.1)]"
+              aria-current={isDevelopersPage ? 'true' : undefined}
+              className={cn(
+                'text-left inline-flex items-center gap-2 text-[0.9rem] font-semibold px-4 py-[9px] rounded-2xl transition-colors',
+                focusRing,
+                isDevelopersPage ? 'bg-[rgba(183,238,122,0.16)]' : 'hover:bg-[rgba(183,238,122,0.1)]',
+              )}
               style={{ color: '#B7EE7A' }}
             >
               <Code2 size={15} />
@@ -174,12 +262,15 @@ export function Header() {
 
             <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
             <Link
-              href="/#waitlist"
+              href={cta.href}
               onClick={() => setOpen(false)}
-              className="flex items-center justify-center text-[0.9rem] font-bold px-4 py-[10px] rounded-2xl"
+              className={cn(
+                'flex items-center justify-center text-[0.9rem] font-bold px-4 py-[10px] rounded-2xl',
+                focusRing,
+              )}
               style={{ background: '#B7EE7A', color: '#174717' }}
             >
-              Join waitlist
+              {cta.label}
             </Link>
           </div>
         )}

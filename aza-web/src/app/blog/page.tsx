@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ const POSTS = [
     author: { name: "Aza Team", role: "Finance" },
   },
   {
-    slug: "developer-platform",
+    slug: "developer",
     date: "May 28, 2026",
     readTime: "6 min",
     tag: "Developers",
@@ -87,25 +88,25 @@ export default function BlogPage() {
 
                 {/* Content */}
                 <div className="flex flex-col gap-3">
-                  <h2
-                    className="font-bold leading-snug"
-                    style={{ fontSize: "1.25rem", letterSpacing: "-0.03em" }}
-                  >
-                    {post.title}
-                  </h2>
+                  <Link href={`/blog/${post.slug}`}>
+                    <h2
+                      className="font-bold leading-snug transition-opacity hover:opacity-70"
+                      style={{ fontSize: "1.25rem", letterSpacing: "-0.03em" }}
+                    >
+                      {post.title}
+                    </h2>
+                  </Link>
                   <p className="text-[0.9rem] leading-[1.7]" style={{ color: "#6e6e73", maxWidth: "600px" }}>
                     {post.excerpt}
                   </p>
-                  <span
-                    className="self-start mt-1 text-[0.82rem] font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-60 cursor-pointer"
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="self-start mt-1 text-[0.82rem] font-semibold flex items-center gap-1.5 transition-opacity hover:opacity-60"
                     style={{ color: "#174717" }}
-                    aria-label={`Read ${post.title}`}
                   >
                     Read article
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                      <path d="M2.5 6h7M6 2.5L9.5 6 6 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
+                    <ArrowRight size={12} aria-hidden="true" />
+                  </Link>
                 </div>
               </div>
             </article>

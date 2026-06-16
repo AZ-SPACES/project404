@@ -55,7 +55,14 @@ export async function POST(request: NextRequest) {
   }
 
   if (upstream.ok) {
-    return NextResponse.json({ success: true }, { status: 201 });
+    let position: number | undefined;
+    try {
+      const data = await upstream.json();
+      if (typeof data?.position === "number") position = data.position;
+    } catch {
+      // backend didn't return JSON or no position field — that's fine
+    }
+    return NextResponse.json({ success: true, position }, { status: 201 });
   }
 
   // Parse backend error without surfacing internal detail

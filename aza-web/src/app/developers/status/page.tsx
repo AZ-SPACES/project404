@@ -118,7 +118,8 @@ export default function StatusPage() {
   }, []);
 
   useEffect(() => {
-    runChecks();
+    // Kick off an immediate check on mount, then poll every minute.
+    runChecks(); // eslint-disable-line react-hooks/set-state-in-effect
     const timer = setInterval(runChecks, 60_000);
     return () => clearInterval(timer);
   }, [runChecks]);

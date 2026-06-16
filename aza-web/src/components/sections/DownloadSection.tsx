@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { StoreButton } from "@/components/ui/StoreButton";
 import QRCode from "qrcode";
 
@@ -37,36 +36,25 @@ export async function DownloadSection() {
         {/* Centered heading */}
         <div className="text-center mb-14 reveal">
           <h2 className="apple-headline mb-4" style={{ color: "#ffffff" }}>
-            Ready to experience Aza?
+            Coming to your phone.
           </h2>
-          <p className="apple-body max-w-[440px] mx-auto mb-8" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Be among the first to send money, chat with friends, and manage your finances — effortlessly.
+          <p className="apple-body max-w-[440px] mx-auto mb-10" style={{ color: "rgba(255,255,255,0.65)" }}>
+            Launching on iOS and Android. You&apos;re on the list — we&apos;ll let you know the moment it&apos;s ready.
           </p>
 
-          {/* Primary CTA */}
-          <div className="flex gap-3 justify-center flex-wrap mb-12">
-            <Link
-              href="/#waitlist"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-[0.95rem] font-semibold transition-opacity hover:opacity-90"
-              style={{ background: "#B7EE7A", color: "#174717" }}
-            >
-              Join the waitlist
-            </Link>
-          </div>
-
-          {/* Store buttons */}
+          {/* Store buttons — coming soon */}
           <div className="flex gap-4 justify-center flex-wrap download-btns mb-12">
-            <StoreButton label="Download on the App Store">
+            <StoreButton label="App Store — coming soon">
               {appleIcon}
               <div>
-                <span className="block text-[0.7rem] opacity-70">Download on the</span>
+                <span className="block text-[0.7rem] opacity-70">Coming soon to the</span>
                 <span className="block text-[0.95rem] font-bold">App Store</span>
               </div>
             </StoreButton>
-            <StoreButton label="Get it on Google Play">
+            <StoreButton label="Google Play — coming soon">
               {googleIcon}
               <div>
-                <span className="block text-[0.7rem] opacity-70">Get it on</span>
+                <span className="block text-[0.7rem] opacity-70">Coming soon to</span>
                 <span className="block text-[0.95rem] font-bold">Google Play</span>
               </div>
             </StoreButton>

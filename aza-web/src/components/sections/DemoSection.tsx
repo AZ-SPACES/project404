@@ -115,6 +115,9 @@ export function DemoSection() {
               onClick={() => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
                 goTo(i);
+                intervalRef.current = setInterval(() => {
+                  setActive((prev) => (prev + 1) % SCREENS.length);
+                }, 3000);
               }}
               className="px-4 py-2 rounded-xl text-[0.8rem] font-semibold transition-all"
               style={{

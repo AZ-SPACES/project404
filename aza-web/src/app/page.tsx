@@ -54,20 +54,20 @@ export default function Home() {
         <PressSection />
         <StatsBannerSection />
         <FeatureSpotlightSection />
+        <DemoSection />
         <ComparisonSection />
         <UseCasesSection />
         <HowItWorksSection />
-        <AvailabilitySection />
+        <TestimonialsSection />
         <SecuritySection />
         <PartnerBarSection />
+        <AvailabilitySection />
         <MerchantSection />
-        <DemoSection />
-        <FAQSection />
         <HubSection />
-        <TestimonialsSection />
         <BlogSection />
-        <DownloadSection />
+        <FAQSection />
         <WaitlistSection />
+        <DownloadSection />
       </main>
 
       <CinematicFooter />
