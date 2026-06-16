@@ -5,6 +5,8 @@ import com.aza.backend.dto.waitlist.WaitlistRequest;
 import com.aza.backend.service.WaitlistService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -35,7 +38,7 @@ public class WaitlistController {
             Pattern.compile("^(([0-9]{1,3}\\.){3}[0-9]{1,3}|[0-9a-fA-F:]{2,39})$");
 
     @PostMapping
-    public ResponseEntity<ApiResponse<String>> joinWaitlist(
+    public ResponseEntity<ApiResponse<JoinResult>> joinWaitlist(
             @RequestHeader(value = "X-Internal-Secret", required = false) String providedSecret,
             @Valid @RequestBody WaitlistRequest request,
             HttpServletRequest httpRequest) {
@@ -48,10 +51,22 @@ public class WaitlistController {
         }
 
         String ipAddress = getClientIp(httpRequest);
-        waitlistService.register(request.getEmail(), ipAddress);
+        long position = waitlistService.register(request.getEmail(), ipAddress);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("You're on the waitlist!"));
+                .body(ApiResponse.success(new JoinResult("You're on the waitlist!", position)));
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> count() {
+        return ResponseEntity.ok(ApiResponse.success(Map.of("total", waitlistService.count())));
+    }
+
+    @Data
+    @AllArgsConstructor
+    static class JoinResult {
+        private String message;
+        private long position;
     }
 
     private boolean isValidSecret(String provided) {

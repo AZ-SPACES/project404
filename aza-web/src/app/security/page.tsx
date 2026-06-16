@@ -73,6 +73,17 @@ const LAYERS = [
     title: "Anomaly detection & holds",
     body: "High-risk transfers are intercepted automatically and held for compliance review. Rules are configurable and backed by transaction-level audit logs.",
   },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <path d="M11 2L4 5v5c0 4.418 3.134 8.55 7 9.5C14.866 18.55 18 14.418 18 10V5L11 2z" stroke="#174717" strokeWidth="1.6" fill="rgba(23,71,23,0.08)" strokeLinejoin="round" />
+        <rect x="8" y="9.5" width="6" height="5" rx="1" stroke="#174717" strokeWidth="1.4" fill="#ffffff" />
+        <path d="M9.3 9.5V8a1.7 1.7 0 0 1 3.4 0v1.5" stroke="#174717" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    ),
+    title: "Encrypted chat backup",
+    body: "Move your chat history to a new device or back it up to the cloud — both stay end-to-end encrypted, unlocked only with a recovery code only you hold.",
+  },
 ];
 
 const CERTS = [

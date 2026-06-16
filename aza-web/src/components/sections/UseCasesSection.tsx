@@ -73,6 +73,33 @@ const CASES = [
     ),
     bg: "#f5f5f7",
   },
+  {
+    id: "budget",
+    who: "Budgeters",
+    title: "Set a limit per category. Get a nudge before you blow it.",
+    desc: "Monthly budgets by spending category, plus AI-generated insights on what each transfer means for your habits.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <path d="M14 4a10 10 0 1 0 7.07 2.93" stroke="#174717" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <path d="M14 4v6l5 3" stroke="#174717" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="rgba(23,71,23,0.08)" />
+        <circle cx="14" cy="14" r="2" fill="#B7EE7A" stroke="#174717" strokeWidth="1.2" />
+      </svg>
+    ),
+    bg: "#ffffff",
+  },
+  {
+    id: "recurring",
+    who: "Power users",
+    title: "Rent, subscriptions, savings — set once, sent every month.",
+    desc: "Schedule a recurring transfer to anyone and Aza sends it automatically, on time, every cycle.",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <path d="M21 8a8 8 0 1 0 1.7 6" stroke="#174717" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <path d="M22 4v4.5h-4.5" stroke="#174717" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </svg>
+    ),
+    bg: "#f5f5f7",
+  },
 ];
 
 export function UseCasesSection() {
