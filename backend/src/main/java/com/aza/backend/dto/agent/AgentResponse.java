@@ -11,6 +11,10 @@ import java.math.BigDecimal;
 public class AgentResponse {
     private String id;
     private String userId;
+    /** Applicant identity, so the back office can review who is being approved. */
+    private String userName;
+    private String userEmail;
+    private String userPhone;
     private String status;
     private String tier;
     private String code;
@@ -22,4 +26,5 @@ public class AgentResponse {
     private String applicationNotes;
     private BigDecimal floatBalance;
     private BigDecimal commissionAccruedGhs;
+    private String createdAt;
 }
