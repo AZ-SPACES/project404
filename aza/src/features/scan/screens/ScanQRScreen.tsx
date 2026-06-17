@@ -124,6 +124,13 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         return;
       }
 
+      // Statement verification QR: aza.systems/verify?code={code} (also www.)
+      const statementMatch = raw.match(/aza\.systems\/verify\?code=([A-Za-z0-9-]+)/i);
+      if (statementMatch) {
+        navigation.navigate('StatementVerifyResult', { code: statementMatch[1]! });
+        return;
+      }
+
       // Parse the data. Format expected: aza.systems/handle or just handle
       let handle = raw;
       if (handle.includes('aza.systems/')) {
