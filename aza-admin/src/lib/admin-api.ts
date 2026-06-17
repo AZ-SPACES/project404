@@ -2730,11 +2730,21 @@ export function getLedgerCheck(): Promise<LedgerCheck> {
 
 // ── Fee Revenue Analytics ─────────────────────────────────────────────────────
 
+export interface FeeBreakdown {
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  allTime: number;
+}
+
 export interface FeeSummary {
   today: number;
   thisWeek: number;
   thisMonth: number;
   allTime: number;
+  /** Same totals split by source. */
+  merchant?: FeeBreakdown;
+  transfer?: FeeBreakdown;
 }
 
 export interface DailyFee {

@@ -212,6 +212,7 @@ public class CheckoutService {
                 .senderId(customerId)
                 .recipientId(merchant.getUserId())
                 .amount(session.getAmount())
+                .feeAmount(platformFee)   // reporting only — balances are set above; lets merchant fees show in fee analytics
                 .note(note)
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)

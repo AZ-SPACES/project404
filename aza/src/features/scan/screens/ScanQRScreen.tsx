@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing, Share } from 'react-native';
 import Button from '../../../components/ui/Button';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
@@ -12,6 +12,7 @@ import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useContactStore } from '../../../store/contactStore';
 import { getPublicMerchant } from '../../../services/api';
+import { useProfile } from '../../../providers/ProfileProvider';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
@@ -27,6 +28,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const scanAnim = useRef(new Animated.Value(0)).current;
   const isProcessing = useRef(false);
   const { findUserByHandle } = useContactStore();
+  const { handle: myHandle, displayName: myName } = useProfile();
 
   // Reset scanner state when screen comes back into focus (e.g. after returning from ContactsProfile)
   useFocusEffect(
@@ -200,6 +202,32 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         Alert.alert('Invalid QR', 'This QR code is not a recognised Aza code.', [
           { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
         ]);
+        return;
+      }
+
+      // Scanning your own code — there's nothing to pay or add; let the user know
+      // and offer to share it so others can pay or add them.
+      if (myHandle && handle.toLowerCase() === myHandle.toLowerCase()) {
+        const reset = () => { setScanned(false); isProcessing.current = false; };
+        const link = `https://aza.systems/pay/${myHandle}`;
+        Alert.alert(
+          'This is your code',
+          'You just scanned your own Aza QR code. Share it so others can pay you or add you.',
+          [
+            {
+              text: 'Share',
+              onPress: async () => {
+                try {
+                  await Share.share({ message: `Pay ${myName || `@${myHandle}`} on Aza: ${link}`, url: link });
+                } catch {
+                  // user cancelled / share unavailable
+                }
+                reset();
+              },
+            },
+            { text: 'Close', style: 'cancel', onPress: reset },
+          ],
+        );
         return;
       }
 

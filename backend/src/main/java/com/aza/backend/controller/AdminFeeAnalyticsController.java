@@ -31,16 +31,39 @@ public class AdminFeeAnalyticsController {
         LocalDateTime startOfWeek = now.minusDays(6).toLocalDate().atStartOfDay();
         LocalDateTime startOfMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
 
+        LocalDateTime epoch = LocalDateTime.of(2000, 1, 1, 0, 0);
+
         BigDecimal today = transactionRepository.sumFeesAfter(startOfToday);
         BigDecimal thisWeek = transactionRepository.sumFeesAfter(startOfWeek);
         BigDecimal thisMonth = transactionRepository.sumFeesAfter(startOfMonth);
-        BigDecimal allTime = transactionRepository.sumFeesAfter(LocalDateTime.of(2000, 1, 1, 0, 0));
+        BigDecimal allTime = transactionRepository.sumFeesAfter(epoch);
+
+        // Breakdown of the same totals by source: merchant checkout fees vs. P2P transfer fees.
+        BigDecimal merchantToday = transactionRepository.sumMerchantFeesAfter(startOfToday);
+        BigDecimal merchantWeek = transactionRepository.sumMerchantFeesAfter(startOfWeek);
+        BigDecimal merchantMonth = transactionRepository.sumMerchantFeesAfter(startOfMonth);
+        BigDecimal merchantAll = transactionRepository.sumMerchantFeesAfter(epoch);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("today", today);
         result.put("thisWeek", thisWeek);
         result.put("thisMonth", thisMonth);
         result.put("allTime", allTime);
+
+        Map<String, Object> merchant = new LinkedHashMap<>();
+        merchant.put("today", merchantToday);
+        merchant.put("thisWeek", merchantWeek);
+        merchant.put("thisMonth", merchantMonth);
+        merchant.put("allTime", merchantAll);
+        result.put("merchant", merchant);
+
+        Map<String, Object> transfer = new LinkedHashMap<>();
+        transfer.put("today", today.subtract(merchantToday));
+        transfer.put("thisWeek", thisWeek.subtract(merchantWeek));
+        transfer.put("thisMonth", thisMonth.subtract(merchantMonth));
+        transfer.put("allTime", allTime.subtract(merchantAll));
+        result.put("transfer", transfer);
+
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 
