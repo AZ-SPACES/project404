@@ -30,8 +30,8 @@ import {
 
 type Step = "register" | "kyb" | "documents";
 
-const BUSINESS_TYPES = ["INDIVIDUAL", "SOLE_PROPRIETOR", "PARTNERSHIP", "COMPANY", "NGO"];
-const ID_TYPES = ["GHANA_CARD", "PASSPORT", "VOTERS_ID", "DRIVERS_LICENSE"];
+const BUSINESS_TYPES = ["SOLE_PROPRIETOR", "PARTNERSHIP", "LIMITED_COMPANY", "NGO", "OTHER"];
+const ID_TYPES = ["GHANA_CARD", "PASSPORT", "VOTER_ID", "DRIVERS_LICENCE"];
 
 const DOC_SLOTS = [
   { type: "CERTIFICATE_OF_INCORPORATION", label: "Certificate of Incorporation" },
@@ -56,10 +56,10 @@ export default function OnboardingPage() {
   const [businessEmail, setBusinessEmail] = useState("");
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessDescription, setBusinessDescription] = useState("");
-  const [category, setCategory] = useState("COMPANY");
+  const [category, setCategory] = useState("RETAIL");
 
   // kyb step
-  const [businessType, setBusinessType] = useState("COMPANY");
+  const [businessType, setBusinessType] = useState("SOLE_PROPRIETOR");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [taxIdNumber, setTaxIdNumber] = useState("");
   const [registeredAddress, setRegisteredAddress] = useState("");
@@ -115,6 +115,7 @@ export default function OnboardingPage() {
           // Populate KYB fields if previously saved
           if (kyb.ownerFullName) {
             setOwnerFullName(kyb.ownerFullName ?? "");
+            if (kyb.businessType) setBusinessType(kyb.businessType);
             setRegistrationNumber(kyb.registrationNumber ?? "");
             setTaxIdNumber(kyb.taxIdNumber ?? "");
             setRegisteredAddress(kyb.registeredAddress ?? "");
@@ -375,8 +376,9 @@ export default function OnboardingPage() {
                 </Field>
                 <Field label="Category" required>
                   <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-                    {["RETAIL", "FOOD_AND_BEVERAGE", "TECHNOLOGY", "HEALTHCARE", "EDUCATION",
-                      "FINANCE", "ENTERTAINMENT", "TRAVEL", "PROFESSIONAL_SERVICES", "OTHER"].map((c) => (
+                    {["RETAIL", "FOOD_AND_BEVERAGE", "SERVICES", "TECHNOLOGY", "HEALTHCARE",
+                      "EDUCATION", "ENTERTAINMENT", "TRANSPORT", "REAL_ESTATE", "AGRICULTURE",
+                      "FINANCE", "OTHER"].map((c) => (
                       <option key={c} value={c}>{c.replace(/_/g, " ")}</option>
                     ))}
                   </select>
