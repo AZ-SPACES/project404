@@ -5,7 +5,7 @@ import { getMe, Merchant } from "@/lib/merchant-api";
 import { Loader2, Copy, Check, Code2, ExternalLink, Monitor } from "lucide-react";
 
 const PAY_BASE = "https://pay.aza.systems";
-const PAY_URL_BASE = "https://aza.systems/pay";
+const PAY_URL_BASE = "https://aza.systems/m";
 
 function buildPayUrl(handle: string, amount?: string, description?: string) {
   const base = `${PAY_URL_BASE}/${handle}`;

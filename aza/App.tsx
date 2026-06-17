@@ -40,6 +40,7 @@ import { E2EEProvider } from "./src/providers/E2EEProvider";
 import { ChatSocketProvider } from "./src/providers/ChatSocketProvider";
 import { CallSocketProvider } from "./src/providers/CallSocketProvider";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
+import { UpdateBanner } from "./src/components/ui/UpdateBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
 import { navigationRef, processNavigationQueue } from "./src/navigation/navigationRef";
 import { useAuth } from "./src/providers/AuthProvider";
@@ -64,7 +65,7 @@ const linking = {
       },
       App: {
         screens: {
-          SendAmount: "pay/:identifier",
+          SendAmount: { path: "pay/:identifier", alias: ["m/:identifier"] },
           OAuthPaymentApproval: "checkout/:sessionId",
           Transactions: "transactions",
           SecurityAndPrivacy: "settings/security",
@@ -174,6 +175,7 @@ function AppContent() {
         </NavigationContainer>
       )}
       <OfflineBanner />
+      <UpdateBanner />
       <PrivacyOverlay />
     </View>
   );

@@ -35,7 +35,7 @@ import { CATEGORIES, CategoryKey } from '../../../utils/categories';
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
 export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
-    const { name, username, avatar, identifier, amount: initialAmount, note: initialNote } = route.params;
+    const { name, username, avatar, identifier, amount: initialAmount, note: initialNote, merchantVerified } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
@@ -185,9 +185,15 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
                             <View style={styles.recipientInfo}>
                                 <Text style={styles.recipientName}>{name}</Text>
                                 <Text style={styles.recipientUsername}>{username}</Text>
+                                {merchantVerified && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                        <Feather name="shield" size={12} color={Colors.success} />
+                                        <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.success }}>Verified business</Text>
+                                    </View>
+                                )}
                             </View>
                             <View style={styles.recipientBadge}>
-                                <Feather name="check" size={14} color={Colors.primary} />
+                                <Feather name={merchantVerified ? 'shield' : 'check'} size={14} color={Colors.primary} />
                             </View>
                         </View>
 
