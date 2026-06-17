@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share, Linking, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Share, Linking, Platform, ScrollView, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Feather } from '@react-native-vector-icons/feather';
 import { useAppTheme, ThemeColors, Spacing, Radius } from '../../../theme';
@@ -87,6 +88,25 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
     }
   };
 
+  const handleCopyLink = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await Clipboard.setStringAsync(profileLink);
+      showToast('Payment link copied', 'success');
+    } catch {
+      showToast('Could not copy link', 'error');
+    }
+  };
+
+  const handleShowSafetyInfo = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      'Is it safe to share?',
+      'Yes. This code only lets people pay you or add you on Aza — it never reveals your balance and can’t be used to take money from your account. Only enter your PIN or approve a payment for transactions you started.',
+      [{ text: 'Got it' }],
+    );
+  };
+
   const handleAddToAppleWallet = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -119,7 +139,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
           <BackButton onPress={() => navigation.goBack()} />
           
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconCircle}>
+            <TouchableOpacity style={styles.iconCircle} onPress={handleShowSafetyInfo} accessibilityLabel="Is it safe to share?">
               <Feather name="shield" size={22} color={Colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleShare} style={styles.iconCircle}>
@@ -167,10 +187,8 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
 
               <TouchableOpacity
                 style={styles.copyLinkContainer}
-                onPress={() => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  // Add Clipboard.setString here if needed
-                }}
+                onPress={handleCopyLink}
+                accessibilityLabel="Copy payment link"
               >
                 <Text style={styles.getPaidText}>
                   Get paid at <Text style={styles.linkText}>{profileLink}</Text>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing, Share, Modal, TextInput, Image, Keyboard } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Button from '../../../components/ui/Button';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
-import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { CameraView, useCameraPermissions, BarcodeScanningResult, scanFromURLAsync } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors, Radius } from '../../../theme';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,6 +19,17 @@ import { useProfile } from '../../../providers/ProfileProvider';
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
 
+// A resolved payment recipient awaiting the user's confirmation before we open Send.
+type PendingPayee = {
+  name: string;
+  handle: string;      // without leading @
+  avatar: string;
+  verified: boolean;   // true for known/active businesses
+  amount?: number | undefined;
+  note?: string | undefined;
+  params: RootStackParamList['SendAmount']; // params handed to the SendAmount screen on confirm
+};
+
 const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
@@ -29,6 +42,61 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const isProcessing = useRef(false);
   const { findUserByHandle } = useContactStore();
   const { handle: myHandle, displayName: myName } = useProfile();
+
+  // Pinch-to-zoom: CameraView takes a 0..1 zoom. We track the live value in state
+  // (to drive the camera) and mirror it in a ref so the gesture's onEnd can read
+  // the latest value without a stale closure.
+  const [zoom, setZoom] = useState(0);
+  const zoomRef = useRef(0);
+  const zoomBase = useRef(0);
+  const applyZoom = (v: number) => {
+    const next = Math.min(1, Math.max(0, v));
+    zoomRef.current = next;
+    setZoom(next);
+  };
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      // Map the pinch scale onto the 0..1 range; 0.25 keeps it from feeling twitchy.
+      applyZoom(zoomBase.current + (e.scale - 1) * 0.25);
+    })
+    .onEnd(() => {
+      zoomBase.current = zoomRef.current;
+    })
+    .runOnJS(true);
+
+  // Confirm-before-pay: instead of jumping straight into the Send flow, we resolve
+  // the payee, show a recipient card, and only navigate once the user confirms.
+  const [pendingPayee, setPendingPayee] = useState<PendingPayee | null>(null);
+  // Manual entry fallback for codes that won't scan.
+  const [manualVisible, setManualVisible] = useState(false);
+  const [manualText, setManualText] = useState('');
+
+  const resetScanner = () => { setScanned(false); isProcessing.current = false; };
+
+  const confirmPayee = (p: PendingPayee) => setPendingPayee(p);
+
+  const handleConfirmPay = () => {
+    if (!pendingPayee) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('SendAmount', pendingPayee.params);
+    setPendingPayee(null);
+  };
+
+  const handleCancelPay = () => {
+    setPendingPayee(null);
+    resetScanner();
+  };
+
+  const handleManualSubmit = async () => {
+    const value = manualText.trim();
+    if (!value) return;
+    Keyboard.dismiss();
+    setManualVisible(false);
+    setManualText('');
+    isProcessing.current = true;
+    setScanned(true);
+    await processQrData(value);
+  };
 
   // Reset scanner state when screen comes back into focus (e.g. after returning from ContactsProfile)
   useFocusEffect(
@@ -69,14 +137,24 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
     try {
       const res = await getPublicMerchant(handle);
       const m = res?.data?.data ?? {};
-      navigation.navigate('SendAmount', {
-        name: m.businessName ?? `@${handle}`,
-        username: `@${handle}`,
-        avatar: m.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.businessName ?? handle)}&background=random`,
-        identifier: `@${handle}`,
-        merchantVerified: true,
-        ...(amount !== undefined ? { amount } : {}),
-        ...(note ? { note } : {}),
+      const name = m.businessName ?? `@${handle}`;
+      const avatar = m.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.businessName ?? handle)}&background=random`;
+      confirmPayee({
+        name,
+        handle,
+        avatar,
+        verified: true,
+        amount,
+        note,
+        params: {
+          name,
+          username: `@${handle}`,
+          avatar,
+          identifier: `@${handle}`,
+          merchantVerified: true,
+          ...(amount !== undefined ? { amount } : {}),
+          ...(note ? { note } : {}),
+        },
       });
     } catch {
       navigation.navigate('MerchantVerifyResult', {
@@ -87,29 +165,9 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
     }
   };
 
-  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
-    if (scanned || isProcessing.current || !frameLayout) return;
-
-    const { bounds, data } = result;
-    if (!bounds) return;
-
-    const qrCenterX = bounds.origin.x + bounds.size.width / 2;
-    const qrCenterY = bounds.origin.y + bounds.size.height / 2;
-
-    const isInsideFrame =
-      qrCenterX >= frameLayout.x &&
-      qrCenterX <= frameLayout.x + frameLayout.width &&
-      qrCenterY >= frameLayout.y &&
-      qrCenterY <= frameLayout.y + frameLayout.height;
-
-    if (isInsideFrame) {
-      isProcessing.current = true;
-      setScanned(true); 
-
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      const raw = data.trim();
-
+  // Route a decoded QR payload to the right destination. Shared by the live
+  // camera handler and the "scan from gallery" picker so both behave identically.
+  const processQrData = async (raw: string) => {
       // QR login for web portals: aza://qr-login?token=...&site=ADMIN
       // OAuth QR: aza://qr-login?token=...&site=THIRD_PARTY&client_id=...&scopes=...
       if (raw.startsWith('aza://qr-login')) {
@@ -245,14 +303,25 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         }
 
         if (merchant) {
-          navigation.navigate('SendAmount', {
-            name: merchant.businessName ?? `@${handle}`,
-            username: `@${merchant.businessHandle ?? handle}`,
-            avatar: merchant.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(merchant.businessName ?? handle)}&background=random`,
-            identifier: `@${merchant.businessHandle ?? handle}`,
-            merchantVerified: true,
-            ...(amount !== undefined ? { amount } : {}),
-            ...(note ? { note } : {}),
+          const mHandle = merchant.businessHandle ?? handle;
+          const name = merchant.businessName ?? `@${handle}`;
+          const avatar = merchant.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(merchant.businessName ?? handle)}&background=random`;
+          confirmPayee({
+            name,
+            handle: mHandle,
+            avatar,
+            verified: true,
+            amount,
+            note,
+            params: {
+              name,
+              username: `@${mHandle}`,
+              avatar,
+              identifier: `@${mHandle}`,
+              merchantVerified: true,
+              ...(amount !== undefined ? { amount } : {}),
+              ...(note ? { note } : {}),
+            },
           });
           return;
         }
@@ -263,15 +332,23 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           const userHandle = (user as any).username ?? (user as any).handle ?? handle;
           const avatar = user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`;
           if (amount !== undefined) {
-            // Payment-request QR: open Send pre-filled with the requested amount/note.
-            navigation.navigate('SendAmount', {
-              id: user.id,
+            // Payment-request QR: confirm, then open Send pre-filled with the amount/note.
+            confirmPayee({
               name: user.displayName,
-              username: `@${userHandle}`,
+              handle: userHandle,
               avatar,
-              identifier: `@${userHandle}`,
+              verified: false,
               amount,
-              ...(note ? { note } : {}),
+              note,
+              params: {
+                id: user.id,
+                name: user.displayName,
+                username: `@${userHandle}`,
+                avatar,
+                identifier: `@${userHandle}`,
+                amount,
+                ...(note ? { note } : {}),
+              },
             });
           } else {
             navigation.navigate('ContactsProfile', {
@@ -291,6 +368,64 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
         ]);
       }
+  };
+
+  const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
+    if (scanned || isProcessing.current || !frameLayout) return;
+
+    const { bounds, data } = result;
+    if (!bounds) return;
+
+    const qrCenterX = bounds.origin.x + bounds.size.width / 2;
+    const qrCenterY = bounds.origin.y + bounds.size.height / 2;
+
+    const isInsideFrame =
+      qrCenterX >= frameLayout.x &&
+      qrCenterX <= frameLayout.x + frameLayout.width &&
+      qrCenterY >= frameLayout.y &&
+      qrCenterY <= frameLayout.y + frameLayout.height;
+
+    if (isInsideFrame) {
+      isProcessing.current = true;
+      setScanned(true);
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      await processQrData(data.trim());
+    }
+  };
+
+  // Decode a QR code out of a saved image / screenshot from the photo library,
+  // then route it through the same handler the live camera uses.
+  const handlePickFromGallery = async () => {
+    if (isProcessing.current) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Photo access needed', 'Allow photo access to scan a saved QR code.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+      if (res.canceled || !res.assets?.length) return;
+
+      isProcessing.current = true;
+      setScanned(true);
+
+      const scans = await scanFromURLAsync(res.assets[0]!.uri, ['qr']);
+      const found = scans?.[0]?.data?.trim();
+      if (!found) {
+        Alert.alert('No QR code found', 'We couldn’t find an Aza QR code in that image.', [
+          { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+        ]);
+        return;
+      }
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await processQrData(found);
+    } catch {
+      Alert.alert('Error', 'Could not read that image. Please try another.', [
+        { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+      ]);
     }
   };
 
@@ -310,10 +445,12 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
   return (
     <View style={styles.container}>
+      <GestureDetector gesture={pinchGesture}>
       <CameraView
         style={StyleSheet.absoluteFill}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         enableTorch={torchEnabled}
+        zoom={zoom}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
       >
         <View style={styles.overlay} />
@@ -357,6 +494,16 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         </SafeAreaView>
 
         <View style={styles.bottomNav}>
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.galleryButton} onPress={handlePickFromGallery}>
+              <Ionicons name="images-outline" size={18} color={Colors.white} />
+              <Text style={styles.galleryButtonText}>Upload from gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.galleryButton} onPress={() => setManualVisible(true)}>
+              <Ionicons name="create-outline" size={18} color={Colors.white} />
+              <Text style={styles.galleryButtonText}>Enter code</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.toggleContainer}>
             <TouchableOpacity style={[styles.toggleButton, styles.activeToggle]}>
               <Text style={styles.toggleTextActive}>Scan</Text>
@@ -367,6 +514,67 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           </View>
         </View>
       </CameraView>
+      </GestureDetector>
+
+      {/* Confirm-before-pay: recipient card shown after a pay code resolves. */}
+      <Modal visible={!!pendingPayee} transparent animationType="fade" onRequestClose={handleCancelPay}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Confirm recipient</Text>
+            {pendingPayee && (
+              <>
+                <Image source={{ uri: pendingPayee.avatar }} style={styles.sheetAvatar} />
+                <Text style={styles.sheetName}>{pendingPayee.name}</Text>
+                <View style={styles.sheetHandleRow}>
+                  <Text style={styles.sheetHandle}>@{pendingPayee.handle}</Text>
+                  {pendingPayee.verified && (
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+                      <Text style={styles.verifiedText}>Verified business</Text>
+                    </View>
+                  )}
+                </View>
+                {pendingPayee.amount !== undefined && (
+                  <Text style={styles.sheetAmount}>GHS {pendingPayee.amount.toFixed(2)}</Text>
+                )}
+                {pendingPayee.note ? (
+                  <Text style={styles.sheetNote} numberOfLines={2}>“{pendingPayee.note}”</Text>
+                ) : null}
+                <Button title={pendingPayee.amount !== undefined ? 'Continue to pay' : 'Continue'} onPress={handleConfirmPay} />
+                <TouchableOpacity onPress={handleCancelPay} style={styles.sheetCancel}>
+                  <Text style={styles.sheetCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Manual entry fallback for codes that won't scan. */}
+      <Modal visible={manualVisible} transparent animationType="fade" onRequestClose={() => setManualVisible(false)}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Enter handle or link</Text>
+            <Text style={styles.sheetSubtitle}>Type an @handle, a store code, or an aza.systems pay link.</Text>
+            <TextInput
+              style={styles.manualInput}
+              value={manualText}
+              onChangeText={setManualText}
+              placeholder="@handle or aza.systems/pay/handle"
+              placeholderTextColor={Colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              returnKeyType="go"
+              onSubmitEditing={handleManualSubmit}
+            />
+            <Button title="Continue" onPress={handleManualSubmit} />
+            <TouchableOpacity onPress={() => { setManualVisible(false); setManualText(''); }} style={styles.sheetCancel}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -469,11 +677,126 @@ function createStyles(Colors: ThemeColors) {
     justifyContent: 'center', 
     alignItems: 'center' 
   },
-  bottomNav: { 
-    position: 'absolute', 
+  bottomNav: {
+    position: 'absolute',
     bottom: 100,
-    width: '100%', 
-    alignItems: 'center' 
+    width: '100%',
+    alignItems: 'center'
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  galleryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+    backgroundColor: Colors.black60,
+  },
+  galleryButtonText: {
+    color: Colors.white,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: Colors.black60,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  sheet: {
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    padding: 24,
+    alignItems: 'center',
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  sheetAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginBottom: 12,
+    backgroundColor: Colors.surface,
+  },
+  sheetName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  sheetHandleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  sheetHandle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  verifiedText: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  sheetAmount: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginVertical: 4,
+  },
+  sheetNote: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  sheetCancel: {
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  manualInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    marginBottom: 16,
   },
   toggleContainer: { 
     flexDirection: 'row', 
