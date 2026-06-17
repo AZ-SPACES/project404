@@ -5,6 +5,7 @@ import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import InternalHeader from '../components/InternalHeader';
 import Button from '../../../../../components/ui/Button';
+import QrCode from '../../../../../components/ui/QrCode';
 
 export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavProps) {
   const [copied, setCopied] = useState(false);
@@ -19,7 +20,6 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
   }
 
   const staticLink = `https://aza.systems/pay/${merchant.businessHandle}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(staticLink)}`;
 
   const handleCopy = () => {
     Clipboard.setString(staticLink);
@@ -104,24 +104,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
             borderRadius: 8,
             marginBottom: 16
           }}>
-            <Image source={{ uri: qrUrl }} style={{ width: 200, height: 200 }} />
-            <View style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              marginTop: -18,
-              marginLeft: -15,
-              backgroundColor: '#FFFFFF',
-              padding: 4,
-              borderRadius: 6,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
-              elevation: 1
-            }}>
-              <Image source={require('../../../../../assets/aza-z.png')} style={{ width: 20, height: 26 }} />
-            </View>
+            <QrCode value={staticLink} size={200} logo={require('../../../../../assets/aza-z.png')} logoSize={40} />
           </View>
 
           <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 4 }}>
@@ -214,7 +197,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
             maxWidth: 320,
             marginBottom: Spacing.xl,
           }}>
-            <Image source={{ uri: qrUrl }} style={{ width: 220, height: 220 }} />
+            <QrCode value={staticLink} size={220} />
             <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 16 }}>
               Scan to Pay
             </Text>

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Image, Share, Linking, Clipboard, Alert, Platform } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Share, Linking, Clipboard, Alert, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount, fmtDate } from '../helpers';
+import QrCode from '../../../../../components/ui/QrCode';
 import { getMerchantSessions, refundMerchantSession, expireMerchantSession } from '../../../../../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../../../lib/queryKeys';
@@ -259,22 +260,12 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                         borderRadius: 6,
                         marginBottom: 12
                       }}>
-                        <Image 
-                          source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(selectedSession.checkoutUrl || `https://pay.aza.systems/c/${selectedSession.id}`)}` }} 
-                          style={{ width: 140, height: 140 }} 
+                        <QrCode
+                          value={selectedSession.checkoutUrl || `https://pay.aza.systems/c/${selectedSession.id}`}
+                          size={140}
+                          logo={require('../../../../../assets/aza-z.png')}
+                          logoSize={28}
                         />
-                        <View style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          marginTop: -14,
-                          marginLeft: -11,
-                          backgroundColor: '#FFFFFF',
-                          padding: 2,
-                          borderRadius: 4
-                        }}>
-                          <Image source={require('../../../../../assets/aza-z.png')} style={{ width: 15, height: 20 }} />
-                        </View>
                       </View>
 
                       <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827', marginBottom: 2 }}>
@@ -436,9 +427,9 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                 maxWidth: 320,
                 marginBottom: Spacing.xl,
               }}>
-                <Image 
-                  source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(selectedSession.checkoutUrl || `https://pay.aza.systems/c/${selectedSession.id}`)}` }} 
-                  style={{ width: 220, height: 220 }} 
+                <QrCode
+                  value={selectedSession.checkoutUrl || `https://pay.aza.systems/c/${selectedSession.id}`}
+                  size={220}
                 />
                 <Text style={{ fontSize: 26, fontWeight: '800', color: '#111827', marginTop: 16 }}>
                   {fmtAmount(selectedSession.amount, selectedSession.currency)}

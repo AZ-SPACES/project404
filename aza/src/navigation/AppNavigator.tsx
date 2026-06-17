@@ -34,6 +34,7 @@ import QrLoginApprovalScreen from '../features/scan/screens/QrLoginApprovalScree
 import MerchantCheckoutScreen from '../features/scan/screens/MerchantCheckoutScreen';
 import OAuthPaymentApprovalScreen from '../features/scan/screens/OAuthPaymentApprovalScreen';
 import StatementVerifyResultScreen from '../features/scan/screens/StatementVerifyResultScreen';
+import MerchantVerifyResultScreen from '../features/scan/screens/MerchantVerifyResultScreen';
 import { InboxScreen } from '../features/notifications';
 import { VerifyPasscodeScreen } from '../features/security/screens/VerifyPasscodeScreen';
 import CreatePasscodeScreen from '../features/security/screens/CreatePasscodeScreen';
@@ -124,6 +125,7 @@ export default function AppNavigator() {
       <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />
       <Stack.Screen name="OAuthPaymentApproval" component={OAuthPaymentApprovalScreen} />
       <Stack.Screen name="StatementVerifyResult" component={StatementVerifyResultScreen} />
+      <Stack.Screen name="MerchantVerifyResult" component={MerchantVerifyResultScreen} />
       <Stack.Screen name="GenerateRecoveryCode" component={GenerateRecoveryCodeScreen} />
       <Stack.Screen name="AccountRecoveryContacts" component={AccountRecoveryContactsScreen} />
       <Stack.Screen name="Reason" component={ReasonScreen} />

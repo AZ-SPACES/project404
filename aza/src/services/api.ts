@@ -390,6 +390,9 @@ export const sendTransactionsStatementEmail = (startDate: string, endDate: strin
 export const verifyStatement = (code: string) =>
   api.get(`/api/v1/public/statements/verify?code=${encodeURIComponent(code)}`);
 
+export const getPublicMerchant = (handle: string) =>
+  api.get(`/api/v1/merchant/public/${encodeURIComponent(handle)}`);
+
 export const initiateTransfer = (payload: {
   recipientIdentifier: string;
   amount: number;
