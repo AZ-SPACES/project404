@@ -204,17 +204,44 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       }
 
       try {
+        // Merchant-first: a handle can be a business (store code) or a person, and the
+        // /users/by-handle lookup also resolves merchants — so check the business
+        // directory explicitly first and pay verified businesses rather than treating
+        // them as a contact to add.
+        let merchant: any = null;
+        try {
+          const mRes = await getPublicMerchant(handle);
+          merchant = mRes?.data?.data ?? null;
+        } catch {
+          // Not an active/known business — fall through to the person lookup.
+        }
+
+        if (merchant) {
+          navigation.navigate('SendAmount', {
+            name: merchant.businessName ?? `@${handle}`,
+            username: `@${merchant.businessHandle ?? handle}`,
+            avatar: merchant.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(merchant.businessName ?? handle)}&background=random`,
+            identifier: `@${merchant.businessHandle ?? handle}`,
+            merchantVerified: true,
+            ...(amount !== undefined ? { amount } : {}),
+            ...(note ? { note } : {}),
+          });
+          return;
+        }
+
         const user = await findUserByHandle(handle);
         if (user) {
+          // The backend public-profile field is `username`; older typings call it `handle`.
+          const userHandle = (user as any).username ?? (user as any).handle ?? handle;
           const avatar = user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`;
           if (amount !== undefined) {
             // Payment-request QR: open Send pre-filled with the requested amount/note.
             navigation.navigate('SendAmount', {
               id: user.id,
               name: user.displayName,
-              username: `@${user.handle}`,
+              username: `@${userHandle}`,
               avatar,
-              identifier: `@${user.handle}`,
+              identifier: `@${userHandle}`,
               amount,
               ...(note ? { note } : {}),
             });
@@ -222,14 +249,14 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             navigation.navigate('ContactsProfile', {
               id: user.id,
               name: user.displayName,
-              username: `@${user.handle}`,
+              username: `@${userHandle}`,
               avatar,
             });
           }
         } else {
-          // Not a user — the legacy pay/{handle} format is also used for merchant store
-          // codes, so resolve it as a business and go straight to paying them.
-          await goToMerchant(handle, amount, note);
+          Alert.alert('Not found', `No Aza account or business found for @${handle}.`, [
+            { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+          ]);
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to resolve QR code. Please try again.', [
