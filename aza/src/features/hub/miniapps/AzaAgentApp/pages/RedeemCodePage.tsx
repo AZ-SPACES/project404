@@ -38,7 +38,7 @@ export default function RedeemCodePage({ goBack, refresh, Colors, styles }: NavP
 
   return (
     <View style={{ flex: 1 }}>
-    <ScrollView contentContainerStyle={styles.scroll}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={goBack}>
           <MaterialIcons name="arrow-back" size={24} color={Colors.textPrimary} />

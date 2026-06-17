@@ -147,7 +147,7 @@ export default function DisableSmsScreen() {
           <Text style={styles.headerTitle}>Text message</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
           {step === 1 ? (
             <View style={styles.content}>
               <Text style={styles.title}>Turn off text message verification</Text>

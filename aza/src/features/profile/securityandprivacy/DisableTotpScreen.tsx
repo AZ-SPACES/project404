@@ -77,7 +77,7 @@ export default function DisableTotpScreen() {
           <Text style={styles.headerTitle}>Authenticator app</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
             <Text style={styles.title}>Turn off authenticator app</Text>
             <Text style={styles.description}>

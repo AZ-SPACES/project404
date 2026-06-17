@@ -92,8 +92,7 @@ export default function SignUpPronounsScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
           <Animated.View
@@ -123,7 +122,7 @@ export default function SignUpPronounsScreen() {
           <SignUpProgressBar step={8} total={10} />
 
           {/* Content */}
-          <Animated.ScrollView
+          <Animated.ScrollView keyboardShouldPersistTaps="handled"
             style={styles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}

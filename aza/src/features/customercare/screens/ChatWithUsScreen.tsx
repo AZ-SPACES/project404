@@ -153,7 +153,7 @@ export default function ChatWithUsScreen() {
           <Text style={styles.subtitle}>AI-powered · Replies instantly</Text>
         </View>
 
-        <ScrollView
+        <ScrollView keyboardShouldPersistTaps="handled"
           ref={scrollViewRef}
           contentContainerStyle={styles.chatContainer}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}

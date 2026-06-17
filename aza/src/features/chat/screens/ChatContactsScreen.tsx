@@ -16,6 +16,8 @@ import {
   Modal,
   Pressable,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -222,7 +224,7 @@ const PinnedSection = memo(function PinnedSection({
 
   return (
     <View>
-      <ScrollView
+      <ScrollView keyboardShouldPersistTaps="handled"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pinnedList}
@@ -1059,7 +1061,7 @@ export default function ChatContactsScreen() {
       {/* Filter pills */}
       {!selectMode && (
         <View style={styles.filtersContainer}>
-          <FlatList
+          <FlatList keyboardShouldPersistTaps="handled"
             horizontal
             showsHorizontalScrollIndicator={false}
             data={allFilterItems}
@@ -1089,7 +1091,7 @@ export default function ChatContactsScreen() {
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
-        <FlatList
+        <FlatList keyboardShouldPersistTaps="handled"
           data={filteredContacts}
           renderItem={renderContact}
           keyExtractor={(item) => item.id}
@@ -1220,6 +1222,10 @@ export default function ChatContactsScreen() {
         animationType="slide"
         onRequestClose={() => setShowCreateFilter(false)}
       >
+        <KeyboardAvoidingView
+          style={styles.modalFlex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
         <Pressable
           style={styles.modalOverlay}
           onPress={() => setShowCreateFilter(false)}
@@ -1272,6 +1278,7 @@ export default function ChatContactsScreen() {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -1527,6 +1534,7 @@ function createStyles(Colors: ThemeColors) {
     bulkActionLabel: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
 
     // ── Create filter modal ──
+    modalFlex: { flex: 1 },
     modalOverlay: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.45)",

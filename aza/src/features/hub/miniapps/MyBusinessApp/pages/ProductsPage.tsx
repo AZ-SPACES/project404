@@ -75,7 +75,7 @@ function ProductForm({
                 <Feather name="x" size={20} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 14 }}>
               {[
                 { label: 'Name *', value: name, onChange: setName, placeholder: 'Product name', keyboardType: 'default' as const },
                 { label: 'Price (GHS) *', value: price, onChange: setPrice, placeholder: '0.00', keyboardType: 'decimal-pad' as const },
@@ -199,7 +199,7 @@ export default function ProductsPage({ goBack, Colors, styles }: NavProps) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {products.map((p: any) => (
             <View
               key={p.id}

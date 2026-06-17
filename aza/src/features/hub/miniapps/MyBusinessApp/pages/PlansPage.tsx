@@ -97,7 +97,7 @@ function PlanModal({ visible, plan, onClose, onSaved, Colors }: any) {
             <TextInput style={inputStyle(Colors)} value={amount} onChangeText={setAmount} placeholder="50.00" keyboardType="decimal-pad" placeholderTextColor={Colors.textSecondary} />
 
             <Text style={labelStyle}>Billing Interval</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm, paddingVertical: 4 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm, paddingVertical: 4 }}>
               {INTERVALS.map((i) => (
                 <TouchableOpacity
                   key={i}
@@ -354,7 +354,7 @@ export default function PlansPage({ goBack, Colors, styles }: NavProps) {
             </Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
             {plans.map((p: any) => (
               <View
                 key={p.id}
@@ -414,7 +414,7 @@ export default function PlansPage({ goBack, Colors, styles }: NavProps) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {subscriptions.map((s: any) => (
             <View
               key={s.id}

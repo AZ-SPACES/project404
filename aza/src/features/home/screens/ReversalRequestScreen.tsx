@@ -141,7 +141,7 @@ export function ReversalRequestScreen() {
     }
 
     return (
-      <FlatList
+      <FlatList keyboardShouldPersistTaps="handled"
         data={transactions}
         keyExtractor={(item) => item.id}
         renderItem={renderTxItem}
@@ -161,10 +161,10 @@ export function ReversalRequestScreen() {
 
     return (
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
           {/* Selected Transaction Summary */}
           <Text style={styles.label}>Selected Transaction</Text>
           <View style={[styles.txCard, { backgroundColor: isDark ? Colors.surface : Colors.white, borderColor: Colors.border }]}>

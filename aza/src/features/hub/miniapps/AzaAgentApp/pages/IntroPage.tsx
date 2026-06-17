@@ -36,7 +36,7 @@ export default function IntroPage({ refresh, Colors, styles }: NavProps) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
       <View style={{ alignItems: 'center', marginVertical: 12 }}>
         <MaterialIcons name="storefront" size={48} color={Colors.primary} />
       </View>

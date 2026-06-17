@@ -353,7 +353,7 @@ export default function NotificationSettingsScreen() {
         <View style={{ width: 40 }} />
       </Animated.View>
 
-      <Animated.ScrollView 
+      <Animated.ScrollView keyboardShouldPersistTaps="handled" 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(

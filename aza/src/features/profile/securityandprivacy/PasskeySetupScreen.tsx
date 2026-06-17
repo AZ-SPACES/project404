@@ -167,7 +167,7 @@ export default function PasskeySetupScreen() {
         <Text style={styles.headerTitle}>Passkeys</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.iconWrap}>
           <MaterialCommunityIcons name="fingerprint" size={56} color={Colors.primary} />
         </View>

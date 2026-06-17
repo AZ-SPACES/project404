@@ -139,7 +139,7 @@ export default function SourceofFundsScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
         >
           {/* Header */}
@@ -163,7 +163,7 @@ export default function SourceofFundsScreen() {
         </Animated.View>
 
         {/* Content */}
-        <Animated.ScrollView
+        <Animated.ScrollView keyboardShouldPersistTaps="handled"
           style={styles.content}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContentContainer}

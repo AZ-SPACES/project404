@@ -212,7 +212,7 @@ export default function ChatBackupScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Busy banner */}
         {busy && (
           <View style={styles.progressCard}>

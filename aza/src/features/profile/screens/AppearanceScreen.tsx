@@ -557,7 +557,7 @@ export default function AppearanceScreen() {
 
         {/* Banner gradient row */}
         <Text style={[styles.sectionSubLabel, { paddingHorizontal: Spacing.lg, marginBottom: 6 }]}>Gradient (when no image)</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gradientScrollContainer}>
+        <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gradientScrollContainer}>
           {BANNER_GRADIENTS.map(g => {
             const gc: string[] = g.colors ? [...g.colors] : [palette.primary, palette.gradientEnd];
             const active = bannerGradient === g.id;
@@ -572,7 +572,7 @@ export default function AppearanceScreen() {
         </ScrollView>
 
         {/* Thumbnail scroll */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.backgroundsScrollContainer}>
+        <ScrollView keyboardShouldPersistTaps="handled" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.backgroundsScrollContainer}>
           {/* None */}
           <TouchableOpacity style={[styles.bgThumbnailContainer, !bg && styles.bgThumbnailSelected]} onPress={() => setBg("")} activeOpacity={0.8}>
             <View style={styles.bgNoneInner}>
@@ -641,7 +641,7 @@ export default function AppearanceScreen() {
         <View style={styles.headerRightPlaceholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* ── Language ── */}
         <View style={styles.section}>
@@ -973,7 +973,7 @@ export default function AppearanceScreen() {
               </Text>
             </View>
           ) : (
-            <FlatList
+            <FlatList keyboardShouldPersistTaps="handled"
               data={unsplashResults}
               keyExtractor={item => item.id}
               numColumns={2}
