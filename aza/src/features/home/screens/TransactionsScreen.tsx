@@ -543,12 +543,29 @@ export function TransactionsScreen() {
             </View>
           </View>
         ) : (
-          <Button
-            title="Close"
-            onPress={closeSheet}
-            backgroundColor={isDark ? Colors.background : Colors.surface}
-            textColor={Colors.textPrimary}
-          />
+          <>
+            {/* Completed payments can be proven with a verifiable QR (#3). */}
+            {!selectedTx.isPending &&
+              selectedTx.status !== "FAILED" &&
+              selectedTx.status !== "CANCELLED" && (
+                <View style={{ marginBottom: Spacing.sm }}>
+                  <Button
+                    title="Show payment proof"
+                    onPress={() => {
+                      const id = selectedTx.id;
+                      closeSheet();
+                      navigation.navigate("PaymentProof", { transactionId: id });
+                    }}
+                  />
+                </View>
+              )}
+            <Button
+              title="Close"
+              onPress={closeSheet}
+              backgroundColor={isDark ? Colors.background : Colors.surface}
+              textColor={Colors.textPrimary}
+            />
+          </>
         )}
       </>
     );

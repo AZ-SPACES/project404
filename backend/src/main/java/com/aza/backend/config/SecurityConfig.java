@@ -123,6 +123,8 @@ public class SecurityConfig {
                     // Statement verification — publicly accessible so employers/banks can verify
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/statements/verify/page").permitAll();
+                    // Payment-proof verification — public; the QR carries its own HMAC signature
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/public/payments/verify").permitAll();
                     // Mobile KYB handoff — token-authenticated, no user session required
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*/status").permitAll();

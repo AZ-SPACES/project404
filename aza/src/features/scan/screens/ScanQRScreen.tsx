@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing, Share, Modal, TextInput, Image, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert, Animated, Easing, Share, Modal, TextInput, Image, Keyboard, AccessibilityInfo } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import * as Clipboard from 'expo-clipboard';
 import Button from '../../../components/ui/Button';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MaterialDesignIcons as MaterialCommunityIcons } from '@react-native-vector-icons/material-design-icons';
@@ -13,8 +14,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useContactStore } from '../../../store/contactStore';
-import { getPublicMerchant } from '../../../services/api';
+import { getPublicMerchant, reportHandle } from '../../../services/api';
 import { useProfile } from '../../../providers/ProfileProvider';
+import { useToast } from '../../../providers/ToastProvider';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
@@ -42,6 +44,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const isProcessing = useRef(false);
   const { findUserByHandle } = useContactStore();
   const { handle: myHandle, displayName: myName } = useProfile();
+  const { showToast } = useToast();
 
   // Pinch-to-zoom: CameraView takes a 0..1 zoom. We track the live value in state
   // (to drive the camera) and mirror it in a ref so the gesture's onEnd can read
@@ -71,6 +74,38 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const [manualVisible, setManualVisible] = useState(false);
   const [manualText, setManualText] = useState('');
 
+  // "Locking on" feedback (#2): when a QR enters view we tint the frame corners
+  // and give a light haptic, before the code is resolved. A short timer clears
+  // the state once the code leaves the frame.
+  const [detected, setDetected] = useState(false);
+  const detectedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lockHaptic = useRef(false);
+  const cornerPulse = useRef(new Animated.Value(1)).current;
+
+  // Low-light torch nudge (#1): no ambient-light sensor is available, so we
+  // surface a hint if the user lingers on the scanner without a successful scan.
+  const [showTorchHint, setShowTorchHint] = useState(false);
+  const torchHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markDetected = () => {
+    if (!detected) {
+      setDetected(true);
+      Animated.sequence([
+        Animated.timing(cornerPulse, { toValue: 1.06, duration: 150, useNativeDriver: true }),
+        Animated.timing(cornerPulse, { toValue: 1, duration: 150, useNativeDriver: true }),
+      ]).start();
+    }
+    if (!lockHaptic.current) {
+      lockHaptic.current = true;
+      Haptics.selectionAsync().catch(() => {});
+    }
+    if (detectedTimer.current) clearTimeout(detectedTimer.current);
+    detectedTimer.current = setTimeout(() => {
+      setDetected(false);
+      lockHaptic.current = false;
+    }, 500);
+  };
+
   const resetScanner = () => { setScanned(false); isProcessing.current = false; };
 
   const confirmPayee = (p: PendingPayee) => setPendingPayee(p);
@@ -85,6 +120,32 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const handleCancelPay = () => {
     setPendingPayee(null);
     resetScanner();
+  };
+
+  // Report a scanned handle / store code as a scam etc. (#5).
+  const submitReport = async (handle: string, reason: string) => {
+    try {
+      await reportHandle(handle, reason);
+      showToast('Report submitted. Thanks for keeping Aza safe.', 'success');
+    } catch {
+      showToast('Could not submit report. Please try again.', 'error');
+    }
+  };
+
+  const handleReportPayee = () => {
+    if (!pendingPayee) return;
+    const handle = pendingPayee.handle;
+    // Android's Alert supports at most three buttons, so keep to the two most
+    // common reasons plus Cancel.
+    Alert.alert(
+      'Report this code',
+      `Why are you reporting @${handle}?`,
+      [
+        { text: 'Scam or fraud', style: 'destructive', onPress: () => submitReport(handle, 'SCAM') },
+        { text: 'Impersonation', onPress: () => submitReport(handle, 'IMPERSONATION') },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   };
 
   const handleManualSubmit = async () => {
@@ -103,6 +164,17 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
     React.useCallback(() => {
       setScanned(false);
       isProcessing.current = false;
+
+      // Start the low-light torch nudge timer; it fires if the user lingers
+      // ~6s without a successful scan and the torch is still off.
+      setShowTorchHint(false);
+      if (torchHintTimer.current) clearTimeout(torchHintTimer.current);
+      torchHintTimer.current = setTimeout(() => setShowTorchHint(true), 6000);
+
+      return () => {
+        if (torchHintTimer.current) clearTimeout(torchHintTimer.current);
+        if (detectedTimer.current) clearTimeout(detectedTimer.current);
+      };
     }, [])
   );
 
@@ -129,6 +201,14 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
     startAnimation();
   }, [permission]);
+
+  // Announce the resolved recipient to screen readers when the confirm card opens (#7).
+  useEffect(() => {
+    if (pendingPayee) {
+      const amt = pendingPayee.amount !== undefined ? `, amount GHS ${pendingPayee.amount.toFixed(2)}` : '';
+      AccessibilityInfo.announceForAccessibility(`Confirm payment to ${pendingPayee.name}${amt}`);
+    }
+  }, [pendingPayee]);
 
   // Resolve a handle as a merchant and go straight to paying them. A verified/active
   // business opens the Send flow with the "Verified business" badge; otherwise the
@@ -214,6 +294,44 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       const statementMatch = raw.match(/aza\.systems\/verify\?code=([A-Za-z0-9-]+)/i);
       if (statementMatch) {
         navigation.navigate('StatementVerifyResult', { code: statementMatch[1]! });
+        return;
+      }
+
+      // Payment-proof QR: aza.systems/p?ref={txnId}&sig={hmac} — the payer's
+      // tamper-evident "I paid this" code. Verify it against the ledger.
+      const proofMatch = raw.match(/aza\.systems\/p\?(.+)$/i);
+      if (proofMatch?.[1]) {
+        try {
+          const params = new URLSearchParams(proofMatch[1]);
+          const proofRef = params.get('ref');
+          const proofSig = params.get('sig');
+          if (proofRef && proofSig) {
+            navigation.navigate('PaymentVerifyResult', { ref: proofRef, sig: proofSig });
+            return;
+          }
+        } catch {
+          // Malformed — fall through to the other matchers.
+        }
+      }
+
+      // Agent cash-out withdrawal code (#4): a one-time all-caps alphanumeric code a
+      // customer shows an agent to collect cash. It isn't a payable handle, so
+      // recognise it explicitly and guide the user instead of failing the handle
+      // lookup with a confusing "no account found".
+      const withdrawalCode = raw.match(/^[A-Z0-9]{8,12}$/);
+      if (withdrawalCode) {
+        const wcReset = () => { setScanned(false); isProcessing.current = false; };
+        Alert.alert(
+          'Withdrawal code',
+          `This is an AZA cash-out code (${raw}).\n\nIf you’re an agent, open the Agent app → Cash out to redeem it and hand over the cash. If you’re a customer, show this code to an agent.`,
+          [
+            {
+              text: 'Copy code',
+              onPress: async () => { await Clipboard.setStringAsync(raw).catch(() => {}); wcReset(); },
+            },
+            { text: 'OK', style: 'cancel', onPress: wcReset },
+          ],
+        );
         return;
       }
 
@@ -376,6 +494,9 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
     const { bounds, data } = result;
     if (!bounds) return;
 
+    // A code is in view — give "locking on" feedback even before it resolves (#2).
+    markDetected();
+
     const qrCenterX = bounds.origin.x + bounds.size.width / 2;
     const qrCenterY = bounds.origin.y + bounds.size.height / 2;
 
@@ -390,6 +511,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       setScanned(true);
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      AccessibilityInfo.announceForAccessibility('QR code scanned');
 
       await processQrData(data.trim());
     }
@@ -421,6 +543,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       }
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      AccessibilityInfo.announceForAccessibility('QR code found');
       await processQrData(found);
     } catch {
       Alert.alert('Error', 'Could not read that image. Please try another.', [
@@ -429,7 +552,10 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
     }
   };
 
-  const toggleFlash = () => setTorchEnabled(!torchEnabled);
+  const toggleFlash = () => {
+    setShowTorchHint(false);
+    setTorchEnabled((prev) => !prev);
+  };
 
   if (!permission?.granted) {
     return (
@@ -456,59 +582,104 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         <View style={styles.overlay} />
         
         <View style={styles.frameContainer}>
-          <View 
-            style={styles.frame}
+          <Animated.View
+            style={[styles.frame, { transform: [{ scale: cornerPulse }] }]}
             onLayout={(event) => setFrameLayout(event.nativeEvent.layout)}
           >
             {/* The Animated Scanning Line */}
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.scanLine, 
+                styles.scanLine,
                 { transform: [{ translateY: scanAnim }] }
-              ]} 
+              ]}
             />
 
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-          </View>
-          
+            {/* Corners tint to the brand colour while a code is "locking on" (#2). */}
+            <View style={[styles.corner, styles.topLeft, detected && styles.cornerActive]} />
+            <View style={[styles.corner, styles.topRight, detected && styles.cornerActive]} />
+            <View style={[styles.corner, styles.bottomLeft, detected && styles.cornerActive]} />
+            <View style={[styles.corner, styles.bottomRight, detected && styles.cornerActive]} />
+          </Animated.View>
+
           <View style={styles.scanLabelContainer}>
-            <Text style={styles.scanLabel}>Scan code to pay</Text>
+            <Text style={styles.scanLabel}>{detected ? 'Hold steady…' : 'Scan code to pay'}</Text>
           </View>
+
+          {/* Low-light torch nudge (#1). */}
+          {showTorchHint && !torchEnabled && (
+            <TouchableOpacity
+              style={styles.torchHint}
+              onPress={toggleFlash}
+              accessibilityRole="button"
+              accessibilityLabel="Trouble scanning? Turn on the flashlight"
+            >
+              <MaterialCommunityIcons name="flashlight" size={16} color={Colors.black} />
+              <Text style={styles.torchHintText}>Trouble scanning? Tap for light</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <SafeAreaView style={styles.topControls}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconCircle}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.iconCircle}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="chevron-back" size={24} color={Colors.white} />
           </TouchableOpacity>
-          
-          <TouchableOpacity onPress={toggleFlash} style={styles.iconCircle}>
-            <MaterialCommunityIcons 
-              name={torchEnabled ? 'flash' : 'flash-off'} 
-              size={24} 
-              color= {Colors.white} 
+
+          <TouchableOpacity
+            onPress={toggleFlash}
+            style={styles.iconCircle}
+            accessibilityRole="button"
+            accessibilityLabel={torchEnabled ? 'Turn off flashlight' : 'Turn on flashlight'}
+            accessibilityState={{ selected: torchEnabled }}
+          >
+            <MaterialCommunityIcons
+              name={torchEnabled ? 'flash' : 'flash-off'}
+              size={24}
+              color= {Colors.white}
             />
           </TouchableOpacity>
         </SafeAreaView>
 
         <View style={styles.bottomNav}>
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.galleryButton} onPress={handlePickFromGallery}>
+            <TouchableOpacity
+              style={styles.galleryButton}
+              onPress={handlePickFromGallery}
+              accessibilityRole="button"
+              accessibilityLabel="Scan a QR code from a saved photo"
+            >
               <Ionicons name="images-outline" size={18} color={Colors.white} />
               <Text style={styles.galleryButtonText}>Upload from gallery</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.galleryButton} onPress={() => setManualVisible(true)}>
+            <TouchableOpacity
+              style={styles.galleryButton}
+              onPress={() => setManualVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Enter a handle or code manually"
+            >
               <Ionicons name="create-outline" size={18} color={Colors.white} />
               <Text style={styles.galleryButtonText}>Enter code</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity style={[styles.toggleButton, styles.activeToggle]}>
+          <View style={styles.toggleContainer} accessibilityRole="tablist">
+            <TouchableOpacity
+              style={[styles.toggleButton, styles.activeToggle]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: true }}
+              accessibilityLabel="Scan tab, selected"
+            >
               <Text style={styles.toggleTextActive}>Scan</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.toggleButton} onPress={onToggle}>
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={onToggle}
+              accessibilityRole="tab"
+              accessibilityLabel="Switch to My code tab"
+            >
               <Text style={styles.toggleTextInactive}>My code</Text>
             </TouchableOpacity>
           </View>
@@ -541,9 +712,14 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
                   <Text style={styles.sheetNote} numberOfLines={2}>“{pendingPayee.note}”</Text>
                 ) : null}
                 <Button title={pendingPayee.amount !== undefined ? 'Continue to pay' : 'Continue'} onPress={handleConfirmPay} />
-                <TouchableOpacity onPress={handleCancelPay} style={styles.sheetCancel}>
-                  <Text style={styles.sheetCancelText}>Cancel</Text>
-                </TouchableOpacity>
+                <View style={styles.sheetFooterRow}>
+                  <TouchableOpacity onPress={handleCancelPay} style={styles.sheetCancel} accessibilityRole="button" accessibilityLabel="Cancel">
+                    <Text style={styles.sheetCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleReportPayee} style={styles.sheetCancel} accessibilityRole="button" accessibilityLabel="Report this code">
+                    <Text style={styles.sheetReportText}>Report this code</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </View>
@@ -616,11 +792,14 @@ function createStyles(Colors: ThemeColors) {
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 5 },
-  corner: { 
-    position: 'absolute', 
-    width: 24, 
-    height: 24, 
-    borderColor: Colors.white 
+  corner: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderColor: Colors.white
+  },
+  cornerActive: {
+    borderColor: Colors.primary,
   },
   topLeft: { 
     top: -2, 
@@ -656,10 +835,25 @@ function createStyles(Colors: ThemeColors) {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20 },
-  scanLabel: { 
-    fontSize: 14, 
-    fontWeight: '700', 
-    color: Colors.black 
+  scanLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.black
+  },
+  torchHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  torchHintText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.black,
   },
   topControls: { 
     position: 'absolute', 
@@ -778,6 +972,12 @@ function createStyles(Colors: ThemeColors) {
     textAlign: 'center',
     marginBottom: 12,
   },
+  sheetFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   sheetCancel: {
     paddingVertical: 12,
     marginTop: 8,
@@ -786,6 +986,11 @@ function createStyles(Colors: ThemeColors) {
     fontSize: 15,
     fontWeight: '700',
     color: Colors.textSecondary,
+  },
+  sheetReportText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.error,
   },
   manualInput: {
     width: '100%',
