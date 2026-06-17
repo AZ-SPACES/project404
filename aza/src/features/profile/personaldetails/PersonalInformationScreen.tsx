@@ -216,10 +216,10 @@ export function PersonalInformationScreen() {
       </Animated.View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        <Animated.ScrollView
+        <Animated.ScrollView keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           onScroll={Animated.event(

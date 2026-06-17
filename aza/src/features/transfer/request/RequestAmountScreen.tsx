@@ -126,7 +126,7 @@ export default function RequestAmountScreen({ navigation, route }: RequestAmount
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" />
             <KeyboardAvoidingView
                 style={styles.flex}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
             >
                 <Pressable style={styles.flex} onPress={Keyboard.dismiss}>

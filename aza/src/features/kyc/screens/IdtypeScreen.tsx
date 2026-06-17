@@ -112,7 +112,7 @@ export default function IdtypeScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
           <Animated.View
@@ -132,7 +132,7 @@ export default function IdtypeScreen() {
             </Animated.View>
           </Animated.View>
 
-          <Animated.ScrollView
+          <Animated.ScrollView keyboardShouldPersistTaps="handled"
             style={styles.content}
             showsVerticalScrollIndicator={false}
             onScroll={Animated.event(

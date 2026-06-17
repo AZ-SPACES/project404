@@ -203,7 +203,7 @@ export default function DiscountCodesPage({ goBack, Colors, styles }: NavProps) 
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {codes.map((c: any) => (
             <View
               key={c.id}

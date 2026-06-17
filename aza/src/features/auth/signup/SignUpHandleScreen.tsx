@@ -126,7 +126,7 @@ export default function SignUpHandleScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
           <Animated.View
@@ -153,7 +153,7 @@ export default function SignUpHandleScreen() {
           <SignUpProgressBar step={5} total={10} />
 
           {/* Content */}
-          <Animated.ScrollView
+          <Animated.ScrollView keyboardShouldPersistTaps="handled"
             style={styles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}

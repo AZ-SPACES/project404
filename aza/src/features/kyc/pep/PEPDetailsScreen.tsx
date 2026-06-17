@@ -94,7 +94,7 @@ export function PEPDetailsScreen() {
           </Animated.View>
 
           {/* Content */}
-          <Animated.ScrollView
+          <Animated.ScrollView keyboardShouldPersistTaps="handled"
             style={styles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}

@@ -137,7 +137,7 @@ export default function SmsSetupScreen() {
           <Text style={styles.headerTitle}>Text message</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {step === 1 ? (
             <View style={styles.content}>
               <View style={styles.iconWrap}>

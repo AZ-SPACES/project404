@@ -70,7 +70,7 @@ export const PollCreatorSheet = memo(function PollCreatorSheet({ visible, onClos
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
             <Text style={[styles.label, { color: Colors.textSecondary }]}>Question</Text>
             <TextInput
               style={[styles.questionInput, { color: Colors.textPrimary, borderColor: Colors.border, backgroundColor: isDark ? Colors.surface : '#F9FAFB' }]}

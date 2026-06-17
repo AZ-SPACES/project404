@@ -309,7 +309,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
           {loading ? (
             <View style={styles.center}><ActivityIndicator color={Colors.primary} /></View>
           ) : (
-            <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
               {filteredKeys.length === 0 ? (
                 <View style={{ padding: Spacing.lg, alignItems: 'center', justifyContent: 'center', marginVertical: Spacing.xl }}>
                   <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center' }}>
@@ -815,7 +815,7 @@ export default function ApiKeysPage({ goBack, Colors, styles }: NavProps) {
           {logsLoading && logs.length === 0 ? (
             <View style={styles.center}><ActivityIndicator color={Colors.primary} /></View>
           ) : (
-            <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
               {logs.length === 0 ? (
                 <View style={{ padding: Spacing.lg, alignItems: 'center', justifyContent: 'center', marginVertical: Spacing.xl }}>
                   <Text style={{ color: Colors.textSecondary, fontSize: 14, textAlign: 'center' }}>

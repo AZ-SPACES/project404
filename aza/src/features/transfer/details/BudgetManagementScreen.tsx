@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, TextInput, ActivityIndicator, Alert, Modal, Pressable,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -119,7 +120,7 @@ export default function BudgetManagementScreen() {
       {isLoading ? (
         <View style={styles.loader}><ActivityIndicator color={Colors.primary} /></View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.listContainer}>
             {CATEGORIES.map((cat, i) => {
               const budget = budgetMap[cat.key];
@@ -168,7 +169,11 @@ export default function BudgetManagementScreen() {
         animationType="slide"
         onRequestClose={() => setModal(m => ({ ...m, visible: false }))}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModal(m => ({ ...m, visible: false }))}>
+        <KeyboardAvoidingView
+          style={styles.modalFlex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setModal(m => ({ ...m, visible: false }))}>
           <Pressable style={styles.modalSheet} onPress={() => {}}>
             <View style={styles.modalHandle} />
 
@@ -227,7 +232,8 @@ export default function BudgetManagementScreen() {
               activeOpacity={0.8}
             />
           </Pressable>
-        </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -270,6 +276,7 @@ function createStyles(Colors: ThemeColors) {
     rowRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
     deleteBtn: { padding: 4 },
 
+    modalFlex: { flex: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalSheet: {
       backgroundColor: isDark ? Colors.surface : Colors.white,

@@ -75,7 +75,7 @@ function DisputeModal({
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 16 }}>
               {/* Amount + status */}
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={[sty.infoBox, { backgroundColor: Colors.background, flex: 1 }]}>
@@ -192,7 +192,7 @@ export default function DisputesPage({ goBack, Colors, styles }: NavProps) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {disputes.map((d: any) => (
             <TouchableOpacity
               key={d.id}

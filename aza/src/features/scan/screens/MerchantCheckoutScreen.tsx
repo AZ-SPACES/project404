@@ -323,7 +323,7 @@ export default function MerchantCheckoutScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
             <BackButton onPress={() => { setPin(''); setErrorMsg(null); setStep('review'); }} />
           </View>

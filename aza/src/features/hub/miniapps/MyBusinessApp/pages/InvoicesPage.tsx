@@ -179,7 +179,7 @@ export default function InvoicesPage({ goBack, Colors, styles }: NavProps) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {invoices.map((inv: any) => (
             <View
               key={inv.id}

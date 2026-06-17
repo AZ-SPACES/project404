@@ -189,7 +189,7 @@ export default function ManageRecoveryCodesScreen() {
           <Text style={styles.headerTitle}>Recovery codes</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
           {step === 'overview' && (
             <>

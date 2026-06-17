@@ -105,7 +105,7 @@ export default function TotpSetupScreen() {
           <Text style={styles.headerTitle}>Two-step verification</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
           {step === 1 ? (
             <View style={styles.stepContainer}>
               <Text style={styles.title}>Set up authenticator</Text>

@@ -81,8 +81,7 @@ export default function MerchantKYBBusinessScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
           <Animated.View
@@ -105,7 +104,7 @@ export default function MerchantKYBBusinessScreen() {
           </Animated.View>
 
           {/* Content */}
-          <Animated.ScrollView
+          <Animated.ScrollView keyboardShouldPersistTaps="handled"
             style={styles.content}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}

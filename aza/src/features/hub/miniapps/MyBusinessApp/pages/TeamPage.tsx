@@ -208,7 +208,7 @@ export default function TeamPage({ goBack, Colors, styles }: NavProps) {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: Spacing.md }}>
           {members.map((m: any) => (
             <View
               key={m.id}

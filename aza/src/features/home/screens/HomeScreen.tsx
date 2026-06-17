@@ -520,7 +520,7 @@ export default function HomeScreen() {
             <ActivityIndicator size="small" color={Colors.primary} />
           </View>
         ) : displayTransactions.length > 0 ? (
-          <ScrollView style={styles.recentTransactionsList} showsVerticalScrollIndicator={false}>
+          <ScrollView keyboardShouldPersistTaps="handled" style={styles.recentTransactionsList} showsVerticalScrollIndicator={false}>
             {displayTransactions.map((item) => (
               <TransactionItem
                 key={item.id}
