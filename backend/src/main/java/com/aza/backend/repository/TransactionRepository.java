@@ -283,6 +283,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT COALESCE(SUM(t.feeAmount), 0) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :since")
     BigDecimal sumFeesAfter(@Param("since") LocalDateTime since);
 
+    /** Merchant checkout fees only (checkout transactions are tagged with a "checkout:" idempotency key). */
+    @Query("SELECT COALESCE(SUM(t.feeAmount), 0) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :since AND t.idempotencyKey LIKE 'checkout:%'")
+    BigDecimal sumMerchantFeesAfter(@Param("since") LocalDateTime since);
+
     @Query("SELECT DATE(t.initiatedAt), COALESCE(SUM(t.feeAmount), 0), COUNT(t) FROM Transaction t WHERE t.status = 'COMPLETED' AND t.initiatedAt >= :since GROUP BY DATE(t.initiatedAt) ORDER BY DATE(t.initiatedAt)")
     List<Object[]> dailyFeeRevenue(@Param("since") LocalDateTime since);
 

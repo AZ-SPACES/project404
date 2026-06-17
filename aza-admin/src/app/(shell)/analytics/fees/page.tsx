@@ -51,12 +51,28 @@ export default function FeeRevenuePage() {
           ))}
         </div>
       ) : summary ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Today" value={summary.today} />
-          <StatCard label="This Week" value={summary.thisWeek} />
-          <StatCard label="This Month" value={summary.thisMonth} />
-          <StatCard label="All Time" value={summary.allTime} />
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            <StatCard label="Today" value={summary.today} />
+            <StatCard label="This Week" value={summary.thisWeek} />
+            <StatCard label="This Month" value={summary.thisMonth} />
+            <StatCard label="All Time" value={summary.allTime} />
+          </div>
+          {(summary.merchant || summary.transfer) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <div className="rounded-xl border border-border p-5">
+                <p className="text-xs text-foreground/50 mb-1">Merchant checkout fees · This Month</p>
+                <p className="text-xl font-semibold text-foreground">{ghs(summary.merchant?.thisMonth ?? 0)}</p>
+                <p className="text-xs text-foreground/30 mt-1">All time: {ghs(summary.merchant?.allTime ?? 0)}</p>
+              </div>
+              <div className="rounded-xl border border-border p-5">
+                <p className="text-xs text-foreground/50 mb-1">P2P transfer fees · This Month</p>
+                <p className="text-xl font-semibold text-foreground">{ghs(summary.transfer?.thisMonth ?? 0)}</p>
+                <p className="text-xs text-foreground/30 mt-1">All time: {ghs(summary.transfer?.allTime ?? 0)}</p>
+              </div>
+            </div>
+          )}
+        </>
       ) : null}
 
       {/* Daily chart */}
