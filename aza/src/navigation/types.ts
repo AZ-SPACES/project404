@@ -151,6 +151,8 @@ export type RootStackParamList = {
   MerchantCheckout: { sessionId: string };
   StatementVerifyResult: { code: string };
   MerchantVerifyResult: { handle: string; amount?: number; note?: string };
+  PaymentVerifyResult: { ref: string; sig: string };
+  PaymentProof: { transactionId: string };
   OAuthPaymentApproval: { sessionId: string };
   BroadcastScreen: { preselected?: string[] };
   SavedMessagesScreen: undefined;

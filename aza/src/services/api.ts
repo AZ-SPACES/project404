@@ -390,6 +390,17 @@ export const sendTransactionsStatementEmail = (startDate: string, endDate: strin
 export const verifyStatement = (code: string) =>
   api.get(`/api/v1/public/statements/verify?code=${encodeURIComponent(code)}`);
 
+// Payment proof (verifiable "I paid this" QR)
+export const getPaymentProof = (transactionId: string) =>
+  api.get(`/api/v1/payments/${encodeURIComponent(transactionId)}/proof`);
+
+export const verifyPayment = (ref: string, sig: string) =>
+  api.get(`/api/v1/public/payments/verify?ref=${encodeURIComponent(ref)}&sig=${encodeURIComponent(sig)}`);
+
+// Report a payment handle / store code (scam, impersonation, …)
+export const reportHandle = (handle: string, reason: string, details?: string) =>
+  api.post(`/api/v1/reports/handle`, { handle, reason, ...(details ? { details } : {}) });
+
 export const getPublicMerchant = (handle: string) =>
   api.get(`/api/v1/merchant/public/${encodeURIComponent(handle)}`);
 
