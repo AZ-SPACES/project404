@@ -19,7 +19,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
     );
   }
 
-  const staticLink = `https://aza.systems/pay/${merchant.businessHandle}`;
+  const staticLink = `https://aza.systems/m/${merchant.businessHandle}`;
 
   const handleCopy = () => {
     Clipboard.setString(staticLink);

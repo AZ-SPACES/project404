@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useContactStore } from '../../../store/contactStore';
+import { getPublicMerchant } from '../../../services/api';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
@@ -58,6 +59,31 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
 
     startAnimation();
   }, [permission]);
+
+  // Resolve a handle as a merchant and go straight to paying them. A verified/active
+  // business opens the Send flow with the "Verified business" badge; otherwise the
+  // verification screen warns the user instead of silently paying an unknown handle.
+  const goToMerchant = async (handle: string, amount?: number, note?: string) => {
+    try {
+      const res = await getPublicMerchant(handle);
+      const m = res?.data?.data ?? {};
+      navigation.navigate('SendAmount', {
+        name: m.businessName ?? `@${handle}`,
+        username: `@${handle}`,
+        avatar: m.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.businessName ?? handle)}&background=random`,
+        identifier: `@${handle}`,
+        merchantVerified: true,
+        ...(amount !== undefined ? { amount } : {}),
+        ...(note ? { note } : {}),
+      });
+    } catch {
+      navigation.navigate('MerchantVerifyResult', {
+        handle,
+        ...(amount !== undefined ? { amount } : {}),
+        ...(note ? { note } : {}),
+      });
+    }
+  };
 
   const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
     if (scanned || isProcessing.current || !frameLayout) return;
@@ -144,11 +170,19 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           const params = new URLSearchParams(raw.slice(qIndex + 1));
           const amt = parseFloat(params.get('amount') ?? '');
           if (!isNaN(amt) && amt > 0) amount = amt;
-          const n = params.get('note');
+          const n = params.get('note') ?? params.get('description');
           if (n) note = n;
         } catch {
           // Malformed query — fall back to opening the profile.
         }
+      }
+
+      // Merchant store code: aza.systems/m/<handle> → pay the business directly
+      // (unambiguous, no user lookup). goToMerchant shows the verified badge or warns.
+      const merchantMatch = raw.match(/aza\.systems\/m\/([A-Za-z0-9_.-]+)/i);
+      if (merchantMatch?.[1]) {
+        await goToMerchant(merchantMatch[1], amount, note);
+        return;
       }
 
       let handle = raw;
@@ -193,13 +227,9 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             });
           }
         } else {
-          // Not a user — the same pay/{handle} format is used for merchant store codes,
-          // so verify it as a business (the screen handles verified / not-found / inactive).
-          navigation.navigate('MerchantVerifyResult', {
-            handle,
-            ...(amount !== undefined ? { amount } : {}),
-            ...(note ? { note } : {}),
-          });
+          // Not a user — the legacy pay/{handle} format is also used for merchant store
+          // codes, so resolve it as a business and go straight to paying them.
+          await goToMerchant(handle, amount, note);
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to resolve QR code. Please try again.', [
