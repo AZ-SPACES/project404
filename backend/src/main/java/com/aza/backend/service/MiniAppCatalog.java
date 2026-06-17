@@ -15,6 +15,7 @@ public final class MiniAppCatalog {
     public static final List<Entry> ALL = List.of(
             new Entry("aza_business", "Aza Business", "Business", "Accept payments, manage payouts and API keys"),
             new Entry("aza_developer", "AZA Developer", "Business", "Manage OAuth apps and Sign in with AZA"),
+            new Entry("aza_agent", "Aza Agent", "Business", "Take cash deposits and pay out withdrawals as an AZA agent"),
             new Entry("play_2048", "2048", "Games", "Join the numbers and get to the 2048 tile!"),
             new Entry("snake", "Snake", "Games", "Eat apples to grow your snake and avoid crashing into walls or yourself!"),
             new Entry("connect4", "Connect 4", "Games", "Connect 4 in a row to win!"),

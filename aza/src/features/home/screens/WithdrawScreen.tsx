@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppTheme, Typography, Spacing, Radius } from "../../../theme";
+import QrCode from "../../../components/ui/QrCode";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from '@react-native-vector-icons/feather';
 import { BackButton } from "../../../components/ui/BackButton";
@@ -330,9 +331,17 @@ export function WithdrawScreen() {
                 Show this code to an AZA agent and they’ll hand you the cash.
               </Text>
 
-              <View style={[styles.summaryCard, { backgroundColor: Colors.surface, borderColor: Colors.border, width: '100%', alignItems: 'center' }]}>
+              <View style={[styles.summaryCard, { backgroundColor: Colors.surface, borderColor: Colors.border, width: '100%', alignItems: 'center', gap: Spacing.md }]}>
+                {code ? (
+                  <View style={{ backgroundColor: '#fff', padding: 12, borderRadius: Radius.md }}>
+                    <QrCode value={code} size={180} />
+                  </View>
+                ) : null}
                 <Text style={{ fontSize: 34, fontWeight: '800', letterSpacing: 6, fontFamily: 'monospace', color: Colors.textPrimary }}>
                   {code}
+                </Text>
+                <Text style={{ fontSize: 12, color: Colors.textSecondary, textAlign: 'center' }}>
+                  The agent can scan this code or type it in.
                 </Text>
               </View>
 

@@ -131,27 +131,75 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         return;
       }
 
-      // Parse the data. Format expected: aza.systems/handle or just handle
+      // User profile / payment link → opens the contact profile (Send / Request / Add),
+      // or jumps straight into the Send flow pre-filled when the link carries an amount
+      // (a "money request" QR). Accepts the formats the app itself generates and shares:
+      //   https://aza.systems/pay/<handle>[?amount=..&note=..]   (MyCodeScreen)
+      //   https://aza.systems/<handle>, https://aza.me/<handle>, @<handle>, or bare <handle>
+      let amount: number | undefined;
+      let note: string | undefined;
+      const qIndex = raw.indexOf('?');
+      if (qIndex >= 0) {
+        try {
+          const params = new URLSearchParams(raw.slice(qIndex + 1));
+          const amt = parseFloat(params.get('amount') ?? '');
+          if (!isNaN(amt) && amt > 0) amount = amt;
+          const n = params.get('note');
+          if (n) note = n;
+        } catch {
+          // Malformed query — fall back to opening the profile.
+        }
+      }
+
       let handle = raw;
-      if (handle.includes('aza.systems/')) {
-        handle = handle.split('aza.systems/')[1] || '';
-      } else if (handle.includes('aza.me/')) {
-        handle = handle.split('aza.me/')[1] || '';
+      const hostMatch = raw.match(/(?:aza\.systems|aza\.me)\/(.+)$/i);
+      if (hostMatch?.[1]) handle = hostMatch[1];
+      handle = handle
+        .replace(/^https?:\/\//i, '') // strip any leftover scheme
+        .replace(/^pay\//i, '')        // strip the /pay/ segment
+        .split(/[?#]/)[0]!             // drop query string / hash
+        .split('/')[0]!                // first path segment only
+        .replace(/^@/, '')             // drop a leading @
+        .trim();
+
+      if (!handle) {
+        Alert.alert('Invalid QR', 'This QR code is not a recognised Aza code.', [
+          { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
+        ]);
+        return;
       }
 
       try {
         const user = await findUserByHandle(handle);
         if (user) {
-          navigation.navigate('ContactsProfile', {
-            id: user.id,
-            name: user.displayName,
-            username: `@${user.handle}`,
-            avatar: user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`,
-          });
+          const avatar = user.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=random`;
+          if (amount !== undefined) {
+            // Payment-request QR: open Send pre-filled with the requested amount/note.
+            navigation.navigate('SendAmount', {
+              id: user.id,
+              name: user.displayName,
+              username: `@${user.handle}`,
+              avatar,
+              identifier: `@${user.handle}`,
+              amount,
+              ...(note ? { note } : {}),
+            });
+          } else {
+            navigation.navigate('ContactsProfile', {
+              id: user.id,
+              name: user.displayName,
+              username: `@${user.handle}`,
+              avatar,
+            });
+          }
         } else {
-          Alert.alert('User Not Found', `No Aza user found with handle @${handle}`, [
-            { text: 'OK', onPress: () => { setScanned(false); isProcessing.current = false; } }
-          ]);
+          // Not a user — the same pay/{handle} format is used for merchant store codes,
+          // so verify it as a business (the screen handles verified / not-found / inactive).
+          navigation.navigate('MerchantVerifyResult', {
+            handle,
+            ...(amount !== undefined ? { amount } : {}),
+            ...(note ? { note } : {}),
+          });
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to resolve QR code. Please try again.', [

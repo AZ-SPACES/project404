@@ -35,12 +35,12 @@ import { CATEGORIES, CategoryKey } from '../../../utils/categories';
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
 export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
-    const { name, username, avatar, identifier } = route.params;
+    const { name, username, avatar, identifier, amount: initialAmount, note: initialNote } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
-    const [amount, setAmount] = useState('0.00');
-    const [note, setNote] = useState('');
+    const [amount, setAmount] = useState(initialAmount != null && initialAmount > 0 ? initialAmount.toFixed(2) : '0.00');
+    const [note, setNote] = useState(initialNote ?? '');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
     const [showCategoryModal, setShowCategoryModal] = useState(false);

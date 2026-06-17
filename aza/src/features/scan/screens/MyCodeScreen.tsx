@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import QrCode from '../../../components/ui/QrCode';
 import * as Haptics from 'expo-haptics';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -155,13 +156,12 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
             <View ref={shareCardRef} collapsable={false} style={styles.shareableArea}>
               <View style={styles.qrCard}>
                 <View style={styles.qrWrapper}>
-                  <Image
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(profileLink)}` }}
-                    style={styles.qrImage}
+                  <QrCode
+                    value={profileLink}
+                    size={Math.round(width * 0.65)}
+                    logo={require('../../../assets/aza-z.png')}
+                    logoSize={48}
                   />
-                  <View style={styles.qrLogoContainer}>
-                    <Image source={require('../../../assets/aza-z.png')} style={styles.qrLogo} />
-                  </View>
                 </View>
               </View>
 
