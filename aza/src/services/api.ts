@@ -387,6 +387,9 @@ export const getTransactionsStatement = (startDate: string, endDate: string) =>
 export const sendTransactionsStatementEmail = (startDate: string, endDate: string) =>
   api.post(`/api/v1/transfers/statement/email?startDate=${startDate}&endDate=${endDate}`);
 
+export const verifyStatement = (code: string) =>
+  api.get(`/api/v1/public/statements/verify?code=${encodeURIComponent(code)}`);
+
 export const initiateTransfer = (payload: {
   recipientIdentifier: string;
   amount: number;
