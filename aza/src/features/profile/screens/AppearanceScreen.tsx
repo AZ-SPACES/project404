@@ -48,6 +48,7 @@ import {
   HomeLayout,
   CornerRadiusScale,
   TabIconStyle,
+  MainTabNav,
   TransactionGrouping,
   QuickActionId,
   TabId,
@@ -403,6 +404,7 @@ export default function AppearanceScreen() {
     homeLayout, setHomeLayout,
     cornerRadiusScale, setCornerRadiusScale,
     tabIconStyle, setTabIconStyle,
+    mainTabNav, setMainTabNav,
     balanceHiddenByDefault, setBalanceHiddenByDefault,
     reducedMotion, setReducedMotion,
     quickActions, setQuickActions,
@@ -715,18 +717,33 @@ export default function AppearanceScreen() {
           {/* Tab bar */}
           <View style={[styles.cardContainer, { padding: Spacing.md, gap: Spacing.md, marginTop: Spacing.sm }]}>
             <SegmentedRow
-              label="Tab bar"
-              options={[{ label: "Labeled", value: "labeled" as TabBarStyle }, { label: "Minimal", value: "minimal" as TabBarStyle }]}
-              value={tabBarStyle}
-              onChange={setTabBarStyle}
+              label="Navigation"
+              options={[{ label: "Aza", value: "custom" as MainTabNav }, { label: "Native", value: "native" as MainTabNav }]}
+              value={mainTabNav}
+              onChange={setMainTabNav}
             />
+            <Text style={styles.sectionSubLabel}>
+              {mainTabNav === 'native'
+                ? "Your device's default bottom tab bar."
+                : 'The Aza bar with the floating Scan button.'}
+            </Text>
+            {mainTabNav === 'custom' && (
+              <SegmentedRow
+                label="Tab bar"
+                options={[{ label: "Labeled", value: "labeled" as TabBarStyle }, { label: "Minimal", value: "minimal" as TabBarStyle }]}
+                value={tabBarStyle}
+                onChange={setTabBarStyle}
+              />
+            )}
             <SegmentedRow
               label="Tab icons"
               options={[{ label: "Outline", value: "outline" as TabIconStyle }, { label: "Filled", value: "filled" as TabIconStyle }]}
               value={tabIconStyle}
               onChange={setTabIconStyle}
             />
-            <TabBarPreview showLabels={tabBarStyle === 'labeled'} filled={tabIconStyle === 'filled'} tabOrder={tabOrder} />
+            {mainTabNav === 'custom' && (
+              <TabBarPreview showLabels={tabBarStyle === 'labeled'} filled={tabIconStyle === 'filled'} tabOrder={tabOrder} />
+            )}
             {/* Tab order */}
             <Text style={styles.sectionSubLabel}>Tab order  •  Scan is always center</Text>
             {tabOrder.map((id, idx) => {

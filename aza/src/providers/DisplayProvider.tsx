@@ -16,6 +16,7 @@ export type TransactionDensity = 'comfortable' | 'compact';
 export type HomeLayout = 'default' | 'minimal';
 export type CornerRadiusScale = 'sharp' | 'rounded' | 'pill';
 export type TabIconStyle = 'outline' | 'filled';
+export type MainTabNav = 'custom' | 'native';
 export type TransactionGrouping = 'date' | 'flat';
 export type QuickActionId = 'send' | 'request' | 'details' | 'withdraw' | 'topup' | 'statement';
 
@@ -116,6 +117,8 @@ export type DisplayContextType = {
   setCornerRadiusScale: (s: CornerRadiusScale) => void;
   tabIconStyle: TabIconStyle;
   setTabIconStyle: (s: TabIconStyle) => void;
+  mainTabNav: MainTabNav;
+  setMainTabNav: (s: MainTabNav) => void;
   balanceHiddenByDefault: boolean;
   setBalanceHiddenByDefault: (v: boolean) => void;
   reducedMotion: boolean;
@@ -155,6 +158,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const [homeLayout, setHomeLayoutState] = useState<HomeLayout>('default');
   const [cornerRadiusScale, setCornerRadiusScaleState] = useState<CornerRadiusScale>('rounded');
   const [tabIconStyle, setTabIconStyleState] = useState<TabIconStyle>('outline');
+  const [mainTabNav, setMainTabNavState] = useState<MainTabNav>('custom');
   const [balanceHiddenByDefault, setBalanceHiddenByDefaultState] = useState<boolean>(false);
   const [reducedMotion, setReducedMotionState] = useState<boolean>(false);
   const [quickActions, setQuickActionsState] = useState<QuickActionId[]>(['send', 'request', 'details']);
@@ -190,6 +194,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
           savedHomeLayout, savedCornerRadius, savedTabIconStyle,
           savedBalanceHidden, savedReducedMotion,
           savedQuickActions, savedTxGrouping, savedTabOrder,
+          savedMainTabNav,
         ] = await Promise.all([
           AsyncStorage.getItem('AppTheme'),
           AsyncStorage.getItem('AppLanguage'),
@@ -215,6 +220,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem('AppQuickActions'),
           AsyncStorage.getItem('AppTransactionGrouping'),
           AsyncStorage.getItem('AppTabOrder'),
+          AsyncStorage.getItem('AppMainTabNav'),
         ]);
 
         if (savedTheme && THEMES.includes(savedTheme as ThemeOption)) setThemeState(savedTheme as ThemeOption);
@@ -241,6 +247,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         if (savedQuickActions) { try { const p = JSON.parse(savedQuickActions); if (Array.isArray(p)) setQuickActionsState(p); } catch {} }
         if (savedTxGrouping && ['date','flat'].includes(savedTxGrouping)) setTransactionGroupingState(savedTxGrouping as TransactionGrouping);
         if (savedTabOrder) { try { const p = JSON.parse(savedTabOrder); if (Array.isArray(p) && p.length === 4) setTabOrderState(p as TabId[]); } catch {} }
+        if (savedMainTabNav && ['custom','native'].includes(savedMainTabNav)) setMainTabNavState(savedMainTabNav as MainTabNav);
       } catch (e) {
         console.error("Error loading display settings:", e);
       }
@@ -407,6 +414,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const setHomeLayout = (l: HomeLayout) => { setHomeLayoutState(l); AsyncStorage.setItem('AppHomeLayout', l).catch(() => {}); };
   const setCornerRadiusScale = (s: CornerRadiusScale) => { setCornerRadiusScaleState(s); AsyncStorage.setItem('AppCornerRadiusScale', s).catch(() => {}); };
   const setTabIconStyle = (s: TabIconStyle) => { setTabIconStyleState(s); AsyncStorage.setItem('AppTabIconStyle', s).catch(() => {}); };
+  const setMainTabNav = (s: MainTabNav) => { setMainTabNavState(s); AsyncStorage.setItem('AppMainTabNav', s).catch(() => {}); };
   const setBalanceHiddenByDefault = (v: boolean) => { setBalanceHiddenByDefaultState(v); AsyncStorage.setItem('AppBalanceHiddenByDefault', String(v)).catch(() => {}); };
   const setReducedMotion = (v: boolean) => { setReducedMotionState(v); AsyncStorage.setItem('AppReducedMotion', String(v)).catch(() => {}); };
   const setQuickActions = (a: QuickActionId[]) => { setQuickActionsState(a); AsyncStorage.setItem('AppQuickActions', JSON.stringify(a)).catch(() => {}); };
@@ -436,6 +444,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
       homeLayout, setHomeLayout,
       cornerRadiusScale, setCornerRadiusScale,
       tabIconStyle, setTabIconStyle,
+      mainTabNav, setMainTabNav,
       balanceHiddenByDefault, setBalanceHiddenByDefault,
       reducedMotion, setReducedMotion,
       quickActions, setQuickActions,

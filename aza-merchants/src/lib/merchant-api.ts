@@ -291,11 +291,50 @@ export async function signup(data: {
   saveTokens(body.data.accessToken, body.data.refreshToken);
 }
 
-export async function preLogin(identifier: string, password: string): Promise<void> {
-  await request<{ success: boolean; data: string }>(
+export type PreLoginResult =
+  | { status: "authenticated" }
+  | { status: "otp_required" }
+  | { status: "two_factor_required"; preAuthToken: string; methods: string[]; defaultMethod: string | null };
+
+/**
+ * Starts a password login. The backend (/api/v1/auth/login) responds in one of three ways:
+ *  - a plain string ("OTP sent…") for accounts that require an emailed/SMS login OTP (e.g. admins)
+ *  - an auth payload with access/refresh tokens for regular accounts with no 2FA — login is complete
+ *  - a 2FA-pending payload (preAuthToken + methods) when the account has 2FA enabled
+ * This returns a discriminated result so the caller knows which step to show next.
+ */
+export async function preLogin(identifier: string, password: string): Promise<PreLoginResult> {
+  const body = await request<{ success: boolean; data: unknown }>(
     "/api/v1/auth/login",
     { method: "POST", body: JSON.stringify({ identifier, password }) }
   );
+  const data = body.data;
+
+  // Accounts that get an emailed/SMS OTP on login: backend returns a plain string.
+  if (typeof data === "string") {
+    return { status: "otp_required" };
+  }
+
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    // Regular account, no 2FA: tokens are returned directly — login is already complete.
+    if (typeof obj.accessToken === "string" && typeof obj.refreshToken === "string") {
+      saveTokens(obj.accessToken, obj.refreshToken);
+      return { status: "authenticated" };
+    }
+    // 2FA-enabled account: a second factor is required before tokens are issued.
+    if (typeof obj.preAuthToken === "string") {
+      return {
+        status: "two_factor_required",
+        preAuthToken: obj.preAuthToken,
+        methods: Array.isArray(obj.methods) ? (obj.methods as string[]) : [],
+        defaultMethod: typeof obj.defaultMethod === "string" ? obj.defaultMethod : null,
+      };
+    }
+  }
+
+  // Unrecognised shape — fall back to asking for an OTP rather than silently failing.
+  return { status: "otp_required" };
 }
 
 export async function verifyLoginOtp(identifier: string, code: string): Promise<{ accessToken: string; refreshToken: string }> {
