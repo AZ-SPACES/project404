@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CreateSubscriptionRequest;
 import com.aza.backend.dto.merchant.SubscriptionResponse;
@@ -29,6 +31,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/merchant/subscriptions")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Merchant Subscriptions", description = "Recurring subscriptions")
 public class MerchantSubscriptionController {
 
     private final MerchantSubscriptionRepository subscriptionRepository;

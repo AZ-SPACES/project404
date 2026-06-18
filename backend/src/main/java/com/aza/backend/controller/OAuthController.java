@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.oauth.*;
 import com.aza.backend.dto.qrlogin.QrLoginInitiateResponse;
@@ -18,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/oauth")
 @RequiredArgsConstructor
+@Tag(name = "Sign in with AZA", description = "OAuth 2.0 authorize, token and userinfo for partner sign-in")
 public class OAuthController {
 
     private final OAuthService    oAuthService;

@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.SettlementDetailResponse;
 import com.aza.backend.dto.merchant.SettlementResponse;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/settlements")
 @RequiredArgsConstructor
+@Tag(name = "Merchant Settlements", description = "Settlement batches and payouts")
 public class MerchantSettlementController {
 
     private final MerchantSettlementService settlementService;

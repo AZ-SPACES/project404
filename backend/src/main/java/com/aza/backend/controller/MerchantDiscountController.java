@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/discount-codes")
 @RequiredArgsConstructor
+@Tag(name = "Merchant Discount Codes", description = "Create and manage discount codes")
 public class MerchantDiscountController {
 
     private final MerchantDiscountService discountService;

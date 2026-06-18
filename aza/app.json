@@ -3,7 +3,7 @@
     "name": "aza",
     "slug": "aza",
     "scheme": "aza",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -88,7 +88,9 @@
       "@react-native-vector-icons/ionicons",
       "@react-native-vector-icons/ant-design",
       "@react-native-vector-icons/material-icons",
-      "@react-native-vector-icons/material-design-icons"
+      "@react-native-vector-icons/material-design-icons",
+      "./plugins/withSwiftUICoreFix.js",
+      "./plugins/withUserScriptSandboxDisabled.js"
     ],
     "extra": {
       "eas": {

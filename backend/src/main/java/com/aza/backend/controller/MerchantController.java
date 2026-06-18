@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
@@ -33,6 +35,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant")
 @RequiredArgsConstructor
+@Tag(name = "Merchant", description = "Merchant profile, balance, KYB, API keys, sessions, webhooks and payouts")
 public class MerchantController {
 
     private final MerchantService merchantService;
@@ -328,6 +331,12 @@ public class MerchantController {
     }
 
     // ==================== PUBLIC MERCHANT PROFILE ====================
+
+    @GetMapping("/public/directory")
+    public ResponseEntity<ApiResponse<List<PublicMerchantSummary>>> getPublicDirectory(
+            @RequestParam(defaultValue = "30") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(merchantService.listPublicDirectory(limit)));
+    }
 
     @GetMapping("/public/{handle}")
     public ResponseEntity<ApiResponse<MerchantResponse>> getPublicMerchantProfile(

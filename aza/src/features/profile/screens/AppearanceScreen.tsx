@@ -727,7 +727,7 @@ export default function AppearanceScreen() {
             />
             <Text style={styles.sectionSubLabel}>
               {mainTabNav === 'native'
-                ? "Your phone's native tab bar (needs the latest app build)."
+                ? "Your phone's native tab bar."
                 : 'The Aza bar with the floating Scan button.'}
             </Text>
             {mainTabNav === 'custom' && (

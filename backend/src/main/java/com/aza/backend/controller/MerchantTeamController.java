@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.InviteTeamMemberRequest;
 import com.aza.backend.dto.merchant.TeamMemberResponse;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/merchant/team")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Merchant Team", description = "Invite and manage team members")
 public class MerchantTeamController {
 
     private final MerchantTeamMemberRepository teamMemberRepository;

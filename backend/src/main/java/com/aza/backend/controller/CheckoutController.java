@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CheckoutSessionResponse;
 import com.aza.backend.dto.merchant.ConfirmCheckoutRequest;
@@ -27,6 +29,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/checkout")
 @RequiredArgsConstructor
+@Tag(name = "Checkout", description = "Public checkout sessions and payment confirmation")
 public class CheckoutController {
 
     private final CheckoutService checkoutService;

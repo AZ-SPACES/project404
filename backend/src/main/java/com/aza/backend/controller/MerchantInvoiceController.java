@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CreateInvoiceRequest;
 import com.aza.backend.dto.merchant.InvoiceResponse;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/invoices")
 @RequiredArgsConstructor
+@Tag(name = "Merchant Invoices", description = "Issue and manage invoices")
 public class MerchantInvoiceController {
 
     private final MerchantService merchantService;
