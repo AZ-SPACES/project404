@@ -160,7 +160,21 @@ export interface LoginResult {
   };
 }
 
-export async function adminLoginStep1(identifier: string, password: string): Promise<void> {
+export type OtpTwoFactorMethod = "EMAIL" | "SMS";
+
+export type AdminPreLoginResult =
+  | { status: "authenticated"; result: LoginResult }
+  | { status: "otp_required" }
+  | { status: "two_factor_required"; preAuthToken: string; methods: string[]; defaultMethod: string | null };
+
+/**
+ * Password login step. Returns a discriminated result so the caller knows what comes next:
+ *  - authenticated: tokens returned directly (no second factor)
+ *  - otp_required: backend already emailed/SMS'd a login OTP (staff without 2FA) — verify via adminLoginStep2
+ *  - two_factor_required: 2FA-enabled account. The backend did NOT send a code; the caller must
+ *    dispatch one (EMAIL/SMS) or collect a TOTP/app factor, using the returned preAuthToken.
+ */
+export async function adminLoginStep1(identifier: string, password: string): Promise<AdminPreLoginResult> {
   const res = await fetch(`${BASE_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -168,6 +182,66 @@ export async function adminLoginStep1(identifier: string, password: string): Pro
   });
   const body = await res.json();
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Login failed");
+
+  const data = body.data;
+  // Accounts that get an emailed/SMS login OTP: backend returns a plain string.
+  if (typeof data === "string") return { status: "otp_required" };
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (typeof obj.accessToken === "string" && typeof obj.refreshToken === "string") {
+      return { status: "authenticated", result: data as LoginResult };
+    }
+    if (typeof obj.preAuthToken === "string") {
+      return {
+        status: "two_factor_required",
+        preAuthToken: obj.preAuthToken,
+        methods: Array.isArray(obj.methods) ? (obj.methods as string[]) : [],
+        defaultMethod: typeof obj.defaultMethod === "string" ? obj.defaultMethod : null,
+      };
+    }
+  }
+  // Unrecognised shape — fall back to the OTP step rather than silently failing.
+  return { status: "otp_required" };
+}
+
+/**
+ * Picks an emailed/SMS 2FA method from the account's available methods, or null when the account
+ * only supports non-code methods (TOTP/APP/PASSKEY), which are handled by their own steps/tabs.
+ */
+export function pickOtpTwoFactorMethod(
+  methods: string[],
+  defaultMethod: string | null
+): OtpTwoFactorMethod | null {
+  if (defaultMethod === "EMAIL" || defaultMethod === "SMS") return defaultMethod;
+  if (methods.includes("EMAIL")) return "EMAIL";
+  if (methods.includes("SMS")) return "SMS";
+  return null;
+}
+
+/** Dispatches the 2FA login code to the account's email or phone for the given preAuthToken. */
+export async function requestTwoFactorOtp(
+  preAuthToken: string,
+  method: OtpTwoFactorMethod
+): Promise<void> {
+  const path = method === "SMS" ? "/api/v1/auth/2fa/sms/request" : "/api/v1/auth/2fa/email/request";
+  const res = await fetch(`${BASE_URL}${path}?preAuthToken=${encodeURIComponent(preAuthToken)}`, {
+    method: "POST",
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Could not send verification code");
+}
+
+/** Verifies the emailed/SMS 2FA code and returns full auth tokens on success. */
+export async function verifyTwoFactorOtp(
+  preAuthToken: string,
+  code: string,
+  method: OtpTwoFactorMethod
+): Promise<LoginResult> {
+  const qs = new URLSearchParams({ preAuthToken, code, method }).toString();
+  const res = await fetch(`${BASE_URL}/api/v1/auth/2fa/otp/verify?${qs}`, { method: "POST" });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "OTP verification failed");
+  return body.data as LoginResult;
 }
 
 export async function adminLoginStep2(

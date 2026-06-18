@@ -38,7 +38,13 @@ function nativeIconFor(key: string) {
 
 export default function NativeMainTabs({ colors, order }: { colors: ThemeColors; order: string[] }) {
   return (
-    <NativeTab.Navigator screenOptions={{ tabBarActiveTintColor: colors.primary }}>
+    <NativeTab.Navigator 
+      translucent={true}
+      sidebarAdaptable={true}
+      screenOptions={{ 
+        tabBarActiveTintColor: colors.primary,
+      }}
+    >
       {order.map((key) => {
         const m = NATIVE_META[key]!;
         return (

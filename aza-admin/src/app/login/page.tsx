@@ -6,6 +6,11 @@ import {
   adminLoginStep1,
   adminLoginStep2,
   adminLoginTotp,
+  pickOtpTwoFactorMethod,
+  requestTwoFactorOtp,
+  verifyTwoFactorOtp,
+  type OtpTwoFactorMethod,
+  type LoginResult,
   saveTokens,
   saveUser,
   isStaff,
@@ -38,6 +43,8 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [preAuthToken, setPreAuthToken] = useState("");
+  // Non-null when the OTP step is verifying an emailed/SMS 2FA code (vs. the legacy login OTP).
+  const [twoFaMethod, setTwoFaMethod] = useState<OtpTwoFactorMethod | null>(null);
   const [totpCode, setTotpCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -121,13 +128,46 @@ export default function LoginPage() {
     return () => stopPolling();
   }, [mode, startQrSession, stopPolling]);
 
+  // Shared success path: enforce admin access, persist the session, and continue to step-up.
+  function finalize(result: LoginResult): boolean {
+    if (!isStaff(result.user)) {
+      setError("This account does not have admin access.");
+      return false;
+    }
+    saveTokens(result.accessToken, result.refreshToken);
+    saveUser(result.user);
+    router.replace("/step-up");
+    return true;
+  }
+
   async function handleCredentials(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await adminLoginStep1(identifier, password);
-      setStep("otp");
+      const result = await adminLoginStep1(identifier, password);
+      if (result.status === "authenticated") {
+        finalize(result.result);
+      } else if (result.status === "two_factor_required") {
+        // 2FA-enabled account. No code was sent by the login call — dispatch an emailed/SMS code
+        // if available, otherwise route to the TOTP step (or the AZA App tab for app-only 2FA).
+        setPreAuthToken(result.preAuthToken);
+        const otpMethod = pickOtpTwoFactorMethod(result.methods, result.defaultMethod);
+        if (otpMethod) {
+          await requestTwoFactorOtp(result.preAuthToken, otpMethod);
+          setTwoFaMethod(otpMethod);
+          setStep("otp");
+        } else if (result.methods.includes("TOTP")) {
+          setTwoFaMethod(null);
+          setStep("totp");
+        } else {
+          setError("This account uses app-based verification. Use the AZA App tab to sign in.");
+        }
+      } else {
+        // Legacy staff OTP path: the backend already sent the code during login.
+        setTwoFaMethod(null);
+        setStep("otp");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -140,14 +180,12 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const result = await adminLoginStep2(identifier, otpCode);
-      if (!isStaff(result.user)) {
-        setError("This account does not have admin access.");
+      if (twoFaMethod) {
+        finalize(await verifyTwoFactorOtp(preAuthToken, otpCode.trim(), twoFaMethod));
         return;
       }
-      saveTokens(result.accessToken, result.refreshToken);
-      saveUser(result.user);
-      router.replace("/step-up");
+      const result = await adminLoginStep2(identifier, otpCode);
+      finalize(result);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Verification failed";
       if (msg.startsWith("TOTP_REQUIRED:")) {
@@ -166,14 +204,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const result = await adminLoginTotp(preAuthToken, totpCode);
-      if (!isStaff(result.user)) {
-        setError("This account does not have admin access.");
-        return;
-      }
-      saveTokens(result.accessToken, result.refreshToken);
-      saveUser(result.user);
-      router.replace("/step-up");
+      finalize(await adminLoginTotp(preAuthToken, totpCode));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -185,6 +216,7 @@ export default function LoginPage() {
     setError("");
     setOtpCode("");
     setTotpCode("");
+    if (target === "credentials") setTwoFaMethod(null);
     setStep(target);
   }
 

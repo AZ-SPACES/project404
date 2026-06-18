@@ -36,7 +36,10 @@ let nativeTabsAvailable: boolean | null = null;
 function isNativeTabsAvailable(): boolean {
   if (nativeTabsAvailable === null) {
     try {
-      nativeTabsAvailable = TurboModuleRegistry.get('SvgDecoder') != null;
+      const { UIManager } = require('react-native');
+      const hasView = UIManager.getViewManagerConfig('RNCTabView') != null;
+      const hasTurbo = TurboModuleRegistry.get('SvgDecoder') != null;
+      nativeTabsAvailable = hasView || hasTurbo;
     } catch {
       nativeTabsAvailable = false;
     }
