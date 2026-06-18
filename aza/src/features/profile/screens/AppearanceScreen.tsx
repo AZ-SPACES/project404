@@ -719,19 +719,16 @@ export default function AppearanceScreen() {
             <SegmentedRow
               label="Navigation"
               options={[
-                { label: "Aza", value: "custom" as MainTabNav },
-                { label: "Default", value: "default" as MainTabNav },
+                { label: "Custom (Aza)", value: "custom" as MainTabNav },
                 { label: "Native", value: "native" as MainTabNav },
               ]}
-              value={mainTabNav}
+              value={mainTabNav === 'default' ? 'custom' : mainTabNav}
               onChange={setMainTabNav}
             />
             <Text style={styles.sectionSubLabel}>
               {mainTabNav === 'native'
-                ? "Your phone's own tab bar (needs the latest app build)."
-                : mainTabNav === 'default'
-                  ? 'A standard bottom tab bar.'
-                  : 'The Aza bar with the floating Scan button.'}
+                ? "Your phone's native tab bar (needs the latest app build)."
+                : 'The Aza bar with the floating Scan button.'}
             </Text>
             {mainTabNav === 'custom' && (
               <SegmentedRow

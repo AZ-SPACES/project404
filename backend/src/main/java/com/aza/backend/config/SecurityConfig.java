@@ -168,7 +168,8 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of(
                 "Authorization", "Content-Type", "X-Requested-With",
-                "X-Device-ID", "X-Platform", "X-Bypass-Token", "X-Api-Key"));
+                "X-Device-ID", "X-Platform", "X-Bypass-Token", "X-Api-Key",
+                "X-Aza-Client"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
