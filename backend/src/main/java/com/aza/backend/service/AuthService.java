@@ -61,6 +61,7 @@ public class AuthService {
     private final GeoLocationService geoLocationService;
     private final ScreeningService screeningService;
     private final ReferralService referralService;
+    private final StaffRoleService staffRoleService;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -185,7 +186,11 @@ public class AuthService {
                     .build();
         }
 
-        if (user.getRole() == User.UserRole.ADMIN) {
+        // Admin-portal users (legacy ADMIN role OR any granted staff role) must verify a
+        // login OTP. The admin frontend treats staff-role users as admins, so we mirror that
+        // here — otherwise a staff user with role=USER would be logged in directly while the
+        // portal sits on an OTP step waiting for a code that was never sent.
+        if (!staffRoleService.getActiveRoles(user).isEmpty()) {
             otpService.sendOtp(identifier, "login");
             return null;
         }

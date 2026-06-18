@@ -29,7 +29,7 @@ const Tab = createBottomTabNavigator();
 export default function MainTabsNavigator() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { tabBarStyle, tabIconStyle, tabOrder } = useDisplayContext();
+  const { tabBarStyle, tabIconStyle, tabOrder, mainTabNav } = useDisplayContext();
   const showLabels = tabBarStyle === 'labeled';
   const filled = tabIconStyle === 'filled';
 
@@ -69,6 +69,35 @@ export default function MainTabsNavigator() {
   // First 2 tabs go left of Scan, last 2 go right
   const leftTabs  = tabOrder.slice(0, 2);
   const rightTabs = tabOrder.slice(2);
+
+  // Native style: the platform-default bottom tab bar — Scan becomes a regular
+  // tab (no floating button) and styling is left to React Navigation's defaults.
+  if (mainTabNav === 'native') {
+    return (
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: Colors.primary,
+          tabBarInactiveTintColor: Colors.textSecondary,
+        }}
+        screenListeners={{ tabPress: handleTabPress }}
+      >
+        {leftTabs.map(renderTab)}
+        <Tab.Screen
+          name="ScanTab"
+          component={ScanScreen}
+          options={{
+            tabBarLabel: 'Scan',
+            tabBarAccessibilityLabel: 'Scan Tab',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name={filled ? 'qr-code' : 'qr-code-outline'} size={size || 24} color={color} />
+            ),
+          }}
+        />
+        {rightTabs.map(renderTab)}
+      </Tab.Navigator>
+    );
+  }
 
   return (
     <Tab.Navigator
