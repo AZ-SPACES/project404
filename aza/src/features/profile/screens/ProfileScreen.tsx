@@ -24,6 +24,7 @@ import * as StoreReview from "expo-store-review";
 import { RootStackParamList } from "../../../navigation/types";
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from "../../../theme";
 import Button from "../../../components/ui/Button";
+import FeedbackSheet from "../../../components/ui/FeedbackSheet";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useProfile } from "../../../providers/ProfileProvider";
 import { useToast } from "../../../providers/ToastProvider";
@@ -107,6 +108,7 @@ export default function ProfileScreen() {
   const avatarBackdropAnim = useRef(new Animated.Value(0)).current;
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   useEffect(() => {
     if (isBottomSheetVisible) {
@@ -298,7 +300,13 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleRateUs = async () => {
+  // Gated review: collect in-app feedback first; route only happy (Good) users
+  // to the public store review so unhappy signal stays private + actionable.
+  const handleFeedbackSubmitted = (rating: number) => {
+    if (rating >= 5) openStoreReview();
+  };
+
+  const openStoreReview = async () => {
     try {
       const isAvailable = await StoreReview.isAvailableAsync();
       if (isAvailable) {
@@ -424,9 +432,9 @@ export default function ProfileScreen() {
           <SectionItem 
             iconFamily="Feather" 
             iconName="star" 
-            title="Rate us" 
-            subtitle="Tell us what you think" 
-            onPress={handleRateUs}
+            title="Rate us"
+            subtitle="Tell us what you think"
+            onPress={() => setFeedbackVisible(true)}
           />
           <SectionItem
             iconFamily="Feather"
@@ -686,6 +694,13 @@ export default function ProfileScreen() {
           />
         </Animated.View>
       </View>
+
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onClose={() => setFeedbackVisible(false)}
+        context="RATE_US"
+        onSubmitted={handleFeedbackSubmitted}
+      />
     </SafeAreaView>
   );
 }

@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, Spacing, ThemeColors, Typography } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
+import FeedbackSheet from '../../../components/ui/FeedbackSheet';
 import { sendAiMessage } from '../../../services/api';
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string };
@@ -33,6 +34,7 @@ export default function AiAssistantScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const scrollToBottom = () => {
@@ -88,7 +90,18 @@ export default function AiAssistantScreen() {
             <Text style={styles.headerSubtitle}>Financial assistant</Text>
           </View>
         </View>
-        <View style={{ width: 44 }} />
+        {messages.some((m) => m.role === 'assistant') ? (
+          <TouchableOpacity
+            onPress={() => setFeedbackVisible(true)}
+            style={styles.rateBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Rate the assistant"
+          >
+            <Feather name="thumbs-up" size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -193,6 +206,12 @@ export default function AiAssistantScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onClose={() => setFeedbackVisible(false)}
+        context="AI_ASSISTANT"
+      />
     </SafeAreaView>
   );
 }
@@ -215,6 +234,7 @@ function createStyles(Colors: ThemeColors) {
     },
     headerTitle: { ...Typography.body, fontWeight: '700', color: Colors.textPrimary },
     headerSubtitle: { ...Typography.caption, color: Colors.textSecondary },
+    rateBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 
     messageList: {
       paddingHorizontal: Spacing.lg,
