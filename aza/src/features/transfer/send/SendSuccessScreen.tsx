@@ -13,6 +13,8 @@ import * as Clipboard from 'expo-clipboard';
 import { useQuery } from '@tanstack/react-query';
 import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import Button from '../../../components/ui/Button';
+import FeedbackSheet from '../../../components/ui/FeedbackSheet';
+import { useAutoFeedback } from '../../../hooks/useAutoFeedback';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
@@ -40,6 +42,14 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
     resetTransferStore();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, [resetTransferStore]);
+
+  // Occasionally ask how sending money felt — frequency-capped + opt-out aware.
+  const feedback = useAutoFeedback('TRANSFER', { globalCooldownDays: 14 });
+  useEffect(() => {
+    const t = setTimeout(() => feedback.tryPrompt(), 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch the confirmed transaction from backend for accurate data
   const { data: tx, isLoading: txLoading } = useQuery({
@@ -391,6 +401,13 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
           activeOpacity={0.7}
         />
       </View>
+
+      <FeedbackSheet
+        visible={feedback.visible}
+        onClose={feedback.close}
+        onSubmitted={feedback.onSubmitted}
+        context="TRANSFER"
+      />
     </SafeAreaView>
   );
 }
