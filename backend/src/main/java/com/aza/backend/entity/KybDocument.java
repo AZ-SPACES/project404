@@ -42,6 +42,7 @@ public class KybDocument {
         BUSINESS_REGISTRATION,
         TAX_CERTIFICATE,
         UTILITY_BILL,
+        PROOF_OF_ADDRESS,
         OWNER_ID_FRONT,
         OWNER_ID_BACK,
         BANK_STATEMENT,
