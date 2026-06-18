@@ -15,12 +15,14 @@ import { RootStackParamList } from "../../../navigation/types";
 import { getSpendingSummary } from "../../../services/api";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { BackButton } from '../../../components/ui/BackButton';
+import FeedbackSheet from '../../../components/ui/FeedbackSheet';
 import { queryKeys } from '../../../lib/queryKeys';
 
 export default function DetailsScreen() {
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [feedbackVisible, setFeedbackVisible] = React.useState(false);
 
   const { data: spending } = useQuery({
     queryKey: queryKeys.spendingSummary(),
@@ -87,12 +89,18 @@ export default function DetailsScreen() {
             <Text style={styles.feedbackText}>
               What do you think about this experience?
             </Text>
-            <TouchableOpacity style={styles.feedbackButton}>
+            <TouchableOpacity style={styles.feedbackButton} onPress={() => setFeedbackVisible(true)}>
               <Text style={styles.giveFeedbackText}>Give us feedback</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
+
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onClose={() => setFeedbackVisible(false)}
+        context="SPENDING_SUMMARY"
+      />
     </SafeAreaView>
   );
 }
