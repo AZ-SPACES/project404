@@ -352,6 +352,48 @@ export async function verifyLoginOtp(identifier: string, code: string): Promise<
   return body.data;
 }
 
+export type OtpTwoFactorMethod = "EMAIL" | "SMS";
+
+/**
+ * Picks an emailed/SMS 2FA method from the account's available methods. The login step does
+ * NOT send a code for 2FA-enabled accounts — the caller must dispatch one for EMAIL/SMS. Returns
+ * null when the account only supports non-code methods (APP/TOTP/PASSKEY), which this portal
+ * handles via the AZA App (QR) tab instead.
+ */
+export function pickOtpTwoFactorMethod(
+  methods: string[],
+  defaultMethod: string | null
+): OtpTwoFactorMethod | null {
+  if (defaultMethod === "EMAIL" || defaultMethod === "SMS") return defaultMethod;
+  if (methods.includes("EMAIL")) return "EMAIL";
+  if (methods.includes("SMS")) return "SMS";
+  return null;
+}
+
+/** Dispatches the 2FA login code to the account's email or phone for the given preAuthToken. */
+export async function requestTwoFactorOtp(
+  preAuthToken: string,
+  method: OtpTwoFactorMethod
+): Promise<void> {
+  const path = method === "SMS" ? "/api/v1/auth/2fa/sms/request" : "/api/v1/auth/2fa/email/request";
+  await request(`${path}?preAuthToken=${encodeURIComponent(preAuthToken)}`, { method: "POST" });
+}
+
+/** Verifies the emailed/SMS 2FA code and, on success, stores the returned tokens. */
+export async function verifyTwoFactorOtp(
+  preAuthToken: string,
+  code: string,
+  method: OtpTwoFactorMethod
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const qs = new URLSearchParams({ preAuthToken, code, method }).toString();
+  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+    `/api/v1/auth/2fa/otp/verify?${qs}`,
+    { method: "POST" }
+  );
+  saveTokens(body.data.accessToken, body.data.refreshToken);
+  return body.data;
+}
+
 // ─── QR Login ────────────────────────────────────────────────────────────────
 
 export interface QrLoginSession {

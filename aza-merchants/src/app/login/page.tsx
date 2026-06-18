@@ -6,6 +6,10 @@ import Link from "next/link";
 import {
   preLogin,
   verifyLoginOtp,
+  pickOtpTwoFactorMethod,
+  requestTwoFactorOtp,
+  verifyTwoFactorOtp,
+  type OtpTwoFactorMethod,
   getMe,
   initiateQrLogin,
   pollQrLoginStatus,
@@ -34,6 +38,10 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  // 2FA-enabled accounts: the login call returns a preAuthToken and the code is sent/verified via
+  // the dedicated 2FA endpoints. Null method means the legacy staff OTP path (already-sent code).
+  const [preAuthToken, setPreAuthToken] = useState<string | null>(null);
+  const [twoFaMethod, setTwoFaMethod] = useState<OtpTwoFactorMethod | null>(null);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,8 +159,22 @@ export default function LoginPage() {
       if (result.status === "authenticated") {
         // Merchant signs in with just email/phone + password — tokens saved, go straight in.
         await redirectAfterQrLogin();
+      } else if (result.status === "two_factor_required") {
+        // 2FA-enabled account (staff/admin). The login call does NOT send a code — pick an
+        // emailed/SMS method and dispatch it, then collect the code on the OTP step.
+        const method = pickOtpTwoFactorMethod(result.methods, result.defaultMethod);
+        if (!method) {
+          setError("This account uses app-based verification. Use the AZA App tab to sign in.");
+          return;
+        }
+        await requestTwoFactorOtp(result.preAuthToken, method);
+        setPreAuthToken(result.preAuthToken);
+        setTwoFaMethod(method);
+        setStep("otp");
       } else {
-        // Staff/admin accounts using this portal still require a login OTP.
+        // Legacy staff OTP path: the backend already sent the code during login.
+        setPreAuthToken(null);
+        setTwoFaMethod(null);
         setStep("otp");
       }
     } catch (err: unknown) {
@@ -167,7 +189,11 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await verifyLoginOtp(identifier.trim(), otp.trim());
+      if (preAuthToken && twoFaMethod) {
+        await verifyTwoFactorOtp(preAuthToken, otp.trim(), twoFaMethod);
+      } else {
+        await verifyLoginOtp(identifier.trim(), otp.trim());
+      }
       await redirectAfterQrLogin();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid OTP code. Please try again.");
@@ -380,8 +406,9 @@ export default function LoginPage() {
               <div className="flex flex-col space-y-1">
                 <h1 className="font-bold text-2xl tracking-wide">Enter your code</h1>
                 <p className="text-base text-muted-foreground">
-                  We sent a 6-digit code to{" "}
-                  <span className="text-foreground font-medium">{identifier.trim()}</span>
+                  {twoFaMethod
+                    ? `We sent a 6-digit code to your ${twoFaMethod === "SMS" ? "phone" : "email"} on file`
+                    : <>We sent a 6-digit code to <span className="text-foreground font-medium">{identifier.trim()}</span></>}
                 </p>
               </div>
 
@@ -404,7 +431,7 @@ export default function LoginPage() {
                     />
                   </InputGroup>
                   <p className="text-xs text-muted-foreground text-center">
-                    Check your {isPhone ? "SMS" : "email"} for the 6-digit code
+                    Check your {(twoFaMethod ? twoFaMethod === "SMS" : isPhone) ? "SMS" : "email"} for the 6-digit code
                   </p>
                 </div>
 
@@ -425,7 +452,7 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => { setStep("credentials"); setOtp(""); setError(null); }}
+                  onClick={() => { setStep("credentials"); setOtp(""); setError(null); setPreAuthToken(null); setTwoFaMethod(null); }}
                   className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                 >
                   <ArrowLeft size={12} /> Back

@@ -33,12 +33,23 @@ public class OtpService {
         // Reset the failed-attempt counter so the user can verify the new code.
         redisTemplate.delete("otp:attempts:" + purpose + ":" + identifier);
 
+        boolean sent;
         if (identifier.contains("@")) {
-            boolean sent = emailService.sendOtp(identifier, otp);
+            sent = emailService.sendOtp(identifier, otp);
             if (!sent) log.warn("Email OTP delivery failed for {}", identifier);
         } else {
-            boolean sent = smsService.sendOtp(identifier, otp);
+            sent = smsService.sendOtp(identifier, otp);
             if (!sent) log.warn("SMS OTP delivery failed for {}", identifier);
+        }
+
+        // Don't report success when delivery actually failed — otherwise the client advances to a
+        // code-entry screen and waits forever for a code that never went out. Drop the stored code
+        // so a retry starts clean, and surface a real error the caller can show.
+        if (!sent) {
+            redisTemplate.delete(key);
+            throw new AppException("VERIFICATION_CODE_SEND_FAILED",
+                    "We couldn't send your verification code right now. Please try again shortly.",
+                    org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
