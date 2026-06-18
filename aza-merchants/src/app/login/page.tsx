@@ -149,15 +149,11 @@ export default function LoginPage() {
     try {
       const result = await preLogin(identifier.trim(), password);
       if (result.status === "authenticated") {
-        // Regular account, no 2FA — tokens already saved, go straight in.
+        // Merchant signs in with just email/phone + password — tokens saved, go straight in.
         await redirectAfterQrLogin();
-      } else if (result.status === "otp_required") {
-        setStep("otp");
       } else {
-        // 2FA-enabled account — the portal doesn't yet drive the 2FA flow.
-        setError(
-          "This account has two-factor authentication enabled. Please sign in using the AZA app QR code."
-        );
+        // Staff/admin accounts using this portal still require a login OTP.
+        setStep("otp");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed. Check your credentials.");

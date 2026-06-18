@@ -1,5 +1,7 @@
 package com.aza.backend.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -26,6 +28,7 @@ public class SmsService {
     private static final String ARKESEL_URL = "https://sms.arkesel.com/api/v2/sms/send";
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Send an SMS via Arkesel API
@@ -49,8 +52,35 @@ public class SmsService {
                     ARKESEL_URL, HttpMethod.POST, request, String.class);
 
             log.info("Arkesel SMS response status: {}", response.getStatusCode());
-            log.info("Arkesel SMS response body: {}", response.getBody());
-            return response.getStatusCode().is2xxSuccessful();
+
+            // Arkesel v2 returns HTTP 200 even for logical failures (unapproved sender id,
+            // insufficient balance, invalid recipient). The real outcome is in the body's
+            // "status" field, so a 2xx alone is not enough to call delivery a success.
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                log.error("Arkesel rejected SMS to {}: {} {}", formattedNumber,
+                        response.getStatusCode(), response.getBody());
+                return false;
+            }
+
+            String responseBody = response.getBody();
+            if (responseBody == null || responseBody.isBlank()) {
+                log.error("Arkesel returned an empty body for SMS to {}", formattedNumber);
+                return false;
+            }
+
+            try {
+                JsonNode root = objectMapper.readTree(responseBody);
+                String status = root.path("status").asText("");
+                if ("success".equalsIgnoreCase(status)) {
+                    log.info("Arkesel accepted SMS to {}", formattedNumber);
+                    return true;
+                }
+                log.error("Arkesel did not accept SMS to {}: {}", formattedNumber, responseBody);
+                return false;
+            } catch (Exception parseEx) {
+                log.error("Could not parse Arkesel response for SMS to {}: {}", formattedNumber, responseBody);
+                return false;
+            }
 
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", formattedNumber, e.getMessage());

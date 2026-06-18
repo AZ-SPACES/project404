@@ -16,7 +16,7 @@ export type TransactionDensity = 'comfortable' | 'compact';
 export type HomeLayout = 'default' | 'minimal';
 export type CornerRadiusScale = 'sharp' | 'rounded' | 'pill';
 export type TabIconStyle = 'outline' | 'filled';
-export type MainTabNav = 'custom' | 'native';
+export type MainTabNav = 'custom' | 'default' | 'native';
 export type TransactionGrouping = 'date' | 'flat';
 export type QuickActionId = 'send' | 'request' | 'details' | 'withdraw' | 'topup' | 'statement';
 
@@ -247,7 +247,7 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
         if (savedQuickActions) { try { const p = JSON.parse(savedQuickActions); if (Array.isArray(p)) setQuickActionsState(p); } catch {} }
         if (savedTxGrouping && ['date','flat'].includes(savedTxGrouping)) setTransactionGroupingState(savedTxGrouping as TransactionGrouping);
         if (savedTabOrder) { try { const p = JSON.parse(savedTabOrder); if (Array.isArray(p) && p.length === 4) setTabOrderState(p as TabId[]); } catch {} }
-        if (savedMainTabNav && ['custom','native'].includes(savedMainTabNav)) setMainTabNavState(savedMainTabNav as MainTabNav);
+        if (savedMainTabNav && ['custom','default','native'].includes(savedMainTabNav)) setMainTabNavState(savedMainTabNav as MainTabNav);
       } catch (e) {
         console.error("Error loading display settings:", e);
       }

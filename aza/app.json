@@ -54,6 +54,7 @@
     },
     "plugins": [
       "expo-updates",
+      "react-native-bottom-tabs",
       "./plugins/withSslPinning",
       [
         "expo-splash-screen",
