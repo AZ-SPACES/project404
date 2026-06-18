@@ -297,16 +297,22 @@ export type PreLoginResult =
   | { status: "two_factor_required"; preAuthToken: string; methods: string[]; defaultMethod: string | null };
 
 /**
- * Starts a password login. The backend (/api/v1/auth/login) responds in one of three ways:
+ * Starts a password login. The X-Aza-Client header tells the backend this is the merchant
+ * portal, so a genuine (non-staff) merchant signs in with just email/phone + password — 2FA is
+ * reserved for the QR (AZA App) sign-in. The backend (/api/v1/auth/login) responds either with:
+ *  - an auth payload with access/refresh tokens — login is complete (the normal merchant path)
  *  - a plain string ("OTP sent…") for accounts that require an emailed/SMS login OTP (e.g. admins)
- *  - an auth payload with access/refresh tokens for regular accounts with no 2FA — login is complete
- *  - a 2FA-pending payload (preAuthToken + methods) when the account has 2FA enabled
+ *  - a 2FA-pending payload (preAuthToken) — only for staff/admin accounts via this portal
  * This returns a discriminated result so the caller knows which step to show next.
  */
 export async function preLogin(identifier: string, password: string): Promise<PreLoginResult> {
   const body = await request<{ success: boolean; data: unknown }>(
     "/api/v1/auth/login",
-    { method: "POST", body: JSON.stringify({ identifier, password }) }
+    {
+      method: "POST",
+      headers: { "X-Aza-Client": "merchant-portal" },
+      body: JSON.stringify({ identifier, password }),
+    }
   );
   const data = body.data;
 

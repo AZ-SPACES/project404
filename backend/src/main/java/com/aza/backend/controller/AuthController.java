@@ -41,7 +41,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Object>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ipAddress = getClientIp(httpRequest);
-        Object response = authService.preLogin(request, ipAddress);
+        boolean merchantPortal = "merchant-portal".equalsIgnoreCase(httpRequest.getHeader("X-Aza-Client"));
+        Object response = authService.preLogin(request, ipAddress, merchantPortal);
         if (response != null) {
             return ResponseEntity.ok(ApiResponse.success(response));
         }

@@ -62,6 +62,7 @@ public class AuthService {
     private final ScreeningService screeningService;
     private final ReferralService referralService;
     private final StaffRoleService staffRoleService;
+    private final com.aza.backend.repository.MerchantRepository merchantRepository;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -131,6 +132,10 @@ public class AuthService {
     // ==================== LOGIN ====================
 
     public Object preLogin(LoginRequest request, String ipAddress) {
+        return preLogin(request, ipAddress, false);
+    }
+
+    public Object preLogin(LoginRequest request, String ipAddress, boolean merchantPortal) {
         rateLimitService.enforceRateLimit("login:" + ipAddress, 50, Duration.ofMinutes(15));
 
         String identifier = request.getIdentifier().trim();
@@ -153,6 +158,18 @@ public class AuthService {
             throw new com.aza.backend.exception.AppException("ACCOUNT_INACTIVE", "Your account is not active", org.springframework.http.HttpStatus.FORBIDDEN);
         }
         // PENDING_DELETION users can log in to cancel their deletion request
+
+        // Merchant-portal password login: genuine, non-staff merchants sign in with just
+        // email/phone + password. 2FA is reserved for the QR (AZA App) sign-in, so the second
+        // factor is skipped here. Scoped to real merchant accounts that are not staff/admin, so
+        // mobile logins (no header) and admin/staff logins keep full 2FA/OTP enforcement, and a
+        // non-merchant sending the header gains nothing.
+        if (merchantPortal
+                && merchantRepository.findByUserId(user.getId()).isPresent()
+                && staffRoleService.getActiveRoles(user).isEmpty()) {
+            return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(),
+                    request.getDeviceId(), ipAddress, false, request.getGpsLocation());
+        }
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
             String preAuthToken = UUID.randomUUID().toString();
