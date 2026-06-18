@@ -1,8 +1,10 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.security.filter.MerchantApiKeyFilter;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantApiLog;
@@ -128,10 +130,24 @@ public class MerchantController {
     @PostMapping("/sessions")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> createSession(
             @AuthenticationPrincipal Object principal,
+            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ENVIRONMENT_ATTR, required = false) String keyEnvironment,
             @Valid @RequestBody CreateCheckoutSessionRequest request) {
         UUID merchantId = resolveMerchantId(principal);
-        CheckoutSessionResponse session = checkoutService.createSession(merchantId, request);
+        // A test session is created when the request is authenticated with an aza_test_ key.
+        boolean testMode = "TEST".equalsIgnoreCase(keyEnvironment);
+        CheckoutSessionResponse session = checkoutService.createSession(merchantId, request, testMode);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(session));
+    }
+
+    @Operation(summary = "Simulate payment of a test session",
+            description = "Completes a test-mode checkout session and fires test webhooks without moving funds. "
+                    + "Only works for sessions created with an aza_test_ key.")
+    @PostMapping("/sessions/{sessionId}/simulate")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> simulateSession(
+            @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.simulatePayment(sessionId, merchantId)));
     }
 
     @GetMapping("/sessions")
@@ -142,11 +158,15 @@ public class MerchantController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
-            @RequestParam(required = false) String q) {
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String mode) {
         UUID merchantId = resolveMerchantId(principal);
-        if (status != null || from != null || to != null || q != null) {
+        // mode: "test" → sandbox only, "live" → live only, anything else → both.
+        Boolean testMode = "test".equalsIgnoreCase(mode) ? Boolean.TRUE
+                : "live".equalsIgnoreCase(mode) ? Boolean.FALSE : null;
+        if (status != null || from != null || to != null || q != null || testMode != null) {
             return ResponseEntity.ok(ApiResponse.success(
-                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q)));
+                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode)));
         }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));

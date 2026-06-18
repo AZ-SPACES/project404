@@ -59,6 +59,10 @@ public class CheckoutService {
 
     @Transactional
     public CheckoutSessionResponse createSession(UUID merchantId, CreateCheckoutSessionRequest request) {
+        return createSession(merchantId, request, false);
+    }
+
+    public CheckoutSessionResponse createSession(UUID merchantId, CreateCheckoutSessionRequest request, boolean testMode) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -108,10 +112,12 @@ public class CheckoutService {
                 .expiresAt(LocalDateTime.now().plusMinutes(SESSION_TTL_MINUTES))
                 .taxAmount(taxAmount)
                 .taxLabel(taxLabel)
+                .testMode(testMode)
                 .build();
 
         sessionRepository.save(session);
-        log.info("Checkout session created: id={}, merchantId={}, amount={}", session.getId(), merchantId, request.getAmount());
+        log.info("Checkout session created: id={}, merchantId={}, amount={}, testMode={}",
+                session.getId(), merchantId, request.getAmount(), testMode);
         return toResponse(session, merchant);
     }
 
@@ -151,6 +157,14 @@ public class CheckoutService {
             session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
             sessionRepository.save(session);
             throw new AppException("SESSION_EXPIRED", "This payment link has expired", HttpStatus.BAD_REQUEST);
+        }
+
+        // Sandbox: a test-mode link completes without charging anyone — no passcode,
+        // no wallet debit, no merchant credit. Lets devs exercise the full flow safely.
+        if (Boolean.TRUE.equals(session.getTestMode())) {
+            Merchant testMerchant = merchantRepository.findById(session.getMerchantId())
+                    .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+            return completeTestSession(session, testMerchant, customerId);
         }
 
         // Verify passcode before acquiring locks — avoids holding DB locks during a Redis round-trip
@@ -309,7 +323,7 @@ public class CheckoutService {
 
     public Page<CheckoutSessionResponse> searchMerchantSessions(
             UUID merchantId, int page, int size,
-            String status, String from, String to, String q) {
+            String status, String from, String to, String q, Boolean testMode) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -328,7 +342,7 @@ public class CheckoutService {
         String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
 
         return sessionRepository.searchSessions(
-                        merchantId, statusEnum, fromDt, toDt, qParam,
+                        merchantId, statusEnum, fromDt, toDt, testMode, qParam,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(s -> toResponse(s, merchant));
     }
@@ -391,6 +405,7 @@ public class CheckoutService {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("event", "checkout.completed");
+            payload.put("livemode", !Boolean.TRUE.equals(session.getTestMode()));
             payload.put("sessionId", session.getId().toString());
             payload.put("merchantId", merchant.getId().toString());
             payload.put("amount", session.getAmount());
@@ -426,6 +441,67 @@ public class CheckoutService {
         return toResponse(session, merchant);
     }
 
+    // ==================== SANDBOX (TEST MODE) ====================
+
+    /**
+     * Sandbox completion — marks a test session COMPLETED and fires test webhooks
+     * WITHOUT moving any funds. No wallet debit, no merchant credit, no Transaction,
+     * no effect on balances/volume/settlement. {@code customerId} may be null.
+     */
+    private CheckoutSessionResponse completeTestSession(CheckoutSession session, Merchant merchant, UUID customerId) {
+        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
+        BigDecimal platformFee = session.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netAmount = session.getAmount().subtract(platformFee);
+
+        session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
+        session.setCustomerId(customerId);
+        session.setPlatformFee(platformFee);
+        session.setNetAmount(netAmount);
+        session.setCompletedAt(LocalDateTime.now());
+        // transactionId intentionally left null — no real money moved.
+        sessionRepository.save(session);
+
+        log.info("TEST checkout completed (no funds moved): sessionId={}, merchant={}, amount={}",
+                session.getId(), merchant.getId(), session.getAmount());
+
+        scheduleWebhookDelivery(session, merchant);
+        return toResponse(session, merchant);
+    }
+
+    /**
+     * Simulate payment of a test session — the sandbox's primary tool. Lets a developer
+     * complete a test checkout end-to-end (and trigger webhooks) without a real customer.
+     * Rejects live sessions so it can never complete a real payment for free.
+     */
+    @Transactional
+    public CheckoutSessionResponse simulatePayment(UUID sessionId, UUID merchantId) {
+        CheckoutSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Checkout session not found", HttpStatus.NOT_FOUND));
+
+        if (!session.getMerchantId().equals(merchantId)) {
+            throw new AppException("FORBIDDEN", "Not your session", HttpStatus.FORBIDDEN);
+        }
+        if (!Boolean.TRUE.equals(session.getTestMode())) {
+            throw new AppException("NOT_TEST_SESSION",
+                    "Only test-mode sessions can be simulated. Create the session with an aza_test_ key.",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (session.getStatus() != CheckoutSession.SessionStatus.PENDING) {
+            throw new AppException("SESSION_NOT_PENDING",
+                    "Session is " + session.getStatus().name().toLowerCase() + " and cannot be paid",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (session.getExpiresAt() != null && LocalDateTime.now().isAfter(session.getExpiresAt())) {
+            session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
+            sessionRepository.save(session);
+            throw new AppException("SESSION_EXPIRED", "This test session has expired", HttpStatus.BAD_REQUEST);
+        }
+
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+        return completeTestSession(session, merchant, null);
+    }
+
     // ==================== HELPERS ====================
 
     /** Public-facing response: omits customerId to protect payer privacy. */
@@ -445,6 +521,7 @@ public class CheckoutService {
                 .taxAmount(s.getTaxAmount())
                 .taxLabel(s.getTaxLabel())
                 .status(s.getStatus().name())
+                .testMode(Boolean.TRUE.equals(s.getTestMode()))
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
@@ -473,6 +550,7 @@ public class CheckoutService {
                 .netAmount(s.getNetAmount())
                 .taxAmount(s.getTaxAmount())
                 .taxLabel(s.getTaxLabel())
+                .testMode(Boolean.TRUE.equals(s.getTestMode()))
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())

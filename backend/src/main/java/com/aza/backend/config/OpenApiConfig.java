@@ -44,11 +44,16 @@ public class OpenApiConfig {
                                   **Developer Clients**.
 
                                 ### Authentication
-                                - **Merchant API key** — `X-Api-Key: sk_live_… | sk_test_…` for server-to-server
+                                - **Merchant API key** — `X-Api-Key: aza_live_… | aza_test_…` for server-to-server
                                   `/api/v1/merchant/*` calls. Create keys in the merchant dashboard.
                                 - **Bearer token** — `Authorization: Bearer <token>` for OAuth partner/user sessions.
 
-                                Use `sk_test_…` keys against test data before going live.
+                                ### Sandbox
+                                Use an **`aza_test_`** key to work in the sandbox: checkout sessions are created
+                                in test mode and never move real money. Complete one end-to-end with
+                                `POST /api/v1/merchant/sessions/{id}/simulate`, which marks it paid and fires a
+                                webhook with `livemode:false` — no customer or funds required. Switch to an
+                                `aza_live_` key to go live.
                                 """)
                         .contact(new Contact().name("AZA Developers").url("https://aza.systems/developers")))
                 .servers(List.of(

@@ -46,8 +46,8 @@ public class SecurityConfig {
     @Value("${app.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
 
-    @Value("${springdoc.swagger-ui.enabled:true}")
-    private boolean swaggerEnabled;
+    @Value("${springdoc.swagger-ui.enabled:false}")
+    private boolean swaggerUiEnabled;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -129,12 +129,13 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/public/kyb-mobile/*/status").permitAll();
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/public/kyb-mobile/*/upload").permitAll();
-                    if (swaggerEnabled) {
-                        // Swagger accessible in dev; set springdoc.swagger-ui.enabled=false in production
+                    // OpenAPI JSON is public — it powers the curated developer explorer on aza-web.
+                    auth.requestMatchers("/v3/api-docs/**").permitAll();
+                    if (swaggerUiEnabled) {
+                        // Raw Swagger UI is dev-only (SWAGGER_UI_ENABLED=true); off in production.
                         auth.requestMatchers(
                                 "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**"
+                                "/swagger-ui.html"
                         ).permitAll();
                     }
                     // Coarse gate: any staff role may reach the admin API surface.

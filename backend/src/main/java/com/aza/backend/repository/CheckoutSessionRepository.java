@@ -104,6 +104,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND (:status IS NULL OR s.status = :status) " +
            "AND (:from IS NULL OR s.createdAt >= :from) " +
            "AND (:to IS NULL OR s.createdAt <= :to) " +
+           "AND (:testMode IS NULL OR s.testMode = :testMode) " +
            "AND (:q IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
@@ -111,6 +112,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
             @Param("status") CheckoutSession.SessionStatus status,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
+            @Param("testMode") Boolean testMode,
             @Param("q") String q,
             Pageable pageable);
 
