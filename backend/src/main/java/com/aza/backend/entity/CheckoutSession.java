@@ -46,7 +46,13 @@ public class CheckoutSession {
     @Column(unique = true)
     private String idempotencyKey;
 
-    private UUID transactionId; // underlying wallet-to-wallet transaction
+    private UUID transactionId; // underlying wallet-to-wallet transaction (null for test-mode sessions)
+
+    // Sandbox flag — true when created with an aza_test_ key. Test sessions complete
+    // without moving funds and never touch balances/settlement/reporting.
+    @Column(name = "test_mode", nullable = false)
+    @Builder.Default
+    private Boolean testMode = false;
 
     @Column(precision = 15, scale = 2)
     private BigDecimal platformFee;

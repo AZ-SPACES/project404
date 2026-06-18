@@ -30,6 +30,7 @@ const STATUS_CFG: Record<string, { icon: React.ElementType; cls: string; label: 
 };
 
 const STATUS_TABS = ["ALL", "COMPLETED", "PENDING", "EXPIRED", "CANCELLED", "REFUNDED"];
+const MODE_TABS = ["ALL", "LIVE", "TEST"];
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
@@ -84,10 +85,17 @@ function DetailModal({
               </p>
             )}
           </div>
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.cls}`}>
-            <StatusIcon size={12} />
-            {cfg.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {session.testMode && (
+              <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                Test
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.cls}`}>
+              <StatusIcon size={12} />
+              {cfg.label}
+            </span>
+          </div>
         </div>
 
         {/* Fields */}
@@ -189,6 +197,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState("ALL");
+  const [mode, setMode] = useState("ALL"); // ALL | LIVE | TEST
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<CheckoutSession | null>(null);
   const [search, setSearch] = useState("");
@@ -196,7 +205,7 @@ export default function TransactionsPage() {
   const [toDate, setToDate] = useState("");
   const searchTimeout = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (p: number, s: string, q: string, from: string, to: string) => {
+  const load = useCallback(async (p: number, s: string, q: string, from: string, to: string, m: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -207,6 +216,7 @@ export default function TransactionsPage() {
         q: q.trim() || undefined,
         from: from || undefined,
         to: to || undefined,
+        mode: m === "LIVE" ? "live" : m === "TEST" ? "test" : undefined,
       });
       setData(res);
       setPage(p);
@@ -217,19 +227,19 @@ export default function TransactionsPage() {
     }
   }, []);
 
-  useEffect(() => { load(0, status, search, fromDate, toDate); }, [load, status, fromDate, toDate]);
+  useEffect(() => { load(0, status, search, fromDate, toDate, mode); }, [load, status, fromDate, toDate, mode]);
 
   function handleSearchChange(val: string) {
     setSearch(val);
     if (searchTimeout[0]) clearTimeout(searchTimeout[0]);
-    searchTimeout[1](setTimeout(() => load(0, status, val, fromDate, toDate), 400));
+    searchTimeout[1](setTimeout(() => load(0, status, val, fromDate, toDate, mode), 400));
   }
 
   function clearFilters() {
     setSearch("");
     setFromDate("");
     setToDate("");
-    load(0, status, "", "", "");
+    load(0, status, "", "", "", mode);
   }
 
   const hasFilters = search || fromDate || toDate;
@@ -302,9 +312,10 @@ export default function TransactionsPage() {
         )}
       </div>
 
-      {/* Status filter tabs */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <FilterTabs options={STATUS_TABS} value={status} onChange={(s) => { setStatus(s); load(0, s, search, fromDate, toDate); }} />
+      {/* Status + mode filter tabs */}
+      <div className="flex flex-wrap gap-3 items-center justify-between">
+        <FilterTabs options={STATUS_TABS} value={status} onChange={(s) => { setStatus(s); load(0, s, search, fromDate, toDate, mode); }} />
+        <FilterTabs options={MODE_TABS} value={mode} onChange={(m) => { setMode(m); load(0, status, search, fromDate, toDate, m); }} />
       </div>
 
       {error && (
@@ -347,8 +358,13 @@ export default function TransactionsPage() {
                     className="hover:bg-muted/10 transition-colors cursor-pointer"
                   >
                     <td className="px-5 py-3.5">
-                      <p className="font-medium text-foreground/80 text-xs truncate max-w-[160px]">
-                        {session.description || "Payment"}
+                      <p className="font-medium text-foreground/80 text-xs truncate max-w-[160px] flex items-center gap-1.5">
+                        <span className="truncate">{session.description || "Payment"}</span>
+                        {session.testMode && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                            Test
+                          </span>
+                        )}
                       </p>
                       <p className="text-[10px] text-foreground/30 font-mono mt-0.5 truncate max-w-[160px]">{session.id}</p>
                     </td>
@@ -386,11 +402,11 @@ export default function TransactionsPage() {
 
       {data && data.totalPages > 1 && (
         <div className="flex justify-center items-center gap-3">
-          <button onClick={() => load(page - 1, status, search, fromDate, toDate)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
+          <button onClick={() => load(page - 1, status, search, fromDate, toDate, mode)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Previous
           </button>
           <span className="text-sm text-foreground/35">{page + 1} / {data.totalPages}</span>
-          <button onClick={() => load(page + 1, status, search, fromDate, toDate)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
+          <button onClick={() => load(page + 1, status, search, fromDate, toDate, mode)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">
             Next
           </button>
         </div>

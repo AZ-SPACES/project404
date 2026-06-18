@@ -27,6 +27,7 @@ public class CheckoutSessionResponse {
     private String successUrl;
     private String cancelUrl;
     private String status;
+    private Boolean testMode; // true for sandbox sessions created with an aza_test_ key
     private String customerId;
     private BigDecimal platformFee;
     private BigDecimal netAmount;

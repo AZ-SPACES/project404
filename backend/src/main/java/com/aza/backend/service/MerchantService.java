@@ -75,22 +75,35 @@ public class MerchantService {
         return !merchantRepository.existsByBusinessHandle(handle.toLowerCase());
     }
 
+    private static final int DIRECTORY_MAX = 60;
+    private static final long DIRECTORY_TTL_MS = 60_000L;
+    private volatile List<PublicMerchantSummary> directoryCache;
+    private volatile long directoryCacheAt;
+
     /**
      * Public directory of active merchants for the marketing site. Returns only
-     * non-sensitive fields, capped to keep the payload small. Ordered by volume
-     * so the most active businesses surface first.
+     * non-sensitive fields, capped to keep the payload small and ordered by volume
+     * so the most active businesses surface first. This endpoint is unauthenticated,
+     * so results are cached for {@value #DIRECTORY_TTL_MS}ms to absorb scraping/burst
+     * traffic without hitting the database each call.
      */
     public List<PublicMerchantSummary> listPublicDirectory(int limit) {
-        int capped = Math.min(Math.max(limit, 1), 60);
-        return merchantRepository.findActiveForDirectory(PageRequest.of(0, capped)).stream()
-                .map(m -> PublicMerchantSummary.builder()
-                        .businessName(m.getBusinessName())
-                        .businessHandle(m.getBusinessHandle())
-                        .logoUrl(m.getLogoUrl())
-                        .category(m.getCategory() != null ? m.getCategory().name() : null)
-                        .brandColor(m.getBrandColor())
-                        .build())
-                .toList();
+        int capped = Math.min(Math.max(limit, 1), DIRECTORY_MAX);
+        List<PublicMerchantSummary> cached = directoryCache;
+        if (cached == null || System.currentTimeMillis() - directoryCacheAt > DIRECTORY_TTL_MS) {
+            cached = merchantRepository.findActiveForDirectory(PageRequest.of(0, DIRECTORY_MAX)).stream()
+                    .map(m -> PublicMerchantSummary.builder()
+                            .businessName(m.getBusinessName())
+                            .businessHandle(m.getBusinessHandle())
+                            .logoUrl(m.getLogoUrl())
+                            .category(m.getCategory() != null ? m.getCategory().name() : null)
+                            .brandColor(m.getBrandColor())
+                            .build())
+                    .toList();
+            directoryCache = cached;
+            directoryCacheAt = System.currentTimeMillis();
+        }
+        return cached.size() > capped ? cached.subList(0, capped) : cached;
     }
 
     public MerchantResponse getMyMerchant(UUID userId) {

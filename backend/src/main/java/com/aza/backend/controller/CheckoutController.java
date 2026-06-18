@@ -1,5 +1,6 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.aza.backend.dto.ApiResponse;
@@ -45,6 +46,7 @@ public class CheckoutController {
     }
 
     /** Requires AZA JWT. Customer confirms payment with their passcode. */
+    @Operation(hidden = true) // hosted-checkout customer flow (pay.aza.systems), not a partner integration endpoint
     @PostMapping("/{sessionId}/confirm")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> confirm(
             @PathVariable UUID sessionId,
@@ -55,6 +57,7 @@ public class CheckoutController {
     }
 
     /** Cancel a pending session — requires merchant JWT. Only the owning merchant can cancel. */
+    @Operation(hidden = true) // hosted-checkout customer flow (pay.aza.systems), not a partner integration endpoint
     @PostMapping("/{sessionId}/cancel")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> cancel(
             @PathVariable UUID sessionId,
@@ -63,6 +66,7 @@ public class CheckoutController {
     }
 
     /** Public — sends a copy of the payment receipt to the provided email address. */
+    @Operation(hidden = true) // hosted-checkout customer flow (pay.aza.systems), not a partner integration endpoint
     @PostMapping("/{sessionId}/receipt/email")
     public ResponseEntity<ApiResponse<Void>> sendReceipt(
             @PathVariable UUID sessionId,
@@ -95,6 +99,7 @@ public class CheckoutController {
      * Validates a discount code and returns the discount amount and final amount.
      * Does NOT redeem the code.
      */
+    @Operation(hidden = true) // hosted-checkout customer flow (pay.aza.systems), not a partner integration endpoint
     @PostMapping("/discount/validate")
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateDiscount(
             @Valid @RequestBody ValidateDiscountRequest request) {

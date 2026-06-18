@@ -12,9 +12,9 @@ const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
 // Structurally compatible with swagger-ui-react's loosely-typed Request
 type SwaggerRequest = { headers?: Record<string, string> };
 
-// The explorer is test-mode only: it never sends a live (sk_live_) key, so a
+// The explorer is test-mode only: it never sends a live (aza_live_) key, so a
 // stray "Try it out" can't move real money on production.
-const isTestKey = (k: string) => k.trim().startsWith('sk_test_');
+const isTestKey = (k: string) => k.trim().startsWith('aza_test_');
 
 const API =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== 'http://localhost:8080'
@@ -56,7 +56,7 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
   const [copied, setCopied] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  const isLive = value.trim().startsWith('sk_live_');
+  const isLive = value.trim().startsWith('aza_live_');
   const valid = value === '' || isTestKey(value);
 
   function copy() {
@@ -87,7 +87,7 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder="sk_test_..."
+        placeholder="aza_test_..."
         className="w-full rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
         style={{
           background: 'rgba(255,255,255,0.05)',
@@ -98,12 +98,12 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
       {!valid ? (
         <p className="text-[10px] px-1" style={{ color: '#f87171' }}>
           {isLive
-            ? 'Live keys are blocked here — the explorer runs against test data only. Use an sk_test_… key.'
-            : 'Enter a test key starting with sk_test_…'}
+            ? 'Live keys are blocked here — the explorer runs against test data only. Use an aza_test_… key.'
+            : 'Enter a test key starting with aza_test_…'}
         </p>
       ) : (
         <p className="text-[10px] px-1" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          Test keys only (<code style={{ color: 'rgba(183,238,122,0.4)' }}>sk_test_…</code>) for{' '}
+          Test keys only (<code style={{ color: 'rgba(183,238,122,0.4)' }}>aza_test_…</code>) for{' '}
           <code style={{ color: 'rgba(183,238,122,0.4)' }}>/merchant/*</code> endpoints
         </p>
       )}
@@ -156,7 +156,7 @@ export default function ApiExplorerPage() {
     // Test mode: refuse to send a live key so "Try it out" can never act on real
     // merchant data. Throwing aborts the request and surfaces the message in the UI.
     if (apiKey && !isTestKey(apiKey)) {
-      throw new Error('AZA API Explorer is test-mode only — use a test key (sk_test_…). Live keys are blocked.');
+      throw new Error('AZA API Explorer is test-mode only — use a test key (aza_test_…). Live keys are blocked.');
     }
     const headers = (req.headers ??= {});
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -320,7 +320,7 @@ export default function ApiExplorerPage() {
           <div>
             <h1 className="font-bold text-sm" style={{ color: '#174717' }}>AZA API Reference</h1>
             <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>
-              Test mode — only <code style={{ color: '#174717' }}>sk_test_…</code> keys execute here.
+              Test mode — only <code style={{ color: '#174717' }}>aza_test_…</code> keys execute here.
             </p>
           </div>
           <span
@@ -348,8 +348,9 @@ export default function ApiExplorerPage() {
               webhook. Manage everything in the dashboard.
             </p>
             <p className="text-[11px] mb-4 rounded-lg px-3 py-2" style={{ background: 'rgba(217,119,6,0.08)', color: '#b45309' }}>
-              This explorer runs in <strong>test mode</strong> — only <code>sk_test_…</code> keys are
-              accepted, so &quot;Try it out&quot; can never touch live merchant data.
+              This explorer runs in <strong>test mode</strong>: &quot;Try it out&quot; executes
+              read-only <code>GET</code> calls only, and merchant calls require a <code>aza_test_…</code>
+              key — so it can never write to or move money from live data.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
@@ -402,6 +403,9 @@ export default function ApiExplorerPage() {
             docExpansion="list"
             defaultModelsExpandDepth={-1}
             tryItOutEnabled
+            // Only GET requests are executable. Writes (POST/PUT/PATCH/DELETE) hit
+            // production and aren't sandboxed, so they're read-only in the explorer.
+            supportedSubmitMethods={['get']}
           />
         </div>
       </main>

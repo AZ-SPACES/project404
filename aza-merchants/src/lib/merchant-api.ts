@@ -175,6 +175,7 @@ export interface CheckoutSession {
   successUrl: string | null;
   cancelUrl: string | null;
   status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
+  testMode?: boolean; // sandbox session created with an aza_test_ key — no real funds moved
   customerId: string | null;
   platformFee: number | null;
   netAmount: number | null;
@@ -512,6 +513,7 @@ export async function getSessions(params: {
   from?: string;
   to?: string;
   q?: string;
+  mode?: "live" | "test"; // omit for both
 }): Promise<Page<CheckoutSession>> {
   const qs = new URLSearchParams();
   if (params.page !== undefined) qs.set("page", String(params.page));
@@ -520,6 +522,7 @@ export async function getSessions(params: {
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
   if (params.q) qs.set("q", params.q);
+  if (params.mode) qs.set("mode", params.mode);
   const body = await request<{ success: boolean; data: Page<CheckoutSession> }>(
     `/api/v1/merchant/sessions?${qs}`
   );

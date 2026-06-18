@@ -23,6 +23,8 @@ import java.util.List;
 public class MerchantApiKeyFilter extends OncePerRequestFilter {
 
     private static final String API_KEY_HEADER = "X-Api-Key";
+    /** Request attribute carrying the authenticating key's environment ("LIVE" | "TEST"). */
+    public static final String API_KEY_ENVIRONMENT_ATTR = "aza.apiKeyEnvironment";
 
     private final MerchantService merchantService;
     private final RequestFingerprintService fingerprintService;
@@ -104,6 +106,10 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
                     List.of(new SimpleGrantedAuthority("ROLE_MERCHANT_API"))
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
+
+            // Expose the key's environment so the controller can route to the sandbox.
+            // aza_test_ keys → test-mode checkout sessions (no real funds move).
+            request.setAttribute(API_KEY_ENVIRONMENT_ATTR, apiKeyEntity.getEnvironment().name());
 
             chain.doFilter(request, response);
             statusCode = response.getStatus();
