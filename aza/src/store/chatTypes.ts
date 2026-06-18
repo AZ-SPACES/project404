@@ -38,6 +38,9 @@ export type LocalMessage = {
   isDeleted?: boolean;
   /** Cloudinary URL for media; encrypted at the file layer if media E2EE is enabled. */
   mediaKey?: string | null;
+  /** Base64 per-file AES key for E2EE media, carried inside the message envelope.
+   *  Present only for media sent in the encrypted format; null for legacy media. */
+  mediaKeySecret?: string | null;
   /** UI-only: reply parent reference. */
   replyToId?: string | null;
   /** Was decryption successful? false means we hold ciphertext we can't read. */

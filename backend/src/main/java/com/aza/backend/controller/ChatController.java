@@ -249,7 +249,7 @@ public class ChatController {
             @RequestParam("file") MultipartFile file,
             @Valid @ModelAttribute ChatMediaUploadRequest request) {
         ChatMediaResponse response = chatService.uploadChatMedia(
-                user, file, request.getChatId(), request.getType());
+                user, file, request.getChatId(), request.getType(), request.isEncrypted());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 }

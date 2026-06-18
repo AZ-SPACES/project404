@@ -16,4 +16,11 @@ public class ChatMediaUploadRequest {
     @NotBlank(message = "Media type is required")
     @Pattern(regexp = "IMAGE|VIDEO|VOICE_NOTE|DOCUMENT", message = "Type must be IMAGE, VIDEO, VOICE_NOTE, or DOCUMENT")
     private String type;
+
+    /**
+     * True when the client has already E2EE-encrypted the file bytes. The upload
+     * is then an opaque blob: skip media content-type/magic-byte validation and
+     * store it on Cloudinary as a raw resource. Size and rate limits still apply.
+     */
+    private boolean encrypted = false;
 }

@@ -182,8 +182,10 @@ public class MerchantService {
         record.setStatus(KybRecord.KybStatus.PENDING);
 
         kybRecordRepository.save(record);
-        merchant.setStatus(Merchant.MerchantStatus.KYB_SUBMITTED);
-        merchantRepository.save(merchant);
+        // NOTE: do NOT advance the merchant status here. This endpoint only persists
+        // KYB info mid-onboarding (before documents are uploaded). The merchant stays
+        // PENDING_KYB / MORE_INFO_REQUIRED until submitKybFinal() is called, so a page
+        // refresh on the documents step won't bounce the user to "Application under review".
 
         return toKybResponse(record, merchant.getId());
     }

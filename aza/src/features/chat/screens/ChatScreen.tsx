@@ -67,7 +67,7 @@ export default function ChatScreen() {
     handleSearchClose, handleSearchNext, handleSearchPrev,
     handleSwipeToReply, handleCancelReply,
     handleSend, handleMessageChange, handleSendAudio,
-    handleViewOnce,
+    handleViewOnce, handleResendMedia,
     handleEditSubmit, handleScrollToPinned, handlePinnedNext, handlePinnedPrev,
     handleScroll, handleScrollToBottom,
     handleScheduleSend,
@@ -139,6 +139,7 @@ export default function ChatScreen() {
             paidRequestIds={paidRequestIds}
             declinedRequestIds={declinedRequestIds}
             onStatusPress={item.sender === 'me' && item.status ? () => navigation.navigate('MessageInfo', { message: item }) : undefined}
+            onResend={handleResendMedia}
             bubbleColor={chatBubbleColor || undefined}
             fontSize={chatFontSize}
             isLastInGroup={isLastInGroup}
@@ -152,7 +153,7 @@ export default function ChatScreen() {
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, paidRequestIds, declinedRequestIds, handleDeclineRequest, newMsgIdsRef, initialMsgCountRef2, handleViewOnce]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, paidRequestIds, declinedRequestIds, handleDeclineRequest, newMsgIdsRef, initialMsgCountRef2, handleViewOnce, handleResendMedia]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
   const listFooter = useMemo(() => isOtherTyping ? <ChatTypingIndicator /> : null, [isOtherTyping]);

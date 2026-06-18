@@ -29,7 +29,9 @@ export default function OnboardingStatusPage() {
         router.replace(!me ? "/onboarding" : "/dashboard");
         return;
       }
-      if (me.status === "PENDING_KYB") {
+      // KYB_SUBMITTED means info was saved but not finally submitted (no documents /
+      // no final submit yet) — send them back to finish onboarding.
+      if (me.status === "PENDING_KYB" || me.status === "KYB_SUBMITTED") {
         router.replace("/onboarding");
         return;
       }

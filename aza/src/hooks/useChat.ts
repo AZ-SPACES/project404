@@ -28,8 +28,9 @@ export type UseChatResult = {
   isOtherTyping: boolean;
   /** Send a plaintext text message. Returns when the optimistic insert is in store; ack happens async. */
   sendText: (text: string) => Promise<void>;
-  /** Upload media to the server and send an encrypted message containing the media URL. */
-  sendMedia: (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT', caption?: string) => Promise<void>;
+  /** Upload media to the server and send an encrypted message containing the media URL.
+   *  `fileKeyB64` is the per-file E2EE key for encrypted media; omit for legacy/plaintext. */
+  sendMedia: (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string, fileKeyB64?: string) => Promise<void>;
   /** Inform peer about typing state. Debounce in the caller. */
   setTyping: (isTyping: boolean) => void;
   /** Mark all messages in this chat as read (call when screen mounts / focuses). */
@@ -79,6 +80,7 @@ function toMessage(m: LocalMessage): Message {
     status,
     type,
     ...(m.mediaKey ? { uri: m.mediaKey } : {}),
+    ...(m.mediaKeySecret ? { mediaSecret: m.mediaKeySecret } : {}),
     ...(m.expiresAt ? { expiresAt: m.expiresAt } : {}),
   };
 }
@@ -173,9 +175,9 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   );
 
   const sendMedia = useCallback(
-    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string) => {
+    async (mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string, fileKeyB64?: string) => {
       if (!chatId) return;
-      await sendMediaStore(chatId, mediaKey, mediaType, caption);
+      await sendMediaStore(chatId, mediaKey, mediaType, caption, fileKeyB64);
     },
     [chatId, sendMediaStore],
   );

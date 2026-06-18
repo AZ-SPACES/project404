@@ -28,7 +28,8 @@ import { usePinnedMessageStore } from '../store/pinnedMessageStore';
 import { useReactionStore } from '../store/reactionStore';
 import { useChatLockStore } from '../store/chatLockStore';
 import { useScheduledMessagesStore } from '../store/scheduledMessagesStore';
-import { uploadChatMedia, blockUser, notifyChatScreenshot, getUserPresence } from '../services/api';
+import { encryptAndUploadMedia, blockUser, notifyChatScreenshot, getUserPresence } from '../services/api';
+import { purgeDecryptedMedia } from './useDecryptedMediaUri';
 import { useDraftStore } from '../store/draftStore';
 import { useMuteDurationStore } from '../store/muteDurationStore';
 import { useMediaAutoSaveStore } from '../store/mediaAutoSaveStore';
@@ -37,6 +38,25 @@ import {
   Message, Contact, ReplyInfo, MoreAction, MenuAnchor, AttachmentAnchor,
   isSameDay, formatTime, calculateStorageAsync,
 } from '../components/chat/chatTypes';
+
+// Human-readable label for a quoted/replied message. Media messages store a raw
+// payload in `text` (e.g. a gif/sticker URL as JSON), so never surface that directly.
+function replyPreviewText(msg: Message): string {
+  const raw = typeof msg.text === 'string' ? msg.text : '';
+  // Gifs and stickers both parse to type 'image' — disambiguate via the raw payload.
+  if (raw.startsWith('{"__gif":')) return 'GIF';
+  if (raw.startsWith('{"__sticker":')) return 'Sticker';
+  switch (msg.type) {
+    case 'image': return msg.caption || 'Photo';
+    case 'video': return msg.caption || 'Video';
+    case 'audio': return 'Voice message';
+    case 'document': return msg.fileName || 'Document';
+    case 'location': return msg.locationName ? `Location: ${msg.locationName}` : 'Location';
+    case 'contact': return msg.contactCardName ? `Contact: ${msg.contactCardName}` : 'Contact';
+    case 'poll': return msg.pollQuestion ? `Poll: ${msg.pollQuestion}` : 'Poll';
+    default: return msg.text || msg.caption || msg.fileName || 'Media';
+  }
+}
 
 export function useChatScreen() {
   const { colors: Colors } = useAppTheme();
@@ -412,28 +432,50 @@ export function useChatScreen() {
     prevMsgCountRef.current = messages.length;
   }, [messages.length, showFab]);
 
+  // Flag a locally-shown media message as failed (keeps the bubble so the user
+  // can retry) instead of silently dropping it.
+  const markMediaFailed = useCallback((id: string) => {
+    setLocalOnlyMessages(prev => prev.map(m => m.id === id ? { ...m, status: 'failed' } : m));
+  }, []);
+
+  // Encrypt + upload + send a single media message. Throws on failure so the
+  // caller can mark it failed; shared by the initial send and the retry path.
+  const attemptMediaSend = useCallback(async (m: Message) => {
+    if (!chatId || !m.uri) throw new Error('missing chat or media uri');
+    const mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE' =
+      m.type === 'audio' ? 'VOICE_NOTE'
+        : m.type === 'video' ? 'VIDEO'
+          : m.type === 'document' ? 'DOCUMENT' : 'IMAGE';
+    // Voice notes carry no caption; their `text` is just the UI label.
+    const caption = m.type === 'audio' ? '' : (m.text ?? '');
+    const { mediaKey, fileKeyB64 } = await encryptAndUploadMedia(m.uri, chatId, mediaType);
+    await sendMedia(mediaKey, mediaType, caption, fileKeyB64);
+  }, [chatId, sendMedia]);
+
+  const handleResendMedia = useCallback(async (messageId: string) => {
+    const target = localOnlyMessages.find(m => m.id === messageId);
+    if (!target) return;
+    // Optimistically flip back to "sending" so the failed UI clears.
+    setLocalOnlyMessages(prev => prev.map(m => m.id === messageId ? { ...m, status: 'sent' } : m));
+    try {
+      await attemptMediaSend(target);
+    } catch (e) {
+      console.warn('[chat] media resend failed', e);
+      markMediaFailed(messageId);
+    }
+  }, [localOnlyMessages, attemptMediaSend, markMediaFailed]);
+
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('chat_media_sent', (sentMedia: Message[]) => {
       if (!sentMedia?.length || !chatId) return;
       setLocalOnlyMessages(prev => [...prev, ...sentMedia]);
       (async () => {
         for (const item of sentMedia) {
-          const mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' =
-            item.type === 'video' ? 'VIDEO' : item.type === 'document' ? 'DOCUMENT' : 'IMAGE';
-          const ext = item.type === 'video' ? 'mp4' : 'jpg';
-          const file = {
-            uri: item.uri!,
-            name: item.fileName ?? `media_${Date.now()}.${ext}`,
-            type: item.mimeType ?? (item.type === 'video' ? 'video/mp4' : 'image/jpeg'),
-          };
           try {
-            const response = await uploadChatMedia(file, chatId, mediaType);
-            const uploadedKey: string | undefined = response.data?.data?.mediaKey;
-            if (!uploadedKey) throw new Error('No mediaKey in upload response');
-            await sendMedia(uploadedKey, mediaType, item.text ?? '');
+            await attemptMediaSend(item);
           } catch (e) {
             console.warn('[chat] media upload/send failed for item', item.id, e);
-            setLocalOnlyMessages(prev => prev.filter(m => m.id !== item.id));
+            markMediaFailed(item.id);
           }
         }
       })();
@@ -444,7 +486,7 @@ export function useChatScreen() {
       }
     });
     return () => { subscription.remove(); clearMediaSub.remove(); };
-  }, [sendMedia, chatId]);
+  }, [attemptMediaSend, markMediaFailed, chatId]);
 
   useEffect(() => {
     const forwardedMessage = route.params?.forwardedMessage;
@@ -673,7 +715,7 @@ export function useChatScreen() {
   }, []);
 
   const handleSwipeToReply = useCallback((msg: Message) => {
-    setReplyTo({ id: msg.id, text: msg.text || msg.caption || msg.fileName || 'Media', sender: msg.sender });
+    setReplyTo({ id: msg.id, text: replyPreviewText(msg), sender: msg.sender });
   }, []);
 
   const handleCancelReply = useCallback(() => { setReplyTo(null); }, []);
@@ -705,21 +747,13 @@ export function useChatScreen() {
     setLocalOnlyMessages(prev => [...prev, newLocal]);
     setReplyTo(null);
 
-    const file = {
-      uri,
-      name: `voice_${Date.now()}.m4a`,
-      type: 'audio/mp4',
-    };
     try {
-      const response = await uploadChatMedia(file, chatId, 'VOICE_NOTE');
-      const uploadedKey: string | undefined = response.data?.data?.mediaKey;
-      if (!uploadedKey) throw new Error('No mediaKey in upload response');
-      await sendMedia(uploadedKey, 'VOICE_NOTE', '');
+      await attemptMediaSend(newLocal);
     } catch (e) {
       console.warn('[chat] voice note upload/send failed', e);
-      setLocalOnlyMessages(prev => prev.filter(m => m.id !== msgId));
+      markMediaFailed(msgId);
     }
-  }, [chatId, sendMedia]);
+  }, [chatId, attemptMediaSend, markMediaFailed]);
 
   const handleCopy = useCallback(async () => {
     if (!selectedMessage) return;
@@ -791,23 +825,13 @@ export function useChatScreen() {
   const addMediaMessage = useCallback(async (newMsg: Message) => {
     if (!chatId) return;
     setLocalOnlyMessages(prev => [...prev, newMsg]);
-    const mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' =
-      newMsg.type === 'video' ? 'VIDEO' : newMsg.type === 'document' ? 'DOCUMENT' : 'IMAGE';
-    const file = {
-      uri: newMsg.uri!,
-      name: newMsg.fileName ?? `media_${Date.now()}`,
-      type: newMsg.mimeType ?? 'application/octet-stream',
-    };
     try {
-      const response = await uploadChatMedia(file, chatId, mediaType);
-      const uploadedKey: string | undefined = response.data?.data?.mediaKey;
-      if (!uploadedKey) throw new Error('No mediaKey in upload response');
-      await sendMedia(uploadedKey, mediaType, newMsg.text ?? '');
+      await attemptMediaSend(newMsg);
     } catch (e) {
       console.warn('[chat] document upload/send failed', e);
-      setLocalOnlyMessages(prev => prev.filter(m => m.id !== newMsg.id));
+      markMediaFailed(newMsg.id);
     }
-  }, [chatId, sendMedia]);
+  }, [chatId, attemptMediaSend, markMediaFailed]);
 
   const handlePickPhoto = useCallback(async () => {
     if (isPickingRef.current) return;
@@ -1029,6 +1053,9 @@ export function useChatScreen() {
     setLocalOnlyMessages(prev =>
       prev.map(m => m.id === messageId ? { ...m, viewOnceSeen: true } : m)
     );
+    // Drop the decrypted blob from the local cache so a view-once item can't be
+    // re-opened from disk after it's been consumed.
+    purgeDecryptedMedia(messageId);
   }, []);
 
   const handleEditSubmit = useCallback(() => {
@@ -1153,7 +1180,7 @@ export function useChatScreen() {
     handleToggleMute, handleOpenSearch,
     handleSwipeToReply, handleCancelReply,
     handleSend, handleMessageChange, handleSendAudio,
-    handleViewOnce,
+    handleViewOnce, handleResendMedia,
     handleForwardAction,
     handlePickPhoto, handleOpenCamera, handleShareLocation,
     handleShareContact, handleCreatePoll, handleSendSticker,

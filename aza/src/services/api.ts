@@ -1,7 +1,10 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { emitAuthEvent } from "../providers/authEvents";
+import { encryptMedia } from "../crypto/mediaCrypto";
+import { base64ToBytes, bytesToBase64 } from "../crypto/codec";
 
 /**
  * File payload shape required by React Native's FormData for binary uploads.
@@ -1066,14 +1069,48 @@ export const markChatMediaViewed = (messageId: string) =>
 export const editChatMessage = (messageId: string, ciphertext: string) =>
   api.put(`/api/v1/chats/messages/${messageId}`, { ciphertext });
 
-export const uploadChatMedia = (file: RNFile, chatId: string, type: string) => {
+export const uploadChatMedia = (file: RNFile, chatId: string, type: string, encrypted = false) => {
   const formData = new FormData();
   formData.append("file", file as any);
   formData.append("chatId", chatId);
   formData.append("type", type);
+  if (encrypted) formData.append("encrypted", "true");
   return api.post("/api/v1/chats/media/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+};
+
+/**
+ * Encrypt a local media file end-to-end, then upload the opaque blob.
+ *
+ * Returns the Cloudinary URL (`mediaKey`) of the ciphertext and the base64
+ * per-file key. The key must be placed inside the message's E2EE envelope
+ * (chatStore.sendMedia) — never stored or sent alongside the blob.
+ */
+export const encryptAndUploadMedia = async (
+  localUri: string,
+  chatId: string,
+  type: string,
+): Promise<{ mediaKey: string; fileKeyB64: string }> => {
+  const b64 = await FileSystem.readAsStringAsync(localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const { blob, key } = encryptMedia(base64ToBytes(b64));
+
+  // RN multipart needs a file URI, so stage the blob in the cache dir.
+  const tempPath = `${FileSystem.cacheDirectory ?? ""}enc_${Date.now()}_${Math.random().toString(36).slice(2)}.enc`;
+  await FileSystem.writeAsStringAsync(tempPath, bytesToBase64(blob), {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  try {
+    const file: RNFile = { uri: tempPath, name: "media.enc", type: "application/octet-stream" };
+    const res = await uploadChatMedia(file, chatId, type, true);
+    const mediaKey: string | undefined = res.data?.data?.mediaKey;
+    if (!mediaKey) throw new Error("No mediaKey in upload response");
+    return { mediaKey, fileKeyB64: bytesToBase64(key) };
+  } finally {
+    FileSystem.deleteAsync(tempPath, { idempotent: true }).catch(() => {});
+  }
 };
 
 // --- E2EE Key Bundle Endpoints ---

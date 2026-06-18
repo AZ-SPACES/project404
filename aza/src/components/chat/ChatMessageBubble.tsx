@@ -5,6 +5,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useAppTheme, ThemeColors, Typography, Spacing, Radius } from '../../theme';
 import type { Message } from './chatTypes';
 import { getDocIcon, formatBytes } from './chatTypes';
+import { useDecryptedMediaUri } from '../../hooks/useDecryptedMediaUri';
 import { useReactionStore, EmojiReaction } from '../../store/reactionStore';
 import { extractFirstUrl, fetchLinkPreview, LinkPreview } from '../../utils/linkPreview';
 import { usePollStore } from '../../store/pollStore';
@@ -29,6 +30,8 @@ type ChatMessageBubbleProps = {
   /** Money-request ids (or legacy card message ids) declined in this chat — flips request cards to Declined. */
   declinedRequestIds?: Set<string> | undefined;
   onStatusPress?: (() => void) | undefined;
+  /** Retry a failed media send. */
+  onResend?: ((messageId: string) => void) | undefined;
   bubbleColor?: string | undefined;
   fontSize?: ChatFontSizeProp | undefined;
   isLastInGroup?: boolean;
@@ -339,9 +342,12 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
   Colors,
   receivedBubbleBg,
 }: AudioBubbleInnerProps) {
+  // E2EE voice notes are opaque blobs — resolve to a decrypted local file first.
+  const decrypted = useDecryptedMediaUri(message.uri, message.mediaSecret, message.id);
+  const playableUri = decrypted.uri;
   const source = useMemo(
-    () => (message.uri ? { uri: message.uri } : undefined),
-    [message.uri]
+    () => (playableUri ? { uri: playableUri } : undefined),
+    [playableUri]
   );
   const player = useAudioPlayer(source, { updateInterval: 250 });
   const status = useAudioPlayerStatus(player);
@@ -384,7 +390,7 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
   };
 
   const handlePlayPause = () => {
-    if (!message.uri) return;
+    if (!playableUri) return;
     if (isPlaying) player.pause();
     else player.play();
   };
@@ -409,7 +415,7 @@ const AudioBubbleInner = memo(function AudioBubbleInner({
               { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : Colors.primary + '15' },
             ]}
             onPress={handlePlayPause}
-            disabled={!message.uri}
+            disabled={!playableUri}
           >
             <Feather
               name={isPlaying ? 'pause' : 'play'}
@@ -471,6 +477,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   paidRequestIds,
   declinedRequestIds,
   onStatusPress,
+  onResend,
   bubbleColor,
   fontSize = 'medium',
   isLastInGroup = true,
@@ -482,6 +489,10 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   onViewOnce,
 }: ChatMessageBubbleProps) {
   const { colors: Colors, isDark } = useAppTheme();
+  // E2EE image/video are opaque blobs — resolve to a decrypted local file before
+  // rendering. Legacy media / GIFs (no mediaSecret) pass through unchanged.
+  const decryptedMedia = useDecryptedMediaUri(message.uri, message.mediaSecret, message.id);
+  const mediaUri = decryptedMedia.uri ?? undefined;
   const resolvedFontSize = fontSize === 'small' ? 13 : fontSize === 'large' ? 17 : 15;
   const styles = useMemo(() => createStyles(Colors, isDark, resolvedFontSize), [Colors, isDark, resolvedFontSize]);
   const isMe = message.sender === 'me';
@@ -520,6 +531,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const receivedBubbleBg = isDark ? Colors.surface : '#FFFFFF';
   const sentTailColor = bubbleColor || Colors.primary;
   const isImageType = message.type === 'image';
+  const isMediaMsg = message.type === 'image' || message.type === 'video'
+    || message.type === 'audio' || message.type === 'document';
+  const showResend = isMe && isMediaMsg && message.status === 'failed' && !!onResend;
   const docIcon = getDocIcon(message.mimeType);
   const replyInfo = message.replyToMessage;
 
@@ -629,6 +643,9 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         </View>
       );
     }
+    if (message.status === 'failed') {
+      return <Feather name="alert-circle" size={12} color="#F87171" style={styles.statusIcon} />;
+    }
     return null;
   }, [isMe, message.status, styles.statusIcon, styles.doubleCheck, styles.secondCheck]);
 
@@ -666,10 +683,24 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           <Text style={[styles.expiryText, { color: timerColor }]}>{expiryLabel}</Text>
         </View>
       )}
-      <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
-        {showFullTime ? fullTimestamp : message.time}
-      </Text>
-      {statusIconEl}
+      {showResend ? (
+        <TouchableOpacity
+          onPress={() => onResend?.(message.id)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+          style={styles.retryRow}
+        >
+          <Feather name="refresh-cw" size={11} color="#F87171" />
+          <Text style={styles.retryText}>Failed · Tap to retry</Text>
+        </TouchableOpacity>
+      ) : (
+        <>
+          <Text style={[styles.timeText, isMe ? styles.timeTextMe : styles.timeTextOther, overlayMeta && styles.timeTextOverlay]}>
+            {showFullTime ? fullTimestamp : message.time}
+          </Text>
+          {statusIconEl}
+        </>
+      )}
     </View>
   );
 
@@ -790,7 +821,8 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 onViewOnce?.(message.id);
                 return;
               }
-              onImagePress?.((gifData?.url ?? message.uri)!);
+              const full = gifData?.url ?? mediaUri;
+              if (full) onImagePress?.(full);
             }}
             onLongPress={onLongPress}
             delayLongPress={250}
@@ -806,7 +838,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             {forwardedBadge}
             {replyPreview}
             <Image
-              source={{ uri: gifData?.url ?? message.uri }}
+              source={{ uri: gifData?.url ?? mediaUri }}
               style={[styles.imageContent, hasCaption && { borderRadius: 12 }]}
               resizeMode="cover"
               accessibilityLabel={gifData ? 'GIF' : 'Sent image'}
@@ -830,7 +862,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
         ) : message.type === 'video' && message.uri ? (
           <TouchableOpacity
             activeOpacity={0.9}
-            onPress={() => onImagePress?.(message.uri!)}
+            onPress={() => { if (mediaUri) onImagePress?.(mediaUri); }}
             onLongPress={onLongPress}
             delayLongPress={250}
             style={[
@@ -843,7 +875,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           >
             {forwardedBadge}
             <Image
-              source={{ uri: message.thumbnailUri ?? message.uri }}
+              source={{ uri: message.thumbnailUri ?? mediaUri }}
               style={styles.imageContent}
               resizeMode="cover"
             />
@@ -1315,6 +1347,8 @@ const createStyles = (Colors: ThemeColors, isDark: boolean, fontSize = 15) => {
     timeTextMe: { color: 'rgba(255,255,255,0.7)' },
     timeTextOther: { color: Colors.textSecondary },
     statusIcon: { marginLeft: 4 },
+    retryRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    retryText: { ...Typography.caption, fontSize: 11, color: '#F87171', fontWeight: '600' },
     doubleCheck: { flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
     secondCheck: { marginLeft: -6 },
     tailSent: {

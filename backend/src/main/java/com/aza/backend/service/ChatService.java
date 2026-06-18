@@ -548,17 +548,25 @@ public class ChatService {
 
     // ==================== MEDIA UPLOAD ====================
 
-    public ChatMediaResponse uploadChatMedia(User user, MultipartFile file, UUID chatId, String type) {
+    public ChatMediaResponse uploadChatMedia(User user, MultipartFile file, UUID chatId, String type, boolean encrypted) {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new AppException("Chat not found"));
         assertParticipant(chat, user.getId());
 
         rateLimitService.enforceRateLimit("chat_media:" + user.getId(), 20, Duration.ofHours(1));
 
-        validateMediaFile(file);
-
-        String url = cloudinaryService.uploadChatMedia(file, chatId.toString());
-        log.info("Chat media uploaded by user {} to chat {}: type={}", user.getId(), chatId, type);
+        String url;
+        if (encrypted) {
+            // E2EE blob: opaque ciphertext, so content-type/magic-byte checks can't
+            // apply. Still enforce non-empty + size, and store as a raw resource.
+            validateEncryptedMediaFile(file);
+            url = cloudinaryService.uploadChatMediaRaw(file, chatId.toString());
+        } else {
+            validateMediaFile(file);
+            url = cloudinaryService.uploadChatMedia(file, chatId.toString());
+        }
+        log.info("Chat media uploaded by user {} to chat {}: type={} encrypted={}",
+                user.getId(), chatId, type, encrypted);
         return new ChatMediaResponse(url, type.toUpperCase(), chatId.toString());
     }
 
@@ -612,6 +620,19 @@ public class ChatService {
                 .isMuted(isMuted)
                 .isArchived(isArchived)
                 .build();
+    }
+
+    /**
+     * Validation for an already-encrypted (opaque) media blob. Content type and
+     * magic bytes are meaningless for ciphertext, so only non-empty + size apply.
+     */
+    private void validateEncryptedMediaFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new AppException("File is required");
+        }
+        if (file.getSize() > MAX_MEDIA_SIZE) {
+            throw new AppException("File exceeds the 25 MB limit");
+        }
     }
 
     private void validateMediaFile(MultipartFile file) {

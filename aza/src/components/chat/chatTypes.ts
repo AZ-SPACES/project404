@@ -25,6 +25,9 @@ export interface Message {
   longitude?: number | undefined;
   locationName?: string | undefined;
   uri?: string | undefined;
+  /** Base64 per-file AES key for E2EE media. When set, `uri` points at an
+   *  encrypted blob that must be downloaded + decrypted before rendering. */
+  mediaSecret?: string | undefined;
   mimeType?: string | undefined;
   fileSize?: number | undefined;
   fileName?: string | undefined;
