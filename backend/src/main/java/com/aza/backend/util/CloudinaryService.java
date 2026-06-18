@@ -66,6 +66,28 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload an already-E2EE-encrypted chat media blob.
+     * resource_type=raw stores the bytes verbatim — Cloudinary makes no attempt
+     * to decode or transcode the (opaque) ciphertext.
+     */
+    public String uploadChatMediaRaw(MultipartFile file, String chatId) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("folder", "aza/chat-media/" + chatId);
+            params.put("resource_type", "raw");
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), params);
+            String url = (String) result.get("secure_url");
+            log.info("Cloudinary raw chat media upload success: chatId={}", chatId);
+            return url;
+        } catch (IOException e) {
+            log.error("Cloudinary raw upload failed: {}", e.getMessage());
+            throw new AppException("Failed to upload file");
+        }
+    }
+
+    /**
      * Upload raw bytes to Cloudinary
      */
     public String uploadBytes(byte[] bytes, String folder) {

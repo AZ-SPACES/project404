@@ -151,7 +151,7 @@ type ChatStoreState = {
   openChatWithUser: (otherUserId: string) => Promise<ChatSummary>;
   loadHistory: (chatId: string) => Promise<void>;
   sendText: (chatId: string, plaintext: string) => Promise<void>;
-  sendMedia: (chatId: string, mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string) => Promise<void>;
+  sendMedia: (chatId: string, mediaKey: string, mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'VOICE_NOTE', caption?: string, fileKeyB64?: string) => Promise<void>;
   sendTyping: (chatId: string, isTyping: boolean) => Promise<void>;
   markRead: (chatId: string) => Promise<void>;
   deleteMessage: (chatId: string, messageId: string) => Promise<void>;
@@ -267,7 +267,8 @@ export function mergeMessage(
   // Status, delivery timestamps, and other metadata still flow through.
   const preservePlaintext = !incoming.decryptOk && existing.decryptOk && !!existing.text;
   const merged: LocalMessage = preservePlaintext
-    ? { ...existing, ...incoming, text: existing.text, decryptOk: true }
+    ? { ...existing, ...incoming, text: existing.text, decryptOk: true,
+        mediaKeySecret: existing.mediaKeySecret ?? incoming.mediaKeySecret ?? null }
     : { ...existing, ...incoming };
   const next = thread.slice();
   next[matchIdx] = merged;
@@ -759,7 +760,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
-  sendMedia: async (chatId, mediaKey, mediaType, caption = '') => {
+  sendMedia: async (chatId, mediaKey, mediaType, caption = '', fileKeyB64) => {
     const { selfUserId, selfDeviceId, chats } = get();
     if (!selfUserId || !selfDeviceId) return;
 
@@ -781,6 +782,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       status: 'pending',
       decryptOk: true,
       mediaKey,
+      mediaKeySecret: fileKeyB64 ?? null,
     };
     set((s) => {
       const thread = s.messagesByChat[chatId] ?? [];
@@ -794,7 +796,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const selfIdentityPriv = get().selfIdentityPrivate;
       if (!selfIdentityPub || !selfIdentityPriv) throw new Error('Identity not ready');
 
-      const plaintextForEncryption = caption.trim() || ' ';
+      // For E2EE media, the per-file key rides inside the encrypted envelope as a
+      // versioned JSON payload `{ v: 2, k, c }`; the recipient parses it back out.
+      // Legacy/no-key sends keep the plain caption (or a placeholder) as before.
+      const plaintextForEncryption = fileKeyB64
+        ? JSON.stringify({ v: 2, k: fileKeyB64, c: caption })
+        : caption.trim() || ' ';
 
       // Multi-device encryption (same pattern as sendText)
       const deviceCiphertexts: Record<string, DeviceCiphertext> = {};
@@ -1434,6 +1441,23 @@ async function decryptServerMessage(
     }
   }
 
+  // For E2EE media, the decrypted body is a versioned JSON envelope { v, k, c }
+  // carrying the per-file key and the caption. Unwrap it so `text` holds the
+  // caption and the key is exposed to the decrypt-on-render path. Legacy media
+  // (plain caption / placeholder) and text messages pass through untouched.
+  let mediaKeySecret: string | null = null;
+  const isMediaType = m.type === 'IMAGE' || m.type === 'VIDEO'
+    || m.type === 'DOCUMENT' || m.type === 'VOICE_NOTE';
+  if (isMediaType && decryptOk && text.startsWith('{"v":2')) {
+    try {
+      const env = JSON.parse(text);
+      if (env && env.v === 2 && typeof env.k === 'string') {
+        mediaKeySecret = env.k;
+        text = typeof env.c === 'string' ? env.c : '';
+      }
+    } catch {}
+  }
+
   // Prefer the server-echoed clientId for self messages — that's our
   // optimistic entry's local id, so mergeMessage will match it directly
   // without falling back to the time-window heuristic. For peer messages
@@ -1457,6 +1481,7 @@ async function decryptServerMessage(
     editedAt,
     isDeleted: !!m.isDeleted,
     mediaKey: m.mediaKey ?? null,
+    mediaKeySecret,
     decryptOk,
   };
 }

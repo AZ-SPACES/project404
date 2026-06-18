@@ -97,16 +97,13 @@ export default function OnboardingPage() {
           router.replace("/dashboard");
           return;
         }
-        if (
-          me.status === "KYB_SUBMITTED" ||
-          me.status === "KYB_UNDER_REVIEW" ||
-          me.status === "REJECTED"
-        ) {
+        if (me.status === "KYB_UNDER_REVIEW" || me.status === "REJECTED") {
           router.replace("/onboarding/status");
           return;
         }
         setBusinessName(me.businessName);
-        // PENDING_KYB or MORE_INFO_REQUIRED — load saved kyb and resume
+        // PENDING_KYB, KYB_SUBMITTED (info saved, not yet finally submitted), or
+        // MORE_INFO_REQUIRED — load saved kyb and resume onboarding
         try {
           const kyb = await getKyb();
           setDocuments(kyb.documents ?? []);

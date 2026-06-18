@@ -65,7 +65,6 @@ export default function HomeScreen() {
     homeBackground, homeDim, homeBlur, homeBannerGradient, accentId, balanceCardStyle,
     homeLayout, balanceHiddenByDefault, reducedMotion, quickActions, homeBgLuminance,
   } = useDisplayContext();
-  const animDuration = reducedMotion ? 0 : 300;
   const accentPalette = ACCENT_PALETTES.find(p => p.id === accentId) ?? ACCENT_PALETTES[0];
   const bannerGrad = homeBannerGradient === 'accent'
     ? [accentPalette.primary, accentPalette.gradientEnd]
@@ -176,32 +175,6 @@ export default function HomeScreen() {
       console.error("Failed to cancel incomplete transfer", err);
     }
   }, [refresh]);
-
-  const moreSheetAnim = React.useRef(new Animated.Value(height)).current;
-  const moreBackdropAnim = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    if (isMoreModalVisible) {
-      Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 1, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(moreSheetAnim, { toValue: height, duration: animDuration, useNativeDriver: true }),
-        Animated.timing(moreBackdropAnim, { toValue: 0, duration: animDuration, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!isMoreModalVisible) {
-        moreSheetAnim.setValue(height);
-        moreBackdropAnim.setValue(0);
-      }
-    }, [isMoreModalVisible, moreSheetAnim, moreBackdropAnim])
-  );
 
   const [lastUpdated, setLastUpdated] = React.useState(new Date());
   const [updateText, setUpdateText] = React.useState("Updated just now");
@@ -544,11 +517,15 @@ export default function HomeScreen() {
       </View>
 
       {/* More Options Bottom Sheet — shows actions not in the quick actions row */}
-      <View style={StyleSheet.absoluteFill} pointerEvents={isMoreModalVisible ? 'auto' : 'none'}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: moreBackdropAnim }]}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsMoreModalVisible(false)} />
-        </Animated.View>
-        <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: moreSheetAnim }] }]}>
+      <Modal
+        visible={isMoreModalVisible}
+        transparent
+        animationType={reducedMotion ? 'none' : 'slide'}
+        onRequestClose={() => setIsMoreModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable style={styles.modalOverlay} onPress={() => setIsMoreModalVisible(false)} />
+          <View style={[styles.bottomSheet, { position: 'relative' }]}>
           <View style={styles.bottomSheetHandle} />
           <Text style={[Typography.h3, styles.bottomSheetTitle]}>More Options</Text>
           {QUICK_ACTIONS_REGISTRY.filter(a => !quickActions.includes(a.id)).map(action => {
@@ -578,8 +555,9 @@ export default function HomeScreen() {
             </View>
             <Text style={[Typography.body, styles.bottomSheetItemText]}>Request Reversal</Text>
           </TouchableOpacity>
-        </Animated.View>
-      </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* PIN entry modal */}
       <Modal
@@ -588,7 +566,7 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={() => { setPinVisible(false); setPin(""); setActionError(null); }}
       >
-        <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable style={styles.modalOverlay} onPress={() => { setPinVisible(false); setPin(""); setActionError(null); }} />
           <View style={[styles.bottomSheet, { position: 'relative' }]}>
             <View style={styles.bottomSheetHandle} />

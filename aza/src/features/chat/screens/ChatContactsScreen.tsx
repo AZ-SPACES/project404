@@ -1182,17 +1182,6 @@ export default function ChatContactsScreen() {
         </View>
       )}
 
-      {/* New chat FAB */}
-      {!selectMode && (
-        <TouchableOpacity
-          style={styles.fab}
-          activeOpacity={0.85}
-          onPress={() => (navigation as any).navigate("Contacts")}
-        >
-          <Feather name="edit-2" size={22} color="#fff" />
-        </TouchableOpacity>
-      )}
-
       {/* Header more-menu */}
       <ChatMoreModal
         visible={showMoreMenu}
@@ -1604,22 +1593,5 @@ function createStyles(Colors: ThemeColors) {
     savedMessagesName: { fontWeight: "700", color: Colors.textPrimary, fontSize: 16, marginBottom: 2 },
     savedMessagesSubtitle: { ...Typography.body, color: Colors.textSecondary },
 
-    // ── FAB ──
-    fab: {
-      position: "absolute",
-      bottom: Spacing.xl + 4,
-      right: Spacing.lg,
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: Colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      elevation: 6,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 6,
-    },
   });
 }
