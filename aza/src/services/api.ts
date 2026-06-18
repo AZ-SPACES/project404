@@ -273,6 +273,12 @@ export const requestPhoneChange = (phone: string) =>
 export const verifyPhoneChange = (phone: string, code: string) =>
   api.post("/api/v1/users/me/phone/verify", { identifier: phone, code, purpose: "change_phone" });
 
+// --- Feedback ---
+
+/** Submit in-app product feedback (rating 1–5 + optional comment, tagged by context). */
+export const submitFeedback = (rating: number, comment?: string, context?: string) =>
+  api.post("/api/v1/feedback", { rating, comment, context });
+
 // --- Support Endpoints ---
 
 export const getOrCreateSupportChat = () => api.post("/api/v1/support/chat");
