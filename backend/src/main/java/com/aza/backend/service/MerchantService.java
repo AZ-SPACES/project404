@@ -75,6 +75,24 @@ public class MerchantService {
         return !merchantRepository.existsByBusinessHandle(handle.toLowerCase());
     }
 
+    /**
+     * Public directory of active merchants for the marketing site. Returns only
+     * non-sensitive fields, capped to keep the payload small. Ordered by volume
+     * so the most active businesses surface first.
+     */
+    public List<PublicMerchantSummary> listPublicDirectory(int limit) {
+        int capped = Math.min(Math.max(limit, 1), 60);
+        return merchantRepository.findActiveForDirectory(PageRequest.of(0, capped)).stream()
+                .map(m -> PublicMerchantSummary.builder()
+                        .businessName(m.getBusinessName())
+                        .businessHandle(m.getBusinessHandle())
+                        .logoUrl(m.getLogoUrl())
+                        .category(m.getCategory() != null ? m.getCategory().name() : null)
+                        .brandColor(m.getBrandColor())
+                        .build())
+                .toList();
+    }
+
     public MerchantResponse getMyMerchant(UUID userId) {
         Merchant merchant = merchantRepository.findByUserId(userId).orElse(null);
         if (merchant == null) return null;

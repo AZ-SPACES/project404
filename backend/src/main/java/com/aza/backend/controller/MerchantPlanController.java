@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CreatePlanRequest;
 import com.aza.backend.dto.merchant.PlanResponse;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/merchant/plans")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Merchant Plans", description = "Subscription plans")
 public class MerchantPlanController {
 
     private final MerchantPlanRepository planRepository;

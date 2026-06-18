@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.NotificationPreferenceResponse;
 import com.aza.backend.dto.merchant.UpdateNotificationPreferenceRequest;
@@ -19,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/notification-preferences")
 @RequiredArgsConstructor
+@Tag(name = "Merchant Notifications", description = "Notification preferences")
 public class MerchantNotificationController {
 
     private final MerchantNotificationService merchantNotificationService;

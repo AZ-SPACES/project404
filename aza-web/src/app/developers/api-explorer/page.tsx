@@ -12,6 +12,10 @@ const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
 // Structurally compatible with swagger-ui-react's loosely-typed Request
 type SwaggerRequest = { headers?: Record<string, string> };
 
+// The explorer is test-mode only: it never sends a live (sk_live_) key, so a
+// stray "Try it out" can't move real money on production.
+const isTestKey = (k: string) => k.trim().startsWith('sk_test_');
+
 const API =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL !== 'http://localhost:8080'
     ? process.env.NEXT_PUBLIC_API_URL
@@ -52,6 +56,9 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
   const [copied, setCopied] = useState(false);
   const [focused, setFocused] = useState(false);
 
+  const isLive = value.trim().startsWith('sk_live_');
+  const valid = value === '' || isTestKey(value);
+
   function copy() {
     if (!value) return;
     navigator.clipboard.writeText(value);
@@ -65,7 +72,7 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
         <div className="flex items-center gap-1.5">
           <Key size={10} style={{ color: 'rgba(183,238,122,0.55)' }} />
           <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.55)' }}>
-            Merchant API Key
+            Merchant API Key · test only
           </span>
         </div>
         {value && (
@@ -80,17 +87,26 @@ function ApiKeyInput({ value, onChange }: { value: string; onChange: (v: string)
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder="sk_live_... or sk_test_..."
+        placeholder="sk_test_..."
         className="w-full rounded-xl px-3 py-2 text-xs font-mono outline-none transition-all"
         style={{
           background: 'rgba(255,255,255,0.05)',
-          border: `1px solid ${focused ? 'rgba(183,238,122,0.4)' : 'rgba(255,255,255,0.08)'}`,
+          border: `1px solid ${!valid ? 'rgba(248,113,113,0.6)' : focused ? 'rgba(183,238,122,0.4)' : 'rgba(255,255,255,0.08)'}`,
           color: 'rgba(183,238,122,0.8)',
         }}
       />
-      <p className="text-[10px] px-1" style={{ color: 'rgba(255,255,255,0.2)' }}>
-        Required for <code style={{ color: 'rgba(183,238,122,0.4)' }}>/merchant/*</code> endpoints
-      </p>
+      {!valid ? (
+        <p className="text-[10px] px-1" style={{ color: '#f87171' }}>
+          {isLive
+            ? 'Live keys are blocked here — the explorer runs against test data only. Use an sk_test_… key.'
+            : 'Enter a test key starting with sk_test_…'}
+        </p>
+      ) : (
+        <p className="text-[10px] px-1" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          Test keys only (<code style={{ color: 'rgba(183,238,122,0.4)' }}>sk_test_…</code>) for{' '}
+          <code style={{ color: 'rgba(183,238,122,0.4)' }}>/merchant/*</code> endpoints
+        </p>
+      )}
     </div>
   );
 }
@@ -137,6 +153,11 @@ export default function ApiExplorerPage() {
   }
 
   function requestInterceptor(req: SwaggerRequest) {
+    // Test mode: refuse to send a live key so "Try it out" can never act on real
+    // merchant data. Throwing aborts the request and surfaces the message in the UI.
+    if (apiKey && !isTestKey(apiKey)) {
+      throw new Error('AZA API Explorer is test-mode only — use a test key (sk_test_…). Live keys are blocked.');
+    }
     const headers = (req.headers ??= {});
     if (token) headers['Authorization'] = `Bearer ${token}`;
     if (apiKey) headers['X-Api-Key'] = apiKey;
@@ -175,18 +196,14 @@ export default function ApiExplorerPage() {
         {/* Nav sections */}
         <nav className="flex-1 p-4 flex flex-col gap-1">
           <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-2" style={{ color: 'rgba(183,238,122,0.4)' }}>
-            Endpoints
+            Partners / Third-party
           </p>
 
           {[
-            { label: 'Authentication',   anchor: '#/Authentication'   },
-            { label: 'Users',            anchor: '#/User'             },
-            { label: 'Wallets',          anchor: '#/Wallet'           },
-            { label: 'Transfers',        anchor: '#/Transfer'         },
-            { label: 'Contacts',         anchor: '#/Contacts'         },
-            { label: 'KYC',              anchor: '#/KYC'              },
-            { label: 'Notifications',    anchor: '#/Notifications'    },
-            { label: 'Biometric',        anchor: '#/Biometric'        },
+            { label: 'Sign in with AZA', anchor: '#/Sign in with AZA' },
+            { label: 'OAuth Payments',   anchor: '#/OAuth Payments'   },
+            { label: 'Developer Clients', anchor: '#/Developer Clients' },
+            { label: 'Checkout',         anchor: '#/Checkout'         },
           ].map(item => (
             <a
               key={item.label}
@@ -209,18 +226,19 @@ export default function ApiExplorerPage() {
 
           <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-2" style={{ color: 'rgba(183,238,122,0.4)' }}>
-              Merchant
+              Merchant API
             </p>
             {[
-              { label: 'Sessions',       anchor: '#/Merchant Sessions'   },
-              { label: 'API Keys',       anchor: '#/Merchant API Keys'   },
-              { label: 'Webhooks',       anchor: '#/Merchant Webhooks'   },
-              { label: 'Invoices',       anchor: '#/Merchant Invoices'   },
-              { label: 'Payouts',        anchor: '#/Merchant Payouts'    },
-              { label: 'Discount Codes', anchor: '#/Merchant Discount'   },
-              { label: 'Customers',      anchor: '#/Merchant Customers'  },
-              { label: 'Settlements',    anchor: '#/Merchant Settlements' },
-              { label: 'Disputes',       anchor: '#/Merchant Disputes'   },
+              { label: 'Merchant',       anchor: '#/Merchant'                 },
+              { label: 'Team',           anchor: '#/Merchant Team'            },
+              { label: 'Products',       anchor: '#/Merchant Products'        },
+              { label: 'Invoices',       anchor: '#/Merchant Invoices'        },
+              { label: 'Discount Codes', anchor: '#/Merchant Discount Codes'  },
+              { label: 'Subscriptions',  anchor: '#/Merchant Subscriptions'   },
+              { label: 'Plans',          anchor: '#/Merchant Plans'           },
+              { label: 'Settlements',    anchor: '#/Merchant Settlements'     },
+              { label: 'Notifications',  anchor: '#/Merchant Notifications'   },
+              { label: 'Bulk Transfers', anchor: '#/Merchant Bulk Transfers'  },
             ].map(item => (
               <a
                 key={item.label}
@@ -302,15 +320,78 @@ export default function ApiExplorerPage() {
           <div>
             <h1 className="font-bold text-sm" style={{ color: '#174717' }}>AZA API Reference</h1>
             <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>
-              All requests are authenticated with your active token.
+              Test mode — only <code style={{ color: '#174717' }}>sk_test_…</code> keys execute here.
             </p>
           </div>
           <span
-            className="text-xs font-bold px-3 py-1 rounded-full"
-            style={{ background: 'rgba(23,71,23,0.08)', color: '#174717' }}
+            className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5"
+            style={{ background: 'rgba(217,119,6,0.1)', color: '#b45309' }}
           >
-            v1
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#d97706' }} />
+            Test mode · v1
           </span>
+        </div>
+
+        {/* Integration overview */}
+        <div className="px-6 pt-6">
+          <div
+            className="rounded-2xl p-5"
+            style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)' }}
+          >
+            <h2 className="font-bold text-sm mb-1" style={{ color: '#174717' }}>
+              Integrate with AZA
+            </h2>
+            <p className="text-xs mb-4" style={{ color: 'rgba(0,0,0,0.5)' }}>
+              Call the <strong>Merchant API</strong> server-to-server with your API key to create a
+              checkout session — it returns a hosted <strong>pay.aza.systems</strong> link. Redirect
+              your customer there to pay; AZA handles the UI, 2FA and receipts, then notifies you by
+              webhook. Manage everything in the dashboard.
+            </p>
+            <p className="text-[11px] mb-4 rounded-lg px-3 py-2" style={{ background: 'rgba(217,119,6,0.08)', color: '#b45309' }}>
+              This explorer runs in <strong>test mode</strong> — only <code>sk_test_…</code> keys are
+              accepted, so &quot;Try it out&quot; can never touch live merchant data.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  title: 'Hosted checkout',
+                  host: 'pay.aza.systems',
+                  href: 'https://pay.aza.systems',
+                  desc: 'Secure payment pages from a checkout session — no card UI to build.',
+                },
+                {
+                  title: 'Merchant dashboard',
+                  host: 'merchants.aza.systems',
+                  href: 'https://merchants.aza.systems',
+                  desc: 'KYB, API keys, webhooks, payouts, settlements and reporting.',
+                },
+                {
+                  title: 'Sign in with AZA',
+                  host: 'OAuth 2.0',
+                  href: '/developers/guides',
+                  desc: 'Authenticate AZA users and request payments in your own app.',
+                },
+              ].map(card => (
+                <a
+                  key={card.title}
+                  href={card.href}
+                  target={card.href.startsWith('http') ? '_blank' : undefined}
+                  rel={card.href.startsWith('http') ? 'noreferrer' : undefined}
+                  className="rounded-xl p-3.5 transition-colors group"
+                  style={{ background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.06)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(23,71,23,0.3)'; e.currentTarget.style.background = '#fff'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)'; e.currentTarget.style.background = '#f8f9fa'; }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold" style={{ color: '#174717' }}>{card.title}</span>
+                    <ExternalLink size={12} style={{ color: 'rgba(23,71,23,0.5)' }} />
+                  </div>
+                  <p className="text-[11px] font-mono mb-1.5" style={{ color: 'rgba(0,0,0,0.4)' }}>{card.host}</p>
+                  <p className="text-[11px] leading-snug" style={{ color: 'rgba(0,0,0,0.5)' }}>{card.desc}</p>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Swagger UI */}

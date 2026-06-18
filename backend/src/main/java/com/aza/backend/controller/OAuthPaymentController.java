@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CheckoutSessionResponse;
 import com.aza.backend.dto.merchant.CreateCheckoutSessionRequest;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/oauth/payments")
 @RequiredArgsConstructor
+@Tag(name = "OAuth Payments", description = "Initiate and confirm payments on behalf of a user")
 public class OAuthPaymentController {
 
     private final OAuthService oAuthService;

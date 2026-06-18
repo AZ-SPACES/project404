@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.oauth.OAuthClientRegistrationRequest;
 import com.aza.backend.dto.oauth.OAuthClientResponse;
@@ -17,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/developer/clients")
 @RequiredArgsConstructor
+@Tag(name = "Developer Clients", description = "Register and manage OAuth client applications")
 public class DeveloperClientController {
 
     private final OAuthService oAuthService;

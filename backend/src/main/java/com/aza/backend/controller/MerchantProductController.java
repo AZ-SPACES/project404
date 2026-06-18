@@ -1,5 +1,7 @@
 package com.aza.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantProduct;
@@ -22,6 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/products")
 @RequiredArgsConstructor
+@Tag(name = "Merchant Products", description = "Product catalog management")
 public class MerchantProductController {
 
     private final MerchantProductRepository productRepository;

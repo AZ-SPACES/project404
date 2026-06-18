@@ -45,6 +45,9 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
     @Query("SELECT m FROM Merchant m WHERE m.autoPayoutEnabled = true AND m.status = com.aza.backend.entity.Merchant.MerchantStatus.ACTIVE")
     List<Merchant> findAllAutoPayoutEligible();
 
+    @Query("SELECT m FROM Merchant m WHERE m.status = com.aza.backend.entity.Merchant.MerchantStatus.ACTIVE ORDER BY m.totalVolume DESC, m.activatedAt DESC")
+    List<Merchant> findActiveForDirectory(Pageable pageable);
+
     @Query(value = """
             SELECT * FROM merchants
             WHERE (:status IS NULL OR status = CAST(:status AS varchar))
