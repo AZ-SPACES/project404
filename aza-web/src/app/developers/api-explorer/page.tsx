@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { LogOut, ChevronRight, ExternalLink, Shield, Key, Copy, Check } from 'lucide-react';
 
-const SwaggerUI = dynamic(() => import('swagger-ui-react'), { ssr: false });
+// We drive the plain Swagger UI bundle (swagger-ui-dist) directly instead of the
+// `swagger-ui-react` wrapper: under React 19 that wrapper's OperationContainer uses
+// UNSAFE_componentWillReceiveProps, which leaves operations stuck on an infinite
+// spinner when expanded. The bundle renders the same UI without that React layer.
 
-// Structurally compatible with swagger-ui-react's loosely-typed Request
+// Structurally compatible with Swagger UI's loosely-typed Request
 type SwaggerRequest = { headers?: Record<string, string> };
 
 // The explorer is test-mode only: it never sends a live (aza_live_) key, so a
@@ -117,6 +119,15 @@ export default function ApiExplorerPage() {
   const [apiKey, setApiKey] = useState('');
   const [mounted, setMounted] = useState(false);
 
+  // The Swagger UI instance reads creds through refs so we can init it once and
+  // not tear it down on every keystroke in the API-key field.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tokenRef = useRef<string | null>(null);
+  const apiKeyRef = useRef('');
+  const initedRef = useRef(false);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+  useEffect(() => { apiKeyRef.current = apiKey; }, [apiKey]);
+
   useEffect(() => {
     const id = 'swagger-ui-css';
     if (!document.getElementById(id)) {
@@ -155,14 +166,43 @@ export default function ApiExplorerPage() {
   function requestInterceptor(req: SwaggerRequest) {
     // Test mode: refuse to send a live key so "Try it out" can never act on real
     // merchant data. Throwing aborts the request and surfaces the message in the UI.
-    if (apiKey && !isTestKey(apiKey)) {
+    const key = apiKeyRef.current;
+    if (key && !isTestKey(key)) {
       throw new Error('AZA API Explorer is test-mode only — use a test key (aza_test_…). Live keys are blocked.');
     }
     const headers = (req.headers ??= {});
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    if (apiKey) headers['X-Api-Key'] = apiKey;
+    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`;
+    if (key) headers['X-Api-Key'] = key;
     return req;
   }
+
+  // Boot the Swagger UI bundle once we have a session and the container is mounted.
+  useEffect(() => {
+    if (!mounted || !token || !containerRef.current || initedRef.current) return;
+    initedRef.current = true;
+    let cancelled = false;
+    // Import the browser bundle directly (not the package index, which pulls in
+    // node-only `path`/`__dirname` via absolute-path.js and breaks bundling).
+    import('swagger-ui-dist/swagger-ui-bundle.js').then((mod) => {
+      const SwaggerUIBundle = (mod.default ?? mod) as typeof import('swagger-ui-dist')['SwaggerUIBundle'];
+      if (cancelled || !containerRef.current) return;
+      SwaggerUIBundle({
+        domNode: containerRef.current,
+        url: `${API}/v3/api-docs`,
+        presets: [SwaggerUIBundle.presets.apis],
+        requestInterceptor,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: -1,
+        tryItOutEnabled: true,
+        // Only GET is executable — writes hit production and aren't sandboxed here.
+        supportedSubmitMethods: ['get'],
+        deepLinking: true,
+      });
+    });
+    return () => { cancelled = true; };
+    // requestInterceptor is stable (reads refs); init must run once when ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, token]);
 
   if (!mounted || !token) return null;
 
@@ -395,18 +435,9 @@ export default function ApiExplorerPage() {
           </div>
         </div>
 
-        {/* Swagger UI */}
+        {/* Swagger UI (rendered into this node by swagger-ui-dist) */}
         <div className="swagger-wrapper">
-          <SwaggerUI
-            url={`${API}/v3/api-docs`}
-            requestInterceptor={requestInterceptor}
-            docExpansion="list"
-            defaultModelsExpandDepth={-1}
-            tryItOutEnabled
-            // Only GET requests are executable. Writes (POST/PUT/PATCH/DELETE) hit
-            // production and aren't sandboxed, so they're read-only in the explorer.
-            supportedSubmitMethods={['get']}
-          />
+          <div ref={containerRef} />
         </div>
       </main>
 

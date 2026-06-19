@@ -67,7 +67,7 @@ services:
       WEBSOCKET_LOCAL_DELIVERY: "true"
       ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems,https://pay.aza.systems
       TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
-      SWAGGER_ENABLED: false
+      SWAGGER_ENABLED: true
       HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
       CHALLENGE_HMAC_SECRET: ${CHALLENGE_HMAC_SECRET}
       PASSKIT_API_KEY: ${PASSKIT_API_KEY:-}
