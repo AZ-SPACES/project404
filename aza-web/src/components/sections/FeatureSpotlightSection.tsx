@@ -43,7 +43,7 @@ const FEATURES: FeatureData[] = [
     desc: "Games, financial tools, entertainment — all running inside Aza. No installs, no new accounts, no switching apps.",
     photo: photo2,
     reverse: true,
-    tag: "60+ apps",
+    tag: "10+ apps",
     bg: "#f5f5f7",
   },
   {
