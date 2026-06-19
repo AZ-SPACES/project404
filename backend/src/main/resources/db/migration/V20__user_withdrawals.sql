@@ -1,4 +1,4 @@
-CREATE TABLE user_withdrawals (
+CREATE TABLE IF NOT EXISTS user_withdrawals (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES users(id),
     amount      NUMERIC(18, 2) NOT NULL CHECK (amount > 0),
@@ -13,5 +13,5 @@ CREATE TABLE user_withdrawals (
     reviewed_by UUID REFERENCES users(id)
 );
 
-CREATE INDEX idx_user_withdrawals_user ON user_withdrawals(user_id);
-CREATE INDEX idx_user_withdrawals_status ON user_withdrawals(status);
+CREATE INDEX IF NOT EXISTS idx_user_withdrawals_user ON user_withdrawals(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_withdrawals_status ON user_withdrawals(status);
