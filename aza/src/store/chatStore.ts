@@ -280,6 +280,86 @@ function makeClientId(): string {
   return `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// ─── Device key-bundle cache ─────────────────────────────────────────────────
+// Sending a message fans out a per-device ciphertext, which means fetching the
+// recipient's device bundles AND our own other-device bundles. These were hit
+// over HTTP on *every* send, adding two sequential round-trips to the delivery
+// path (and the "sent" tick) even during a rapid back-and-forth. The fan-out
+// only reads each bundle's long-lived identity public key — it never consumes a
+// one-time prekey here — so caching them briefly is safe: the only staleness
+// risk is a device linked within the TTL window, which the v3 session + history
+// sync already backfill. Bundles change rarely (device link/unlink), so a short
+// TTL keeps conversation bursts off the network without going stale.
+const DEVICE_BUNDLE_TTL_MS = 3 * 60 * 1000;
+type CachedBundles = { bundles: unknown[]; expiry: number };
+const recipientBundleCache = new Map<string, CachedBundles>();
+let ownBundleCache: CachedBundles | null = null;
+
+async function fetchRecipientDeviceBundlesCached(otherUserId: string): Promise<any[]> {
+  const hit = recipientBundleCache.get(otherUserId);
+  if (hit && hit.expiry > Date.now()) return hit.bundles as any[];
+  const { data } = await fetchUserKeyBundles(otherUserId);
+  const bundles: any[] = data?.data ?? [];
+  if (bundles.length) recipientBundleCache.set(otherUserId, { bundles, expiry: Date.now() + DEVICE_BUNDLE_TTL_MS });
+  return bundles;
+}
+
+async function fetchOwnDeviceBundlesCached(): Promise<any[]> {
+  if (ownBundleCache && ownBundleCache.expiry > Date.now()) return ownBundleCache.bundles as any[];
+  const { data } = await fetchOwnKeyBundles();
+  const bundles: any[] = data?.data ?? [];
+  if (bundles.length) ownBundleCache = { bundles, expiry: Date.now() + DEVICE_BUNDLE_TTL_MS };
+  return bundles;
+}
+
+/** Drop a peer's cached device bundles — call when their identity key rotates. */
+function invalidateRecipientBundles(otherUserId: string): void {
+  recipientBundleCache.delete(otherUserId);
+}
+
+/** Clear all cached bundles (holds other users' keys in memory) — call on logout. */
+function clearDeviceBundleCache(): void {
+  recipientBundleCache.clear();
+  ownBundleCache = null;
+}
+
+// ─── Encrypted-at-rest write coalescing ──────────────────────────────────────
+// Every incoming/outgoing message used to trigger a full thread persist:
+// JSON.stringify the entire thread → AES-256-GCM encrypt it (pure JS, on the JS
+// thread) → write the whole blob to AsyncStorage. On a busy thread that janks
+// the JS thread right when a message lands. We coalesce the high-frequency
+// writes behind a trailing debounce so bursts (history backfill, rapid replies)
+// collapse into one write. The cache is only an optimization — the server is
+// the source of truth and loadHistory re-decrypts on next open — so a dropped
+// trailing write on a hard kill costs at most a re-decrypt, never data.
+const THREAD_SAVE_DEBOUNCE_MS = 700;
+const pendingThreadSaves = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Cancel any pending debounced save for this thread (an immediate write supersedes it). */
+function cancelThreadSave(uid: string, chatId: string): void {
+  const key = `${uid}:${chatId}`;
+  const t = pendingThreadSaves.get(key);
+  if (t) { clearTimeout(t); pendingThreadSaves.delete(key); }
+}
+
+/** Drop every pending debounced save. Used on logout so a trailing write can't
+ *  resurrect a thread cache (with a freshly-minted master key) after the wipe. */
+function cancelAllThreadSaves(): void {
+  for (const t of pendingThreadSaves.values()) clearTimeout(t);
+  pendingThreadSaves.clear();
+}
+
+/** Schedule a trailing-debounced persist. `getThread` is read fresh at flush time. */
+function scheduleThreadSave(uid: string, chatId: string, getThread: () => LocalMessage[]): void {
+  const key = `${uid}:${chatId}`;
+  const existing = pendingThreadSaves.get(key);
+  if (existing) clearTimeout(existing);
+  pendingThreadSaves.set(key, setTimeout(() => {
+    pendingThreadSaves.delete(key);
+    saveCachedThread(uid, chatId, getThread()).catch(() => {});
+  }, THREAD_SAVE_DEBOUNCE_MS));
+}
+
 // ─── Store ──────────────────────────────────────────────────────────────────
 
 export const useChatStore = create<ChatStoreState>((set, get) => ({
@@ -307,6 +387,11 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
   resetForLogout: async () => {
     const uid = get().selfUserId;
+    // Kill any in-flight debounced persists first — otherwise one could fire
+    // after the wipe below and re-create an encrypted thread on disk.
+    cancelAllThreadSaves();
+    // Drop cached device bundles — they hold other users' keys in memory.
+    clearDeviceBundleCache();
     if (uid) {
       await Promise.all([
         wipeAllChatCaches(uid),
@@ -419,9 +504,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const { data } = await getChatMessages(chatId, 0, 50);
       const page = data?.data;
       const items: any[] = (page?.content ?? []).slice().reverse(); // oldest first
+      // Index what we already hold decrypted so the loop can skip re-decrypting
+      // messages that haven't changed — the common case when reopening a chat.
+      const cachedById = new Map<string, LocalMessage>();
+      for (const cm of cached) if (cm.serverId) cachedById.set(cm.serverId, cm);
       const decrypted: LocalMessage[] = [];
       for (const m of items) {
-        const local = await decryptServerMessage(m, chatId, selfUserId, selfDeviceId, selfIdentityPrivate);
+        const local = await decryptServerMessage(m, chatId, selfUserId, selfDeviceId, selfIdentityPrivate, cachedById);
         if (local) decrypted.push(local);
       }
       const next = decrypted.reduce<LocalMessage[]>(
@@ -429,7 +518,15 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         cached,
       );
       set((s) => ({ messagesByChat: { ...s.messagesByChat, [chatId]: next } }));
-      await saveCachedThread(selfUserId, chatId, next);
+      // Only re-encrypt + rewrite the whole thread when the server actually
+      // brought something new or changed — reopening an unchanged chat shouldn't
+      // pay for a full-thread AES re-encrypt and disk write.
+      const changed = next.length !== cached.length || decrypted.some((d) => {
+        const c = d.serverId ? cachedById.get(d.serverId) : undefined;
+        return !c || c.text !== d.text || c.status !== d.status
+          || c.isDeleted !== d.isDeleted || (c.editedAt ?? null) !== (d.editedAt ?? null);
+      });
+      if (changed) await saveCachedThread(selfUserId, chatId, next);
       const lastMsg = lastVisibleMessage(next);
       if (lastMsg) {
         set((s) => {
@@ -498,6 +595,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             // proactive deletion stops the entry from leaking when the
             // user later resets.
             deleteSessionRoot(selfUserId, otherUserId).catch(() => {});
+            // Cached device bundles carry the old identity key — drop them so
+            // the next send re-fetches and encrypts to the rotated key.
+            invalidateRecipientBundles(otherUserId);
           }
         } catch (e) {
           console.warn('[E2EE] TOFU check failed', e);
@@ -576,8 +676,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       // Recipient devices
       let recipientBundles: any[] = [];
       try {
-        const { data } = await fetchUserKeyBundles(chat.otherUserId);
-        recipientBundles = data?.data ?? [];
+        recipientBundles = await fetchRecipientDeviceBundlesCached(chat.otherUserId);
       } catch {
         // Fall back to single-bundle fetch so we can still send.
         try {
@@ -604,8 +703,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
       // Sender's own other devices (so Device 2 can read what Device 1 sent)
       try {
-        const { data } = await fetchOwnKeyBundles();
-        const ownBundles: any[] = data?.data ?? [];
+        const ownBundles = await fetchOwnDeviceBundlesCached();
         for (const bundle of ownBundles) {
           if (bundle.deviceId === selfDeviceId || !bundle.identityPublicKey) continue;
           const env = encryptForRecipient({
@@ -692,7 +790,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           if (!established) markSessionEstablished(selfUserId, chat.otherUserId).catch(() => {});
         });
         const uid = get().selfUserId;
-        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        if (uid) scheduleThreadSave(uid, chatId, () => get().messagesByChat[chatId] ?? []);
         // Safety net: if the WS echo never arrives (e.g. the connection drops
         // immediately after publish), mark the message failed so retryFailedSends
         // can pick it up on reconnect.
@@ -745,7 +843,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         };
       });
       const uid = get().selfUserId;
-      if (uid) await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []);
+      if (uid) { cancelThreadSave(uid, chatId); await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []); }
     } catch (e) {
       console.warn('[chat] send failed', e);
       set((s) => {
@@ -808,8 +906,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
       let recipientBundles: any[] = [];
       try {
-        const { data } = await fetchUserKeyBundles(chat.otherUserId);
-        recipientBundles = data?.data ?? [];
+        recipientBundles = await fetchRecipientDeviceBundlesCached(chat.otherUserId);
       } catch {
         try {
           const peer = await get().ensurePeerKeys(chat.otherUserId);
@@ -834,8 +931,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       }
 
       try {
-        const { data } = await fetchOwnKeyBundles();
-        const ownBundles: any[] = data?.data ?? [];
+        const ownBundles = await fetchOwnDeviceBundlesCached();
         for (const bundle of ownBundles) {
           if (bundle.deviceId === selfDeviceId || !bundle.identityPublicKey) continue;
           const env = encryptForRecipient({
@@ -914,7 +1010,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           body: JSON.stringify(payload),
         });
         const uid = get().selfUserId;
-        if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+        if (uid) scheduleThreadSave(uid, chatId, () => get().messagesByChat[chatId] ?? []);
         setTimeout(() => {
           set((s) => {
             const thread = s.messagesByChat[chatId] ?? [];
@@ -950,7 +1046,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       });
 
       const uid = get().selfUserId;
-      if (uid) await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []);
+      if (uid) { cancelThreadSave(uid, chatId); await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []); }
     } catch (e) {
       console.warn('[chat] sendMedia failed', e);
       set((s) => {
@@ -1009,7 +1105,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         };
       });
       const uid = get().selfUserId;
-      if (uid) await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []);
+      if (uid) { cancelThreadSave(uid, chatId); await saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []); }
     } catch (e) {
       console.warn('[chat] deleteMessage failed', e);
     }
@@ -1064,7 +1160,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     set((s) => ({
       messagesByChat: { ...s.messagesByChat, [chatId]: [] },
     }));
-    if (selfUserId) clearCachedThread(selfUserId, chatId).catch(() => {});
+    // Drop any pending debounced save so it can't re-write the thread we're
+    // about to clear from disk.
+    if (selfUserId) { cancelThreadSave(selfUserId, chatId); clearCachedThread(selfUserId, chatId).catch(() => {}); }
   },
 
   retryFailedSends: async () => {
@@ -1114,7 +1212,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           });
           // Side-effects: persist and (if not self) tell server it arrived.
           const uid = get().selfUserId;
-          if (uid) saveCachedThread(uid, chatId, get().messagesByChat[chatId] ?? []).catch(() => {});
+          if (uid) scheduleThreadSave(uid, chatId, () => get().messagesByChat[chatId] ?? []);
           if (!local.isSelf) markChatDelivered(chatId).catch(() => {});
         })().catch((e) => console.warn('[chat] decrypt failed', e));
         break;
@@ -1309,6 +1407,7 @@ async function decryptServerMessage(
   selfUserId: string,
   selfDeviceId: string,
   selfIdentityPrivate: Uint8Array,
+  cachedById?: Map<string, LocalMessage>,
 ): Promise<LocalMessage | null> {
   if (!m?.id) return null;
   const isSelf = m.isSelf === true || m.senderId === selfUserId;
@@ -1319,11 +1418,23 @@ async function decryptServerMessage(
 
   let text = '';
   let decryptOk = true;
+  let mediaKeySecret: string | null = null;
+
+  // Reuse already-decrypted plaintext from the local cache instead of re-running
+  // ECDH/AES (and, on the v3 path, re-reading SecureStore) for a message we
+  // already hold. Message bodies are immutable once sent, so the only thing that
+  // can invalidate a cached body is an edit — gated here by comparing editedAt.
+  const prior = cachedById?.get(m.id);
+  const canReuse = !m.isDeleted && !m.content && !!prior?.decryptOk
+    && editedAt === (prior!.editedAt ?? null);
 
   if (m.isDeleted) {
     text = '';
   } else if (m.content) {
     text = m.content;
+  } else if (canReuse) {
+    text = prior!.text;
+    mediaKeySecret = prior!.mediaKeySecret ?? null;
   } else {
     // ── Multi-device path ────────────────────────────────────────────────────
     const dcMap: Record<string, { ciphertext: string; ephemeralKey: string; preKeyId?: string; senderIdentityPublicKey?: string }> | null =
@@ -1445,7 +1556,6 @@ async function decryptServerMessage(
   // carrying the per-file key and the caption. Unwrap it so `text` holds the
   // caption and the key is exposed to the decrypt-on-render path. Legacy media
   // (plain caption / placeholder) and text messages pass through untouched.
-  let mediaKeySecret: string | null = null;
   const isMediaType = m.type === 'IMAGE' || m.type === 'VIDEO'
     || m.type === 'DOCUMENT' || m.type === 'VOICE_NOTE';
   if (isMediaType && decryptOk && text.startsWith('{"v":2')) {

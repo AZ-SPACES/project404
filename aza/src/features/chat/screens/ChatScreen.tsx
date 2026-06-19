@@ -95,6 +95,22 @@ export default function ChatScreen() {
     }
   }, [declineMoneyRequest, sendText, setToastMessage]);
 
+  // Stable per-message handlers. These take the message as an argument so the
+  // bubble can bind them once to its own row, instead of us minting a fresh
+  // closure per row on every render (which defeated ChatMessageBubble's memo
+  // and re-rendered the entire list on each incoming frame).
+  const handlePayPress = useCallback((amount: number, requestId: string | undefined, messageId: string) => {
+    setPaymentSheet(
+      requestId
+        ? { visible: true, mode: 'pay', prefillAmount: amount, requestId, settleMsgId: messageId }
+        : { visible: true, mode: 'send', prefillAmount: amount, settleMsgId: messageId },
+    );
+  }, [setPaymentSheet]);
+
+  const handleStatusPress = useCallback((m: Message) => {
+    navigation.navigate('MessageInfo', { message: m });
+  }, [navigation]);
+
   // --------------------------------------------------------------------------
   // FlatList helpers
   // --------------------------------------------------------------------------
@@ -125,20 +141,18 @@ export default function ChatScreen() {
         <SwipeableMessageBubble message={item} onSwipeToReply={handleSwipeToReply} disabled={selectMode || undefined}>
           <ChatMessageBubble
             message={item}
-            onLongPress={() => handleSelectMessage(item)}
+            onLongPress={handleSelectMessage}
             onImagePress={setFullScreenUri}
-            onPayPress={(amount, requestId, messageId) => setPaymentSheet(
-              // With a request id we settle that request (fixed amount, straight
-              // to PIN); legacy cards without one fall back to a prefilled send.
-              // settleMsgId keys the card itself so the receipt can flip it.
-              requestId
-                ? { visible: true, mode: 'pay', prefillAmount: amount, requestId, settleMsgId: messageId }
-                : { visible: true, mode: 'send', prefillAmount: amount, settleMsgId: messageId },
-            )}
+            // With a request id we settle that request (fixed amount, straight
+            // to PIN); legacy cards without one fall back to a prefilled send.
+            // settleMsgId keys the card itself so the receipt can flip it.
+            onPayPress={handlePayPress}
             onDeclinePress={handleDeclineRequest}
             paidRequestIds={paidRequestIds}
             declinedRequestIds={declinedRequestIds}
-            onStatusPress={item.sender === 'me' && item.status ? () => navigation.navigate('MessageInfo', { message: item }) : undefined}
+            // The bubble only wires this onto own messages that carry a status
+            // tick, so passing it unconditionally keeps behaviour identical.
+            onStatusPress={handleStatusPress}
             onResend={handleResendMedia}
             bubbleColor={chatBubbleColor || undefined}
             fontSize={chatFontSize}
@@ -147,13 +161,13 @@ export default function ChatScreen() {
             highlight={searchActive && searchQuery ? searchQuery : undefined}
             isSelected={selectMode ? selectedMsgIds.includes(item.id) : undefined}
             isSelectMode={selectMode || undefined}
-            onSelectToggle={selectMode ? () => handleSelectMessage(item) : undefined}
+            onSelectToggle={handleSelectMessage}
             onViewOnce={handleViewOnce}
           />
         </SwipeableMessageBubble>
       </View>
     );
-  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, navigation, setPaymentSheet, paidRequestIds, declinedRequestIds, handleDeclineRequest, newMsgIdsRef, initialMsgCountRef2, handleViewOnce, handleResendMedia]);
+  }, [filteredMessages, styles.dateHeaderContainer, styles.dateHeaderText, styles.unreadSeparator, styles.unreadLine, styles.unreadLabel, handleSelectMessage, handleSwipeToReply, chatBubbleColor, chatFontSize, setFullScreenUri, searchActive, searchQuery, selectMode, selectedMsgIds, handlePayPress, handleStatusPress, paidRequestIds, declinedRequestIds, handleDeclineRequest, newMsgIdsRef, initialMsgCountRef2, handleViewOnce, handleResendMedia]);
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
   const listFooter = useMemo(() => isOtherTyping ? <ChatTypingIndicator /> : null, [isOtherTyping]);

@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.RejectedExecutionException;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.dto.e2ee.DeviceCiphertextDto;
 
@@ -201,16 +202,27 @@ public class ChatService {
         chatRepository.save(chat);
 
         MessageResponse response = toMessageResponse(message, sender.getId());
-        notificationService.sendNewMessageNotification(
-                recipientId,
-                sender.getFirstName() + " " + sender.getLastName(),
-                sender.getId(),
-                chat.getId().toString(),
-                sender.getProfileImageUrl());
 
+        // Deliver in real time FIRST — the recipient's live socket must not wait
+        // on the notification/FCM path, which previously ran a blocking Firebase
+        // HTTP call (and an extra DB write) ahead of this publish.
         webSocketPublisher.publishToChatRoom(
                 chat.getParticipantOneId(), chat.getParticipantTwoId(),
                 WebSocketEventType.CHAT_MESSAGE, response);
+
+        // Push + in-app notification are best-effort and run off-thread (@Async).
+        // Under sustained overload the bounded executor rejects new work; swallow
+        // that so a notification backlog can never fail an already-delivered send.
+        try {
+            notificationService.sendNewMessageNotification(
+                    recipientId,
+                    sender.getFirstName() + " " + sender.getLastName(),
+                    sender.getId(),
+                    chat.getId().toString(),
+                    sender.getProfileImageUrl());
+        } catch (RejectedExecutionException e) {
+            log.warn("New-message notification dropped (executor saturated) for chat {}", chat.getId());
+        }
 
         log.debug("Message sent in chat {} by user {}", chat.getId(), sender.getId());
         return response;
@@ -225,8 +237,20 @@ public class ChatService {
         assertParticipant(chat, user.getId());
 
         int cappedSize = Math.min(size, 50);
-        return chatMessageRepository.findByChatId(chatId, PageRequest.of(page, cappedSize))
-                .map(m -> toMessageResponse(m, user.getId()));
+        Page<ChatMessage> pageData = chatMessageRepository.findByChatId(chatId, PageRequest.of(page, cappedSize));
+
+        // Batch-load the multi-device envelopes for the whole page in one query
+        // and group by message id, instead of issuing a findByMessageId per row.
+        List<UUID> messageIds = pageData.getContent().stream().map(ChatMessage::getId).toList();
+        Map<UUID, List<MessageCiphertext>> ciphertextsByMessage = new HashMap<>();
+        if (!messageIds.isEmpty()) {
+            for (MessageCiphertext row : messageCiphertextRepository.findByMessageIdIn(messageIds)) {
+                ciphertextsByMessage.computeIfAbsent(row.getMessageId(), k -> new ArrayList<>()).add(row);
+            }
+        }
+
+        return pageData.map(m -> toMessageResponse(m, user.getId(),
+                ciphertextsByMessage.getOrDefault(m.getId(), List.of())));
     }
 
     // ==================== MARK AS READ ====================
@@ -687,6 +711,15 @@ public class ChatService {
     }
 
     private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId) {
+        return toMessageResponse(message, currentUserId, null);
+    }
+
+    /**
+     * @param preloadedCiphertexts envelopes for this message when the caller has
+     *   already batch-loaded them (history pages); null means load on demand.
+     */
+    private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId,
+                                              List<MessageCiphertext> preloadedCiphertexts) {
         PaymentRequestResponse paymentRequest = null;
         if (message.getType() == ChatMessage.MessageType.PAYMENT_REQUEST
                 && message.getPaymentRequestId() != null) {
@@ -715,7 +748,9 @@ public class ChatService {
         // to top-level ciphertext for backward compat.
         Map<String, DeviceCiphertextDto> deviceCiphertexts = null;
         if (!Boolean.TRUE.equals(message.getIsDeleted())) {
-            List<MessageCiphertext> rows = messageCiphertextRepository.findByMessageId(message.getId());
+            List<MessageCiphertext> rows = preloadedCiphertexts != null
+                    ? preloadedCiphertexts
+                    : messageCiphertextRepository.findByMessageId(message.getId());
             if (!rows.isEmpty()) {
                 deviceCiphertexts = new HashMap<>();
                 for (MessageCiphertext row : rows) {
