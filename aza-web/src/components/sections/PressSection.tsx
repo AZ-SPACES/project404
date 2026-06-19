@@ -35,11 +35,9 @@ export async function PressSection() {
     return null;
   }
 
-  const names = merchants.map((m) => m.businessName);
-
   // Repeat until the track is wide enough for a seamless loop, then double it.
-  const base = [...names];
-  while (base.length < 10) base.push(...names);
+  const base = [...merchants];
+  while (base.length < 10) base.push(...merchants);
   const doubled = [...base, ...base];
 
   return (
@@ -56,16 +54,28 @@ export async function PressSection() {
         Merchants building on AZA
       </p>
 
-      <div className="press-marquee-track flex" style={{ animation: "pressMarquee 32s linear infinite" }}>
-        {doubled.map((name, i) => (
-          <span
-            key={i}
-            className="shrink-0 px-8 text-[0.9rem] font-semibold select-none"
-            style={{ color: "#c7c7cc", letterSpacing: "-0.01em" }}
-          >
-            {name}
-          </span>
-        ))}
+      <div className="press-marquee-track flex items-center" style={{ animation: "pressMarquee 32s linear infinite" }}>
+        {doubled.map((m, i) =>
+          m.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={m.logoUrl}
+              alt={m.businessName}
+              title={m.businessName}
+              loading="lazy"
+              className="shrink-0 mx-8 h-7 w-auto max-w-[120px] object-contain rounded-md select-none"
+            />
+          ) : (
+            <span
+              key={i}
+              className="shrink-0 px-8 text-[0.9rem] font-semibold select-none"
+              style={{ color: "#c7c7cc", letterSpacing: "-0.01em" }}
+            >
+              {m.businessName}
+            </span>
+          )
+        )}
       </div>
 
       <style>{`
