@@ -17,25 +17,6 @@ const partners = [
     sub: "Interoperable Payments",
     color: "#2B5EA7",
   },
-  {
-    name: "MTN Ghana",
-    abbr: "MTN",
-    sub: "Network Partner",
-    color: "#FFCC00",
-    dark: true,
-  },
-  {
-    name: "Vodafone Cash",
-    abbr: "VDF",
-    sub: "Network Partner",
-    color: "#E60000",
-  },
-  {
-    name: "AirtelTigo Money",
-    abbr: "AT",
-    sub: "Network Partner",
-    color: "#C8102E",
-  },
 ];
 
 export function PartnerBarSection() {
@@ -56,7 +37,7 @@ export function PartnerBarSection() {
                 className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-[0.8rem] tracking-tight shadow-sm transition-transform duration-200 group-hover:scale-105"
                 style={{
                   background: p.color,
-                  color: p.dark ? "#1d1d1f" : "#ffffff",
+                  color: "#1d1d1f",
                   letterSpacing: "-0.02em",
                 }}
                 aria-hidden="true"
