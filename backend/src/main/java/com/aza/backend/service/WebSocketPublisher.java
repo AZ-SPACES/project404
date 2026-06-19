@@ -6,6 +6,7 @@ import com.aza.backend.dto.websocket.WebSocketMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,16 @@ public class WebSocketPublisher {
     private final StringRedisTemplate redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+
+    /**
+     * Single-instance optimization: when true, real-time events are delivered
+     * straight to the local STOMP session instead of going through a Redis
+     * publish/subscribe round-trip. MUST stay false when running more than one
+     * backend instance — a recipient connected to another instance would never
+     * receive the event. Default false keeps the safe cross-instance behavior.
+     */
+    @Value("${app.websocket.local-delivery:false}")
+    private boolean localDeliveryOnly;
 
     /**
      * Send a notification event to a specific user via Redis pub/sub.
@@ -75,10 +86,36 @@ public class WebSocketPublisher {
     private void publish(String channel, WebSocketEventType type, Object payload) {
         try {
             String json = objectMapper.writeValueAsString(WebSocketMessage.of(type, payload));
-            redisTemplate.convertAndSend(channel, json);
+            if (localDeliveryOnly) {
+                deliverLocally(channel, json);
+            } else {
+                redisTemplate.convertAndSend(channel, json);
+            }
         } catch (Exception e) {
             log.error("Failed to publish WebSocket event type={} to channel={}: {}",
                     type, channel, e.getMessage());
+        }
+    }
+
+    /**
+     * Forward straight to the local STOMP destination, skipping Redis. Mirrors the
+     * channel→destination mapping in {@link com.aza.backend.websocket.handler.RedisMessageSubscriber}.
+     */
+    private void deliverLocally(String channel, String json) {
+        if (channel.startsWith(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX)) {
+            messagingTemplate.convertAndSendToUser(
+                    channel.substring(RedisPubSubConfig.CHAT_USER_CHANNEL_PREFIX.length()), "/queue/chat", json);
+        } else if (channel.startsWith(RedisPubSubConfig.CALL_CHANNEL_PREFIX)) {
+            messagingTemplate.convertAndSendToUser(
+                    channel.substring(RedisPubSubConfig.CALL_CHANNEL_PREFIX.length()), "/queue/calls", json);
+        } else if (channel.startsWith(RedisPubSubConfig.PRESENCE_USER_CHANNEL_PREFIX)) {
+            messagingTemplate.convertAndSendToUser(
+                    channel.substring(RedisPubSubConfig.PRESENCE_USER_CHANNEL_PREFIX.length()), "/queue/presence", json);
+        } else if (channel.startsWith(RedisPubSubConfig.NOTIFY_CHANNEL_PREFIX)) {
+            messagingTemplate.convertAndSendToUser(
+                    channel.substring(RedisPubSubConfig.NOTIFY_CHANNEL_PREFIX.length()), "/queue/notifications", json);
+        } else if (channel.equals(RedisPubSubConfig.ADMIN_SUPPORT_CHANNEL)) {
+            messagingTemplate.convertAndSend("/topic/admin/support", json);
         }
     }
 }

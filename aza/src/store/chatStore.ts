@@ -1200,6 +1200,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
             selfIdentityPrivate,
           );
           if (!local) return;
+          // Dev-only latency probe: when our own echo lands, the matching
+          // optimistic entry's timestamp is the moment we hit send, so the delta
+          // is the full send→server→echo round trip.
+          if (__DEV__ && local.isSelf) {
+            const pending = (get().messagesByChat[chatId] ?? [])
+              .find((m) => m.clientId === local.clientId && m.status === 'pending');
+            if (pending) console.log(`[chat-perf] send→echo RTT ${Date.now() - pending.timestamp}ms`);
+          }
           set((s) => {
             const thread = s.messagesByChat[chatId] ?? [];
             return {

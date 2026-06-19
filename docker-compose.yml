@@ -62,6 +62,9 @@ services:
       TURN_HOST: ${TURN_HOST:-turn.aza.systems}
       APP_BASE_URL: https://aza.systems
       APP_API_BASE_URL: https://api.aza.systems
+      # Single-instance deploy: skip the Redis hop for real-time delivery.
+      # Set to "false" if you ever scale aza-backend beyond one instance.
+      WEBSOCKET_LOCAL_DELIVERY: "true"
       ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems,https://pay.aza.systems
       TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
       SWAGGER_ENABLED: false

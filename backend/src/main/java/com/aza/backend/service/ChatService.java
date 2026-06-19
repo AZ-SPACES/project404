@@ -30,6 +30,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RejectedExecutionException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.dto.e2ee.DeviceCiphertextDto;
 
@@ -117,18 +119,14 @@ public class ChatService {
 
     @Transactional
     public MessageResponse sendMessage(User sender, Chat chat, SendMessageRequest request) {
+        long startNanos = System.nanoTime();
         assertParticipant(chat, sender.getId());
 
         UUID recipientId = getOtherParticipantId(chat, sender.getId());
 
-        // Enforce block in both directions (only for non-support chats)
-        if (!chat.isSupport()) {
-            if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(recipientId, sender.getId())) {
-                throw new AppException("You cannot send messages to this user");
-            }
-            if (blockedUserRepository.existsByBlockerIdAndBlockedUserId(sender.getId(), recipientId)) {
-                throw new AppException("You cannot send messages to this user");
-            }
+        // Enforce block in both directions in a single query (non-support chats).
+        if (!chat.isSupport() && blockedUserRepository.existsBlockBetween(sender.getId(), recipientId)) {
+            throw new AppException("You cannot send messages to this user");
         }
 
         // Validate a message type
@@ -201,30 +199,33 @@ public class ChatService {
         chat.setLastMessageAt(LocalDateTime.now());
         chatRepository.save(chat);
 
-        MessageResponse response = toMessageResponse(message, sender.getId());
+        // Build the wire payload straight from the request's in-memory envelopes —
+        // no read-back of the rows we just saved.
+        MessageResponse response = buildMessageResponse(message, sender.getId(), request.getDeviceCiphertexts());
 
-        // Deliver in real time FIRST — the recipient's live socket must not wait
-        // on the notification/FCM path, which previously ran a blocking Firebase
-        // HTTP call (and an extra DB write) ahead of this publish.
-        webSocketPublisher.publishToChatRoom(
-                chat.getParticipantOneId(), chat.getParticipantTwoId(),
-                WebSocketEventType.CHAT_MESSAGE, response);
+        // Defer real-time delivery + notification until the transaction commits:
+        // we never push a message that could roll back, and the network I/O (Redis
+        // fan-out, FCM submit) no longer holds the DB transaction open. The
+        // notification stays best-effort — a saturated async executor drops it
+        // rather than failing an already-delivered send.
+        final UUID p1 = chat.getParticipantOneId();
+        final UUID p2 = chat.getParticipantTwoId();
+        final UUID chatId = chat.getId();
+        final String senderName = sender.getFirstName() + " " + sender.getLastName();
+        final String senderAvatar = sender.getProfileImageUrl();
+        final UUID senderId = sender.getId();
+        runAfterCommit(() -> {
+            webSocketPublisher.publishToChatRoom(p1, p2, WebSocketEventType.CHAT_MESSAGE, response);
+            try {
+                notificationService.sendNewMessageNotification(
+                        recipientId, senderName, senderId, chatId.toString(), senderAvatar);
+            } catch (RejectedExecutionException e) {
+                log.warn("New-message notification dropped (executor saturated) for chat {}", chatId);
+            }
+        });
 
-        // Push + in-app notification are best-effort and run off-thread (@Async).
-        // Under sustained overload the bounded executor rejects new work; swallow
-        // that so a notification backlog can never fail an already-delivered send.
-        try {
-            notificationService.sendNewMessageNotification(
-                    recipientId,
-                    sender.getFirstName() + " " + sender.getLastName(),
-                    sender.getId(),
-                    chat.getId().toString(),
-                    sender.getProfileImageUrl());
-        } catch (RejectedExecutionException e) {
-            log.warn("New-message notification dropped (executor saturated) for chat {}", chat.getId());
-        }
-
-        log.debug("Message sent in chat {} by user {}", chat.getId(), sender.getId());
+        log.debug("Message sent in chat {} by user {} (server compute {} us)",
+                chat.getId(), sender.getId(), (System.nanoTime() - startNanos) / 1000);
         return response;
     }
 
@@ -710,16 +711,68 @@ public class ChatService {
         };
     }
 
+    /**
+     * Run {@code action} after the current transaction commits — or immediately
+     * if no transaction is active — so we never publish/notify for a message that
+     * later rolls back, and keep network I/O out of the DB transaction window.
+     */
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
+    }
+
     private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId) {
-        return toMessageResponse(message, currentUserId, null);
+        // On-demand single-message path: load envelopes from the DB.
+        Map<String, DeviceCiphertextDto> dc = Boolean.TRUE.equals(message.getIsDeleted())
+                ? null
+                : toDeviceCiphertextMap(messageCiphertextRepository.findByMessageId(message.getId()));
+        return buildMessageResponse(message, currentUserId, dc);
     }
 
     /**
      * @param preloadedCiphertexts envelopes for this message when the caller has
-     *   already batch-loaded them (history pages); null means load on demand.
+     *   already batch-loaded them (history pages); null means none.
      */
     private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId,
                                               List<MessageCiphertext> preloadedCiphertexts) {
+        Map<String, DeviceCiphertextDto> dc = Boolean.TRUE.equals(message.getIsDeleted())
+                ? null
+                : toDeviceCiphertextMap(preloadedCiphertexts);
+        return buildMessageResponse(message, currentUserId, dc);
+    }
+
+    private Map<String, DeviceCiphertextDto> toDeviceCiphertextMap(List<MessageCiphertext> rows) {
+        if (rows == null || rows.isEmpty()) return null;
+        Map<String, DeviceCiphertextDto> map = new HashMap<>();
+        for (MessageCiphertext row : rows) {
+            map.put(row.getDeviceId(), DeviceCiphertextDto.builder()
+                    .ciphertext(row.getCiphertext())
+                    .ephemeralKey(row.getEphemeralKey())
+                    .preKeyId(row.getPreKeyId())
+                    .senderIdentityPublicKey(row.getSenderIdentityPublicKey())
+                    .build());
+        }
+        return map;
+    }
+
+    /**
+     * Build the wire response from an already-resolved envelope map. The chat
+     * send path passes the request's in-memory map straight through, avoiding a
+     * read-back of the rows it just wrote. A null/empty map means a legacy
+     * message and the client falls back to the top-level ciphertext fields.
+     */
+    private MessageResponse buildMessageResponse(ChatMessage message, UUID currentUserId,
+                                                 Map<String, DeviceCiphertextDto> deviceCiphertexts) {
+        if (deviceCiphertexts != null && deviceCiphertexts.isEmpty()) deviceCiphertexts = null;
+        if (Boolean.TRUE.equals(message.getIsDeleted())) deviceCiphertexts = null;
         PaymentRequestResponse paymentRequest = null;
         if (message.getType() == ChatMessage.MessageType.PAYMENT_REQUEST
                 && message.getPaymentRequestId() != null) {
@@ -742,26 +795,6 @@ public class ChatService {
                             .createdAt(pr.getCreatedAt() != null ? pr.getCreatedAt().toString() : null)
                             .build())
                     .orElse(null);
-        }
-
-        // Load multi-device envelopes.  Null map = legacy message, client falls back
-        // to top-level ciphertext for backward compat.
-        Map<String, DeviceCiphertextDto> deviceCiphertexts = null;
-        if (!Boolean.TRUE.equals(message.getIsDeleted())) {
-            List<MessageCiphertext> rows = preloadedCiphertexts != null
-                    ? preloadedCiphertexts
-                    : messageCiphertextRepository.findByMessageId(message.getId());
-            if (!rows.isEmpty()) {
-                deviceCiphertexts = new HashMap<>();
-                for (MessageCiphertext row : rows) {
-                    deviceCiphertexts.put(row.getDeviceId(), DeviceCiphertextDto.builder()
-                            .ciphertext(row.getCiphertext())
-                            .ephemeralKey(row.getEphemeralKey())
-                            .preKeyId(row.getPreKeyId())
-                            .senderIdentityPublicKey(row.getSenderIdentityPublicKey())
-                            .build());
-                }
-            }
         }
 
         return MessageResponse.builder()
