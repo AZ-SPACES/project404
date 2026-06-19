@@ -129,8 +129,8 @@ public class MerchantController {
 
     @PostMapping("/sessions")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> createSession(
-            @AuthenticationPrincipal Object principal,
-            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ENVIRONMENT_ATTR, required = false) String keyEnvironment,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ENVIRONMENT_ATTR, required = false) String keyEnvironment,
             @Valid @RequestBody CreateCheckoutSessionRequest request) {
         UUID merchantId = resolveMerchantId(principal);
         // A test session is created when the request is authenticated with an aza_test_ key.
@@ -144,7 +144,7 @@ public class MerchantController {
                     + "Only works for sessions created with an aza_test_ key.")
     @PostMapping("/sessions/{sessionId}/simulate")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> simulateSession(
-            @AuthenticationPrincipal Object principal,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID sessionId) {
         UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(checkoutService.simulatePayment(sessionId, merchantId)));
@@ -152,7 +152,7 @@ public class MerchantController {
 
     @GetMapping("/sessions")
     public ResponseEntity<ApiResponse<Page<CheckoutSessionResponse>>> listSessions(
-            @AuthenticationPrincipal Object principal,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status,
@@ -174,7 +174,7 @@ public class MerchantController {
 
     @GetMapping("/sessions/{sessionId}")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> getSession(
-            @AuthenticationPrincipal Object principal,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID sessionId) {
         UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(checkoutService.getMerchantSession(sessionId, merchantId)));
@@ -182,7 +182,7 @@ public class MerchantController {
 
     @PostMapping("/sessions/{sessionId}/expire")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> expireSession(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal User user,
             @PathVariable UUID sessionId) {
         return ResponseEntity.ok(ApiResponse.success(checkoutService.expireSession(sessionId, user.getId())));
     }
