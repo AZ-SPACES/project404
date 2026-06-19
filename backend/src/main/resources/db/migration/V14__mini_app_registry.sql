@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS mini_apps (
     icon_url         TEXT,
     url              TEXT NOT NULL,
     developer_name   VARCHAR(255),
-    support_url      TEXT,
+    support_url      VARCHAR(255),
     version          VARCHAR(20),
     status           VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     submitted_by     UUID NOT NULL,

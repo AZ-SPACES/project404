@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS feedback (
     id          UUID PRIMARY KEY,
     user_id     UUID NOT NULL,
-    rating      SMALLINT NOT NULL,
+    rating      INTEGER NOT NULL,
     comment     TEXT,
     context     VARCHAR(60),
     created_at  TIMESTAMP NOT NULL

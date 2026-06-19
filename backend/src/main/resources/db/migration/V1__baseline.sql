@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS users (
     other_nationality                    VARCHAR(255),
     is_tax_resident_abroad               BOOLEAN,
     tax_country                          VARCHAR(255),
-    is_us_person                         BOOLEAN,
+    -- Entity field `isUSPerson` (no @Column) maps to `isusperson` under the
+    -- physical naming strategy, so the column must match for Hibernate validate.
+    isusperson                           BOOLEAN,
     employment_status                    VARCHAR(50),
     password_hash                        VARCHAR(255) NOT NULL,
     passcode_hash                        VARCHAR(255),
