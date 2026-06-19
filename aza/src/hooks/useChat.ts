@@ -85,6 +85,23 @@ function toMessage(m: LocalMessage): Message {
   };
 }
 
+// Cache the LocalMessage→Message conversion keyed by the *source object ref*.
+// mergeMessage (and the store's update paths) preserve the reference of any
+// unchanged message — only the inserted/merged one becomes a new object — so a
+// cache hit here means the message is genuinely unchanged and we can hand back
+// the exact same Message instance. That stable identity is what lets the
+// memo'd ChatMessageBubble bail out instead of re-rendering the whole list on
+// every incoming frame. A WeakMap evicts entries automatically as the store
+// drops old LocalMessage objects.
+const messageCache = new WeakMap<LocalMessage, Message>();
+function toMessageCached(m: LocalMessage): Message {
+  const hit = messageCache.get(m);
+  if (hit) return hit;
+  const out = toMessage(m);
+  messageCache.set(m, out);
+  return out;
+}
+
 const TYPING_DEBOUNCE_MS = 400;
 
 export function useChat(otherUserId: string | undefined): UseChatResult {
@@ -161,7 +178,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
           m.decryptOk &&
           !(typeof m.expiresAt === 'number' && m.expiresAt > 0 && m.expiresAt <= now),
       )
-      .map(toMessage);
+      .map(toMessageCached);
   // expiryTick is intentional — it drives the periodic re-filter
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thread, expiryTick]);

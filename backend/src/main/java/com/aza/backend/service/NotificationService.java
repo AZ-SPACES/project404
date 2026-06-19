@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -131,6 +132,13 @@ public class NotificationService {
 
     //CONVENIENCE METHODS
 
+    /**
+     * Runs off the request thread: persists the in-app notification and makes the
+     * blocking Firebase HTTP call without gating real-time chat delivery (the WS
+     * publish already happened by the time this is invoked). On a saturated
+     * executor the call site receives RejectedExecutionException and drops it.
+     */
+    @Async("taskExecutor")
     public void sendNewMessageNotification(UUID recipientId, String senderName, UUID senderId, String chatId, String senderAvatar) {
         Map<String, Object> data = new HashMap<>();
         data.put("type", "NEW_MESSAGE");

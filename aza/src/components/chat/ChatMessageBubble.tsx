@@ -20,7 +20,7 @@ type ChatFontSizeProp = 'small' | 'medium' | 'large';
 
 type ChatMessageBubbleProps = {
   message: Message;
-  onLongPress?: () => void;
+  onLongPress?: (message: Message) => void;
   onImagePress?: (uri: string) => void;
   /** messageId is the request card's chat message id — keys legacy cards with no requestId. */
   onPayPress?: (amount: number, requestId: string | undefined, messageId: string) => void;
@@ -29,7 +29,7 @@ type ChatMessageBubbleProps = {
   paidRequestIds?: Set<string> | undefined;
   /** Money-request ids (or legacy card message ids) declined in this chat — flips request cards to Declined. */
   declinedRequestIds?: Set<string> | undefined;
-  onStatusPress?: (() => void) | undefined;
+  onStatusPress?: ((message: Message) => void) | undefined;
   /** Retry a failed media send. */
   onResend?: ((messageId: string) => void) | undefined;
   bubbleColor?: string | undefined;
@@ -39,7 +39,7 @@ type ChatMessageBubbleProps = {
   highlight?: string | undefined;
   isSelected?: boolean | undefined;
   isSelectMode?: boolean | undefined;
-  onSelectToggle?: (() => void) | undefined;
+  onSelectToggle?: ((message: Message) => void) | undefined;
   onViewOnce?: ((messageId: string) => void) | undefined;
 };
 
@@ -509,18 +509,27 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Bind the per-message callbacks to this bubble's `message` once. The parent
+  // hands us stable handlers (it can't pre-bind without minting a new closure
+  // per row, which would defeat the memo); we close over `message` here, and
+  // since `message` keeps a stable identity for unchanged rows these wrappers
+  // stay referentially stable too.
+  const handleLongPress = useCallback(() => onLongPress?.(message), [onLongPress, message]);
+  const handleSelectToggle = useCallback(() => onSelectToggle?.(message), [onSelectToggle, message]);
+  const handleStatusPress = useCallback(() => onStatusPress?.(message), [onStatusPress, message]);
+
   // Tap-to-see-full-timestamp (or select in select mode)
   const [showFullTime, setShowFullTime] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePress = useCallback(() => {
     if (isSelectMode) {
-      onSelectToggle?.();
+      handleSelectToggle();
       return;
     }
     setShowFullTime(true);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setShowFullTime(false), 2500);
-  }, [isSelectMode, onSelectToggle]);
+  }, [isSelectMode, handleSelectToggle]);
   useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
 
   const fullTimestamp = useMemo(() => {
@@ -659,7 +668,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const timerColor = isMe ? 'rgba(255,255,255,0.75)' : '#9CA3AF';
   const statusIconEl = statusIcon && onStatusPress ? (
     <TouchableOpacity
-      onPress={onStatusPress}
+      onPress={handleStatusPress}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       activeOpacity={0.6}
     >
@@ -789,7 +798,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       )}
       <TouchableOpacity
         onPress={handlePress}
-        onLongPress={onLongPress}
+        onLongPress={handleLongPress}
         delayLongPress={250}
         activeOpacity={0.9}
         style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}
@@ -816,7 +825,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           <TouchableOpacity
             activeOpacity={0.95}
             onPress={() => {
-              if (isSelectMode) { onSelectToggle?.(); return; }
+              if (isSelectMode) { handleSelectToggle(); return; }
               if (message.viewOnce && !message.viewOnceSeen && message.sender !== 'me') {
                 onViewOnce?.(message.id);
                 return;
@@ -824,7 +833,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               const full = gifData?.url ?? mediaUri;
               if (full) onImagePress?.(full);
             }}
-            onLongPress={onLongPress}
+            onLongPress={handleLongPress}
             delayLongPress={250}
             style={[
               styles.imageBubble,
@@ -863,7 +872,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => { if (mediaUri) onImagePress?.(mediaUri); }}
-            onLongPress={onLongPress}
+            onLongPress={handleLongPress}
             delayLongPress={250}
             style={[
               styles.imageBubble,
@@ -955,7 +964,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
                 )}
                 <TouchableOpacity
                   activeOpacity={mapsUrl ? 0.8 : 1}
-                  onLongPress={onLongPress}
+                  onLongPress={handleLongPress}
                   delayLongPress={250}
                   onPress={mapsUrl ? () => {
                     const { Linking } = require('react-native');

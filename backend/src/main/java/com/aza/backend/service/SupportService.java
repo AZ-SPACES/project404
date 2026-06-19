@@ -12,6 +12,7 @@ import com.aza.backend.repository.UserRepository;
 import com.aza.backend.util.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.RejectedExecutionException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -109,13 +110,17 @@ public class SupportService {
             // AI bot handles this chat — generate async response
             botProcessor.generateAndReply(chat.getId(), user.getId());
         } else {
-            // Human agent owns the chat — send push notification
-            notificationService.sendNewMessageNotification(
-                    chat.getParticipantTwoId(),
-                    user.getFirstName() + " " + user.getLastName(),
-                    user.getId(),
-                    chat.getId().toString(),
-                    user.getProfileImageUrl());
+            // Human agent owns the chat — send push notification (async, best-effort)
+            try {
+                notificationService.sendNewMessageNotification(
+                        chat.getParticipantTwoId(),
+                        user.getFirstName() + " " + user.getLastName(),
+                        user.getId(),
+                        chat.getId().toString(),
+                        user.getProfileImageUrl());
+            } catch (RejectedExecutionException e) {
+                log.warn("Support notification dropped (executor saturated) for chat {}", chat.getId());
+            }
         }
 
         return response;
@@ -395,12 +400,16 @@ public class SupportService {
         if (Boolean.TRUE.equals(chat.getBotActive())) {
             botProcessor.generateAndReply(chat.getId(), user.getId());
         } else {
-            notificationService.sendNewMessageNotification(
-                    chat.getParticipantTwoId(),
-                    user.getFirstName() + " " + user.getLastName(),
-                    user.getId(),
-                    chat.getId().toString(),
-                    user.getProfileImageUrl());
+            try {
+                notificationService.sendNewMessageNotification(
+                        chat.getParticipantTwoId(),
+                        user.getFirstName() + " " + user.getLastName(),
+                        user.getId(),
+                        chat.getId().toString(),
+                        user.getProfileImageUrl());
+            } catch (RejectedExecutionException e) {
+                log.warn("Support notification dropped (executor saturated) for chat {}", chat.getId());
+            }
         }
 
         return response;

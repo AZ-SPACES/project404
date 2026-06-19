@@ -39,6 +39,24 @@ import {
   isSameDay, formatTime, calculateStorageAsync,
 } from '../components/chat/chatTypes';
 
+// Return a referentially-stable Set: hand back the previous instance whenever
+// the new one has identical contents, so downstream memoized consumers don't
+// see a changed prop on every recompute.
+function useStableStringSet(next: Set<string>): Set<string> {
+  const ref = useRef(next);
+  const prev = ref.current;
+  if (prev !== next) {
+    let equal = prev.size === next.size;
+    if (equal) {
+      for (const v of next) {
+        if (!prev.has(v)) { equal = false; break; }
+      }
+    }
+    if (!equal) ref.current = next;
+  }
+  return ref.current;
+}
+
 // Human-readable label for a quoted/replied message. Media messages store a raw
 // payload in `text` (e.g. a gif/sticker URL as JSON), so never surface that directly.
 function replyPreviewText(msg: Message): string {
@@ -296,14 +314,20 @@ export function useChatScreen() {
   }, []);
 
   const messages = useMemo<Message[]>(() => {
+    // liveMessages already arrives timestamp-sorted from the store. Only merge +
+    // re-sort when there are local-only system messages (e.g. screenshot
+    // notices) to interleave — the common case skips the spread and the
+    // O(n log n) sort on every recompute.
+    const sorted = localOnlyMessages.length > 0
+      ? [...liveMessages, ...localOnlyMessages].sort((a, b) => a.timestamp - b.timestamp)
+      : liveMessages;
     // Drop payment-decline control messages — they only flip a request card's
     // status (via declinedRequestIds) and shouldn't render as bubbles.
-    const combined = [...liveMessages, ...localOnlyMessages].filter(
+    const combined = sorted.filter(
       m => !(typeof m.text === 'string' && m.text.startsWith('{"__payment_decline":')),
     );
-    const sorted = combined.sort((a, b) => a.timestamp - b.timestamp);
     const starredIds = new Set(starredEntries.map(e => e.messageId));
-    return sorted.map(m => {
+    return combined.map(m => {
       if (deletedMsgIds.has(m.id)) return { ...m, deleted: true, text: '', uri: undefined };
       let msg: Message = starredIds.has(m.id) ? { ...m, isStarred: true } : m;
       if (!msg.type || msg.type === 'text') {
@@ -359,7 +383,7 @@ export function useChatScreen() {
   // receipts that failed to send — the server already settled the request.
   const localPaidIds = useSettledRequestsStore(s => s.paidIds);
   const localDeclinedIds = useSettledRequestsStore(s => s.declinedIds);
-  const { paidRequestIds, declinedRequestIds } = useMemo(() => {
+  const { paidRequestIds: paidRequestIdsRaw, declinedRequestIds: declinedRequestIdsRaw } = useMemo(() => {
     const paid = new Set<string>(localPaidIds);
     const declined = new Set<string>(localDeclinedIds);
     for (const m of liveMessages) {
@@ -385,6 +409,14 @@ export function useChatScreen() {
     }
     return { paidRequestIds: paid, declinedRequestIds: declined };
   }, [liveMessages, localPaidIds, localDeclinedIds]);
+
+  // The memo above mints a fresh Set whenever liveMessages changes — i.e. on
+  // every incoming frame — even when the settled-id contents are identical.
+  // These Sets are passed to every bubble, so a new reference each time would
+  // re-render the whole list. Collapse to a stable reference unless the
+  // contents actually change.
+  const paidRequestIds = useStableStringSet(paidRequestIdsRaw);
+  const declinedRequestIds = useStableStringSet(declinedRequestIdsRaw);
 
   const isAutoSaveEnabled = useMediaAutoSaveStore(s => chatId ? s.isEnabled(chatId) : false);
   const autoSavedIdsRef = useRef(new Set<string>());
