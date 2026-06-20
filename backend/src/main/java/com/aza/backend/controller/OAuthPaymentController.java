@@ -110,9 +110,15 @@ public class OAuthPaymentController {
         OAuthAccessToken token = resolveToken(authHeader);
         requireScope(token, "payment");
 
-        getMerchantForToken(token); // validates client is still linked
+        Merchant merchant = getMerchantForToken(token); // validates client is still linked
 
         CheckoutSessionResponse session = checkoutService.getSession(sessionId);
+        // Only expose sessions owned by this token's merchant — a payment-scoped token
+        // must not read other merchants' sessions. NOT_FOUND (not FORBIDDEN) so we don't
+        // leak which session IDs exist.
+        if (!merchant.getId().toString().equals(session.getMerchantId())) {
+            throw new AppException("NOT_FOUND", "Session not found.", HttpStatus.NOT_FOUND);
+        }
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "sessionId",   session.getId(),
                 "status",      session.getStatus(),

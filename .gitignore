@@ -24,3 +24,4 @@ turnserver.conf
 backend/docs
 docs
 .gitignore
+backend/.env.example

@@ -35,7 +35,7 @@ public class PaymentProofService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
-    @Value("${app.payment-proof.hmac-secret:change-me-in-production}")
+    @Value("${app.payment-proof.hmac-secret}")
     private String hmacSecret;
 
     @Value("${app.payment-proof.base-url:https://aza.systems}")
