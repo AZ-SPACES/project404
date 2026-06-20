@@ -1,24 +1,20 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.withdrawal.WithdrawalResponse;
 import com.aza.backend.entity.User;
-import com.aza.backend.entity.UserWithdrawal;
-import com.aza.backend.exception.AppException;
 import com.aza.backend.repository.UserWithdrawalRepository;
-import com.aza.backend.repository.WalletRepository;
-import com.aza.backend.service.UserService;
+import com.aza.backend.service.UserWithdrawalService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/withdrawals")
@@ -26,8 +22,7 @@ import java.util.UUID;
 public class WithdrawalController {
 
     private final UserWithdrawalRepository withdrawalRepository;
-    private final WalletRepository walletRepository;
-    private final UserService userService;
+    private final UserWithdrawalService withdrawalService;
 
     public record WithdrawalRequest(
         @NotNull @DecimalMin("1.00") BigDecimal amount,
@@ -38,37 +33,22 @@ public class WithdrawalController {
     ) {}
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserWithdrawal>> requestWithdrawal(
+    public ResponseEntity<ApiResponse<WithdrawalResponse>> requestWithdrawal(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody WithdrawalRequest req) {
-
-        userService.verifyPasscode(user, req.passcode());
-
-        var wallet = walletRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new AppException("NO_WALLET", "Wallet not found", HttpStatus.NOT_FOUND));
-
-        if (wallet.getBalance() == null || wallet.getBalance().compareTo(req.amount()) < 0) {
-            throw new AppException("INSUFFICIENT_FUNDS", "Insufficient balance for this withdrawal", HttpStatus.BAD_REQUEST);
-        }
-
-        var withdrawal = UserWithdrawal.builder()
-                .userId(user.getId())
-                .amount(req.amount())
-                .provider(req.provider())
-                .destination(req.destination())
-                .bankName(req.bankName())
-                .status(UserWithdrawal.WithdrawalStatus.PENDING)
-                .build();
-
-        return ResponseEntity.ok(ApiResponse.success(withdrawalRepository.save(withdrawal)));
+        var withdrawal = withdrawalService.request(
+                user, req.amount(), req.provider(), req.destination(), req.bankName(), req.passcode());
+        return ResponseEntity.ok(ApiResponse.success(WithdrawalResponse.from(withdrawal)));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<UserWithdrawal>>> listWithdrawals(
+    public ResponseEntity<ApiResponse<Page<WithdrawalResponse>>> listWithdrawals(
             @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(
-                withdrawalRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(page, size))));
+        Page<WithdrawalResponse> result = withdrawalRepository
+                .findAllByUserIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(page, size))
+                .map(WithdrawalResponse::from);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

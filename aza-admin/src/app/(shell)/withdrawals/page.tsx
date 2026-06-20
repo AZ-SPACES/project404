@@ -315,7 +315,7 @@ export default function WithdrawalsPage() {
                     { label: "Status", value: selected.status },
                     { label: "Requested", value: fmtDate(selected.createdAt) },
                     { label: "Reviewed", value: fmtDate(selected.reviewedAt) },
-                    ...(selected.adminNote ? [{ label: "Note", value: selected.adminNote }] : []),
+                    ...(selected.note ? [{ label: "Note", value: selected.note }] : []),
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between px-4 py-2.5 text-sm">
                       <span className="text-foreground/40">{label}</span>

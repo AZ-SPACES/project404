@@ -76,7 +76,8 @@ public class PendingApproval {
         ENABLE_MINI_APP,        // approver needs ADMIN (kill switch stays immediate)
         APPROVE_AGENT,          // approver needs COMPLIANCE (rejecting/suspending stays immediate)
         MINT_FLOAT,             // approver needs FINANCE (creates e-money against a bank deposit)
-        BURN_FLOAT              // approver needs FINANCE (destroys e-money as bank money is wired out)
+        BURN_FLOAT,             // approver needs FINANCE (destroys e-money as bank money is wired out)
+        APPROVE_WITHDRAWAL      // approver needs FINANCE (rejection/refund stays immediate)
     }
 
     public enum Status {

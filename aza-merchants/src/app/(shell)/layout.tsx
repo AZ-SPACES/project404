@@ -9,7 +9,7 @@ declare global {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { logout as apiLogout, getChatbaseToken, getMe, Merchant } from "@/lib/merchant-api";
+import { logout as apiLogout, ensureSession, getChatbaseToken, getMe, Merchant } from "@/lib/merchant-api";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard,
@@ -134,13 +134,19 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   const [merchant, setMerchant] = useState<Merchant | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("aza_merchant_token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-    getMe()
-      .then((me) => {
+    let active = true;
+    (async () => {
+      // Access token lives in memory; after a hard reload it is re-minted from the
+      // httpOnly refresh cookie. No usable session → back to login.
+      const ok = await ensureSession();
+      if (!active) return;
+      if (!ok) {
+        router.replace("/login");
+        return;
+      }
+      try {
+        const me = await getMe();
+        if (!active) return;
         if (!me || (me.status !== "ACTIVE" && me.status !== "SUSPENDED")) {
           if (!me || me.status === "PENDING_KYB") {
             router.replace("/onboarding");
@@ -156,10 +162,13 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
             window.chatbase("identify", { token });
           }
         });
-      })
-      .catch(() => {
-        router.replace("/login");
-      });
+      } catch {
+        if (active) router.replace("/login");
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   async function logout() {

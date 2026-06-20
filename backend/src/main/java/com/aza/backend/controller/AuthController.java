@@ -6,10 +6,10 @@ import com.aza.backend.entity.User;
 import com.aza.backend.service.AuthService;
 import com.aza.backend.service.UserService;
 import com.aza.backend.service.OtpService;
+import com.aza.backend.security.fingerprint.RequestFingerprintService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,9 +25,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
     private final OtpService otpService;
-
-    @Value("${app.trusted-proxy-ips:}")
-    private String trustedProxyIps;
+    private final RequestFingerprintService requestFingerprintService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<AuthResponse>> signup(
@@ -366,24 +364,9 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Two-factor authentication disabled"));
     }
 
-    private static final java.util.regex.Pattern IP_PATTERN =
-            java.util.regex.Pattern.compile(
-                    "^(([0-9]{1,3}\\.){3}[0-9]{1,3}|[0-9a-fA-F:]{2,39})$");
-
+    // Delegates to the central resolver, which trusts X-Forwarded-For / CF-Connecting-IP
+    // only when the request arrives from a configured trusted proxy.
     private String getClientIp(HttpServletRequest request) {
-        String remoteAddr = request.getRemoteAddr();
-        if (trustedProxyIps != null && !trustedProxyIps.isBlank()) {
-            Set<String> trusted = Set.of(trustedProxyIps.split(","));
-            if (trusted.contains(remoteAddr)) {
-                String xfHeader = request.getHeader("X-Forwarded-For");
-                if (xfHeader != null && !xfHeader.isBlank()) {
-                    String candidate = xfHeader.split(",")[0].trim();
-                    if (IP_PATTERN.matcher(candidate).matches()) {
-                        return candidate;
-                    }
-                }
-            }
-        }
-        return remoteAddr;
+        return requestFingerprintService.getClientIp(request);
     }
 }

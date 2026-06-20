@@ -92,7 +92,7 @@ export default function LoginPage() {
                 setQrError("This account does not have admin access.");
                 return;
               }
-              saveTokens(result.accessToken, result.refreshToken);
+              void saveTokens(result.accessToken, result.refreshToken);
               saveUser(result.user);
               router.replace("/step-up");
             } catch (e: unknown) {
@@ -134,7 +134,7 @@ export default function LoginPage() {
       setError("This account does not have admin access.");
       return false;
     }
-    saveTokens(result.accessToken, result.refreshToken);
+    void saveTokens(result.accessToken, result.refreshToken);
     saveUser(result.user);
     router.replace("/step-up");
     return true;

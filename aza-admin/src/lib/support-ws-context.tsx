@@ -10,7 +10,7 @@ import {
 } from "react";
 import { Client } from "@stomp/stompjs";
 import * as SockJS from "sockjs-client";
-import { getToken, SupportChatSummary } from "@/lib/admin-api";
+import { getToken, ensureSession, SupportChatSummary } from "@/lib/admin-api";
 
 const BASE_WS_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -65,15 +65,23 @@ export function SupportWsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
+    let client: Client | null = null;
+    let cancelled = false;
 
-    const client = new Client({
+    (async () => {
+      // After a hard reload the in-memory access token is null until it is re-minted
+      // from the httpOnly refresh cookie, so wait for a session before connecting.
+      const ok = await ensureSession();
+      if (cancelled || !ok) return;
+      const token = getToken();
+      if (!token) return;
+
+      const c: Client = new Client({
       webSocketFactory: () => new (SockJS as any)(`${BASE_WS_URL}/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
-        client.subscribe("/topic/admin/support", (frame) => {
+        c.subscribe("/topic/admin/support", (frame) => {
           try {
             const event = JSON.parse(frame.body) as {
               type: string;
@@ -100,10 +108,16 @@ export function SupportWsProvider({ children }: { children: React.ReactNode }) {
           }
         });
       },
-    });
+      });
 
-    client.activate();
-    return () => { client.deactivate(); };
+      client = c;
+      c.activate();
+    })();
+
+    return () => {
+      cancelled = true;
+      client?.deactivate();
+    };
   }, []);
 
   const clearUnread = useCallback(() => setUnreadCount(0), []);

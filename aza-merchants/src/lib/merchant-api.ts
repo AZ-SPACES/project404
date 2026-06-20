@@ -2,93 +2,99 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 // ─── Token management ────────────────────────────────────────────────────────
 
+// Access token lives ONLY in memory; the refresh token is an httpOnly cookie re-minted
+// via /api/auth/refresh. Nothing is persisted in localStorage, so an XSS cannot steal a
+// long-lived session — at most a ~15-minute access token.
+let accessToken: string | null = null;
+
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("aza_merchant_token");
+  return accessToken;
 }
 
-export function saveTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem("aza_merchant_token", accessToken);
-  localStorage.setItem("aza_merchant_refresh_token", refreshToken);
+/** Access token → memory (synchronously); refresh token → httpOnly cookie via same-origin route. */
+export async function saveTokens(access: string, refreshToken: string): Promise<void> {
+  accessToken = access;
+  await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
 }
 
-export function clearTokens() {
-  localStorage.removeItem("aza_merchant_token");
-  localStorage.removeItem("aza_merchant_refresh_token");
+export async function clearTokens(): Promise<void> {
+  accessToken = null;
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    /* best-effort; the in-memory token is already cleared */
+  }
+}
+
+// Single-flight refresh: concurrent 401s share one refresh round-trip.
+let refreshPromise: Promise<boolean> | null = null;
+
+/** Re-mints the in-memory access token from the httpOnly refresh cookie. */
+export function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", { method: "POST" });
+        if (!res.ok) return false;
+        const body = await res.json().catch(() => null);
+        if (body?.accessToken) {
+          accessToken = body.accessToken as string;
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+/** Ensures a usable access token exists (e.g. after a full page reload). */
+export async function ensureSession(): Promise<boolean> {
+  if (accessToken) return true;
+  return refreshAccessToken();
 }
 
 export async function logout(): Promise<void> {
   try {
     await request("/api/v1/auth/logout", { method: "POST" });
+  } catch {
+    /* ignore — clearing the session below is what matters */
   } finally {
-    clearTokens();
+    await clearTokens();
   }
 }
 
 // ─── Core fetch with auto-refresh ────────────────────────────────────────────
 
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const doFetch = () =>
+    fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...options.headers,
+      },
+    });
+
+  let res = await doFetch();
 
   if (res.status === 401) {
-    if (!isRefreshing) {
-      isRefreshing = true;
-      const refreshToken = localStorage.getItem("aza_merchant_refresh_token");
-      if (!refreshToken) {
-        clearTokens();
-        window.location.href = "/login";
-        throw new Error("Session expired");
-      }
-      try {
-        const r = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-        const body = await r.json();
-        if (r.ok && body.success) {
-          saveTokens(body.data.accessToken, body.data.refreshToken);
-          isRefreshing = false;
-          onTokenRefreshed(body.data.accessToken);
-        } else {
-          throw new Error("Refresh failed");
-        }
-      } catch {
-        isRefreshing = false;
-        clearTokens();
-        window.location.href = "/login";
-        throw new Error("Session expired");
-      }
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      await clearTokens();
+      if (typeof window !== "undefined") window.location.href = "/login";
+      throw new Error("Session expired");
     }
-    return new Promise((resolve) => {
-      refreshSubscribers.push((newToken) => {
-        resolve(
-          request(path, {
-            ...options,
-            headers: {
-              ...options.headers,
-              Authorization: `Bearer ${newToken}`,
-            },
-          })
-        );
-      });
-    });
+    res = await doFetch();
   }
 
   if (!res.ok) {
@@ -289,7 +295,7 @@ export async function signup(data: {
     "/api/v1/auth/signup",
     { method: "POST", body: JSON.stringify(data) }
   );
-  saveTokens(body.data.accessToken, body.data.refreshToken);
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
 }
 
 export type PreLoginResult =
@@ -326,7 +332,7 @@ export async function preLogin(identifier: string, password: string): Promise<Pr
     const obj = data as Record<string, unknown>;
     // Regular account, no 2FA: tokens are returned directly — login is already complete.
     if (typeof obj.accessToken === "string" && typeof obj.refreshToken === "string") {
-      saveTokens(obj.accessToken, obj.refreshToken);
+      await saveTokens(obj.accessToken, obj.refreshToken);
       return { status: "authenticated" };
     }
     // 2FA-enabled account: a second factor is required before tokens are issued.
@@ -349,7 +355,7 @@ export async function verifyLoginOtp(identifier: string, code: string): Promise<
     "/api/v1/auth/verify-otp",
     { method: "POST", body: JSON.stringify({ identifier, code, purpose: "login" }) }
   );
-  saveTokens(body.data.accessToken, body.data.refreshToken);
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
   return body.data;
 }
 
@@ -391,7 +397,7 @@ export async function verifyTwoFactorOtp(
     `/api/v1/auth/2fa/otp/verify?${qs}`,
     { method: "POST" }
   );
-  saveTokens(body.data.accessToken, body.data.refreshToken);
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
   return body.data;
 }
 
@@ -434,7 +440,7 @@ export async function completeQrLogin(
   });
   const body = await res.json();
   if (!res.ok || !body.success) throw new Error(body.error?.message ?? "QR login failed");
-  saveTokens(body.data.accessToken, body.data.refreshToken);
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
   return body.data;
 }
 

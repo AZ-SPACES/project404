@@ -1,19 +1,69 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// The access token lives ONLY in memory (never localStorage). It is short-lived and
+// re-minted from the httpOnly refresh cookie via /api/auth/refresh, so an XSS can at
+// most read a ~15-minute token and can never persist a session by reading storage.
+let accessToken: string | null = null;
+
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("aza_admin_token");
+  return accessToken;
 }
 
-export function saveTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem("aza_admin_token", accessToken);
-  localStorage.setItem("aza_admin_refresh_token", refreshToken);
+/**
+ * Persists a freshly issued session: the access token is held in memory; the refresh
+ * token is handed to a same-origin route that stores it as an httpOnly cookie (never
+ * readable by JS). The in-memory access token is set synchronously before the cookie
+ * round-trip so immediate post-login requests work without waiting.
+ */
+export async function saveTokens(access: string, refreshToken: string): Promise<void> {
+  accessToken = access;
+  await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
 }
 
-export function clearTokens() {
-  localStorage.removeItem("aza_admin_token");
-  localStorage.removeItem("aza_admin_refresh_token");
-  localStorage.removeItem("aza_admin_user");
+export async function clearTokens(): Promise<void> {
+  accessToken = null;
+  if (typeof window !== "undefined") localStorage.removeItem("aza_admin_user");
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    /* best-effort; the in-memory token is already cleared */
+  }
+}
+
+// Single-flight refresh: concurrent 401s share one refresh round-trip.
+let refreshPromise: Promise<boolean> | null = null;
+
+/** Re-mints the in-memory access token from the httpOnly refresh cookie. */
+export function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch("/api/auth/refresh", { method: "POST" });
+        if (!res.ok) return false;
+        const body = await res.json().catch(() => null);
+        if (body?.accessToken) {
+          accessToken = body.accessToken as string;
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+/** Ensures a usable access token exists (e.g. after a full page reload). */
+export async function ensureSession(): Promise<boolean> {
+  if (accessToken) return true;
+  return refreshAccessToken();
 }
 
 // ── Staff roles ───────────────────────────────────────────────────────────────
@@ -53,74 +103,28 @@ export function hasRole(roles: StaffRoleName[], required: StaffRoleName[]): bool
   return required.some((r) => roles.includes(r));
 }
 
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.map((callback) => callback(token));
-  refreshSubscribers = [];
-}
-
-function addRefreshSubscriber(callback: (token: string) => void) {
-  refreshSubscribers.push(callback);
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const doFetch = () =>
+    fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...options.headers,
+      },
+    });
+
+  let res = await doFetch();
 
   if (res.status === 401) {
-    if (!isRefreshing) {
-      isRefreshing = true;
-      const refreshToken = localStorage.getItem("aza_admin_refresh_token");
-      if (!refreshToken) {
-        clearTokens();
-        window.location.href = "/login";
-        throw new Error("No refresh token");
-      }
-
-      try {
-        const refreshRes = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
-        const refreshBody = await refreshRes.json();
-        
-        if (refreshRes.ok && refreshBody.success) {
-          const { accessToken, refreshToken: newRefreshToken } = refreshBody.data;
-          saveTokens(accessToken, newRefreshToken);
-          isRefreshing = false;
-          onTokenRefreshed(accessToken);
-        } else {
-          throw new Error("Refresh failed");
-        }
-      } catch {
-        isRefreshing = false;
-        clearTokens();
-        window.location.href = "/login";
-        throw new Error("Session expired");
-      }
+    // Access token missing/expired — re-mint it from the httpOnly refresh cookie once.
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      await clearTokens();
+      if (typeof window !== "undefined") window.location.href = "/login";
+      throw new Error("Session expired");
     }
-
-    return new Promise((resolve) => {
-      addRefreshSubscriber((newToken) => {
-        resolve(request(path, {
-          ...options,
-          headers: {
-            ...options.headers,
-            Authorization: `Bearer ${newToken}`,
-          },
-        }));
-      });
-    });
+    res = await doFetch();
   }
 
   if (res.status === 403) {
@@ -1820,10 +1824,9 @@ export interface UserWithdrawal {
   destination: string;
   bankName: string | null;
   status: string;
-  adminNote: string | null;
+  note: string | null;
   createdAt: string;
   reviewedAt: string | null;
-  reviewedBy: string | null;
 }
 
 export function getAdminWithdrawals(page = 0, size = 20, status?: string): Promise<Page<UserWithdrawal>> {
@@ -1832,7 +1835,12 @@ export function getAdminWithdrawals(page = 0, size = 20, status?: string): Promi
   return request(`/api/v1/admin/withdrawals?${params}`);
 }
 
-export function reviewWithdrawal(id: string, action: "APPROVE" | "REJECT", note?: string): Promise<UserWithdrawal> {
+/**
+ * Approving may go through maker-checker (returns a pending {@link Approval} a second
+ * FINANCE/ADMIN must confirm); rejecting refunds the user immediately and returns the
+ * updated withdrawal.
+ */
+export function reviewWithdrawal(id: string, action: "APPROVE" | "REJECT", note?: string): Promise<UserWithdrawal | Approval> {
   return request(`/api/v1/admin/withdrawals/${id}/review`, {
     method: "POST",
     body: JSON.stringify({ action, note }),
@@ -1975,10 +1983,14 @@ export function unblockDevice(deviceId: string): Promise<string> {
 // ── Authenticated file downloads ──────────────────────────────────────────────
 
 export async function downloadFile(path: string, filename: string): Promise<void> {
-  const token = getToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const doFetch = () =>
+    fetch(`${BASE_URL}${path}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    });
+  let res = await doFetch();
+  if (res.status === 401 && (await refreshAccessToken())) {
+    res = await doFetch();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.error?.message ?? `Download failed (${res.status})`);
