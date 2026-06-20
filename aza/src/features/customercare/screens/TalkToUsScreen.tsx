@@ -221,7 +221,7 @@ export default function TalkToUsScreen() {
 
           <TouchableOpacity
             style={styles.issueItem}
-            onPress={() => navigation.navigate("ChatbotScreen")}
+            onPress={() => navigation.navigate("ChatWithUs")}
           >
             <View style={styles.iconContainer}>
               <Feather
@@ -232,7 +232,7 @@ export default function TalkToUsScreen() {
             </View>
             <View style={styles.issueTextContainer}>
               <Text style={styles.issueTitle}>Chat with us</Text>
-              <Text style={styles.issueSubtitle}>Immediate response</Text>
+              <Text style={styles.issueSubtitle}>Chat live with a support agent</Text>
             </View>
             <Feather
               name="chevron-right"
