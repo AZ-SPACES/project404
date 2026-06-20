@@ -99,7 +99,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/payouts", label: "Payouts", icon: Coins, roles: ["FINANCE"] },
-      { href: "/withdrawals", label: "User Withdrawals", icon: Wallet, roles: ["FINANCE", "SUPPORT"] },
+      { href: "/withdrawals", label: "User Withdrawals", icon: Wallet, roles: ["FINANCE"] },
       { href: "/merchants", label: "Merchants", icon: Store, roles: ["FINANCE", "COMPLIANCE"] },
       { href: "/merchants/health", label: "Merchant Health", icon: HeartPulse, roles: ["FINANCE", "ADMIN"] },
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["FINANCE", "COMPLIANCE"] },

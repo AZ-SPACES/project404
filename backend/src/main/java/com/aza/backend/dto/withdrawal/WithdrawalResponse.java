@@ -16,6 +16,7 @@ import java.util.UUID;
 @Builder
 public class WithdrawalResponse {
     private UUID id;
+    private UUID userId;
     private BigDecimal amount;
     private String currency;
     private String provider;
@@ -29,6 +30,7 @@ public class WithdrawalResponse {
     public static WithdrawalResponse from(UserWithdrawal w) {
         return WithdrawalResponse.builder()
                 .id(w.getId())
+                .userId(w.getUserId())
                 .amount(w.getAmount())
                 .currency(w.getCurrency())
                 .provider(w.getProvider())
