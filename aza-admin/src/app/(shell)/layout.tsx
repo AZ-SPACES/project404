@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearTokens, getStoredRoles, hasRole, type StaffRoleName } from "@/lib/admin-api";
+import { clearTokens, ensureSession, getStoredRoles, hasRole, type StaffRoleName } from "@/lib/admin-api";
 import { SupportWsProvider, useSupportWs } from "@/lib/support-ws-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -190,14 +190,22 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useSupportWs();
 
   useEffect(() => {
-    const token = localStorage.getItem("aza_admin_token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-    setRoles(getStoredRoles());
-    // eslint-disable-next-line
-    setReady(true);
+    let active = true;
+    (async () => {
+      // Access token lives in memory; after a hard reload it is re-minted from the
+      // httpOnly refresh cookie. No usable session → back to login.
+      const ok = await ensureSession();
+      if (!active) return;
+      if (!ok) {
+        router.replace("/login");
+        return;
+      }
+      setRoles(getStoredRoles());
+      setReady(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   // Hide nav areas this staff member's roles can't use. Unknown roles (sessions
@@ -211,8 +219,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     .map((section) => ({ ...section, items: section.items.filter(canSee) }))
     .filter((section) => section.items.length > 0);
 
-  function logout() {
-    clearTokens();
+  async function logout() {
+    await clearTokens();
     router.replace("/login");
   }
 
