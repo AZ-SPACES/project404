@@ -45,6 +45,7 @@ public class ApprovalService {
     private final StaffAlertService staffAlertService;
     private final AgentService agentService;
     private final FloatService floatService;
+    private final UserWithdrawalService userWithdrawalService;
     private final ObjectMapper objectMapper;
 
     private static final int EXPIRY_DAYS = 7;
@@ -174,13 +175,18 @@ public class ApprovalService {
                 FloatMovementPayload p = fromJson(approval.getPayload(), FloatMovementPayload.class);
                 floatService.burn(approver, approval.getTargetId(), p.getAmount(), p.getReference());
             }
+            case APPROVE_WITHDRAWAL ->
+                    userWithdrawalService.review(approver, approval.getTargetId(), "APPROVE",
+                            approval.getPayload() != null
+                                    ? fromJson(approval.getPayload(), ReasonPayload.class).getReason()
+                                    : null);
         }
     }
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
-                 MINT_FLOAT, BURN_FLOAT -> StaffRole.Role.FINANCE;
+                 MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT -> StaffRole.Role.COMPLIANCE;
             case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
                  BROADCAST_NOTIFICATION, ENABLE_MINI_APP -> StaffRole.Role.ADMIN;

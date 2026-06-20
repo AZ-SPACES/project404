@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           { key: "Permissions-Policy", value: "camera=*, microphone=()" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Safe, resource-load-agnostic hardening (does not restrict script/img/connect).
+          // A full script-src/connect-src policy is the recommended browser-verified follow-up.
+          { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-ancestors 'self'" },
         ],
       },
     ];

@@ -1824,10 +1824,9 @@ export interface UserWithdrawal {
   destination: string;
   bankName: string | null;
   status: string;
-  adminNote: string | null;
+  note: string | null;
   createdAt: string;
   reviewedAt: string | null;
-  reviewedBy: string | null;
 }
 
 export function getAdminWithdrawals(page = 0, size = 20, status?: string): Promise<Page<UserWithdrawal>> {
@@ -1836,7 +1835,12 @@ export function getAdminWithdrawals(page = 0, size = 20, status?: string): Promi
   return request(`/api/v1/admin/withdrawals?${params}`);
 }
 
-export function reviewWithdrawal(id: string, action: "APPROVE" | "REJECT", note?: string): Promise<UserWithdrawal> {
+/**
+ * Approving may go through maker-checker (returns a pending {@link Approval} a second
+ * FINANCE/ADMIN must confirm); rejecting refunds the user immediately and returns the
+ * updated withdrawal.
+ */
+export function reviewWithdrawal(id: string, action: "APPROVE" | "REJECT", note?: string): Promise<UserWithdrawal | Approval> {
   return request(`/api/v1/admin/withdrawals/${id}/review`, {
     method: "POST",
     body: JSON.stringify({ action, note }),
