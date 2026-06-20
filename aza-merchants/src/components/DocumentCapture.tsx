@@ -114,6 +114,28 @@ export default function DocumentCapture({ docLabel, onCapture, onCancel }: Props
 
   // ── Quality analysis loop ──────────────────────────────────────────────────
 
+  // Frame capture — declared before the analysis effect below (which invokes it) so
+  // the React Compiler can see it before use and preserve its memoization.
+  const captureFrame = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    const video = videoRef.current;
+    if (!video) return;
+
+    const W = video.videoWidth, H = video.videoHeight;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    c.getContext("2d")!.drawImage(video, 0, 0, W, H);
+
+    c.toBlob(blob => {
+      if (!blob) return;
+      const file = new File([blob], "document.jpg", { type: "image/jpeg" });
+      const url  = URL.createObjectURL(blob);
+      setCapturedFile(file);
+      setCapturedUrl(url);
+      setPhase("liveness");
+    }, "image/jpeg", 0.92);
+  }, []);
+
   useEffect(() => {
     if (phase !== "scanning") return;
 
@@ -176,26 +198,6 @@ export default function DocumentCapture({ docLabel, onCapture, onCancel }: Props
   }, [phase]);
 
   // ── Frame capture ─────────────────────────────────────────────────────────
-
-  const captureFrame = useCallback(() => {
-    cancelAnimationFrame(rafRef.current);
-    const video = videoRef.current;
-    if (!video) return;
-
-    const W = video.videoWidth, H = video.videoHeight;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    c.getContext("2d")!.drawImage(video, 0, 0, W, H);
-
-    c.toBlob(blob => {
-      if (!blob) return;
-      const file = new File([blob], "document.jpg", { type: "image/jpeg" });
-      const url  = URL.createObjectURL(blob);
-      setCapturedFile(file);
-      setCapturedUrl(url);
-      setPhase("liveness");
-    }, "image/jpeg", 0.92);
-  }, []);
 
   const retake = useCallback(() => {
     if (capturedUrl) URL.revokeObjectURL(capturedUrl);
