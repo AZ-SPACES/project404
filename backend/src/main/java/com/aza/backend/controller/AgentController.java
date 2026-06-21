@@ -16,6 +16,7 @@ import com.aza.backend.service.AgentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +50,7 @@ public class AgentController {
                         .status(a.getStatus().name())
                         .tier(a.getTier().name())
                         .code(a.getCode())
-                        .floatBalance(walletRepository.findByUserId(user.getId())
+                        .floatBalance(walletRepository.findByUserIdAndType(user.getId(), Wallet.WalletType.AGENT_FLOAT)
                                 .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                         .commissionAccruedGhs(a.getCommissionAccruedGhs())
                         .floatLimit(a.getFloatLimit())
@@ -59,6 +60,7 @@ public class AgentController {
     }
 
     @PostMapping("/cash-in")
+    @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<ApiResponse<AgentCashResponse>> cashIn(
             @RequestBody CashInRequest request, @AuthenticationPrincipal User user) {
         AgentCashResponse res = agentCashService.cashIn(
@@ -67,6 +69,7 @@ public class AgentController {
     }
 
     @PostMapping("/cash-out/redeem")
+    @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<ApiResponse<AgentCashResponse>> cashOut(
             @RequestBody CashOutRedeemRequest request, @AuthenticationPrincipal User user) {
         AgentCashResponse res = agentCashService.cashOut(

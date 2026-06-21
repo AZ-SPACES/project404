@@ -62,9 +62,9 @@ class AgentCashServiceTest {
 
         when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));
         when(userRepository.findByEmailOrPhoneNumber("cust@x", "cust@x")).thenReturn(Optional.of(customer()));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
         when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(customerWallet));
-        when(walletRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndType(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
             Transaction t = inv.getArgument(0);
             if (t.getId() == null) t.setId(UUID.randomUUID());
@@ -89,9 +89,9 @@ class AgentCashServiceTest {
         Wallet agentWallet = wallet(agentUserId, "1000.00");
         when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));
         when(userRepository.findByEmailOrPhoneNumber(any(), any())).thenReturn(Optional.of(customer()));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
         when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(wallet(customerId, "0.00")));
-        when(walletRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndType(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
             Transaction t = inv.getArgument(0);
             if (t.getId() == null) t.setId(UUID.randomUUID());
@@ -118,7 +118,9 @@ class AgentCashServiceTest {
         Agent agent = activeAgent();
         when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));
         when(userRepository.findByEmailOrPhoneNumber(any(), any())).thenReturn(Optional.of(customer()));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(wallet(agentUserId, "100.00")));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT))
+                .thenReturn(Optional.of(wallet(agentUserId, "100.00")));
+        when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(wallet(customerId, "0.00")));
 
         AppException ex = assertThrows(AppException.class,
                 () -> service.cashIn(agentUser(), "cust@x", new BigDecimal("200.00"), null));
@@ -143,8 +145,8 @@ class AgentCashServiceTest {
         when(feeCalculationService.quote(eq("CASH_OUT"), eq(new BigDecimal("100.00")), eq(customerId)))
                 .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("1.00"), UUID.randomUUID(), false));
         when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(customerWallet));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(agentWallet));
-        when(walletRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
+        when(walletRepository.findByUserIdAndType(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(agentWallet));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
             Transaction t = inv.getArgument(0);
             if (t.getId() == null) t.setId(UUID.randomUUID());
@@ -172,6 +174,8 @@ class AgentCashServiceTest {
         when(feeCalculationService.quote(eq("CASH_OUT"), eq(new BigDecimal("100.00")), eq(customerId)))
                 .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("1.00"), UUID.randomUUID(), false));
         when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(wallet(customerId, "50.00")));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT))
+                .thenReturn(Optional.of(wallet(agentUserId, "1000.00")));
 
         AppException ex = assertThrows(AppException.class,
                 () -> service.cashOut(agentUser(), "ABCDEFGHJK", null));

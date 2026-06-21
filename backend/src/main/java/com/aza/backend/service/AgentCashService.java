@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Agent cash network. A cash-in moves wallet balance from the agent's float (their
@@ -69,18 +70,17 @@ public class AgentCashService {
             throw new AppException("INVALID_CUSTOMER", "An agent cannot cash in to their own wallet", HttpStatus.BAD_REQUEST);
         }
 
-        // Lock both wallets. The agent's primary wallet is their float.
-        Wallet agentWallet = walletRepository.findByUserIdForUpdate(agentUser.getId())
-                .orElseThrow(() -> new AppException("Agent wallet not found"));
+        // Lock the agent float and customer personal wallets (deadlock-safe order).
+        WalletPair pair = lockFloatAndCustomer(agentUser.getId(), customer.getId());
+        Wallet agentWallet = pair.agentWallet();
+        Wallet customerWallet = pair.customerWallet();
         if (Boolean.TRUE.equals(agentWallet.getFrozen())) {
-            throw new AppException("WALLET_FROZEN", "Agent wallet is frozen", HttpStatus.FORBIDDEN);
+            throw new AppException("WALLET_FROZEN", "Agent float wallet is frozen", HttpStatus.FORBIDDEN);
         }
         if (agentWallet.getBalance().compareTo(amount) < 0) {
             throw new AppException("INSUFFICIENT_FLOAT",
                     "Agent float is too low for this deposit", HttpStatus.BAD_REQUEST);
         }
-        Wallet customerWallet = walletRepository.findByUserIdForUpdate(customer.getId())
-                .orElseThrow(() -> new AppException("Customer wallet not found"));
 
         // A deposit must keep the customer within their KYC tier's wallet ceiling.
         limitGuard.enforceWalletCeiling(customer, customerWallet.getBalance().add(amount));
@@ -91,8 +91,7 @@ public class AgentCashService {
         walletRepository.save(agentWallet);
         walletRepository.save(customerWallet);
 
-        agentUser.setBalance(agentWallet.getBalance());
-        userRepository.save(agentUser);
+        // Float lives only in the agent's float wallet — never touch their personal User.balance.
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
 
@@ -152,8 +151,10 @@ public class AgentCashService {
                 .multiply(BigDecimal.valueOf(agent.getCashOutCommissionShareBps()))
                 .divide(BigDecimal.valueOf(10_000), 2, RoundingMode.HALF_UP);
 
-        Wallet customerWallet = walletRepository.findByUserIdForUpdate(customer.getId())
-                .orElseThrow(() -> new AppException("Customer wallet not found"));
+        // Lock the agent float and customer personal wallets (deadlock-safe order).
+        WalletPair pair = lockFloatAndCustomer(agentUser.getId(), customer.getId());
+        Wallet agentWallet = pair.agentWallet();
+        Wallet customerWallet = pair.customerWallet();
         if (Boolean.TRUE.equals(customerWallet.getFrozen())) {
             throw new AppException("WALLET_FROZEN", "Customer wallet is frozen", HttpStatus.FORBIDDEN);
         }
@@ -162,18 +163,15 @@ public class AgentCashService {
             throw new AppException("INSUFFICIENT_FUNDS",
                     "Customer balance is too low for this withdrawal plus its fee", HttpStatus.BAD_REQUEST);
         }
-        Wallet agentWallet = walletRepository.findByUserIdForUpdate(agentUser.getId())
-                .orElseThrow(() -> new AppException("Agent wallet not found"));
 
         customerWallet.setBalance(customerWallet.getBalance().subtract(totalDebit));
         agentWallet.setBalance(agentWallet.getBalance().add(amount).add(agentShare));
         walletRepository.save(customerWallet);
         walletRepository.save(agentWallet);
 
+        // Float lives only in the agent's float wallet — never touch their personal User.balance.
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
-        agentUser.setBalance(agentWallet.getBalance());
-        userRepository.save(agentUser);
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .senderId(customer.getId())
@@ -197,6 +195,37 @@ public class AgentCashService {
         return amount.multiply(rate).setScale(2, RoundingMode.HALF_UP).max(MIN_CASH_IN_COMMISSION);
     }
 
+    /**
+     * Locks the agent's float wallet and the customer's personal wallet in a
+     * deterministic order (ascending owner id) so a concurrent cash-in and
+     * cash-out over the same pair can never deadlock.
+     */
+    private WalletPair lockFloatAndCustomer(UUID agentUserId, UUID customerId) {
+        Wallet agentWallet;
+        Wallet customerWallet;
+        if (agentUserId.compareTo(customerId) < 0) {
+            agentWallet = lockFloat(agentUserId);
+            customerWallet = lockPersonal(customerId);
+        } else {
+            customerWallet = lockPersonal(customerId);
+            agentWallet = lockFloat(agentUserId);
+        }
+        return new WalletPair(agentWallet, customerWallet);
+    }
+
+    private Wallet lockFloat(UUID agentUserId) {
+        return walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)
+                .orElseThrow(() -> new AppException("AGENT_FLOAT_MISSING",
+                        "Agent float wallet not found", HttpStatus.CONFLICT));
+    }
+
+    private Wallet lockPersonal(UUID userId) {
+        return walletRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new AppException("Customer wallet not found"));
+    }
+
+    private record WalletPair(Wallet agentWallet, Wallet customerWallet) {}
+
     private Agent agentForUser(User agentUser) {
         return agentRepository.findByUserId(agentUser.getId())
                 .orElseThrow(() -> new AppException("NOT_AN_AGENT",
@@ -214,7 +243,7 @@ public class AgentCashService {
     }
 
     private AgentCashResponse toResponse(Transaction tx, Agent agent) {
-        BigDecimal floatBalance = walletRepository.findByUserId(agent.getUserId())
+        BigDecimal floatBalance = walletRepository.findByUserIdAndType(agent.getUserId(), Wallet.WalletType.AGENT_FLOAT)
                 .map(Wallet::getBalance).orElse(BigDecimal.ZERO);
         return AgentCashResponse.builder()
                 .transactionId(tx.getId().toString())

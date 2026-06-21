@@ -67,6 +67,24 @@ public class AgentService {
             agent.setCode(generateCode());
         }
         agentRepository.save(agent);
+        ensureFloatWallet(agent.getUserId());
+    }
+
+    /**
+     * Every active agent needs a ring-fenced float wallet, separate from their
+     * personal wallet. Created empty — finance mints float into it out of band.
+     * Idempotent so re-activation never duplicates it.
+     */
+    private void ensureFloatWallet(UUID userId) {
+        if (walletRepository.findByUserIdAndType(userId, Wallet.WalletType.AGENT_FLOAT).isEmpty()) {
+            walletRepository.save(Wallet.builder()
+                    .userId(userId)
+                    .type(Wallet.WalletType.AGENT_FLOAT)
+                    .balance(BigDecimal.ZERO)
+                    .currency("GHS")
+                    .frozen(false)
+                    .build());
+        }
     }
 
     /** A short, human-readable till code (e.g. AZA-7K4PQM) assigned when the agent goes live. */
@@ -126,7 +144,7 @@ public class AgentService {
                 .idNumber(a.getIdNumber())
                 .expectedMonthlyVolumeGhs(a.getExpectedMonthlyVolumeGhs())
                 .applicationNotes(a.getApplicationNotes())
-                .floatBalance(walletRepository.findByUserId(a.getUserId())
+                .floatBalance(walletRepository.findByUserIdAndType(a.getUserId(), Wallet.WalletType.AGENT_FLOAT)
                         .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                 .commissionAccruedGhs(a.getCommissionAccruedGhs())
                 .createdAt(a.getCreatedAt() != null ? a.getCreatedAt().toString() : null);
