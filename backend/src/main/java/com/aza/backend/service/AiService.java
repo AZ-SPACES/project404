@@ -38,10 +38,10 @@ public class AiService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${anthropic.api-key:}")
+    @Value("${gemini.api-key:}")
     private String apiKey;
 
-    @Value("${anthropic.model:claude-sonnet-4-6}")
+    @Value("${gemini.model:gemini-2.5-flash}")
     private String model;
 
     @Value("${chatbase.identity-secret:}")
@@ -91,7 +91,7 @@ public class AiService {
                 catSummary
         );
 
-        return callClaude(
+        return callGemini(
                 "You are a financial assistant for AZA, a payment app in Ghana (GHS). Be encouraging and concise.",
                 List.of(Map.of("role", "user", "content", prompt)),
                 120
@@ -148,7 +148,7 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", message.substring(0, Math.min(message.length(), 2000))));
 
-        return callClaude(systemPrompt, messages, 400);
+        return callGemini(systemPrompt, messages, 400);
     }
 
     public String supportBotReply(String userContext, List<Map<String, String>> history, int maxTokens) {
@@ -164,7 +164,7 @@ public class AiService {
                 urgent account issues, or asks to speak to a human. Be concise (under 80 words).
 
                 """ + userContext;
-        return callClaude(system, history, maxTokens);
+        return callGemini(system, history, maxTokens);
     }
 
     public String generateChatbaseToken(UUID userId, String email) {
@@ -199,21 +199,31 @@ public class AiService {
         return sb.toString();
     }
 
-    private String callClaude(String systemPrompt, List<Map<String, String>> messages, int maxTokens) {
+    private String callGemini(String systemPrompt, List<Map<String, String>> messages, int maxTokens) {
         try {
+            // Gemini uses "model" for the assistant role and groups text under "parts".
+            List<Map<String, Object>> contents = new ArrayList<>();
+            for (Map<String, String> msg : messages) {
+                String role = "assistant".equals(msg.get("role")) ? "model" : "user";
+                contents.add(Map.of(
+                        "role", role,
+                        "parts", List.of(Map.of("text", msg.get("content")))));
+            }
+
             Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", model);
-            body.put("max_tokens", maxTokens);
-            body.put("system", systemPrompt);
-            body.put("messages", messages);
+            body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
+            body.put("contents", contents);
+            body.put("generationConfig", Map.of("maxOutputTokens", maxTokens));
 
             String requestJson = objectMapper.writeValueAsString(body);
 
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                    + model + ":generateContent";
+
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.anthropic.com/v1/messages"))
+                    .uri(URI.create(url))
                     .timeout(Duration.ofSeconds(60))
-                    .header("x-api-key", apiKey)
-                    .header("anthropic-version", "2023-06-01")
+                    .header("x-goog-api-key", apiKey)
                     .header("content-type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                     .build();
@@ -221,19 +231,20 @@ public class AiService {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                log.warn("Anthropic API returned {}: {}", response.statusCode(), response.body());
+                log.warn("Gemini API returned {}: {}", response.statusCode(), response.body());
                 return null;
             }
 
             JsonNode root = objectMapper.readTree(response.body());
-            for (JsonNode block : root.path("content")) {
-                if ("text".equals(block.path("type").asText())) {
-                    return block.path("text").asText(null);
+            for (JsonNode part : root.path("candidates").path(0).path("content").path("parts")) {
+                String text = part.path("text").asText(null);
+                if (text != null && !text.isBlank()) {
+                    return text;
                 }
             }
             return null;
         } catch (Exception e) {
-            log.warn("Anthropic API call failed: {}", e.getMessage());
+            log.warn("Gemini API call failed: {}", e.getMessage());
             return null;
         }
     }
