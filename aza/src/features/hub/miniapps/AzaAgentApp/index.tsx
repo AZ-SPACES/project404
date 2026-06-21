@@ -14,6 +14,7 @@ import StatusPage from './pages/StatusPage';
 import DashboardPage from './pages/DashboardPage';
 import CashInPage from './pages/CashInPage';
 import RedeemCodePage from './pages/RedeemCodePage';
+import HistoryPage from './pages/HistoryPage';
 
 interface LocalMiniAppProps {
   onClose?: () => void;
@@ -120,6 +121,8 @@ export default function AzaAgentApp(_: LocalMiniAppProps) {
         return <CashInPage {...navProps} />;
       case 'redeem':
         return <RedeemCodePage {...navProps} />;
+      case 'history':
+        return <HistoryPage {...navProps} />;
       default:
         return null;
     }

@@ -68,7 +68,10 @@ public class Notification {
         KYB_MORE_INFO_REQUIRED,
         RECOVERY_CONTACT_INVITE,
         RECOVERY_CONTACT_REQUEST,
-        LIMIT_INCREASE
+        LIMIT_INCREASE,
+        AGENT_APPROVED,
+        AGENT_REJECTED,
+        AGENT_SUSPENDED
     }
 
 }

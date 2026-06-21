@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.agent.AgentCashResponse;
+import com.aza.backend.dto.agent.AgentTransactionResponse;
 import com.aza.backend.entity.Agent;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
@@ -12,6 +13,8 @@ import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -164,8 +167,17 @@ public class AgentCashService {
                     "Customer balance is too low for this withdrawal plus its fee", HttpStatus.BAD_REQUEST);
         }
 
+        // Cash-out grows the agent's float; keep it within their float limit if one is set.
+        BigDecimal agentNewBalance = agentWallet.getBalance().add(amount).add(agentShare);
+        if (agent.getFloatLimit() != null && agentNewBalance.compareTo(agent.getFloatLimit()) > 0) {
+            throw new AppException("FLOAT_LIMIT_EXCEEDED",
+                    "This cash-out would push the agent's float above their limit of GHS "
+                            + agent.getFloatLimit().toPlainString() + ". Settle float before taking more.",
+                    HttpStatus.CONFLICT);
+        }
+
         customerWallet.setBalance(customerWallet.getBalance().subtract(totalDebit));
-        agentWallet.setBalance(agentWallet.getBalance().add(amount).add(agentShare));
+        agentWallet.setBalance(agentNewBalance);
         walletRepository.save(customerWallet);
         walletRepository.save(agentWallet);
 
@@ -187,6 +199,33 @@ public class AgentCashService {
 
         riskEngineService.evaluateCashActivity(tx, customer.getId());
         return toResponse(tx, agent);
+    }
+
+    /** Paged till history for the calling agent. */
+    public Page<AgentTransactionResponse> history(User agentUser, int page, int size) {
+        agentForUser(agentUser); // ensures the caller is a registered agent
+        return transactionRepository
+                .findAgentCashHistory(agentUser.getId(), PageRequest.of(page, Math.min(size, 50)))
+                .map(this::toHistoryResponse);
+    }
+
+    private AgentTransactionResponse toHistoryResponse(Transaction tx) {
+        boolean cashIn = tx.getType() == Transaction.TransactionType.CASH_IN;
+        UUID customerId = cashIn ? tx.getRecipientId() : tx.getSenderId();
+        String name = userRepository.findById(customerId).map(u -> {
+            String full = ((u.getFirstName() != null ? u.getFirstName() : "") + " "
+                    + (u.getLastName() != null ? u.getLastName() : "")).trim();
+            return full.isBlank() ? u.getUsername() : full;
+        }).orElse(null);
+        return AgentTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .type(tx.getType().name())
+                .amount(tx.getAmount())
+                .fee(tx.getFeeAmount() != null ? tx.getFeeAmount() : BigDecimal.ZERO)
+                .counterpartyName(name)
+                .createdAt(tx.getCompletedAt() != null ? tx.getCompletedAt().toString()
+                        : (tx.getInitiatedAt() != null ? tx.getInitiatedAt().toString() : null))
+                .build();
     }
 
     private BigDecimal cashInCommission(Agent agent, BigDecimal amount) {

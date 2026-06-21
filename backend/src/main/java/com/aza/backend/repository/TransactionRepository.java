@@ -55,6 +55,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     java.util.List<Transaction> findAllBySenderIdAndStatus(UUID senderId, Transaction.TransactionStatus status);
 
+    /** Cash-in/out where the agent is a party — their till history, most recent first. */
+    @Query("SELECT t FROM Transaction t WHERE t.type IN ('CASH_IN','CASH_OUT') " +
+            "AND (t.senderId = :agentUserId OR t.recipientId = :agentUserId) ORDER BY t.initiatedAt DESC")
+    Page<Transaction> findAgentCashHistory(@Param("agentUserId") UUID agentUserId, Pageable pageable);
+
     /* Find all transactions where user is sender or recipient, ordered by most recent first. */
     @Query("SELECT t FROM Transaction t WHERE t.senderId = :userId OR t.recipientId = :userId ORDER BY t.initiatedAt DESC")
     Page<Transaction> findAllByUserId(@Param("userId") UUID userId, Pageable pageable);

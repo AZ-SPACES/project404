@@ -655,6 +655,9 @@ export const agentCashIn = (data: {
 export const agentCashOut = (data: { code: string; idempotencyKey?: string }) =>
   api.post('/api/v1/agent/cash-out/redeem', data);
 
+export const getAgentTransactions = (page = 0, size = 20) =>
+  api.get(`/api/v1/agent/transactions?page=${page}&size=${size}`);
+
 export const generateWithdrawalCode = (data: { amount: number }) =>
   api.post('/api/v1/withdrawal-codes', data);
 

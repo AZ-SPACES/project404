@@ -166,6 +166,27 @@ class AgentCashServiceTest {
     }
 
     @Test
+    void cashOut_rejectsWhenItWouldExceedAgentFloatLimit() {
+        Agent agent = activeAgent();
+        agent.setFloatLimit(new BigDecimal("1050.00")); // 1000 + 100 + 0.50 share = 1100.50 > 1050
+        Wallet customerWallet = wallet(customerId, "500.00");
+        Wallet agentWallet = wallet(agentUserId, "1000.00");
+
+        when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));
+        when(withdrawalCodeService.consume("ABCDEFGHJK", agentUserId)).thenReturn(code("100.00"));
+        when(userRepository.findById(customerId)).thenReturn(Optional.of(customer()));
+        when(feeCalculationService.quote(eq("CASH_OUT"), eq(new BigDecimal("100.00")), eq(customerId)))
+                .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal("1.00"), UUID.randomUUID(), false));
+        when(walletRepository.findByUserIdForUpdate(customerId)).thenReturn(Optional.of(customerWallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT))
+                .thenReturn(Optional.of(agentWallet));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.cashOut(agentUser(), "ABCDEFGHJK", null));
+        assertEquals("FLOAT_LIMIT_EXCEEDED", ex.getCode());
+    }
+
+    @Test
     void cashOut_rejectsWhenCustomerCannotCoverAmountPlusFee() {
         Agent agent = activeAgent();
         when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));

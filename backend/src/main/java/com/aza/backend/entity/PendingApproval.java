@@ -75,6 +75,7 @@ public class PendingApproval {
         BROADCAST_NOTIFICATION, // approver needs ADMIN
         ENABLE_MINI_APP,        // approver needs ADMIN (kill switch stays immediate)
         APPROVE_AGENT,          // approver needs COMPLIANCE (rejecting/suspending stays immediate)
+        UPDATE_AGENT_TERMS,     // approver needs COMPLIANCE (changes agent tier/limit/commission)
         MINT_FLOAT,             // approver needs FINANCE (creates e-money against a bank deposit)
         BURN_FLOAT,             // approver needs FINANCE (destroys e-money as bank money is wired out)
         APPROVE_WITHDRAWAL,     // approver needs FINANCE (rejection/refund stays immediate)

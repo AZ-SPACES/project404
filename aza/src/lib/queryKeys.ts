@@ -16,6 +16,7 @@ export const queryKeys = {
   todaySent:           () => ['today-sent'] as const,
   merchant:            () => ['merchant'] as const,
   agent:               () => ['agent'] as const,
+  agentTransactions:   () => ['agent', 'transactions'] as const,
   spendingSummary:     () => ['spending-summary'] as const,
   // Merchant portal sub-resources
   merchantSessions:    () => ['merchant', 'sessions'] as const,

@@ -168,6 +168,9 @@ public class ApprovalService {
                             fromJson(approval.getPayload(), EnableMiniAppPayload.class).getAppId());
             case APPROVE_AGENT ->
                     agentService.activate(approval.getTargetId());
+            case UPDATE_AGENT_TERMS ->
+                    agentService.updateTerms(approval.getTargetId(),
+                            fromJson(approval.getPayload(), com.aza.backend.dto.agent.AgentTermsRequest.class));
             case MINT_FLOAT -> {
                 FloatMovementPayload p = fromJson(approval.getPayload(), FloatMovementPayload.class);
                 floatService.mint(approver, approval.getTargetId(), p.getAmount(), p.getReference());
@@ -192,7 +195,8 @@ public class ApprovalService {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
                  MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION -> StaffRole.Role.FINANCE;
-            case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT -> StaffRole.Role.COMPLIANCE;
+            case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT,
+                 UPDATE_AGENT_TERMS -> StaffRole.Role.COMPLIANCE;
             case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
                  BROADCAST_NOTIFICATION, ENABLE_MINI_APP -> StaffRole.Role.ADMIN;
         };

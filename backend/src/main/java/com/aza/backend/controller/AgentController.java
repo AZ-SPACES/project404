@@ -5,6 +5,7 @@ import com.aza.backend.dto.agent.AgentApplyRequest;
 import com.aza.backend.dto.agent.AgentCashResponse;
 import com.aza.backend.dto.agent.AgentMeResponse;
 import com.aza.backend.dto.agent.AgentResponse;
+import com.aza.backend.dto.agent.AgentTransactionResponse;
 import com.aza.backend.dto.agent.CashInRequest;
 import com.aza.backend.dto.agent.CashOutRedeemRequest;
 import com.aza.backend.entity.User;
@@ -15,6 +16,7 @@ import com.aza.backend.service.AgentCashService;
 import com.aza.backend.service.AgentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -75,5 +77,14 @@ public class AgentController {
         AgentCashResponse res = agentCashService.cashOut(
                 user, request.getCode(), request.getIdempotencyKey());
         return ResponseEntity.ok(ApiResponse.success(res));
+    }
+
+    @GetMapping("/transactions")
+    @PreAuthorize("hasRole('AGENT')")
+    public ResponseEntity<ApiResponse<Page<AgentTransactionResponse>>> transactions(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(agentCashService.history(user, page, size)));
     }
 }

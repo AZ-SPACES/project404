@@ -34,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
   BROADCAST_NOTIFICATION: "Broadcast Notification",
   ENABLE_MINI_APP: "Mini App Re-enable",
   APPROVE_AGENT: "Agent Activation",
+  UPDATE_AGENT_TERMS: "Agent Terms Change",
   MINT_FLOAT: "Float Mint",
   BURN_FLOAT: "Float Burn",
   SETTLE_COMMISSION: "Commission Settlement",

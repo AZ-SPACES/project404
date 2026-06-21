@@ -406,7 +406,17 @@ export interface AgentRecord {
   applicationNotes: string | null;
   floatBalance: number;
   commissionAccruedGhs: number;
+  floatLimit: number | null;
+  cashInCommissionBps: number | null;
+  cashOutCommissionShareBps: number | null;
   createdAt: string | null;
+}
+
+export interface AgentTerms {
+  tier?: string;
+  floatLimit?: number;
+  cashInCommissionBps?: number;
+  cashOutCommissionShareBps?: number;
 }
 
 export function getAgents(status?: string, page = 0, size = 20): Promise<Page<AgentRecord>> {
@@ -422,6 +432,14 @@ export function approveAgent(id: string): Promise<Approval> {
 
 export function rejectAgent(id: string): Promise<AgentRecord> {
   return request(`/api/v1/admin/agents/${id}/reject`, { method: "POST" });
+}
+
+/** Term changes are maker-checker: returns a pending Approval a second COMPLIANCE/ADMIN must confirm. */
+export function updateAgentTerms(id: string, terms: AgentTerms): Promise<Approval> {
+  return request(`/api/v1/admin/agents/${id}/terms`, {
+    method: "POST",
+    body: JSON.stringify(terms),
+  });
 }
 
 export function suspendAgent(id: string): Promise<AgentRecord> {
@@ -2080,6 +2098,7 @@ export interface Approval {
     | "BROADCAST_NOTIFICATION"
     | "ENABLE_MINI_APP"
     | "APPROVE_AGENT"
+    | "UPDATE_AGENT_TERMS"
     | "MINT_FLOAT"
     | "BURN_FLOAT"
     | "SETTLE_COMMISSION";
