@@ -428,6 +428,63 @@ export function suspendAgent(id: string): Promise<AgentRecord> {
   return request(`/api/v1/admin/agents/${id}/suspend`, { method: "POST" });
 }
 
+// ── Agent float (mint / burn) ──────────────────────────────────────────────────
+
+export interface FloatMovement {
+  id: string;
+  agentId: string;
+  type: "MINT" | "BURN";
+  amount: number;
+  bankReference: string | null;
+  performedBy: string | null;
+  createdAt: string | null;
+}
+
+/** Mint is maker-checker: returns a pending Approval a second FINANCE/ADMIN must confirm before float is created. */
+export function mintFloat(agentId: string, amount: number, reference: string): Promise<Approval> {
+  return request(`/api/v1/admin/float/${agentId}/mint`, {
+    method: "POST",
+    body: JSON.stringify({ amount, reference }),
+  });
+}
+
+/** Burn is maker-checker: returns a pending Approval a second FINANCE/ADMIN must confirm before float is destroyed. */
+export function burnFloat(agentId: string, amount: number, reference: string): Promise<Approval> {
+  return request(`/api/v1/admin/float/${agentId}/burn`, {
+    method: "POST",
+    body: JSON.stringify({ amount, reference }),
+  });
+}
+
+export function getFloatMovements(page = 0, size = 20): Promise<Page<FloatMovement>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request(`/api/v1/admin/float/movements?${params}`);
+}
+
+// ── Agent commission settlement ────────────────────────────────────────────────
+
+export interface CommissionSettlement {
+  id: string;
+  agentId: string;
+  amount: number;
+  bankReference: string | null;
+  performedBy: string | null;
+  createdAt: string | null;
+}
+
+/** Settlement is maker-checker: returns a pending Approval a second FINANCE/ADMIN must confirm before the accrual is reduced. */
+export function settleCommission(agentId: string, amount: number, reference: string): Promise<Approval> {
+  return request(`/api/v1/admin/commission/${agentId}/settle`, {
+    method: "POST",
+    body: JSON.stringify({ amount, reference }),
+  });
+}
+
+export function getCommissionSettlements(page = 0, size = 20): Promise<Page<CommissionSettlement>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request(`/api/v1/admin/commission/settlements?${params}`);
+}
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
@@ -2024,7 +2081,8 @@ export interface Approval {
     | "ENABLE_MINI_APP"
     | "APPROVE_AGENT"
     | "MINT_FLOAT"
-    | "BURN_FLOAT";
+    | "BURN_FLOAT"
+    | "SETTLE_COMMISSION";
   targetId: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";

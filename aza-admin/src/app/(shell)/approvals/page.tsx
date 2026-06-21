@@ -36,6 +36,7 @@ const ACTION_LABELS: Record<string, string> = {
   APPROVE_AGENT: "Agent Activation",
   MINT_FLOAT: "Float Mint",
   BURN_FLOAT: "Float Burn",
+  SETTLE_COMMISSION: "Commission Settlement",
 };
 
 function fmt(iso: string | null) {

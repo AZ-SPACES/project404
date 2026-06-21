@@ -45,6 +45,7 @@ public class ApprovalService {
     private final StaffAlertService staffAlertService;
     private final AgentService agentService;
     private final FloatService floatService;
+    private final AgentCommissionService agentCommissionService;
     private final UserWithdrawalService userWithdrawalService;
     private final ObjectMapper objectMapper;
 
@@ -175,6 +176,10 @@ public class ApprovalService {
                 FloatMovementPayload p = fromJson(approval.getPayload(), FloatMovementPayload.class);
                 floatService.burn(approver, approval.getTargetId(), p.getAmount(), p.getReference());
             }
+            case SETTLE_COMMISSION -> {
+                CommissionSettlementPayload p = fromJson(approval.getPayload(), CommissionSettlementPayload.class);
+                agentCommissionService.settle(approver, approval.getTargetId(), p.getAmount(), p.getReference());
+            }
             case APPROVE_WITHDRAWAL ->
                     userWithdrawalService.review(approver, approval.getTargetId(), "APPROVE",
                             approval.getPayload() != null
@@ -186,7 +191,7 @@ public class ApprovalService {
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
-                 MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL -> StaffRole.Role.FINANCE;
+                 MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT -> StaffRole.Role.COMPLIANCE;
             case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
                  BROADCAST_NOTIFICATION, ENABLE_MINI_APP -> StaffRole.Role.ADMIN;
@@ -226,6 +231,14 @@ public class ApprovalService {
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class FloatMovementPayload {
+        private BigDecimal amount;
+        private String reference;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class CommissionSettlementPayload {
         private BigDecimal amount;
         private String reference;
     }
