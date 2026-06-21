@@ -13,6 +13,7 @@ import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.service.AgentCashService;
 import com.aza.backend.service.AgentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,7 +38,7 @@ public class AgentController {
 
     @PostMapping("/apply")
     public ResponseEntity<ApiResponse<AgentResponse>> apply(
-            @RequestBody(required = false) AgentApplyRequest request, @AuthenticationPrincipal User user) {
+            @Valid @RequestBody AgentApplyRequest request, @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(agentService.apply(user, request)));
     }
 

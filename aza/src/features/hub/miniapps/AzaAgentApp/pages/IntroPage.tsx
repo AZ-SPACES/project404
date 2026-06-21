@@ -15,6 +15,10 @@ export default function IntroPage({ refresh, Colors, styles }: NavProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const apply = async () => {
+    if (!businessName.trim()) {
+      Alert.alert('Business name required', 'Enter your business or trading name to continue.');
+      return;
+    }
     setSubmitting(true);
     try {
       const volume = parseFloat(expectedVolume.replace(/,/g, ''));
@@ -46,7 +50,7 @@ export default function IntroPage({ refresh, Colors, styles }: NavProps) {
         withdrawal you handle.
       </Text>
 
-      <Text style={styles.inputLabel}>Business / trading name (optional)</Text>
+      <Text style={styles.inputLabel}>Business / trading name</Text>
       <TextInput
         style={styles.input}
         placeholder="e.g. Adwoa Mobile Money"
