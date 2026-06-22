@@ -63,6 +63,7 @@ public class AuthService {
     private final ReferralService referralService;
     private final StaffRoleService staffRoleService;
     private final com.aza.backend.repository.MerchantRepository merchantRepository;
+    private final com.aza.backend.repository.AgentRepository agentRepository;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -159,14 +160,16 @@ public class AuthService {
         }
         // PENDING_DELETION users can log in to cancel their deletion request
 
-        // Merchant-portal password login: genuine, non-staff merchants sign in with just
-        // email/phone + password. 2FA is reserved for the QR (AZA App) sign-in, so the second
-        // factor is skipped here. Scoped to real merchant accounts that are not staff/admin, so
-        // mobile logins (no header) and admin/staff logins keep full 2FA/OTP enforcement, and a
-        // non-merchant sending the header gains nothing.
+        // Web-portal password login: genuine, non-staff merchants AND agents (incl. superagents)
+        // sign in with just email/phone + password. 2FA is reserved for the QR (AZA App) sign-in,
+        // so the second factor is skipped here. Scoped to real merchant/agent accounts that are not
+        // staff/admin, so mobile logins (no header) and admin/staff logins keep full 2FA/OTP
+        // enforcement, and a plain user sending the header gains nothing. Agent tier (SUPER) is not
+        // checked here — that is enforced at the superagent distribution endpoints.
         if (merchantPortal
-                && merchantRepository.findByUserId(user.getId()).isPresent()
-                && staffRoleService.getActiveRoles(user).isEmpty()) {
+                && staffRoleService.getActiveRoles(user).isEmpty()
+                && (merchantRepository.findByUserId(user.getId()).isPresent()
+                        || agentRepository.findByUserId(user.getId()).isPresent())) {
             return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(),
                     request.getDeviceId(), ipAddress, false, request.getGpsLocation());
         }

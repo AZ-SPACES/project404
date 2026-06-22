@@ -159,6 +159,49 @@ export async function verifyLoginOtp(identifier: string, code: string): Promise<
   await saveTokens(body.data.accessToken, body.data.refreshToken);
 }
 
+// ─── QR (AZA App) sign-in ─────────────────────────────────────────────────────
+// Mirrors the merchant portal: the browser initiates a SUPERAGENT QR session, the
+// user scans it in the AZA app and approves, then the browser polls and completes.
+// These hit the public /api/v1/auth/qr-login/** endpoints, so they don't carry an
+// access token and are not routed through `request()` (no auto-refresh needed).
+
+export interface QrLoginSession {
+  challengeToken: string;
+  sessionSecret: string;
+  qrImageBase64: string;
+  expiresAt: string;
+  ttlSeconds: number;
+}
+
+export async function initiateQrLogin(): Promise<QrLoginSession> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ siteType: "SUPERAGENT" }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Failed to generate QR");
+  return body.data as QrLoginSession;
+}
+
+export async function pollQrLoginStatus(challengeToken: string): Promise<"PENDING" | "APPROVED" | "EXPIRED"> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/status/${challengeToken}`);
+  const body = await res.json();
+  if (!res.ok || !body.success) return "EXPIRED";
+  return body.data.status as "PENDING" | "APPROVED" | "EXPIRED";
+}
+
+export async function completeQrLogin(challengeToken: string, sessionSecret: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/qr-login/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ challengeToken, sessionSecret }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "QR login failed");
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
+}
+
 // ─── Agent / Superagent ────────────────────────────────────────────────────────
 
 export interface AgentMe {

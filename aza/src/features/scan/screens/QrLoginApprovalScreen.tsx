@@ -19,6 +19,7 @@ const SITE_ICONS: Record<string, string> = {
   ADMIN: 'shield-checkmark',
   MERCHANT: 'storefront',
   DEVELOPER: 'code-slash',
+  SUPERAGENT: 'cash',
   THIRD_PARTY: 'apps',
 };
 
