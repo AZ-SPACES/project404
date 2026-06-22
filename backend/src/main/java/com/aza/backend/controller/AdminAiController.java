@@ -2,10 +2,13 @@ package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.AdminTransactionResponse;
+import com.aza.backend.dto.ai.AiUsageOverview;
+import com.aza.backend.dto.ai.AiUsageUserRow;
 import com.aza.backend.dto.transfer.TransferResponse;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AdminAuditService;
 import com.aza.backend.service.AdminService;
+import com.aza.backend.service.AiUsageService;
 import com.aza.backend.service.FraudAiService;
 import com.aza.backend.service.TransferService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class AdminAiController {
     private final TransferService transferService;
     private final AdminAuditService auditService;
     private final FraudAiService fraudAiService;
+    private final AiUsageService aiUsageService;
 
     @GetMapping("/fraud/flagged")
     public ResponseEntity<ApiResponse<Page<AdminTransactionResponse>>> getFlaggedTransactions(
@@ -92,5 +96,53 @@ public class AdminAiController {
             @RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(ApiResponse.success(
                 adminService.getCategoryBreakdown(days)));
+    }
+
+    // ── AI assistant usage (metadata-only monitoring; no chat content stored) ────
+
+    @GetMapping("/ai/usage")
+    public ResponseEntity<ApiResponse<AiUsageOverview>> getAiUsageOverview(
+            @RequestParam(defaultValue = "30") int days) {
+        return ResponseEntity.ok(ApiResponse.success(
+                aiUsageService.getOverview(clampDays(days))));
+    }
+
+    @GetMapping("/ai/usage/users")
+    public ResponseEntity<ApiResponse<List<AiUsageUserRow>>> getAiUsageTopUsers(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "50") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(
+                aiUsageService.getTopUsers(clampDays(days), Math.min(Math.max(limit, 1), 200))));
+    }
+
+    /** Disable the AI assistant for a user (kill switch). */
+    @PostMapping("/ai/users/{userId}/disable")
+    public ResponseEntity<ApiResponse<Void>> disableUserAi(
+            @PathVariable UUID userId, @AuthenticationPrincipal User admin) {
+        User target = aiUsageService.setAiDisabled(userId, true);
+        auditService.log(admin, "AI_DISABLE_USER", target, "userId=" + userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    /** Re-enable the AI assistant for a user. */
+    @PostMapping("/ai/users/{userId}/enable")
+    public ResponseEntity<ApiResponse<Void>> enableUserAi(
+            @PathVariable UUID userId, @AuthenticationPrincipal User admin) {
+        User target = aiUsageService.setAiDisabled(userId, false);
+        auditService.log(admin, "AI_ENABLE_USER", target, "userId=" + userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    /** Clear a user's hourly + daily AI quota counters. */
+    @PostMapping("/ai/users/{userId}/reset-quota")
+    public ResponseEntity<ApiResponse<Void>> resetUserAiQuota(
+            @PathVariable UUID userId, @AuthenticationPrincipal User admin) {
+        aiUsageService.resetQuota(userId);
+        auditService.log(admin, "AI_RESET_QUOTA", null, "userId=" + userId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    private int clampDays(int days) {
+        return Math.min(Math.max(days, 1), 365);
     }
 }

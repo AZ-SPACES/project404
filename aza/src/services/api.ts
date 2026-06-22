@@ -1375,8 +1375,13 @@ api.interceptors.response.use(
         responseData.toLowerCase().includes('cloudflare');
 
       // Geo-blocked — navigate to the "not available in your region" screen.
-      if (responseData?.error === 'GEO_RESTRICTED' || isCloudflareHtmlBlock) {
+      if (responseData?.error?.code === 'GEO_RESTRICTED' || isCloudflareHtmlBlock) {
         emitAuthEvent({ type: 'geoBlocked' });
+        return Promise.reject(error);
+      }
+      // AI assistant disabled for this user by an admin — a feature-level block, NOT an
+      // auth failure. Reject so the calling screen can show a message; do not log out.
+      if (responseData?.error?.code === 'AI_DISABLED') {
         return Promise.reject(error);
       }
       // Token is revoked or session is invalid — clear tokens and trigger logout.

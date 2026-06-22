@@ -49,6 +49,11 @@ public class User {
     @Builder.Default
     private AccountStatus status = AccountStatus.ACTIVE;
 
+    /** Admin kill switch for the AI assistant — when true, AiService refuses this user's calls. */
+    @Column(name = "ai_disabled", nullable = false)
+    @Builder.Default
+    private boolean aiDisabled = false;
+
     private String deactivationReason;
 
     @Enumerated(EnumType.STRING)

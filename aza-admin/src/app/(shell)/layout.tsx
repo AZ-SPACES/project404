@@ -20,6 +20,7 @@ import {
   Bell,
   AlertTriangle,
   ShieldAlert,
+  Bot,
   PieChart,
   Scale,
   FileBarChart2,
@@ -53,6 +54,7 @@ import {
   Tag,
   Gauge,
   Headphones,
+  Search,
 } from "lucide-react";
 
 interface NavItem {
@@ -75,20 +77,20 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/approvals", label: "Approvals", icon: ClipboardCheck, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/approvals", label: "Approvals", icon: ClipboardCheck, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
     ],
   },
   {
     label: "User Management",
     items: [
-      { href: "/kyc", label: "KYC Review", icon: ShieldCheck, exactMatch: true, roles: ["COMPLIANCE"] },
-      { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["COMPLIANCE"] },
-      { href: "/kyc/expiring", label: "Doc Expiry", icon: CalendarClock, roles: ["COMPLIANCE"] },
-      { href: "/users", label: "Users", icon: Users, roles: ["SUPPORT", "COMPLIANCE"] },
-      { href: "/agents", label: "Agents", icon: Store, exactMatch: true, roles: ["COMPLIANCE"] },
+      { href: "/kyc", label: "KYC Review", icon: ShieldCheck, exactMatch: true, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/kyc-analytics", label: "KYC Analytics", icon: BarChart3, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/kyc/expiring", label: "Doc Expiry", icon: CalendarClock, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/users", label: "Users", icon: Users, roles: ["ADMIN", "SUPPORT", "COMPLIANCE"] },
+      { href: "/agents", label: "Agents", icon: Store, exactMatch: true, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/cs", label: "CS Toolkit", icon: Headphones, roles: ["ADMIN", "SUPPORT"] },
       { href: "/users/segment", label: "Segmentation", icon: Filter, roles: ["ADMIN", "COMPLIANCE"] },
-      { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["FINANCE"] },
+      { href: "/wallets", label: "Wallets", icon: Wallet, roles: ["ADMIN", "FINANCE"] },
       { href: "/campaigns", label: "Campaigns", icon: Megaphone, roles: ["ADMIN"] },
       { href: "/waitlist", label: "Waitlist", icon: UsersRound, roles: ["ADMIN", "SUPPORT"] },
       { href: "/closure-requests", label: "Closure Requests", icon: UserX, roles: ["ADMIN", "COMPLIANCE"] },
@@ -98,52 +100,53 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Finance",
     items: [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-      { href: "/payouts", label: "Payouts", icon: Coins, roles: ["FINANCE"] },
-      { href: "/withdrawals", label: "User Withdrawals", icon: Wallet, roles: ["FINANCE"] },
-      { href: "/merchants", label: "Merchants", icon: Store, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/payouts", label: "Payouts", icon: Coins, roles: ["ADMIN", "FINANCE"] },
+      { href: "/withdrawals", label: "User Withdrawals", icon: Wallet, roles: ["ADMIN", "FINANCE"] },
+      { href: "/merchants", label: "Merchants", icon: Store, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
       { href: "/merchants/health", label: "Merchant Health", icon: HeartPulse, roles: ["FINANCE", "ADMIN"] },
-      { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["FINANCE", "COMPLIANCE"] },
+      { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
       { href: "/miniapps", label: "Mini App Reports", icon: Flag, roles: ["ADMIN"] },
       { href: "/oauth-apps", label: "OAuth Apps", icon: KeyRound, roles: ["ADMIN"] },
-      { href: "/disputes", label: "Disputes", icon: Scale, roles: ["SUPPORT", "FINANCE"] },
-      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp, roles: ["COMPLIANCE"] },
-      { href: "/fees", label: "Fee Management", icon: Coins, roles: ["FINANCE"] },
-      { href: "/reports", label: "Reports", icon: FileBarChart2, roles: ["FINANCE"] },
-      { href: "/reconciliation", label: "Reconciliation", icon: Scale, roles: ["FINANCE"] },
+      { href: "/disputes", label: "Disputes", icon: Scale, roles: ["ADMIN", "SUPPORT", "FINANCE"] },
+      { href: "/limit-requests", label: "Limit Requests", icon: TrendingUp, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/fees", label: "Fee Management", icon: Coins, roles: ["ADMIN", "FINANCE"] },
+      { href: "/reports", label: "Reports", icon: FileBarChart2, roles: ["ADMIN", "FINANCE"] },
+      { href: "/reconciliation", label: "Reconciliation", icon: Scale, roles: ["ADMIN", "FINANCE"] },
     ],
   },
   {
     label: "Compliance & Risk",
     items: [
-      { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck, roles: ["COMPLIANCE"] },
-      { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["COMPLIANCE"] },
+      { href: "/compliance", label: "Compliance / AML", icon: ShieldCheck, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/risk", label: "Risk Management", icon: AlertTriangle, roles: ["ADMIN", "COMPLIANCE"] },
       { href: "/risk/velocity", label: "Velocity Alerts", icon: Zap, roles: ["COMPLIANCE", "ADMIN"] },
-      { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["COMPLIANCE"] },
-      { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["COMPLIANCE"] },
-      { href: "/devices", label: "Device Management", icon: ShieldCheck, roles: ["COMPLIANCE", "SUPPORT"] },
-      { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["COMPLIANCE", "FINANCE"] },
-      { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["COMPLIANCE", "SUPPORT"] },
+      { href: "/fraud-detection", label: "Fraud Detection", icon: ShieldAlert, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/screening", label: "Sanctions Screening", icon: ShieldAlert, roles: ["ADMIN", "COMPLIANCE"] },
+      { href: "/devices", label: "Device Management", icon: ShieldCheck, roles: ["ADMIN", "COMPLIANCE", "SUPPORT"] },
+      { href: "/filings", label: "Filings & Exports", icon: FileBarChart2, roles: ["ADMIN", "COMPLIANCE", "FINANCE"] },
+      { href: "/data-requests", label: "Data Requests", icon: FileSearch, roles: ["ADMIN", "COMPLIANCE", "SUPPORT"] },
       { href: "/sla", label: "SLA Dashboard", icon: Timer, roles: ["ADMIN", "COMPLIANCE", "SUPPORT"] },
     ],
   },
   {
     label: "Analytics",
     items: [
-      { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp, roles: ["FINANCE"] },
-      { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2, roles: ["FINANCE"] },
-      { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["FINANCE"] },
+      { href: "/analytics/revenue", label: "Revenue", icon: TrendingUp, roles: ["ADMIN", "FINANCE"] },
+      { href: "/analytics/cohorts", label: "Cohort Retention", icon: Users2, roles: ["ADMIN", "FINANCE"] },
+      { href: "/analytics/spending", label: "Spending", icon: PieChart, roles: ["ADMIN", "FINANCE"] },
       { href: "/analytics/onboarding", label: "Onboarding Funnel", icon: UsersRound, roles: ["ADMIN", "FINANCE", "COMPLIANCE"] },
       { href: "/analytics", label: "Webhooks & Geo", icon: Globe, exactMatch: true, roles: ["ADMIN", "FINANCE"] },
       { href: "/analytics/2fa", label: "2FA Enrollment", icon: ShieldCheck, roles: ["COMPLIANCE", "ADMIN"] },
-      { href: "/analytics/fees", label: "Fee Revenue", icon: Coins, roles: ["FINANCE"] },
+      { href: "/analytics/fees", label: "Fee Revenue", icon: Coins, roles: ["ADMIN", "FINANCE"] },
+      { href: "/ai-usage", label: "AI Usage", icon: Bot, roles: ["ADMIN", "COMPLIANCE"] },
     ],
   },
   {
     label: "Support",
     items: [
-      { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox", roles: ["SUPPORT"] },
-      { href: "/support/analytics", label: "Analytics", icon: MessageSquare, roles: ["SUPPORT"] },
-      { href: "/complaints", label: "Complaints", icon: MessageSquare, roles: ["SUPPORT"] },
+      { href: "/support", label: "Inbox", icon: Headset, exactMatch: true, badge: "inbox", roles: ["ADMIN", "SUPPORT"] },
+      { href: "/support/analytics", label: "Analytics", icon: MessageSquare, roles: ["ADMIN", "SUPPORT"] },
+      { href: "/complaints", label: "Complaints", icon: MessageSquare, roles: ["ADMIN", "SUPPORT"] },
     ],
   },
   {
@@ -168,7 +171,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/settings", label: "System Settings", icon: Settings, roles: ["ADMIN"] },
       { href: "/maintenance", label: "Maintenance Mode", icon: Wrench, roles: ["ADMIN"] },
       { href: "/templates", label: "Email Templates", icon: Mail, roles: ["ADMIN"] },
-      { href: "/audit-log", label: "Audit Log", icon: ScrollText, roles: ["COMPLIANCE"] },
+      { href: "/audit-log", label: "Audit Log", icon: ScrollText, roles: ["ADMIN", "COMPLIANCE"] },
     ],
   },
 ];
@@ -187,6 +190,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [roles, setRoles] = useState<StaffRoleName[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const { unreadCount } = useSupportWs();
 
   useEffect(() => {
@@ -216,7 +220,18 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   }
 
   const visibleSections = NAV_SECTIONS
-    .map((section) => ({ ...section, items: section.items.filter(canSee) }))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!canSee(item)) return false;
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          item.label.toLowerCase().includes(q) ||
+          section.label.toLowerCase().includes(q)
+        );
+      }),
+    }))
     .filter((section) => section.items.length > 0);
 
   async function logout() {
@@ -232,7 +247,20 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         <img src="/logo.png" alt="Aza Admin" className="h-6 w-auto" />
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      <div className="px-3 pt-4 pb-1 flex-shrink-0">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+          />
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-6">
         {visibleSections.map((section) => (
           <div key={section.label}>
             <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">

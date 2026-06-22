@@ -97,6 +97,12 @@ public class RateLimitService {
         redisTemplate.delete("ratelimit:user:" + userId);
     }
 
+    /** Clear a user's AI-assistant hourly + daily quota counters (admin override). */
+    public void resetAiQuota(UUID userId) {
+        redisTemplate.delete("ratelimit:ai_hour:" + userId);
+        redisTemplate.delete("ratelimit:ai_day:" + userId);
+    }
+
     /** Clear all sliding-window counters for a specific IP address. */
     public void resetIp(String ip) {
         redisTemplate.delete("ratelimit:ip:" + ip);

@@ -15,6 +15,7 @@ import { BackButton } from '../../../components/ui/BackButton';
 import { queryKeys } from '../../../lib/queryKeys';
 import { getSpendingCategories, getFinancialSummary, getBudgetStatus } from '../../../services/api';
 import { formatCurrency } from '../../../utils/transactionUtils';
+import { useProfile } from '../../../providers/ProfileProvider';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FinancialDashboard'>;
 type Period = '7D' | '1M' | '3M' | '6M' | '1Y';
@@ -92,6 +93,7 @@ export default function FinancialDashboardScreen() {
   const isDark = Colors.isDark;
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
+  const { aiDisabled } = useProfile();
   const [period, setPeriod] = useState<Period>('1M');
 
   const { startDate, endDate } = getPeriodDates(period);
@@ -226,21 +228,23 @@ export default function FinancialDashboardScreen() {
             </View>
           </View>
 
-          {/* AI Assistant Banner */}
-          <TouchableOpacity
-            style={styles.aiBanner}
-            onPress={() => navigation.navigate('AiAssistant')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.aiIconWrap}>
-              <Feather name="cpu" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.aiBannerTitle}>Ask Aza AI</Text>
-              <Text style={styles.aiBannerSub}>Get insights about your spending</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
-          </TouchableOpacity>
+          {/* AI Assistant Banner — hidden when an admin has disabled AI for this user */}
+          {!aiDisabled && (
+            <TouchableOpacity
+              style={styles.aiBanner}
+              onPress={() => navigation.navigate('AiAssistant')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.aiIconWrap}>
+                <Feather name="cpu" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.aiBannerTitle}>Ask Aza AI</Text>
+                <Text style={styles.aiBannerSub}>Get insights about your spending</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={isDark ? '#818cf8' : '#4f46e5'} />
+            </TouchableOpacity>
+          )}
 
           {/* Donut Chart */}
           <View style={styles.sectionCard}>

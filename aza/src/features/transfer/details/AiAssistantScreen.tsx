@@ -62,11 +62,14 @@ export default function AiAssistantScreen() {
         setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: reply }]);
         scrollToBottom();
       }
-    } catch {
-      setMessages(prev => [
-        ...prev,
-        { id: uid(), role: 'assistant', content: "Sorry, I'm having trouble right now. Please try again." },
-      ]);
+    } catch (err: any) {
+      let content = "Sorry, I'm having trouble right now. Please try again.";
+      if (err?.response?.data?.error?.code === 'AI_DISABLED') {
+        content = "AI assistance is turned off for your account. Please contact support if you think this is a mistake.";
+      } else if (err?.isRateLimited || err?.response?.status === 429) {
+        content = "You've reached your AI usage limit for now. Please try again a bit later.";
+      }
+      setMessages(prev => [...prev, { id: uid(), role: 'assistant', content }]);
     } finally {
       setIsLoading(false);
     }

@@ -63,7 +63,7 @@ public class SupportBotProcessor {
             }
 
             String userContext = buildUserContext(user, chat);
-            String jsonResponse = aiService.supportBotReply(userContext, history, 400);
+            String jsonResponse = aiService.supportBotReply(userId, userContext, history, 400);
 
             if (jsonResponse == null) {
                 log.warn("Bot returned null for chat {}", chatId);
