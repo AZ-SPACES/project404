@@ -62,6 +62,8 @@ public class Transaction {
         TRANSFER, REQUEST,
         /** Agent cash network: physical cash exchanged for wallet balance. */
         CASH_IN, CASH_OUT,
+        /** Superagent moves e-float down to another agent (internal transfer, no mint). */
+        FLOAT_DISTRIBUTION,
         /** Reserved for the merchant/biller/disbursement flows built on the same ledger. */
         MERCHANT_PAYMENT, BILL_PAY, PAYOUT, DISBURSEMENT
     }

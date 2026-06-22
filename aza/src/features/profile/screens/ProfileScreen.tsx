@@ -497,16 +497,15 @@ export default function ProfileScreen() {
           <View style={styles.bottomSheetDivider} />
 
           <Button
-            title="Personal account"
+            title="Agent account"
             onPress={() => {
               setBottomSheetVisible(false);
+              navigation.navigate('MiniApp', { appId: 'aza_agent' });
             }}
             backgroundColor="#1E5128"
-            textColor="#B7ED7E"
+            textColor="#ffffffff"
             borderRadius={24}
-            disabled
           />
-          <Text style={styles.activeAccountMessage}>You already have a personal account</Text>
           
           <View style={{ height: 16 }} />
           
@@ -520,9 +519,6 @@ export default function ProfileScreen() {
             textColor={hasBusinessAccount ? "#B7ED7E" : "#1E5128"}
             borderRadius={24}
           />
-          {hasBusinessAccount && (
-            <Text style={styles.activeAccountMessage}>You already have a business account</Text>
-          )}
         </Animated.View>
       </View>
 
@@ -825,11 +821,7 @@ function createStyles(Colors: ThemeColors) {
     height: 1,
     backgroundColor: Colors.border,
     marginBottom: 24 },
-  activeAccountMessage: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: 8 },
+
   profileImageContainer: {
     position: "relative",
     marginBottom: Spacing.md },

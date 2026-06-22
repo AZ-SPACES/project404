@@ -39,7 +39,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Object>> login(
             @Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String ipAddress = getClientIp(httpRequest);
-        boolean merchantPortal = "merchant-portal".equalsIgnoreCase(httpRequest.getHeader("X-Aza-Client"));
+        // Web portals where a genuine (non-staff) user signs in with password only; 2FA is
+        // reserved for staff/admin accounts. Superagents are regular users, so their portal
+        // gets the same password-only path as the merchant portal.
+        String azaClient = httpRequest.getHeader("X-Aza-Client");
+        boolean merchantPortal = "merchant-portal".equalsIgnoreCase(azaClient)
+                || "superagent-portal".equalsIgnoreCase(azaClient);
         Object response = authService.preLogin(request, ipAddress, merchantPortal);
         if (response != null) {
             return ResponseEntity.ok(ApiResponse.success(response));

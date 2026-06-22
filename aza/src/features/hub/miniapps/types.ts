@@ -39,6 +39,12 @@ export interface MiniAppMeta {
   /** Community apps: permissions the app declared to the platform. */
   requestedPermissions?: string[];
   developerName?: string;
+  /**
+   * Account-gated apps are hidden from the Hub until the user opens that account
+   * (from Profile → Open an Account). Once they have an agent/business record the
+   * app appears. Undefined = always visible.
+   */
+  gatedBy?: 'agent' | 'business';
 }
 
 export interface MiniAppEntry extends MiniAppMeta {
