@@ -1,4 +1,6 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+// Strip any trailing slash so `${BASE_URL}/api/v1/...` never produces a double slash
+// (a trailing slash in the Vercel NEXT_PUBLIC_API_URL would otherwise yield //api/v1).
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 
 // ─── Token management ────────────────────────────────────────────────────────
 // Access token lives ONLY in memory; the refresh token is an httpOnly cookie re-minted

@@ -1,4 +1,5 @@
-# Use this on DigitalOcean when aza-web and aza-admin are deployed on Vercel.
+# Use this on DigitalOcean — all frontends are deployed on Vercel, so the droplet runs
+# only backend + postgres + redis + nginx (api.aza.systems).
 # Command: docker compose -f docker-compose.yml -f docker-compose.backend.yml up -d
 
 services:
@@ -6,6 +7,15 @@ services:
     profiles: ["disabled"]
 
   aza-admin:
+    profiles: ["disabled"]
+
+  aza-merchants:
+    profiles: ["disabled"]
+
+  aza-pay:
+    profiles: ["disabled"]
+
+  aza-superagents:
     profiles: ["disabled"]
 
   postgres:

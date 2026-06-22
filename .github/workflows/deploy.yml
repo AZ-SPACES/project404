@@ -30,13 +30,9 @@ jobs:
       packages: write
     strategy:
       matrix:
+        # Only the backend runs on the droplet — all frontends are deployed on Vercel.
         include:
-          - { service: backend,         context: ./backend }
-          - { service: aza-web,         context: ./aza-web,         build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
-          - { service: aza-admin,       context: ./aza-admin,       build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
-          - { service: aza-merchants,   context: ./aza-merchants,   build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
-          - { service: aza-pay,         context: ./aza-pay,         build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
-          - { service: aza-superagents, context: ./aza-superagents, build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+          - { service: backend, context: ./backend }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,27 +80,30 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            echo "→ Syncing compose & nginx config..."
-            git pull origin main
+            # The droplet runs the backend-only profile: backend + postgres + redis + nginx
+            # (api.aza.systems only). All frontends are on Vercel. The override mounts the
+            # backend-only nginx config and disables the frontend services.
+            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.backend.yml"
 
-            echo "→ Logging in to GHCR and pulling pre-built images ($TAG)..."
+            echo "→ Syncing tracked files to origin/main (server-local untracked files like backend/.env and the backend-only nginx default.conf are untouched)..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "→ Logging in to GHCR and pulling the backend image ($TAG)..."
             echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "$GHCR_USER" --password-stdin
             export TAG
-            docker compose pull
+            $COMPOSE pull backend
 
-            echo "→ Rolling app services with zero downtime..."
-            for svc in backend aza-web aza-admin aza-merchants aza-pay aza-superagents; do
-              echo "   • $svc"
-              docker rollout -f docker-compose.yml "$svc"
-              # nginx caches upstream IPs; reload so it picks up the new container.
-              docker compose exec -T nginx nginx -s reload || true
-            done
+            echo "→ Rolling backend with zero downtime..."
+            docker rollout -f docker-compose.yml -f docker-compose.backend.yml backend
+            # nginx caches the backend's upstream IP; reload so it picks up the new container.
+            $COMPOSE exec -T nginx nginx -s reload || true
 
-            echo "→ Applying infra services (nginx/redis/postgres/certbot)..."
-            docker compose up -d --remove-orphans
+            echo "→ Reconciling infra (nginx/redis/postgres/certbot)..."
+            $COMPOSE up -d --remove-orphans
 
             echo "→ Pruning unused images..."
             docker image prune -f
 
-            docker compose ps
+            $COMPOSE ps
             echo "✓ Deploy complete."
