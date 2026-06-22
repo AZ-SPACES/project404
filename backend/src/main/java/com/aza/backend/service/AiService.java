@@ -286,7 +286,13 @@ public class AiService {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
             body.put("contents", contents);
-            body.put("generationConfig", Map.of("maxOutputTokens", maxTokens));
+            // gemini-*-flash are "thinking" models: without this, reasoning tokens consume the
+            // entire maxOutputTokens budget and the response comes back with no text part
+            // (finishReason MAX_TOKENS). This assistant only needs short answers, so disable
+            // thinking — all tokens go to the actual reply.
+            body.put("generationConfig", Map.of(
+                    "maxOutputTokens", maxTokens,
+                    "thinkingConfig", Map.of("thinkingBudget", 0)));
 
             String requestJson = objectMapper.writeValueAsString(body);
 
