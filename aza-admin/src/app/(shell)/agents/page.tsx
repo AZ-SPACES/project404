@@ -7,7 +7,9 @@ import {
   getAgents,
   rejectAgent,
   suspendAgent,
+  updateAgentTerms,
   type AgentRecord,
+  type AgentTerms,
   type Page,
 } from "@/lib/admin-api";
 import {
@@ -16,6 +18,7 @@ import {
   ChevronRight,
   Loader2,
   MapPin,
+  SlidersHorizontal,
   Store,
   X,
   Ban,
@@ -50,9 +53,46 @@ export default function AgentsPage() {
   const [notice, setNotice] = useState("");
   const [acting, setActing] = useState<string | null>(null);
 
+  // Inline "edit terms" editor state.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [tier, setTier] = useState("STANDARD");
+  const [floatLimit, setFloatLimit] = useState("");
+  const [cashInBps, setCashInBps] = useState("");
+  const [cashOutShareBps, setCashOutShareBps] = useState("");
+
   const { data, isLoading } = useQuery<Page<AgentRecord>>({
     queryKey: ["agents", status, page],
     queryFn: () => getAgents(status, page, 20),
+  });
+
+  function openEditor(agent: AgentRecord) {
+    setError("");
+    setNotice("");
+    setEditId(agent.id);
+    setTier(agent.tier || "STANDARD");
+    setFloatLimit(agent.floatLimit != null ? String(agent.floatLimit) : "");
+    setCashInBps(agent.cashInCommissionBps != null ? String(agent.cashInCommissionBps) : "");
+    setCashOutShareBps(agent.cashOutCommissionShareBps != null ? String(agent.cashOutCommissionShareBps) : "");
+  }
+
+  const termsMutation = useMutation({
+    mutationFn: (id: string) => {
+      const terms: AgentTerms = { tier };
+      if (floatLimit.trim() !== "") terms.floatLimit = Number(floatLimit);
+      if (cashInBps.trim() !== "") terms.cashInCommissionBps = Number(cashInBps);
+      if (cashOutShareBps.trim() !== "") terms.cashOutCommissionShareBps = Number(cashOutShareBps);
+      return updateAgentTerms(id, terms);
+    },
+    onMutate: () => {
+      setError("");
+      setNotice("");
+    },
+    onSuccess: () => {
+      setNotice("Term change submitted for approval. A second compliance/admin officer must confirm it in Approvals.");
+      setEditId(null);
+      queryClient.invalidateQueries({ queryKey: ["approvals"] });
+    },
+    onError: (e: Error) => setError(e.message),
   });
 
   const action = useMutation({
@@ -126,7 +166,8 @@ export default function AgentsPage() {
       ) : (
         <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
           {data.content.map((agent) => (
-            <div key={agent.id} className="px-5 py-4 flex items-start gap-4">
+            <div key={agent.id} className="px-5 py-4">
+              <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center text-foreground/50 text-sm font-medium shrink-0">
                 {(agent.userName ?? agent.userEmail ?? "?")[0].toUpperCase()}
               </div>
@@ -205,20 +246,95 @@ export default function AgentsPage() {
                   </>
                 )}
                 {agent.status === "ACTIVE" && (
-                  <button
-                    onClick={() => action.mutate({ id: agent.id, kind: "suspend" })}
-                    disabled={action.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 text-xs font-medium hover:bg-orange-500/20 disabled:opacity-30 transition-colors"
-                  >
-                    {acting === `${agent.id}:suspend` ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Ban size={12} />
-                    )}
-                    Suspend
-                  </button>
+                  <>
+                    <button
+                      onClick={() => (editId === agent.id ? setEditId(null) : openEditor(agent))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/40 text-foreground/70 border border-border text-xs font-medium hover:bg-muted transition-colors"
+                    >
+                      <SlidersHorizontal size={12} />
+                      Edit terms
+                    </button>
+                    <button
+                      onClick={() => action.mutate({ id: agent.id, kind: "suspend" })}
+                      disabled={action.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 text-xs font-medium hover:bg-orange-500/20 disabled:opacity-30 transition-colors"
+                    >
+                      {acting === `${agent.id}:suspend` ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Ban size={12} />
+                      )}
+                      Suspend
+                    </button>
+                  </>
                 )}
               </div>
+              </div>
+
+              {editId === agent.id && (
+                <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <label className="text-xs text-foreground/60">
+                      Tier
+                      <select
+                        value={tier}
+                        onChange={(e) => setTier(e.target.value)}
+                        className="mt-1 w-full rounded-lg bg-background border border-border px-2 py-1.5 text-sm text-foreground outline-none focus:border-foreground/30"
+                      >
+                        <option value="STANDARD">STANDARD</option>
+                        <option value="SUPER">SUPER</option>
+                      </select>
+                    </label>
+                    <label className="text-xs text-foreground/60">
+                      Float limit (GHS)
+                      <input
+                        value={floatLimit}
+                        onChange={(e) => setFloatLimit(e.target.value)}
+                        inputMode="decimal"
+                        placeholder="No limit"
+                        className="mt-1 w-full rounded-lg bg-background border border-border px-2 py-1.5 text-sm text-foreground outline-none focus:border-foreground/30"
+                      />
+                    </label>
+                    <label className="text-xs text-foreground/60">
+                      Cash-in commission (bps)
+                      <input
+                        value={cashInBps}
+                        onChange={(e) => setCashInBps(e.target.value)}
+                        inputMode="numeric"
+                        className="mt-1 w-full rounded-lg bg-background border border-border px-2 py-1.5 text-sm text-foreground outline-none focus:border-foreground/30"
+                      />
+                    </label>
+                    <label className="text-xs text-foreground/60">
+                      Cash-out share (bps)
+                      <input
+                        value={cashOutShareBps}
+                        onChange={(e) => setCashOutShareBps(e.target.value)}
+                        inputMode="numeric"
+                        className="mt-1 w-full rounded-lg bg-background border border-border px-2 py-1.5 text-sm text-foreground outline-none focus:border-foreground/30"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <button
+                      onClick={() => termsMutation.mutate(agent.id)}
+                      disabled={termsMutation.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-30 transition-opacity"
+                    >
+                      {termsMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                      Submit for approval
+                    </button>
+                    <button
+                      onClick={() => setEditId(null)}
+                      className="px-3 py-1.5 rounded-lg bg-muted/40 text-foreground/70 border border-border text-xs font-medium hover:bg-muted transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <span className="text-[11px] text-foreground/40">
+                      100 bps = 1%. Leave a field blank to keep its current value.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

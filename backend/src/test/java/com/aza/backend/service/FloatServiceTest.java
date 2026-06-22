@@ -48,7 +48,7 @@ class FloatServiceTest {
     void mint_creditsFloatAndRecordsMovement() {
         Wallet wallet = wallet("100.00");
         when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(null)));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(wallet));
         echoMovement();
 
         FloatMovement m = service.mint(admin, agentId, new BigDecimal("500.00"), "BANK-REF-1");
@@ -62,7 +62,7 @@ class FloatServiceTest {
     @Test
     void mint_rejectsWhenOverFloatLimit() {
         when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(new BigDecimal("1000.00"))));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(wallet("800.00")));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(wallet("800.00")));
 
         AppException ex = assertThrows(AppException.class,
                 () -> service.mint(admin, agentId, new BigDecimal("500.00"), "BANK-REF-2")); // 1300 > 1000
@@ -74,7 +74,7 @@ class FloatServiceTest {
     void burn_debitsFloat() {
         Wallet wallet = wallet("600.00");
         when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(null)));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(wallet));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(wallet));
         echoMovement();
 
         FloatMovement m = service.burn(admin, agentId, new BigDecimal("200.00"), "BANK-REF-3");
@@ -86,7 +86,7 @@ class FloatServiceTest {
     @Test
     void burn_rejectsInsufficientFloat() {
         when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(null)));
-        when(walletRepository.findByUserIdForUpdate(agentUserId)).thenReturn(Optional.of(wallet("100.00")));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)).thenReturn(Optional.of(wallet("100.00")));
 
         AppException ex = assertThrows(AppException.class,
                 () -> service.burn(admin, agentId, new BigDecimal("200.00"), "BANK-REF-4"));

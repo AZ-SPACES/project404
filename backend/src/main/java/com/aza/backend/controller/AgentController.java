@@ -5,6 +5,7 @@ import com.aza.backend.dto.agent.AgentApplyRequest;
 import com.aza.backend.dto.agent.AgentCashResponse;
 import com.aza.backend.dto.agent.AgentMeResponse;
 import com.aza.backend.dto.agent.AgentResponse;
+import com.aza.backend.dto.agent.AgentTransactionResponse;
 import com.aza.backend.dto.agent.CashInRequest;
 import com.aza.backend.dto.agent.CashOutRedeemRequest;
 import com.aza.backend.entity.User;
@@ -13,8 +14,11 @@ import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.WalletRepository;
 import com.aza.backend.service.AgentCashService;
 import com.aza.backend.service.AgentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +41,7 @@ public class AgentController {
 
     @PostMapping("/apply")
     public ResponseEntity<ApiResponse<AgentResponse>> apply(
-            @RequestBody(required = false) AgentApplyRequest request, @AuthenticationPrincipal User user) {
+            @Valid @RequestBody AgentApplyRequest request, @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(ApiResponse.success(agentService.apply(user, request)));
     }
 
@@ -48,7 +52,7 @@ public class AgentController {
                         .status(a.getStatus().name())
                         .tier(a.getTier().name())
                         .code(a.getCode())
-                        .floatBalance(walletRepository.findByUserId(user.getId())
+                        .floatBalance(walletRepository.findByUserIdAndType(user.getId(), Wallet.WalletType.AGENT_FLOAT)
                                 .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                         .commissionAccruedGhs(a.getCommissionAccruedGhs())
                         .floatLimit(a.getFloatLimit())
@@ -58,6 +62,7 @@ public class AgentController {
     }
 
     @PostMapping("/cash-in")
+    @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<ApiResponse<AgentCashResponse>> cashIn(
             @RequestBody CashInRequest request, @AuthenticationPrincipal User user) {
         AgentCashResponse res = agentCashService.cashIn(
@@ -66,10 +71,20 @@ public class AgentController {
     }
 
     @PostMapping("/cash-out/redeem")
+    @PreAuthorize("hasRole('AGENT')")
     public ResponseEntity<ApiResponse<AgentCashResponse>> cashOut(
             @RequestBody CashOutRedeemRequest request, @AuthenticationPrincipal User user) {
         AgentCashResponse res = agentCashService.cashOut(
                 user, request.getCode(), request.getIdempotencyKey());
         return ResponseEntity.ok(ApiResponse.success(res));
+    }
+
+    @GetMapping("/transactions")
+    @PreAuthorize("hasRole('AGENT')")
+    public ResponseEntity<ApiResponse<Page<AgentTransactionResponse>>> transactions(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(agentCashService.history(user, page, size)));
     }
 }

@@ -19,8 +19,18 @@ public class Wallet {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private UUID userId;
+
+    /**
+     * Distinguishes a user's everyday {@code PERSONAL} wallet from an agent's
+     * ring-fenced {@code AGENT_FLOAT} wallet. Uniqueness is per (userId, type),
+     * so an agent holds exactly one of each.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private WalletType type = WalletType.PERSONAL;
 
     @Column(nullable = false, precision = 15, scale = 2)
     @Builder.Default
@@ -35,4 +45,6 @@ public class Wallet {
 
     @UpdateTimestamp
     private LocalDateTime lastUpdatedAt;
+
+    public enum WalletType { PERSONAL, AGENT_FLOAT }
 }

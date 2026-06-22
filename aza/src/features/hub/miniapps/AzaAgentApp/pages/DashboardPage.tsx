@@ -44,6 +44,13 @@ export default function DashboardPage({ navigate, refresh, agent, Colors, styles
       </TouchableOpacity>
 
       <TouchableOpacity
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}
+        onPress={() => navigate('history')}>
+        <MaterialIcons name="receipt-long" size={18} color={Colors.textSecondary} />
+        <Text style={[styles.label, { marginLeft: 6 }]}>Transaction history</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20 }}
         onPress={refresh}>
         <MaterialIcons name="refresh" size={18} color={Colors.textSecondary} />

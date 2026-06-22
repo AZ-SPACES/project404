@@ -88,8 +88,9 @@ public class FloatService {
     }
 
     private Wallet lockWallet(Agent agent) {
-        return walletRepository.findByUserIdForUpdate(agent.getUserId())
-                .orElseThrow(() -> new AppException("Agent wallet not found"));
+        return walletRepository.findByUserIdAndTypeForUpdate(agent.getUserId(), Wallet.WalletType.AGENT_FLOAT)
+                .orElseThrow(() -> new AppException("AGENT_FLOAT_MISSING",
+                        "Agent float wallet not found", HttpStatus.CONFLICT));
     }
 
     private void validateAmount(BigDecimal amount) {

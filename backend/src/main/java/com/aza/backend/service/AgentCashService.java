@@ -1,6 +1,7 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.agent.AgentCashResponse;
+import com.aza.backend.dto.agent.AgentTransactionResponse;
 import com.aza.backend.entity.Agent;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
@@ -12,6 +13,8 @@ import com.aza.backend.repository.TransactionRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Agent cash network. A cash-in moves wallet balance from the agent's float (their
@@ -69,18 +73,17 @@ public class AgentCashService {
             throw new AppException("INVALID_CUSTOMER", "An agent cannot cash in to their own wallet", HttpStatus.BAD_REQUEST);
         }
 
-        // Lock both wallets. The agent's primary wallet is their float.
-        Wallet agentWallet = walletRepository.findByUserIdForUpdate(agentUser.getId())
-                .orElseThrow(() -> new AppException("Agent wallet not found"));
+        // Lock the agent float and customer personal wallets (deadlock-safe order).
+        WalletPair pair = lockFloatAndCustomer(agentUser.getId(), customer.getId());
+        Wallet agentWallet = pair.agentWallet();
+        Wallet customerWallet = pair.customerWallet();
         if (Boolean.TRUE.equals(agentWallet.getFrozen())) {
-            throw new AppException("WALLET_FROZEN", "Agent wallet is frozen", HttpStatus.FORBIDDEN);
+            throw new AppException("WALLET_FROZEN", "Agent float wallet is frozen", HttpStatus.FORBIDDEN);
         }
         if (agentWallet.getBalance().compareTo(amount) < 0) {
             throw new AppException("INSUFFICIENT_FLOAT",
                     "Agent float is too low for this deposit", HttpStatus.BAD_REQUEST);
         }
-        Wallet customerWallet = walletRepository.findByUserIdForUpdate(customer.getId())
-                .orElseThrow(() -> new AppException("Customer wallet not found"));
 
         // A deposit must keep the customer within their KYC tier's wallet ceiling.
         limitGuard.enforceWalletCeiling(customer, customerWallet.getBalance().add(amount));
@@ -91,8 +94,7 @@ public class AgentCashService {
         walletRepository.save(agentWallet);
         walletRepository.save(customerWallet);
 
-        agentUser.setBalance(agentWallet.getBalance());
-        userRepository.save(agentUser);
+        // Float lives only in the agent's float wallet — never touch their personal User.balance.
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
 
@@ -152,8 +154,10 @@ public class AgentCashService {
                 .multiply(BigDecimal.valueOf(agent.getCashOutCommissionShareBps()))
                 .divide(BigDecimal.valueOf(10_000), 2, RoundingMode.HALF_UP);
 
-        Wallet customerWallet = walletRepository.findByUserIdForUpdate(customer.getId())
-                .orElseThrow(() -> new AppException("Customer wallet not found"));
+        // Lock the agent float and customer personal wallets (deadlock-safe order).
+        WalletPair pair = lockFloatAndCustomer(agentUser.getId(), customer.getId());
+        Wallet agentWallet = pair.agentWallet();
+        Wallet customerWallet = pair.customerWallet();
         if (Boolean.TRUE.equals(customerWallet.getFrozen())) {
             throw new AppException("WALLET_FROZEN", "Customer wallet is frozen", HttpStatus.FORBIDDEN);
         }
@@ -162,18 +166,24 @@ public class AgentCashService {
             throw new AppException("INSUFFICIENT_FUNDS",
                     "Customer balance is too low for this withdrawal plus its fee", HttpStatus.BAD_REQUEST);
         }
-        Wallet agentWallet = walletRepository.findByUserIdForUpdate(agentUser.getId())
-                .orElseThrow(() -> new AppException("Agent wallet not found"));
+
+        // Cash-out grows the agent's float; keep it within their float limit if one is set.
+        BigDecimal agentNewBalance = agentWallet.getBalance().add(amount).add(agentShare);
+        if (agent.getFloatLimit() != null && agentNewBalance.compareTo(agent.getFloatLimit()) > 0) {
+            throw new AppException("FLOAT_LIMIT_EXCEEDED",
+                    "This cash-out would push the agent's float above their limit of GHS "
+                            + agent.getFloatLimit().toPlainString() + ". Settle float before taking more.",
+                    HttpStatus.CONFLICT);
+        }
 
         customerWallet.setBalance(customerWallet.getBalance().subtract(totalDebit));
-        agentWallet.setBalance(agentWallet.getBalance().add(amount).add(agentShare));
+        agentWallet.setBalance(agentNewBalance);
         walletRepository.save(customerWallet);
         walletRepository.save(agentWallet);
 
+        // Float lives only in the agent's float wallet — never touch their personal User.balance.
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
-        agentUser.setBalance(agentWallet.getBalance());
-        userRepository.save(agentUser);
 
         Transaction tx = transactionRepository.save(Transaction.builder()
                 .senderId(customer.getId())
@@ -191,11 +201,69 @@ public class AgentCashService {
         return toResponse(tx, agent);
     }
 
+    /** Paged till history for the calling agent. */
+    public Page<AgentTransactionResponse> history(User agentUser, int page, int size) {
+        agentForUser(agentUser); // ensures the caller is a registered agent
+        return transactionRepository
+                .findAgentCashHistory(agentUser.getId(), PageRequest.of(page, Math.min(size, 50)))
+                .map(this::toHistoryResponse);
+    }
+
+    private AgentTransactionResponse toHistoryResponse(Transaction tx) {
+        boolean cashIn = tx.getType() == Transaction.TransactionType.CASH_IN;
+        UUID customerId = cashIn ? tx.getRecipientId() : tx.getSenderId();
+        String name = userRepository.findById(customerId).map(u -> {
+            String full = ((u.getFirstName() != null ? u.getFirstName() : "") + " "
+                    + (u.getLastName() != null ? u.getLastName() : "")).trim();
+            return full.isBlank() ? u.getUsername() : full;
+        }).orElse(null);
+        return AgentTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .type(tx.getType().name())
+                .amount(tx.getAmount())
+                .fee(tx.getFeeAmount() != null ? tx.getFeeAmount() : BigDecimal.ZERO)
+                .counterpartyName(name)
+                .createdAt(tx.getCompletedAt() != null ? tx.getCompletedAt().toString()
+                        : (tx.getInitiatedAt() != null ? tx.getInitiatedAt().toString() : null))
+                .build();
+    }
+
     private BigDecimal cashInCommission(Agent agent, BigDecimal amount) {
         BigDecimal rate = BigDecimal.valueOf(agent.getCashInCommissionBps())
                 .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
         return amount.multiply(rate).setScale(2, RoundingMode.HALF_UP).max(MIN_CASH_IN_COMMISSION);
     }
+
+    /**
+     * Locks the agent's float wallet and the customer's personal wallet in a
+     * deterministic order (ascending owner id) so a concurrent cash-in and
+     * cash-out over the same pair can never deadlock.
+     */
+    private WalletPair lockFloatAndCustomer(UUID agentUserId, UUID customerId) {
+        Wallet agentWallet;
+        Wallet customerWallet;
+        if (agentUserId.compareTo(customerId) < 0) {
+            agentWallet = lockFloat(agentUserId);
+            customerWallet = lockPersonal(customerId);
+        } else {
+            customerWallet = lockPersonal(customerId);
+            agentWallet = lockFloat(agentUserId);
+        }
+        return new WalletPair(agentWallet, customerWallet);
+    }
+
+    private Wallet lockFloat(UUID agentUserId) {
+        return walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)
+                .orElseThrow(() -> new AppException("AGENT_FLOAT_MISSING",
+                        "Agent float wallet not found", HttpStatus.CONFLICT));
+    }
+
+    private Wallet lockPersonal(UUID userId) {
+        return walletRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new AppException("Customer wallet not found"));
+    }
+
+    private record WalletPair(Wallet agentWallet, Wallet customerWallet) {}
 
     private Agent agentForUser(User agentUser) {
         return agentRepository.findByUserId(agentUser.getId())
@@ -214,7 +282,7 @@ public class AgentCashService {
     }
 
     private AgentCashResponse toResponse(Transaction tx, Agent agent) {
-        BigDecimal floatBalance = walletRepository.findByUserId(agent.getUserId())
+        BigDecimal floatBalance = walletRepository.findByUserIdAndType(agent.getUserId(), Wallet.WalletType.AGENT_FLOAT)
                 .map(Wallet::getBalance).orElse(BigDecimal.ZERO);
         return AgentCashResponse.builder()
                 .transactionId(tx.getId().toString())

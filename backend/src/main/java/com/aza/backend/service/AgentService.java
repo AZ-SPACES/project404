@@ -2,7 +2,9 @@ package com.aza.backend.service;
 
 import com.aza.backend.dto.agent.AgentApplyRequest;
 import com.aza.backend.dto.agent.AgentResponse;
+import com.aza.backend.dto.agent.AgentTermsRequest;
 import com.aza.backend.entity.Agent;
+import com.aza.backend.entity.Notification;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.exception.AppException;
@@ -33,12 +35,18 @@ public class AgentService {
     private final AgentRepository agentRepository;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 
     @Transactional
     public AgentResponse apply(User user, AgentApplyRequest request) {
+        // Agents handle physical cash, so identity must be verified before they can apply.
+        if (user.getKycStatus() != User.KycStatus.VERIFIED) {
+            throw new AppException("KYC_REQUIRED",
+                    "Complete identity verification before applying to become an agent", HttpStatus.FORBIDDEN);
+        }
         agentRepository.findByUserId(user.getId()).ifPresent(a -> {
             throw new AppException("AGENT_EXISTS",
                     "You already have an agent application or account", HttpStatus.CONFLICT);
@@ -67,6 +75,27 @@ public class AgentService {
             agent.setCode(generateCode());
         }
         agentRepository.save(agent);
+        ensureFloatWallet(agent.getUserId());
+        notify(agent.getUserId(), Notification.NotificationType.AGENT_APPROVED,
+                "You're now an AZA agent",
+                "Your agent application has been approved. You can start taking deposits and paying out withdrawals.");
+    }
+
+    /**
+     * Every active agent needs a ring-fenced float wallet, separate from their
+     * personal wallet. Created empty — finance mints float into it out of band.
+     * Idempotent so re-activation never duplicates it.
+     */
+    private void ensureFloatWallet(UUID userId) {
+        if (walletRepository.findByUserIdAndType(userId, Wallet.WalletType.AGENT_FLOAT).isEmpty()) {
+            walletRepository.save(Wallet.builder()
+                    .userId(userId)
+                    .type(Wallet.WalletType.AGENT_FLOAT)
+                    .balance(BigDecimal.ZERO)
+                    .currency("GHS")
+                    .frozen(false)
+                    .build());
+        }
     }
 
     /** A short, human-readable till code (e.g. AZA-7K4PQM) assigned when the agent goes live. */
@@ -89,14 +118,66 @@ public class AgentService {
     public AgentResponse reject(UUID agentId) {
         Agent agent = require(agentId);
         agent.setStatus(Agent.Status.REJECTED);
-        return toResponse(agentRepository.save(agent));
+        AgentResponse response = toResponse(agentRepository.save(agent));
+        notify(agent.getUserId(), Notification.NotificationType.AGENT_REJECTED,
+                "Agent application not approved",
+                "Your agent application was not approved. Contact support if you believe this is a mistake.");
+        return response;
     }
 
     @Transactional
     public AgentResponse suspend(UUID agentId) {
         Agent agent = require(agentId);
         agent.setStatus(Agent.Status.SUSPENDED);
-        return toResponse(agentRepository.save(agent));
+        AgentResponse response = toResponse(agentRepository.save(agent));
+        notify(agent.getUserId(), Notification.NotificationType.AGENT_SUSPENDED,
+                "Agent access suspended",
+                "Your agent account has been suspended. Please contact support for help.");
+        return response;
+    }
+
+    /** Status-change push; never let a notification failure roll back the status change. */
+    private void notify(UUID userId, Notification.NotificationType type, String title, String body) {
+        try {
+            notificationService.sendNotification(userId, type, title, body,
+                    java.util.Map.of("type", type.name()));
+        } catch (Exception e) {
+            // best-effort; the status change is the source of truth
+        }
+    }
+
+    /** Maker-checker target: a second COMPLIANCE/ADMIN approving UPDATE_AGENT_TERMS applies new commercial/risk terms. */
+    @Transactional
+    public void updateTerms(UUID agentId, AgentTermsRequest req) {
+        Agent agent = require(agentId);
+        if (req.getTier() != null && !req.getTier().isBlank()) {
+            try {
+                agent.setTier(Agent.Tier.valueOf(req.getTier().trim().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new AppException("INVALID_TIER", "Tier must be STANDARD or SUPER", HttpStatus.BAD_REQUEST);
+            }
+        }
+        if (req.getFloatLimit() != null) {
+            if (req.getFloatLimit().signum() < 0) {
+                throw new AppException("INVALID_FLOAT_LIMIT", "Float limit cannot be negative", HttpStatus.BAD_REQUEST);
+            }
+            agent.setFloatLimit(req.getFloatLimit());
+        }
+        if (req.getCashInCommissionBps() != null) {
+            agent.setCashInCommissionBps(requireBps(req.getCashInCommissionBps(), "cash-in commission"));
+        }
+        if (req.getCashOutCommissionShareBps() != null) {
+            agent.setCashOutCommissionShareBps(requireBps(req.getCashOutCommissionShareBps(), "cash-out commission share"));
+        }
+        agentRepository.save(agent);
+    }
+
+    private int requireBps(int bps, String label) {
+        if (bps < 0 || bps > 10_000) {
+            throw new AppException("INVALID_BPS",
+                    "The " + label + " must be between 0 and 10000 basis points", HttpStatus.BAD_REQUEST);
+        }
+        return bps;
     }
 
     public Page<AgentResponse> list(String status, int page, int size) {
@@ -126,9 +207,12 @@ public class AgentService {
                 .idNumber(a.getIdNumber())
                 .expectedMonthlyVolumeGhs(a.getExpectedMonthlyVolumeGhs())
                 .applicationNotes(a.getApplicationNotes())
-                .floatBalance(walletRepository.findByUserId(a.getUserId())
+                .floatBalance(walletRepository.findByUserIdAndType(a.getUserId(), Wallet.WalletType.AGENT_FLOAT)
                         .map(Wallet::getBalance).orElse(BigDecimal.ZERO))
                 .commissionAccruedGhs(a.getCommissionAccruedGhs())
+                .floatLimit(a.getFloatLimit())
+                .cashInCommissionBps(a.getCashInCommissionBps())
+                .cashOutCommissionShareBps(a.getCashOutCommissionShareBps())
                 .createdAt(a.getCreatedAt() != null ? a.getCreatedAt().toString() : null);
         userRepository.findById(a.getUserId()).ifPresent(u -> {
             String name = ((u.getFirstName() != null ? u.getFirstName() : "") + " "

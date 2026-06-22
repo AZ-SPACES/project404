@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.admin.ApprovalResponse;
 import com.aza.backend.dto.agent.AgentResponse;
+import com.aza.backend.dto.agent.AgentTermsRequest;
 import com.aza.backend.entity.PendingApproval;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.AgentService;
@@ -53,5 +54,14 @@ public class AdminAgentController {
     @PostMapping("/{id}/suspend")
     public ResponseEntity<ApiResponse<AgentResponse>> suspend(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(agentService.suspend(id)));
+    }
+
+    /** Changing an agent's tier/float-limit/commission is maker-checker — a second COMPLIANCE/ADMIN must confirm. */
+    @PostMapping("/{id}/terms")
+    public ResponseEntity<ApiResponse<ApprovalResponse>> updateTerms(
+            @PathVariable UUID id, @RequestBody AgentTermsRequest request, @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.UPDATE_AGENT_TERMS, id, request,
+                "Update terms for agent " + id)));
     }
 }

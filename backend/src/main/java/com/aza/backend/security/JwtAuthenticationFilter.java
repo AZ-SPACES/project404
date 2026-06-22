@@ -1,6 +1,8 @@
 package com.aza.backend.security;
 
+import com.aza.backend.entity.Agent;
 import com.aza.backend.entity.User;
+import com.aza.backend.repository.AgentRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.StaffRoleService;
 import jakarta.servlet.FilterChain;
@@ -33,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
     private final StaffRoleService staffRoleService;
+    private final AgentRepository agentRepository;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -89,6 +92,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (request.getRequestURI().startsWith("/api/v1/admin")) {
             staffRoleService.getEffectiveRoles(user).forEach(role ->
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name())));
+        }
+        // Agent capability is derived from an ACTIVE Agent record, not stored on the user.
+        // Loaded only for agent-path traffic so ordinary requests skip the extra query.
+        if (request.getRequestURI().startsWith("/api/v1/agent")) {
+            agentRepository.findByUserId(user.getId())
+                    .filter(a -> a.getStatus() == Agent.Status.ACTIVE)
+                    .ifPresent(a -> authorities.add(new SimpleGrantedAuthority("ROLE_AGENT")));
         }
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(user, null, authorities);

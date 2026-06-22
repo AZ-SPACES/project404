@@ -26,5 +26,9 @@ public class AgentResponse {
     private String applicationNotes;
     private BigDecimal floatBalance;
     private BigDecimal commissionAccruedGhs;
+    /** Current commercial/risk terms, so the back office can review before editing. */
+    private BigDecimal floatLimit;
+    private Integer cashInCommissionBps;
+    private Integer cashOutCommissionShareBps;
     private String createdAt;
 }
