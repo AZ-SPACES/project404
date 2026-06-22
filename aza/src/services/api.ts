@@ -658,6 +658,17 @@ export const agentCashOut = (data: { code: string; idempotencyKey?: string }) =>
 export const getAgentTransactions = (page = 0, size = 20) =>
   api.get(`/api/v1/agent/transactions?page=${page}&size=${size}`);
 
+// --- Superagent (tiered float distribution) Endpoints ---
+
+export const distributeFloat = (data: {
+  targetAgentCode: string;
+  amount: number;
+  idempotencyKey?: string;
+}) => api.post('/api/v1/superagent/distribute', data);
+
+export const getFloatDistributions = (page = 0, size = 20) =>
+  api.get(`/api/v1/superagent/distributions?page=${page}&size=${size}`);
+
 export const generateWithdrawalCode = (data: { amount: number }) =>
   api.post('/api/v1/withdrawal-codes', data);
 

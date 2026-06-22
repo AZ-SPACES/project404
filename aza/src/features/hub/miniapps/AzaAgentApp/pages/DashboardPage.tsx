@@ -43,12 +43,27 @@ export default function DashboardPage({ navigate, refresh, agent, Colors, styles
         <Text style={styles.secondaryButtonText}>Cash out (redeem a code)</Text>
       </TouchableOpacity>
 
+      {agent?.tier === 'SUPER' ? (
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('distribute')}>
+          <Text style={styles.secondaryButtonText}>Distribute float to an agent</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <TouchableOpacity
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}
         onPress={() => navigate('history')}>
         <MaterialIcons name="receipt-long" size={18} color={Colors.textSecondary} />
         <Text style={[styles.label, { marginLeft: 6 }]}>Transaction history</Text>
       </TouchableOpacity>
+
+      {agent?.tier === 'SUPER' ? (
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16 }}
+          onPress={() => navigate('distributions')}>
+          <MaterialIcons name="account-tree" size={18} color={Colors.textSecondary} />
+          <Text style={[styles.label, { marginLeft: 6 }]}>Float distributions</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <TouchableOpacity
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20 }}

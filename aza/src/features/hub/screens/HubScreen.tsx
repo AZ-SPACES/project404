@@ -23,6 +23,8 @@ import { MINI_APP_REGISTRY } from '../miniapps/registry';
 import { MiniAppCategory, MiniAppEntry } from '../miniapps/types';
 import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 import { useCommunityMiniApps } from '../../../hooks/useCommunityMiniApps';
+import { useQuery } from '@tanstack/react-query';
+import { getAgent, getMerchant } from '../../../services/api';
 import { queryClient } from '../../../lib/queryClient';
 import { queryKeys } from '../../../lib/queryKeys';
 
@@ -58,9 +60,31 @@ export default function HubScreen() {
   const { disabled, maintenance } = useDisabledMiniApps();
   const { communityApps } = useCommunityMiniApps();
 
+  // Account-gated apps (aza_agent, aza_business) stay hidden until the user opens
+  // that account from Profile → Open an Account. Mirrors the merchant check used there.
+  const { data: agentData } = useQuery({
+    queryKey: queryKeys.agent(),
+    queryFn: getAgent,
+    staleTime: 5 * 60_000,
+  });
+  const agentStatus = (agentData as any)?.data?.data?.status ?? (agentData as any)?.data?.status;
+  const hasAgentAccount = !!agentStatus && agentStatus !== 'NONE';
+
+  const { data: merchantData } = useQuery({
+    queryKey: queryKeys.merchant(),
+    queryFn: getMerchant,
+    staleTime: 5 * 60_000,
+    retry: (failureCount, error: any) =>
+      error?.response?.status !== 404 && failureCount < 1,
+  });
+  const hasBusinessAccount = !!((merchantData as any)?.data?.data?.id ?? (merchantData as any)?.data?.id);
+
   useFocusEffect(
     useCallback(() => {
       queryClient.invalidateQueries({ queryKey: queryKeys.disabledMiniApps() });
+      // Refresh account state so a just-opened agent/business account appears here.
+      queryClient.invalidateQueries({ queryKey: queryKeys.agent() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.merchant() });
     }, []),
   );
 
@@ -76,11 +100,14 @@ export default function HubScreen() {
   const filteredApps = React.useMemo(() => {
     return allApps.filter((app) => {
       if (disabled.has(app.id)) return false;
+      // Hide account-gated apps until the user has opened that account.
+      if (app.gatedBy === 'agent' && !hasAgentAccount) return false;
+      if (app.gatedBy === 'business' && !hasBusinessAccount) return false;
       const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || app.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory, disabled, allApps]);
+  }, [searchQuery, activeCategory, disabled, allApps, hasAgentAccount, hasBusinessAccount]);
 
   return (
     <View style={styles.container}>

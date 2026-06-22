@@ -94,8 +94,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name())));
         }
         // Agent capability is derived from an ACTIVE Agent record, not stored on the user.
-        // Loaded only for agent-path traffic so ordinary requests skip the extra query.
-        if (request.getRequestURI().startsWith("/api/v1/agent")) {
+        // Loaded only for agent-path traffic (including the superagent distribution surface)
+        // so ordinary requests skip the extra query.
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/api/v1/agent") || uri.startsWith("/api/v1/superagent")) {
             agentRepository.findByUserId(user.getId())
                     .filter(a -> a.getStatus() == Agent.Status.ACTIVE)
                     .ifPresent(a -> authorities.add(new SimpleGrantedAuthority("ROLE_AGENT")));

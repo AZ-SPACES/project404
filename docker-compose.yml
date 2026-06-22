@@ -135,6 +135,18 @@ services:
     networks:
       - aza-network
 
+  aza-superagents:
+    build:
+      context: ./aza-superagents
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-superagents
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - aza-network
+
   nginx:
     image: nginx:alpine
     container_name: aza-nginx

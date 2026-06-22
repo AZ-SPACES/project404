@@ -15,6 +15,8 @@ import DashboardPage from './pages/DashboardPage';
 import CashInPage from './pages/CashInPage';
 import RedeemCodePage from './pages/RedeemCodePage';
 import HistoryPage from './pages/HistoryPage';
+import DistributeFloatPage from './pages/DistributeFloatPage';
+import DistributionsPage from './pages/DistributionsPage';
 
 interface LocalMiniAppProps {
   onClose?: () => void;
@@ -123,6 +125,10 @@ export default function AzaAgentApp(_: LocalMiniAppProps) {
         return <RedeemCodePage {...navProps} />;
       case 'history':
         return <HistoryPage {...navProps} />;
+      case 'distribute':
+        return <DistributeFloatPage {...navProps} />;
+      case 'distributions':
+        return <DistributionsPage {...navProps} />;
       default:
         return null;
     }
