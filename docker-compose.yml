@@ -38,8 +38,7 @@ services:
       retries: 5
 
   backend:
-    build: ./backend
-    container_name: aza-backend
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/backend:${TAG:-latest}
     restart: unless-stopped
     env_file: ./backend/.env
     environment:
@@ -85,67 +84,87 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - aza-network
+      # Keep the `aza-backend` name nginx proxies to, even though container_name is
+      # dropped so docker-rollout can run two copies during a zero-downtime swap.
+      aza-network:
+        aliases:
+          - aza-backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   aza-web:
-    build:
-      context: ./aza-web
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-web
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/aza-web:${TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
     networks:
       - aza-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   aza-admin:
-    build:
-      context: ./aza-admin
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-admin
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/aza-admin:${TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
     networks:
       - aza-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   aza-merchants:
-    build:
-      context: ./aza-merchants
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-merchants
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/aza-merchants:${TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
     networks:
       - aza-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3001/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   aza-pay:
-    build:
-      context: ./aza-pay
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-pay
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/aza-pay:${TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
     networks:
       - aza-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   aza-superagents:
-    build:
-      context: ./aza-superagents
-      args:
-        NEXT_PUBLIC_API_URL: https://api.aza.systems
-    container_name: aza-superagents
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-az-spaces}/aza-superagents:${TAG:-latest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
     networks:
       - aza-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3003/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   nginx:
     image: nginx:alpine

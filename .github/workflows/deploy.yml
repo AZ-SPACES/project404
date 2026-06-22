@@ -10,42 +10,97 @@ on:
   # Allow triggering a deploy manually from the Actions tab
   workflow_dispatch:
 
-jobs:
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
+# The exact commit to build + ship. For workflow_run it's the commit that passed CI;
+# for manual dispatch it's the branch head. Every image and the deploy pin to this.
+env:
+  REGISTRY: ghcr.io
+  OWNER: az-spaces
+  TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-    # For workflow_run triggers: only deploy if CI actually passed
+jobs:
+  # ── 1. Build each service image once, in CI, and push to GHCR ────────────────
+  build:
+    name: Build & push images
+    runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - { service: backend,         context: ./backend }
+          - { service: aza-web,         context: ./aza-web,         build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+          - { service: aza-admin,       context: ./aza-admin,       build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+          - { service: aza-merchants,   context: ./aza-merchants,   build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+          - { service: aza-pay,         context: ./aza-pay,         build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+          - { service: aza-superagents, context: ./aza-superagents, build_args: "NEXT_PUBLIC_API_URL=https://api.aza.systems" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          build-args: ${{ matrix.build_args }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.service }}:${{ env.TAG }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ── 2. On the server: pull the pre-built images and roll with no downtime ────
+  release:
+    name: Release to production
+    needs: build
+    runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: ${{ secrets.DEPLOY_PORT || '22' }}
+          envs: TAG,REGISTRY,OWNER,GHCR_USER,GHCR_TOKEN
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            echo "→ Pulling latest code..."
+            echo "→ Syncing compose & nginx config..."
             git pull origin main
 
-            echo "→ Rebuilding and restarting services..."
-            SENTRY_RELEASE=$(git rev-parse --short HEAD) \
-            docker compose up --build -d --remove-orphans
+            echo "→ Logging in to GHCR and pulling pre-built images ($TAG)..."
+            echo "$GHCR_TOKEN" | docker login "$REGISTRY" -u "$GHCR_USER" --password-stdin
+            export TAG
+            docker compose pull
 
-            echo "→ Waiting for services to become healthy..."
-            sleep 15
+            echo "→ Rolling app services with zero downtime..."
+            for svc in backend aza-web aza-admin aza-merchants aza-pay aza-superagents; do
+              echo "   • $svc"
+              docker rollout -f docker-compose.yml "$svc"
+              # nginx caches upstream IPs; reload so it picks up the new container.
+              docker compose exec -T nginx nginx -s reload || true
+            done
 
-            echo "→ Checking running containers..."
-            docker compose ps
+            echo "→ Applying infra services (nginx/redis/postgres/certbot)..."
+            docker compose up -d --remove-orphans
 
             echo "→ Pruning unused images..."
             docker image prune -f
 
+            docker compose ps
             echo "✓ Deploy complete."
