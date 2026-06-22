@@ -192,7 +192,7 @@ public class AiService {
         }
         messages.add(Map.of("role", "user", "content", message.substring(0, Math.min(message.length(), 2000))));
 
-        return callGemini(systemPrompt, messages, 10000);
+        return callGemini(systemPrompt, messages, 8192);
     }
 
     public String supportBotReply(UUID userId, String userContext, List<Map<String, String>> history, int maxTokens) {
