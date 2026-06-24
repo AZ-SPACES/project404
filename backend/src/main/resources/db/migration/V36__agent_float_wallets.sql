@@ -5,8 +5,27 @@
 
 ALTER TABLE wallets ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'PERSONAL';
 
--- One wallet per user becomes one wallet per (user, type).
-ALTER TABLE wallets DROP CONSTRAINT IF EXISTS wallets_user_id_key;
+-- One wallet per user becomes one wallet per (user, type). The old unique was created
+-- either by the V1 baseline (named wallets_user_id_key) or, on DBs built by the legacy
+-- ddl-auto=update, by Hibernate (an opaque uk_* name). Drop ANY unique constraint that
+-- is exactly on (user_id) so a second AGENT_FLOAT wallet can be inserted. Same dynamic
+-- pattern as V31/V34.
+DO $$
+DECLARE
+    c record;
+BEGIN
+    FOR c IN
+        SELECT con.conname
+        FROM pg_constraint con
+        JOIN pg_class rel ON rel.oid = con.conrelid
+        WHERE rel.relname = 'wallets'
+          AND con.contype = 'u'
+          AND pg_get_constraintdef(con.oid) = 'UNIQUE (user_id)'
+    LOOP
+        EXECUTE format('ALTER TABLE wallets DROP CONSTRAINT %I', c.conname);
+    END LOOP;
+END $$;
+
 ALTER TABLE wallets DROP CONSTRAINT IF EXISTS wallets_user_id_type_key;
 ALTER TABLE wallets ADD CONSTRAINT wallets_user_id_type_key UNIQUE (user_id, type);
 

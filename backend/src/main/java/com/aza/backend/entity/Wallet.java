@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "wallets")
+@Table(name = "wallets", uniqueConstraints =
+        @UniqueConstraint(name = "wallets_user_id_type_key", columnNames = {"user_id", "type"}))
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
