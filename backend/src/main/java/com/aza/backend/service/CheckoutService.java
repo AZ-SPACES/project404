@@ -105,6 +105,7 @@ public class CheckoutService {
                 .amount(request.getAmount())
                 .description(request.getDescription())
                 .metadata(request.getMetadata())
+                .reference(request.getReference())
                 .successUrl(request.getSuccessUrl())
                 .cancelUrl(request.getCancelUrl())
                 .idempotencyKey(request.getIdempotencyKey())
@@ -323,7 +324,7 @@ public class CheckoutService {
 
     public Page<CheckoutSessionResponse> searchMerchantSessions(
             UUID merchantId, int page, int size,
-            String status, String from, String to, String q, Boolean testMode) {
+            String status, String from, String to, String q, Boolean testMode, String reference) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -340,11 +341,31 @@ public class CheckoutService {
             try { toDt = LocalDateTime.parse(to + "T23:59:59"); } catch (Exception ignored) {}
         }
         String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
+        String referenceParam = (reference != null && !reference.isBlank()) ? reference.trim() : null;
 
         return sessionRepository.searchSessions(
-                        merchantId, statusEnum, fromDt, toDt, testMode, qParam,
+                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, qParam,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(s -> toResponse(s, merchant));
+    }
+
+    /**
+     * Per-reference reconciliation summary for a platform merchant: count + gross + net of its
+     * COMPLETED sessions carrying a given reference (e.g. one tenant/seller or order group).
+     */
+    public Map<String, Object> reconcileByReference(UUID merchantId, String reference) {
+        if (reference == null || reference.isBlank()) {
+            throw new AppException("VALIDATION", "reference is required", HttpStatus.BAD_REQUEST);
+        }
+        String ref = reference.trim();
+        List<Object[]> rows = sessionRepository.reconcileByReference(merchantId, ref);
+        Object[] row = rows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO, BigDecimal.ZERO} : rows.get(0);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("reference", ref);
+        result.put("completedCount", row[0] != null ? ((Number) row[0]).longValue() : 0L);
+        result.put("totalAmount", row[1] != null ? row[1] : BigDecimal.ZERO);
+        result.put("totalNetAmount", row[2] != null ? row[2] : BigDecimal.ZERO);
+        return result;
     }
 
     public Page<CheckoutSessionResponse> listCustomerSessions(
@@ -412,6 +433,11 @@ public class CheckoutService {
             payload.put("currency", session.getCurrency());
             payload.put("platformFee", session.getPlatformFee());
             payload.put("netAmount", session.getNetAmount());
+            // Attribution data so a platform merchant can route the payment to the right
+            // tenant/order from the webhook alone, without a follow-up GET /sessions/{id}.
+            payload.put("reference", session.getReference());
+            payload.put("description", session.getDescription());
+            payload.put("metadata", session.getMetadata());
             payload.put("completedAt", session.getCompletedAt().toString());
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
@@ -542,6 +568,7 @@ public class CheckoutService {
                 .currency(s.getCurrency())
                 .description(s.getDescription())
                 .metadata(s.getMetadata())
+                .reference(s.getReference())
                 .successUrl(s.getSuccessUrl())
                 .cancelUrl(s.getCancelUrl())
                 .status(s.getStatus().name())

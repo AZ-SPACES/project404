@@ -24,6 +24,7 @@ public class CheckoutSessionResponse {
     private String currency;
     private String description;
     private String metadata;
+    private String reference;
     private String successUrl;
     private String cancelUrl;
     private String status;

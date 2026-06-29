@@ -159,17 +159,30 @@ public class MerchantController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String reference,
             @RequestParam(required = false) String mode) {
         UUID merchantId = resolveMerchantId(principal);
         // mode: "test" → sandbox only, "live" → live only, anything else → both.
         Boolean testMode = "test".equalsIgnoreCase(mode) ? Boolean.TRUE
                 : "live".equalsIgnoreCase(mode) ? Boolean.FALSE : null;
-        if (status != null || from != null || to != null || q != null || testMode != null) {
+        if (status != null || from != null || to != null || q != null || reference != null || testMode != null) {
             return ResponseEntity.ok(ApiResponse.success(
-                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode)));
+                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode, reference)));
         }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));
+    }
+
+    @Operation(summary = "Reconcile completed sessions by reference",
+            description = "Returns the count, gross total and net total of COMPLETED checkout sessions "
+                    + "carrying the given `reference`. A platform merchant uses this to reconcile payments "
+                    + "for one of its tenants/sellers or an order group.")
+    @GetMapping("/sessions/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> sessionsSummary(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @RequestParam String reference) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.reconcileByReference(merchantId, reference)));
     }
 
     @GetMapping("/sessions/{sessionId}")

@@ -54,6 +54,22 @@ public class OpenApiConfig {
                                 `POST /api/v1/merchant/sessions/{id}/simulate`, which marks it paid and fires a
                                 webhook with `livemode:false` — no customer or funds required. Switch to an
                                 `aza_live_` key to go live.
+
+                                ### Platforms & marketplaces (multi-tenant)
+                                A platform that hosts many independent sellers/stores (an Amazon-style marketplace)
+                                integrates as a **single AZA merchant**: one account, one wallet, one set of API keys.
+                                You stay the merchant of record and settle to your tenants yourself.
+                                - **Attribute each payment to a tenant/order** — set `reference` (e.g. a tenant or
+                                  order id) and/or `metadata` (arbitrary JSON) when you create the checkout session.
+                                  Both are echoed back on the session and in the `checkout.completed` webhook, so you
+                                  can route the payment to the right tenant from the webhook alone.
+                                - **Reconcile per tenant** — `GET /api/v1/merchant/sessions?reference=…` lists a single
+                                  tenant's sessions, and `GET /api/v1/merchant/sessions/summary?reference=…` returns the
+                                  count, gross and net totals for that reference.
+                                - **Pay your tenants** out-of-band on your own schedule, net of your commission. AZA
+                                  settles only to your platform account; it does not split funds to individual tenants.
+                                - **Idempotency keys are unique within your account.** Namespace them per tenant/order
+                                  (e.g. `tenantA:order-123`) so two tenants can never collide.
                                 """)
                         .contact(new Contact().name("AZA Developers").url("https://aza.systems/developers")))
                 .servers(List.of(

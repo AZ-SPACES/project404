@@ -34,6 +34,11 @@ public class CheckoutSession {
     @Column(columnDefinition = "TEXT")
     private String metadata; // merchant-supplied JSON blob
 
+    // Merchant-supplied reference (e.g. their own order/tenant id). Indexed so a
+    // platform merchant can filter and reconcile sessions per tenant without scanning metadata.
+    @Column(length = 255)
+    private String reference;
+
     private String successUrl;
     private String cancelUrl;
 

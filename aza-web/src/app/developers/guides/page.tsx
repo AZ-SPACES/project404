@@ -272,6 +272,12 @@ const navigationGroups = [
     ],
   },
   {
+    title: 'Platforms',
+    items: [
+      { id: 'marketplaces', label: 'Marketplaces & Multi-tenant' },
+    ],
+  },
+  {
     title: 'Payouts',
     items: [
       { id: 'payouts', label: 'Merchant Payouts' },
@@ -535,11 +541,17 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
         <Table
           headers={['Field', 'Type', 'Required', 'Description']}
           rows={[
-            ['amount',      'decimal', 'Yes', 'Amount in GHS, e.g. 50.00'],
-            ['description', 'string',  'No',  'Note shown to the customer at checkout'],
-            ['reference',   'string',  'No',  'Your own idempotency reference'],
+            ['amount',         'decimal', 'Yes', 'Amount in GHS, e.g. 50.00'],
+            ['description',    'string',  'No',  'Note shown to the customer at checkout'],
+            ['reference',      'string',  'No',  'Your own reference (e.g. order or tenant/seller id). Echoed on the session and in webhooks, and filterable via ?reference='],
+            ['metadata',       'string',  'No',  'Arbitrary JSON string, returned unchanged on the session and in webhooks'],
+            ['idempotencyKey', 'string',  'No',  'Unique key to safely retry creation without duplicating a session'],
           ]}
         />
+
+        <Note>
+          Building a marketplace or multi-tenant platform? See <strong>Platforms → Marketplaces &amp; Multi-tenant</strong> for how to attribute each payment to a seller with <code>reference</code> and reconcile per tenant.
+        </Note>
 
         <h3 className="text-base font-bold text-gray-900">Session response</h3>
         <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
@@ -658,6 +670,156 @@ var statusRes = client.send(
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(statusRes.body()); // status: COMPLETED`,
+    },
+  },
+
+  // ── Marketplaces & Multi-tenant ──────────────────────────────────────────────
+  marketplaces: {
+    id: 'marketplaces',
+    category: 'Platforms',
+    title: 'Marketplaces & Multi-tenant',
+    subtitle: 'Run a platform with many sellers on one Aza account',
+    lastUpdated: 'June 2026',
+    description: 'If you run a marketplace or multi-tenant platform — many independent sellers or stores under one brand — you integrate as a single Aza merchant. You stay the merchant of record, attribute each payment to one of your tenants, and settle to your tenants yourself. This is the same model a marketplace like Amazon uses.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">How it works</h3>
+        <p className="text-sm">Your platform is <strong>one</strong> Aza merchant: one account, one wallet, one set of API keys. Every payment settles into your account. You attribute each payment to the right seller, keep your commission, and pay your sellers out on your own schedule.</p>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm">
+          <li>You complete KYB once, for your platform — your sellers do not each onboard with Aza.</li>
+          <li>Aza settles only to your platform account; it does not split funds to individual sellers.</li>
+          <li>You run your own per-seller ledger and payouts.</li>
+        </ul>
+
+        <h3 className="text-base font-bold text-gray-900">Attribute each payment to a tenant</h3>
+        <p className="text-sm">Set <code>reference</code> (and optionally <code>metadata</code>) when you create a checkout session. Both are echoed back on the session object and in the <code>session.completed</code> webhook, so you can route a payment to the right seller from the webhook alone.</p>
+        <Table
+          headers={['Field', 'Type', 'Use']}
+          rows={[
+            ['reference', 'string', 'Indexed, filterable tag — e.g. a seller id or order id'],
+            ['metadata',  'string', 'Arbitrary JSON for any extra context you need back'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Reconcile per tenant</h3>
+        <p className="text-sm">List one seller&apos;s sessions, or fetch a rolled-up total of their completed payments:</p>
+        <div className="space-y-2">
+          <Endpoint method="GET" path="/api/v1/merchant/sessions?reference={ref}" />
+          <Endpoint method="GET" path="/api/v1/merchant/sessions/summary?reference={ref}" />
+        </div>
+        <p className="text-sm">The summary returns the count, gross total and net total (after Aza&apos;s fee) for that reference:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "reference": "seller_4471",
+    "completedCount": 128,
+    "totalAmount": 8640.00,
+    "totalNetAmount": 8510.40
+  }
+}`}</pre>
+
+        <Warn>
+          <strong>Idempotency keys are unique across your whole account.</strong> Because all sellers share one merchant, namespace any <code>idempotencyKey</code> per seller/order (e.g. <code>seller_4471:order_9920</code>) so two tenants can never collide.
+        </Warn>
+
+        <Note>
+          Need Aza to settle <em>directly</em> to each seller and KYB them individually (a connected-accounts model)? That is not supported today — talk to us at <a href="https://aza.systems/developers" className="text-[#2e7d2e] underline">aza.systems/developers</a> about your use case.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# 1. Create a checkout for one of your sellers — tag it with a reference
+curl -X POST ${BASE}/api/v1/merchant/sessions \\
+  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "amount": 120.00,
+    "description": "Order #9920",
+    "reference": "seller_4471",
+    "metadata": "{\\"order_id\\":\\"9920\\",\\"seller_id\\":\\"4471\\"}"
+  }'
+
+# 2. List a single seller's sessions
+curl -X GET "${BASE}/api/v1/merchant/sessions?reference=seller_4471&page=0&size=20" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"
+
+# 3. Reconcile a seller's completed payments (count + gross + net)
+curl -X GET "${BASE}/api/v1/merchant/sessions/summary?reference=seller_4471" \\
+  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+      js: `const BASE = '${BASE}';
+const KEY  = 'sk_live_YOUR_KEY';
+
+// Create a checkout for a seller, tagged with your reference
+const { data: session } = await fetch(\`\${BASE}/api/v1/merchant/sessions\`, {
+  method: 'POST',
+  headers: { 'X-Api-Key': KEY, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    amount: 120.00,
+    description: 'Order #9920',
+    reference: 'seller_4471',
+    metadata: JSON.stringify({ order_id: '9920', seller_id: '4471' }),
+  }),
+}).then(r => r.json());
+
+// Reconcile a single seller's completed payments
+const { data: summary } = await fetch(
+  \`\${BASE}/api/v1/merchant/sessions/summary?reference=seller_4471\`,
+  { headers: { 'X-Api-Key': KEY } }
+).then(r => r.json());
+
+console.log(summary.completedCount, summary.totalNetAmount);`,
+      python: `import requests, json
+
+BASE    = '${BASE}'
+HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+
+# Create a checkout for a seller, tagged with your reference
+session = requests.post(
+    f'{BASE}/api/v1/merchant/sessions',
+    headers=HEADERS,
+    json={
+        'amount': 120.00,
+        'description': 'Order #9920',
+        'reference': 'seller_4471',
+        'metadata': json.dumps({'order_id': '9920', 'seller_id': '4471'}),
+    }
+).json()['data']
+
+# Reconcile a single seller's completed payments
+summary = requests.get(
+    f'{BASE}/api/v1/merchant/sessions/summary',
+    params={'reference': 'seller_4471'},
+    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+).json()['data']
+
+print(summary['completedCount'], summary['totalNetAmount'])`,
+      java: `import java.net.URI;
+import java.net.http.*;
+
+var client = HttpClient.newHttpClient();
+String BASE = "https://api.aza.systems";
+
+// Create a checkout for a seller, tagged with your reference
+String body = "{\\"amount\\":120.00,\\"description\\":\\"Order #9920\\","
+    + "\\"reference\\":\\"seller_4471\\","
+    + "\\"metadata\\":\\"{\\\\\\"order_id\\\\\\":\\\\\\"9920\\\\\\"}\\"}";
+client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+    HttpResponse.BodyHandlers.ofString());
+
+// Reconcile a single seller's completed payments
+var summary = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions/summary?reference=seller_4471"))
+        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+System.out.println(summary.body());
+// {"success":true,"data":{"reference":"seller_4471","completedCount":128,...}}`,
     },
   },
 
@@ -1501,9 +1663,14 @@ System.out.println(payout.body());`,
     "amount": 50.00,
     "currency": "GHS",
     "status": "COMPLETED",
-    "reference": "order_1042"
+    "reference": "order_1042",
+    "metadata": "{\\"seller_id\\":\\"4471\\"}"
   }
 }`}</pre>
+
+        <Note>
+          <code>reference</code> and <code>metadata</code> are echoed back on every <code>session.completed</code> event, so a platform can route a payment to the right seller without a follow-up API call. See <strong>Platforms → Marketplaces &amp; Multi-tenant</strong>.
+        </Note>
 
         <Note>
           If your endpoint returns any status other than <code>2xx</code>, Aza will retry delivery up to <strong>5 times</strong> with exponential backoff (30 s, 2 min, 10 min, 1 hr, 6 hr).
@@ -2256,10 +2423,22 @@ System.out.println(session); // contains checkoutUrl`,
 
         {[
           {
-            version: 'v1.5.0',
-            date: 'May 2026',
+            version: 'v1.6.0',
+            date: 'June 2026',
             tag: 'Latest',
             tagColor: '#22c55e',
+            changes: [
+              { type: 'New', text: 'Marketplaces & multi-tenant guide — run a platform with many sellers on one Aza account' },
+              { type: 'New', text: 'Per-tenant reconciliation — GET /sessions/summary?reference= returns count, gross and net for a reference' },
+              { type: 'Improved', text: 'Checkout sessions accept a metadata JSON field, and filter by reference via GET /sessions?reference=' },
+              { type: 'Improved', text: 'session.completed webhook now echoes reference and metadata for attribution without a follow-up call' },
+            ],
+          },
+          {
+            version: 'v1.5.0',
+            date: 'May 2026',
+            tag: null,
+            tagColor: '',
             changes: [
               { type: 'New', text: 'Merchant invoices API — create, send, and cancel invoices with customer email delivery' },
               { type: 'New', text: 'Discount codes API — percentage and fixed-amount codes with optional usage caps and expiry' },

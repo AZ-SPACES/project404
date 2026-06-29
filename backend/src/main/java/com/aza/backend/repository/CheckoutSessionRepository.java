@@ -109,6 +109,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND (CAST(:from AS timestamp) IS NULL OR s.createdAt >= :from) " +
            "AND (CAST(:to AS timestamp) IS NULL OR s.createdAt <= :to) " +
            "AND (CAST(:testMode AS boolean) IS NULL OR s.testMode = :testMode) " +
+           "AND (CAST(:reference AS string) IS NULL OR s.reference = :reference) " +
            "AND (CAST(:q AS string) IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
@@ -117,8 +118,16 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             @Param("testMode") Boolean testMode,
+            @Param("reference") String reference,
             @Param("q") String q,
             Pageable pageable);
+
+    // Per-reference reconciliation: a platform merchant sums COMPLETED sessions for one of its
+    // tenants/orders. Returns a single row [count, SUM(amount), SUM(netAmount)].
+    @Query("SELECT COUNT(s), COALESCE(SUM(s.amount), 0), COALESCE(SUM(s.netAmount), 0) " +
+           "FROM CheckoutSession s WHERE s.merchantId = :merchantId AND s.reference = :reference " +
+           "AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
+    List<Object[]> reconcileByReference(@Param("merchantId") UUID merchantId, @Param("reference") String reference);
 
     // ── Customer transaction history ──────────────────────────────────────────
 

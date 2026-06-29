@@ -2,6 +2,7 @@ package com.aza.backend.dto.merchant;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -15,6 +16,12 @@ public class CreateCheckoutSessionRequest {
 
     private String description;
     private String metadata; // arbitrary JSON string
+
+    // Your own reference for this payment (e.g. order or tenant/seller id). Returned on the
+    // session and in the webhook payload, and filterable via GET /sessions?reference=...
+    @Size(max = 255)
+    private String reference;
+
     private String successUrl;
     private String cancelUrl;
     private String idempotencyKey;

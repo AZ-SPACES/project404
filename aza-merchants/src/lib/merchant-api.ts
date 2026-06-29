@@ -178,6 +178,7 @@ export interface CheckoutSession {
   currency: string;
   description: string | null;
   metadata: string | null;
+  reference: string | null; // merchant-supplied reference (e.g. order/tenant id)
   successUrl: string | null;
   cancelUrl: string | null;
   status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
@@ -541,6 +542,7 @@ export async function createSession(data: {
   successUrl?: string;
   cancelUrl?: string;
   metadata?: string;
+  reference?: string;
   idempotencyKey?: string;
 }): Promise<CheckoutSession> {
   const body = await request<{ success: boolean; data: CheckoutSession }>(
