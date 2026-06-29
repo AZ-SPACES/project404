@@ -300,32 +300,35 @@ export default function ProfileScreen() {
     );
   };
 
-  // Gated review: collect in-app feedback first; route only happy (Good) users
-  // to the public store review so unhappy signal stays private + actionable.
-  const handleFeedbackSubmitted = (rating: number) => {
-    if (rating >= 5) openStoreReview();
+  const handleFeedbackSubmitted = (_rating: number) => {
+    openStoreReview();
   };
+
+  const ITUNES_ITEM_ID = '';
 
   const openStoreReview = async () => {
     try {
       const isAvailable = await StoreReview.isAvailableAsync();
       if (isAvailable) {
         await StoreReview.requestReview();
-      } else {
-        const androidPackageName = 'com.semekor.k.aza';
-        const itunesItemId = 'YOUR_APP_ID'; // Replace with actual App Store ID when known
-        const storeUrl = Platform.OS === 'ios'
-          ? `https://apps.apple.com/app/apple-store/id${itunesItemId}?mt=8`
-          : `market://details?id=${androidPackageName}`;
+        return;
+      }
 
-        const canOpen = await Linking.canOpenURL(storeUrl);
-        if (canOpen) {
-          await Linking.openURL(storeUrl);
-        } else if (Platform.OS === 'android') {
-          await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackageName}`);
-        } else {
-          showToast('Store could not be opened.', 'error');
+      const androidPackageName = 'com.semekor.k.aza';
+      if (Platform.OS === 'ios') {
+        if (!ITUNES_ITEM_ID) {
+          // No App Store ID yet — don't open a broken link.
+          return;
         }
+        await Linking.openURL(`https://apps.apple.com/app/apple-store/id${ITUNES_ITEM_ID}?mt=8`);
+        return;
+      }
+
+      const marketUrl = `market://details?id=${androidPackageName}`;
+      if (await Linking.canOpenURL(marketUrl)) {
+        await Linking.openURL(marketUrl);
+      } else {
+        await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackageName}`);
       }
     } catch {
       showToast('Could not open store. Please try again later.', 'error');

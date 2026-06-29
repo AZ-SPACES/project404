@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { useAppTheme, Spacing, ThemeColors, Typography } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
 import FeedbackSheet from '../../../components/ui/FeedbackSheet';
-import { sendAiMessage } from '../../../services/api';
+import { useToast } from '../../../providers/ToastProvider';
+import { sendAiMessage, submitFeedback } from '../../../services/api';
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string };
 
@@ -30,6 +31,7 @@ export default function AiAssistantScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation();
+  const { showToast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -73,6 +75,33 @@ export default function AiAssistantScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Long-press an AI response to report harmful/incorrect output. Routes through
+  // the existing feedback endpoint (context AI_REPORT) so it lands server-side
+  // for moderation review. Satisfies App Store AI-safety guidance (Guideline 3.3.11).
+  const reportMessage = (content: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Report response',
+      'Flag this AI response as harmful, offensive, or incorrect? Our team will review it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const excerpt = content.length > 800 ? `${content.slice(0, 800)}…` : content;
+              await submitFeedback(1, `Reported AI response: "${excerpt}"`, 'AI_REPORT');
+              showToast('Thanks — this response has been reported for review.', 'success');
+            } catch {
+              showToast('Could not submit report. Please try again.', 'error');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const isEmpty = messages.length === 0 && !isLoading;
@@ -144,8 +173,11 @@ export default function AiAssistantScreen() {
           ) : (
             <>
               {messages.map(msg => (
-                <View
+                <Pressable
                   key={msg.id}
+                  onLongPress={msg.role === 'assistant' ? () => reportMessage(msg.content) : undefined}
+                  delayLongPress={400}
+                  accessibilityHint={msg.role === 'assistant' ? 'Long press to report this response' : undefined}
                   style={[
                     styles.bubble,
                     msg.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant,
@@ -167,7 +199,7 @@ export default function AiAssistantScreen() {
                       {msg.content}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               ))}
 
               {isLoading && (
