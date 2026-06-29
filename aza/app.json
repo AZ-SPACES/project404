@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.semekor.k.aza"
+      "bundleIdentifier": "com.semekor.k.aza",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "allowBackup": false,
@@ -26,9 +29,7 @@
         "android.permission.USE_FINGERPRINT",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.READ_CONTACTS",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -56,6 +57,7 @@
       "expo-updates",
       "react-native-bottom-tabs",
       "./plugins/withSslPinning",
+      "./plugins/withStoreComplianceFixes",
       [
         "expo-splash-screen",
         {

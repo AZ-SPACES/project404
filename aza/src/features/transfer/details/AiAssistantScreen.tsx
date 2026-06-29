@@ -208,6 +208,9 @@ export default function AiAssistantScreen() {
             <Feather name="send" size={18} color={!inputText.trim() || isLoading ? Colors.textSecondary : '#fff'} />
           </TouchableOpacity>
         </View>
+        <Text style={styles.disclaimer}>
+          Aza AI can make mistakes. This is general information, not financial advice.
+        </Text>
       </KeyboardAvoidingView>
 
       <FeedbackSheet
@@ -301,6 +304,14 @@ function createStyles(Colors: ThemeColors) {
       flexDirection: 'row', alignItems: 'flex-end', gap: 10,
       paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border,
+      backgroundColor: Colors.background,
+    },
+    disclaimer: {
+      ...Typography.caption,
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.sm,
       backgroundColor: Colors.background,
     },
     input: {

@@ -347,6 +347,9 @@ export function CinematicFooter() {
                 <MagneticButton as="a" href="/cookie-policy" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Cookie Policy
                 </MagneticButton>
+                <MagneticButton as="a" href="/delete-account" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
+                  Delete Account
+                </MagneticButton>
                 <MagneticButton as="a" href="mailto:support@aza.systems" className="footer-solid-pill px-6 py-2 rounded-xl font-medium text-xs md:text-sm">
                   Contact Support
                 </MagneticButton>

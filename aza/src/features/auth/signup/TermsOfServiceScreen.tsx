@@ -7,7 +7,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
 import { BackButton } from '../../../components/ui/BackButton';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ? `${process.env.EXPO_PUBLIC_WEB_URL}/terms-of-service` : 'https://www.aza.systems/terms-of-service';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://www.aza.systems';
 
 export default function TermsOfServiceScreen() {
   const { colors: Colors } = useAppTheme();
