@@ -510,7 +510,27 @@ export default function CheckoutPage() {
     setBusy(true);
     setError(null);
     try {
-      await loginStep1(identifier, password);
+      const result = await loginStep1(identifier, password);
+      // The backend decides whether a second factor is needed. Only regular
+      // customers with no 2FA get an OTP; staff/2FA accounts return a preAuthToken,
+      // and a direct login returns a token. Route to whichever step actually applies
+      // instead of always sitting on the OTP screen waiting for a code that may
+      // never have been sent.
+      if (result && typeof result === "object") {
+        if (result.preAuthToken) {
+          setPreAuthToken(result.preAuthToken);
+          setTwoFaMode("totp");
+          setTwoFaCode("");
+          setStep("2fa");
+          return;
+        }
+        if (result.accessToken) {
+          setToken(result.accessToken);
+          setStep("passcode");
+          return;
+        }
+      }
+      // No token and no preAuthToken → an OTP was sent; collect it.
       setStep("otp");
     } catch (e: any) {
       setError(e.message ?? "Login failed");

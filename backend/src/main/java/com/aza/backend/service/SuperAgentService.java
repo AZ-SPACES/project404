@@ -49,6 +49,13 @@ public class SuperAgentService {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
+                // Idempotency keys are globally unique. Scope replay to the caller so one
+                // superagent can never observe another's distribution (target agent, float
+                // balance) by reusing — or guessing — their key.
+                if (!existing.get().getSenderId().equals(superUser.getId())) {
+                    throw new AppException("IDEMPOTENCY_KEY_CONFLICT",
+                            "This idempotency key has already been used", HttpStatus.CONFLICT);
+                }
                 return toResponse(existing.get(), superForUser(superUser));
             }
         }

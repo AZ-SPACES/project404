@@ -30,6 +30,18 @@ export interface LoginResult {
   preAuthToken?: string;
 }
 
+// Shape returned by POST /auth/login. The backend may take one of three paths:
+//  - send an OTP and return a status string (data is a plain string)
+//  - require 2FA and return a preAuthToken (no OTP step)
+//  - log the user straight in and return access/refresh tokens (no OTP step)
+export interface PreLoginResult {
+  accessToken?: string;
+  refreshToken?: string;
+  preAuthToken?: string;
+  methods?: string[];
+  defaultMethod?: string;
+}
+
 export interface PromoInfo {
   code: string;
   description: string | null;
@@ -83,7 +95,7 @@ export function getSession(sessionId: string): Promise<CheckoutSession> {
   return get(`/api/v1/checkout/${sessionId}`);
 }
 
-export function loginStep1(identifier: string, password: string): Promise<void> {
+export function loginStep1(identifier: string, password: string): Promise<PreLoginResult | string> {
   return post("/api/v1/auth/login", { identifier, password });
 }
 

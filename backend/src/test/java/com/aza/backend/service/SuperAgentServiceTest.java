@@ -165,4 +165,24 @@ class SuperAgentServiceTest {
         verify(transactionRepository, never()).save(any());           // no second ledger entry
         verify(walletRepository, never()).findByUserIdAndTypeForUpdate(any(), any()); // no balance moves
     }
+
+    @Test
+    void distribute_idempotencyKeyOwnedByAnotherSuperagent_isRejectedNotLeaked() {
+        // A globally-unique idempotency key that belongs to a DIFFERENT superagent must not
+        // return that superagent's transaction (which would leak their target agent + float).
+        Transaction otherSuperagentsTx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(UUID.randomUUID()) // some other sender
+                .recipientId(targetUserId).amount(new BigDecimal("120.00"))
+                .type(Transaction.TransactionType.FLOAT_DISTRIBUTION)
+                .build();
+        when(transactionRepository.findByIdempotencyKey("shared-key")).thenReturn(Optional.of(otherSuperagentsTx));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.distribute(superUser(), TARGET_CODE, new BigDecimal("120.00"), "shared-key"));
+
+        assertEquals("IDEMPOTENCY_KEY_CONFLICT", ex.getCode());
+        verify(transactionRepository, never()).save(any());
+        // The caller never sees the other superagent's transaction details.
+        verify(userRepository, never()).findById(any());
+    }
 }

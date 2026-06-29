@@ -105,7 +105,9 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND (:from IS NULL OR s.createdAt >= :from) " +
            "AND (:to IS NULL OR s.createdAt <= :to) " +
            "AND (:testMode IS NULL OR s.testMode = :testMode) " +
-           "AND (:q IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
+           // CAST(:q AS string) pins the bind type so a null :q is sent as varchar, not an
+           // untyped null that PostgreSQL infers as bytea → "function lower(bytea) does not exist".
+           "AND (:q IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
             @Param("merchantId") UUID merchantId,
