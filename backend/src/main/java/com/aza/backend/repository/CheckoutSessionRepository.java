@@ -100,14 +100,16 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     // ── Filtered / search sessions ────────────────────────────────────────────
 
+    // Each nullable optional filter is CAST in its "IS NULL" check so the bind is sent with an
+    // explicit type. A standalone "? IS NULL" gives PostgreSQL no type context: it then either
+    // infers bytea (→ "function lower(bytea) does not exist" on :q) or fails outright (→ "could
+    // not determine data type of parameter" on the temporal :from/:to). Casting pins the type.
     @Query("SELECT s FROM CheckoutSession s WHERE s.merchantId = :merchantId " +
            "AND (:status IS NULL OR s.status = :status) " +
-           "AND (:from IS NULL OR s.createdAt >= :from) " +
-           "AND (:to IS NULL OR s.createdAt <= :to) " +
-           "AND (:testMode IS NULL OR s.testMode = :testMode) " +
-           // CAST(:q AS string) pins the bind type so a null :q is sent as varchar, not an
-           // untyped null that PostgreSQL infers as bytea → "function lower(bytea) does not exist".
-           "AND (:q IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
+           "AND (CAST(:from AS timestamp) IS NULL OR s.createdAt >= :from) " +
+           "AND (CAST(:to AS timestamp) IS NULL OR s.createdAt <= :to) " +
+           "AND (CAST(:testMode AS boolean) IS NULL OR s.testMode = :testMode) " +
+           "AND (CAST(:q AS string) IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
             @Param("merchantId") UUID merchantId,
