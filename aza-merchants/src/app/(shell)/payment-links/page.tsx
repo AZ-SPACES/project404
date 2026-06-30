@@ -5,7 +5,9 @@ import {
   getSessions,
   createSession,
   expireSession,
+  getSessionsSummary,
   CheckoutSession,
+  SessionsSummary,
   Page,
 } from "@/lib/merchant-api";
 import {
@@ -21,6 +23,9 @@ import {
   Check,
   X,
   ExternalLink,
+  Search,
+  Hash,
+  Calculator,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 
@@ -45,6 +50,7 @@ const STATUS_CFG: Record<string, { icon: React.ElementType; cls: string; label: 
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [reference, setReference] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckoutSession | null>(null);
@@ -60,6 +66,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
       const res = await createSession({
         amount: amt,
         description: description || undefined,
+        reference: reference.trim() || undefined,
       });
       setResult(res);
       onCreated();
@@ -108,6 +115,16 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
                 className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground/50 mb-1.5">Reference <span className="text-foreground/25 font-normal">optional</span></label>
+              <input
+                type="text" value={reference} onChange={(e) => setReference(e.target.value)}
+                maxLength={255}
+                placeholder="Order or tenant/seller ID"
+                className="w-full px-3.5 py-2.5 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-sm transition-all"
+              />
+              <p className="text-[11px] text-foreground/30 mt-1.5 leading-snug">Your own ID for this payment. Filter and reconcile by it later; included in the webhook payload.</p>
+            </div>
             {error && <p className="text-red-400 text-xs">{error}</p>}
             <button type="submit" disabled={loading} className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] disabled:opacity-50 text-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2">
               {loading && <Loader2 size={14} className="animate-spin" />}
@@ -124,6 +141,12 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               <p className="text-[10px] text-foreground/30 mb-1.5 uppercase tracking-wider font-medium">URL</p>
               <p className="text-xs text-foreground/70 font-mono">{result.checkoutUrl}</p>
             </div>
+            {result.reference && (
+              <div className="bg-black/30 border border-border rounded-xl p-3 break-all">
+                <p className="text-[10px] text-foreground/30 mb-1.5 uppercase tracking-wider font-medium">Reference</p>
+                <p className="text-xs text-foreground/70 font-mono">{result.reference}</p>
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={copy} className="flex-1 py-2.5 rounded-xl bg-muted/30 border border-border text-foreground/60 hover:text-foreground hover:bg-muted font-medium text-sm transition-colors flex items-center justify-center gap-2">
                 {copied ? <Check size={13} className="text-[#B7EE7A]" /> : <Copy size={13} />}
@@ -158,12 +181,20 @@ export default function PaymentLinksPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [expiring, setExpiring] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [refInput, setRefInput] = useState("");
+  const [reference, setReference] = useState("");
+  const [summary, setSummary] = useState<SessionsSummary | null>(null);
 
-  const load = useCallback(async (p: number, s: string) => {
+  const load = useCallback(async (p: number, s: string, ref: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getSessions({ page: p, size: 20, status: s !== "ALL" ? s : undefined });
+      const res = await getSessions({
+        page: p,
+        size: 20,
+        status: s !== "ALL" ? s : undefined,
+        reference: ref || undefined,
+      });
       setData(res);
       setPage(p);
     } catch (err: any) {
@@ -173,13 +204,35 @@ export default function PaymentLinksPage() {
     }
   }, []);
 
-  useEffect(() => { load(0, statusFilter); }, [load, statusFilter]);
+  useEffect(() => { load(0, statusFilter, reference); }, [load, statusFilter, reference]);
+
+  // When filtering by a reference, also pull the reconciliation totals for it.
+  // The render is guarded on summary.reference === reference, so a stale summary
+  // for a previous reference never shows while a new one loads.
+  useEffect(() => {
+    if (!reference) return;
+    let cancelled = false;
+    getSessionsSummary(reference)
+      .then((s) => { if (!cancelled) setSummary(s); })
+      .catch(() => { if (!cancelled) setSummary(null); });
+    return () => { cancelled = true; };
+  }, [reference]);
+
+  function applyReference(e: React.FormEvent) {
+    e.preventDefault();
+    setReference(refInput.trim());
+  }
+
+  function clearReference() {
+    setRefInput("");
+    setReference("");
+  }
 
   async function handleExpire(id: string) {
     setExpiring(id);
     try {
       await expireSession(id);
-      load(page, statusFilter);
+      load(page, statusFilter, reference);
     } catch {}
     setExpiring(null);
   }
@@ -197,7 +250,7 @@ export default function PaymentLinksPage() {
       {showCreate && (
         <CreateModal
           onClose={() => setShowCreate(false)}
-          onCreated={() => load(0, statusFilter)}
+          onCreated={() => load(0, statusFilter, reference)}
         />
       )}
 
@@ -216,19 +269,61 @@ export default function PaymentLinksPage() {
           </button>
         </div>
 
-        <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit flex-wrap">
-          {STATUS_TABS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                statusFilter === s ? "bg-[#174717] text-foreground" : "text-foreground/45 hover:text-foreground"
-              }`}
-            >
-              {s.charAt(0) + s.slice(1).toLowerCase()}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-1 bg-muted/30 p-1 rounded-xl w-fit flex-wrap">
+            {STATUS_TABS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  statusFilter === s ? "bg-[#174717] text-foreground" : "text-foreground/45 hover:text-foreground"
+                }`}
+              >
+                {s.charAt(0) + s.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={applyReference} className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/30 pointer-events-none" />
+            <input
+              type="text"
+              value={refInput}
+              onChange={(e) => setRefInput(e.target.value)}
+              placeholder="Filter by reference…"
+              className="w-56 pl-9 pr-8 py-2 bg-muted/30 border border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/60 text-xs transition-all"
+            />
+            {reference && (
+              <button type="button" onClick={clearReference} title="Clear" className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-foreground/30 hover:text-foreground transition-colors">
+                <X size={13} />
+              </button>
+            )}
+          </form>
         </div>
+
+        {reference && summary && summary.reference === reference && (
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4 bg-[#B7EE7A]/[0.06] border border-[#B7EE7A]/20 rounded-xl">
+            <div className="flex items-center gap-2 text-foreground/60">
+              <Calculator size={15} className="text-[#B7EE7A]" />
+              <span className="text-xs font-medium">Reconciliation</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/40 text-[11px] font-mono text-foreground/70">
+                <Hash size={10} className="text-foreground/35" />{summary.reference}
+              </span>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-foreground/30 font-medium">Paid sessions</p>
+              <p className="text-sm font-semibold text-foreground mt-0.5">{summary.completedCount}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-foreground/30 font-medium">Gross collected</p>
+              <p className="text-sm font-semibold text-foreground mt-0.5">{fmtGHS(summary.totalAmount)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-foreground/30 font-medium">Net (after fees)</p>
+              <p className="text-sm font-semibold text-[#B7EE7A] mt-0.5">{fmtGHS(summary.totalNetAmount)}</p>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
@@ -273,6 +368,16 @@ export default function PaymentLinksPage() {
                       </td>
                       <td className="px-5 py-3.5 hidden sm:table-cell">
                         <p className="text-sm text-foreground/70 truncate max-w-[180px]">{s.description ?? "—"}</p>
+                        {s.reference && (
+                          <button
+                            onClick={() => { setRefInput(s.reference!); setReference(s.reference!); }}
+                            title="Filter by this reference"
+                            className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-muted/40 text-[10px] font-mono text-foreground/45 hover:text-foreground/80 hover:bg-muted/60 transition-colors max-w-[180px] truncate"
+                          >
+                            <Hash size={9} className="text-foreground/30 flex-shrink-0" />
+                            <span className="truncate">{s.reference}</span>
+                          </button>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <span className="text-xs text-foreground/40">{fmtDate(s.createdAt)}</span>
@@ -323,9 +428,9 @@ export default function PaymentLinksPage() {
 
         {data && data.totalPages > 1 && (
           <div className="flex justify-center items-center gap-3">
-            <button onClick={() => load(page - 1, statusFilter)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Previous</button>
+            <button onClick={() => load(page - 1, statusFilter, reference)} disabled={page === 0 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Previous</button>
             <span className="text-sm text-foreground/35">{page + 1} / {data.totalPages}</span>
-            <button onClick={() => load(page + 1, statusFilter)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Next</button>
+            <button onClick={() => load(page + 1, statusFilter, reference)} disabled={page >= data.totalPages - 1 || loading} className="px-4 py-2 text-sm rounded-xl bg-muted/30 hover:bg-muted disabled:opacity-30 border border-border">Next</button>
           </div>
         )}
       </div>
