@@ -22,6 +22,15 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "v1.6.0",
+    date: "2026-06-30",
+    summary: "Mini app submissions: screenshots and live URL validation.",
+    changes: [
+      { type: "added",    text: "PUT /v1/dev/miniapps now accepts `screenshotUrls` (up to 6 HTTPS image URLs) — shown to reviewers during admin approval." },
+      { type: "changed",  text: "Submitting a mini app for review now verifies the app URL is reachable over a valid HTTPS endpoint; unreachable or non-2xx URLs are rejected with a clear error." },
+    ],
+  },
+  {
     version: "v1.5.0",
     date: "2026-06-29",
     summary: "Checkout session references for platform/multi-tenant reconciliation.",

@@ -1662,6 +1662,7 @@ export interface MiniAppSubmission {
   version: string;
   status: "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "REJECTED" | "SUSPENDED";
   requestedPermissions: string[];
+  screenshotUrls: string[];
   createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;

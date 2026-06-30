@@ -259,6 +259,20 @@ export default function MiniAppsPage() {
                           <p className="text-foreground/40 text-xs truncate max-w-[200px]">{sub.description}</p>
                         </div>
                       </div>
+                      {sub.screenshotUrls?.length > 0 && (
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          {sub.screenshotUrls.map((shot, i) => (
+                            <a key={i} href={shot} target="_blank" rel="noopener noreferrer" title="Open full size">
+                              <img
+                                src={shot}
+                                alt={`Screenshot ${i + 1}`}
+                                loading="lazy"
+                                className="w-12 h-12 rounded-md object-cover border border-border hover:ring-2 hover:ring-emerald-400/50 transition"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-foreground/60">{sub.developerName}</td>
                     <td className="px-4 py-3 text-foreground/50">{sub.category}</td>
