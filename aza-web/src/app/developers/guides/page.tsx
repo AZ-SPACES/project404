@@ -274,7 +274,7 @@ const navigationGroups = [
   {
     title: 'Platforms',
     items: [
-      { id: 'marketplaces', label: 'Marketplaces & Multi-tenant' },
+      { id: 'marketplaces', label: 'Marketplaces (Aza Connect)' },
     ],
   },
   {
@@ -677,19 +677,43 @@ System.out.println(statusRes.body()); // status: COMPLETED`,
   marketplaces: {
     id: 'marketplaces',
     category: 'Platforms',
-    title: 'Marketplaces & Multi-tenant',
-    subtitle: 'Run a platform with many sellers on one Aza account',
-    lastUpdated: 'June 2026',
-    description: 'If you run a marketplace or multi-tenant platform — many independent sellers or stores under one brand — you integrate as a single Aza merchant. You stay the merchant of record, attribute each payment to one of your tenants, and settle to your tenants yourself. This is the same model a marketplace like Amazon uses.',
+    title: 'Marketplaces (Aza Connect)',
+    subtitle: 'Pay many sellers into their own Aza wallets from one account',
+    lastUpdated: 'July 2026',
+    description: 'If you run a marketplace — many independent sellers under one brand — you integrate as a single Aza merchant. Buyers pay from their own Aza account, and Aza Connect moves each seller’s share into their own Aza wallet for you: automatically at checkout (splits), or on your own schedule (direct transfers). Your sellers are ordinary Aza users and do not onboard as merchants.',
     content: (
       <div className="space-y-6">
         <h3 className="text-base font-bold text-gray-900">How it works</h3>
-        <p className="text-sm">Your platform is <strong>one</strong> Aza merchant: one account, one wallet, one set of API keys. Every payment settles into your account. You attribute each payment to the right seller, keep your commission, and pay your sellers out on your own schedule.</p>
+        <p className="text-sm">Your platform is <strong>one</strong> Aza merchant: one account, one wallet, one set of API keys. Buyers pay from their own Aza account, and Aza Connect credits each seller&apos;s share to their own Aza wallet. Sellers are ordinary Aza users, identified by email or username.</p>
         <ul className="list-disc pl-5 space-y-1.5 text-sm">
           <li>You complete KYB once, for your platform — your sellers do not each onboard with Aza.</li>
-          <li>Aza settles only to your platform account; it does not split funds to individual sellers.</li>
-          <li>You run your own per-seller ledger and payouts.</li>
+          <li><strong>Split at checkout</strong> — credit each seller automatically the moment the buyer pays.</li>
+          <li><strong>Direct payouts</strong> — push money from your balance to a seller&apos;s wallet any time.</li>
+          <li>You keep your commission: whatever is left after the Aza fee and the seller splits.</li>
         </ul>
+
+        <h3 className="text-base font-bold text-gray-900">Option A — Split a payment at checkout</h3>
+        <p className="text-sm">Add <code>splits</code> when you create a checkout session. Each split names a seller and a fixed GHS amount; when the buyer pays, every seller&apos;s wallet is credited and you keep the rest. The sum of splits must not exceed the amount after the Aza fee.</p>
+        <Endpoint method="POST" path="/api/v1/merchant/sessions" />
+        <Table
+          headers={['Field', 'Type', 'Description']}
+          rows={[
+            ['splits[].recipient', 'string',  "Seller's Aza email or username"],
+            ['splits[].amount',    'decimal', 'Fixed GHS amount routed to this seller'],
+            ['splits[].note',      'string',  'Optional note on the seller transaction'],
+          ]}
+        />
+        <p className="text-sm">The <code>checkout.session.completed</code> webhook returns a <code>splits</code> array so you can reconcile each seller. If a seller cannot be paid at that moment, their split is returned as <code>FALLBACK_TO_PLATFORM</code> and the amount stays in your balance — the buyer&apos;s payment always succeeds. Refunding a split payment claws back each seller&apos;s share and refunds the buyer in full.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Option B — Pay sellers directly</h3>
+        <p className="text-sm">Push funds from your platform balance to a seller&apos;s wallet on your own schedule — for payout runs, adjustments, or reversing a fallback split.</p>
+        <div className="space-y-2">
+          <Endpoint method="POST" path="/api/v1/merchant/connect/transfers" />
+          <Endpoint method="POST" path="/api/v1/merchant/connect/transfers/bulk" />
+          <Endpoint method="GET"  path="/api/v1/merchant/connect/recipients/resolve?identifier={id}" />
+          <Endpoint method="GET"  path="/api/v1/merchant/connect/balance" />
+        </div>
+        <p className="text-sm">Transfers are idempotent — pass <code>idempotencyKey</code> and a retry returns the original transfer. With an <code>aza_test_</code> key a transfer is fully validated but moves no money (<code>status: SIMULATED</code>). Bulk transfers pay up to 100 sellers at once and require a live key.</p>
 
         <h3 className="text-base font-bold text-gray-900">Attribute each payment to a tenant</h3>
         <p className="text-sm">Set <code>reference</code> (and optionally <code>metadata</code>) when you create a checkout session. Both are echoed back on the session object and in the <code>session.completed</code> webhook, so you can route a payment to the right seller from the webhook alone.</p>
@@ -723,21 +747,30 @@ System.out.println(statusRes.body()); // status: COMPLETED`,
         </Warn>
 
         <Note>
-          Need Aza to settle <em>directly</em> to each seller and KYB them individually (a connected-accounts model)? That is not supported today — talk to us at <a href="https://aza.systems/developers" className="text-[#2e7d2e] underline">aza.systems/developers</a> about your use case.
+          Aza Connect settles <em>directly</em> to each seller&apos;s Aza wallet — no per-seller KYB or connected-account onboarding required. Explore every endpoint in the <a href="/developers/api-explorer" className="text-[#2e7d2e] underline">API Reference</a>.
         </Note>
       </div>
     ),
     codeSnippets: {
-      curl: `# 1. Create a checkout for one of your sellers — tag it with a reference
+      curl: `# 1. Split a checkout across sellers — each is credited when the buyer pays
 curl -X POST ${BASE}/api/v1/merchant/sessions \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 120.00,
     "description": "Order #9920",
-    "reference": "seller_4471",
-    "metadata": "{\\"order_id\\":\\"9920\\",\\"seller_id\\":\\"4471\\"}"
+    "reference": "order_9920",
+    "splits": [
+      { "recipient": "kwame@example.com", "amount": 70.00 },
+      { "recipient": "ama_store", "amount": 40.00 }
+    ]
   }'
+
+# 1b. Or pay a seller directly from your platform balance (idempotent)
+curl -X POST ${BASE}/api/v1/merchant/connect/transfers \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "recipient": "kwame@example.com", "amount": 70.00, "idempotencyKey": "payout-9920:kwame" }'
 
 # 2. List a single seller's sessions
 curl -X GET "${BASE}/api/v1/merchant/sessions?reference=seller_4471&page=0&size=20" \\

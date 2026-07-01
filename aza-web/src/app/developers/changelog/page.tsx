@@ -22,6 +22,20 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "v1.7.0",
+    date: "2026-07-01",
+    summary: "Aza Connect — split payments to sellers at checkout and direct payouts to individual seller wallets.",
+    changes: [
+      { type: "added",    text: "POST /v1/merchant/sessions now accepts `splits` (list of { recipient, amount }) — each seller's share is credited straight to their Aza wallet when the buyer pays; the platform keeps the remainder after the Aza fee." },
+      { type: "added",    text: "POST /v1/merchant/connect/transfers — pay an individual seller from your platform balance into their Aza wallet. Idempotent per account; simulated with an aza_test_ key." },
+      { type: "added",    text: "POST /v1/merchant/connect/transfers/bulk — disburse to up to 100 sellers in one call (live keys only)." },
+      { type: "added",    text: "GET /v1/merchant/connect/recipients/resolve?identifier=… — confirm a seller exists and can receive before paying them." },
+      { type: "added",    text: "GET /v1/merchant/connect/balance — funds available to pay out to sellers." },
+      { type: "changed",  text: "checkout.session.completed webhook now includes a `splits` array (per-seller settlement); `netAmount` is what the platform kept after the fee and splits." },
+      { type: "changed",  text: "POST /v1/merchant/sessions/{id}/refund now fully refunds split payments — it claws back each credited seller's share and refunds the buyer in full, atomically (or rejects with no money moved if a seller has spent their share)." },
+    ],
+  },
+  {
     version: "v1.6.0",
     date: "2026-06-30",
     summary: "Mini app submissions: screenshots and live URL validation.",
