@@ -55,21 +55,30 @@ public class OpenApiConfig {
                                 webhook with `livemode:false` — no customer or funds required. Switch to an
                                 `aza_live_` key to go live.
 
-                                ### Platforms & marketplaces (multi-tenant)
-                                A platform that hosts many independent sellers/stores (an Amazon-style marketplace)
+                                ### Platforms & marketplaces (AZA Connect)
+                                A platform that hosts many independent sellers (an Amazon-style marketplace)
                                 integrates as a **single AZA merchant**: one account, one wallet, one set of API keys.
-                                You stay the merchant of record and settle to your tenants yourself.
-                                - **Attribute each payment to a tenant/order** — set `reference` (e.g. a tenant or
-                                  order id) and/or `metadata` (arbitrary JSON) when you create the checkout session.
-                                  Both are echoed back on the session and in the `checkout.completed` webhook, so you
-                                  can route the payment to the right tenant from the webhook alone.
-                                - **Reconcile per tenant** — `GET /api/v1/merchant/sessions?reference=…` lists a single
-                                  tenant's sessions, and `GET /api/v1/merchant/sessions/summary?reference=…` returns the
-                                  count, gross and net totals for that reference.
-                                - **Pay your tenants** out-of-band on your own schedule, net of your commission. AZA
-                                  settles only to your platform account; it does not split funds to individual tenants.
-                                - **Idempotency keys are unique within your account.** Namespace them per tenant/order
-                                  (e.g. `tenantA:order-123`) so two tenants can never collide.
+                                You stay the merchant of record; **AZA Connect** then moves each seller's share into
+                                their own AZA wallet for you. Sellers are ordinary AZA users — they don't onboard as
+                                merchants.
+                                - **Split at checkout** — pass `splits` (a list of `{ recipient, amount }`) when you
+                                  create a checkout session. When the buyer pays, each seller's amount is credited
+                                  straight to their AZA wallet and you keep the remainder after the AZA fee. Splits
+                                  appear on the session and in the `checkout.completed` webhook for per-seller
+                                  reconciliation.
+                                - **Pay sellers directly** — `POST /api/v1/merchant/connect/transfers` pushes funds
+                                  from your platform balance to any seller's AZA wallet on your own schedule
+                                  (collect-then-disburse), and `.../transfers/bulk` pays up to 100 at once. Both are
+                                  authenticated with your `X-Api-Key`, and are idempotent per account.
+                                - **Verify a seller first** — `GET /api/v1/merchant/connect/recipients/resolve?identifier=…`
+                                  confirms a seller's account exists and can receive before you pay them.
+                                - **Attribute & reconcile** — set `reference` and/or `metadata` on a session to route a
+                                  payment to the right order/seller; `GET /api/v1/merchant/sessions?reference=…` and
+                                  `.../sessions/summary?reference=…` reconcile per reference.
+                                - **Sandbox** — an `aza_test_` key simulates a Connect transfer (full validation, no
+                                  funds move); bulk transfers are live-key only.
+                                - **Idempotency keys are unique within your account.** Namespace them per seller/order
+                                  (e.g. `sellerA:payout-123`) so two flows can never collide.
                                 """)
                         .contact(new Contact().name("AZA Developers").url("https://aza.systems/developers")))
                 .servers(List.of(

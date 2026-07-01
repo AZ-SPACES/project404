@@ -1,11 +1,13 @@
 package com.aza.backend.dto.merchant;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class CreateCheckoutSessionRequest {
@@ -25,4 +27,11 @@ public class CreateCheckoutSessionRequest {
     private String successUrl;
     private String cancelUrl;
     private String idempotencyKey;
+
+    // Marketplace split settlement (Aza Connect). When set, each seller's fixed amount is
+    // credited straight to their wallet at payment; the platform keeps the remainder after
+    // the Aza fee. Sum of splits must not exceed the amount net of the Aza fee.
+    @Valid
+    @Size(max = 20, message = "A checkout session may have at most 20 splits")
+    private List<CheckoutSplitRequest> splits;
 }

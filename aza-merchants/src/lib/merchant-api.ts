@@ -1253,6 +1253,71 @@ export async function createBulkTransfer(data: {
   return body.data;
 }
 
+// ─── Connect (marketplace payouts) ────────────────────────────────────────────
+
+export interface ConnectTransfer {
+  id: string;
+  recipient: string;
+  recipientUserId: string | null;
+  amount: number;
+  currency: string;
+  note: string | null;
+  reference: string | null;
+  status: "SIMULATED" | "PENDING" | "COMPLETED" | "FAILED";
+  failureReason: string | null;
+  testMode: boolean;
+  createdAt: string;
+  processedAt: string | null;
+}
+
+export interface ConnectBalance {
+  available: number;
+  currency: string;
+}
+
+export interface ConnectRecipient {
+  found: boolean;
+  canReceive: boolean;
+  userId: string | null;
+  displayName: string | null;
+  reason: string | null;
+}
+
+export async function getConnectBalance(): Promise<ConnectBalance> {
+  const body = await request<{ success: boolean; data: ConnectBalance }>(
+    "/api/v1/merchant/connect/balance"
+  );
+  return body.data;
+}
+
+export async function resolveConnectRecipient(identifier: string): Promise<ConnectRecipient> {
+  const body = await request<{ success: boolean; data: ConnectRecipient }>(
+    `/api/v1/merchant/connect/recipients/resolve?identifier=${encodeURIComponent(identifier)}`
+  );
+  return body.data;
+}
+
+export async function getConnectTransfers(page = 0, size = 20): Promise<Page<ConnectTransfer>> {
+  const body = await request<{ success: boolean; data: Page<ConnectTransfer> }>(
+    `/api/v1/merchant/connect/transfers?page=${page}&size=${size}`
+  );
+  return body.data;
+}
+
+export async function createConnectTransfer(data: {
+  recipient: string;
+  amount: number;
+  note?: string;
+  reference?: string;
+  idempotencyKey?: string;
+}): Promise<ConnectTransfer> {
+  const body = await request<{ success: boolean; data: ConnectTransfer }>(
+    "/api/v1/merchant/connect/transfers",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
 // ─── Analytics ───────────────────────────────────────────────────────────────
 
 export interface AnalyticsSummary {

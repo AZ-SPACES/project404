@@ -33,8 +33,9 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Only activate for /api/v1/merchant/sessions (external session creation)
-        if (!path.startsWith("/api/v1/merchant/sessions")) {
+        // Activate for the API-key surface: checkout sessions and the Connect (marketplace) API.
+        if (!path.startsWith("/api/v1/merchant/sessions")
+                && !path.startsWith("/api/v1/merchant/connect")) {
             chain.doFilter(request, response);
             return;
         }
@@ -80,7 +81,12 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
 
             // Verify Restricted scopes
             if (apiKeyEntity.getKeyType() == MerchantApiKey.KeyType.RESTRICTED) {
-                String requiredScope = request.getMethod().equalsIgnoreCase("POST") ? "sessions:write" : "sessions:read";
+                // Connect (payout) calls need transfers:* scopes; session calls need sessions:*.
+                boolean isConnect = path.startsWith("/api/v1/merchant/connect");
+                boolean isWrite = !request.getMethod().equalsIgnoreCase("GET");
+                String requiredScope = isConnect
+                        ? (isWrite ? "transfers:write" : "transfers:read")
+                        : (isWrite ? "sessions:write" : "sessions:read");
                 String scopes = apiKeyEntity.getScopes();
                 boolean hasScope = false;
                 if (scopes != null) {
