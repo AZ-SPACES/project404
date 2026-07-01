@@ -37,6 +37,7 @@ import {
   BarChart2,
   Package,
   Store,
+  Search,
 } from "lucide-react";
 
 interface NavItem {
@@ -134,6 +135,7 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [navQuery, setNavQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -180,6 +182,19 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
 
   if (!ready) return null;
 
+  // Filter the sidebar by the search box. A matching section title keeps the whole
+  // section; otherwise keep only the items whose label matches.
+  const q = navQuery.trim().toLowerCase();
+  const filteredNav: NavSection[] = q === ""
+    ? NAV
+    : NAV
+        .map((section) => {
+          if (section.label.toLowerCase().includes(q)) return section;
+          const items = section.items.filter((i) => i.label.toLowerCase().includes(q));
+          return items.length ? { ...section, items } : null;
+        })
+        .filter((s): s is NavSection => s !== null);
+
   const sidebar = (
     <aside className="flex flex-col h-full bg-card border-r border-border">
       {/* Logo + business name */}
@@ -192,9 +207,34 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
+      {/* Search */}
+      <div className="px-3 pt-3 flex-shrink-0">
+        <div className="relative">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
+          <input
+            value={navQuery}
+            onChange={(e) => setNavQuery(e.target.value)}
+            placeholder="Search menu…"
+            aria-label="Search navigation"
+            className="w-full bg-muted/40 border border-border rounded-lg pl-8 pr-7 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#B7EE7A]/50"
+          />
+          {navQuery && (
+            <button
+              onClick={() => setNavQuery("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-        {NAV.map((section) => (
+        {filteredNav.length === 0 ? (
+          <p className="px-3 py-6 text-center text-xs text-muted-foreground/50">No matches</p>
+        ) : filteredNav.map((section) => (
           <div key={section.label}>
             <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
               {section.label}
