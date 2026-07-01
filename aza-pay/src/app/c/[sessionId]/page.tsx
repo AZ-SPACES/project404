@@ -198,7 +198,7 @@ function PinPad({
   accent: string;
 }) {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
-  const maxLen = 6;
+  const maxLen = 4;
 
   return (
     <div className="space-y-4">
@@ -1064,7 +1064,7 @@ export default function CheckoutPage() {
                     <PrimaryBtn
                       accent={accent}
                       loading={busy}
-                      disabled={passcode.length < 4}
+                      disabled={passcode.length !== 4}
                       onClick={handleConfirm}
                     >
                       Pay now <ShieldCheck size={15} />

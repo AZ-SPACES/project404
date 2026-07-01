@@ -50,7 +50,7 @@ function PayoutModal({
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) { setError("Enter a valid amount"); return; }
     if (amt > maxAmount) { setError(`Amount exceeds available balance of ${fmtGHS(maxAmount)}`); return; }
-    if (!passcode) { setError("Passcode is required"); return; }
+    if (passcode.length !== 4) { setError("Passcode must be exactly 4 digits"); return; }
     setError(null);
     setSubmitting(true);
     try {
@@ -84,8 +84,10 @@ function PayoutModal({
             <label className="block text-xs font-medium text-foreground/50 mb-1.5">Passcode *</label>
             <input
               type="password" required
-              value={passcode} onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Your AZA passcode"
+              inputMode="numeric" maxLength={4} pattern="\d{4}"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="Your 4-digit AZA passcode"
               className={inputCls}
             />
           </div>
