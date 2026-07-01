@@ -9,6 +9,8 @@ import {
   forceLogout,
   lockUser,
   unlockUser,
+  resetPasscode,
+  resetPassword,
   addAdminNote,
   getAdminNotes,
   type CSUser,
@@ -26,6 +28,8 @@ import {
   DollarSign,
   StickyNote,
   ChevronRight,
+  KeyRound,
+  Lock,
 } from "lucide-react";
 
 function timeAgo(iso: string): string {
@@ -90,7 +94,7 @@ function initials(user: CSUser): string {
   return (f + l).toUpperCase() || user.email[0].toUpperCase();
 }
 
-type ActionMode = "adjust" | "force-logout" | "lock" | "note" | null;
+type ActionMode = "adjust" | "force-logout" | "lock" | "note" | "reset-passcode" | "reset-password" | null;
 
 export default function CSPage() {
   const queryClient = useQueryClient();
@@ -169,6 +173,24 @@ export default function CSPage() {
       queryClient.invalidateQueries({ queryKey: ["csUsers", debouncedQ] });
       setActionMode(null);
       showToast(detail?.locked ? "User unlocked" : "User locked");
+    },
+  });
+
+  // Reset passcode
+  const resetPasscodeMutation = useMutation({
+    mutationFn: () => resetPasscode(selectedUser!.id),
+    onSuccess: () => {
+      setActionMode(null);
+      showToast("Passcode cleared — user must set a new one");
+    },
+  });
+
+  // Reset password
+  const resetPasswordMutation = useMutation({
+    mutationFn: () => resetPassword(selectedUser!.id),
+    onSuccess: () => {
+      setActionMode(null);
+      showToast("Password reset forced — user must set a new one");
     },
   });
 
@@ -357,6 +379,20 @@ export default function CSPage() {
                     {detail.locked ? "Unlock" : "Lock"} Account
                   </button>
                   <button
+                    onClick={() => setActionMode(actionMode === "reset-passcode" ? null : "reset-passcode")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm font-semibold hover:bg-orange-500/20 transition-all"
+                  >
+                    <KeyRound size={14} />
+                    Reset Passcode
+                  </button>
+                  <button
+                    onClick={() => setActionMode(actionMode === "reset-password" ? null : "reset-password")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm font-semibold hover:bg-orange-500/20 transition-all"
+                  >
+                    <Lock size={14} />
+                    Reset Password
+                  </button>
+                  <button
                     onClick={() => setActionMode(actionMode === "note" ? null : "note")}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition-all"
                   >
@@ -452,6 +488,66 @@ export default function CSPage() {
                       >
                         {forceLogoutMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />}
                         Confirm Logout
+                      </button>
+                      <button
+                        onClick={() => setActionMode(null)}
+                        className="px-4 py-2 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {actionMode === "reset-passcode" && (
+                  <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-5 space-y-3">
+                    <p className="text-sm font-semibold text-orange-400">Reset Passcode</p>
+                    <p className="text-sm text-foreground/60">
+                      This clears the user&apos;s 4-digit payment passcode. They will be blocked from
+                      payments until they set a new one in the app. Use this when a user is locked out
+                      of their passcode. Confirm?
+                    </p>
+                    {resetPasscodeMutation.error && (
+                      <p className="text-red-400 text-sm">{(resetPasscodeMutation.error as Error).message}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => resetPasscodeMutation.mutate()}
+                        disabled={resetPasscodeMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 border border-orange-500/25 text-orange-400 text-sm font-semibold hover:bg-orange-500/25 disabled:opacity-40 transition-all"
+                      >
+                        {resetPasscodeMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />}
+                        Confirm Reset
+                      </button>
+                      <button
+                        onClick={() => setActionMode(null)}
+                        className="px-4 py-2 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {actionMode === "reset-password" && (
+                  <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-5 space-y-3">
+                    <p className="text-sm font-semibold text-orange-400">Reset Password</p>
+                    <p className="text-sm text-foreground/60">
+                      This forces a password reset: all sessions and biometric logins are revoked, and
+                      the user must set a new password (via &quot;Forgot password&quot;) on next sign-in.
+                      The user is notified. Confirm?
+                    </p>
+                    {resetPasswordMutation.error && (
+                      <p className="text-red-400 text-sm">{(resetPasswordMutation.error as Error).message}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => resetPasswordMutation.mutate()}
+                        disabled={resetPasswordMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/15 border border-orange-500/25 text-orange-400 text-sm font-semibold hover:bg-orange-500/25 disabled:opacity-40 transition-all"
+                      >
+                        {resetPasswordMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+                        Confirm Reset
                       </button>
                       <button
                         onClick={() => setActionMode(null)}

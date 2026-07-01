@@ -39,6 +39,7 @@ public class AdminCSController {
     private final TransactionRepository transactionRepository;
     private final AdminNoteRepository adminNoteRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final com.aza.backend.service.AuthService authService;
 
     // ====================== USER SEARCH ======================
 
@@ -155,6 +156,22 @@ public class AdminCSController {
         user.setStatus(User.AccountStatus.ACTIVE);
         userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success(UserSummary.from(user)));
+    }
+
+    // ====================== CREDENTIAL RESETS ======================
+
+    /** Clear the user's payment passcode — they must set a new one before they can pay again. */
+    @PostMapping("/users/{userId}/reset-passcode")
+    public ResponseEntity<ApiResponse<String>> resetPasscode(@PathVariable UUID userId) {
+        authService.adminResetPasscode(userId);
+        return ResponseEntity.ok(ApiResponse.success("Passcode cleared. User must set a new passcode."));
+    }
+
+    /** Force a password reset — flags the account, ends all sessions, and notifies the user. */
+    @PostMapping("/users/{userId}/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@PathVariable UUID userId) {
+        authService.adminForcePasswordReset(userId);
+        return ResponseEntity.ok(ApiResponse.success("Password reset forced. User must set a new password."));
     }
 
     // ====================== ADMIN NOTES ======================

@@ -474,6 +474,95 @@ public class AuthService {
         emailService.sendPasswordChangedNotification(user.getEmail(), user.getFirstName(), ipAddress, secureToken);
     }
 
+    // ==================== PASSCODE CHANGE / RESET ====================
+
+    /** Change the payment passcode when the current one is known. */
+    @Transactional
+    public void changePasscode(User user, String currentPasscode, String newPasscode) {
+        userService.verifyPasscode(user, currentPasscode); // enforces lockout + "not set"
+        userService.setPasscode(user, newPasscode);
+        notificationService.sendNotification(user.getId(),
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Passcode changed",
+                "Your payment passcode was changed. If this wasn't you, contact support immediately.",
+                null);
+        emailService.sendPasscodeChangedNotification(user.getEmail(), user.getFirstName(), false);
+    }
+
+    /**
+     * Forgot-passcode step 1: re-authenticate with the account password, then send a
+     * one-time code to the user's email. Rate limited to blunt brute force.
+     */
+    public String requestPasscodeReset(User user, String password) {
+        rateLimitService.enforceRateLimit("passcode_reset:" + user.getId(), 3, Duration.ofMinutes(10));
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new AppException("Password is incorrect");
+        }
+        otpService.sendOtp(user.getEmail(), "passcode_reset");
+        return maskEmail(user.getEmail());
+    }
+
+    /** Forgot-passcode step 2: verify the emailed code and set the new passcode. */
+    @Transactional
+    public void confirmPasscodeReset(User user, String code, String newPasscode) {
+        otpService.verifyOtp(user.getEmail(), code, "passcode_reset");
+        userService.setPasscode(user, newPasscode);
+        redisTemplate.delete("pin:attempts:" + user.getId()); // clear any failed-attempt lockout
+        notificationService.sendNotification(user.getId(),
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Passcode reset",
+                "Your payment passcode was reset. If this wasn't you, contact support immediately.",
+                null);
+        emailService.sendPasscodeChangedNotification(user.getEmail(), user.getFirstName(), true);
+    }
+
+    // ==================== ADMIN-INITIATED RESETS ====================
+
+    /** Support clears a user's passcode so they must set a new one; payments stay blocked until they do. */
+    @Transactional
+    public void adminResetPasscode(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("User not found"));
+        user.setPasscodeHash(null);
+        userRepository.save(user);
+        redisTemplate.delete("pin:attempts:" + userId);
+        notificationService.sendNotification(userId,
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Passcode reset by support",
+                "Aza support reset your payment passcode. Open the app to set a new one before making payments.",
+                null);
+        emailService.sendPasscodeChangedNotification(user.getEmail(), user.getFirstName(), true);
+        log.info("Admin reset passcode for user {}", userId);
+    }
+
+    /** Support forces a password reset: flags the account, kills sessions/biometrics, and notifies the user. */
+    @Transactional
+    public void adminForcePasswordReset(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException("User not found"));
+        user.setForcePasswordReset(true);
+        userRepository.save(user);
+        refreshTokenRepository.deleteAllByUserId(userId);
+        biometricService.revokeAllBiometricTokens(user);
+        notificationService.sendNotification(userId,
+                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                "Password reset required",
+                "Aza support has reset your password. Please sign in and use \"Forgot password\" to set a new one.",
+                null);
+        emailService.sendAccountSecuredEmail(user.getEmail(), user.getFirstName());
+        log.info("Admin forced password reset for user {}", userId);
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "your email";
+        String[] parts = email.split("@", 2);
+        String name = parts[0];
+        String masked = name.length() <= 2
+                ? name.charAt(0) + "*"
+                : name.charAt(0) + "***" + name.charAt(name.length() - 1);
+        return masked + "@" + parts[1];
+    }
+
     @Transactional
     public void secureAccountWithToken(String token) {
         String userIdStr = redisTemplate.opsForValue().get("secure_token:" + token);

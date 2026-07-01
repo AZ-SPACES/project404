@@ -154,8 +154,41 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> setPasscode(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody PasscodeRequest request) {
+        // First-time set only. Once a passcode exists it can only be changed (with the
+        // current passcode) or reset (via password + OTP) — a session alone can't overwrite it.
+        if (user.getPasscodeHash() != null) {
+            throw new com.aza.backend.exception.AppException("PASSCODE_EXISTS",
+                    "A passcode is already set. Use change or reset instead.", HttpStatus.CONFLICT);
+        }
         userService.setPasscode(user, request.getPasscode());
         return ResponseEntity.ok(ApiResponse.success("Passcode set successfully"));
+    }
+
+    /** Change the passcode when the current one is known. */
+    @PostMapping("/passcode/change")
+    public ResponseEntity<ApiResponse<String>> changePasscode(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody PasscodeChangeRequest request) {
+        authService.changePasscode(user, request.getCurrentPasscode(), request.getNewPasscode());
+        return ResponseEntity.ok(ApiResponse.success("Passcode changed successfully"));
+    }
+
+    /** Forgot-passcode step 1 — re-authenticate with the account password; sends an OTP. */
+    @PostMapping("/passcode/reset/request")
+    public ResponseEntity<ApiResponse<String>> requestPasscodeReset(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody PasscodeResetRequest request) {
+        String channel = authService.requestPasscodeReset(user, request.getPassword());
+        return ResponseEntity.ok(ApiResponse.success("A verification code was sent to " + channel));
+    }
+
+    /** Forgot-passcode step 2 — verify the OTP and set the new passcode. */
+    @PostMapping("/passcode/reset/confirm")
+    public ResponseEntity<ApiResponse<String>> confirmPasscodeReset(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody PasscodeResetConfirmRequest request) {
+        authService.confirmPasscodeReset(user, request.getCode(), request.getNewPasscode());
+        return ResponseEntity.ok(ApiResponse.success("Passcode reset successfully"));
     }
 
     @PostMapping("/passcode/verify")

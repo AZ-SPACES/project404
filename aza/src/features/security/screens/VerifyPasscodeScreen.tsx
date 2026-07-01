@@ -68,7 +68,8 @@ export function VerifyPasscodeScreen() {
     if (isCorrect) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Navigate to the success screen
-      navigation.replace(onSuccessScreen as any, onSuccessParams);
+      // Forward the just-verified passcode so a change flow can prove the current one.
+      navigation.replace(onSuccessScreen as any, { ...(onSuccessParams ?? {}), currentPasscode: passcode });
     } else {
       const newCount = attemptCount + 1;
       setAttemptCount(newCount);
@@ -163,6 +164,10 @@ export function VerifyPasscodeScreen() {
                   Incorrect passcode. {MAX_ATTEMPTS - attemptCount} attempts left.
                 </Text>
               )}
+
+              <TouchableOpacity onPress={() => navigation.navigate('ResetPasscode')} style={styles.forgotLink}>
+                <Text style={styles.forgotText}>Forgot passcode?</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -190,6 +195,8 @@ function createStyles(Colors: ThemeColors) {
     },
     title: { ...Typography.h2, color: Colors.textPrimary, marginBottom: 8, textAlign: 'center' },
     subtitle: { ...Typography.body, color: Colors.textSecondary, marginBottom: 48, textAlign: 'center' },
+    forgotLink: { marginTop: 28, paddingVertical: 8 },
+    forgotText: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600' },
     hiddenInput: { position: "absolute", width: 0, height: 0, opacity: 0 },
     passcodeContainer: { flexDirection: "row", gap: 16 },
     passcodeBox: {

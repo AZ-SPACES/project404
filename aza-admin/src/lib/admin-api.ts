@@ -3245,6 +3245,16 @@ export function unlockUser(userId: string): Promise<void> {
   return request(`/api/v1/admin/cs/users/${userId}/unlock`, { method: "POST" });
 }
 
+/** Clear the user's payment passcode — they must set a new one before paying again. */
+export function resetPasscode(userId: string): Promise<string> {
+  return request(`/api/v1/admin/cs/users/${userId}/reset-passcode`, { method: "POST" });
+}
+
+/** Force a password reset — ends sessions and requires the user to set a new password. */
+export function resetPassword(userId: string): Promise<string> {
+  return request(`/api/v1/admin/cs/users/${userId}/reset-password`, { method: "POST" });
+}
+
 export function addAdminNote(userId: string, note: string): Promise<AdminNote> {
   return request(`/api/v1/admin/cs/users/${userId}/notes`, {
     method: "POST",

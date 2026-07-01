@@ -26,8 +26,9 @@ export type RootStackParamList = {
   SignUpEmployment: undefined;
   SignUpBirthday: undefined;
   TaxResidency: undefined;
-  CreatePasscode: undefined;
-  ConfirmPasscode: { firstPasscode: string };
+  CreatePasscode: { mode?: 'change' | 'reset' | undefined; currentPasscode?: string | undefined; resetCode?: string | undefined } | undefined;
+  ConfirmPasscode: { firstPasscode: string; mode?: 'signup' | 'change' | 'reset' | undefined; currentPasscode?: string | undefined; resetCode?: string | undefined };
+  ResetPasscode: undefined;
   Consent: undefined;
   TermsOfService: undefined;
   PrivacyPolicy: undefined;
