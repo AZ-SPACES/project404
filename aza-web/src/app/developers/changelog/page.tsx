@@ -22,6 +22,26 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "v1.6.0",
+    date: "2026-06-30",
+    summary: "Mini app submissions: screenshots and live URL validation.",
+    changes: [
+      { type: "added",    text: "PUT /v1/dev/miniapps now accepts `screenshotUrls` (up to 6 HTTPS image URLs) — shown to reviewers during admin approval." },
+      { type: "changed",  text: "Submitting a mini app for review now verifies the app URL is reachable over a valid HTTPS endpoint; unreachable or non-2xx URLs are rejected with a clear error." },
+    ],
+  },
+  {
+    version: "v1.5.0",
+    date: "2026-06-29",
+    summary: "Checkout session references for platform/multi-tenant reconciliation.",
+    changes: [
+      { type: "added",    text: "POST /v1/merchant/sessions now accepts an optional `reference` (≤255 chars) — your own order or tenant/seller id, returned on the session." },
+      { type: "added",    text: "GET /v1/merchant/sessions?reference=… — filter checkout sessions by a reference." },
+      { type: "added",    text: "GET /v1/merchant/sessions/summary?reference=… — reconcile a reference: count, gross total and net total of its COMPLETED sessions." },
+      { type: "changed",  text: "checkout.session.completed webhook payload now includes `reference`, `description` and `metadata` so payments can be attributed from the webhook alone." },
+    ],
+  },
+  {
     version: "v1.4.0",
     date: "2026-06-10",
     summary: "Mini-app consent, device presence API, and E2EE history sync.",

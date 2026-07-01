@@ -18,7 +18,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.net.ssl.SSLException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +42,12 @@ public class MiniAppService {
     private final MiniAppConsentRepository consentRepository;
     private final TransferService transferService;
     private final NotificationService notificationService;
+
+    /** Used to verify a submitted app URL is reachable over HTTPS before it enters review. */
+    private final HttpClient reachabilityClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(8))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
 
     // ── Public registry ────────────────────────────────────────────────────
 
@@ -83,7 +98,13 @@ public class MiniAppService {
                     }).collect(Collectors.toSet());
         app.setRequestedPermissions(permissions);
 
+        app.setScreenshotUrls(req.getScreenshotUrls() == null
+                ? new ArrayList<>()
+                : new ArrayList<>(req.getScreenshotUrls()));
+
         if (req.isSubmitForReview()) {
+            // Only verify reachability on submit — drafts may point at a not-yet-deployed URL.
+            verifyUrlReachable(app.getUrl());
             app.setStatus(MiniApp.Status.PENDING_REVIEW);
             app.setSubmittedAt(LocalDateTime.now());
         } else if (app.getStatus() == null || app.getStatus() == MiniApp.Status.REJECTED) {
@@ -108,6 +129,7 @@ public class MiniAppService {
         if (app.getStatus() != MiniApp.Status.REJECTED && app.getStatus() != MiniApp.Status.DRAFT) {
             throw new IllegalStateException("Only rejected or draft apps can be resubmitted");
         }
+        verifyUrlReachable(app.getUrl());
         app.setStatus(MiniApp.Status.PENDING_REVIEW);
         app.setSubmittedAt(LocalDateTime.now());
         app.setRejectionReason(null);
@@ -121,6 +143,99 @@ public class MiniAppService {
             throw new IllegalStateException("You do not own this app");
         }
         return app;
+    }
+
+    /**
+     * Verify the submitted app URL is live and served over a valid HTTPS endpoint before it
+     * enters the admin review queue. Rejects unreachable hosts, TLS failures and 4xx/5xx
+     * responses so reviewers never open a dead link.
+     */
+    private void verifyUrlReachable(String url) {
+        if (url == null || !url.startsWith("https://")) {
+            throw new IllegalArgumentException("App URL must use HTTPS");
+        }
+        URI uri;
+        try {
+            uri = URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("App URL is not a valid URL");
+        }
+        // SSRF guard: the URL is developer-supplied and we fetch it server-side, so reject any
+        // host that resolves to a private/internal address before issuing the request.
+        guardAgainstInternalHost(uri.getHost());
+        HttpRequest request;
+        try {
+            request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", "Aza-MiniApp-Reviewer/1.0")
+                    .GET()
+                    .build();
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("App URL is not a valid URL");
+        }
+        try {
+            HttpResponse<Void> response = reachabilityClient.send(
+                    request, HttpResponse.BodyHandlers.discarding());
+            int status = response.statusCode();
+            if (status >= 400) {
+                throw new IllegalArgumentException(
+                        "App URL returned HTTP " + status + ". It must be reachable before review.");
+            }
+        } catch (SSLException e) {
+            throw new IllegalArgumentException(
+                    "Could not establish a secure HTTPS connection to the app URL (invalid certificate).");
+        } catch (java.net.http.HttpConnectTimeoutException | java.net.ConnectException e) {
+            throw new IllegalArgumentException("App URL is not reachable (connection timed out).");
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("App URL is not reachable: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("URL check was interrupted; please try again.");
+        }
+    }
+
+    /**
+     * Reject app URLs whose host resolves to a private, loopback, link-local or otherwise
+     * internal address — prevents the reachability check from being used to probe internal
+     * services (SSRF). All resolved addresses must be public, since DNS can return several.
+     */
+    private void guardAgainstInternalHost(String host) {
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("App URL is missing a host");
+        }
+        InetAddress[] addresses;
+        try {
+            addresses = InetAddress.getAllByName(host);
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("App URL host could not be resolved");
+        }
+        for (InetAddress addr : addresses) {
+            if (isInternalAddress(addr)) {
+                throw new IllegalArgumentException("App URL must be a public address");
+            }
+        }
+    }
+
+    private boolean isInternalAddress(InetAddress addr) {
+        if (addr.isAnyLocalAddress()     // 0.0.0.0, ::
+                || addr.isLoopbackAddress()   // 127.0.0.0/8, ::1
+                || addr.isLinkLocalAddress()  // 169.254.0.0/16, fe80::/10
+                || addr.isSiteLocalAddress()  // 10/8, 172.16/12, 192.168/16
+                || addr.isMulticastAddress()) {
+            return true;
+        }
+        byte[] b = addr.getAddress();
+        if (b.length == 4) {
+            int first = b[0] & 0xFF;
+            int second = b[1] & 0xFF;
+            // 100.64.0.0/10 — carrier-grade NAT / shared address space.
+            if (first == 100 && second >= 64 && second <= 127) return true;
+        } else if (b.length == 16) {
+            // fc00::/7 — IPv6 unique local addresses (not flagged as site-local by the JDK).
+            if ((b[0] & 0xFE) == 0xFC) return true;
+        }
+        return false;
     }
 
     // ── Admin review ───────────────────────────────────────────────────────
@@ -335,6 +450,8 @@ public class MiniAppService {
                 .status(app.getStatus().name())
                 .requestedPermissions(app.getRequestedPermissions().stream()
                         .map(Enum::name).collect(Collectors.toSet()))
+                .screenshotUrls(app.getScreenshotUrls() == null
+                        ? List.of() : new ArrayList<>(app.getScreenshotUrls()))
                 .createdAt(app.getCreatedAt())
                 .submittedAt(app.getSubmittedAt())
                 .reviewedAt(app.getReviewedAt())

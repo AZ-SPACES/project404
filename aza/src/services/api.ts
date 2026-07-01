@@ -977,7 +977,8 @@ export const getMyMiniApps = () => api.get('/api/v1/dev/miniapps');
 export const saveMiniApp = (data: {
   id: string; name: string; description: string; category: string;
   iconUrl?: string; url: string; developerName: string; supportUrl?: string;
-  version: string; requestedPermissions: string[]; submitForReview: boolean;
+  version: string; requestedPermissions: string[]; screenshotUrls?: string[];
+  submitForReview: boolean;
 }) => api.put('/api/v1/dev/miniapps', data);
 
 export const resubmitMiniApp = (appId: string) =>
