@@ -81,7 +81,7 @@ function LiveSecurityPanel() {
         {badges.map((b, i) => (
           <span
             key={b}
-            className="px-3 py-1 rounded-lg text-[0.72rem] font-semibold transition-all duration-300"
+            className="px-3 py-1 rounded-lg text-[0.72rem] font-semibold transition-[background-color,color,border-color,transform] duration-300"
             style={{
               background: i === activeIdx ? "rgba(23,71,23,0.1)" : "rgba(0,0,0,0.04)",
               border: `1px solid ${i === activeIdx ? "rgba(23,71,23,0.3)" : "rgba(0,0,0,0.08)"}`,

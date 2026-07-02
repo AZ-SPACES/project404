@@ -119,7 +119,7 @@ export function DemoSection() {
                   setActive((prev) => (prev + 1) % SCREENS.length);
                 }, 3000);
               }}
-              className="px-4 py-2 rounded-xl text-[0.8rem] font-semibold transition-all"
+              className="px-4 py-2 rounded-xl text-[0.8rem] font-semibold transition-[background-color,color,border-color,transform] duration-200 active:scale-[0.97]"
               style={{
                 background: i === active ? "rgba(255,255,255,0.12)" : "transparent",
                 color: i === active ? "#ffffff" : "rgba(255,255,255,0.4)",

@@ -96,7 +96,7 @@ export function Header() {
         <div
           className={cn(
             'w-full flex items-center h-[52px] px-3 pl-4',
-            'transition-all duration-300 ease-out rounded-[100px]',
+            'transition-[max-width,box-shadow,transform] duration-300 ease-out rounded-[100px]',
             scrolled && !open
               ? 'max-w-[900px] shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.07)] scale-[0.985]'
               : 'max-w-full',

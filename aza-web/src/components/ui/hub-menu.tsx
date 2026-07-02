@@ -16,7 +16,7 @@ export function HubMenu({ open, onClose }: { open: boolean; onClose: () => void 
       className={cn(
         'absolute left-1/2 -translate-x-1/2 top-[calc(100%+10px)] w-[300px] rounded-2xl p-4 z-50',
         'shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.07)]',
-        'transition-all duration-200 ease-out origin-top',
+        'transition-[opacity,transform] duration-200 ease-out origin-top',
         open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none',
       )}
       style={{ background: '#0e2a0e' }}

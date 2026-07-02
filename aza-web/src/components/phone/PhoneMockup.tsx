@@ -83,7 +83,7 @@ export function PhoneMockup({ hideDots = false }: { hideDots?: boolean }) {
               aria-selected={active === i}
               aria-label={`Screen ${i + 1}`}
               onClick={() => goTo(i)}
-              className="h-2 rounded-full transition-all"
+              className="h-2 rounded-full transition-[width,background-color] duration-300 ease-out"
               style={{
                 width: active === i ? 24 : 8,
                 background: active === i ? "#174717" : "#DADCE0",

@@ -103,6 +103,12 @@
   --section-padding: 4em;
   --gap: 1.5em;
   --cubic-default: cubic-bezier(0.65, 0.05, 0, 1);
+
+  /* Canonical motion curves — strong custom easings (built-in CSS easings are too weak).
+     Enter/exit UI → --ease-out; on-screen movement/morph → --ease-in-out. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ============================================================
@@ -440,20 +446,27 @@
    FEATURE CARD HOVER
    ============================================================ */
 .feature-card {
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out), transform 0.16s var(--ease-out);
 }
-.feature-card:hover {
-  box-shadow: var(--aza-card-shadow-hover);
-  border-color: rgba(183,238,122,0.4);
+/* Gate hover motion so touch taps don't leave a stuck hover state */
+@media (hover: hover) and (pointer: fine) {
+  .feature-card:hover {
+    box-shadow: var(--aza-card-shadow-hover);
+    border-color: rgba(183,238,122,0.4);
+  }
 }
+/* Press feedback — the card confirms it heard the tap */
+.feature-card:active { transform: scale(0.985); }
 
 /* ============================================================
    HUB APP HOVER
    ============================================================ */
 .hub-app { transition: opacity 0.15s ease; }
-.hub-app:hover { opacity: 0.85; }
 .hub-app__icon-wrap { transition: box-shadow 0.15s ease; }
-.hub-app:hover .hub-app__icon-wrap { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+@media (hover: hover) and (pointer: fine) {
+  .hub-app:hover { opacity: 0.85; }
+  .hub-app:hover .hub-app__icon-wrap { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+}
 
 /* ============================================================
    STORE BUTTON
@@ -467,30 +480,38 @@
   border-radius: 12px;
   padding: 12px 20px;
   color: #fff;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.16s var(--ease-out);
   cursor: pointer;
   text-decoration: none;
 }
-.store-btn:hover {
-  background: rgba(255,255,255,0.2);
-  border-color: rgba(255,255,255,0.4);
+@media (hover: hover) and (pointer: fine) {
+  .store-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+  }
 }
+.store-btn:active { transform: scale(0.97); }
 
 /* ============================================================
    TESTIMONIAL CARD
    ============================================================ */
 .testimonial-card {
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow 0.2s var(--ease-out);
 }
-.testimonial-card:hover {
-  box-shadow: var(--aza-card-shadow-hover);
+@media (hover: hover) and (pointer: fine) {
+  .testimonial-card:hover {
+    box-shadow: var(--aza-card-shadow-hover);
+  }
 }
 
 /* ============================================================
    SOCIAL LINK
    ============================================================ */
-.social-link { transition: background 0.15s ease, color 0.15s ease; }
-.social-link:hover { background: #174717 !important; color: #B7EE7A !important; }
+.social-link { transition: background 0.15s ease, color 0.15s ease, transform 0.16s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .social-link:hover { background: #174717 !important; color: #B7EE7A !important; }
+}
+.social-link:active { transform: scale(0.94); }
 
 /* ============================================================
    SECTION SPACING
@@ -751,33 +772,39 @@
 
 /* CTA Buttons (cinematic hero) */
 .btn-modern-light, .btn-modern-dark {
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.16s var(--ease-out);
 }
 .btn-modern-light {
   background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
   color: #0F172A;
   box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1);
 }
-.btn-modern-light:hover {
-  background: linear-gradient(180deg, #F8FAFC 0%, #EDF0F4 100%);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,1);
+@media (hover: hover) and (pointer: fine) {
+  .btn-modern-light:hover {
+    background: linear-gradient(180deg, #F8FAFC 0%, #EDF0F4 100%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 1px rgba(255,255,255,1);
+  }
 }
 .btn-modern-light:active {
   background: linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 100%);
   box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 2px rgba(0,0,0,0.06);
+  transform: scale(0.97);
 }
 .btn-modern-dark {
   background: linear-gradient(180deg, #27272A 0%, #18181B 100%);
   color: #FFFFFF;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.15);
 }
-.btn-modern-dark:hover {
-  background: linear-gradient(180deg, #3F3F46 0%, #27272A 100%);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+@media (hover: hover) and (pointer: fine) {
+  .btn-modern-dark:hover {
+    background: linear-gradient(180deg, #3F3F46 0%, #27272A 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+  }
 }
 .btn-modern-dark:active {
   background: #18181B;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 4px rgba(0,0,0,0.6);
+  transform: scale(0.97);
 }
 
 .progress-ring {
@@ -880,5 +907,14 @@
   /* Instant phone slide transitions */
   .phone-slide {
     transition: none;
+  }
+
+  /* Drop press-scale movement (keep color/shadow feedback) */
+  .feature-card:active,
+  .store-btn:active,
+  .social-link:active,
+  .btn-modern-light:active,
+  .btn-modern-dark:active {
+    transform: none;
   }
 }
