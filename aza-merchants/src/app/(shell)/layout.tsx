@@ -38,6 +38,7 @@ import {
   Package,
   Store,
   Search,
+  LogIn,
 } from "lucide-react";
 
 interface NavItem {
@@ -86,6 +87,7 @@ const NAV: NavSection[] = [
     label: "Developer",
     items: [
       { href: "/api-keys", label: "API Keys", icon: Key },
+      { href: "/oauth-apps", label: "Sign in with AZA", icon: LogIn },
       { href: "/webhooks", label: "Webhooks", icon: Webhook },
       { href: "/embed", label: "Embed Widget", icon: Code2 },
     ],

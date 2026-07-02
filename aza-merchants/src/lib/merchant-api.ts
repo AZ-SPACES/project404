@@ -212,6 +212,31 @@ export interface ApiKey {
   fullKey?: string;
 }
 
+/** OAuth 2.0 client application ("Sign in with AZA"). */
+export interface OAuthClient {
+  id: string;
+  clientId: string;
+  clientSecret?: string | null; // only present on create or rotate — shown once
+  appName: string;
+  appDescription: string | null;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  redirectUris: string[];
+  allowedScopes: string[];
+  active: boolean;
+  createdAt: string | null;
+  merchantId: string | null;
+  merchantName: string | null;
+}
+
+export const OAUTH_SCOPES: { value: string; label: string; description: string }[] = [
+  { value: "identity", label: "Identity", description: "Name, username and profile photo" },
+  { value: "email", label: "Email", description: "Account email address" },
+  { value: "phone", label: "Phone", description: "Account phone number" },
+  { value: "wallet:read", label: "Wallet balance", description: "Read-only wallet balance & currency" },
+  { value: "payment", label: "Payments", description: "Charge the user's wallet (requires linking your merchant account)" },
+];
+
 export interface WebhookEndpoint {
   id: string;
   url: string;
@@ -618,6 +643,57 @@ export async function rollApiKey(id: string, expirationHours?: number): Promise<
 
 export async function revokeApiKey(id: string): Promise<void> {
   await request(`/api/v1/merchant/api-keys/${id}`, { method: "DELETE" });
+}
+
+// ─── OAuth clients ("Sign in with AZA") ──────────────────────────────────────
+
+export async function getOAuthClients(): Promise<OAuthClient[]> {
+  const body = await request<{ success: boolean; data: OAuthClient[] }>("/api/v1/developer/clients");
+  return body.data;
+}
+
+export async function createOAuthClient(data: {
+  appName: string;
+  appDescription?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  redirectUris: string[];
+  scopes: string[];
+}): Promise<OAuthClient> {
+  const body = await request<{ success: boolean; data: OAuthClient }>(
+    "/api/v1/developer/clients",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+  return body.data;
+}
+
+export async function rotateOAuthClientSecret(clientId: string): Promise<OAuthClient> {
+  const body = await request<{ success: boolean; data: OAuthClient }>(
+    `/api/v1/developer/clients/${clientId}/rotate-secret`,
+    { method: "POST" }
+  );
+  return body.data;
+}
+
+export async function deleteOAuthClient(clientId: string): Promise<void> {
+  await request(`/api/v1/developer/clients/${clientId}`, { method: "DELETE" });
+}
+
+/** Attach the caller's merchant account so this client can use the `payment` scope. */
+export async function linkOAuthClientMerchant(clientId: string): Promise<OAuthClient> {
+  const body = await request<{ success: boolean; data: OAuthClient }>(
+    `/api/v1/developer/clients/${clientId}/merchant`,
+    { method: "POST" }
+  );
+  return body.data;
+}
+
+export async function unlinkOAuthClientMerchant(clientId: string): Promise<OAuthClient> {
+  const body = await request<{ success: boolean; data: OAuthClient }>(
+    `/api/v1/developer/clients/${clientId}/merchant`,
+    { method: "DELETE" }
+  );
+  return body.data;
 }
 
 // ─── Webhooks ────────────────────────────────────────────────────────────────
