@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -289,6 +290,9 @@ public class CheckoutService {
                 && LocalDateTime.now().isAfter(session.getExpiresAt())) {
             session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
             sessionRepository.save(session);
+            // A read can be the first thing to observe expiry (before the 60s sweeper runs),
+            // so notify here too; the sweeper's query no longer matches this now-EXPIRED row.
+            scheduleWebhookDelivery(session, merchant, "checkout.expired");
         }
 
         // Public response: strip customerId to protect payer privacy
@@ -461,6 +465,8 @@ public class CheckoutService {
         session.setCancelledAt(LocalDateTime.now());
         sessionRepository.save(session);
 
+        scheduleWebhookDelivery(session, merchant, "checkout.cancelled");
+
         return toResponse(session, merchant);
     }
 
@@ -549,28 +555,44 @@ public class CheckoutService {
     public void expireSessions() {
         List<CheckoutSession> expired = sessionRepository.findExpiredSessions(LocalDateTime.now());
         if (expired.isEmpty()) return;
+        Map<UUID, Merchant> merchantCache = new HashMap<>();
         for (CheckoutSession session : expired) {
             session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
+            sessionRepository.save(session);
+            Merchant merchant = merchantCache.computeIfAbsent(
+                    session.getMerchantId(), id -> merchantRepository.findById(id).orElse(null));
+            if (merchant != null) {
+                scheduleWebhookDelivery(session, merchant, "checkout.expired");
+            }
         }
-        sessionRepository.saveAll(expired);
         log.info("Expired {} checkout sessions", expired.size());
     }
 
     // ==================== WEBHOOK DISPATCH ====================
 
+    /** Backward-compatible entry point — dispatches a {@code checkout.completed} event. */
     public void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant) {
+        scheduleWebhookDelivery(session, merchant, "checkout.completed");
+    }
+
+    /**
+     * Queues one webhook delivery per active endpoint subscribed to {@code eventType}
+     * (or to the {@code *} wildcard). Endpoints opt in via their comma-separated events list,
+     * so existing consumers only receive the new lifecycle events once they subscribe.
+     */
+    public void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant, String eventType) {
         List<WebhookEndpoint> endpoints = webhookEndpointRepository
                 .findAllByMerchantIdAndIsActiveTrue(merchant.getId());
         if (endpoints.isEmpty()) return;
 
-        String payload = buildWebhookPayload(session, merchant);
+        String payload = buildWebhookPayload(session, merchant, eventType);
 
         for (WebhookEndpoint endpoint : endpoints) {
-            if (!isSubscribed(endpoint)) continue;
+            if (!isSubscribed(endpoint, eventType)) continue;
             WebhookDelivery delivery = WebhookDelivery.builder()
                     .endpointId(endpoint.getId())
                     .checkoutSessionId(session.getId())
-                    .eventType("checkout.completed")
+                    .eventType(eventType)
                     .payload(payload)
                     .status(WebhookDelivery.DeliveryStatus.PENDING)
                     .nextRetryAt(LocalDateTime.now())
@@ -579,18 +601,19 @@ public class CheckoutService {
         }
     }
 
-    private boolean isSubscribed(WebhookEndpoint endpoint) {
+    private boolean isSubscribed(WebhookEndpoint endpoint, String eventType) {
         if (endpoint.getEvents() == null) return false;
         for (String e : endpoint.getEvents().split(",")) {
-            if (e.trim().equalsIgnoreCase("checkout.completed") || e.trim().equals("*")) return true;
+            String trimmed = e.trim();
+            if (trimmed.equals("*") || trimmed.equalsIgnoreCase(eventType)) return true;
         }
         return false;
     }
 
-    private String buildWebhookPayload(CheckoutSession session, Merchant merchant) {
+    private String buildWebhookPayload(CheckoutSession session, Merchant merchant, String eventType) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("event", "checkout.completed");
+            payload.put("event", eventType);
             payload.put("livemode", !Boolean.TRUE.equals(session.getTestMode()));
             payload.put("sessionId", session.getId().toString());
             payload.put("merchantId", merchant.getId().toString());
@@ -617,7 +640,13 @@ public class CheckoutService {
                 }
                 payload.put("splits", splitList);
             }
-            payload.put("completedAt", session.getCompletedAt().toString());
+            // Timestamps: occurredAt is always present; the lifecycle-specific timestamps are
+            // included only when set, so this payload is safe for every event type (a freshly
+            // expired session has no completedAt).
+            payload.put("occurredAt", LocalDateTime.now().toString());
+            if (session.getCompletedAt() != null) payload.put("completedAt", session.getCompletedAt().toString());
+            if (session.getCancelledAt() != null) payload.put("cancelledAt", session.getCancelledAt().toString());
+            if (session.getRefundedAt()  != null) payload.put("refundedAt",  session.getRefundedAt().toString());
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
             log.error("Failed to serialize webhook payload for session {}", session.getId(), e);
@@ -643,6 +672,7 @@ public class CheckoutService {
         }
         session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
         sessionRepository.save(session);
+        scheduleWebhookDelivery(session, merchant, "checkout.expired");
         return toResponse(session, merchant);
     }
 
@@ -890,6 +920,8 @@ public class CheckoutService {
         session.setStatus(CheckoutSession.SessionStatus.REFUNDED);
         session.setRefundedAt(LocalDateTime.now());
         sessionRepository.save(session);
+
+        scheduleWebhookDelivery(session, merchant, "checkout.refunded");
 
         log.info("Session refunded: sessionId={}, merchantId={}, amount={}, sellersClawedBack={}",
                 sessionId, merchantId, refundAmount, sellersTotal);
