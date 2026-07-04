@@ -223,7 +223,7 @@ export default function ApiExplorerPage() {
       >
         {/* Logo */}
         <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/developers" className="flex items-center gap-2.5">
             <AzaMark size={30} className="shrink-0 rounded-[8px]" />
             <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.7)' }}>
               API Explorer
