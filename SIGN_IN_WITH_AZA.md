@@ -233,6 +233,19 @@ Content-Type: application/json
 
 Redirect the user's browser to the returned URL. AZA will show them a consent screen with your app name, logo, and the permissions you requested.
 
+> **Using a standard OAuth client library?** Steps 2–3 can be collapsed into the
+> conventional authorization redirect. Point the browser straight at:
+>
+> ```
+> GET https://aza.systems/oauth/authorize?response_type=code&client_id=…&redirect_uri=…&scope=…&state=…&code_challenge=…&code_challenge_method=S256
+> ```
+>
+> AZA runs the same validation and 302-redirects to the consent screen. The same
+> endpoint is also served on `https://api.aza.systems/oauth/authorize`. Scopes are
+> space-delimited (`identity email phone wallet:read payment`). This is purely a
+> convenience wrapper over the `POST` above — the token exchange in Step 5 is
+> unchanged and still must happen server-side.
+
 ### Step 4 — Handle the callback
 
 After approval, AZA redirects to your `redirectUri`:

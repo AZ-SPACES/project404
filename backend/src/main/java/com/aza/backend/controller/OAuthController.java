@@ -7,14 +7,17 @@ import com.aza.backend.dto.oauth.*;
 import com.aza.backend.dto.qrlogin.QrLoginInitiateResponse;
 import com.aza.backend.dto.qrlogin.QrLoginStatusResponse;
 import com.aza.backend.entity.User;
+import com.aza.backend.exception.AppException;
 import com.aza.backend.service.OAuthService;
 import com.aza.backend.service.QrLoginService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -25,6 +28,8 @@ public class OAuthController {
 
     private final OAuthService    oAuthService;
     private final QrLoginService  qrLoginService;
+
+    private static final String CONSENT_BASE = "https://aza.systems/oauth/consent?state=";
 
     // ── Public client info ────────────────────────────────────────────────────
 
@@ -44,8 +49,61 @@ public class OAuthController {
     public ResponseEntity<ApiResponse<String>> authorize(
             @Valid @RequestBody OAuthAuthorizeRequest request) {
         String pendingState = oAuthService.initiateAuthorize(request);
-        String consentUrl   = "https://aza.systems/oauth/consent?state=" + pendingState;
+        String consentUrl   = CONSENT_BASE + pendingState;
         return ResponseEntity.ok(ApiResponse.success(consentUrl));
+    }
+
+    /**
+     * Standard OAuth 2.0 authorization endpoint (RFC 6749 §3.1) — the browser
+     * GET that off-the-shelf OAuth/plugin clients build:
+     *   GET /oauth/authorize?response_type=code&client_id=…&redirect_uri=…&scope=…&state=…
+     *
+     * Runs the same validation as the POST variant and 302-redirects the user's
+     * browser to the AZA consent page. Errors are rendered inline rather than
+     * reflected to redirect_uri, to avoid an open-redirect via an unregistered URI.
+     */
+    @GetMapping("/authorize")
+    public ResponseEntity<?> authorizeBrowser(
+            @RequestParam(value = "response_type", required = false) String responseType,
+            @RequestParam(value = "client_id",     required = false) String clientId,
+            @RequestParam(value = "redirect_uri",  required = false) String redirectUri,
+            @RequestParam(value = "scope",         required = false) String scope,
+            @RequestParam(value = "state",         required = false) String state,
+            @RequestParam(value = "code_challenge",        required = false) String codeChallenge,
+            @RequestParam(value = "code_challenge_method", required = false) String codeChallengeMethod) {
+
+        if (responseType != null && !responseType.equals("code")) {
+            return oauthErrorPage("unsupported_response_type", "Only response_type=code is supported.");
+        }
+        if (clientId == null || redirectUri == null || scope == null || state == null) {
+            return oauthErrorPage("invalid_request",
+                    "Missing required parameter (client_id, redirect_uri, scope, state).");
+        }
+
+        OAuthAuthorizeRequest req = new OAuthAuthorizeRequest();
+        req.setClientId(clientId);
+        req.setRedirectUri(redirectUri);
+        // scopes arrive space- (or +/comma-) separated; normalize to the space form
+        req.setScope(scope.replaceAll("[+,\\s]+", " ").trim());
+        req.setState(state);
+        req.setCodeChallenge(codeChallenge);
+        req.setCodeChallengeMethod(codeChallengeMethod);
+
+        try {
+            String pendingState = oAuthService.initiateAuthorize(req);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(CONSENT_BASE + pendingState))
+                    .build();
+        } catch (AppException e) {
+            return oauthErrorPage(e.getCode(), e.getMessage());
+        }
+    }
+
+    private ResponseEntity<String> oauthErrorPage(String error, String description) {
+        String body = "OAuth error: " + error + " — " + description;
+        return ResponseEntity.badRequest()
+                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
+                .body(body);
     }
 
     /**
