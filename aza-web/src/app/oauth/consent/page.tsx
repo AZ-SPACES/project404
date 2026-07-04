@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2, Lock } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.aza.systems';
 
@@ -83,7 +83,7 @@ function ConsentContent() {
         return;
       }
 
-      // Backend returns the redirect URL — navigate to it so the IDE receives the code
+      // Backend returns the redirect URL — navigate to it so the app receives the code
       window.location.href = json.data;
     } catch {
       setAuthError('Network error. Please try again.');
@@ -92,94 +92,91 @@ function ConsentContent() {
   }
 
   function handleDeny() {
-    // Redirect back with error so the IDE handles it
+    // Redirect back with error so the app handles it
     window.history.back();
   }
 
   if (loadError) return <ErrorScreen message={loadError} />;
   if (!client)   return <LoadingScreen />;
 
+  const canPay   = client.scopes.includes('payment');
+  const disabled = submitting || !identifier.trim() || !password;
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12"
-         style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <main className="w-full max-w-sm">
+    <div className="azc">
+      <Styles />
+      <main className="azc-shell">
+        <div className="azc-card">
 
-        {/* Card */}
-        <div className="rounded-2xl border p-8"
-             style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}>
+          {/* Connection lockup — you are linking this app TO your Aza account */}
+          <div className="azc-lockup" aria-hidden="true">
+            <div className="azc-mark azc-mark--aza">a</div>
+            <div className="azc-connector">
+              <span className="azc-dash" />
+              <span className="azc-node"><Lock size={13} strokeWidth={2.4} /></span>
+              <span className="azc-dash" />
+            </div>
+            <div className="azc-mark azc-mark--app">
+              {client.logoUrl ? (
+                <Image src={client.logoUrl} alt="" width={52} height={52} unoptimized
+                       className="azc-mark-img" />
+              ) : (
+                <span>{client.appName[0].toUpperCase()}</span>
+              )}
+            </div>
+          </div>
 
-          {/* App identity */}
-          <div className="flex flex-col items-center text-center mb-7">
-            {client.logoUrl ? (
-              <Image src={client.logoUrl} alt={client.appName} width={56} height={56}
-                   unoptimized
-                   className="w-14 h-14 rounded-2xl object-cover mb-3"
-                   style={{ border: '1px solid rgba(255,255,255,0.12)' }} />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-xl font-black"
-                   style={{ background: 'rgba(183,238,122,0.15)', color: '#B7EE7A' }}>
-                {client.appName[0].toUpperCase()}
-              </div>
-            )}
-            <h1 className="text-white font-bold text-lg leading-tight">
-              {client.appName}
-            </h1>
-            {client.appDescription && (
-              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                {client.appDescription}
+          <div className="azc-head">
+            <h1 className="azc-title">{client.appName}</h1>
+            <p className="azc-sub">
+              wants to connect to your <span className="azc-brand">Aza</span> account
+            </p>
+          </div>
+
+          {/* Permissions */}
+          <section className="azc-perms" aria-label="Requested permissions">
+            <p className="azc-perms-label">This app will be able to</p>
+            <ul className="azc-scopes">
+              {client.scopes.map((scope, i) => {
+                const meta = SCOPE_LABELS[scope];
+                return (
+                  <li key={scope} className="azc-scope" style={{ animationDelay: `${120 + i * 55}ms` }}>
+                    <ShieldCheck size={16} strokeWidth={2.2} className="azc-scope-ic" />
+                    <div className="azc-scope-txt">
+                      <span className="azc-scope-title">{meta?.label ?? scope}</span>
+                      <span className="azc-scope-desc">{meta?.description ?? scope}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {canPay && (
+              <p className="azc-payhint">
+                <Lock size={12} strokeWidth={2.4} />
+                You’ll still confirm every payment inside Aza.
               </p>
             )}
-          </div>
+          </section>
 
-          {/* Scopes */}
-          <div className="mb-6 rounded-xl px-4 py-3 space-y-2.5"
-               style={{ background: 'rgba(183,238,122,0.05)', border: '1px solid rgba(183,238,122,0.1)' }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              THIS APP WANTS TO ACCESS
-            </p>
-            {client.scopes.map(scope => {
-              const meta = SCOPE_LABELS[scope];
-              return (
-                <div key={scope} className="flex items-start gap-2.5">
-                  <ShieldCheck size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#B7EE7A' }} />
-                  <div>
-                    <p className="text-xs font-semibold text-white">{meta?.label ?? scope}</p>
-                    <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                      {meta?.description ?? scope}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className="azc-rule"><span>Sign in to authorize</span></div>
 
-          {/* Login form */}
-          <form onSubmit={handleApprove} className="space-y-3">
-            <p className="text-xs text-center mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Sign in with your Aza account to continue
-            </p>
+          {/* Credentials */}
+          <form onSubmit={handleApprove} className="azc-form">
+            <input
+              ref={identifierRef}
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Username, email or phone"
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
+              required
+              className="azc-input"
+            />
 
-            <div>
-              <input
-                ref={identifierRef}
-                type="text"
-                autoComplete="username"
-                placeholder="Username, email or phone"
-                value={identifier}
-                onChange={e => setIdentifier(e.target.value)}
-                required
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'white',
-                }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.5)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
-              />
-            </div>
-
-            <div className="relative">
+            <div className="azc-pw">
               <input
                 type={showPw ? 'text' : 'password'}
                 autoComplete="current-password"
@@ -187,61 +184,47 @@ function ConsentContent() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 pr-10 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'white',
-                }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.5)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+                className="azc-input"
               />
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
+                className="azc-pw-toggle"
+                aria-label={showPw ? 'Hide password' : 'Show password'}
                 tabIndex={-1}
               >
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
 
             {authError && (
-              <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-                   style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <AlertCircle size={13} className="flex-shrink-0" />
-                {authError}
+              <div className="azc-error" role="alert">
+                <AlertCircle size={14} className="azc-error-ic" />
+                <span>{authError}</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting || !identifier || !password}
-              className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40"
-              style={{ background: '#B7EE7A', color: '#174717' }}
-            >
-              {submitting
-                ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" />Signing in…</span>
-                : `Allow ${client.appName}`}
+            <button type="submit" disabled={disabled} className="azc-primary">
+              {submitting ? (
+                <span className="azc-inline"><Loader2 size={15} className="azc-spin" /> Authorizing…</span>
+              ) : (
+                `Allow ${client.appName}`
+              )}
             </button>
 
-            <button
-              type="button"
-              onClick={handleDeny}
-              disabled={submitting}
-              className="w-full py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-70"
-              style={{ color: 'rgba(255,255,255,0.45)' }}
-            >
+            <button type="button" onClick={handleDeny} disabled={submitting} className="azc-ghost">
               Cancel
             </button>
           </form>
+
+          <p className="azc-trust">
+            <Lock size={12} strokeWidth={2.4} />
+            Aza never shares your password with {client.appName}.
+          </p>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-[11px] mt-5" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          You are authorising <strong className="text-white/40">{client.appName}</strong> to access your Aza account.
-          You can revoke access at any time from Aza → Profile → Connected Apps.
+        <p className="azc-foot">
+          You can revoke access anytime in <strong>Aza → Profile → Connected&nbsp;Apps</strong>.
         </p>
       </main>
     </div>
@@ -250,24 +233,238 @@ function ConsentContent() {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center"
-         style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <main>
-        <Loader2 size={24} className="animate-spin" style={{ color: '#B7EE7A' }} />
-      </main>
+    <div className="azc azc--center">
+      <Styles />
+      <Loader2 size={26} className="azc-spin" style={{ color: 'var(--lime)' }} />
     </div>
   );
 }
 
 function ErrorScreen({ message }: { message: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6"
-         style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}>
-      <main className="text-center max-w-sm">
-        <AlertCircle size={32} className="mx-auto mb-3" style={{ color: '#fca5a5' }} />
-        <p className="text-white font-semibold mb-1">Authorization failed</p>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{message}</p>
-      </main>
+    <div className="azc azc--center">
+      <Styles />
+      <div className="azc-errscreen">
+        <div className="azc-errbadge"><AlertCircle size={26} strokeWidth={2.2} /></div>
+        <h1 className="azc-title">Authorization failed</h1>
+        <p className="azc-errmsg">{message}</p>
+      </div>
     </div>
+  );
+}
+
+function Styles() {
+  return (
+    <style>{`
+      .azc {
+        --bg: #060d09;
+        --card: #0e1a12;
+        --card-2: #15251b;
+        --line: rgba(183,238,122,0.16);
+        --line-soft: rgba(233,245,224,0.10);
+        --lime: #B7EE7A;
+        --lime-ink: #0a1b0c;
+        --ink: #f4f8ef;
+        --text: #b7c5af;
+        --muted: #8b9b84;
+        --placeholder: #879680;
+        --danger: #f4aaa1;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        color: var(--ink);
+        font-family: var(--font-inter), system-ui, sans-serif;
+        background:
+          radial-gradient(115% 75% at 50% -8%, rgba(183,238,122,0.11), transparent 52%),
+          radial-gradient(90% 55% at 50% 118%, rgba(23,71,23,0.40), transparent 60%),
+          var(--bg);
+      }
+      .azc--center { flex-direction: column; }
+
+      .azc-shell { width: 100%; max-width: 392px; }
+
+      .azc-card {
+        background: linear-gradient(180deg, rgba(183,238,122,0.035), transparent 42%), var(--card);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 30px 28px 24px;
+        box-shadow:
+          0 1px 0 rgba(255,255,255,0.05) inset,
+          0 30px 70px -28px rgba(0,0,0,0.85);
+        animation: azc-rise .55s cubic-bezier(.22,1,.36,1) both;
+      }
+
+      /* Connection lockup */
+      .azc-lockup {
+        display: flex; align-items: center; justify-content: center;
+        gap: 4px; margin-bottom: 18px;
+      }
+      .azc-mark {
+        width: 52px; height: 52px; border-radius: 16px;
+        display: grid; place-items: center;
+        font-size: 22px; font-weight: 800; overflow: hidden; flex: none;
+      }
+      .azc-mark--aza {
+        background: var(--lime); color: var(--lime-ink);
+        box-shadow: 0 6px 20px -6px rgba(183,238,122,0.5);
+      }
+      .azc-mark--app {
+        background: var(--card-2);
+        border: 1px solid var(--line-soft);
+        color: var(--lime);
+      }
+      .azc-mark-img { width: 52px; height: 52px; object-fit: cover; }
+      .azc-connector { display: flex; align-items: center; gap: 5px; padding: 0 4px; }
+      .azc-dash {
+        width: 16px; height: 0;
+        border-top: 2px dashed rgba(183,238,122,0.4);
+      }
+      .azc-node {
+        width: 26px; height: 26px; border-radius: 50%;
+        display: grid; place-items: center;
+        background: var(--card-2); border: 1px solid var(--line);
+        color: var(--lime);
+      }
+
+      .azc-head { text-align: center; margin-bottom: 22px; }
+      .azc-title {
+        font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
+        line-height: 1.2; text-wrap: balance;
+      }
+      .azc-sub { margin-top: 5px; font-size: 13.5px; color: var(--text); line-height: 1.45; }
+      .azc-brand { color: var(--lime); font-weight: 600; }
+
+      /* Permissions */
+      .azc-perms {
+        background: var(--card-2);
+        border: 1px solid var(--line-soft);
+        border-radius: 16px;
+        padding: 15px 16px;
+        margin-bottom: 22px;
+      }
+      .azc-perms-label {
+        font-size: 11.5px; font-weight: 600; color: var(--muted);
+        margin-bottom: 12px; letter-spacing: 0.01em;
+      }
+      .azc-scopes { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+      .azc-scope {
+        display: flex; align-items: flex-start; gap: 11px;
+        animation: azc-fade .45s ease-out both;
+      }
+      .azc-scope-ic { color: var(--lime); flex: none; margin-top: 1px; }
+      .azc-scope-txt { display: flex; flex-direction: column; gap: 2px; }
+      .azc-scope-title { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.25; }
+      .azc-scope-desc { font-size: 12px; color: var(--text); line-height: 1.35; }
+      .azc-payhint {
+        display: flex; align-items: center; gap: 6px;
+        margin-top: 13px; padding-top: 12px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 11.5px; color: var(--muted); line-height: 1.35;
+      }
+      .azc-payhint svg { color: var(--lime); flex: none; }
+
+      /* Divider with label */
+      .azc-rule {
+        display: flex; align-items: center; gap: 12px;
+        margin: 0 2px 16px; color: var(--muted); font-size: 11.5px; font-weight: 500;
+      }
+      .azc-rule::before, .azc-rule::after {
+        content: ""; flex: 1; height: 1px; background: var(--line-soft);
+      }
+
+      /* Form */
+      .azc-form { display: flex; flex-direction: column; gap: 10px; }
+      .azc-input {
+        width: 100%; padding: 12px 14px;
+        background: var(--card-2);
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
+        color: var(--ink); font-size: 14px;
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+      }
+      .azc-input::placeholder { color: var(--placeholder); }
+      .azc-input:hover { border-color: rgba(233,245,224,0.18); }
+      .azc-input:focus {
+        outline: none;
+        border-color: var(--lime);
+        box-shadow: 0 0 0 3px rgba(183,238,122,0.22);
+        background: #182a1d;
+      }
+      .azc-pw { position: relative; }
+      .azc-pw .azc-input { padding-right: 42px; }
+      .azc-pw-toggle {
+        position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+        display: grid; place-items: center; width: 32px; height: 32px;
+        border-radius: 8px; color: var(--muted); background: transparent;
+        cursor: pointer; transition: color .15s ease, background .15s ease;
+      }
+      .azc-pw-toggle:hover { color: var(--text); background: rgba(233,245,224,0.06); }
+
+      .azc-error {
+        display: flex; align-items: center; gap: 8px;
+        padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
+        color: var(--danger);
+        background: rgba(244,110,97,0.10);
+        border: 1px solid rgba(244,110,97,0.26);
+      }
+      .azc-error-ic { flex: none; }
+
+      .azc-primary {
+        width: 100%; margin-top: 4px; padding: 13px;
+        border-radius: 12px; font-size: 14px; font-weight: 700;
+        background: var(--lime); color: var(--lime-ink); border: 1px solid transparent;
+        cursor: pointer;
+        transition: filter .18s ease, transform .1s ease, opacity .18s ease;
+      }
+      .azc-primary:hover:not(:disabled) { filter: brightness(1.06); }
+      .azc-primary:active:not(:disabled) { transform: translateY(1px); }
+      .azc-primary:disabled { opacity: .42; cursor: not-allowed; }
+
+      .azc-ghost {
+        width: 100%; padding: 10px; border-radius: 12px;
+        font-size: 13.5px; font-weight: 600; color: var(--muted);
+        background: transparent; border: 1px solid transparent; cursor: pointer;
+        transition: color .16s ease, background .16s ease;
+      }
+      .azc-ghost:hover:not(:disabled) { color: var(--text); background: rgba(233,245,224,0.045); }
+
+      .azc-primary:focus-visible, .azc-ghost:focus-visible, .azc-pw-toggle:focus-visible {
+        outline: none; box-shadow: 0 0 0 3px rgba(183,238,122,0.4);
+      }
+
+      .azc-inline { display: inline-flex; align-items: center; gap: 8px; }
+
+      .azc-trust {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        margin-top: 16px; font-size: 11.5px; color: var(--muted); text-align: center;
+      }
+      .azc-trust svg { color: var(--lime); flex: none; }
+
+      .azc-foot {
+        text-align: center; margin-top: 18px;
+        font-size: 11.5px; line-height: 1.5; color: var(--muted);
+      }
+      .azc-foot strong { color: var(--text); font-weight: 600; }
+
+      /* Error screen */
+      .azc-errscreen { text-align: center; max-width: 320px; }
+      .azc-errbadge {
+        width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 16px;
+        display: grid; place-items: center; color: var(--danger);
+        background: rgba(244,110,97,0.10); border: 1px solid rgba(244,110,97,0.24);
+      }
+      .azc-errmsg { margin-top: 8px; font-size: 13.5px; color: var(--text); line-height: 1.5; }
+
+      .azc-spin { animation: azc-spin 1s linear infinite; }
+      @keyframes azc-spin { to { transform: rotate(360deg); } }
+      @keyframes azc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes azc-fade { from { opacity: 0; } to { opacity: 1; } }
+
+      @media (prefers-reduced-motion: reduce) {
+        .azc-card, .azc-scope { animation: none !important; }
+      }
+    `}</style>
   );
 }
