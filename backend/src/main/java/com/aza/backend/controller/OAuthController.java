@@ -17,7 +17,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.MediaType;
+
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 @RestController
@@ -132,11 +137,73 @@ public class OAuthController {
 
     // ── Token exchange ────────────────────────────────────────────────────────
 
-    @PostMapping("/token")
+    /**
+     * JSON token exchange — used by the native AZA flow (camelCase body).
+     */
+    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<OAuthTokenResponse> token(
             @Valid @RequestBody OAuthTokenRequest request) {
-        OAuthTokenResponse response = oAuthService.exchangeToken(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(oAuthService.exchangeToken(request));
+    }
+
+    /**
+     * Standard OAuth 2.0 token endpoint (RFC 6749 §4.1.3 / §6): off-the-shelf
+     * OAuth clients POST the code exchange as application/x-www-form-urlencoded
+     * with snake_case parameters, and may pass client credentials via HTTP Basic
+     * auth (§2.3.1) instead of the body. Accept both.
+     */
+    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<OAuthTokenResponse> tokenForm(
+            @RequestParam(value = "grant_type",    required = false) String grantType,
+            @RequestParam(value = "code",          required = false) String code,
+            @RequestParam(value = "redirect_uri",  required = false) String redirectUri,
+            @RequestParam(value = "code_verifier", required = false) String codeVerifier,
+            @RequestParam(value = "refresh_token", required = false) String refreshToken,
+            @RequestParam(value = "client_id",     required = false) String clientId,
+            @RequestParam(value = "client_secret", required = false) String clientSecret,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        // Client credentials may arrive via HTTP Basic auth instead of the body.
+        if ((clientId == null || clientSecret == null)
+                && authHeader != null && authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
+            String[] basic = decodeBasicAuth(authHeader.substring(6).trim());
+            if (basic != null) {
+                if (clientId == null)     clientId     = basic[0];
+                if (clientSecret == null) clientSecret = basic[1];
+            }
+        }
+
+        if (grantType == null || clientId == null || clientSecret == null) {
+            throw new AppException("OAUTH_INVALID_REQUEST",
+                    "Missing required parameter (grant_type, client_id, client_secret).",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        OAuthTokenRequest req = new OAuthTokenRequest();
+        req.setGrantType(grantType);
+        req.setCode(code);
+        req.setRedirectUri(redirectUri);
+        req.setCodeVerifier(codeVerifier);
+        req.setRefreshToken(refreshToken);
+        req.setClientId(clientId);
+        req.setClientSecret(clientSecret);
+
+        return ResponseEntity.ok(oAuthService.exchangeToken(req));
+    }
+
+    /** Decodes a "base64(client_id:client_secret)" HTTP Basic credential; returns null if malformed. */
+    private String[] decodeBasicAuth(String encoded) {
+        try {
+            String decoded = new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8);
+            int sep = decoded.indexOf(':');
+            if (sep < 0) return null;
+            return new String[]{
+                    URLDecoder.decode(decoded.substring(0, sep), StandardCharsets.UTF_8),
+                    URLDecoder.decode(decoded.substring(sep + 1), StandardCharsets.UTF_8)
+            };
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     // ── Userinfo ──────────────────────────────────────────────────────────────
