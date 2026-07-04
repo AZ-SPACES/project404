@@ -45,8 +45,10 @@ public class MerchantPlanController {
     public ResponseEntity<ApiResponse<List<PlanResponse>>> listPlans(
             @AuthenticationPrincipal User user) {
         Merchant merchant = requireMerchant(user.getId());
+        // Deleting a plan deactivates it (subscriptions still reference it); exclude those
+        // so a deleted plan does not reappear in the merchant's list.
         List<PlanResponse> plans = planRepository
-                .findAllByMerchantIdOrderByCreatedAtDesc(merchant.getId())
+                .findAllByMerchantIdAndActiveTrueOrderByCreatedAtDesc(merchant.getId())
                 .stream()
                 .map(this::toPlanResponse)
                 .collect(Collectors.toList());

@@ -705,8 +705,11 @@ public class MerchantService {
         if (!endpoint.getMerchantId().equals(merchant.getId())) {
             throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
         }
-        endpoint.setIsActive(false);
-        webhookRepository.save(endpoint);
+        // Hard delete: isActive is also used by the enable/disable toggle, so a soft delete
+        // is indistinguishable from a disabled endpoint and would reappear in listWebhooks.
+        // Past deliveries are keyed by endpointId and remain queryable; any pending deliveries
+        // are gracefully abandoned by WebhookService when the endpoint can no longer be found.
+        webhookRepository.delete(endpoint);
         logMerchantAction(merchant.getId(), "WEBHOOK_DELETED", resolveActorEmail(userId),
                 "endpointId=" + endpointId);
     }

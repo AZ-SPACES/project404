@@ -12,4 +12,6 @@ public interface MerchantTeamMemberRepository extends JpaRepository<MerchantTeam
     Optional<MerchantTeamMember> findByInviteToken(String token);
     Optional<MerchantTeamMember> findByIdAndMerchantId(UUID id, UUID merchantId);
     boolean existsByMerchantIdAndEmail(UUID merchantId, String email);
+    boolean existsByMerchantIdAndEmailAndStatusNot(
+            UUID merchantId, String email, MerchantTeamMember.TeamStatus status);
 }

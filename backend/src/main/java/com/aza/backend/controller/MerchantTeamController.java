@@ -44,6 +44,9 @@ public class MerchantTeamController {
         List<TeamMemberResponse> members = teamMemberRepository
                 .findAllByMerchantIdOrderByInvitedAtDesc(merchant.getId())
                 .stream()
+                // Revoking a member is a soft delete (REVOKED tombstone); hide it so it does
+                // not reappear in the list after the frontend removes it.
+                .filter(m -> m.getStatus() != MerchantTeamMember.TeamStatus.REVOKED)
                 .map(this::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success(members));
@@ -57,7 +60,9 @@ public class MerchantTeamController {
         Merchant merchant = requireMerchant(user.getId());
         String email = request.getEmail().toLowerCase().trim();
 
-        if (teamMemberRepository.existsByMerchantIdAndEmail(merchant.getId(), email)) {
+        // A previously revoked member is a tombstone — allow re-inviting the same email.
+        if (teamMemberRepository.existsByMerchantIdAndEmailAndStatusNot(
+                merchant.getId(), email, MerchantTeamMember.TeamStatus.REVOKED)) {
             throw new AppException("ALREADY_EXISTS",
                     "A team member with this email already exists", HttpStatus.CONFLICT);
         }

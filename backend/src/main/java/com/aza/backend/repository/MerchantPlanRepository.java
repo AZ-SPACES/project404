@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface MerchantPlanRepository extends JpaRepository<MerchantPlan, UUID> {
     List<MerchantPlan> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId);
+    List<MerchantPlan> findAllByMerchantIdAndActiveTrueOrderByCreatedAtDesc(UUID merchantId);
     Optional<MerchantPlan> findByIdAndMerchantId(UUID id, UUID merchantId);
     boolean existsByMerchantIdAndName(UUID merchantId, String name);
 }
