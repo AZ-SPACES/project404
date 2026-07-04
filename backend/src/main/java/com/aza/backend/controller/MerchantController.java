@@ -288,6 +288,14 @@ public class MerchantController {
                 merchantService.updateWebhookEndpoint(user.getId(), endpointId, request)));
     }
 
+    @PostMapping("/webhooks/{endpointId}/regenerate-secret")
+    public ResponseEntity<ApiResponse<WebhookEndpointResponse>> regenerateWebhookSecret(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID endpointId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.regenerateWebhookSecret(user.getId(), endpointId)));
+    }
+
     @GetMapping("/webhooks/{endpointId}/deliveries")
     public ResponseEntity<ApiResponse<List<WebhookDeliveryResponse>>> listWebhookDeliveries(
             @AuthenticationPrincipal User user,

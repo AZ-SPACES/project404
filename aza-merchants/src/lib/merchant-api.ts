@@ -744,6 +744,13 @@ export async function deleteWebhook(id: string): Promise<void> {
   await request(`/api/v1/merchant/webhooks/${id}`, { method: "DELETE" });
 }
 
+export async function regenerateWebhookSecret(id: string): Promise<WebhookEndpoint> {
+  const body = await request<{ success: boolean; data: {
+    id: string; url: string; signingSecret?: string; isActive: boolean; events: string; createdAt: string;
+  } }>(`/api/v1/merchant/webhooks/${id}/regenerate-secret`, { method: "POST" });
+  return { ...body.data, events: parseWebhookEvents(body.data.events) };
+}
+
 export async function getWebhookDeliveries(id: string): Promise<WebhookDelivery[]> {
   const body = await request<{ success: boolean; data: WebhookDelivery[] }>(
     `/api/v1/merchant/webhooks/${id}/deliveries`

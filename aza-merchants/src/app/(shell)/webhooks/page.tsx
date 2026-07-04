@@ -6,6 +6,7 @@ import {
   createWebhook,
   updateWebhook,
   deleteWebhook,
+  regenerateWebhookSecret,
   getWebhookDeliveries,
   WebhookEndpoint,
   WebhookDelivery,
@@ -25,6 +26,9 @@ import {
   ToggleLeft,
   ToggleRight,
   AlertCircle,
+  KeyRound,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -121,6 +125,65 @@ function EndpointModal({
   );
 }
 
+// ─── Signing Secret Reveal (shown once) ─────────────────────────────────────────
+
+function SecretRevealModal({
+  secret,
+  onClose,
+}: {
+  secret: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70">
+      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 relative">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="p-2 rounded-lg bg-[#B7EE7A]/10">
+            <KeyRound size={16} className="text-[#B7EE7A]" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground">Signing secret</h3>
+        </div>
+        <p className="text-xs text-foreground/50 mb-4 leading-relaxed">
+          Use this secret to verify the <span className="font-mono text-foreground/70">X-Aza-Signature</span> header
+          on incoming webhook requests.
+        </p>
+        <div className="flex items-center gap-2 px-3.5 py-3 rounded-xl bg-muted/30 border border-border mb-3">
+          <code className="flex-1 min-w-0 text-xs text-foreground font-mono break-all">{secret}</code>
+          <button
+            onClick={copy}
+            title="Copy"
+            className="flex-shrink-0 p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+          </button>
+        </div>
+        <div className="flex items-start gap-2 px-3.5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-5">
+          <AlertCircle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-300/90 leading-relaxed">
+            Copy it now — for security, you won&apos;t be able to see this secret again. You can regenerate it later if lost.
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-[#174717] hover:bg-[#1e5e1e] text-foreground font-semibold text-sm transition-colors"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Delivery Log ──────────────────────────────────────────────────────────────
 
 function DeliveryLog({ endpointId }: { endpointId: string }) {
@@ -176,21 +239,33 @@ function EndpointCard({
   endpoint,
   onUpdate,
   onDelete,
+  onRegenerate,
 }: {
   endpoint: WebhookEndpoint;
   onUpdate: (id: string, data: any) => Promise<void>;
   onDelete: (id: string) => void;
+  onRegenerate: (id: string) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [regenConfirm, setRegenConfirm] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   async function handleToggle() {
     setToggling(true);
     try { await onUpdate(endpoint.id, { isActive: !endpoint.isActive }); }
     catch {}
     setToggling(false);
+  }
+
+  async function handleRegenerate() {
+    setRegenerating(true);
+    try { await onRegenerate(endpoint.id); }
+    catch {}
+    setRegenerating(false);
+    setRegenConfirm(false);
   }
 
   return (
@@ -220,6 +295,19 @@ function EndpointCard({
             <button onClick={() => setEditing(true)} className="p-1.5 rounded-lg text-foreground/25 hover:text-foreground/70 hover:bg-muted/40 transition-colors text-xs font-medium">
               Edit
             </button>
+            {regenConfirm ? (
+              <>
+                <button onClick={handleRegenerate} disabled={regenerating} className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-400 text-xs font-medium hover:bg-amber-500/25 disabled:opacity-50 transition-colors flex items-center gap-1">
+                  {regenerating && <Loader2 size={11} className="animate-spin" />}
+                  Roll secret
+                </button>
+                <button onClick={() => setRegenConfirm(false)} className="p-1.5 rounded-lg text-foreground/30 hover:text-foreground transition-colors"><X size={13} /></button>
+              </>
+            ) : (
+              <button onClick={() => setRegenConfirm(true)} title="Regenerate signing secret" className="p-1.5 rounded-lg text-foreground/25 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">
+                <KeyRound size={14} />
+              </button>
+            )}
             {deleteConfirm ? (
               <>
                 <button onClick={() => onDelete(endpoint.id)} className="px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/25 text-red-400 text-xs font-medium hover:bg-red-500/25 transition-colors">Delete</button>
@@ -253,6 +341,7 @@ export default function WebhooksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -271,11 +360,19 @@ export default function WebhooksPage() {
   async function handleCreate(data: { url: string; events: string[] }) {
     const ep = await createWebhook(data);
     setEndpoints((prev) => [ep, ...prev]);
+    if (ep.signingSecret) setRevealedSecret(ep.signingSecret);
   }
 
   async function handleUpdate(id: string, data: any) {
     const updated = await updateWebhook(id, data);
     setEndpoints((prev) => prev.map((e) => e.id === id ? updated : e));
+  }
+
+  async function handleRegenerate(id: string) {
+    const updated = await regenerateWebhookSecret(id);
+    // Response omits the plaintext secret from the list view; keep existing card fields, just reveal the new secret.
+    setEndpoints((prev) => prev.map((e) => e.id === id ? { ...e, ...updated, signingSecret: undefined } : e));
+    if (updated.signingSecret) setRevealedSecret(updated.signingSecret);
   }
 
   async function handleDelete(id: string) {
@@ -293,6 +390,13 @@ export default function WebhooksPage() {
         <EndpointModal
           onSave={handleCreate}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {revealedSecret && (
+        <SecretRevealModal
+          secret={revealedSecret}
+          onClose={() => setRevealedSecret(null)}
         />
       )}
 
@@ -330,7 +434,7 @@ export default function WebhooksPage() {
         ) : (
           <div className="space-y-3">
             {endpoints.map((ep) => (
-              <EndpointCard key={ep.id} endpoint={ep} onUpdate={handleUpdate} onDelete={handleDelete} />
+              <EndpointCard key={ep.id} endpoint={ep} onUpdate={handleUpdate} onDelete={handleDelete} onRegenerate={handleRegenerate} />
             ))}
           </div>
         )}

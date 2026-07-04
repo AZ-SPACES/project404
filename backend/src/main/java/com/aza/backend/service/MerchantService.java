@@ -639,6 +639,34 @@ public class MerchantService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public WebhookEndpointResponse regenerateWebhookSecret(UUID userId, UUID endpointId) {
+        Merchant merchant = requireActiveMerchant(userId);
+        WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Webhook not found", HttpStatus.NOT_FOUND));
+        if (!endpoint.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
+        }
+
+        byte[] secretBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(secretBytes);
+        String signingSecret = "whsec_" + HexFormat.of().formatHex(secretBytes);
+        endpoint.setSigningSecret(signingSecret);
+        webhookRepository.save(endpoint);
+
+        logMerchantAction(merchant.getId(), "WEBHOOK_SECRET_REGENERATED", resolveActorEmail(userId),
+                "endpointId=" + endpointId);
+
+        return WebhookEndpointResponse.builder()
+                .id(endpoint.getId().toString())
+                .url(endpoint.getUrl())
+                .signingSecret(signingSecret) // only shown once
+                .isActive(endpoint.getIsActive())
+                .events(endpoint.getEvents())
+                .createdAt(endpoint.getCreatedAt())
+                .build();
+    }
+
     public List<WebhookDeliveryResponse> listWebhookDeliveries(UUID userId, UUID endpointId) {
         Merchant merchant = requireMerchant(userId);
         WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
