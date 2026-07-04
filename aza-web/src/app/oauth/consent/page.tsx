@@ -8,12 +8,12 @@ import { AzaMark } from '@/components/AzaMark';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.aza.systems';
 
-const SCOPE_LABELS: Record<string, { label: string; description: string }> = {
-  identity:      { label: 'Your profile',   description: 'Name, username, and profile picture' },
-  email:         { label: 'Email address',  description: 'Your registered email address' },
-  phone:         { label: 'Phone number',   description: 'Your registered phone number' },
-  'wallet:read': { label: 'Wallet balance', description: 'View your current Aza balance' },
-  payment:       { label: 'Make payments',  description: 'Initiate payments from your Aza wallet' },
+const SCOPE_LABELS: Record<string, { label: string; short: string }> = {
+  identity:      { label: 'Your profile',   short: 'PROFILE' },
+  email:         { label: 'Email address',  short: 'EMAIL'   },
+  phone:         { label: 'Phone number',   short: 'PHONE'   },
+  'wallet:read': { label: 'Wallet balance', short: 'WALLET'  },
+  payment:       { label: 'Make payments',  short: 'PAYMENTS'},
 };
 
 interface ClientInfo {
@@ -24,6 +24,16 @@ interface ClientInfo {
   websiteUrl: string | null;
   scopes: string[];
 }
+
+// Turn the opaque OAuth state into a stable, ticket-like pass number.
+function passNumber(state: string | null): string {
+  const raw = (state ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().padEnd(8, '0');
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}`;
+}
+
+const ISSUED = new Date().toLocaleDateString('en-GB', {
+  day: '2-digit', month: 'short', year: 'numeric',
+}).toUpperCase();
 
 export default function ConsentPage() {
   return (
@@ -85,7 +95,7 @@ function ConsentContent() {
       }
 
       // Backend returns the redirect URL — navigate to it so the app receives the code
-      window.location.href = json.data;
+      window.location.assign(json.data);
     } catch {
       setAuthError('Network error. Please try again.');
       setSubmitting(false);
@@ -100,69 +110,96 @@ function ConsentContent() {
   if (loadError) return <ErrorScreen message={loadError} />;
   if (!client)   return <LoadingScreen />;
 
-  const canPay   = client.scopes.includes('payment');
+  const canPay = client.scopes.includes('payment');
   const disabled = submitting || !identifier.trim() || !password;
+  const passNo = passNumber(state);
 
   return (
-    <div className="azc">
+    <div className="pass-counter">
       <Styles />
-      <main className="azc-shell">
-        <div className="azc-card">
+      <main className="pass-wrap">
+        <article className="pass" aria-label="Aza access pass">
 
-          {/* Connection lockup — you are linking this app TO your Aza account */}
-          <div className="azc-lockup" aria-hidden="true">
-            <AzaMark size={52} className="azc-mark azc-mark--aza" priority />
-            <div className="azc-connector">
-              <span className="azc-dash" />
-              <span className="azc-node"><Lock size={13} strokeWidth={2.4} /></span>
-              <span className="azc-dash" />
+          {/* Header stub */}
+          <header className="pass-head">
+            <div className="pass-head-brand">
+              <AzaMark size={30} className="pass-mark" priority />
+              <div className="pass-head-txt">
+                <span className="pass-head-title">AZA</span>
+                <span className="pass-head-sub">ACCESS&nbsp;PASS</span>
+              </div>
             </div>
-            <div className="azc-mark azc-mark--app">
-              {client.logoUrl ? (
-                <Image src={client.logoUrl} alt="" width={52} height={52} unoptimized
-                       className="azc-mark-img" />
-              ) : (
-                <span>{client.appName[0].toUpperCase()}</span>
-              )}
+            <div className="pass-head-no">
+              <span className="pass-k">PASS №</span>
+              <span className="pass-v">{passNo}</span>
             </div>
-          </div>
+          </header>
 
-          <div className="azc-head">
-            <h1 className="azc-title">{client.appName}</h1>
-            <p className="azc-sub">
-              wants to connect to your <span className="azc-brand">Aza</span> account
-            </p>
-          </div>
+          {/* Ticket body */}
+          <div className="pass-body">
+            <div className="pass-field">
+              <span className="pass-k">ISSUED TO</span>
+              <div className="pass-app">
+                <div className="pass-app-mark">
+                  {client.logoUrl ? (
+                    <Image src={client.logoUrl} alt="" width={40} height={40} unoptimized className="pass-app-img" />
+                  ) : (
+                    <span>{client.appName[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="pass-app-txt">
+                  <span className="pass-app-name">{client.appName}</span>
+                  {client.appDescription && <span className="pass-app-desc">{client.appDescription}</span>}
+                </div>
+              </div>
+            </div>
 
-          {/* Permissions */}
-          <section className="azc-perms" aria-label="Requested permissions">
-            <p className="azc-perms-label">This app will be able to</p>
-            <ul className="azc-scopes">
-              {client.scopes.map((scope, i) => {
-                const meta = SCOPE_LABELS[scope];
-                return (
-                  <li key={scope} className="azc-scope" style={{ animationDelay: `${120 + i * 55}ms` }}>
-                    <ShieldCheck size={16} strokeWidth={2.2} className="azc-scope-ic" />
-                    <div className="azc-scope-txt">
-                      <span className="azc-scope-title">{meta?.label ?? scope}</span>
-                      <span className="azc-scope-desc">{meta?.description ?? scope}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="pass-meta">
+              <div className="pass-field">
+                <span className="pass-k">ISSUED</span>
+                <span className="pass-meta-v">{ISSUED}</span>
+              </div>
+              <div className="pass-field">
+                <span className="pass-k">ISSUER</span>
+                <span className="pass-meta-v">aza.systems</span>
+              </div>
+            </div>
+
+            <div className="pass-field">
+              <span className="pass-k">This pass grants access to</span>
+              <ul className="pass-scopes">
+                {client.scopes.map((scope, i) => {
+                  const meta = SCOPE_LABELS[scope];
+                  return (
+                    <li key={scope} className="pass-scope" style={{ animationDelay: `${140 + i * 55}ms` }}>
+                      <ShieldCheck size={15} strokeWidth={2.3} className="pass-scope-ic" />
+                      <span className="pass-scope-label">{meta?.label ?? scope}</span>
+                      <span className="pass-scope-code">{meta?.short ?? scope}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
             {canPay && (
-              <p className="azc-payhint">
+              <p className="pass-note">
                 <Lock size={12} strokeWidth={2.4} />
-                You’ll still confirm every payment inside Aza.
+                Every payment is still confirmed by you inside Aza.
               </p>
             )}
-          </section>
+          </div>
 
-          <div className="azc-rule"><span>Sign in to authorize</span></div>
+          {/* Perforated tear line */}
+          <div className="pass-tear" aria-hidden="true">
+            <span className="pass-notch pass-notch--l" />
+            <span className="pass-dash" />
+            <span className="pass-notch pass-notch--r" />
+          </div>
 
-          {/* Credentials */}
-          <form onSubmit={handleApprove} className="azc-form">
+          {/* Validation stub — sign in */}
+          <form className="pass-stub" onSubmit={handleApprove}>
+            <span className="pass-k pass-stub-k">Sign in to validate this pass</span>
+
             <input
               ref={identifierRef}
               type="text"
@@ -174,10 +211,10 @@ function ConsentContent() {
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
               required
-              className="azc-input"
+              className="pass-input"
             />
 
-            <div className="azc-pw">
+            <div className="pass-pw">
               <input
                 type={showPw ? 'text' : 'password'}
                 autoComplete="current-password"
@@ -185,12 +222,12 @@ function ConsentContent() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="azc-input"
+                className="pass-input"
               />
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
-                className="azc-pw-toggle"
+                className="pass-pw-toggle"
                 aria-label={showPw ? 'Hide password' : 'Show password'}
                 tabIndex={-1}
               >
@@ -199,33 +236,39 @@ function ConsentContent() {
             </div>
 
             {authError && (
-              <div className="azc-error" role="alert">
-                <AlertCircle size={14} className="azc-error-ic" />
+              <div className="pass-error" role="alert">
+                <AlertCircle size={14} className="pass-error-ic" />
                 <span>{authError}</span>
               </div>
             )}
 
-            <button type="submit" disabled={disabled} className="azc-primary">
+            <button type="submit" disabled={disabled} className="pass-allow">
               {submitting ? (
-                <span className="azc-inline"><Loader2 size={15} className="azc-spin" /> Authorizing…</span>
+                <span className="pass-inline"><Loader2 size={15} className="pass-spin" /> Validating…</span>
               ) : (
-                `Allow ${client.appName}`
+                <>Approve &amp; grant access</>
               )}
             </button>
 
-            <button type="button" onClick={handleDeny} disabled={submitting} className="azc-ghost">
+            <button type="button" onClick={handleDeny} disabled={submitting} className="pass-deny">
               Cancel
             </button>
           </form>
 
-          <p className="azc-trust">
-            <Lock size={12} strokeWidth={2.4} />
-            Aza never shares your password with {client.appName}.
-          </p>
-        </div>
+          {/* Barcode footer */}
+          <footer className="pass-foot">
+            <div className="pass-barcode" aria-hidden="true" />
+            <div className="pass-foot-row">
+              <span>AZA · OAUTH 2.0</span>
+              <span>{passNo}</span>
+            </div>
+          </footer>
+        </article>
 
-        <p className="azc-foot">
-          You can revoke access anytime in <strong>Aza → Profile → Connected&nbsp;Apps</strong>.
+        <p className="pass-legal">
+          <Lock size={11} strokeWidth={2.4} />
+          Aza never shares your password with {client.appName}. Revoke anytime in
+          {' '}<strong>Profile → Connected&nbsp;Apps</strong>.
         </p>
       </main>
     </div>
@@ -234,21 +277,24 @@ function ConsentContent() {
 
 function LoadingScreen() {
   return (
-    <div className="azc azc--center">
+    <div className="pass-counter pass-counter--center">
       <Styles />
-      <Loader2 size={26} className="azc-spin" style={{ color: 'var(--lime)' }} />
+      <div className="pass-loader">
+        <Loader2 size={22} className="pass-spin" />
+        <span>Printing your access pass…</span>
+      </div>
     </div>
   );
 }
 
 function ErrorScreen({ message }: { message: string }) {
   return (
-    <div className="azc azc--center">
+    <div className="pass-counter pass-counter--center">
       <Styles />
-      <div className="azc-errscreen">
-        <div className="azc-errbadge"><AlertCircle size={26} strokeWidth={2.2} /></div>
-        <h1 className="azc-title">Authorization failed</h1>
-        <p className="azc-errmsg">{message}</p>
+      <div className="pass-void">
+        <div className="pass-void-stamp">PASS DECLINED</div>
+        <AlertCircle size={22} className="pass-void-ic" />
+        <p className="pass-void-msg">{message}</p>
       </div>
     </div>
   );
@@ -257,213 +303,255 @@ function ErrorScreen({ message }: { message: string }) {
 function Styles() {
   return (
     <style>{`
-      .azc {
-        --bg: #060d09;
-        --card: #0e1a12;
-        --card-2: #15251b;
-        --line: rgba(183,238,122,0.16);
-        --line-soft: rgba(233,245,224,0.10);
+      .pass-counter {
+        --counter: #071a0d;
         --lime: #B7EE7A;
-        --lime-ink: #0a1b0c;
-        --ink: #f4f8ef;
-        --text: #b7c5af;
-        --muted: #8b9b84;
-        --placeholder: #879680;
-        --danger: #f4aaa1;
+        --lime-ink: #0e2a0e;
+        --paper: #ffffff;
+        --paper-2: #f6f8f4;
+        --head: #0e2a0e;
+        --ink: #14251a;
+        --muted: #6b7a6f;
+        --faint: #9aa79d;
+        --border: #e6ebe4;
+        --green: #2e7d2e;
+        --danger: #c62828;
+        --mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
         min-height: 100dvh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        color: var(--ink);
-        font-family: var(--font-inter), system-ui, sans-serif;
-        background:
-          radial-gradient(115% 75% at 50% -8%, rgba(183,238,122,0.11), transparent 52%),
-          radial-gradient(90% 55% at 50% 118%, rgba(23,71,23,0.40), transparent 60%),
-          var(--bg);
-      }
-      .azc--center { flex-direction: column; }
-
-      .azc-shell { width: 100%; max-width: 392px; }
-
-      .azc-card {
-        background: linear-gradient(180deg, rgba(183,238,122,0.035), transparent 42%), var(--card);
-        border: 1px solid var(--line);
-        border-radius: 24px;
-        padding: 30px 28px 24px;
-        box-shadow:
-          0 1px 0 rgba(255,255,255,0.05) inset,
-          0 30px 70px -28px rgba(0,0,0,0.85);
-        animation: azc-rise .55s cubic-bezier(.22,1,.36,1) both;
-      }
-
-      /* Connection lockup */
-      .azc-lockup {
         display: flex; align-items: center; justify-content: center;
-        gap: 4px; margin-bottom: 18px;
+        padding: 40px 20px;
+        font-family: var(--font-inter), system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(120% 60% at 50% -10%, rgba(183,238,122,0.14), transparent 55%),
+          radial-gradient(90% 60% at 50% 115%, rgba(46,125,46,0.22), transparent 60%),
+          var(--counter);
       }
-      .azc-mark {
-        width: 52px; height: 52px; border-radius: 16px;
-        display: grid; place-items: center;
-        font-size: 22px; font-weight: 800; overflow: hidden; flex: none;
-      }
-      .azc-mark--aza {
-        box-shadow: 0 6px 20px -8px rgba(0,0,0,0.6);
-      }
-      .azc-mark--app {
-        background: var(--card-2);
-        border: 1px solid var(--line-soft);
-        color: var(--lime);
-      }
-      .azc-mark-img { width: 52px; height: 52px; object-fit: cover; }
-      .azc-connector { display: flex; align-items: center; gap: 5px; padding: 0 4px; }
-      .azc-dash {
-        width: 16px; height: 0;
-        border-top: 2px dashed rgba(183,238,122,0.4);
-      }
-      .azc-node {
-        width: 26px; height: 26px; border-radius: 50%;
-        display: grid; place-items: center;
-        background: var(--card-2); border: 1px solid var(--line);
-        color: var(--lime);
+      .pass-counter--center { flex-direction: column; }
+      .pass-wrap { width: 100%; max-width: 400px; }
+
+      /* ── Ticket ── */
+      .pass {
+        position: relative;
+        background: var(--paper);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow:
+          0 1px 0 rgba(255,255,255,0.6) inset,
+          0 30px 70px -30px rgba(0,0,0,0.8),
+          0 8px 24px -12px rgba(0,0,0,0.5);
+        animation: pass-print .6s cubic-bezier(.2,.9,.25,1) both;
       }
 
-      .azc-head { text-align: center; margin-bottom: 22px; }
-      .azc-title {
-        font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
-        line-height: 1.2; text-wrap: balance;
+      /* Header */
+      .pass-head {
+        background: var(--head);
+        color: #fff;
+        padding: 16px 20px;
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        position: relative;
       }
-      .azc-sub { margin-top: 5px; font-size: 13.5px; color: var(--text); line-height: 1.45; }
-      .azc-brand { color: var(--lime); font-weight: 600; }
+      .pass-head::after {
+        content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+        background: repeating-linear-gradient(90deg, var(--lime) 0 10px, transparent 10px 18px);
+        opacity: .5;
+      }
+      .pass-head-brand { display: flex; align-items: center; gap: 11px; }
+      .pass-mark { border-radius: 8px; }
+      .pass-head-txt { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+      .pass-head-title { font-size: 15px; font-weight: 800; letter-spacing: 0.16em; }
+      .pass-head-sub {
+        font-family: var(--mono);
+        font-size: 9.5px; letter-spacing: 0.22em; color: var(--lime);
+      }
+      .pass-head-no { text-align: right; display: flex; flex-direction: column; gap: 3px; }
+      .pass-head-no .pass-k { color: rgba(255,255,255,0.5); }
+      .pass-head-no .pass-v {
+        font-family: var(--mono); font-size: 13px; font-weight: 600;
+        color: var(--lime); letter-spacing: 0.08em;
+      }
 
-      /* Permissions */
-      .azc-perms {
-        background: var(--card-2);
-        border: 1px solid var(--line-soft);
-        border-radius: 16px;
-        padding: 15px 16px;
-        margin-bottom: 22px;
+      /* Shared key/value labels */
+      .pass-k {
+        font-family: var(--mono);
+        font-size: 9px; font-weight: 600; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--faint);
       }
-      .azc-perms-label {
-        font-size: 11.5px; font-weight: 600; color: var(--muted);
-        margin-bottom: 12px; letter-spacing: 0.01em;
+
+      /* Body */
+      .pass-body { padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+      .pass-field { display: flex; flex-direction: column; gap: 8px; }
+
+      .pass-app { display: flex; align-items: center; gap: 12px; }
+      .pass-app-mark {
+        width: 44px; height: 44px; border-radius: 12px; flex: none;
+        display: grid; place-items: center; overflow: hidden;
+        background: var(--paper-2); border: 1px solid var(--border);
+        color: var(--green); font-size: 18px; font-weight: 800;
       }
-      .azc-scopes { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-      .azc-scope {
-        display: flex; align-items: flex-start; gap: 11px;
-        animation: azc-fade .45s ease-out both;
+      .pass-app-img { width: 44px; height: 44px; object-fit: cover; }
+      .pass-app-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .pass-app-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+      .pass-app-desc { font-size: 12.5px; color: var(--muted); }
+
+      .pass-meta {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+        padding: 12px 14px; border-radius: 12px;
+        background: var(--paper-2); border: 1px solid var(--border);
       }
-      .azc-scope-ic { color: var(--lime); flex: none; margin-top: 1px; }
-      .azc-scope-txt { display: flex; flex-direction: column; gap: 2px; }
-      .azc-scope-title { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.25; }
-      .azc-scope-desc { font-size: 12px; color: var(--text); line-height: 1.35; }
-      .azc-payhint {
-        display: flex; align-items: center; gap: 6px;
-        margin-top: 13px; padding-top: 12px;
-        border-top: 1px solid var(--line-soft);
+      .pass-meta-v { font-family: var(--mono); font-size: 12.5px; font-weight: 600; color: var(--ink); letter-spacing: 0.03em; }
+
+      .pass-scopes { list-style: none; display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+      .pass-scope {
+        display: flex; align-items: center; gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px dashed var(--border);
+        animation: pass-fade .4s ease-out both;
+      }
+      .pass-scope:last-child { border-bottom: none; }
+      .pass-scope-ic { color: var(--green); flex: none; }
+      .pass-scope-label { font-size: 13.5px; font-weight: 500; color: var(--ink); flex: 1; }
+      .pass-scope-code {
+        font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
+        color: var(--green); background: rgba(46,125,46,0.09);
+        padding: 3px 7px; border-radius: 5px;
+      }
+
+      .pass-note {
+        display: flex; align-items: center; gap: 7px;
         font-size: 11.5px; color: var(--muted); line-height: 1.35;
       }
-      .azc-payhint svg { color: var(--lime); flex: none; }
+      .pass-note svg { color: var(--green); flex: none; }
 
-      /* Divider with label */
-      .azc-rule {
-        display: flex; align-items: center; gap: 12px;
-        margin: 0 2px 16px; color: var(--muted); font-size: 11.5px; font-weight: 500;
+      /* Perforation */
+      .pass-tear { position: relative; height: 24px; display: flex; align-items: center; }
+      .pass-dash {
+        flex: 1; height: 0; margin: 0 18px;
+        border-top: 2px dashed #cfd8ca;
       }
-      .azc-rule::before, .azc-rule::after {
-        content: ""; flex: 1; height: 1px; background: var(--line-soft);
+      .pass-notch {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 24px; height: 24px; border-radius: 50%;
+        background: var(--counter);
       }
+      .pass-notch--l { left: -12px; }
+      .pass-notch--r { right: -12px; }
 
-      /* Form */
-      .azc-form { display: flex; flex-direction: column; gap: 10px; }
-      .azc-input {
+      /* Validation stub */
+      .pass-stub {
+        background: var(--paper-2);
+        padding: 18px 20px 20px;
+        display: flex; flex-direction: column; gap: 10px;
+      }
+      .pass-stub-k { margin-bottom: 2px; }
+      .pass-input {
         width: 100%; padding: 12px 14px;
-        background: var(--card-2);
-        border: 1px solid var(--line-soft);
-        border-radius: 12px;
-        color: var(--ink); font-size: 14px;
-        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        background: var(--paper); border: 1px solid var(--border);
+        border-radius: 11px; color: var(--ink); font-size: 14px;
+        transition: border-color .16s ease, box-shadow .16s ease;
       }
-      .azc-input::placeholder { color: var(--placeholder); }
-      .azc-input:hover { border-color: rgba(233,245,224,0.18); }
-      .azc-input:focus {
-        outline: none;
-        border-color: var(--lime);
-        box-shadow: 0 0 0 3px rgba(183,238,122,0.22);
-        background: #182a1d;
+      .pass-input::placeholder { color: var(--faint); }
+      .pass-input:hover { border-color: #cdd6c8; }
+      .pass-input:focus {
+        outline: none; border-color: var(--green);
+        box-shadow: 0 0 0 3px rgba(46,125,46,0.14);
       }
-      .azc-pw { position: relative; }
-      .azc-pw .azc-input { padding-right: 42px; }
-      .azc-pw-toggle {
+      .pass-pw { position: relative; }
+      .pass-pw .pass-input { padding-right: 42px; }
+      .pass-pw-toggle {
         position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
         display: grid; place-items: center; width: 32px; height: 32px;
-        border-radius: 8px; color: var(--muted); background: transparent;
-        cursor: pointer; transition: color .15s ease, background .15s ease;
+        border-radius: 8px; color: var(--faint); background: transparent; cursor: pointer;
+        transition: color .15s ease, background .15s ease;
       }
-      .azc-pw-toggle:hover { color: var(--text); background: rgba(233,245,224,0.06); }
+      .pass-pw-toggle:hover { color: var(--muted); background: #eef1ea; }
 
-      .azc-error {
+      .pass-error {
         display: flex; align-items: center; gap: 8px;
         padding: 9px 12px; border-radius: 10px; font-size: 12.5px;
-        color: var(--danger);
-        background: rgba(244,110,97,0.10);
-        border: 1px solid rgba(244,110,97,0.26);
+        color: var(--danger); background: #fdeaea; border: 1px solid #f6c9c9;
       }
-      .azc-error-ic { flex: none; }
+      .pass-error-ic { flex: none; }
 
-      .azc-primary {
+      .pass-allow {
         width: 100%; margin-top: 4px; padding: 13px;
-        border-radius: 12px; font-size: 14px; font-weight: 700;
-        background: var(--lime); color: var(--lime-ink); border: 1px solid transparent;
-        cursor: pointer;
-        transition: filter .18s ease, transform .1s ease, opacity .18s ease;
+        border-radius: 11px; font-size: 14px; font-weight: 700;
+        background: var(--lime); color: var(--lime-ink); border: none; cursor: pointer;
+        transition: filter .16s ease, transform .1s ease, opacity .16s ease;
       }
-      .azc-primary:hover:not(:disabled) { filter: brightness(1.06); }
-      .azc-primary:active:not(:disabled) { transform: translateY(1px); }
-      .azc-primary:disabled { opacity: .42; cursor: not-allowed; }
+      .pass-allow:hover:not(:disabled) { filter: brightness(1.04); }
+      .pass-allow:active:not(:disabled) { transform: translateY(1px); }
+      .pass-allow:disabled { opacity: .5; cursor: not-allowed; }
 
-      .azc-ghost {
-        width: 100%; padding: 10px; border-radius: 12px;
-        font-size: 13.5px; font-weight: 600; color: var(--muted);
-        background: transparent; border: 1px solid transparent; cursor: pointer;
-        transition: color .16s ease, background .16s ease;
+      .pass-deny {
+        width: 100%; padding: 9px; border-radius: 11px;
+        font-size: 13px; font-weight: 600; color: var(--muted);
+        background: transparent; border: none; cursor: pointer;
+        transition: color .15s ease, background .15s ease;
       }
-      .azc-ghost:hover:not(:disabled) { color: var(--text); background: rgba(233,245,224,0.045); }
+      .pass-deny:hover:not(:disabled) { color: var(--ink); background: #eef1ea; }
 
-      .azc-primary:focus-visible, .azc-ghost:focus-visible, .azc-pw-toggle:focus-visible {
-        outline: none; box-shadow: 0 0 0 3px rgba(183,238,122,0.4);
+      .pass-allow:focus-visible, .pass-deny:focus-visible, .pass-pw-toggle:focus-visible {
+        outline: none; box-shadow: 0 0 0 3px rgba(46,125,46,0.3);
+      }
+      .pass-inline { display: inline-flex; align-items: center; gap: 8px; }
+
+      /* Barcode footer */
+      .pass-foot { background: var(--paper); padding: 16px 20px 18px; }
+      .pass-barcode {
+        height: 42px; border-radius: 3px;
+        background-image: repeating-linear-gradient(90deg,
+          #16241a 0 2px, transparent 2px 4px,
+          #16241a 4px 7px, transparent 7px 9px,
+          #16241a 9px 10px, transparent 10px 13px,
+          #16241a 13px 16px, transparent 16px 17px,
+          #16241a 17px 19px, transparent 19px 23px);
+      }
+      .pass-foot-row {
+        margin-top: 9px; display: flex; justify-content: space-between;
+        font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; color: var(--faint);
       }
 
-      .azc-inline { display: inline-flex; align-items: center; gap: 8px; }
-
-      .azc-trust {
+      /* Legal line */
+      .pass-legal {
         display: flex; align-items: center; justify-content: center; gap: 6px;
-        margin-top: 16px; font-size: 11.5px; color: var(--muted); text-align: center;
+        flex-wrap: wrap; text-align: center;
+        margin-top: 18px; font-size: 11px; line-height: 1.5; color: rgba(255,255,255,0.42);
       }
-      .azc-trust svg { color: var(--lime); flex: none; }
+      .pass-legal svg { color: var(--lime); flex: none; }
+      .pass-legal strong { color: rgba(255,255,255,0.7); font-weight: 600; }
 
-      .azc-foot {
-        text-align: center; margin-top: 18px;
-        font-size: 11.5px; line-height: 1.5; color: var(--muted);
+      /* Loading */
+      .pass-loader {
+        display: flex; align-items: center; gap: 10px;
+        font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em;
+        color: var(--lime);
       }
-      .azc-foot strong { color: var(--text); font-weight: 600; }
 
-      /* Error screen */
-      .azc-errscreen { text-align: center; max-width: 320px; }
-      .azc-errbadge {
-        width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 16px;
-        display: grid; place-items: center; color: var(--danger);
-        background: rgba(244,110,97,0.10); border: 1px solid rgba(244,110,97,0.24);
+      /* Error / voided pass */
+      .pass-void {
+        position: relative; text-align: center; max-width: 320px;
+        padding: 34px 28px; border-radius: 18px;
+        background: var(--paper);
+        box-shadow: 0 30px 70px -30px rgba(0,0,0,0.8);
       }
-      .azc-errmsg { margin-top: 8px; font-size: 13.5px; color: var(--text); line-height: 1.5; }
+      .pass-void-stamp {
+        position: absolute; top: 20px; left: 50%;
+        transform: translateX(-50%) rotate(-8deg);
+        font-family: var(--mono); font-size: 15px; font-weight: 800; letter-spacing: 0.14em;
+        color: var(--danger); border: 3px solid var(--danger); border-radius: 8px;
+        padding: 5px 12px; opacity: .85;
+      }
+      .pass-void-ic { color: var(--danger); margin: 44px auto 10px; display: block; }
+      .pass-void-msg { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 
-      .azc-spin { animation: azc-spin 1s linear infinite; }
-      @keyframes azc-spin { to { transform: rotate(360deg); } }
-      @keyframes azc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-      @keyframes azc-fade { from { opacity: 0; } to { opacity: 1; } }
+      .pass-spin { animation: pass-spin 1s linear infinite; }
+      @keyframes pass-spin { to { transform: rotate(360deg); } }
+      @keyframes pass-print { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+      @keyframes pass-fade { from { opacity: 0; } to { opacity: 1; } }
 
       @media (prefers-reduced-motion: reduce) {
-        .azc-card, .azc-scope { animation: none !important; }
+        .pass, .pass-scope { animation: none !important; }
       }
     `}</style>
   );

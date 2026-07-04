@@ -13,8 +13,10 @@ import {
   Code,
   AlertTriangle,
   Info,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
-import { AzaMark } from '@/components/AzaMark';
+import { DevNav } from '../_ui/DevNav';
 
 type CodeTab = 'curl' | 'js' | 'python' | 'java';
 
@@ -61,6 +63,12 @@ function GuidesContent() {
 
   const currentDoc = docMap[activeDoc] || docMap['intro'];
 
+  // Flat doc order (for prev/next navigation)
+  const flatDocs = navigationGroups.flatMap(g => g.items);
+  const docIdx = flatDocs.findIndex(d => d.id === activeDoc);
+  const prevDoc = docIdx > 0 ? flatDocs[docIdx - 1] : null;
+  const nextDoc = docIdx >= 0 && docIdx < flatDocs.length - 1 ? flatDocs[docIdx + 1] : null;
+
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopied(true);
@@ -68,96 +76,108 @@ function GuidesContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white font-sans antialiased text-gray-900">
-      {/* Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0e2a0e] text-white border-b border-white/10 sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <AzaMark size={28} className="rounded-[8px]" />
-          <span className="font-semibold text-sm tracking-tight text-white/80">developers</span>
-        </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 text-white/80 hover:text-white" aria-label="Toggle navigation">
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
+    <div className="min-h-screen flex flex-col bg-white font-sans antialiased text-gray-900">
+      <DevNav active="/developers/guides" />
 
-      {/* Sidebar */}
-      <aside className={`w-full md:w-64 flex-shrink-0 flex flex-col bg-[#0e2a0e] text-white border-r border-[#174717] md:sticky md:top-0 md:h-screen overflow-y-auto z-40 transition-all duration-200 ${mobileMenuOpen ? 'fixed inset-x-0 bottom-0 top-[53px]' : 'hidden md:flex'}`}>
-        <div className="hidden md:block p-5 border-b border-white/5">
-          <Link href="/" className="flex items-center gap-2">
-            <AzaMark size={32} className="rounded-[9px]" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#B7EE7A]/70">Developer Guides</p>
-          </Link>
-        </div>
+      {/* Mobile doc-nav toggle */}
+      <button
+        onClick={() => setMobileMenuOpen(v => !v)}
+        className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3 text-sm font-semibold text-gray-700 md:hidden"
+        aria-expanded={mobileMenuOpen}
+      >
+        <span className="flex items-center gap-2">
+          {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+          Browse guides
+        </span>
+        <span className="truncate pl-3 text-xs font-normal text-gray-400">{currentDoc.title}</span>
+      </button>
 
-        <nav className="flex-1 p-4 flex flex-col gap-5">
-          {navigationGroups.map((group) => (
-            <div key={group.title} className="flex flex-col gap-0.5">
-              <h2 className="text-[10px] font-extrabold uppercase tracking-wider text-[#B7EE7A]/40 px-2 py-1 mb-0.5">{group.title}</h2>
-              {group.items.map((item) => {
-                const isActive = activeDoc === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelectDoc(item.id)}
-                    className={`w-full text-left px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-between ${isActive ? 'bg-white/10 text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
-                  >
-                    {item.label}
-                    {isActive && <ChevronRight size={12} className="text-[#B7EE7A]" />}
-                  </button>
-                );
-              })}
+      <div className="flex flex-1 flex-col md:flex-row">
+        {/* Sidebar */}
+        <aside className={`${mobileMenuOpen ? 'block' : 'hidden'} w-full shrink-0 border-b border-gray-200 bg-white md:block md:w-64 md:border-b-0 md:border-r md:sticky md:top-14 md:h-[calc(100vh-56px)] md:overflow-y-auto`}>
+          <nav className="flex flex-col gap-6 p-4">
+            {navigationGroups.map((group) => (
+              <div key={group.title} className="flex flex-col gap-0.5">
+                <h2 className="mb-1 px-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">{group.title}</h2>
+                {group.items.map((item) => {
+                  const isActive = activeDoc === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectDoc(item.id)}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-[13px] font-medium transition-colors ${isActive ? 'bg-[#eaf7e0] font-semibold text-[#174717]' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
+                    >
+                      {item.label}
+                      {isActive && <ChevronRight size={13} className="text-[#2e7d2e]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            <div className="mt-1 flex flex-col gap-2 border-t border-gray-200 pt-4">
+              <Link href="/developers/api-explorer" className="flex items-center justify-between px-2 text-[13px] font-semibold text-[#174717] hover:underline">
+                <span>API Reference Explorer</span>
+                <ExternalLink size={13} />
+              </Link>
+              <span className="px-2 font-mono text-[11px] text-gray-400">API version: v1</span>
             </div>
-          ))}
-        </nav>
+          </nav>
+        </aside>
 
-        <div className="p-4 border-t border-white/5 bg-[#0a1f0a] flex flex-col gap-2">
-          <Link href="/developers/api-explorer" className="flex items-center justify-between text-xs font-medium text-[#B7EE7A] hover:underline">
-            <span>API Reference Explorer</span>
-            <ExternalLink size={12} />
-          </Link>
-          <div className="text-[10px] text-white/30 font-mono mt-1">API Version: v1</div>
-        </div>
-      </aside>
+        {/* Content + code */}
+        <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
+          <main className="min-w-0 max-w-3xl flex-1 px-6 py-9 md:px-10">
+            <nav className="mb-4 flex items-center gap-1.5 font-mono text-xs text-gray-400">
+              <span>Guides</span>
+              <ChevronRight size={12} />
+              <span className="text-gray-600">{currentDoc.category}</span>
+            </nav>
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900" style={{ letterSpacing: '-0.02em' }}>
+              {currentDoc.title}
+            </h1>
+            <p className="mt-2 text-sm font-medium text-gray-500">
+              {currentDoc.subtitle} &middot; Last updated {currentDoc.lastUpdated}
+            </p>
 
-      {/* Main Panel */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 bg-white border-b border-gray-200 z-30 h-14 flex items-center justify-between px-6">
-          <span className="text-xs text-gray-500 font-mono hidden md:inline">
-            docs / guides / {currentDoc.category.toLowerCase().replace(/ /g, '-')}
-          </span>
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <button onClick={() => handleSelectDoc('intro')} className="px-3 py-1.5 border-b-2 border-[#174717] text-[#174717]">Guides</button>
-            <Link href="/developers/api-explorer" className="px-3 py-1.5 text-gray-500 hover:text-gray-900 border-b-2 border-transparent transition-colors">API Reference</Link>
-            <Link href="/developers/login" className="ml-2 px-3 py-1.5 bg-[#174717] text-white hover:bg-[#205c20] rounded-md transition-colors">Dashboard</Link>
-          </div>
-        </header>
-
-        <div className="flex-1 flex flex-col xl:flex-row overflow-y-auto">
-          <main className="flex-1 px-6 py-8 max-w-3xl">
-            <div className="border-b border-gray-100 pb-6 mb-6">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#2e7d2e] bg-[#2e7d2e]/10 px-2.5 py-1 rounded">
-                {currentDoc.category}
-              </span>
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mt-3">{currentDoc.title}</h1>
-              <p className="text-sm text-gray-500 mt-2 font-medium">
-                {currentDoc.subtitle} &middot; Last updated {currentDoc.lastUpdated}
-              </p>
-            </div>
-            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed space-y-6">
+            <div className="prose prose-sm mt-7 max-w-none space-y-6 border-t border-gray-100 pt-7 leading-relaxed text-gray-700">
               <p className="text-base text-gray-600">{currentDoc.description}</p>
               {currentDoc.content}
             </div>
+
+            {/* Prev / Next */}
+            {(prevDoc || nextDoc) && (
+              <div className="mt-12 grid gap-3 border-t border-gray-100 pt-8 sm:grid-cols-2">
+                {prevDoc ? (
+                  <button
+                    onClick={() => handleSelectDoc(prevDoc.id)}
+                    className="group flex flex-col rounded-xl border border-gray-200 p-4 text-left transition-colors hover:border-[#2e7d2e]/40 hover:bg-[#f8faf6]"
+                  >
+                    <span className="flex items-center gap-1 text-xs font-medium text-gray-400"><ArrowLeft size={12} /> Previous</span>
+                    <span className="mt-1 font-semibold text-gray-900 group-hover:text-[#174717]">{prevDoc.label}</span>
+                  </button>
+                ) : <span />}
+                {nextDoc && (
+                  <button
+                    onClick={() => handleSelectDoc(nextDoc.id)}
+                    className="group col-start-2 flex flex-col items-end rounded-xl border border-gray-200 p-4 text-right transition-colors hover:border-[#2e7d2e]/40 hover:bg-[#f8faf6]"
+                  >
+                    <span className="flex items-center gap-1 text-xs font-medium text-gray-400">Next <ArrowRight size={12} /></span>
+                    <span className="mt-1 font-semibold text-gray-900 group-hover:text-[#174717]">{nextDoc.label}</span>
+                  </button>
+                )}
+              </div>
+            )}
           </main>
 
           {/* Code Panel */}
-          <aside className="w-full xl:w-[420px] bg-[#111827] text-[#e5e7eb] flex-shrink-0 flex flex-col border-t xl:border-t-0 xl:border-l border-gray-800 xl:sticky xl:top-14 xl:h-[calc(100vh-56px)] overflow-y-auto font-mono">
-            <div className="flex items-center justify-between px-4 py-2 bg-[#1f2937] border-b border-gray-800">
+          <aside className="flex w-full shrink-0 flex-col border-t border-gray-200 bg-[#0d1117] font-mono xl:sticky xl:top-14 xl:h-[calc(100vh-56px)] xl:w-[440px] xl:border-l xl:border-t-0">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
               <div className="flex items-center gap-1">
                 {(['curl', 'js', 'python', 'java'] as CodeTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveCodeTab(tab)}
-                    className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${activeCodeTab === tab ? 'bg-[#111827] text-white border border-gray-700' : 'text-gray-400 hover:text-white'}`}
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${activeCodeTab === tab ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
                   >
                     {tab === 'curl' ? 'cURL' : tab === 'js' ? 'Node.js' : tab === 'python' ? 'Python' : 'Java'}
                   </button>
@@ -165,19 +185,19 @@ function GuidesContent() {
               </div>
               <button
                 onClick={() => copyCode(currentDoc.codeSnippets[activeCodeTab])}
-                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-700"
+                className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {copied ? (<><Check size={12} className="text-[#B7EE7A]" /><span className="text-[#B7EE7A]">Copied</span></>) : (<><Copy size={12} /><span>Copy</span></>)}
               </button>
             </div>
-            <div className="flex-1 p-5 overflow-auto text-xs leading-relaxed bg-[#0b0f19]">
-              <pre className="whitespace-pre-wrap break-all font-mono text-[#f3f4f6]">
+            <div className="flex-1 overflow-auto p-5 text-xs leading-relaxed xl:min-h-0">
+              <pre className="whitespace-pre-wrap break-all text-[#e6edf3]">
                 <code>{currentDoc.codeSnippets[activeCodeTab]}</code>
               </pre>
             </div>
-            <div className="p-4 bg-[#1f2937] border-t border-gray-800 text-[10px] text-gray-400 leading-normal flex items-start gap-2">
-              <Code size={13} className="text-[#B7EE7A] flex-shrink-0 mt-0.5" />
-              <span>Authenticate using your API key (<code>aza_live_...</code> or <code>aza_test_...</code>) from the merchant dashboard. Pass it as the <code>X-Api-Key</code> header.</span>
+            <div className="flex items-start gap-2 border-t border-white/10 px-4 py-3 text-[10px] leading-normal text-gray-400">
+              <Code size={13} className="mt-0.5 flex-shrink-0 text-[#B7EE7A]" />
+              <span>Authenticate with your API key (<code>aza_live_…</code> or <code>aza_test_…</code>) from the merchant dashboard, passed as the <code>X-Api-Key</code> header.</span>
             </div>
           </aside>
         </div>
@@ -190,18 +210,18 @@ function GuidesContent() {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 p-4 bg-[#f0f9ff] border border-[#bae6fd] rounded-lg text-sm text-[#0369a1]">
-      <Info size={16} className="flex-shrink-0 mt-0.5" />
-      <div>{children}</div>
+    <div className="flex items-start gap-3 rounded-xl border border-[#c7dbfb] bg-[#eef4fe] p-4 text-sm text-[#1a56db]">
+      <Info size={16} className="mt-0.5 flex-shrink-0" />
+      <div className="[&_code]:rounded [&_code]:bg-[#1a56db]/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]">{children}</div>
     </div>
   );
 }
 
 function Warn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 p-4 bg-[#fef3c7] border border-[#fde68a] rounded-lg text-sm text-[#78350f]">
-      <AlertTriangle size={16} className="flex-shrink-0 mt-0.5 text-amber-600" />
-      <div>{children}</div>
+    <div className="flex items-start gap-3 rounded-xl border border-[#fbdca0] bg-[#fff8ec] p-4 text-sm text-[#b45309]">
+      <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+      <div className="[&_code]:rounded [&_code]:bg-[#b45309]/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]">{children}</div>
     </div>
   );
 }
@@ -232,10 +252,16 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
 }
 
 function Endpoint({ method, path }: { method: string; path: string }) {
-  const colors: Record<string, string> = { GET: 'bg-blue-100 text-blue-800', POST: 'bg-green-100 text-green-800', DELETE: 'bg-red-100 text-red-800', PATCH: 'bg-yellow-100 text-yellow-700' };
+  const colors: Record<string, string> = {
+    GET:    'bg-[#e8f0fe] text-[#1a56db]',
+    POST:   'bg-[#eaf7e0] text-[#1e6b23]',
+    DELETE: 'bg-[#fdeaea] text-[#c62828]',
+    PATCH:  'bg-[#fff2df] text-[#b45309]',
+    PUT:    'bg-[#fff2df] text-[#b45309]',
+  };
   return (
-    <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs">
-      <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${colors[method] ?? 'bg-gray-200 text-gray-700'}`}>{method}</span>
+    <div className="flex items-center gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 font-mono text-xs">
+      <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${colors[method] ?? 'bg-gray-200 text-gray-700'}`}>{method}</span>
       <span className="text-gray-700">{path}</span>
     </div>
   );
