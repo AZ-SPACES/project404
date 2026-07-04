@@ -193,6 +193,21 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(checkoutService.getMerchantSession(sessionId, merchantId)));
     }
 
+    // ==================== TRANSACTION VERIFICATION ====================
+
+    @Operation(summary = "Verify a transaction by id",
+            description = "Look up a transaction credited to your account — e.g. verify a Mini App SDK "
+                    + "payment server-side using the transactionId returned by aza.requestPayment(). "
+                    + "Only transactions your account received are visible; any other id returns 404.")
+    @GetMapping("/transactions/{transactionId}")
+    public ResponseEntity<ApiResponse<MerchantTransactionResponse>> verifyTransaction(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID transactionId) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.verifyTransaction(merchantId, transactionId)));
+    }
+
     @PostMapping("/sessions/{sessionId}/expire")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> expireSession(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal User user,

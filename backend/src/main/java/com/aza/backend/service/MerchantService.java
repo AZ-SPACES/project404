@@ -55,6 +55,7 @@ public class MerchantService {
     private final EmailService emailService;
     private final MerchantNotificationPreferenceRepository notificationPrefRepository;
     private final CheckoutSessionRepository checkoutSessionRepository;
+    private final TransactionRepository transactionRepository;
     private final MerchantAuditLogRepository auditLogRepository;
     private final DisputeRepository disputeRepository;
     private final MerchantInvoiceRepository invoiceRepository;
@@ -1557,6 +1558,35 @@ public class MerchantService {
                 .lastUsedAt(key.getLastUsedAt())
                 .createdAt(key.getCreatedAt())
                 .revokedAt(key.getRevokedAt())
+                .build();
+    }
+
+    // ==================== TRANSACTION VERIFICATION ====================
+
+    /**
+     * Look up a transaction credited to this merchant's account, for server-side payment
+     * verification (e.g. a Mini App SDK payment). Scoped strictly to transactions whose
+     * recipient is the merchant's owning user — any other id returns NOT_FOUND so a merchant
+     * can neither read other users' transactions nor probe which ids exist.
+     */
+    @Transactional(readOnly = true)
+    public MerchantTransactionResponse verifyTransaction(UUID merchantId, UUID transactionId) {
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+
+        Transaction tx = transactionRepository.findById(transactionId)
+                .filter(t -> merchant.getUserId().equals(t.getRecipientId()))
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+
+        return MerchantTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .status(tx.getStatus() != null ? tx.getStatus().name() : null)
+                .amount(tx.getAmount())
+                .currency("GHS")
+                .note(tx.getNote())
+                .type(tx.getType() != null ? tx.getType().name() : null)
+                .createdAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
                 .build();
     }
 }

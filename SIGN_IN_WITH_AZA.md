@@ -14,9 +14,10 @@ Allow your users to authenticate with their AZA account instead of creating a ne
 6. [Fetch user info](#6-fetch-user-info)
 7. [Refresh tokens](#7-refresh-tokens)
 8. [Revoking access](#8-revoking-access)
-9. [API reference](#9-api-reference)
-10. [Code examples](#10-code-examples)
-11. [Security checklist](#11-security-checklist)
+9. [Payments on behalf of a user](#9-payments-on-behalf-of-a-user)
+10. [API reference](#10-api-reference)
+11. [Code examples](#11-code-examples)
+12. [Security checklist](#12-security-checklist)
 
 ---
 
@@ -69,6 +70,7 @@ Content-Type: application/json
 | `email` | Registered email address |
 | `phone` | Registered phone number |
 | `wallet:read` | Wallet balance and currency (read-only, no transaction history) |
+| `payment` | Create payment sessions the user approves in-app (see [§9](#9-payments-on-behalf-of-a-user)). Requires a merchant account linked to your OAuth client. |
 
 Request only the scopes you need. Users see exactly what your app will access before they approve.
 
@@ -349,7 +351,79 @@ Users can also revoke your app's access at any time from **AZA Settings → Priv
 
 ---
 
-## 9. API reference
+## 9. Payments on behalf of a user
+
+If your access token carries the `payment` scope, your app can create a payment session for the user without a separate API key. The user still approves every payment in the AZA app — the token authorises you to *initiate* a charge, never to move funds silently.
+
+**Prerequisites**
+
+- Your OAuth client is linked to an **active merchant account** (Developer → My Apps → Link merchant). The `payment` scope must be granted before linking.
+- The access token was issued with the `payment` scope.
+
+### Create a payment session
+
+```http
+POST https://api.aza.systems/oauth/payments/sessions
+Authorization: Bearer <user-access-token>
+Content-Type: application/json
+
+{
+  "amount": 50.00,
+  "currency": "GHS",
+  "description": "Trip deposit",
+  "reference": "booking_1042",
+  "metadata": "{\"tripId\":\"4471\",\"userId\":\"u_88\"}",
+  "successUrl": "https://yourapp.com/paid",
+  "cancelUrl": "https://yourapp.com/cancelled",
+  "idempotencyKey": "booking_1042_traveller_3",
+  "splits": [
+    { "recipient": "host@example.com", "amount": 45.00 }
+  ]
+}
+```
+
+- `reference` (≤255 chars) is your reconciliation key — indexed, filterable, and returned in every webhook.
+- `metadata` is an arbitrary **JSON string**, echoed back unchanged.
+- `splits` is optional marketplace settlement (Aza Connect) — each seller's fixed amount is credited to their wallet when the buyer pays. See the [Aza Connect guide](docs/AZA_CONNECT.md).
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "sessionId": "7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
+    "checkoutUrl": "https://pay.aza.systems/c/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
+    "deepLink": "aza://pay/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
+    "status": "PENDING",
+    "amount": 50.00,
+    "currency": "GHS",
+    "reference": "booking_1042",
+    "merchantName": "Voy"
+  }
+}
+```
+
+Send the user to `checkoutUrl` (web) or `deepLink` (in the AZA app) to approve with their passcode.
+
+### Check session status
+
+```http
+GET https://api.aza.systems/oauth/payments/sessions/{sessionId}
+Authorization: Bearer <user-access-token>
+```
+
+Returns `status` (`PENDING`, `COMPLETED`, `EXPIRED`, `CANCELLED`, `REFUNDED`), `amount`, `currency`, `checkoutUrl`, `deepLink`, and `completedAt`.
+
+### Get notified
+
+Register a merchant webhook (Developer → Webhooks or `POST /api/v1/merchant/webhooks`) to receive `checkout.completed`, `checkout.expired`, `checkout.cancelled`, and `checkout.refunded`. Deliveries are signed with `X-Aza-Signature: sha256=<hmac>` — see the [Merchant API webhook guide](https://aza.systems/developers/guides) for verification.
+
+> Payments always require the user to approve in-app. There is no off-session/silent debit — `wallet:read` only reads balance, and `payment` only lets you initiate an approvable session.
+
+---
+
+## 10. API reference
 
 ### Base URL
 
@@ -367,6 +441,8 @@ https://api.aza.systems
 | `POST` | `/oauth/qr/initiate` | client_id + client_secret | Start a QR login session |
 | `GET` | `/oauth/qr/status/{token}` | None | Poll QR session status |
 | `POST` | `/oauth/qr/complete` | client_id + client_secret | Complete QR login and get tokens |
+| `POST` | `/oauth/payments/sessions` | Bearer token (`payment` scope) | Create a payment session on behalf of the user |
+| `GET` | `/oauth/payments/sessions/{sessionId}` | Bearer token (`payment` scope) | Poll a payment session status |
 | `POST` | `/api/v1/developer/clients` | AZA JWT | Register an OAuth app |
 | `GET` | `/api/v1/developer/clients` | AZA JWT | List your apps |
 | `GET` | `/api/v1/developer/clients/{id}` | AZA JWT | Get app details |
@@ -403,7 +479,7 @@ Common error codes:
 
 ---
 
-## 10. Code examples
+## 11. Code examples
 
 ### Node.js — QR login (Express)
 
@@ -564,7 +640,7 @@ curl https://api.aza.systems/oauth/userinfo \
 
 ---
 
-## 11. Security checklist
+## 12. Security checklist
 
 - **Never expose `clientSecret` in browser code or mobile apps.** Token exchange and QR completion must happen server-to-server.
 - **Always verify `state`** in the PKCE callback to prevent CSRF attacks.

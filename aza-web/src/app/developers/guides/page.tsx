@@ -179,7 +179,7 @@ function GuidesContent() {
             </div>
             <div className="p-4 bg-[#1f2937] border-t border-gray-800 text-[10px] text-gray-400 leading-normal flex items-start gap-2">
               <Code size={13} className="text-[#B7EE7A] flex-shrink-0 mt-0.5" />
-              <span>Authenticate using your API key (<code>sk_live_...</code> or <code>sk_test_...</code>) from the merchant dashboard. Pass it as the <code>X-Api-Key</code> header.</span>
+              <span>Authenticate using your API key (<code>aza_live_...</code> or <code>aza_test_...</code>) from the merchant dashboard. Pass it as the <code>X-Api-Key</code> header.</span>
             </div>
           </aside>
         </div>
@@ -352,7 +352,7 @@ const docMap: Record<string, DocArticle> = {
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700">
           {BASE}
         </div>
-        <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>sk_test_...</code>) behave identically to live keys but do not move real money.</p>
+        <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>aza_test_...</code>) behave identically to live keys but do not move real money.</p>
 
         <Note>
           <strong>Currency:</strong> The default currency is <strong>GHS (Ghana Cedi)</strong>. All amounts in request and response bodies are in GHS unless noted.
@@ -363,25 +363,25 @@ const docMap: Record<string, DocArticle> = {
           <li>Register your business at <a href="https://merchants.aza.systems/onboarding" className="text-[#2e7d2e] underline">merchants.aza.systems</a> and complete KYB.</li>
           <li>Generate an API key from <strong>Settings → API Keys</strong>.</li>
           <li>Create a checkout session via <code>POST /api/v1/merchant/sessions</code>.</li>
-          <li>Listen for the <code>session.completed</code> webhook to confirm payment.</li>
+          <li>Listen for the <code>checkout.completed</code> webhook to confirm payment.</li>
         </ol>
       </div>
     ),
     codeSnippets: {
       curl: `# Verify your API key and fetch your merchant profile
-curl -X GET ${BASE}/api/v1/merchant/profile \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X GET ${BASE}/api/v1/merchant/me \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `// Fetch your merchant profile
-const res = await fetch('${BASE}/api/v1/merchant/profile', {
-  headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' }
+const res = await fetch('${BASE}/api/v1/merchant/me', {
+  headers: { 'X-Api-Key': 'aza_live_YOUR_KEY' }
 });
 const { data } = await res.json();
 console.log(data.businessName, data.status);`,
       python: `import requests
 
 resp = requests.get(
-    '${BASE}/api/v1/merchant/profile',
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    '${BASE}/api/v1/merchant/me',
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 )
 data = resp.json()['data']
 print(data['businessName'], data['status'])`,
@@ -391,8 +391,8 @@ import java.net.http.*;
 // Fetch your merchant profile
 var client = HttpClient.newHttpClient();
 var req = HttpRequest.newBuilder()
-    .uri(URI.create("https://api.aza.systems/api/v1/merchant/profile"))
-    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .uri(URI.create("https://api.aza.systems/api/v1/merchant/me"))
+    .header("X-Api-Key", "aza_live_YOUR_KEY")
     .GET()
     .build();
 
@@ -416,7 +416,7 @@ System.out.println(res.body());
         <Table
           headers={['Header', 'Value']}
           rows={[
-            ['X-Api-Key', 'sk_live_...  or  sk_test_...'],
+            ['X-Api-Key', 'aza_live_...  or  aza_test_...'],
           ]}
         />
 
@@ -424,8 +424,8 @@ System.out.println(res.body());
         <Table
           headers={['Prefix', 'Environment', 'Effect']}
           rows={[
-            ['sk_test_...', 'Test', 'Full API access; no real money moves'],
-            ['sk_live_...', 'Live', 'Real transactions and payouts'],
+            ['aza_test_...', 'Test', 'Full API access; no real money moves'],
+            ['aza_live_...', 'Live', 'Real transactions and payouts'],
           ]}
         />
 
@@ -437,12 +437,14 @@ System.out.println(res.body());
         <Endpoint method="GET"  path="/api/v1/merchant/api-keys" />
         <Endpoint method="POST" path="/api/v1/merchant/api-keys" />
 
-        <p className="text-sm">POST body accepts an optional <code>name</code> string to label the key. The secret value is returned <strong>once</strong> at creation — store it immediately.</p>
+        <p className="text-sm">POST body accepts an optional <code>label</code> string, plus optional <code>environment</code> (<code>LIVE</code> or <code>TEST</code>, default <code>LIVE</code>), <code>scopes</code>, <code>ipWhitelist</code>, and <code>expirationDays</code>. The full key is returned <strong>once</strong> at creation, in the <code>fullKey</code> field — store it immediately.</p>
 
         <Table
           headers={['Field', 'Type', 'Description']}
           rows={[
-            ['name', 'string (optional)', 'Human-readable label, e.g. "Production server"'],
+            ['label',        'string (optional)', 'Human-readable label, e.g. "Production server"'],
+            ['environment',  'string (optional)', 'LIVE or TEST. Defaults to LIVE'],
+            ['scopes',       'string (optional)', 'Comma-separated scopes to restrict the key'],
           ]}
         />
 
@@ -450,10 +452,12 @@ System.out.println(res.body());
         <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
   "success": true,
   "data": {
-    "id": "key_abc123",
-    "name": "Production server",
-    "keyPrefix": "sk_live_Ab1c",
-    "secret": "sk_live_Ab1cXXXXXXXXXXXX",
+    "id": "b2c1d4e5-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    "label": "Production server",
+    "keyPrefix": "aza_live_Ab1cDeFg...",
+    "fullKey": "aza_live_Ab1cDeFgHiJkLmNoPqRs",
+    "environment": "LIVE",
+    "keyType": "SECRET",
     "createdAt": "2026-05-01T10:00:00Z"
   }
 }`}</pre>
@@ -462,33 +466,33 @@ System.out.println(res.body());
     codeSnippets: {
       curl: `# List all API keys
 curl -X GET ${BASE}/api/v1/merchant/api-keys \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # Create a new API key
 curl -X POST ${BASE}/api/v1/merchant/api-keys \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Production server"}'`,
       js: `// List API keys
 const list = await fetch('${BASE}/api/v1/merchant/api-keys', {
-  headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' }
+  headers: { 'X-Api-Key': 'aza_live_YOUR_KEY' }
 }).then(r => r.json());
 
 // Create a new key
 const created = await fetch('${BASE}/api/v1/merchant/api-keys', {
   method: 'POST',
   headers: {
-    'X-Api-Key': 'sk_live_YOUR_KEY',
+    'X-Api-Key': 'aza_live_YOUR_KEY',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({ name: 'Production server' }),
 }).then(r => r.json());
 
-console.log(created.data.secret); // store this immediately`,
+console.log(created.data.fullKey); // store this immediately`,
       python: `import requests
 
 BASE = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY'}
 
 # List API keys
 keys = requests.get(f'{BASE}/api/v1/merchant/api-keys', headers=HEADERS).json()
@@ -500,7 +504,7 @@ new_key = requests.post(
     json={'name': 'Production server'}
 ).json()
 
-print(new_key['data']['secret'])  # store immediately`,
+print(new_key['data']['fullKey'])  # store immediately`,
       java: `import java.net.URI;
 import java.net.http.*;
 
@@ -509,7 +513,7 @@ var client = HttpClient.newHttpClient();
 // List API keys
 var listReq = HttpRequest.newBuilder()
     .uri(URI.create("https://api.aza.systems/api/v1/merchant/api-keys"))
-    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .header("X-Api-Key", "aza_live_YOUR_KEY")
     .GET().build();
 System.out.println(client.send(listReq, HttpResponse.BodyHandlers.ofString()).body());
 
@@ -517,7 +521,7 @@ System.out.println(client.send(listReq, HttpResponse.BodyHandlers.ofString()).bo
 String createBody = "{\"name\": \"Production server\"}";
 var createReq = HttpRequest.newBuilder()
     .uri(URI.create("https://api.aza.systems/api/v1/merchant/api-keys"))
-    .header("X-Api-Key", "sk_live_YOUR_KEY")
+    .header("X-Api-Key", "aza_live_YOUR_KEY")
     .header("Content-Type", "application/json")
     .POST(HttpRequest.BodyPublishers.ofString(createBody))
     .build();
@@ -557,12 +561,12 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
         <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
   "success": true,
   "data": {
-    "id": "sess_7f3a9b",
+    "id": "7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
     "status": "PENDING",
     "amount": 50.00,
     "currency": "GHS",
-    "checkoutUrl": "https://pay.aza.systems/c/sess_7f3a9b",
-    "deepLink": "aza://checkout/sess_7f3a9b",
+    "reference": "order_1042",
+    "checkoutUrl": "https://pay.aza.systems/c/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
     "expiresAt": "2026-05-27T11:30:00Z",
     "createdAt": "2026-05-27T11:00:00Z"
   }
@@ -582,19 +586,19 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
             ['COMPLETED', 'Payment received successfully'],
             ['EXPIRED',   'Session timed out (30 minutes)'],
             ['CANCELLED', 'Cancelled before payment'],
-            ['REFUNDED',  'Full or partial refund issued'],
+            ['REFUNDED',  'Refund issued (full amount)'],
           ]}
         />
 
         <Note>
-          Redirect or deep-link the customer to <code>checkoutUrl</code> or <code>deepLink</code>. On mobile, prefer the deep link to open the Aza app directly.
+          Redirect the customer to <code>checkoutUrl</code> to complete payment. On mobile, the hosted checkout offers to continue in the Aza app.
         </Note>
       </div>
     ),
     codeSnippets: {
       curl: `# Create a checkout session
 curl -X POST ${BASE}/api/v1/merchant/sessions \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 50.00,
@@ -602,10 +606,10 @@ curl -X POST ${BASE}/api/v1/merchant/sessions \\
   }'
 
 # Retrieve a session
-curl -X GET ${BASE}/api/v1/merchant/sessions/sess_7f3a9b \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X GET ${BASE}/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const BASE = '${BASE}';
-const KEY  = 'sk_live_YOUR_KEY';
+const KEY  = 'aza_live_YOUR_KEY';
 
 // Create a session
 const { data: session } = await fetch(\`\${BASE}/api/v1/merchant/sessions\`, {
@@ -627,7 +631,7 @@ console.log(status.status); // 'COMPLETED'`,
       python: `import requests
 
 BASE = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Create a session
 session = requests.post(
@@ -656,17 +660,17 @@ String body = "{\"amount\": 50.00, \"description\": \"Order #1042\"}";
 var res = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/sessions"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
-System.out.println(res.body()); // contains checkoutUrl and deepLink
+System.out.println(res.body()); // contains id and checkoutUrl
 
 // Poll session status
 var statusRes = client.send(
     HttpRequest.newBuilder()
-        .uri(URI.create(BASE + "/api/v1/merchant/sessions/sess_7f3a9b"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c"))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(statusRes.body()); // status: COMPLETED`,
@@ -703,7 +707,7 @@ System.out.println(statusRes.body()); // status: COMPLETED`,
             ['splits[].note',      'string',  'Optional note on the seller transaction'],
           ]}
         />
-        <p className="text-sm">The <code>checkout.session.completed</code> webhook returns a <code>splits</code> array so you can reconcile each seller. If a seller cannot be paid at that moment, their split is returned as <code>FALLBACK_TO_PLATFORM</code> and the amount stays in your balance — the buyer&apos;s payment always succeeds. Refunding a split payment claws back each seller&apos;s share and refunds the buyer in full.</p>
+        <p className="text-sm">The <code>checkout.completed</code> webhook returns a <code>splits</code> array so you can reconcile each seller. If a seller cannot be paid at that moment, their split is returned as <code>FALLBACK_TO_PLATFORM</code> and the amount stays in your balance — the buyer&apos;s payment always succeeds. Refunding a split payment claws back each seller&apos;s share and refunds the buyer in full.</p>
 
         <h3 className="text-base font-bold text-gray-900">Option B — Pay sellers directly</h3>
         <p className="text-sm">Push funds from your platform balance to a seller&apos;s wallet on your own schedule — for payout runs, adjustments, or reversing a fallback split.</p>
@@ -716,7 +720,7 @@ System.out.println(statusRes.body()); // status: COMPLETED`,
         <p className="text-sm">Transfers are idempotent — pass <code>idempotencyKey</code> and a retry returns the original transfer. With an <code>aza_test_</code> key a transfer is fully validated but moves no money (<code>status: SIMULATED</code>). Bulk transfers pay up to 100 sellers at once and require a live key.</p>
 
         <h3 className="text-base font-bold text-gray-900">Attribute each payment to a tenant</h3>
-        <p className="text-sm">Set <code>reference</code> (and optionally <code>metadata</code>) when you create a checkout session. Both are echoed back on the session object and in the <code>session.completed</code> webhook, so you can route a payment to the right seller from the webhook alone.</p>
+        <p className="text-sm">Set <code>reference</code> (and optionally <code>metadata</code>) when you create a checkout session. Both are echoed back on the session object and in the <code>checkout.completed</code> webhook, so you can route a payment to the right seller from the webhook alone.</p>
         <Table
           headers={['Field', 'Type', 'Use']}
           rows={[
@@ -774,13 +778,13 @@ curl -X POST ${BASE}/api/v1/merchant/connect/transfers \\
 
 # 2. List a single seller's sessions
 curl -X GET "${BASE}/api/v1/merchant/sessions?reference=seller_4471&page=0&size=20" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # 3. Reconcile a seller's completed payments (count + gross + net)
 curl -X GET "${BASE}/api/v1/merchant/sessions/summary?reference=seller_4471" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const BASE = '${BASE}';
-const KEY  = 'sk_live_YOUR_KEY';
+const KEY  = 'aza_live_YOUR_KEY';
 
 // Create a checkout for a seller, tagged with your reference
 const { data: session } = await fetch(\`\${BASE}/api/v1/merchant/sessions\`, {
@@ -804,7 +808,7 @@ console.log(summary.completedCount, summary.totalNetAmount);`,
       python: `import requests, json
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Create a checkout for a seller, tagged with your reference
 session = requests.post(
@@ -822,7 +826,7 @@ session = requests.post(
 summary = requests.get(
     f'{BASE}/api/v1/merchant/sessions/summary',
     params={'reference': 'seller_4471'},
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 ).json()['data']
 
 print(summary['completedCount'], summary['totalNetAmount'])`,
@@ -839,7 +843,7 @@ String body = "{\\"amount\\":120.00,\\"description\\":\\"Order #9920\\","
 client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/sessions"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -848,7 +852,7 @@ client.send(
 var summary = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/sessions/summary?reference=seller_4471"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(summary.body());
@@ -1011,7 +1015,7 @@ System.out.println(res.body()); // businessName, status`,
     codeSnippets: {
       curl: `# Create a draft invoice
 curl -X POST ${BASE}/api/v1/merchant/invoices \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "customerName": "Kwame Mensah",
@@ -1022,14 +1026,14 @@ curl -X POST ${BASE}/api/v1/merchant/invoices \\
   }'
 
 # Send the invoice (triggers customer email)
-curl -X POST ${BASE}/api/v1/merchant/invoices/inv_abc123/send \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+curl -X POST ${BASE}/api/v1/merchant/invoices/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d/send \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # Cancel an invoice
-curl -X DELETE ${BASE}/api/v1/merchant/invoices/inv_abc123 \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X DELETE ${BASE}/api/v1/merchant/invoices/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const BASE = '${BASE}';
-const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
+const HEADERS = { 'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json' };
 
 // Create invoice
 const { data: inv } = await fetch(\`\${BASE}/api/v1/merchant/invoices\`, {
@@ -1054,7 +1058,7 @@ console.log('Invoice sent:', inv.id);`,
       python: `import requests
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Create invoice
 inv = requests.post(
@@ -1087,7 +1091,7 @@ String body = "{\"customerName\":\"Kwame Mensah\",\"customerEmail\":\"kwame@exam
 var inv = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/invoices"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -1096,8 +1100,8 @@ System.out.println("Created: " + inv.body());
 // Send the invoice (triggers customer email)
 client.send(
     HttpRequest.newBuilder()
-        .uri(URI.create(BASE + "/api/v1/merchant/invoices/inv_abc123/send"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .uri(URI.create(BASE + "/api/v1/merchant/invoices/a1b2c3d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d/send"))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .POST(HttpRequest.BodyPublishers.noBody()).build(),
     HttpResponse.BodyHandlers.ofString());`,
     },
@@ -1151,7 +1155,7 @@ client.send(
     codeSnippets: {
       curl: `# Create a 20% discount code (max 100 uses)
 curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "code": "SAVE20",
@@ -1162,7 +1166,7 @@ curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
 
 # Create a fixed GH₵10 off code
 curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "code": "OFF10",
@@ -1172,9 +1176,9 @@ curl -X POST ${BASE}/api/v1/merchant/discount-codes \\
 
 # List all codes
 curl -X GET "${BASE}/api/v1/merchant/discount-codes?page=0&size=20" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const BASE    = '${BASE}';
-const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
+const HEADERS = { 'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json' };
 
 // Create 20% off code
 const { data: code } = await fetch(\`\${BASE}/api/v1/merchant/discount-codes\`, {
@@ -1192,7 +1196,7 @@ console.log(code.id, code.code, code.isActive);`,
       python: `import requests
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Create 20% off code
 code = requests.post(
@@ -1213,7 +1217,7 @@ String body = "{\"code\":\"SAVE20\",\"type\":\"PERCENTAGE\",\"value\":20,\"maxUs
 var res = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/discount-codes"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -1224,7 +1228,7 @@ String body2 = "{\"code\":\"OFF10\",\"type\":\"FIXED\",\"value\":10}";
 client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/discount-codes"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body2)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -1233,7 +1237,7 @@ client.send(
 var list = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/discount-codes?page=0&size=20"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(list.body());`,
@@ -1282,10 +1286,10 @@ System.out.println(list.body());`,
     codeSnippets: {
       curl: `# List customers (page 0, 20 per page)
 curl -X GET "${BASE}/api/v1/merchant/customers?page=0&size=20" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const { data } = await fetch(
   '${BASE}/api/v1/merchant/customers?page=0&size=20',
-  { headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' } }
+  { headers: { 'X-Api-Key': 'aza_live_YOUR_KEY' } }
 ).then(r => r.json());
 
 const customers = data.content;
@@ -1298,7 +1302,7 @@ customers.forEach(c => {
 resp = requests.get(
     '${BASE}/api/v1/merchant/customers',
     params={'page': 0, 'size': 20},
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 )
 data = resp.json()['data']
 print(f"{data['totalElements']} total customers")
@@ -1311,7 +1315,7 @@ var client = HttpClient.newHttpClient();
 var res = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create("https://api.aza.systems/api/v1/merchant/customers?page=0&size=20"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(res.body());
@@ -1357,7 +1361,7 @@ System.out.println(res.body());
         <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
   "success": true,
   "data": {
-    "sessionId": "sess_7f3a9b",
+    "sessionId": "7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
     "refundedAmount": 50.00,
     "status": "REFUNDED",
     "refundedAt": "2026-05-27T14:00:00Z"
@@ -1368,13 +1372,13 @@ System.out.println(res.body());
     codeSnippets: {
       curl: `# List disputes
 curl -X GET "${BASE}/api/v1/merchant/disputes?page=0&size=20" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # Issue a full refund on a completed session
-curl -X POST ${BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X POST ${BASE}/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c/refund \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const BASE    = '${BASE}';
-const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY' };
+const HEADERS = { 'X-Api-Key': 'aza_live_YOUR_KEY' };
 
 // List disputes
 const { data } = await fetch(
@@ -1386,7 +1390,7 @@ console.log(\`\${data.totalElements} open disputes\`);
 
 // Issue refund
 const refund = await fetch(
-  \`\${BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund\`,
+  \`\${BASE}/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c/refund\`,
   { method: 'POST', headers: HEADERS }
 ).then(r => r.json());
 
@@ -1394,7 +1398,7 @@ console.log(refund.data.status); // 'REFUNDED'`,
       python: `import requests
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY'}
 
 # List disputes
 disputes = requests.get(
@@ -1405,7 +1409,7 @@ disputes = requests.get(
 
 # Issue refund
 refund = requests.post(
-    f'{BASE}/api/v1/merchant/sessions/sess_7f3a9b/refund',
+    f'{BASE}/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c/refund',
     headers=HEADERS
 ).json()['data']
 
@@ -1420,7 +1424,7 @@ String BASE = "https://api.aza.systems";
 var disputes = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/disputes?page=0&size=20"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(disputes.body());
@@ -1428,8 +1432,8 @@ System.out.println(disputes.body());
 // Issue a full refund
 var refund = client.send(
     HttpRequest.newBuilder()
-        .uri(URI.create(BASE + "/api/v1/merchant/sessions/sess_7f3a9b/refund"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .uri(URI.create(BASE + "/api/v1/merchant/sessions/7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c/refund"))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .POST(HttpRequest.BodyPublishers.noBody()).build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(refund.body()); // status: REFUNDED`,
@@ -1482,10 +1486,10 @@ System.out.println(refund.body()); // status: REFUNDED`,
     codeSnippets: {
       curl: `# List settlements
 curl -X GET "${BASE}/api/v1/merchant/settlements?page=0&size=20" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `const { data } = await fetch(
   '${BASE}/api/v1/merchant/settlements?page=0&size=20',
-  { headers: { 'X-Api-Key': 'sk_live_YOUR_KEY' } }
+  { headers: { 'X-Api-Key': 'aza_live_YOUR_KEY' } }
 ).then(r => r.json());
 
 data.content.forEach(s => {
@@ -1500,7 +1504,7 @@ data.content.forEach(s => {
 resp = requests.get(
     '${BASE}/api/v1/merchant/settlements',
     params={'page': 0, 'size': 20},
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 ).json()
 
 for s in resp['data']['content']:
@@ -1512,7 +1516,7 @@ var client = HttpClient.newHttpClient();
 var res = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create("https://api.aza.systems/api/v1/merchant/settlements?page=0&size=20"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println(res.body());
@@ -1568,18 +1572,18 @@ System.out.println(res.body());
     codeSnippets: {
       curl: `# Check available balance
 curl -X GET ${BASE}/api/v1/merchant/reports/summary \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # Request a payout
 curl -X POST ${BASE}/api/v1/merchant/payouts \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 2000.00,
     "note": "Weekly withdrawal"
   }'`,
       js: `const BASE    = '${BASE}';
-const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json' };
+const HEADERS = { 'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json' };
 
 // Check balance first
 const { data: summary } = await fetch(
@@ -1600,7 +1604,7 @@ console.log(payout.id, payout.status);`,
       python: `import requests
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Check balance
 summary = requests.get(
@@ -1627,7 +1631,7 @@ String BASE = "https://api.aza.systems";
 var summary = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/reports/summary"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 System.out.println("Balance: " + summary.body());
@@ -1637,7 +1641,7 @@ String body = "{\"amount\": 2000.00, \"note\": \"Weekly withdrawal\"}";
 var payout = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create(BASE + "/api/v1/merchant/payouts"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -1675,76 +1679,84 @@ System.out.println(payout.body());`,
         <Table
           headers={['Event', 'Fired when']}
           rows={[
-            ['session.completed',  'A checkout session is paid successfully'],
-            ['session.expired',    'A checkout session expires without payment'],
-            ['session.refunded',   'A refund is issued against a session'],
-            ['invoice.paid',       'A customer pays an invoice'],
-            ['invoice.overdue',    'An invoice passes its due date unpaid'],
-            ['payout.completed',   'A payout is successfully sent to your bank'],
-            ['payout.failed',      'A payout processing attempt fails'],
-            ['dispute.opened',     'A customer opens a dispute on a payment'],
+            ['checkout.completed',  'A checkout session is paid successfully'],
+            ['checkout.expired',    'A pending session passes its expiry without payment'],
+            ['checkout.cancelled',  'The merchant cancels a pending session'],
+            ['checkout.refunded',   'A completed session is refunded'],
           ]}
         />
+        <Note>
+          Subscribe by listing events on the endpoint (comma-separated), or use <code>*</code> to receive all of them. Endpoints only receive events they subscribe to.
+        </Note>
 
         <h3 className="text-base font-bold text-gray-900">Event payload structure</h3>
+        <p className="text-sm">The body is a <strong>flat JSON object</strong> — there is no <code>type</code>/<code>data</code> envelope. The event name is in the <code>event</code> field and repeated in the <code>X-Aza-Event</code> header.</p>
         <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
-  "id": "evt_20260527_abc123",
-  "type": "session.completed",
-  "createdAt": "2026-05-27T11:05:00Z",
-  "data": {
-    "id": "sess_7f3a9b",
-    "amount": 50.00,
-    "currency": "GHS",
-    "status": "COMPLETED",
-    "reference": "order_1042",
-    "metadata": "{\\"seller_id\\":\\"4471\\"}"
-  }
+  "event": "checkout.completed",
+  "livemode": true,
+  "sessionId": "7f3a9b2c-1d4e-4f6a-8b0c-2e5d7a9f1b3c",
+  "merchantId": "b2c1d4e5-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+  "amount": 50.00,
+  "currency": "GHS",
+  "platformFee": 0.50,
+  "netAmount": 49.50,
+  "reference": "order_1042",
+  "description": "Trip deposit",
+  "metadata": "{\\"tripId\\":\\"4471\\"}",
+  "splits": [
+    { "recipient": "seller@example.com", "amount": 20.00, "status": "CREDITED" }
+  ],
+  "occurredAt": "2026-05-27T11:05:00",
+  "completedAt": "2026-05-27T11:05:00"
 }`}</pre>
-
         <Note>
-          <code>reference</code> and <code>metadata</code> are echoed back on every <code>session.completed</code> event, so a platform can route a payment to the right seller without a follow-up API call. See <strong>Platforms → Marketplaces &amp; Multi-tenant</strong>.
+          <code>splits</code> is present only when the session has marketplace splits. Timestamps vary by event: <code>completedAt</code> on <code>checkout.completed</code>, <code>cancelledAt</code> on <code>checkout.cancelled</code>, <code>refundedAt</code> on <code>checkout.refunded</code>; <code>occurredAt</code> is always present (use it for <code>checkout.expired</code>).
         </Note>
 
         <Note>
-          If your endpoint returns any status other than <code>2xx</code>, Aza will retry delivery up to <strong>5 times</strong> with exponential backoff (30 s, 2 min, 10 min, 1 hr, 6 hr).
+          <code>reference</code> and <code>metadata</code> are echoed back on every checkout event, so a platform can route a payment to the right seller without a follow-up API call. See <strong>Platforms → Marketplaces &amp; Multi-tenant</strong>.
+        </Note>
+
+        <Note>
+          If your endpoint returns any status other than <code>2xx</code>, Aza retries delivery up to <strong>7 times</strong> with exponential backoff (5 s, 30 s, 5 min, 30 min, 2 hr, 6 hr, 24 hr), then abandons the delivery. Respond <code>2xx</code> within 15 seconds.
         </Note>
       </div>
     ),
     codeSnippets: {
       curl: `# Register a webhook endpoint
 curl -X POST ${BASE}/api/v1/merchant/webhooks \\
-  -H "X-Api-Key: sk_live_YOUR_KEY" \\
+  -H "X-Api-Key: aza_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "url": "https://yourserver.com/webhooks/aza",
-    "events": ["session.completed", "payout.completed"]
+    "events": ["checkout.completed", "checkout.expired"]
   }'
 
 # List webhooks
 curl -X GET ${BASE}/api/v1/merchant/webhooks \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `// Register webhook
 const { data: wh } = await fetch('${BASE}/api/v1/merchant/webhooks', {
   method: 'POST',
   headers: {
-    'X-Api-Key': 'sk_live_YOUR_KEY',
+    'X-Api-Key': 'aza_live_YOUR_KEY',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
     url: 'https://yourserver.com/webhooks/aza',
-    events: ['session.completed', 'payout.completed'],
+    events: ['checkout.completed', 'checkout.expired'],
   }),
 }).then(r => r.json());
 
-console.log('Webhook ID:', wh.id, '| Secret:', wh.secret);
+console.log('Webhook ID:', wh.id, '| Secret:', wh.signingSecret);
 
 // --- Express handler ---
 import express from 'express';
 const app = express();
 app.post('/webhooks/aza', express.json(), (req, res) => {
   const event = req.body;
-  if (event.type === 'session.completed') {
-    console.log('Payment received:', event.data.id, event.data.amount);
+  if (event.event === 'checkout.completed') {
+    console.log('Payment received:', event.sessionId, event.amount);
   }
   res.sendStatus(200);
 });`,
@@ -1752,7 +1764,7 @@ app.post('/webhooks/aza', express.json(), (req, res) => {
 from flask import Flask, request, jsonify
 
 BASE    = '${BASE}'
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY', 'Content-Type': 'application/json'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY', 'Content-Type': 'application/json'}
 
 # Register webhook
 wh = requests.post(
@@ -1760,11 +1772,11 @@ wh = requests.post(
     headers=HEADERS,
     json={
         'url': 'https://yourserver.com/webhooks/aza',
-        'events': ['session.completed', 'payout.completed'],
+        'events': ['checkout.completed', 'checkout.expired'],
     }
 ).json()['data']
 
-print('Webhook ID:', wh['id'], '| Secret:', wh['secret'])
+print('Webhook ID:', wh['id'], '| Secret:', wh['signingSecret'])
 
 # --- Flask handler ---
 app = Flask(__name__)
@@ -1772,8 +1784,8 @@ app = Flask(__name__)
 @app.route('/webhooks/aza', methods=['POST'])
 def handle_webhook():
     event = request.json
-    if event['type'] == 'session.completed':
-        print('Payment:', event['data']['id'], event['data']['amount'])
+    if event['event'] == 'checkout.completed':
+        print('Payment:', event['sessionId'], event['amount'])
     return jsonify(received=True), 200`,
       java: `import java.net.URI;
 import java.net.http.*;
@@ -1782,11 +1794,11 @@ var client = HttpClient.newHttpClient();
 
 // Register webhook endpoint
 String body = "{\"url\":\"https://yourserver.com/webhooks/aza\","
-    + "\"events\":[\"session.completed\",\"payout.completed\"]}";
+    + "\"events\":[\"checkout.completed\",\"checkout.expired\"]}";
 var res = client.send(
     HttpRequest.newBuilder()
         .uri(URI.create("https://api.aza.systems/api/v1/merchant/webhooks"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
     HttpResponse.BodyHandlers.ofString());
@@ -1812,21 +1824,21 @@ System.out.println(res.body()); // contains webhook id and signing secret
     title: 'Signature Verification',
     subtitle: 'Authenticate that events come from Aza',
     lastUpdated: 'May 2026',
-    description: 'Every webhook delivery includes an X-Aza-Signature header. Verify it using your webhook secret to confirm the payload was not tampered with.',
+    description: "Every webhook delivery includes an X-Aza-Signature header containing an HMAC-SHA256 of the raw request body, formatted as sha256=<hex>. Verify it with your endpoint's signing secret to confirm the payload came from Aza and was not tampered with.",
     content: (
       <div className="space-y-6">
-        <h3 className="text-base font-bold text-gray-900">Header format</h3>
-        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700">
-          X-Aza-Signature: t=1716800000,v1=a3f9d2...
-        </pre>
+        <h3 className="text-base font-bold text-gray-900">Delivery headers</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`X-Aza-Signature: sha256=a3f9d2...
+X-Aza-Event:     checkout.completed
+X-Aza-Delivery:  6f7a4b8c-9d0e-1f2a-3b4c-5d6e7f8a9b0c`}</pre>
+        <p className="text-sm"><code>X-Aza-Event</code> is the event name and <code>X-Aza-Delivery</code> is a unique delivery ID — use it to de-duplicate retries.</p>
 
         <h3 className="text-base font-bold text-gray-900">Verification steps</h3>
         <ol className="list-decimal pl-5 space-y-2 text-sm">
-          <li>Split the header on <code>,</code> to get the <code>t</code> (timestamp) and <code>v1</code> (HMAC) parts.</li>
-          <li>Build the signed string: <code>{`${'{timestamp}'}.${'{rawBody}'}`}</code></li>
-          <li>Compute <strong>HMAC-SHA256</strong> of that string using your webhook secret.</li>
-          <li>Compare the result (constant-time) to the <code>v1</code> value.</li>
-          <li>Optionally reject events where <code>t</code> is older than 5 minutes to prevent replay attacks.</li>
+          <li>Read the <strong>raw request body</strong> before any JSON parsing — the signature is computed over the exact bytes sent.</li>
+          <li>Compute <strong>HMAC-SHA256</strong> of the raw body using your endpoint&apos;s signing secret, hex-encoded.</li>
+          <li>Prefix it with <code>sha256=</code> and compare (constant-time) to the <code>X-Aza-Signature</code> header.</li>
+          <li>Treat <code>X-Aza-Delivery</code> as an idempotency key so a retried delivery is processed only once.</li>
         </ol>
 
         <Warn>
@@ -1840,57 +1852,38 @@ System.out.println(res.body()); // contains webhook id and signing secret
       js: `import crypto from 'crypto';
 
 function verifyAzaSignature(rawBody, signatureHeader, secret) {
-  const parts     = signatureHeader.split(',');
-  const timestamp = parts.find(p => p.startsWith('t='))?.split('=')[1];
-  const v1        = parts.find(p => p.startsWith('v1='))?.split('=')[1];
-
-  if (!timestamp || !v1) return false;
-
-  // Reject events older than 5 minutes
-  if (Date.now() / 1000 - parseInt(timestamp) > 300) return false;
-
-  const expected = crypto
+  // Header format: "sha256=<hex>"
+  const expected = 'sha256=' + crypto
     .createHmac('sha256', secret)
-    .update(\`\${timestamp}.\${rawBody}\`)
+    .update(rawBody, 'utf8')
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(v1),
-    Buffer.from(expected)
-  );
+  const a = Buffer.from(signatureHeader || '');
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// Express usage
+// Express usage — verify against the RAW body, not the parsed JSON
 app.post('/webhooks/aza', express.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['x-aza-signature'];
-  if (!verifyAzaSignature(req.body.toString(), sig, process.env.AZA_WEBHOOK_SECRET)) {
+  if (!verifyAzaSignature(req.body.toString('utf8'), sig, process.env.AZA_WEBHOOK_SECRET)) {
     return res.status(400).send('Invalid signature');
   }
   const event = JSON.parse(req.body);
-  // process event...
+  if (event.event === 'checkout.completed') {
+    console.log('Paid:', event.sessionId, event.amount);
+  }
   res.sendStatus(200);
 });`,
       python: `import hmac
 import hashlib
-import time
 
 def verify_aza_signature(raw_body: bytes, signature_header: str, secret: str) -> bool:
-    parts     = dict(p.split('=', 1) for p in signature_header.split(','))
-    timestamp = parts.get('t')
-    v1        = parts.get('v1')
+    # Header format: "sha256=<hex>"
+    expected = 'sha256=' + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature_header or '', expected)
 
-    if not timestamp or not v1:
-        return False
-
-    # Reject events older than 5 minutes
-    if time.time() - int(timestamp) > 300:
-        return False
-
-    signed    = f"{timestamp}.".encode() + raw_body
-    expected  = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(v1, expected)
-
-# Flask usage
+# Flask usage — verify against request.data (raw bytes), not request.json
 from flask import Flask, request, abort
 
 app = Flask(__name__)
@@ -1901,7 +1894,8 @@ def handle():
     if not verify_aza_signature(request.data, sig, 'your_webhook_secret'):
         abort(400)
     event = request.json
-    # process event...
+    if event['event'] == 'checkout.completed':
+        print('Paid:', event['sessionId'], event['amount'])
     return '', 200`,
       java: `import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -1911,34 +1905,23 @@ import java.util.HexFormat;
 
 public static boolean verifySignature(
         String rawBody, String sigHeader, String secret) throws Exception {
-    String timestamp = null, v1 = null;
-    for (String part : sigHeader.split(",")) {
-        if (part.startsWith("t="))  timestamp = part.substring(2);
-        if (part.startsWith("v1=")) v1         = part.substring(3);
-    }
-    if (timestamp == null || v1 == null) return false;
-
-    // Reject events older than 5 minutes
-    if (System.currentTimeMillis() / 1000 - Long.parseLong(timestamp) > 300)
-        return false;
-
-    String signed = timestamp + "." + rawBody;
+    // Header format: "sha256=<hex>"
     Mac mac = Mac.getInstance("HmacSHA256");
     mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-    String expected = HexFormat.of().formatHex(
-        mac.doFinal(signed.getBytes(StandardCharsets.UTF_8)));
+    String expected = "sha256=" + HexFormat.of().formatHex(
+        mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8)));
 
-    return MessageDigest.isEqual(
+    return sigHeader != null && MessageDigest.isEqual(
         expected.getBytes(StandardCharsets.UTF_8),
-        v1.getBytes(StandardCharsets.UTF_8));
+        sigHeader.getBytes(StandardCharsets.UTF_8));
 }
 
-// Spring Boot usage:
+// Spring Boot usage — bind the RAW body as a String:
 // @PostMapping("/webhooks/aza")
 // public ResponseEntity<Void> handle(
-//     @RequestBody byte[] body,
+//     @RequestBody String body,
 //     @RequestHeader("X-Aza-Signature") String sig) throws Exception {
-//   if (!verifySignature(new String(body), sig, webhookSecret))
+//   if (!verifySignature(body, sig, webhookSecret))
 //     return ResponseEntity.status(400).build();
 //   // process event...
 //   return ResponseEntity.ok().build();
@@ -2007,8 +1990,8 @@ public static boolean verifySignature(
 # }
 
 # Test your key
-curl -X GET ${BASE}/api/v1/merchant/profile \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X GET ${BASE}/api/v1/merchant/me \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `async function azaRequest(path, options = {}) {
   const res = await fetch(\`${BASE}\${path}\`, {
     ...options,
@@ -2030,7 +2013,7 @@ curl -X GET ${BASE}/api/v1/merchant/profile \\
 
 // Usage
 try {
-  const profile = await azaRequest('/api/v1/merchant/profile');
+  const profile = await azaRequest('/api/v1/merchant/me');
 } catch (err) {
   if (err.code === 'MERCHANT_NOT_ACTIVE') {
     console.error('Complete KYB before using the API');
@@ -2050,7 +2033,7 @@ def aza_request(method, path, **kwargs):
     resp = requests.request(
         method,
         f'${BASE}{path}',
-        headers={'X-Api-Key': 'sk_live_YOUR_KEY', **kwargs.pop('headers', {})},
+        headers={'X-Api-Key': 'aza_live_YOUR_KEY', **kwargs.pop('headers', {})},
         **kwargs
     )
     body = resp.json()
@@ -2059,7 +2042,7 @@ def aza_request(method, path, **kwargs):
     return body['data']
 
 try:
-    profile = aza_request('GET', '/api/v1/merchant/profile')
+    profile = aza_request('GET', '/api/v1/merchant/me')
 except AzaError as e:
     if e.code == 'MERCHANT_NOT_ACTIVE':
         print('Complete KYB first')
@@ -2086,8 +2069,8 @@ public static String azaRequest(HttpClient client, String apiKey,
 // Usage
 var client = HttpClient.newHttpClient();
 try {
-    String profile = azaRequest(client, "sk_live_YOUR_KEY",
-        "GET", "/api/v1/merchant/profile", null);
+    String profile = azaRequest(client, "aza_live_YOUR_KEY",
+        "GET", "/api/v1/merchant/me", null);
     System.out.println(profile);
 } catch (RuntimeException e) {
     if (e.getMessage().contains("MERCHANT_NOT_ACTIVE"))
@@ -2153,7 +2136,7 @@ try {
     codeSnippets: {
       curl: `# All list endpoints support ?page= and ?size=
 curl -X GET "${BASE}/api/v1/merchant/sessions?page=0&size=50" \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # Response:
 # {
@@ -2183,7 +2166,7 @@ async function* paginate(path, headers) {
 }
 
 // Usage: iterate all sessions
-const HEADERS = { 'X-Api-Key': 'sk_live_YOUR_KEY' };
+const HEADERS = { 'X-Api-Key': 'aza_live_YOUR_KEY' };
 for await (const session of paginate('/api/v1/merchant/sessions', HEADERS)) {
   console.log(session.id, session.status);
 }`,
@@ -2202,7 +2185,7 @@ def paginate(path, headers, size=100):
         if page >= resp['totalPages']:
             break
 
-HEADERS = {'X-Api-Key': 'sk_live_YOUR_KEY'}
+HEADERS = {'X-Api-Key': 'aza_live_YOUR_KEY'}
 for session in paginate('/api/v1/merchant/sessions', HEADERS):
     print(session['id'], session['status'])`,
       java: `import java.net.URI;
@@ -2218,7 +2201,7 @@ while (page < totalPages) {
             .uri(URI.create(
                 "https://api.aza.systems/api/v1/merchant/sessions"
                 + "?page=" + page + "&size=100"))
-            .header("X-Api-Key", "sk_live_YOUR_KEY")
+            .header("X-Api-Key", "aza_live_YOUR_KEY")
             .GET().build(),
         HttpResponse.BodyHandlers.ofString());
     System.out.println("Page " + page + ": " + res.body());
@@ -2317,7 +2300,7 @@ echo $body['data']['checkoutUrl'];`}</pre>
         <Table
           headers={['Variable', 'Value']}
           rows={[
-            ['AZA_API_KEY',        'Your sk_live_... or sk_test_... key'],
+            ['AZA_API_KEY',        'Your aza_live_... or aza_test_... key'],
             ['AZA_WEBHOOK_SECRET', 'Your webhook endpoint signing secret'],
           ]}
         />
@@ -2328,10 +2311,10 @@ echo $body['data']['checkoutUrl'];`}</pre>
       curl: `# No SDK needed — standard curl works everywhere
 
 # Set your key as an env var (recommended)
-export AZA_API_KEY="sk_live_YOUR_KEY"
+export AZA_API_KEY="aza_live_YOUR_KEY"
 
 # Then use it in any request
-curl -X GET https://api.aza.systems/api/v1/merchant/profile \\
+curl -X GET https://api.aza.systems/api/v1/merchant/me \\
   -H "X-Api-Key: $AZA_API_KEY"
 
 curl -X POST https://api.aza.systems/api/v1/merchant/sessions \\
@@ -2456,15 +2439,24 @@ System.out.println(session); // contains checkoutUrl`,
 
         {[
           {
+            version: 'v1.7.0',
+            date: 'July 2026',
+            tag: 'Latest',
+            tagColor: '#22c55e',
+            changes: [
+              { type: 'New', text: 'Checkout lifecycle webhooks — checkout.expired, checkout.cancelled and checkout.refunded join checkout.completed (subscribe per endpoint, or use *)' },
+              { type: 'New', text: 'OAuth payments — apps with a payment-scoped token can create sessions via POST /oauth/payments/sessions, now forwarding reference and splits' },
+            ],
+          },
+          {
             version: 'v1.6.0',
             date: 'June 2026',
-            tag: 'Latest',
             tagColor: '#22c55e',
             changes: [
               { type: 'New', text: 'Marketplaces & multi-tenant guide — run a platform with many sellers on one Aza account' },
               { type: 'New', text: 'Per-tenant reconciliation — GET /sessions/summary?reference= returns count, gross and net for a reference' },
               { type: 'Improved', text: 'Checkout sessions accept a metadata JSON field, and filter by reference via GET /sessions?reference=' },
-              { type: 'Improved', text: 'session.completed webhook now echoes reference and metadata for attribution without a follow-up call' },
+              { type: 'Improved', text: 'checkout.completed webhook now echoes reference and metadata for attribution without a follow-up call' },
             ],
           },
           {
@@ -2517,7 +2509,7 @@ System.out.println(session); // contains checkoutUrl`,
             tagColor: '',
             changes: [
               { type: 'New', text: 'Merchant portal at merchants.aza.systems — KYB onboarding, dashboard, transactions' },
-              { type: 'New', text: 'Checkout sessions API — create hosted payment sessions with deep links' },
+              { type: 'New', text: 'Checkout sessions API — create hosted payment sessions on pay.aza.systems' },
               { type: 'New', text: 'Payment link generation — QR codes pointing to pay.aza.systems/c/{sessionId}' },
               { type: 'Breaking', text: 'X-Api-Key header replaces Authorization: Bearer for all /merchant/* routes' },
             ],
@@ -2565,14 +2557,14 @@ System.out.println(session); // contains checkoutUrl`,
     ),
     codeSnippets: {
       curl: `# Check the current API version in any response header
-curl -I https://api.aza.systems/api/v1/merchant/profile \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"
+curl -I https://api.aza.systems/api/v1/merchant/me \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"
 
 # The response includes:
 # X-Api-Version: 1.5.0
 # X-Deprecation-Notice: (set if endpoint is deprecated)`,
       js: `// Verify API version compatibility at startup
-const res = await fetch('https://api.aza.systems/api/v1/merchant/profile', {
+const res = await fetch('https://api.aza.systems/api/v1/merchant/me', {
   method: 'HEAD',
   headers: { 'X-Api-Key': process.env.AZA_API_KEY! },
 });
@@ -2587,8 +2579,8 @@ if (major < 1) throw new Error('Unsupported API version');`,
 
 # Check API version via HEAD request
 res = requests.head(
-    'https://api.aza.systems/api/v1/merchant/profile',
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    'https://api.aza.systems/api/v1/merchant/me',
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 )
 
 version = res.headers.get('X-Api-Version', '1.0')
@@ -2604,8 +2596,8 @@ import java.net.http.*;
 var client = HttpClient.newHttpClient();
 var res = client.send(
     HttpRequest.newBuilder()
-        .uri(URI.create("https://api.aza.systems/api/v1/merchant/profile"))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/me"))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .method("HEAD", HttpRequest.BodyPublishers.noBody()).build(),
     HttpResponse.BodyHandlers.discarding());
 
@@ -2700,14 +2692,14 @@ if (result.status === 'COMPLETED') {
 import requests
 
 # Verify a transaction after receiving the transactionId from the client
-tx_id = 'tx_abc123'  # received from aza.requestPayment() result
+tx_id = '9c8d7e6f-5a4b-4c3d-2e1f-0a9b8c7d6e5f'  # received from aza.requestPayment() result
 resp = requests.get(
-    f'https://api.aza.systems/api/v1/merchant/sessions/{tx_id}',
-    headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+    f'https://api.aza.systems/api/v1/merchant/transactions/{tx_id}',
+    headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
 )
 data = resp.json()['data']
 if data['status'] == 'COMPLETED':
-    grant_access(data['reference'])`,
+    grant_access(tx_id)`,
       java: `// Mini apps are web apps — the SDK is JavaScript only.
 // Your backend can verify payments via the Aza REST API:
 
@@ -2715,12 +2707,12 @@ import java.net.URI;
 import java.net.http.*;
 
 // Verify a transactionId returned by aza.requestPayment()
-String txId = "tx_abc123";
+String txId = "9c8d7e6f-5a4b-4c3d-2e1f-0a9b8c7d6e5f";
 var client = HttpClient.newHttpClient();
 var res = client.send(
     HttpRequest.newBuilder()
-        .uri(URI.create("https://api.aza.systems/api/v1/merchant/sessions/" + txId))
-        .header("X-Api-Key", "sk_live_YOUR_KEY")
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/transactions/" + txId))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
         .GET().build(),
     HttpResponse.BodyHandlers.ofString());
 
@@ -2921,17 +2913,35 @@ try {
         />
 
         <h3 className="text-base font-bold text-gray-900">Server-side verification</h3>
-        <p className="text-sm">For anything of value, verify the <code>transactionId</code> on your server before granting access. A client can fake a success response — your server should not.</p>
+        <p className="text-sm">For anything of value, verify the <code>transactionId</code> on your server before granting access. A client can fake a success response — your server should not. Send the <code>transactionId</code> to your backend, then look it up with your merchant API key:</p>
+
+        <Endpoint method="GET" path="/api/v1/merchant/transactions/{transactionId}" />
+        <p className="text-sm">Authenticate with <code>X-Api-Key</code>. Only transactions credited to your account are visible — any other id returns <code>404</code>, so a success requires a real payment to you.</p>
+
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-[11px] text-gray-700 overflow-x-auto">{`{
+  "success": true,
+  "data": {
+    "id": "9c8d7e6f-5a4b-4c3d-2e1f-0a9b8c7d6e5f",
+    "status": "COMPLETED",
+    "amount": 5.00,
+    "currency": "GHS",
+    "note": "Premium access",
+    "type": "TRANSFER",
+    "createdAt": "2026-06-01T10:00:00",
+    "completedAt": "2026-06-01T10:00:03"
+  }
+}`}</pre>
+        <p className="text-sm">Treat the payment as valid only when <code>status</code> is <code>COMPLETED</code> and <code>amount</code> matches what you expected.</p>
 
         <Note>
-          Payments go to the <code>recipientIdentifier</code> Aza account — usually your own. Requires <strong>MAKE_PAYMENTS</strong> permission to be declared and consented.
+          Payments go to the <code>recipientIdentifier</code> Aza account — usually your own. Requires <strong>MAKE_PAYMENTS</strong> permission to be declared and consented. The merchant account behind your API key must own that recipient account.
         </Note>
       </div>
     ),
     codeSnippets: {
       curl: `# Verify a payment on your backend after the client reports success
-curl -X GET https://api.aza.systems/api/v1/merchant/sessions/TX_ID \\
-  -H "X-Api-Key: sk_live_YOUR_KEY"`,
+curl -X GET https://api.aza.systems/api/v1/merchant/transactions/TX_ID \\
+  -H "X-Api-Key: aza_live_YOUR_KEY"`,
       js: `import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
 
 const aza = await waitForAza();
@@ -2977,8 +2987,8 @@ async function retryPayment(key: string) {
 # Verify transactionId from the client on your server
 def verify_mini_app_payment(transaction_id: str) -> bool:
     resp = requests.get(
-        f'https://api.aza.systems/api/v1/merchant/sessions/{transaction_id}',
-        headers={'X-Api-Key': 'sk_live_YOUR_KEY'}
+        f'https://api.aza.systems/api/v1/merchant/transactions/{transaction_id}',
+        headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
     )
     data = resp.json().get('data', {})
     return data.get('status') == 'COMPLETED'`,
@@ -2991,8 +3001,8 @@ public boolean verifyMiniAppPayment(String transactionId) throws Exception {
     var res = client.send(
         HttpRequest.newBuilder()
             .uri(URI.create(
-                "https://api.aza.systems/api/v1/merchant/sessions/" + transactionId))
-            .header("X-Api-Key", "sk_live_YOUR_KEY")
+                "https://api.aza.systems/api/v1/merchant/transactions/" + transactionId))
+            .header("X-Api-Key", "aza_live_YOUR_KEY")
             .GET().build(),
         HttpResponse.BodyHandlers.ofString());
 

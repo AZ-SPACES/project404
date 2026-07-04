@@ -31,6 +31,8 @@ import { format, parseISO } from "date-fns";
 const ALL_EVENTS = [
   "checkout.completed",
   "checkout.expired",
+  "checkout.cancelled",
+  "checkout.refunded",
   "*",
 ];
 
