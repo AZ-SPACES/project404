@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2, Lock } from 'lucide-react';
+import { AzaMark } from '@/components/AzaMark';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.aza.systems';
 
@@ -110,7 +111,7 @@ function ConsentContent() {
 
           {/* Connection lockup — you are linking this app TO your Aza account */}
           <div className="azc-lockup" aria-hidden="true">
-            <div className="azc-mark azc-mark--aza">a</div>
+            <AzaMark size={52} className="azc-mark azc-mark--aza" priority />
             <div className="azc-connector">
               <span className="azc-dash" />
               <span className="azc-node"><Lock size={13} strokeWidth={2.4} /></span>
@@ -307,8 +308,7 @@ function Styles() {
         font-size: 22px; font-weight: 800; overflow: hidden; flex: none;
       }
       .azc-mark--aza {
-        background: var(--lime); color: var(--lime-ink);
-        box-shadow: 0 6px 20px -6px rgba(183,238,122,0.5);
+        box-shadow: 0 6px 20px -8px rgba(0,0,0,0.6);
       }
       .azc-mark--app {
         background: var(--card-2);

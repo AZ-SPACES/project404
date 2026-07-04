@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
+import { AzaMark } from '@/components/AzaMark';
 
 type CodeTab = 'curl' | 'js' | 'python' | 'java';
 
@@ -71,8 +72,8 @@ function GuidesContent() {
       {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0e2a0e] text-white border-b border-white/10 sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black bg-[#B7EE7A] text-[#174717]">A</span>
-          <span className="font-extrabold text-sm tracking-tight">aza developers</span>
+          <AzaMark size={28} className="rounded-[8px]" />
+          <span className="font-semibold text-sm tracking-tight text-white/80">developers</span>
         </div>
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 text-white/80 hover:text-white" aria-label="Toggle navigation">
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -83,11 +84,8 @@ function GuidesContent() {
       <aside className={`w-full md:w-64 flex-shrink-0 flex flex-col bg-[#0e2a0e] text-white border-r border-[#174717] md:sticky md:top-0 md:h-screen overflow-y-auto z-40 transition-all duration-200 ${mobileMenuOpen ? 'fixed inset-x-0 bottom-0 top-[53px]' : 'hidden md:flex'}`}>
         <div className="hidden md:block p-5 border-b border-white/5">
           <Link href="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black bg-[#B7EE7A] text-[#174717]">A</span>
-            <div>
-              <p className="font-extrabold text-sm leading-none tracking-tight">aza</p>
-              <p className="text-[10px] font-bold tracking-wider text-[#B7EE7A]/60 mt-1 uppercase">Developer Guides</p>
-            </div>
+            <AzaMark size={32} className="rounded-[9px]" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#B7EE7A]/70">Developer Guides</p>
           </Link>
         </div>
 
@@ -335,7 +333,7 @@ const docMap: Record<string, DocArticle> = {
     title: 'Introduction',
     subtitle: 'Build on Aza\'s payments infrastructure',
     lastUpdated: 'May 2026',
-    description: 'Aza is a mobile-first payments platform for Ghana and West Africa. As a merchant, you can accept customer payments, manage invoices and discount codes, receive automated payouts, and react to real-time events — all via a single REST API.',
+    description: 'Aza is a mobile-first payments platform for Ghana . As a merchant, you can accept customer payments, manage invoices and discount codes, receive automated payouts, and react to real-time events — all via a single REST API.',
     content: (
       <div className="space-y-6">
         <h3 className="text-base font-bold text-gray-900">What you can build</h3>

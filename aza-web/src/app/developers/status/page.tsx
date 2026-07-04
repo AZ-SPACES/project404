@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowLeft, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { AzaMark } from '@/components/AzaMark';
 
 const API = 'https://api.aza.systems';
 
@@ -148,7 +148,7 @@ export default function StatusPage() {
           </Link>
 
           <div className="flex items-center gap-4 mb-3">
-            <Image src="/logo.png" alt="Aza" width={88} height={40} className="h-10 w-auto shrink-0" />
+            <AzaMark size={40} className="shrink-0 rounded-[11px]" priority />
             <div>
               <p className="text-white font-extrabold text-xl" style={{ letterSpacing: '-0.04em' }}>Aza System Status</p>
               <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>api.aza.systems</p>
