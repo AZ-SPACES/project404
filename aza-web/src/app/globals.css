@@ -156,10 +156,26 @@
 @layer base {
   * { @apply border-border outline-ring/50; }
   body { @apply bg-background text-foreground; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  /* Native smooth scroll for anchor jumps when Lenis is NOT running
+     (reduced-motion users). While Lenis is active the .lenis.lenis-smooth
+     rule below forces scroll-behavior:auto so the two don't double-smooth. */
   html { scroll-behavior: smooth; }
   a { text-decoration: none; color: inherit; }
   img { max-width: 100%; display: block; }
 }
+
+/* ============================================================
+   LENIS SMOOTH SCROLL — required base styles.
+   Without these, Lenis fights the CSS scroll-behavior and the
+   document height, producing janky / stuttering scrolling.
+   ============================================================ */
+html.lenis,
+html.lenis body { height: auto; }
+
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
 
 /* ============================================================
    CINEMATIC INTRO — hide navbar until card animation ends
@@ -660,6 +676,52 @@
    (Moved from inline dangerouslySetInnerHTML in cinematic-landing-hero.tsx)
    ============================================================ */
 .gsap-reveal { visibility: hidden; }
+
+/* Redesigned cinematic — the splash is always light, even when the site is in
+   dark theme. Pinning the bg/fg tokens locally means the gradient, grid, scroll
+   cue and inline text below all resolve to light values (no dark drench). A
+   whisper of Aza green at the top fades into the light canvas; lime shows up as
+   a highlighter swipe behind the emphasis word (dark-green text on lime). */
+.cinematic-canvas {
+  --color-background: #E6ECE1;
+  --color-foreground: #0E0F0C;
+}
+/* The gradient lives on its own layer so the exit can dissolve the background
+   while the shared "money" word flies out on top of it, still fully opaque. */
+.cine-bg {
+  background: radial-gradient(130% 100% at 50% -10%,
+    color-mix(in srgb, #174717 7%, var(--color-background)) 0%,
+    var(--color-background) 58%);
+}
+.cinematic-grid {
+  background-size: 64px 64px;
+  background-image:
+    linear-gradient(to right,  color-mix(in srgb, var(--color-foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-foreground) 5%, transparent) 1px, transparent 1px);
+  -webkit-mask-image: radial-gradient(ellipse 68% 58% at 50% 45%, #000 0%, transparent 78%);
+          mask-image: radial-gradient(ellipse 68% 58% at 50% 45%, #000 0%, transparent 78%);
+}
+/* Lime highlighter that sweeps in behind the emphasis word */
+.cinematic-highlight {
+  background: #B7EE7A;
+  border-radius: 4px;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+/* Minimal scroll cue: an ink segment falling down a hairline track */
+.scroll-cue-line {
+  position: relative; width: 1px; height: 34px; overflow: hidden; border-radius: 2px;
+  background: color-mix(in srgb, var(--color-foreground) 14%, transparent);
+}
+.scroll-cue-line::after {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 45%;
+  background: linear-gradient(180deg, transparent, var(--color-foreground));
+  animation: cineScrollDrop 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes cineScrollDrop {
+  0%       { transform: translateY(-110%); }
+  55%,100% { transform: translateY(240%); }
+}
 
 /* Environment Overlays */
 .film-grain {

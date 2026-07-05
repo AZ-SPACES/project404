@@ -57,7 +57,8 @@ export function HeroSection() {
           data-delay="60"
           style={{ color: "#1d1d1f" }}
         >
-          The money app<br />
+          {/* "money" is the shared element the cinematic splash flies into. */}
+          The <span id="hero-shared-money">money</span> app<br />
           <span style={{ color: "#174717" }}>built for Africa.</span>
         </h1>
 
