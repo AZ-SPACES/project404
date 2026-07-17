@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from "@react-navigation/native";
@@ -41,7 +42,7 @@ export default function ConfirmPasscodeScreen() {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ConfirmPageRouteProp>();
-  const { firstPasscode } = route.params;
+  const { firstPasscode, mode = 'signup', currentPasscode, resetCode } = route.params;
   const { userToken, savePasscodeValue } = useAuth();
 
   // useSignupActions() returns stable references — calling update()
@@ -107,31 +108,43 @@ export default function ConfirmPasscodeScreen() {
       isNavigatingRef.current = true;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      if (userToken) {
-        try {
+      try {
+        if (mode === 'change') {
+          // Change flow: prove the current passcode, set the new one, return home.
+          await api.post('/api/v1/auth/passcode/change', { currentPasscode, newPasscode: passcode });
+          await savePasscodeValue(passcode);
+          Alert.alert('Passcode updated', 'Your payment passcode has been changed.');
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+        } else if (mode === 'reset') {
+          // Forgot-passcode flow: the OTP is verified server-side as the passcode is set.
+          await api.post('/api/v1/auth/passcode/reset/confirm', { code: resetCode, newPasscode: passcode });
+          await savePasscodeValue(passcode);
+          Alert.alert('Passcode reset', 'Your payment passcode has been reset.');
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+        } else if (userToken) {
+          // Signup for an already-authenticated session: register the first passcode.
           await api.post('/api/v1/auth/passcode/set', { passcode });
           await savePasscodeValue(passcode);
-          
           update({ passcode });
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Consent" }],
-          });
-        } catch (e: unknown) {
-          console.error("Passcode sync error:", e);
-          setServerError("Failed to sync passcode. Please try again.");
-          isNavigatingRef.current = false;
-          setErrorStatus(true);
-          startShake();
-          setPasscode("");
+          navigation.reset({ index: 0, routes: [{ name: 'Consent' }] });
+        } else {
+          // Signup, not logged in yet: stash it in signup data; set after auth.
+          update({ passcode });
+          navigation.reset({ index: 0, routes: [{ name: 'Consent' }] });
         }
-      } else {
-        // Signup case: Not logged in yet, store in signup data.
-        update({ passcode });
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Consent" }],
-        });
+      } catch (e: unknown) {
+        console.error('Passcode error:', e);
+        setServerError(
+          mode === 'reset'
+            ? 'That code was incorrect or expired. Please try again.'
+            : mode === 'change'
+            ? 'Could not change your passcode. Please try again.'
+            : 'Failed to sync passcode. Please try again.'
+        );
+        isNavigatingRef.current = false;
+        setErrorStatus(true);
+        startShake();
+        setPasscode('');
       }
     } else {
       const newCount = attemptCount + 1;
@@ -143,7 +156,7 @@ export default function ConfirmPasscodeScreen() {
       startShake();
       setPasscode("");
     }
-  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked, userToken, savePasscodeValue]);
+  }, [passcode, firstPasscode, navigation, startShake, update, attemptCount, isLocked, userToken, savePasscodeValue, mode, currentPasscode, resetCode]);
 
   // Keep a ref to the latest handleContinue so the auto-trigger effect
   // doesn't re-fire when handleContinue's identity changes.

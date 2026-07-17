@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CheckoutSessionResponse;
+import com.aza.backend.dto.merchant.CheckoutSplitRequest;
 import com.aza.backend.dto.merchant.CreateCheckoutSessionRequest;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.OAuthAccessToken;
@@ -14,6 +15,7 @@ import com.aza.backend.service.OAuthService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -45,9 +48,21 @@ public class OAuthPaymentController {
         private String currency = "GHS";
         private String description;
         private String metadata;
+
+        // Your own reconciliation key for this payment (e.g. tripId/bookingId). Returned on the
+        // session and in the webhook payload, and filterable via the merchant sessions search.
+        @Size(max = 255)
+        private String reference;
+
         private String successUrl;
         private String cancelUrl;
         private String idempotencyKey;
+
+        // Marketplace split settlement (Aza Connect): route fixed amounts straight to sellers'
+        // wallets at payment. Validated against the linked merchant's balance/fee at creation.
+        @Valid
+        @Size(max = 20, message = "A checkout session may have at most 20 splits")
+        private List<CheckoutSplitRequest> splits;
     }
 
     @Data
@@ -58,6 +73,7 @@ public class OAuthPaymentController {
         private String status;
         private BigDecimal amount;
         private String currency;
+        private String reference;
         private String merchantName;
     }
 
@@ -80,9 +96,11 @@ public class OAuthPaymentController {
         sessionRequest.setAmount(request.getAmount());
         sessionRequest.setDescription(request.getDescription());
         sessionRequest.setMetadata(request.getMetadata());
+        sessionRequest.setReference(request.getReference());
         sessionRequest.setSuccessUrl(request.getSuccessUrl());
         sessionRequest.setCancelUrl(request.getCancelUrl());
         sessionRequest.setIdempotencyKey(request.getIdempotencyKey());
+        sessionRequest.setSplits(request.getSplits());
 
         CheckoutSessionResponse session = checkoutService.createSession(merchant.getId(), sessionRequest);
 
@@ -93,6 +111,7 @@ public class OAuthPaymentController {
         response.setStatus(session.getStatus());
         response.setAmount(session.getAmount());
         response.setCurrency(session.getCurrency());
+        response.setReference(session.getReference());
         response.setMerchantName(merchant.getBusinessName());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));

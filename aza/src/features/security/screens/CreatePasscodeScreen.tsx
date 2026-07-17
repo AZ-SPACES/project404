@@ -12,7 +12,7 @@ import {
   Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { LightColors as Colors, Spacing } from "../../../theme";
 import Button from "../../../components/ui/Button";
@@ -25,6 +25,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, "CreatePassc
 export default function CreatePasscodeScreen() {
   usePreventScreenCapture();
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProp<RootStackParamList, "CreatePasscode">>();
   const [passcode, setPasscode] = useState("");
   const inputRef = useRef<TextInput>(null);
   const scaleAnims = useRef([
@@ -35,12 +36,15 @@ export default function CreatePasscodeScreen() {
   ]).current;
 
   // Stable navigation callback
+  // Carry the flow mode (change / reset) and its credentials through to Confirm.
+  const { mode, currentPasscode, resetCode } = route.params ?? {};
+
   const handleContinue = useCallback(() => {
     if (passcode.length === 4) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.navigate("ConfirmPasscode", { firstPasscode: passcode });
+      navigation.navigate("ConfirmPasscode", { firstPasscode: passcode, mode, currentPasscode, resetCode });
     }
-  }, [passcode, navigation]);
+  }, [passcode, navigation, mode, currentPasscode, resetCode]);
 
   useEffect(() => {
     // Focus keyboard on mount

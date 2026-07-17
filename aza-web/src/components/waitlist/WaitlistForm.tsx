@@ -12,7 +12,7 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
   return (
     <form
       onSubmit={onSubmit}
-      className={`relative w-full h-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+      className={`relative w-full h-full transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
         status === "success"
           ? "opacity-0 scale-95 pointer-events-none"
           : "opacity-100 scale-100"
@@ -27,7 +27,7 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
         disabled={status === "loading"}
         onChange={onChange}
         aria-label="Email address"
-        className="w-full h-[60px] pl-6 pr-[150px] rounded-xl outline-none transition-all duration-200 placeholder-zinc-500 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#27272a]"
+        className="w-full h-[60px] pl-6 pr-[150px] rounded-xl outline-none transition-[box-shadow,opacity] duration-200 placeholder-zinc-500 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#27272a]"
         style={{
           backgroundColor: "#27272a",
           color: "#ffffff",
@@ -38,7 +38,7 @@ export function WaitlistForm({ email, status, onChange, onSubmit }: WaitlistForm
         <button
           type="submit"
           disabled={status === "loading"}
-          className="h-full px-6 rounded-xl font-semibold transition-all active:scale-95 hover:opacity-90 disabled:hover:opacity-100 disabled:active:scale-100 disabled:cursor-wait flex items-center justify-center min-w-[130px]"
+          className="h-full px-6 rounded-xl font-semibold transition-[opacity,transform] duration-200 active:scale-95 hover:opacity-90 disabled:hover:opacity-100 disabled:active:scale-100 disabled:cursor-wait flex items-center justify-center min-w-[130px]"
           style={{ backgroundColor: "#174717", color: "#B7EE7A" }}
         >
           {status === "loading" ? (

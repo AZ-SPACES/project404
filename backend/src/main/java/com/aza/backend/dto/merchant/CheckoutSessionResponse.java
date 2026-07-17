@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,6 +25,7 @@ public class CheckoutSessionResponse {
     private String currency;
     private String description;
     private String metadata;
+    private String reference;
     private String successUrl;
     private String cancelUrl;
     private String status;
@@ -31,6 +33,9 @@ public class CheckoutSessionResponse {
     private String customerId;
     private BigDecimal platformFee;
     private BigDecimal netAmount;
+    // Marketplace splits (Aza Connect). Merchant-facing only — never exposed on the
+    // public checkout page, so buyers can't see who the sellers are.
+    private List<CheckoutSplitInfo> splits;
     private BigDecimal taxAmount;
     private String taxLabel;
     private String checkoutUrl;

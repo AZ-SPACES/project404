@@ -64,7 +64,7 @@ export function HubSection() {
               role="tab"
               aria-selected={activeCat === c.key}
               onClick={() => setActiveCat(c.key)}
-              className="px-4 py-1.5 rounded-lg text-[0.8rem] font-semibold transition-all"
+              className="px-4 py-1.5 rounded-lg text-[0.8rem] font-semibold transition-[background-color,color,border-color,transform] duration-200 active:scale-[0.97]"
               style={{
                 background: activeCat === c.key ? "#1d1d1f" : "rgba(0,0,0,0.05)",
                 color: activeCat === c.key ? "#ffffff" : "#6e6e73",

@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { LogOut, ChevronRight, ExternalLink, Shield, Key, Copy, Check } from 'lucide-react';
+import { AzaMark } from '@/components/AzaMark';
 
 // We drive the plain Swagger UI bundle (swagger-ui-dist) directly instead of the
 // `swagger-ui-react` wrapper: under React 19 that wrapper's OperationContainer uses
@@ -223,13 +223,11 @@ export default function ApiExplorerPage() {
       >
         {/* Logo */}
         <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" className="flex flex-col gap-2">
-            <Image src="/logo.png" alt="AZA" width={53} height={24} className="h-6 w-auto self-start" />
-            <div>
-              <p className="text-[10px] font-medium mt-1" style={{ color: 'rgba(183,238,122,0.5)', letterSpacing: '0.05em' }}>
-                API EXPLORER
-              </p>
-            </div>
+          <Link href="/developers" className="flex items-center gap-2.5">
+            <AzaMark size={30} className="shrink-0 rounded-[8px]" />
+            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.7)' }}>
+              API Explorer
+            </p>
           </Link>
         </div>
 

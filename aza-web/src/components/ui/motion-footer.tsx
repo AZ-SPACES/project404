@@ -78,11 +78,13 @@ const STYLES = `
   background: var(--pill-bg);
   border: 1px solid var(--pill-border);
   color: var(--pill-text);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.footer-solid-pill:hover {
-  background: var(--pill-bg-hover);
+@media (hover: hover) and (pointer: fine) {
+  .footer-solid-pill:hover {
+    background: var(--pill-bg-hover);
+  }
 }
 
 /* Giant Background Text Masking */

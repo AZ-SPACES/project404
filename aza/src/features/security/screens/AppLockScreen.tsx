@@ -16,16 +16,18 @@ import * as Haptics from "expo-haptics";
 import { usePreventScreenCapture } from "../../../hooks/usePreventScreenCapture";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useAppTheme, ThemeColors, Typography } from "../../../theme";
+import { useAppTheme, ThemeColors, Typography, Radius } from "../../../theme";
 import { useAuth } from "../../../providers/AuthProvider";
 import { useSecurity } from "../../../providers/SecurityProvider";
+import { api } from "../../../services/api";
+import Button from "../../../components/ui/Button";
 
 export default function AppLockScreen() {
   usePreventScreenCapture();
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
-  const { verifyPasscode, isBiometricsEnabled, logout } = useAuth();
+  const { verifyPasscode, isBiometricsEnabled, logout, savePasscodeValue } = useAuth();
   const { unlock, unlockWithPasscode } = useSecurity();
 
   const [passcode, setPasscode] = useState("");
@@ -33,7 +35,63 @@ export default function AppLockScreen() {
   const [attemptCount, setAttemptCount] = useState(0);
   const inputRef = useRef<TextInput>(null);
 
+  // Inline forgot-passcode recovery — the lock screen replaces the navigator, so the
+  // reset (account password → OTP → new passcode) has to live here to avoid a lockout loop.
+  const [view, setView] = useState<"lock" | "reset">("lock");
+  const [resetStep, setResetStep] = useState<"password" | "set">("password");
+  const [rPassword, setRPassword] = useState("");
+  const [rCode, setRCode] = useState("");
+  const [rNewPass, setRNewPass] = useState("");
+  const [rConfirm, setRConfirm] = useState("");
+  const [rChannel, setRChannel] = useState<string | null>(null);
+  const [rLoading, setRLoading] = useState(false);
+  const [rError, setRError] = useState<string | null>(null);
+
   const MAX_ATTEMPTS = 5;
+
+  const backToLock = useCallback(() => {
+    setView("lock");
+    setResetStep("password");
+    setRPassword(""); setRCode(""); setRNewPass(""); setRConfirm("");
+    setRError(null); setRChannel(null);
+    setTimeout(() => inputRef.current?.focus(), 300);
+  }, []);
+
+  const sendResetCode = useCallback(async () => {
+    if (!rPassword.trim() || rLoading) return;
+    setRLoading(true);
+    setRError(null);
+    try {
+      const res = await api.post("/api/v1/auth/passcode/reset/request", { password: rPassword });
+      setRChannel((res?.data?.data as string | undefined) ?? "We sent a verification code to your email.");
+      setResetStep("set");
+    } catch (e: unknown) {
+      const anyErr = e as { response?: { data?: { message?: string } } };
+      setRError(anyErr?.response?.data?.message ?? "Password is incorrect. Please try again.");
+    } finally {
+      setRLoading(false);
+    }
+  }, [rPassword, rLoading]);
+
+  const submitReset = useCallback(async () => {
+    if (rLoading) return;
+    if (rCode.trim().length < 4) { setRError("Enter the code we sent you."); return; }
+    if (rNewPass.length !== 4) { setRError("Passcode must be 4 digits."); return; }
+    if (rNewPass !== rConfirm) { setRError("Passcodes do not match."); return; }
+    setRLoading(true);
+    setRError(null);
+    try {
+      await api.post("/api/v1/auth/passcode/reset/confirm", { code: rCode.trim(), newPasscode: rNewPass });
+      await savePasscodeValue(rNewPass);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      unlockWithPasscode();
+    } catch (e: unknown) {
+      const anyErr = e as { response?: { data?: { message?: string } } };
+      setRError(anyErr?.response?.data?.message ?? "That code was incorrect or expired. Please try again.");
+    } finally {
+      setRLoading(false);
+    }
+  }, [rLoading, rCode, rNewPass, rConfirm, savePasscodeValue, unlockWithPasscode]);
 
   const scaleAnims = useRef([
     new Animated.Value(1),
@@ -113,11 +171,12 @@ export default function AppLockScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
+            {view === "lock" ? (
             <View style={styles.content}>
               <View style={styles.logoContainer}>
                  <Ionicons name="lock-closed" size={40} color={Colors.primary} />
               </View>
-              
+
               <Text style={styles.title}>AZA is locked</Text>
               <Text style={styles.subtitle}>Enter your passcode to continue</Text>
 
@@ -169,11 +228,90 @@ export default function AppLockScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            ) : (
+            <View style={styles.resetContent}>
+              <View style={styles.logoContainer}>
+                <Ionicons name="key-outline" size={38} color={Colors.primary} />
+              </View>
+              <Text style={styles.title}>Reset passcode</Text>
+
+              {resetStep === "password" ? (
+                <>
+                  <Text style={styles.subtitle}>
+                    Confirm your account password. We&apos;ll send a verification code before you set a new passcode.
+                  </Text>
+                  <TextInput
+                    style={styles.resetInput}
+                    placeholder="Account password"
+                    placeholderTextColor={Colors.textSecondary}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    value={rPassword}
+                    onChangeText={(t) => { setRPassword(t); setRError(null); }}
+                    returnKeyType="go"
+                    onSubmitEditing={sendResetCode}
+                  />
+                  {rError && <Text style={styles.resetError}>{rError}</Text>}
+                  <Button title="Send code" onPress={sendResetCode} loading={rLoading} disabled={!rPassword.trim()} style={styles.resetButton} />
+                </>
+              ) : (
+                <>
+                  <Text style={styles.subtitle}>{rChannel}</Text>
+                  <TextInput
+                    style={styles.resetInput}
+                    placeholder="Verification code"
+                    placeholderTextColor={Colors.textSecondary}
+                    keyboardType="number-pad"
+                    value={rCode}
+                    onChangeText={(t) => { setRCode(t.replace(/[^0-9]/g, "")); setRError(null); }}
+                  />
+                  <TextInput
+                    style={styles.resetInput}
+                    placeholder="New 4-digit passcode"
+                    placeholderTextColor={Colors.textSecondary}
+                    keyboardType="number-pad"
+                    secureTextEntry
+                    maxLength={4}
+                    value={rNewPass}
+                    onChangeText={(t) => { setRNewPass(t.replace(/[^0-9]/g, "").slice(0, 4)); setRError(null); }}
+                  />
+                  <TextInput
+                    style={styles.resetInput}
+                    placeholder="Confirm new passcode"
+                    placeholderTextColor={Colors.textSecondary}
+                    keyboardType="number-pad"
+                    secureTextEntry
+                    maxLength={4}
+                    value={rConfirm}
+                    onChangeText={(t) => { setRConfirm(t.replace(/[^0-9]/g, "").slice(0, 4)); setRError(null); }}
+                    returnKeyType="go"
+                    onSubmitEditing={submitReset}
+                  />
+                  {rError && <Text style={styles.resetError}>{rError}</Text>}
+                  <Button title="Reset passcode" onPress={submitReset} loading={rLoading}
+                    disabled={rCode.trim().length < 4 || rNewPass.length !== 4 || rConfirm.length !== 4}
+                    style={styles.resetButton} />
+                  <Text style={styles.resendLink} onPress={sendResetCode}>Didn&apos;t get it? Resend code</Text>
+                </>
+              )}
+            </View>
+            )}
 
             <View style={styles.footer}>
-               <TouchableOpacity onPress={logout}>
-                  <Text style={styles.logoutText}>Forgot passcode? Log out</Text>
-               </TouchableOpacity>
+              {view === "lock" ? (
+                <>
+                  <TouchableOpacity onPress={() => { setView("reset"); Keyboard.dismiss(); }}>
+                    <Text style={styles.resetEntryText}>Forgot passcode?</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={logout} style={{ marginTop: 16 }}>
+                    <Text style={styles.logoutText}>Log out</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity onPress={backToLock}>
+                  <Text style={styles.logoutText}>Back to passcode</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </TouchableWithoutFeedback>
@@ -188,6 +326,23 @@ function createStyles(Colors: ThemeColors) {
     safeArea: { flex: 1, backgroundColor: Colors.background },
     container: { flex: 1 },
     content: { flex: 1, alignItems: "center", justifyContent: 'center', paddingHorizontal: 40 },
+    resetContent: { flex: 1, alignItems: "center", justifyContent: 'center', paddingHorizontal: 32, width: '100%' },
+    resetInput: {
+      ...Typography.body,
+      color: Colors.textPrimary,
+      backgroundColor: isDark ? Colors.surface : Colors.white,
+      borderRadius: Radius.md,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      width: '100%',
+      marginTop: 12,
+    },
+    resetError: { ...Typography.body, color: Colors.error, marginTop: 12, textAlign: 'center' },
+    resetButton: { marginTop: 20, width: '100%' },
+    resendLink: { ...Typography.body, color: Colors.textPrimary, fontWeight: '600', textAlign: 'center', marginTop: 20 },
+    resetEntryText: { ...Typography.body, color: Colors.primary, fontWeight: '600' },
     logoContainer: {
       width: 80,
       height: 80,

@@ -1,6 +1,8 @@
 package com.aza.backend.service;
 
 import com.aza.backend.dto.merchant.CheckoutSessionResponse;
+import com.aza.backend.dto.merchant.CheckoutSplitInfo;
+import com.aza.backend.dto.merchant.CheckoutSplitRequest;
 import com.aza.backend.dto.merchant.ConfirmCheckoutRequest;
 import com.aza.backend.dto.merchant.CreateCheckoutSessionRequest;
 import com.aza.backend.entity.*;
@@ -26,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +40,7 @@ import java.util.UUID;
 public class CheckoutService {
 
     private final CheckoutSessionRepository sessionRepository;
+    private final CheckoutSessionSplitRepository splitRepository;
     private final MerchantRepository merchantRepository;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
@@ -62,6 +66,7 @@ public class CheckoutService {
         return createSession(merchantId, request, false);
     }
 
+    @Transactional
     public CheckoutSessionResponse createSession(UUID merchantId, CreateCheckoutSessionRequest request, boolean testMode) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
@@ -105,6 +110,7 @@ public class CheckoutService {
                 .amount(request.getAmount())
                 .description(request.getDescription())
                 .metadata(request.getMetadata())
+                .reference(request.getReference())
                 .successUrl(request.getSuccessUrl())
                 .cancelUrl(request.getCancelUrl())
                 .idempotencyKey(request.getIdempotencyKey())
@@ -115,10 +121,160 @@ public class CheckoutService {
                 .testMode(testMode)
                 .build();
 
+        // Validate & resolve marketplace splits (Aza Connect) before persisting anything,
+        // so an invalid seller fails session creation rather than a buyer's payment.
+        List<CheckoutSessionSplit> splits = resolveSplits(merchant, request.getAmount(), request.getSplits());
+
         sessionRepository.save(session);
-        log.info("Checkout session created: id={}, merchantId={}, amount={}, testMode={}",
-                session.getId(), merchantId, request.getAmount(), testMode);
-        return toResponse(session, merchant);
+
+        if (!splits.isEmpty()) {
+            for (CheckoutSessionSplit s : splits) s.setSessionId(session.getId());
+            splitRepository.saveAll(splits);
+        }
+
+        log.info("Checkout session created: id={}, merchantId={}, amount={}, testMode={}, splits={}",
+                session.getId(), merchantId, request.getAmount(), testMode, splits.size());
+        return toResponse(session, merchant, toSplitInfos(splits));
+    }
+
+    /**
+     * Validate the requested splits and resolve each seller. The Aza fee comes off the top;
+     * the remainder (netAmount) is the distributable pool, so the sum of all splits must not
+     * exceed it and the platform keeps whatever is left. Throws if any seller can't be paid.
+     */
+    private List<CheckoutSessionSplit> resolveSplits(Merchant merchant, BigDecimal amount,
+                                                     List<CheckoutSplitRequest> requested) {
+        if (requested == null || requested.isEmpty()) return new java.util.ArrayList<>();
+
+        BigDecimal netAmount = amount.subtract(computeAzaFee(merchant, amount));
+        BigDecimal total = BigDecimal.ZERO;
+        List<CheckoutSessionSplit> resolved = new java.util.ArrayList<>();
+
+        for (CheckoutSplitRequest req : requested) {
+            if (req.getAmount() == null || req.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new AppException("INVALID_SPLIT", "Each split amount must be greater than 0", HttpStatus.BAD_REQUEST);
+            }
+            BigDecimal splitAmount = req.getAmount().setScale(2, RoundingMode.HALF_UP);
+            total = total.add(splitAmount);
+
+            String identifier = req.getRecipient() == null ? "" : req.getRecipient().trim();
+            User seller = userRepository.findByEmailIgnoreCaseOrUsername(identifier, identifier).orElse(null);
+            if (seller == null) {
+                throw new AppException("SPLIT_RECIPIENT_NOT_FOUND",
+                        "No Aza account matches split recipient '" + identifier + "'", HttpStatus.BAD_REQUEST);
+            }
+            if (seller.getId().equals(merchant.getUserId())) {
+                throw new AppException("SPLIT_SELF",
+                        "A split cannot pay your own account: '" + identifier + "'", HttpStatus.BAD_REQUEST);
+            }
+            if (seller.getStatus() != User.AccountStatus.ACTIVE) {
+                throw new AppException("SPLIT_RECIPIENT_INACTIVE",
+                        "Split recipient '" + identifier + "' is not active", HttpStatus.BAD_REQUEST);
+            }
+            if (walletRepository.findByUserId(seller.getId()).isEmpty()) {
+                throw new AppException("SPLIT_RECIPIENT_NO_WALLET",
+                        "Split recipient '" + identifier + "' has no wallet", HttpStatus.BAD_REQUEST);
+            }
+
+            resolved.add(CheckoutSessionSplit.builder()
+                    .recipientUserId(seller.getId())
+                    .recipientIdentifier(identifier)
+                    .amount(splitAmount)
+                    .note(req.getNote())
+                    .status(CheckoutSessionSplit.Status.PENDING)
+                    .build());
+        }
+
+        if (total.compareTo(netAmount) > 0) {
+            throw new AppException("SPLITS_EXCEED_NET",
+                    "Splits total " + merchant.getCurrency() + " " + total + " but only "
+                            + merchant.getCurrency() + " " + netAmount
+                            + " is available after the Aza fee. Reduce the splits or raise the amount.",
+                    HttpStatus.BAD_REQUEST);
+        }
+        return resolved;
+    }
+
+    /**
+     * Credit each seller's split to their wallet, capped at the remaining distributable
+     * budget. A split that can't be paid (seller gone/inactive/frozen, or budget exhausted
+     * because the fee changed since creation) is marked FALLBACK_TO_PLATFORM and its amount
+     * stays with the platform. Returns the (mutated, saved) split rows.
+     */
+    private List<CheckoutSessionSplit> creditSplits(CheckoutSession session, Merchant merchant, BigDecimal netAmount) {
+        List<CheckoutSessionSplit> splits = splitRepository.findAllBySessionId(session.getId());
+        if (splits.isEmpty()) return splits;
+
+        BigDecimal budgetLeft = netAmount;
+        for (CheckoutSessionSplit split : splits) {
+            User seller = split.getRecipientUserId() != null
+                    ? userRepository.findById(split.getRecipientUserId()).orElse(null) : null;
+            Wallet wallet = seller != null ? walletRepository.findByUserId(seller.getId()).orElse(null) : null;
+
+            String reason = null;
+            if (seller == null) reason = "Recipient not found";
+            else if (seller.getStatus() != User.AccountStatus.ACTIVE) reason = "Recipient not active";
+            else if (wallet == null) reason = "Recipient wallet not found";
+            else if (Boolean.TRUE.equals(wallet.getFrozen())) reason = "Recipient wallet frozen";
+            else if (split.getAmount().compareTo(budgetLeft) > 0) reason = "Insufficient remaining amount for split";
+
+            if (reason != null) {
+                split.setStatus(CheckoutSessionSplit.Status.FALLBACK_TO_PLATFORM);
+                split.setFailureReason(reason);
+                split.setProcessedAt(LocalDateTime.now());
+                continue;
+            }
+
+            wallet.setBalance(wallet.getBalance().add(split.getAmount()));
+            walletRepository.save(wallet);
+            seller.setBalance(wallet.getBalance());
+            userRepository.save(seller);
+            budgetLeft = budgetLeft.subtract(split.getAmount());
+
+            String note = (split.getNote() != null && !split.getNote().isBlank())
+                    ? split.getNote()
+                    : "Sale via " + merchant.getBusinessName();
+            Transaction tx = Transaction.builder()
+                    .senderId(merchant.getUserId())
+                    .recipientId(seller.getId())
+                    .amount(split.getAmount())
+                    .note(note)
+                    .type(Transaction.TransactionType.TRANSFER)
+                    .status(Transaction.TransactionStatus.COMPLETED)
+                    .idempotencyKey("checkout-split:" + split.getId())
+                    .completedAt(LocalDateTime.now())
+                    .build();
+            transactionRepository.save(tx);
+
+            split.setStatus(CheckoutSessionSplit.Status.CREDITED);
+            split.setTransactionId(tx.getId());
+            split.setProcessedAt(LocalDateTime.now());
+
+            notificationService.sendNotification(
+                    seller.getId(),
+                    Notification.NotificationType.MONEY_RECEIVED,
+                    "Money Received",
+                    merchant.getBusinessName() + " sent you " + merchant.getCurrency() + " " + split.getAmount(),
+                    null);
+        }
+        splitRepository.saveAll(splits);
+        return splits;
+    }
+
+    private BigDecimal computeAzaFee(Merchant merchant, BigDecimal amount) {
+        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps())
+                .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
+        return amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private List<CheckoutSplitInfo> toSplitInfos(List<CheckoutSessionSplit> splits) {
+        if (splits == null || splits.isEmpty()) return null;
+        return splits.stream().map(s -> CheckoutSplitInfo.builder()
+                .recipient(s.getRecipientIdentifier())
+                .amount(s.getAmount())
+                .status(s.getStatus().name())
+                .failureReason(s.getFailureReason())
+                .build()).collect(java.util.stream.Collectors.toList());
     }
 
     // ==================== GET SESSION (public) ====================
@@ -134,6 +290,9 @@ public class CheckoutService {
                 && LocalDateTime.now().isAfter(session.getExpiresAt())) {
             session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
             sessionRepository.save(session);
+            // A read can be the first thing to observe expiry (before the 60s sweeper runs),
+            // so notify here too; the sweeper's query no longer matches this now-EXPIRED row.
+            scheduleWebhookDelivery(session, merchant, "checkout.expired");
         }
 
         // Public response: strip customerId to protect payer privacy
@@ -213,8 +372,18 @@ public class CheckoutService {
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
 
-        // Credit merchant (net of fee)
-        merchant.setBalance(merchant.getBalance().add(netAmount));
+        // Route marketplace splits straight to the sellers' wallets; the platform keeps
+        // whatever is left of netAmount. Splits that can't be paid fall back to the platform
+        // so the buyer's payment is never blocked by an unpayable seller.
+        List<CheckoutSessionSplit> splits = creditSplits(session, merchant, netAmount);
+        BigDecimal creditedToSellers = splits.stream()
+                .filter(sp -> sp.getStatus() == CheckoutSessionSplit.Status.CREDITED)
+                .map(CheckoutSessionSplit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal platformCredit = netAmount.subtract(creditedToSellers);
+
+        // Credit platform merchant its share (net of fee and seller splits)
+        merchant.setBalance(merchant.getBalance().add(platformCredit));
         merchant.setTotalVolume(merchant.getTotalVolume().add(session.getAmount()));
         merchantRepository.save(merchant);
 
@@ -239,12 +408,13 @@ public class CheckoutService {
         session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
         session.setCustomerId(customerId);
         session.setPlatformFee(platformFee);
-        session.setNetAmount(netAmount);
+        session.setNetAmount(platformCredit);
         session.setCompletedAt(LocalDateTime.now());
         session.setTransactionId(tx.getId());
         sessionRepository.save(session);
 
-        log.info("Checkout confirmed: sessionId={}, customer={}, merchant={}, amount={}", sessionId, customerId, merchant.getId(), session.getAmount());
+        log.info("Checkout confirmed: sessionId={}, customer={}, merchant={}, amount={}, sellerSplits={}",
+                sessionId, customerId, merchant.getId(), session.getAmount(), creditedToSellers);
 
         // Dispatch webhooks asynchronously
         scheduleWebhookDelivery(session, merchant);
@@ -270,7 +440,7 @@ public class CheckoutService {
                             merchant.getBusinessName(), session.getAmount(), senderName, ref));
         }
 
-        return toResponse(session, merchant);
+        return toResponse(session, merchant, toSplitInfos(splits));
     }
 
     // ==================== CANCEL SESSION ====================
@@ -294,6 +464,8 @@ public class CheckoutService {
         session.setStatus(CheckoutSession.SessionStatus.CANCELLED);
         session.setCancelledAt(LocalDateTime.now());
         sessionRepository.save(session);
+
+        scheduleWebhookDelivery(session, merchant, "checkout.cancelled");
 
         return toResponse(session, merchant);
     }
@@ -323,7 +495,7 @@ public class CheckoutService {
 
     public Page<CheckoutSessionResponse> searchMerchantSessions(
             UUID merchantId, int page, int size,
-            String status, String from, String to, String q, Boolean testMode) {
+            String status, String from, String to, String q, Boolean testMode, String reference) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -340,11 +512,31 @@ public class CheckoutService {
             try { toDt = LocalDateTime.parse(to + "T23:59:59"); } catch (Exception ignored) {}
         }
         String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
+        String referenceParam = (reference != null && !reference.isBlank()) ? reference.trim() : null;
 
         return sessionRepository.searchSessions(
-                        merchantId, statusEnum, fromDt, toDt, testMode, qParam,
+                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, qParam,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(s -> toResponse(s, merchant));
+    }
+
+    /**
+     * Per-reference reconciliation summary for a platform merchant: count + gross + net of its
+     * COMPLETED sessions carrying a given reference (e.g. one tenant/seller or order group).
+     */
+    public Map<String, Object> reconcileByReference(UUID merchantId, String reference) {
+        if (reference == null || reference.isBlank()) {
+            throw new AppException("VALIDATION", "reference is required", HttpStatus.BAD_REQUEST);
+        }
+        String ref = reference.trim();
+        List<Object[]> rows = sessionRepository.reconcileByReference(merchantId, ref);
+        Object[] row = rows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO, BigDecimal.ZERO} : rows.get(0);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("reference", ref);
+        result.put("completedCount", row[0] != null ? ((Number) row[0]).longValue() : 0L);
+        result.put("totalAmount", row[1] != null ? row[1] : BigDecimal.ZERO);
+        result.put("totalNetAmount", row[2] != null ? row[2] : BigDecimal.ZERO);
+        return result;
     }
 
     public Page<CheckoutSessionResponse> listCustomerSessions(
@@ -363,28 +555,44 @@ public class CheckoutService {
     public void expireSessions() {
         List<CheckoutSession> expired = sessionRepository.findExpiredSessions(LocalDateTime.now());
         if (expired.isEmpty()) return;
+        Map<UUID, Merchant> merchantCache = new HashMap<>();
         for (CheckoutSession session : expired) {
             session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
+            sessionRepository.save(session);
+            Merchant merchant = merchantCache.computeIfAbsent(
+                    session.getMerchantId(), id -> merchantRepository.findById(id).orElse(null));
+            if (merchant != null) {
+                scheduleWebhookDelivery(session, merchant, "checkout.expired");
+            }
         }
-        sessionRepository.saveAll(expired);
         log.info("Expired {} checkout sessions", expired.size());
     }
 
     // ==================== WEBHOOK DISPATCH ====================
 
+    /** Backward-compatible entry point — dispatches a {@code checkout.completed} event. */
     public void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant) {
+        scheduleWebhookDelivery(session, merchant, "checkout.completed");
+    }
+
+    /**
+     * Queues one webhook delivery per active endpoint subscribed to {@code eventType}
+     * (or to the {@code *} wildcard). Endpoints opt in via their comma-separated events list,
+     * so existing consumers only receive the new lifecycle events once they subscribe.
+     */
+    public void scheduleWebhookDelivery(CheckoutSession session, Merchant merchant, String eventType) {
         List<WebhookEndpoint> endpoints = webhookEndpointRepository
                 .findAllByMerchantIdAndIsActiveTrue(merchant.getId());
         if (endpoints.isEmpty()) return;
 
-        String payload = buildWebhookPayload(session, merchant);
+        String payload = buildWebhookPayload(session, merchant, eventType);
 
         for (WebhookEndpoint endpoint : endpoints) {
-            if (!isSubscribed(endpoint)) continue;
+            if (!isSubscribed(endpoint, eventType)) continue;
             WebhookDelivery delivery = WebhookDelivery.builder()
                     .endpointId(endpoint.getId())
                     .checkoutSessionId(session.getId())
-                    .eventType("checkout.completed")
+                    .eventType(eventType)
                     .payload(payload)
                     .status(WebhookDelivery.DeliveryStatus.PENDING)
                     .nextRetryAt(LocalDateTime.now())
@@ -393,18 +601,19 @@ public class CheckoutService {
         }
     }
 
-    private boolean isSubscribed(WebhookEndpoint endpoint) {
+    private boolean isSubscribed(WebhookEndpoint endpoint, String eventType) {
         if (endpoint.getEvents() == null) return false;
         for (String e : endpoint.getEvents().split(",")) {
-            if (e.trim().equalsIgnoreCase("checkout.completed") || e.trim().equals("*")) return true;
+            String trimmed = e.trim();
+            if (trimmed.equals("*") || trimmed.equalsIgnoreCase(eventType)) return true;
         }
         return false;
     }
 
-    private String buildWebhookPayload(CheckoutSession session, Merchant merchant) {
+    private String buildWebhookPayload(CheckoutSession session, Merchant merchant, String eventType) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("event", "checkout.completed");
+            payload.put("event", eventType);
             payload.put("livemode", !Boolean.TRUE.equals(session.getTestMode()));
             payload.put("sessionId", session.getId().toString());
             payload.put("merchantId", merchant.getId().toString());
@@ -412,7 +621,32 @@ public class CheckoutService {
             payload.put("currency", session.getCurrency());
             payload.put("platformFee", session.getPlatformFee());
             payload.put("netAmount", session.getNetAmount());
-            payload.put("completedAt", session.getCompletedAt().toString());
+            // Attribution data so a platform merchant can route the payment to the right
+            // tenant/order from the webhook alone, without a follow-up GET /sessions/{id}.
+            payload.put("reference", session.getReference());
+            payload.put("description", session.getDescription());
+            payload.put("metadata", session.getMetadata());
+            // Per-seller settlement so a marketplace can reconcile each seller from the
+            // webhook alone. netAmount above is what the platform kept after fee + splits.
+            List<CheckoutSessionSplit> splits = splitRepository.findAllBySessionId(session.getId());
+            if (!splits.isEmpty()) {
+                List<Map<String, Object>> splitList = new java.util.ArrayList<>();
+                for (CheckoutSessionSplit sp : splits) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("recipient", sp.getRecipientIdentifier());
+                    m.put("amount", sp.getAmount());
+                    m.put("status", sp.getStatus().name());
+                    splitList.add(m);
+                }
+                payload.put("splits", splitList);
+            }
+            // Timestamps: occurredAt is always present; the lifecycle-specific timestamps are
+            // included only when set, so this payload is safe for every event type (a freshly
+            // expired session has no completedAt).
+            payload.put("occurredAt", LocalDateTime.now().toString());
+            if (session.getCompletedAt() != null) payload.put("completedAt", session.getCompletedAt().toString());
+            if (session.getCancelledAt() != null) payload.put("cancelledAt", session.getCancelledAt().toString());
+            if (session.getRefundedAt()  != null) payload.put("refundedAt",  session.getRefundedAt().toString());
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
             log.error("Failed to serialize webhook payload for session {}", session.getId(), e);
@@ -438,6 +672,7 @@ public class CheckoutService {
         }
         session.setStatus(CheckoutSession.SessionStatus.EXPIRED);
         sessionRepository.save(session);
+        scheduleWebhookDelivery(session, merchant, "checkout.expired");
         return toResponse(session, merchant);
     }
 
@@ -453,19 +688,25 @@ public class CheckoutService {
         BigDecimal platformFee = session.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal netAmount = session.getAmount().subtract(platformFee);
 
+        // Preview splits without moving money: netAmount shows what the platform would keep.
+        List<CheckoutSessionSplit> splits = splitRepository.findAllBySessionId(session.getId());
+        BigDecimal splitTotal = splits.stream()
+                .map(CheckoutSessionSplit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
         session.setCustomerId(customerId);
         session.setPlatformFee(platformFee);
-        session.setNetAmount(netAmount);
+        session.setNetAmount(netAmount.subtract(splitTotal));
         session.setCompletedAt(LocalDateTime.now());
         // transactionId intentionally left null — no real money moved.
         sessionRepository.save(session);
 
-        log.info("TEST checkout completed (no funds moved): sessionId={}, merchant={}, amount={}",
-                session.getId(), merchant.getId(), session.getAmount());
+        log.info("TEST checkout completed (no funds moved): sessionId={}, merchant={}, amount={}, splits={}",
+                session.getId(), merchant.getId(), session.getAmount(), splits.size());
 
         scheduleWebhookDelivery(session, merchant);
-        return toResponse(session, merchant);
+        return toResponse(session, merchant, toSplitInfos(splits));
     }
 
     /**
@@ -529,6 +770,10 @@ public class CheckoutService {
     }
 
     private CheckoutSessionResponse toResponse(CheckoutSession s, Merchant merchant) {
+        return toResponse(s, merchant, null);
+    }
+
+    private CheckoutSessionResponse toResponse(CheckoutSession s, Merchant merchant, List<CheckoutSplitInfo> splits) {
         return CheckoutSessionResponse.builder()
                 .id(s.getId().toString())
                 .merchantId(s.getMerchantId().toString())
@@ -542,12 +787,14 @@ public class CheckoutService {
                 .currency(s.getCurrency())
                 .description(s.getDescription())
                 .metadata(s.getMetadata())
+                .reference(s.getReference())
                 .successUrl(s.getSuccessUrl())
                 .cancelUrl(s.getCancelUrl())
                 .status(s.getStatus().name())
                 .customerId(s.getCustomerId() != null ? s.getCustomerId().toString() : null)
                 .platformFee(s.getPlatformFee())
                 .netAmount(s.getNetAmount())
+                .splits(splits)
                 .taxAmount(s.getTaxAmount())
                 .taxLabel(s.getTaxLabel())
                 .testMode(Boolean.TRUE.equals(s.getTestMode()))
@@ -574,48 +821,110 @@ public class CheckoutService {
         User customer = userRepository.findById(session.getCustomerId())
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Customer not found", HttpStatus.NOT_FOUND));
 
-        Wallet customerWallet = walletRepository.findByUserIdForUpdate(session.getCustomerId())
-                .orElseThrow(() -> new AppException("NOT_FOUND", "Customer wallet not found", HttpStatus.NOT_FOUND));
-
+        // Merchant lock first (serialises this platform's money movements), then wallets.
         Merchant merchant = merchantRepository.findByIdForUpdate(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
         BigDecimal refundAmount = session.getAmount();
-        if (merchant.getBalance().compareTo(refundAmount) < 0) {
+        List<CheckoutSessionSplit> splits = splitRepository.findAllBySessionId(sessionId);
+        List<CheckoutSessionSplit> credited = splits.stream()
+                .filter(s -> s.getStatus() == CheckoutSessionSplit.Status.CREDITED)
+                .collect(java.util.stream.Collectors.toList());
+
+        // How much the sellers must give back, and therefore how much the platform must cover
+        // (its own kept share + the Aza fee it absorbs on a refund).
+        BigDecimal sellersTotal = credited.stream()
+                .map(CheckoutSessionSplit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal platformPortion = refundAmount.subtract(sellersTotal);
+
+        if (merchant.getBalance().compareTo(platformPortion) < 0) {
             throw new AppException("INSUFFICIENT_FUNDS",
-                    "Merchant balance is insufficient to process this refund", HttpStatus.BAD_REQUEST);
+                    "Your balance is insufficient to cover your share of this refund ("
+                            + merchant.getCurrency() + " " + platformPortion + ")", HttpStatus.BAD_REQUEST);
         }
 
-        // Debit merchant full original amount (merchant absorbs the platform fee on refunds)
-        merchant.setBalance(merchant.getBalance().subtract(refundAmount));
-        merchantRepository.save(merchant);
+        // Lock each seller's wallet (sorted by user id for deadlock safety) and verify each
+        // seller can give back their share before moving any money.
+        java.util.Map<UUID, Wallet> sellerWallets = new LinkedHashMap<>();
+        java.util.Map<UUID, BigDecimal> requiredPerSeller = new LinkedHashMap<>();
+        for (CheckoutSessionSplit split : credited) {
+            requiredPerSeller.merge(split.getRecipientUserId(), split.getAmount(), BigDecimal::add);
+        }
+        requiredPerSeller.keySet().stream().sorted().forEach(uid -> {
+            Wallet w = walletRepository.findByUserIdForUpdate(uid)
+                    .orElseThrow(() -> new AppException("SELLER_CLAWBACK_FAILED",
+                            "A seller's wallet could not be found to reverse their share", HttpStatus.BAD_REQUEST));
+            if (Boolean.TRUE.equals(w.getFrozen())) {
+                throw new AppException("SELLER_CLAWBACK_FROZEN",
+                        "Seller wallet is frozen; reverse their share manually", HttpStatus.BAD_REQUEST);
+            }
+            if (w.getBalance().compareTo(requiredPerSeller.get(uid)) < 0) {
+                throw new AppException("SELLER_CLAWBACK_INSUFFICIENT",
+                        "A seller has already spent their share and cannot be auto-refunded ("
+                                + merchant.getCurrency() + " " + requiredPerSeller.get(uid)
+                                + " needed). Reverse it manually.", HttpStatus.BAD_REQUEST);
+            }
+            sellerWallets.put(uid, w);
+        });
 
-        // Credit customer the full original amount they paid
+        Wallet customerWallet = walletRepository.findByUserIdForUpdate(session.getCustomerId())
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Customer wallet not found", HttpStatus.NOT_FOUND));
+
+        String baseNote = session.getDescription() != null ? session.getDescription() : "Payment refund";
+
+        // 1. Platform gives back its portion (kept share + absorbed fee).
+        merchant.setBalance(merchant.getBalance().subtract(platformPortion));
+        merchantRepository.save(merchant);
+        transactionRepository.save(Transaction.builder()
+                .senderId(merchant.getUserId())
+                .recipientId(session.getCustomerId())
+                .amount(platformPortion)
+                .note("Refund: " + baseNote)
+                .type(Transaction.TransactionType.TRANSFER)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("refund:" + session.getId())
+                .completedAt(LocalDateTime.now())
+                .build());
+
+        // 2. Each seller gives back their share.
+        for (CheckoutSessionSplit split : credited) {
+            Wallet w = sellerWallets.get(split.getRecipientUserId());
+            w.setBalance(w.getBalance().subtract(split.getAmount()));
+            walletRepository.save(w);
+            userRepository.findById(split.getRecipientUserId()).ifPresent(seller -> {
+                seller.setBalance(w.getBalance());
+                userRepository.save(seller);
+            });
+            transactionRepository.save(Transaction.builder()
+                    .senderId(split.getRecipientUserId())
+                    .recipientId(session.getCustomerId())
+                    .amount(split.getAmount())
+                    .note("Refund (seller share): " + baseNote)
+                    .type(Transaction.TransactionType.TRANSFER)
+                    .status(Transaction.TransactionStatus.COMPLETED)
+                    .idempotencyKey("refund-split:" + split.getId())
+                    .completedAt(LocalDateTime.now())
+                    .build());
+            split.setStatus(CheckoutSessionSplit.Status.REVERSED);
+            split.setProcessedAt(LocalDateTime.now());
+        }
+        if (!credited.isEmpty()) splitRepository.saveAll(credited);
+
+        // 3. Customer receives the full original amount.
         customerWallet.setBalance(customerWallet.getBalance().add(refundAmount));
         walletRepository.save(customerWallet);
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
 
-        // Create reversal transaction
-        String note = "Refund: " + (session.getDescription() != null ? session.getDescription() : "Payment refund");
-        Transaction tx = Transaction.builder()
-                .senderId(merchant.getUserId())
-                .recipientId(session.getCustomerId())
-                .amount(refundAmount)
-                .note(note)
-                .type(Transaction.TransactionType.TRANSFER)
-                .status(Transaction.TransactionStatus.COMPLETED)
-                .idempotencyKey("refund:" + session.getId())
-                .completedAt(LocalDateTime.now())
-                .build();
-        transactionRepository.save(tx);
-
-        // Mark session as refunded
         session.setStatus(CheckoutSession.SessionStatus.REFUNDED);
         session.setRefundedAt(LocalDateTime.now());
         sessionRepository.save(session);
 
-        log.info("Session refunded: sessionId={}, merchantId={}, amount={}", sessionId, merchantId, refundAmount);
-        return toResponse(session, merchant);
+        scheduleWebhookDelivery(session, merchant, "checkout.refunded");
+
+        log.info("Session refunded: sessionId={}, merchantId={}, amount={}, sellersClawedBack={}",
+                sessionId, merchantId, refundAmount, sellersTotal);
+        return toResponse(session, merchant, toSplitInfos(splits));
     }
 }

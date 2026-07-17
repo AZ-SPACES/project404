@@ -33,8 +33,11 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Only activate for /api/v1/merchant/sessions (external session creation)
-        if (!path.startsWith("/api/v1/merchant/sessions")) {
+        // Activate for the API-key surface: checkout sessions, the Connect (marketplace) API,
+        // and transaction verification (e.g. verifying a Mini App SDK payment server-side).
+        if (!path.startsWith("/api/v1/merchant/sessions")
+                && !path.startsWith("/api/v1/merchant/connect")
+                && !path.startsWith("/api/v1/merchant/transactions")) {
             chain.doFilter(request, response);
             return;
         }
@@ -80,7 +83,19 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
 
             // Verify Restricted scopes
             if (apiKeyEntity.getKeyType() == MerchantApiKey.KeyType.RESTRICTED) {
-                String requiredScope = request.getMethod().equalsIgnoreCase("POST") ? "sessions:write" : "sessions:read";
+                // Connect (payout) calls need transfers:* scopes; session calls need sessions:*;
+                // transaction verification is read-only and needs transactions:read.
+                boolean isConnect = path.startsWith("/api/v1/merchant/connect");
+                boolean isTransactions = path.startsWith("/api/v1/merchant/transactions");
+                boolean isWrite = !request.getMethod().equalsIgnoreCase("GET");
+                String requiredScope;
+                if (isConnect) {
+                    requiredScope = isWrite ? "transfers:write" : "transfers:read";
+                } else if (isTransactions) {
+                    requiredScope = "transactions:read";
+                } else {
+                    requiredScope = isWrite ? "sessions:write" : "sessions:read";
+                }
                 String scopes = apiKeyEntity.getScopes();
                 boolean hasScope = false;
                 if (scopes != null) {

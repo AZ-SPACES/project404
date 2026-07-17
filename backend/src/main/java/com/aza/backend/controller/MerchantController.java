@@ -159,17 +159,30 @@ public class MerchantController {
             @RequestParam(required = false) String from,
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String reference,
             @RequestParam(required = false) String mode) {
         UUID merchantId = resolveMerchantId(principal);
         // mode: "test" → sandbox only, "live" → live only, anything else → both.
         Boolean testMode = "test".equalsIgnoreCase(mode) ? Boolean.TRUE
                 : "live".equalsIgnoreCase(mode) ? Boolean.FALSE : null;
-        if (status != null || from != null || to != null || q != null || testMode != null) {
+        if (status != null || from != null || to != null || q != null || reference != null || testMode != null) {
             return ResponseEntity.ok(ApiResponse.success(
-                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode)));
+                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode, reference)));
         }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));
+    }
+
+    @Operation(summary = "Reconcile completed sessions by reference",
+            description = "Returns the count, gross total and net total of COMPLETED checkout sessions "
+                    + "carrying the given `reference`. A platform merchant uses this to reconcile payments "
+                    + "for one of its tenants/sellers or an order group.")
+    @GetMapping("/sessions/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> sessionsSummary(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @RequestParam String reference) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.reconcileByReference(merchantId, reference)));
     }
 
     @GetMapping("/sessions/{sessionId}")
@@ -178,6 +191,21 @@ public class MerchantController {
             @PathVariable UUID sessionId) {
         UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(checkoutService.getMerchantSession(sessionId, merchantId)));
+    }
+
+    // ==================== TRANSACTION VERIFICATION ====================
+
+    @Operation(summary = "Verify a transaction by id",
+            description = "Look up a transaction credited to your account — e.g. verify a Mini App SDK "
+                    + "payment server-side using the transactionId returned by aza.requestPayment(). "
+                    + "Only transactions your account received are visible; any other id returns 404.")
+    @GetMapping("/transactions/{transactionId}")
+    public ResponseEntity<ApiResponse<MerchantTransactionResponse>> verifyTransaction(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID transactionId) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.verifyTransaction(merchantId, transactionId)));
     }
 
     @PostMapping("/sessions/{sessionId}/expire")
@@ -258,6 +286,14 @@ public class MerchantController {
             @RequestBody WebhookEndpointRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 merchantService.updateWebhookEndpoint(user.getId(), endpointId, request)));
+    }
+
+    @PostMapping("/webhooks/{endpointId}/regenerate-secret")
+    public ResponseEntity<ApiResponse<WebhookEndpointResponse>> regenerateWebhookSecret(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID endpointId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.regenerateWebhookSecret(user.getId(), endpointId)));
     }
 
     @GetMapping("/webhooks/{endpointId}/deliveries")

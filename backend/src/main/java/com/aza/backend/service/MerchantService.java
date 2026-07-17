@@ -55,6 +55,7 @@ public class MerchantService {
     private final EmailService emailService;
     private final MerchantNotificationPreferenceRepository notificationPrefRepository;
     private final CheckoutSessionRepository checkoutSessionRepository;
+    private final TransactionRepository transactionRepository;
     private final MerchantAuditLogRepository auditLogRepository;
     private final DisputeRepository disputeRepository;
     private final MerchantInvoiceRepository invoiceRepository;
@@ -638,6 +639,34 @@ public class MerchantService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public WebhookEndpointResponse regenerateWebhookSecret(UUID userId, UUID endpointId) {
+        Merchant merchant = requireActiveMerchant(userId);
+        WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Webhook not found", HttpStatus.NOT_FOUND));
+        if (!endpoint.getMerchantId().equals(merchant.getId())) {
+            throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
+        }
+
+        byte[] secretBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(secretBytes);
+        String signingSecret = "whsec_" + HexFormat.of().formatHex(secretBytes);
+        endpoint.setSigningSecret(signingSecret);
+        webhookRepository.save(endpoint);
+
+        logMerchantAction(merchant.getId(), "WEBHOOK_SECRET_REGENERATED", resolveActorEmail(userId),
+                "endpointId=" + endpointId);
+
+        return WebhookEndpointResponse.builder()
+                .id(endpoint.getId().toString())
+                .url(endpoint.getUrl())
+                .signingSecret(signingSecret) // only shown once
+                .isActive(endpoint.getIsActive())
+                .events(endpoint.getEvents())
+                .createdAt(endpoint.getCreatedAt())
+                .build();
+    }
+
     public List<WebhookDeliveryResponse> listWebhookDeliveries(UUID userId, UUID endpointId) {
         Merchant merchant = requireMerchant(userId);
         WebhookEndpoint endpoint = webhookRepository.findById(endpointId)
@@ -676,8 +705,11 @@ public class MerchantService {
         if (!endpoint.getMerchantId().equals(merchant.getId())) {
             throw new AppException("FORBIDDEN", "Not your webhook", HttpStatus.FORBIDDEN);
         }
-        endpoint.setIsActive(false);
-        webhookRepository.save(endpoint);
+        // Hard delete: isActive is also used by the enable/disable toggle, so a soft delete
+        // is indistinguishable from a disabled endpoint and would reappear in listWebhooks.
+        // Past deliveries are keyed by endpointId and remain queryable; any pending deliveries
+        // are gracefully abandoned by WebhookService when the endpoint can no longer be found.
+        webhookRepository.delete(endpoint);
         logMerchantAction(merchant.getId(), "WEBHOOK_DELETED", resolveActorEmail(userId),
                 "endpointId=" + endpointId);
     }
@@ -1557,6 +1589,35 @@ public class MerchantService {
                 .lastUsedAt(key.getLastUsedAt())
                 .createdAt(key.getCreatedAt())
                 .revokedAt(key.getRevokedAt())
+                .build();
+    }
+
+    // ==================== TRANSACTION VERIFICATION ====================
+
+    /**
+     * Look up a transaction credited to this merchant's account, for server-side payment
+     * verification (e.g. a Mini App SDK payment). Scoped strictly to transactions whose
+     * recipient is the merchant's owning user — any other id returns NOT_FOUND so a merchant
+     * can neither read other users' transactions nor probe which ids exist.
+     */
+    @Transactional(readOnly = true)
+    public MerchantTransactionResponse verifyTransaction(UUID merchantId, UUID transactionId) {
+        Merchant merchant = merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+
+        Transaction tx = transactionRepository.findById(transactionId)
+                .filter(t -> merchant.getUserId().equals(t.getRecipientId()))
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
+
+        return MerchantTransactionResponse.builder()
+                .id(tx.getId().toString())
+                .status(tx.getStatus() != null ? tx.getStatus().name() : null)
+                .amount(tx.getAmount())
+                .currency("GHS")
+                .note(tx.getNote())
+                .type(tx.getType() != null ? tx.getType().name() : null)
+                .createdAt(tx.getInitiatedAt())
+                .completedAt(tx.getCompletedAt())
                 .build();
     }
 }

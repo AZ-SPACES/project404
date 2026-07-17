@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Loader2, ArrowLeft, Eye, EyeOff, QrCode, RefreshCw } from 'lucide-react';
+import { AzaMark } from '@/components/AzaMark';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -26,6 +26,12 @@ interface QrSession {
   ttlSeconds: number;
 }
 
+// ── Shared light-theme control styles ────────────────────────────────────────
+const inputBase =
+  'w-full rounded-xl px-4 py-3 text-sm text-[#111827] bg-white border border-[#e5e7eb] outline-none transition-colors placeholder:text-[#9ca3af] focus:border-[#174717] focus:ring-2 focus:ring-[#174717]/15';
+const inputError = 'border-[#dc2626] focus:border-[#dc2626] focus:ring-[#dc2626]/15';
+const labelCls = 'text-xs font-semibold text-[#6b7280]';
+
 export default function DevLoginPage() {
   const router = useRouter();
 
@@ -39,7 +45,6 @@ export default function DevLoginPage() {
   const [preAuthToken, setPreAuthToken] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
-  const [focused, setFocused] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [loading, setLoading] = useState(false);
 
   // ── QR login state ───────────────────────────────────────────────────────────
@@ -234,432 +239,327 @@ export default function DevLoginPage() {
   const steps = ['Credentials', 'Verification', '2FA'];
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4"
-      style={{ background: 'linear-gradient(135deg, #0e2a0e 0%, #132613 60%, #0a1a0a 100%)' }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa] px-4 py-14 font-sans antialiased">
       {/* Back link */}
       <Link
         href="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded"
-        style={{ color: 'rgba(183,238,122,0.6)' }}
-        onMouseEnter={e => (e.currentTarget.style.color = 'var(--aza-accent)')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(183,238,122,0.6)')}
+        className="absolute top-6 left-6 flex items-center gap-1.5 text-sm font-medium text-[#374151] transition-colors hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e2a0e] rounded"
       >
         <ArrowLeft size={15} />
         Back to aza
       </Link>
 
-      <main>
-      {/* Card */}
-      <div
-        className="w-full max-w-[420px] rounded-3xl p-8"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(183,238,122,0.12)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-6">
-          <Image src="/logo.png" alt="AZA" width={71} height={32} className="h-8 w-auto" />
-          <span className="text-white font-extrabold text-lg" style={{ letterSpacing: '-0.04em' }}>
-            <span style={{ color: 'rgba(183,238,122,0.6)', fontWeight: 500, fontSize: '0.8rem' }}>developers</span>
-          </span>
+      <main className="w-full max-w-[420px]">
+        <div className="rounded-2xl border border-[#e5e7eb] bg-white p-8 shadow-[0_10px_40px_-16px_rgba(14,42,14,0.18)]">
+          {/* Logo */}
+          <div className="mb-7 flex items-center gap-2.5">
+            <AzaMark size={32} className="rounded-[9px]" priority />
+            <span className="text-sm font-semibold tracking-tight text-[#374151]">developers</span>
+          </div>
+
+          {/* Mode toggle — only on the first password step */}
+          {step === 'credentials' && (
+            <div className="mb-6 flex gap-1 rounded-xl bg-[#f3f4f6] p-1">
+              <button
+                type="button"
+                onClick={() => { setMode('password'); setError(''); }}
+                className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
+                  mode === 'password' ? 'bg-white text-[#174717] shadow-sm' : 'text-[#6b7280] hover:text-[#374151]'
+                }`}
+              >
+                Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('qr')}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-all ${
+                  mode === 'qr' ? 'bg-white text-[#174717] shadow-sm' : 'text-[#6b7280] hover:text-[#374151]'
+                }`}
+              >
+                <QrCode size={14} />
+                Aza App
+              </button>
+            </div>
+          )}
+
+          {/* ── QR Login Panel ── */}
+          {mode === 'qr' && step === 'credentials' && (
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-center text-sm text-[#6b7280]">
+                Open the Aza app and scan this code to sign in.
+              </p>
+
+              {qrLoading && (
+                <div className="flex h-[220px] w-[220px] items-center justify-center rounded-2xl border border-[#e5e7eb] bg-[#f8f9fa]">
+                  <Loader2 size={28} className="animate-spin text-[#2e7d2e]" />
+                </div>
+              )}
+
+              {!qrLoading && qrSession && qrStatus === 'PENDING' && (
+                <>
+                  <div className="rounded-2xl border border-[#e5e7eb] bg-white p-2.5 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- data URL can't go through next/image */}
+                    <img
+                      src={`data:image/png;base64,${qrSession.qrImageBase64}`}
+                      alt="QR Code"
+                      style={{ width: 200, height: 200, display: 'block' }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-[#6b7280]">
+                    <span className="font-mono text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {qrSecondsLeft}s
+                    </span>
+                    <div className="h-1 w-20 overflow-hidden rounded-full bg-[#e5e7eb]">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(qrSecondsLeft / (qrSession.ttlSeconds || 90)) * 100}%`,
+                          background: qrSecondsLeft > 20 ? '#2e7d2e' : '#dc2626',
+                          transition: 'width 1s linear',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!qrLoading && qrStatus === 'APPROVED' && (
+                <div className="flex flex-col items-center gap-2 py-6">
+                  <Loader2 size={28} className="animate-spin text-[#2e7d2e]" />
+                  <p className="text-sm text-[#6b7280]">Signing you in…</p>
+                </div>
+              )}
+
+              {!qrLoading && qrStatus === 'EXPIRED' && (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <p className="text-sm text-[#6b7280]">QR code expired.</p>
+                  <button
+                    type="button"
+                    onClick={startQrSession}
+                    className="flex items-center gap-1.5 rounded-xl border border-[#cdeab3] bg-[#eaf7e0] px-4 py-2 text-sm font-semibold text-[#174717] transition-colors hover:bg-[#e0f2d1]"
+                  >
+                    <RefreshCw size={13} />
+                    Refresh QR code
+                  </button>
+                </div>
+              )}
+
+              {qrError && qrStatus !== 'APPROVED' && (
+                <p className="px-2 text-center text-sm text-[#dc2626]">{qrError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setMode('password')}
+                className="text-sm text-[#6b7280] transition-colors hover:text-[#374151]"
+              >
+                Sign in with password instead
+              </button>
+            </div>
+          )}
+
+          {/* ── Password flow ── */}
+          {mode === 'password' && (
+            <>
+              {/* Step indicator */}
+              <div className="mb-8 flex items-center gap-2">
+                {steps.map((s, i) => (
+                  <React.Fragment key={s}>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                          i < stepIndex
+                            ? 'bg-[#174717] text-white'
+                            : i === stepIndex
+                            ? 'bg-[#eaf7e0] text-[#174717] ring-[1.5px] ring-[#174717]'
+                            : 'bg-[#f3f4f6] text-[#9ca3af]'
+                        }`}
+                      >
+                        {i < stepIndex ? '✓' : i + 1}
+                      </div>
+                      <span
+                        className={`hidden text-xs font-medium sm:block ${
+                          i === stepIndex ? 'text-[#174717]' : 'text-[#9ca3af]'
+                        }`}
+                      >
+                        {s}
+                      </span>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div className={`h-px flex-1 ${i < stepIndex ? 'bg-[#174717]/40' : 'bg-[#e5e7eb]'}`} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* ── Step 1: Credentials ── */}
+              {step === 'credentials' && (
+                <form onSubmit={handleCredentials} className="flex flex-col gap-4">
+                  <div>
+                    <h1 className="text-xl font-bold tracking-tight text-[#111827]">Sign in to the API Explorer</h1>
+                    <p className="mt-1 text-sm text-[#6b7280]">Use your Aza account credentials.</p>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="li-id" className={labelCls}>Email or phone</label>
+                    <input
+                      id="li-id"
+                      type="text"
+                      autoComplete="username"
+                      placeholder="you@example.com"
+                      value={identifier}
+                      onChange={e => { setIdentifier(e.target.value); if (fieldErrors.identifier) setFieldErrors(p => ({ ...p, identifier: undefined })); }}
+                      className={`${inputBase} ${fieldErrors.identifier ? inputError : ''}`}
+                      aria-describedby={fieldErrors.identifier ? 'err-identifier' : undefined}
+                      aria-invalid={!!fieldErrors.identifier}
+                    />
+                    {fieldErrors.identifier && (
+                      <p id="err-identifier" className="text-xs text-[#dc2626]">{fieldErrors.identifier}</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="li-pw" className={labelCls}>Password</label>
+                    <div className="relative">
+                      <input
+                        id="li-pw"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(p => ({ ...p, password: undefined })); }}
+                        className={`${inputBase} pr-11 ${fieldErrors.password ? inputError : ''}`}
+                        aria-describedby={fieldErrors.password ? 'err-password' : undefined}
+                        aria-invalid={!!fieldErrors.password}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] transition-colors hover:text-[#6b7280] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#174717] rounded"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {fieldErrors.password && (
+                      <p id="err-password" className="text-xs text-[#dc2626]">{fieldErrors.password}</p>
+                    )}
+                  </div>
+
+                  {error && <ErrorBox>{error}</ErrorBox>}
+
+                  <SubmitButton loading={loading}>Continue</SubmitButton>
+
+                  <p className="text-center text-sm text-[#6b7280]">
+                    Don&apos;t have an account?{' '}
+                    <a href="/developers/signup" className="font-semibold text-[#174717] hover:underline">Sign up</a>
+                  </p>
+                </form>
+              )}
+
+              {/* ── Step 2: OTP ── */}
+              {step === 'otp' && (
+                <form onSubmit={handleOtp} className="flex flex-col gap-4">
+                  <div>
+                    <h1 className="text-xl font-bold tracking-tight text-[#111827]">
+                      Check your {identifier.includes('@') ? 'email' : 'phone'}
+                    </h1>
+                    <p className="mt-1 text-sm text-[#6b7280]">
+                      We sent a 6-digit code to <strong className="text-[#374151]">{identifier}</strong>.
+                    </p>
+                  </div>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className={labelCls}>One-time code</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      autoFocus
+                      required
+                      className={`${inputBase} text-center font-mono text-2xl tracking-[0.3em]`}
+                    />
+                  </label>
+
+                  {error && <ErrorBox>{error}</ErrorBox>}
+
+                  <SubmitButton loading={loading} disabled={otp.length < 6}>Verify code</SubmitButton>
+
+                  <button
+                    type="button"
+                    onClick={() => { setStep('credentials'); setOtp(''); setError(''); }}
+                    className="text-center text-sm text-[#6b7280] transition-colors hover:text-[#374151]"
+                  >
+                    ← Back
+                  </button>
+                </form>
+              )}
+
+              {/* ── Step 3: TOTP ── */}
+              {step === 'totp' && (
+                <form onSubmit={handleTotp} className="flex flex-col gap-4">
+                  <div>
+                    <h1 className="text-xl font-bold tracking-tight text-[#111827]">Authenticator app</h1>
+                    <p className="mt-1 text-sm text-[#6b7280]">Enter the 6-digit code from your authenticator app.</p>
+                  </div>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className={labelCls}>Authenticator code</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      autoFocus
+                      required
+                      className={`${inputBase} text-center font-mono text-2xl tracking-[0.3em]`}
+                    />
+                  </label>
+
+                  {error && <ErrorBox>{error}</ErrorBox>}
+
+                  <SubmitButton loading={loading} disabled={totpCode.length < 6}>Sign in</SubmitButton>
+                </form>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Mode toggle — only on the first password step */}
-        {step === 'credentials' && (
-          <div
-            className="flex rounded-xl overflow-hidden mb-6"
-            style={{ border: '1px solid rgba(183,238,122,0.15)' }}
-          >
-            <button
-              type="button"
-              onClick={() => { setMode('password'); setError(''); }}
-              className="flex-1 py-2 text-sm font-semibold transition-all"
-              style={
-                mode === 'password'
-                  ? { background: '#B7EE7A', color: '#174717' }
-                  : { background: 'transparent', color: 'rgba(255,255,255,0.4)' }
-              }
-            >
-              Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('qr')}
-              className="flex-1 py-2 text-sm font-semibold transition-all flex items-center justify-center gap-1.5"
-              style={
-                mode === 'qr'
-                  ? { background: '#B7EE7A', color: '#174717' }
-                  : { background: 'transparent', color: 'rgba(255,255,255,0.4)' }
-              }
-            >
-              <QrCode size={14} />
-              AZA App
-            </button>
-          </div>
-        )}
-
-        {/* ── QR Login Panel ── */}
-        {mode === 'qr' && step === 'credentials' && (
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-sm text-center" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Open the AZA app and scan this code to sign in.
-            </p>
-
-            {/* Loading skeleton */}
-            {qrLoading && (
-              <div
-                className="flex items-center justify-center rounded-2xl"
-                style={{
-                  width: 220, height: 220,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(183,238,122,0.1)',
-                }}
-              >
-                <Loader2 size={28} className="animate-spin" style={{ color: 'rgba(183,238,122,0.5)' }} />
-              </div>
-            )}
-
-            {/* QR image */}
-            {!qrLoading && qrSession && qrStatus === 'PENDING' && (
-              <>
-                <div
-                  className="rounded-2xl p-2.5"
-                  style={{ background: '#fff', border: '1px solid rgba(183,238,122,0.2)' }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL can't go through next/image */}
-                  <img
-                    src={`data:image/png;base64,${qrSession.qrImageBase64}`}
-                    alt="QR Code"
-                    style={{ width: 200, height: 200, display: 'block' }}
-                  />
-                </div>
-                <div className="flex items-center gap-1.5" style={{ color: 'rgba(183,238,122,0.5)' }}>
-                  <span className="text-xs font-mono" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {qrSecondsLeft}s
-                  </span>
-                  <div
-                    className="h-1 rounded-full overflow-hidden"
-                    style={{ width: 80, background: 'rgba(255,255,255,0.08)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${(qrSecondsLeft / (qrSession.ttlSeconds || 90)) * 100}%`,
-                        background: qrSecondsLeft > 20 ? '#B7EE7A' : '#f87171',
-                        transition: 'width 1s linear',
-                      }}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Approved — completing login */}
-            {!qrLoading && qrStatus === 'APPROVED' && (
-              <div className="flex flex-col items-center gap-2 py-6">
-                <Loader2 size={28} className="animate-spin" style={{ color: 'var(--aza-accent)' }} />
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Signing you in…</p>
-              </div>
-            )}
-
-            {/* Expired */}
-            {!qrLoading && qrStatus === 'EXPIRED' && (
-              <div className="flex flex-col items-center gap-3 py-4">
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>QR code expired.</p>
-                <button
-                  type="button"
-                  onClick={startQrSession}
-                  className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80"
-                  style={{ background: 'rgba(183,238,122,0.12)', color: '#B7EE7A', border: '1px solid rgba(183,238,122,0.2)' }}
-                >
-                  <RefreshCw size={13} />
-                  Refresh QR code
-                </button>
-              </div>
-            )}
-
-            {qrError && qrStatus !== 'APPROVED' && (
-              <p className="text-sm text-center px-2" style={{ color: '#f87171' }}>{qrError}</p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setMode('password')}
-              className="text-sm transition-colors"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
-            >
-              Sign in with password instead
-            </button>
-          </div>
-        )}
-
-        {/* ── Password flow ── */}
-        {mode === 'password' && (
-          <>
-            {/* Step indicator */}
-            <div className="flex items-center gap-2 mb-8">
-              {steps.map((s, i) => (
-                <React.Fragment key={s}>
-                  <div className="flex items-center gap-1.5">
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
-                      style={
-                        i < stepIndex
-                          ? { background: '#B7EE7A', color: '#174717' }
-                          : i === stepIndex
-                          ? { background: 'rgba(183,238,122,0.25)', border: '1.5px solid #B7EE7A', color: '#B7EE7A' }
-                          : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }
-                      }
-                    >
-                      {i < stepIndex ? '✓' : i + 1}
-                    </div>
-                    <span
-                      className="text-xs font-medium hidden sm:block"
-                      style={{ color: i === stepIndex ? '#B7EE7A' : 'rgba(255,255,255,0.25)' }}
-                    >
-                      {s}
-                    </span>
-                  </div>
-                  {i < steps.length - 1 && (
-                    <div
-                      className="flex-1 h-px"
-                      style={{ background: i < stepIndex ? 'rgba(183,238,122,0.4)' : 'rgba(255,255,255,0.08)' }}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {/* ── Step 1: Credentials ── */}
-            {step === 'credentials' && (
-              <form onSubmit={handleCredentials} className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                    Sign in to the API Explorer
-                  </h1>
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    Use your AZA account credentials.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                    Email or phone
-                  </label>
-                  <input
-                    type="text"
-                    autoComplete="username"
-                    placeholder="you@example.com"
-                    value={identifier}
-                    onChange={e => { setIdentifier(e.target.value); if (fieldErrors.identifier) setFieldErrors(p => ({ ...p, identifier: undefined })); }}
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all focus-visible:outline-none"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.identifier ? 'rgba(183,238,122,0.4)' : fieldErrors.identifier ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
-                    onFocus={() => setFocused(p => ({ ...p, identifier: true }))}
-                    onBlur={() => setFocused(p => ({ ...p, identifier: false }))}
-                    aria-describedby={fieldErrors.identifier ? 'err-identifier' : undefined}
-                    aria-invalid={!!fieldErrors.identifier}
-                  />
-                  {fieldErrors.identifier && (
-                    <p id="err-identifier" className="text-xs" style={{ color: '#f87171' }}>{fieldErrors.identifier}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(p => ({ ...p, password: undefined })); }}
-                      className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white outline-none transition-all focus-visible:outline-none"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${focused.password ? 'rgba(183,238,122,0.4)' : fieldErrors.password ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.1)'}` }}
-                      onFocus={() => setFocused(p => ({ ...p, password: true }))}
-                      onBlur={() => setFocused(p => ({ ...p, password: false }))}
-                      aria-describedby={fieldErrors.password ? 'err-password' : undefined}
-                      aria-invalid={!!fieldErrors.password}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30 rounded"
-                      style={{ color: 'rgba(255,255,255,0.3)' }}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {fieldErrors.password && (
-                    <p id="err-password" className="text-xs" style={{ color: '#f87171' }}>{fieldErrors.password}</p>
-                  )}
-                </div>
-
-                {error && (
-                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
-                >
-                  {loading && <Loader2 size={15} className="animate-spin" />}
-                  Continue
-                </button>
-
-                <p className="text-center text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  Don&apos;t have an account?{' '}
-                  <a href="/developers/signup" style={{ color: '#B7EE7A', fontWeight: 600 }}>
-                    Sign up
-                  </a>
-                </p>
-              </form>
-            )}
-
-            {/* ── Step 2: OTP ── */}
-            {step === 'otp' && (
-              <form onSubmit={handleOtp} className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                    Check your {identifier.includes('@') ? 'email' : 'phone'}
-                  </h1>
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    We sent a 6-digit code to <strong className="text-white/70">{identifier}</strong>.
-                  </p>
-                </div>
-
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                    One-time code
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={otp}
-                    onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    autoFocus
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'monospace',
-                      fontSize: '1.4rem',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-                  />
-                </label>
-
-                {error && (
-                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || otp.length < 6}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
-                >
-                  {loading && <Loader2 size={15} className="animate-spin" />}
-                  Verify code
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setStep('credentials'); setOtp(''); setError(''); }}
-                  className="text-sm text-center transition-colors"
-                  style={{ color: 'rgba(255,255,255,0.35)' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
-                >
-                  ← Back
-                </button>
-              </form>
-            )}
-
-            {/* ── Step 3: TOTP ── */}
-            {step === 'totp' && (
-              <form onSubmit={handleTotp} className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-xl font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>
-                    Authenticator app
-                  </h1>
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    Enter the 6-digit code from your authenticator app.
-                  </p>
-                </div>
-
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(183,238,122,0.6)' }}>
-                    Authenticator code
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={totpCode}
-                    onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    autoFocus
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none tracking-[0.3em] text-center transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      fontFamily: 'monospace',
-                      fontSize: '1.4rem',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(183,238,122,0.4)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-                  />
-                </label>
-
-                {error && (
-                  <p className="text-sm rounded-xl px-4 py-3" style={{ background: 'rgba(220,38,38,0.1)', color: '#f87171', border: '1px solid rgba(220,38,38,0.2)' }}>
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || totpCode.length < 6}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: 'var(--aza-accent)', color: 'var(--aza-primary)' }}
-                >
-                  {loading && <Loader2 size={15} className="animate-spin" />}
-                  Sign in
-                </button>
-              </form>
-            )}
-          </>
-        )}
-      </div>
+        <p className="mt-6 text-center text-xs text-[#9ca3af]">
+          © {new Date().getFullYear()} Aza · Developer Portal
+        </p>
       </main>
-
-      <p className="mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-        © {new Date().getFullYear()} Aza · Developer Portal
-      </p>
     </div>
+  );
+}
+
+// ── Shared sub-components ──────────────────────────────────────────────────
+function ErrorBox({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-xl border border-[#f6c9c9] bg-[#fdeaea] px-4 py-3 text-sm text-[#c62828]">
+      {children}
+    </p>
+  );
+}
+
+function SubmitButton({ children, loading, disabled }: { children: React.ReactNode; loading: boolean; disabled?: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={loading || disabled}
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#B7EE7A] py-3 text-sm font-bold text-[#0e2a0e] transition-all hover:brightness-[1.04] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e2a0e] focus-visible:ring-offset-2"
+    >
+      {loading && <Loader2 size={15} className="animate-spin" />}
+      {children}
+    </button>
   );
 }

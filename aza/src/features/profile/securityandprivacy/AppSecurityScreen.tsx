@@ -147,7 +147,7 @@ export function AppSecurityScreen() {
           <TouchableOpacity
             style={styles.row}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: 'CreatePasscode' })}
+            onPress={() => navigation.navigate('VerifyPasscode', { onSuccessScreen: 'CreatePasscode', onSuccessParams: { mode: 'change' } })}
           >
             <View style={styles.iconWrap}>
               <Feather name="hash" size={22} color={Colors.textPrimary} />

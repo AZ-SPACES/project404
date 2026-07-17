@@ -152,6 +152,20 @@ public class EmailService {
         });
     }
 
+    public void sendPasscodeChangedNotification(String email, String name, boolean wasReset) {
+        CompletableFuture.runAsync(() -> {
+            Context ctx = new Context();
+            ctx.setVariable("name", name);
+            ctx.setVariable("wasReset", wasReset);
+            ctx.setVariable("changeTime", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")));
+            String html = inlineImages(templateEngine.process("email/passcode-changed", ctx));
+            sendViaBrevo("AZA Security", senderEmail, email,
+                    wasReset ? "Security Alert: Your AZA Passcode was Reset"
+                             : "Security Alert: Your AZA Passcode was Changed", html, null, null);
+        });
+    }
+
     public void sendBillReceivedEmail(String email, String name,
                                       String merchantName, BigDecimal amount) {
         CompletableFuture.runAsync(() -> {

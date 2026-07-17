@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { RefreshCw, CheckCircle, AlertTriangle, XCircle, Clock, ArrowUpRight } from 'lucide-react';
+import { DevNav } from '../_ui/DevNav';
+import { DevFooter } from '../_ui/DevFooter';
 
 const API = 'https://api.aza.systems';
 
@@ -19,39 +20,39 @@ interface ServiceCheck {
 }
 
 const SERVICES: Omit<ServiceCheck, 'status' | 'latencyMs' | 'checkedAt'>[] = [
-  { name: 'API Gateway',       description: 'Core REST API — authentication, users, wallets', url: `${API}/actuator/health` },
-  { name: 'Merchant API',      description: 'Checkout sessions, invoices, payouts',           url: `${API}/api/v1/merchant/public/aza` },
-  { name: 'Payment Processing',description: 'Session creation and completion',                 url: `${API}/actuator/health` },
-  { name: 'Webhook Delivery',  description: 'Real-time event dispatch',                       url: `${API}/actuator/health` },
+  { name: 'API Gateway',        description: 'Core REST API — authentication, users, wallets', url: `${API}/actuator/health` },
+  { name: 'Merchant API',       description: 'Checkout sessions, invoices, payouts',           url: `${API}/api/v1/merchant/public/aza` },
+  { name: 'Payment Processing', description: 'Session creation and completion',                 url: `${API}/actuator/health` },
+  { name: 'Webhook Delivery',   description: 'Real-time event dispatch',                        url: `${API}/actuator/health` },
 ];
 
-function statusColor(s: ServiceStatus) {
-  if (s === 'operational') return '#22c55e';
-  if (s === 'degraded')    return '#f59e0b';
-  if (s === 'down')        return '#ef4444';
-  return '#9ca3af';
-}
+// Light-surface palette per status. `accent` drives icons/dots, `tint`/`border`
+// wash the overall banner, and `pillBg`/`pillText` style the per-service pills.
+const THEME: Record<ServiceStatus, {
+  accent: string; tint: string; border: string; pillBg: string; pillText: string; label: string;
+}> = {
+  operational: { accent: '#16a34a', tint: '#f0fdf4', border: '#bbf7d0', pillBg: '#dcfce7', pillText: '#15803d', label: 'Operational' },
+  degraded:    { accent: '#d97706', tint: '#fffbeb', border: '#fde68a', pillBg: '#fef3c7', pillText: '#b45309', label: 'Degraded'    },
+  down:        { accent: '#dc2626', tint: '#fef2f2', border: '#fecaca', pillBg: '#fee2e2', pillText: '#b91c1c', label: 'Down'        },
+  checking:    { accent: '#9ca3af', tint: '#f9fafb', border: '#e5e7eb', pillBg: '#f3f4f6', pillText: '#6b7280', label: 'Checking…'   },
+};
 
 function StatusIcon({ status, size = 18 }: { status: ServiceStatus; size?: number }) {
-  if (status === 'operational') return <CheckCircle size={size} color="#22c55e" />;
-  if (status === 'degraded')    return <AlertTriangle size={size} color="#f59e0b" />;
-  if (status === 'down')        return <XCircle size={size} color="#ef4444" />;
-  return <Clock size={size} color="#9ca3af" className="animate-pulse" />;
+  const c = THEME[status].accent;
+  if (status === 'operational') return <CheckCircle size={size} color={c} />;
+  if (status === 'degraded')    return <AlertTriangle size={size} color={c} />;
+  if (status === 'down')        return <XCircle size={size} color={c} />;
+  return <Clock size={size} color={c} className="animate-pulse" />;
 }
 
 function StatusPill({ status }: { status: ServiceStatus }) {
-  const labels: Record<ServiceStatus, string> = {
-    operational: 'Operational',
-    degraded:    'Degraded',
-    down:        'Down',
-    checking:    'Checking…',
-  };
+  const t = THEME[status];
   return (
     <span
-      className="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
-      style={{ background: statusColor(status) + '20', color: statusColor(status) }}
+      className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+      style={{ background: t.pillBg, color: t.pillText }}
     >
-      {labels[status]}
+      {t.label}
     </span>
   );
 }
@@ -125,126 +126,137 @@ export default function StatusPage() {
   }, [runChecks]);
 
   const overall = overallStatus(services);
-  const overallBg =
-    overall === 'operational' ? 'linear-gradient(135deg, #052e16 0%, #14532d 100%)' :
-    overall === 'degraded'    ? 'linear-gradient(135deg, #451a03 0%, #78350f 100%)' :
-    overall === 'down'        ? 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)' :
-                                'linear-gradient(135deg, #0e2a0e 0%, #132613 100%)';
+  const t = THEME[overall];
+  const upCount = services.filter(s => s.status === 'operational').length;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] font-sans antialiased">
-      <main>
-      {/* Hero banner */}
-      <div style={{ background: overallBg }} className="transition-all duration-700">
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          <Link
-            href="/developers/guides"
-            className="inline-flex items-center gap-1.5 text-xs font-medium mb-8 transition-colors"
-            style={{ color: 'rgba(255,255,255,0.45)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.8)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+    <div className="flex min-h-screen flex-col bg-white font-sans text-[#111827] antialiased">
+      <DevNav active="/developers/status" />
+
+      <main className="flex-1">
+        {/* Page header */}
+        <div className="mx-auto max-w-3xl px-5 pt-14 pb-6 sm:px-6">
+          <h1
+            className="text-3xl font-black tracking-tight text-[#111827] sm:text-4xl"
+            style={{ letterSpacing: '-0.03em', textWrap: 'balance' } as React.CSSProperties}
           >
-            <ArrowLeft size={12} /> Developer Docs
-          </Link>
-
-          <div className="flex items-center gap-4 mb-3">
-            <Image src="/logo.png" alt="Aza" width={88} height={40} className="h-10 w-auto shrink-0" />
-            <div>
-              <p className="text-white font-extrabold text-xl" style={{ letterSpacing: '-0.04em' }}>Aza System Status</p>
-              <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>api.aza.systems</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 mt-6">
-            <StatusIcon status={overall} size={28} />
-            <p className="text-white font-bold text-2xl" style={{ letterSpacing: '-0.03em' }}>
-              {OVERALL_LABEL[overall]}
-            </p>
-          </div>
-
-          {lastRefreshed && (
-            <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              Last checked {lastRefreshed.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Service cards */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Services</h2>
-          <button
-            onClick={runChecks}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-          {services.map((service, i) => (
-            <div
-              key={service.name}
-              className={`flex items-center justify-between px-5 py-4 ${i < services.length - 1 ? 'border-b border-gray-100' : ''}`}
-            >
-              <div className="flex items-center gap-3">
-                <StatusIcon status={service.status} size={16} />
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{service.name}</p>
-                  <p className="text-xs text-gray-500">{service.description}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                {service.latencyMs !== null && (
-                  <span className="text-xs font-mono text-gray-400">{service.latencyMs} ms</span>
-                )}
-                <StatusPill status={service.status} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Uptime note */}
-        <div className="mt-6 p-4 bg-white rounded-2xl border border-gray-200 shadow-sm">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">About this page</p>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Status is checked live from your browser by pinging the Aza API endpoints directly. Results reflect
-            reachability from your network. For production monitoring integrations, poll{' '}
-            <code className="text-[#174717] bg-gray-100 px-1.5 py-0.5 rounded text-xs">
-              {API}/actuator/health
-            </code>{' '}
-            from your server.
+            System Status
+          </h1>
+          <p className="mt-3 max-w-md text-base text-[#6b7280]">
+            Live reachability of the Aza API and platform services, checked directly from your browser.
           </p>
         </div>
 
-        {/* Quick links */}
-        <div className="mt-6 flex items-center gap-3 flex-wrap">
-          <Link
-            href="/developers/guides"
-            className="text-xs font-semibold text-[#174717] hover:underline"
+        {/* Overall status banner */}
+        <div className="mx-auto max-w-3xl px-5 sm:px-6">
+          <div
+            className="rounded-2xl border p-5 transition-colors duration-500 sm:p-6"
+            style={{ background: t.tint, borderColor: t.border }}
           >
-            ← Developer Guides
-          </Link>
-          <span className="text-gray-300">·</span>
-          <Link
-            href="/developers/api-explorer"
-            className="text-xs font-semibold text-[#174717] hover:underline"
-          >
-            API Explorer
-          </Link>
-          <span className="text-gray-300">·</span>
-          <Link
-            href="/developers/guides?doc=errors"
-            className="text-xs font-semibold text-[#174717] hover:underline"
-          >
-            Error Reference
-          </Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white shadow-sm">
+                  {overall === 'operational' && (
+                    <span
+                      className="absolute inline-flex h-3 w-3 animate-ping rounded-full opacity-60"
+                      style={{ background: t.accent }}
+                    />
+                  )}
+                  <StatusIcon status={overall} size={24} />
+                </span>
+                <div>
+                  <p className="text-lg font-extrabold tracking-tight text-[#111827] sm:text-xl" style={{ letterSpacing: '-0.02em' }}>
+                    {OVERALL_LABEL[overall]}
+                  </p>
+                  <p className="mt-0.5 text-sm text-[#6b7280]">
+                    {overall === 'checking'
+                      ? 'Pinging endpoints…'
+                      : `${upCount} of ${services.length} services operational`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pl-16 sm:pl-0">
+                {lastRefreshed && (
+                  <span className="text-xs text-[#9ca3af]">
+                    Updated {lastRefreshed.toLocaleTimeString()}
+                  </span>
+                )}
+                <button
+                  onClick={runChecks}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#374151] transition-colors hover:border-[#0e2a0e] hover:text-[#111827] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7EE7A]"
+                >
+                  <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Service cards */}
+        <section className="mx-auto max-w-3xl px-5 py-8 sm:px-6">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-[#6b7280]">Services</h2>
+
+          <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            {services.map((service, i) => (
+              <div
+                key={service.name}
+                className={`flex items-center justify-between gap-3 px-5 py-4 ${i < services.length - 1 ? 'border-b border-[#f3f4f6]' : ''}`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <StatusIcon status={service.status} size={16} />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#111827]">{service.name}</p>
+                    <p className="truncate text-sm text-[#6b7280]">{service.description}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {service.latencyMs !== null && (
+                    <span className="hidden font-mono text-xs text-[#9ca3af] sm:inline">{service.latencyMs} ms</span>
+                  )}
+                  <StatusPill status={service.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* About */}
+          <div className="mt-6 rounded-2xl border border-[#e5e7eb] bg-[#f8f9fa] p-5">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">About this page</p>
+            <p className="text-sm leading-relaxed text-[#6b7280]">
+              Status is checked live from your browser by pinging the Aza API endpoints directly, so results reflect
+              reachability from your network. This page auto-refreshes every 60 seconds. For production monitoring,
+              poll{' '}
+              <code className="rounded bg-[#eaf7e0] px-1.5 py-0.5 text-xs text-[#174717]">
+                {API}/actuator/health
+              </code>{' '}
+              from your server.
+            </p>
+          </div>
+
+          {/* Related links */}
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+            {[
+              { href: '/developers/guides', label: 'Developer Guides' },
+              { href: '/developers/api-explorer', label: 'API Explorer' },
+              { href: '/developers/guides?doc=errors', label: 'Error Reference' },
+            ].map(l => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-[#174717] transition-colors hover:text-[#2e7d2e]"
+              >
+                {l.label}
+                <ArrowUpRight size={13} />
+              </Link>
+            ))}
+          </div>
+        </section>
       </main>
+
+      <DevFooter />
     </div>
   );
 }

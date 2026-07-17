@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { MenuToggleIcon } from '@/components/ui/menu-toggle-icon';
 import { useScroll } from '@/components/ui/use-scroll';
 import { useActiveSection } from '@/components/ui/use-active-section';
-import { DeveloperMenu } from '@/components/ui/developer-menu';
 import { HubMenu } from '@/components/ui/hub-menu';
 import { Sun, Moon, Code2 } from 'lucide-react';
 
@@ -28,7 +27,6 @@ const focusRing =
 
 export function Header() {
   const [open,        setOpen]        = React.useState(false);
-  const [devOpen,     setDevOpen]     = React.useState(false);
   const [hubMenuOpen, setHubMenuOpen] = React.useState(false);
   const [theme,       setTheme]       = React.useState<'light' | 'dark'>('light');
   const scrolled = useScroll(20);
@@ -60,11 +58,11 @@ export function Header() {
     setTheme(saved as 'light' | 'dark'); // eslint-disable-line react-hooks/set-state-in-effect
   }, []);
 
-  // Mobile menu scroll lock (dev menu manages its own)
+  // Mobile menu scroll lock
   React.useEffect(() => {
-    if (!devOpen) document.body.style.overflow = open ? 'hidden' : '';
-    return () => { if (!devOpen) document.body.style.overflow = ''; };
-  }, [open, devOpen]);
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
 
   React.useEffect(() => {
     if (!hubMenuOpen) return;
@@ -80,8 +78,6 @@ export function Header() {
     localStorage.setItem('aza-theme', next);
   };
 
-  const openDevMenu = () => { setOpen(false); setDevOpen(true); };
-
   return (
     <>
       <header
@@ -96,7 +92,7 @@ export function Header() {
         <div
           className={cn(
             'w-full flex items-center h-[52px] px-3 pl-4',
-            'transition-all duration-300 ease-out rounded-[100px]',
+            'transition-[max-width,box-shadow,transform] duration-300 ease-out rounded-[100px]',
             scrolled && !open
               ? 'max-w-[900px] shadow-[0_8px_32px_rgba(0,0,0,0.45),0_0_0_1px_rgba(255,255,255,0.07)] scale-[0.985]'
               : 'max-w-full',
@@ -152,9 +148,9 @@ export function Header() {
               );
             })}
 
-            {/* Developers button */}
-            <button
-              onClick={openDevMenu}
+            {/* Developers */}
+            <Link
+              href="/developers"
               aria-current={isDevelopersPage ? 'true' : undefined}
               className={cn(
                 'inline-flex items-center gap-[5px] text-[0.84rem] font-semibold px-[11px] py-[5px] rounded-lg transition-colors',
@@ -171,7 +167,7 @@ export function Header() {
               >
                 Docs
               </span>
-            </button>
+            </Link>
           </nav>
 
           {/* Right actions */}
@@ -246,8 +242,9 @@ export function Header() {
             })}
 
             {/* Developers in mobile menu */}
-            <button
-              onClick={openDevMenu}
+            <Link
+              href="/developers"
+              onClick={() => setOpen(false)}
               aria-current={isDevelopersPage ? 'true' : undefined}
               className={cn(
                 'text-left inline-flex items-center gap-2 text-[0.9rem] font-semibold px-4 py-[9px] rounded-2xl transition-colors',
@@ -258,7 +255,7 @@ export function Header() {
             >
               <Code2 size={15} />
               Developers
-            </button>
+            </Link>
 
             <div className="h-px my-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
             <Link
@@ -275,9 +272,6 @@ export function Header() {
           </div>
         )}
       </header>
-
-      {/* Full-screen developer menu overlay */}
-      <DeveloperMenu isOpen={devOpen} onClose={() => setDevOpen(false)} />
     </>
   );
 }

@@ -35,7 +35,7 @@ function Item({ faq, open, onToggle }: { faq: typeof faqs[0]; open: boolean; onT
         </span>
       </button>
       <div
-        className="overflow-hidden transition-all duration-300 ease-out"
+        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
         style={{ maxHeight: open ? "300px" : "0px", opacity: open ? 1 : 0 }}
       >
         <p className="pb-4 text-[0.9rem] leading-[1.7] max-w-[600px]" style={{ color: "#6e6e73" }}>

@@ -31,7 +31,7 @@ function WhatsAppIcon() {
 export function WaitlistSuccess({ show, position }: WaitlistSuccessProps) {
   return (
     <div
-      className={`absolute inset-0 flex items-center justify-center rounded-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+      className={`absolute inset-0 flex items-center justify-center rounded-xl transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
         show
           ? "opacity-100 scale-100"
           : "opacity-0 scale-95 pointer-events-none"

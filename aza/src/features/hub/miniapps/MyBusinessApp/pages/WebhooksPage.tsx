@@ -22,6 +22,8 @@ import { extractErrorMessage } from '../../../../../utils/errorUtils';
 const ALL_EVENTS = [
   'checkout.completed',
   'checkout.expired',
+  'checkout.cancelled',
+  'checkout.refunded',
   '*',
 ];
 
