@@ -164,6 +164,33 @@ class AuthServiceTest {
         verify(valueOps).set(startsWith("totp:preauth:"), anyString(), eq(Duration.ofMinutes(5)));
     }
 
+    @Test
+    void loginWithOtp_mixedCaseEmail_normalizedBeforeVerifyAndLookup() {
+        // preLogin lowercases the email before sending the code, so the stored OTP key and the
+        // user row (emails are persisted lowercased) are keyed on the lowercased address. Verify
+        // must apply the same normalization or a genuinely-delivered code fails as "not found".
+        User user = activeUser();
+        when(userRepository.findByEmailOrPhoneNumber("alice@example.com", "alice@example.com"))
+                .thenReturn(Optional.of(user));
+        when(jwtUtil.generateAccessToken(any(), anyString())).thenReturn("access-token");
+        when(jwtUtil.generateRefreshToken(any(), anyString())).thenReturn("refresh-token");
+        when(jwtUtil.getRemainingValidity(anyString())).thenReturn(Duration.ofHours(1));
+        when(refreshTokenRepository.findByUserIdAndDeviceId(any(), any())).thenReturn(Optional.empty());
+        when(refreshTokenRepository.save(any())).thenReturn(new RefreshToken());
+
+        OtpVerifyRequest req = new OtpVerifyRequest();
+        req.setIdentifier("  Alice@Example.COM ");
+        req.setCode("123456");
+        req.setPurpose("login");
+
+        Object result = authService.loginWithOtp(req, "1.2.3.4");
+
+        assertInstanceOf(AuthResponse.class, result);
+        // Both the OTP key lookup and the user lookup must see the canonical, lowercased address.
+        verify(otpService).verifyOtp("alice@example.com", "123456", "login");
+        verify(userRepository).findByEmailOrPhoneNumber("alice@example.com", "alice@example.com");
+    }
+
     // ── Logout ────────────────────────────────────────────────────────────────
 
     @Test
