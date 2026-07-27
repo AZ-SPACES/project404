@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  useWindowDimensions,
+  Dimensions,
   StatusBar,
   ActivityIndicator,
   Animated,
@@ -46,6 +46,9 @@ import { useTransferStore } from "../../../store/transferStore";
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { getAdaptiveForeground } from '../../../utils/wallpaperContrast';
 
+const { height } = Dimensions.get("window");
+
+
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good Morning";
@@ -55,8 +58,7 @@ function getGreeting() {
 
 export default function HomeScreen() {
   const { colors: Colors, isDark, radii } = useAppTheme();
-  const { height: winHeight } = useWindowDimensions();
-  const styles = React.useMemo(() => createStyles(Colors, radii, winHeight), [Colors, radii, winHeight]);
+  const styles = React.useMemo(() => createStyles(Colors, radii), [Colors, radii]);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
@@ -640,7 +642,7 @@ export default function HomeScreen() {
   );
 }
 
-function createStyles(Colors: ThemeColors, radii: Radii, height: number) {
+function createStyles(Colors: ThemeColors, radii: Radii) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
     container: {

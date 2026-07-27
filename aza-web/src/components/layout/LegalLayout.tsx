@@ -50,7 +50,6 @@ export function LegalLayout({ children }: LegalLayoutProps) {
               { label: "Terms of Service", href: "/terms-of-service" },
               { label: "Cookie Policy",    href: "/cookie-policy"    },
               { label: "Compliance",       href: "/compliance"       },
-              { label: "Delete Account",   href: "/delete-account"   },
             ].map((l) => (
               <Link
                 key={l.href}

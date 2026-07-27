@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -48,10 +47,6 @@ public class SubmitMiniAppRequest {
 
     /** Which Aza permissions this app needs. */
     private Set<String> requestedPermissions;
-
-    /** Marketing screenshots (HTTPS image URLs) shown to admins during review. Up to 6. */
-    @Size(max = 6, message = "At most 6 screenshots allowed")
-    private List<@Pattern(regexp = "^https://.*", message = "Screenshot URLs must use HTTPS") String> screenshotUrls;
 
     /** true = submit for review immediately; false = save as draft */
     private boolean submitForReview;

@@ -54,9 +54,6 @@ class AuthServiceTest {
     @MockitoBean ScreeningService screeningService;
     @MockitoBean ReferralService referralService;
     @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
-    @MockitoBean StaffRoleService staffRoleService;
-    @MockitoBean MerchantRepository merchantRepository;
-    @MockitoBean AgentRepository agentRepository;
 
     @SuppressWarnings("unchecked")
     private ValueOperations<String, String> valueOps = mock(ValueOperations.class);
@@ -168,48 +165,30 @@ class AuthServiceTest {
     }
 
     @Test
-    void preLogin_superagentPortal_agentWith2fa_skips2faAndLogsIn() {
-        // A genuine (non-staff) agent signing in through a web portal (X-Aza-Client →
-        // merchantPortal=true) takes the password-only path even with 2FA enabled. Before the
-        // fix this required a merchant record, so superagents fell through to the 2FA branch and
-        // the portal showed "needs the AZA app". Now an agent record qualifies too.
+    void loginWithOtp_mixedCaseEmail_normalizedBeforeVerifyAndLookup() {
+        // preLogin lowercases the email before sending the code, so the stored OTP key and the
+        // user row (emails are persisted lowercased) are keyed on the lowercased address. Verify
+        // must apply the same normalization or a genuinely-delivered code fails as "not found".
         User user = activeUser();
-        user.setTwoFactorEnabled(true);
-        user.setTwoFactorSecret("encrypted-secret");
-        when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(staffRoleService.getActiveRoles(user)).thenReturn(java.util.Set.of());
-        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(agentRepository.findByUserId(userId)).thenReturn(Optional.of(new Agent()));
+        when(userRepository.findByEmailOrPhoneNumber("alice@example.com", "alice@example.com"))
+                .thenReturn(Optional.of(user));
         when(jwtUtil.generateAccessToken(any(), anyString())).thenReturn("access-token");
         when(jwtUtil.generateRefreshToken(any(), anyString())).thenReturn("refresh-token");
         when(jwtUtil.getRemainingValidity(anyString())).thenReturn(Duration.ofHours(1));
         when(refreshTokenRepository.findByUserIdAndDeviceId(any(), any())).thenReturn(Optional.empty());
         when(refreshTokenRepository.save(any())).thenReturn(new RefreshToken());
 
-        Object result = authService.preLogin(loginRequest("alice@example.com", "pass"), "1.2.3.4", true);
+        OtpVerifyRequest req = new OtpVerifyRequest();
+        req.setIdentifier("  Alice@Example.COM ");
+        req.setCode("123456");
+        req.setPurpose("login");
+
+        Object result = authService.loginWithOtp(req, "1.2.3.4");
 
         assertInstanceOf(AuthResponse.class, result);
-        // 2FA must NOT have been initiated — no preauth token written to Redis.
-        verify(valueOps, never()).set(startsWith("totp:preauth:"), anyString(), any());
-    }
-
-    @Test
-    void preLogin_superagentPortal_plainUserNotAgentOrMerchant_keeps2fa() {
-        // The portal header alone must not bypass 2FA — a user who is neither a merchant nor an
-        // agent still gets the full 2FA challenge.
-        User user = activeUser();
-        user.setTwoFactorEnabled(true);
-        user.setTwoFactorSecret("encrypted-secret");
-        when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(staffRoleService.getActiveRoles(user)).thenReturn(java.util.Set.of());
-        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(agentRepository.findByUserId(userId)).thenReturn(Optional.empty());
-
-        Object result = authService.preLogin(loginRequest("alice@example.com", "pass"), "1.2.3.4", true);
-
-        assertInstanceOf(TwoFactorPendingResponse.class, result);
+        // Both the OTP key lookup and the user lookup must see the canonical, lowercased address.
+        verify(otpService).verifyOtp("alice@example.com", "123456", "login");
+        verify(userRepository).findByEmailOrPhoneNumber("alice@example.com", "alice@example.com");
     }
 
     // ── Logout ────────────────────────────────────────────────────────────────

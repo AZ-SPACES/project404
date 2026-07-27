@@ -221,7 +221,7 @@ export default function ManageStorageScreen() {
 
   const handleDownload = useCallback(async (msg: Message) => {
     if (!msg.uri) return;
-    const { status } = await MediaLibrary.requestPermissionsAsync(true);
+    const { status } = await MediaLibrary.requestPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission denied', 'Allow media access to save files.');
       return;

@@ -6,7 +6,7 @@ import { useAppTheme, ThemeColors, Typography, Spacing } from '../../../theme';
 import { WebView } from 'react-native-webview';
 import { BackButton } from '../../../components/ui/BackButton';
 
-const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://aza.systems';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ? `${process.env.EXPO_PUBLIC_WEB_URL}/privacy-policy` : 'https://aza.systems/privacy-policy';
 
 export default function PrivacyPolicyScreen() {
   const { colors: Colors } = useAppTheme();

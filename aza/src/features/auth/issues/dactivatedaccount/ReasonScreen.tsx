@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -120,7 +121,7 @@ export default function Reason() {
         <View style={styles.buttonContainer}>
           <Button
             title="Submit an appeal"
-            onPress={() => navigation.navigate("TalkToUs")}
+            onPress={() => Alert.alert("Coming Soon", "Appeal submission will be available soon.")}
             backgroundColor={Colors.primary}
             textColor={Colors.secondary}
             paddingVertical={16}

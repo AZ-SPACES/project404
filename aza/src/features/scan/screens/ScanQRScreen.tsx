@@ -260,7 +260,6 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
             ADMIN: 'Admin Portal',
             MERCHANT: 'Merchant Portal',
             DEVELOPER: 'Developer Portal',
-            SUPERAGENT: 'Superagent Portal',
             THIRD_PARTY: 'External App',
           };
           const params: Record<string, unknown> = {

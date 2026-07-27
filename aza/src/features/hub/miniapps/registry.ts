@@ -22,7 +22,6 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/aza-business.png'),
     category: 'Business',
     component: MyBusinessApp,
-    gatedBy: 'business',
   },
   {
     id: 'aza_developer',
@@ -39,7 +38,6 @@ export const MINI_APP_REGISTRY: MiniAppEntry[] = [
     icon: require('../../../assets/aza-business.png'),
     category: 'Business',
     component: AzaAgentApp,
-    gatedBy: 'agent',
   },
   {
     id: 'play_2048',

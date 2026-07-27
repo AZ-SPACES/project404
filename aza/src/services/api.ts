@@ -658,17 +658,6 @@ export const agentCashOut = (data: { code: string; idempotencyKey?: string }) =>
 export const getAgentTransactions = (page = 0, size = 20) =>
   api.get(`/api/v1/agent/transactions?page=${page}&size=${size}`);
 
-// --- Superagent (tiered float distribution) Endpoints ---
-
-export const distributeFloat = (data: {
-  targetAgentCode: string;
-  amount: number;
-  idempotencyKey?: string;
-}) => api.post('/api/v1/superagent/distribute', data);
-
-export const getFloatDistributions = (page = 0, size = 20) =>
-  api.get(`/api/v1/superagent/distributions?page=${page}&size=${size}`);
-
 export const generateWithdrawalCode = (data: { amount: number }) =>
   api.post('/api/v1/withdrawal-codes', data);
 
@@ -977,8 +966,7 @@ export const getMyMiniApps = () => api.get('/api/v1/dev/miniapps');
 export const saveMiniApp = (data: {
   id: string; name: string; description: string; category: string;
   iconUrl?: string; url: string; developerName: string; supportUrl?: string;
-  version: string; requestedPermissions: string[]; screenshotUrls?: string[];
-  submitForReview: boolean;
+  version: string; requestedPermissions: string[]; submitForReview: boolean;
 }) => api.put('/api/v1/dev/miniapps', data);
 
 export const resubmitMiniApp = (appId: string) =>
@@ -1390,13 +1378,8 @@ api.interceptors.response.use(
         responseData.toLowerCase().includes('cloudflare');
 
       // Geo-blocked — navigate to the "not available in your region" screen.
-      if (responseData?.error?.code === 'GEO_RESTRICTED' || isCloudflareHtmlBlock) {
+      if (responseData?.error === 'GEO_RESTRICTED' || isCloudflareHtmlBlock) {
         emitAuthEvent({ type: 'geoBlocked' });
-        return Promise.reject(error);
-      }
-      // AI assistant disabled for this user by an admin — a feature-level block, NOT an
-      // auth failure. Reject so the calling screen can show a message; do not log out.
-      if (responseData?.error?.code === 'AI_DISABLED') {
         return Promise.reject(error);
       }
       // Token is revoked or session is invalid — clear tokens and trigger logout.

@@ -110,7 +110,6 @@ public class UserService {
                 .silentHoursStart(user.getSilentHoursStart())
                 .silentHoursEnd(user.getSilentHoursEnd())
                 .silentHoursPaymentThreshold(user.getSilentHoursPaymentThreshold())
-                .aiDisabled(user.isAiDisabled())
                 .build();
     }
 
