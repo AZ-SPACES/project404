@@ -1662,7 +1662,6 @@ export interface MiniAppSubmission {
   version: string;
   status: "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "REJECTED" | "SUSPENDED";
   requestedPermissions: string[];
-  screenshotUrls: string[];
   createdAt: string;
   submittedAt: string | null;
   reviewedAt: string | null;
@@ -1744,60 +1743,6 @@ export interface CategoryBreakdown {
 
 export function getAdminCategoryBreakdown(days = 30): Promise<CategoryBreakdown[]> {
   return request(`/api/v1/admin/analytics/categories?days=${days}`);
-}
-
-// ── AI: Assistant Usage Monitoring ────────────────────────────────────────────
-
-export interface AiUsageCount {
-  key: string;
-  count: number;
-}
-
-export interface AiUsageDaily {
-  date: string;
-  count: number;
-}
-
-export interface AiUsageOverview {
-  totalCalls: number;
-  blockedCalls: number;
-  uniqueUsers: number;
-  byEndpoint: AiUsageCount[];
-  byTopic: AiUsageCount[];
-  daily: AiUsageDaily[];
-}
-
-export interface AiUsageUserRow {
-  userId: string;
-  name: string;
-  username: string | null;
-  totalCalls: number;
-  blockedCalls: number;
-  otherTopicCalls: number;
-  lastUsedAt: string | null;
-  aiDisabled: boolean;
-}
-
-/** Aggregate AI-assistant usage — metadata only, no chat content is ever stored. */
-export function getAiUsageOverview(days = 30): Promise<AiUsageOverview> {
-  return request(`/api/v1/admin/ai/usage?days=${days}`);
-}
-
-/** Per-user usage rollup; blockedCalls + otherTopicCalls are the misuse signals. */
-export function getAiUsageTopUsers(days = 30, limit = 50): Promise<AiUsageUserRow[]> {
-  return request(`/api/v1/admin/ai/usage/users?days=${days}&limit=${limit}`);
-}
-
-/** Admin kill switch: enable/disable the AI assistant for a user. */
-export function setUserAiDisabled(userId: string, disabled: boolean): Promise<void> {
-  return request(`/api/v1/admin/ai/users/${userId}/${disabled ? "disable" : "enable"}`, {
-    method: "POST",
-  });
-}
-
-/** Admin override: clear a user's hourly + daily AI quota counters. */
-export function resetUserAiQuota(userId: string): Promise<void> {
-  return request(`/api/v1/admin/ai/users/${userId}/reset-quota`, { method: "POST" });
 }
 
 // ── OAuth Apps ────────────────────────────────────────────────────────────────

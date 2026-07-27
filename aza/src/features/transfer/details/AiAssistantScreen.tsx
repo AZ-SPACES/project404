@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
   StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,8 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppTheme, Spacing, ThemeColors, Typography } from '../../../theme';
 import { BackButton } from '../../../components/ui/BackButton';
 import FeedbackSheet from '../../../components/ui/FeedbackSheet';
-import { useToast } from '../../../providers/ToastProvider';
-import { sendAiMessage, submitFeedback } from '../../../services/api';
+import { sendAiMessage } from '../../../services/api';
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string };
 
@@ -31,7 +30,6 @@ export default function AiAssistantScreen() {
   const isDark = Colors.isDark;
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const navigation = useNavigation();
-  const { showToast } = useToast();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -64,44 +62,14 @@ export default function AiAssistantScreen() {
         setMessages(prev => [...prev, { id: uid(), role: 'assistant', content: reply }]);
         scrollToBottom();
       }
-    } catch (err: any) {
-      let content = "Sorry, I'm having trouble right now. Please try again.";
-      if (err?.response?.data?.error?.code === 'AI_DISABLED') {
-        content = "AI assistance is turned off for your account. Please contact support if you think this is a mistake.";
-      } else if (err?.isRateLimited || err?.response?.status === 429) {
-        content = "You've reached your AI usage limit for now. Please try again a bit later.";
-      }
-      setMessages(prev => [...prev, { id: uid(), role: 'assistant', content }]);
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        { id: uid(), role: 'assistant', content: "Sorry, I'm having trouble right now. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Long-press an AI response to report harmful/incorrect output. Routes through
-  // the existing feedback endpoint (context AI_REPORT) so it lands server-side
-  // for moderation review. Satisfies App Store AI-safety guidance (Guideline 3.3.11).
-  const reportMessage = (content: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Report response',
-      'Flag this AI response as harmful, offensive, or incorrect? Our team will review it.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Report',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const excerpt = content.length > 800 ? `${content.slice(0, 800)}…` : content;
-              await submitFeedback(1, `Reported AI response: "${excerpt}"`, 'AI_REPORT');
-              showToast('Thanks — this response has been reported for review.', 'success');
-            } catch {
-              showToast('Could not submit report. Please try again.', 'error');
-            }
-          },
-        },
-      ],
-    );
   };
 
   const isEmpty = messages.length === 0 && !isLoading;
@@ -173,11 +141,8 @@ export default function AiAssistantScreen() {
           ) : (
             <>
               {messages.map(msg => (
-                <Pressable
+                <View
                   key={msg.id}
-                  onLongPress={msg.role === 'assistant' ? () => reportMessage(msg.content) : undefined}
-                  delayLongPress={400}
-                  accessibilityHint={msg.role === 'assistant' ? 'Long press to report this response' : undefined}
                   style={[
                     styles.bubble,
                     msg.role === 'user' ? styles.bubbleUser : styles.bubbleAssistant,
@@ -199,7 +164,7 @@ export default function AiAssistantScreen() {
                       {msg.content}
                     </Text>
                   </View>
-                </Pressable>
+                </View>
               ))}
 
               {isLoading && (
@@ -240,9 +205,6 @@ export default function AiAssistantScreen() {
             <Feather name="send" size={18} color={!inputText.trim() || isLoading ? Colors.textSecondary : '#fff'} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.disclaimer}>
-          Aza AI can make mistakes. This is general information, not financial advice.
-        </Text>
       </KeyboardAvoidingView>
 
       <FeedbackSheet
@@ -336,14 +298,6 @@ function createStyles(Colors: ThemeColors) {
       flexDirection: 'row', alignItems: 'flex-end', gap: 10,
       paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.border,
-      backgroundColor: Colors.background,
-    },
-    disclaimer: {
-      ...Typography.caption,
-      color: Colors.textSecondary,
-      textAlign: 'center',
-      paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.sm,
       backgroundColor: Colors.background,
     },
     input: {

@@ -37,7 +37,6 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
   const [supportUrl, setSupportUrl] = useState('');
   const [version, setVersion] = useState('1.0.0');
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
-  const [screenshots, setScreenshots] = useState<string[]>(['']);
   const [submitForReview, setSubmitForReview] = useState(true);
   const [error, setError] = useState('');
 
@@ -49,7 +48,6 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
       supportUrl: supportUrl.trim() || undefined,
       version: version.trim(),
       requestedPermissions: Array.from(permissions),
-      screenshotUrls: screenshots.map(s => s.trim()).filter(Boolean),
       submitForReview,
     }),
     onSuccess: () => {
@@ -68,19 +66,7 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
     });
   };
 
-  const setShot = (i: number, value: string) =>
-    setScreenshots(prev => prev.map((s, idx) => (idx === i ? value : s)));
-  const addShot = () =>
-    setScreenshots(prev => (prev.length >= 6 ? prev : [...prev, '']));
-  const removeShot = (i: number) =>
-    setScreenshots(prev => (prev.length === 1 ? [''] : prev.filter((_, idx) => idx !== i)));
-
-  const screenshotsValid = screenshots
-    .map(s => s.trim())
-    .filter(Boolean)
-    .every(s => s.startsWith('https://'));
-
-  const valid = id && name && description && url.startsWith('https://') && developerName && screenshotsValid;
+  const valid = id && name && description && url.startsWith('https://') && developerName;
 
   return (
     <View style={styles.root}>
@@ -188,37 +174,6 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
             keyboardType="url"
           />
         </Field>
-
-        <Text style={[styles.section, { color: Colors.textSecondary }]}>SCREENSHOTS</Text>
-        <Text style={[styles.permNote, { color: Colors.textSecondary }]}>
-          Add up to 6 HTTPS image URLs. Reviewers preview these before approving your app.
-        </Text>
-        {screenshots.map((shot, i) => (
-          <View key={i} style={styles.shotRow}>
-            <TextInput
-              style={[styles.input, styles.shotInput, { color: Colors.textPrimary, borderColor: Colors.border }]}
-              value={shot}
-              onChangeText={(t) => setShot(i, t)}
-              placeholder={`https://myapp.example.com/shot-${i + 1}.png`}
-              placeholderTextColor={Colors.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
-            <TouchableOpacity
-              style={[styles.shotRemove, { borderColor: Colors.border }]}
-              onPress={() => removeShot(i)}
-            >
-              <Feather name="x" size={16} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        ))}
-        {screenshots.length < 6 && (
-          <TouchableOpacity style={styles.addShotBtn} onPress={addShot}>
-            <Feather name="plus" size={14} color={Colors.primary} />
-            <Text style={[styles.addShotText, { color: Colors.primary }]}>Add screenshot</Text>
-          </TouchableOpacity>
-        )}
 
         <Text style={[styles.section, { color: Colors.textSecondary }]}>CATEGORY</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
@@ -349,24 +304,6 @@ function createStyles(Colors: ThemeColors) {
       fontSize: 14,
       minHeight: 80,
     },
-    shotRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.sm },
-    shotInput: { flex: 1 },
-    shotRemove: {
-      width: 44,
-      height: 44,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    addShotBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: Spacing.sm,
-      marginBottom: Spacing.sm,
-    },
-    addShotText: { fontSize: 14, fontWeight: '600' },
     chips: { flexDirection: 'row', gap: 8, paddingBottom: Spacing.sm },
     chip: {
       paddingHorizontal: Spacing.md,

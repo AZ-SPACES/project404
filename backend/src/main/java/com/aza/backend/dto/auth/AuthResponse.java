@@ -67,7 +67,5 @@ public class AuthResponse {
         private String silentHoursStart;
         private String silentHoursEnd;
         private java.math.BigDecimal silentHoursPaymentThreshold;
-        /** True when an admin has disabled the AI assistant for this user. */
-        private boolean aiDisabled;
     }
 }

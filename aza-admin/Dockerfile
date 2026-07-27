@@ -1,8 +1,6 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
-# .npmrc carries legacy-peer-deps=true — needed because react-simple-maps@3 peers
-# React 16–18 while this app is on React 19. Without copying it, npm ci fails ERESOLVE.
-COPY package.json package-lock.json .npmrc ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
@@ -18,7 +16,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/public ./public 2>/dev/null || true
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000

@@ -20,7 +20,6 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { useTransferStore } from '../../../store/transferStore';
 import { useToast } from '../../../providers/ToastProvider';
 import { getTransaction, getTransactionInsight } from '../../../services/api';
-import { useProfile } from '../../../providers/ProfileProvider';
 import { queryKeys } from '../../../lib/queryKeys';
 import { CATEGORY_META, CategoryKey } from '../../../utils/categories';
 import { formatCurrency } from '../../../utils/transactionUtils';
@@ -38,7 +37,6 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
   const receiptRef = useRef<View>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const { aiDisabled } = useProfile();
 
   useEffect(() => {
     resetTransferStore();
@@ -73,7 +71,7 @@ export default function SendSuccessScreen({ navigation, route }: SendSuccessScre
       const res = await getTransactionInsight(transactionId);
       return res.data?.data?.insight ?? res.data?.insight ?? null;
     },
-    enabled: !!transactionId && !txLoading && (tx?.status === 'COMPLETED') && !aiDisabled,
+    enabled: !!transactionId && !txLoading && (tx?.status === 'COMPLETED'),
     staleTime: Infinity,
     retry: false,
   });

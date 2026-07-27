@@ -397,8 +397,7 @@ export default function ChatInfoScreen() {
 
   const handleSaveProfilePhoto = useCallback(async () => {
     if (!avatar) { Alert.alert("No photo", "This contact has no profile photo."); return; }
-    // writeOnly: saving only needs add-only access, not full library read.
-    const perm = await MediaLibrary.requestPermissionsAsync(true);
+    const perm = await MediaLibrary.requestPermissionsAsync();
     if (!perm.granted) { Alert.alert("Permission denied", "Allow media access to save photos."); return; }
     try {
       await MediaLibrary.saveToLibraryAsync(avatar);

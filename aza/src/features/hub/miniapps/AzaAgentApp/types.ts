@@ -10,9 +10,7 @@ export type Page =
   | 'dashboard'
   | 'cash_in'
   | 'redeem'
-  | 'history'
-  | 'distribute'
-  | 'distributions';
+  | 'history';
 
 export interface AgentData {
   status: string;            // NONE | PENDING | ACTIVE | SUSPENDED | REJECTED

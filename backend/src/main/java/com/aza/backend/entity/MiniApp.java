@@ -6,9 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -78,15 +76,6 @@ public class MiniApp {
     @Column(name = "permission", length = 30)
     @Builder.Default
     private Set<Permission> requestedPermissions = new LinkedHashSet<>();
-
-    /** Marketing screenshots (HTTPS image URLs) shown to admins during review. */
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "mini_app_screenshots",
-            joinColumns = @JoinColumn(name = "app_id"))
-    @OrderColumn(name = "position")
-    @Column(name = "url", columnDefinition = "TEXT")
-    @Builder.Default
-    private List<String> screenshotUrls = new ArrayList<>();
 
     /** Aza user ID of the developer who submitted this app. */
     @Column(nullable = false)

@@ -17,7 +17,6 @@ export const queryKeys = {
   merchant:            () => ['merchant'] as const,
   agent:               () => ['agent'] as const,
   agentTransactions:   () => ['agent', 'transactions'] as const,
-  floatDistributions:  () => ['agent', 'distributions'] as const,
   spendingSummary:     () => ['spending-summary'] as const,
   // Merchant portal sub-resources
   merchantSessions:    () => ['merchant', 'sessions'] as const,

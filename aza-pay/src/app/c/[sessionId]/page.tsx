@@ -198,7 +198,7 @@ function PinPad({
   accent: string;
 }) {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
-  const maxLen = 4;
+  const maxLen = 6;
 
   return (
     <div className="space-y-4">
@@ -510,27 +510,7 @@ export default function CheckoutPage() {
     setBusy(true);
     setError(null);
     try {
-      const result = await loginStep1(identifier, password);
-      // The backend decides whether a second factor is needed. Only regular
-      // customers with no 2FA get an OTP; staff/2FA accounts return a preAuthToken,
-      // and a direct login returns a token. Route to whichever step actually applies
-      // instead of always sitting on the OTP screen waiting for a code that may
-      // never have been sent.
-      if (result && typeof result === "object") {
-        if (result.preAuthToken) {
-          setPreAuthToken(result.preAuthToken);
-          setTwoFaMode("totp");
-          setTwoFaCode("");
-          setStep("2fa");
-          return;
-        }
-        if (result.accessToken) {
-          setToken(result.accessToken);
-          setStep("passcode");
-          return;
-        }
-      }
-      // No token and no preAuthToken → an OTP was sent; collect it.
+      await loginStep1(identifier, password);
       setStep("otp");
     } catch (e: any) {
       setError(e.message ?? "Login failed");
@@ -1064,7 +1044,7 @@ export default function CheckoutPage() {
                     <PrimaryBtn
                       accent={accent}
                       loading={busy}
-                      disabled={passcode.length !== 4}
+                      disabled={passcode.length < 4}
                       onClick={handleConfirm}
                     >
                       Pay now <ShieldCheck size={15} />

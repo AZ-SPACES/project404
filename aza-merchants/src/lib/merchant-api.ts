@@ -178,7 +178,6 @@ export interface CheckoutSession {
   currency: string;
   description: string | null;
   metadata: string | null;
-  reference: string | null; // merchant-supplied reference (e.g. order/tenant id)
   successUrl: string | null;
   cancelUrl: string | null;
   status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
@@ -545,7 +544,6 @@ export async function getSessions(params: {
   from?: string;
   to?: string;
   q?: string;
-  reference?: string;
   mode?: "live" | "test"; // omit for both
 }): Promise<Page<CheckoutSession>> {
   const qs = new URLSearchParams();
@@ -555,27 +553,9 @@ export async function getSessions(params: {
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
   if (params.q) qs.set("q", params.q);
-  if (params.reference) qs.set("reference", params.reference);
   if (params.mode) qs.set("mode", params.mode);
   const body = await request<{ success: boolean; data: Page<CheckoutSession> }>(
     `/api/v1/merchant/sessions?${qs}`
-  );
-  return body.data;
-}
-
-export interface SessionsSummary {
-  reference: string;
-  completedCount: number;
-  totalAmount: number;
-  totalNetAmount: number;
-}
-
-// Reconcile COMPLETED sessions carrying a given reference (e.g. a tenant/seller id
-// or order group) — count, gross total and net total.
-export async function getSessionsSummary(reference: string): Promise<SessionsSummary> {
-  const qs = new URLSearchParams({ reference });
-  const body = await request<{ success: boolean; data: SessionsSummary }>(
-    `/api/v1/merchant/sessions/summary?${qs}`
   );
   return body.data;
 }
@@ -586,7 +566,6 @@ export async function createSession(data: {
   successUrl?: string;
   cancelUrl?: string;
   metadata?: string;
-  reference?: string;
   idempotencyKey?: string;
 }): Promise<CheckoutSession> {
   const body = await request<{ success: boolean; data: CheckoutSession }>(

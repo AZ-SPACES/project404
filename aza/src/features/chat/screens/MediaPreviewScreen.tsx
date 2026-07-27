@@ -29,6 +29,7 @@ type EditMode = null | 'draw' | 'text' | 'crop';
 const TOOLS = [
   { icon: 'download', label: 'Save' },
   { icon: 'crop', label: 'Crop' },
+  { icon: 'smile', label: 'Sticker' },
   { icon: 'type', label: 'Text' },
   { icon: 'edit-2', label: 'Draw' },
 ] as const;
@@ -195,6 +196,9 @@ export default function MediaPreviewScreen() {
         break;
       case 'Draw':
         setActiveMode(prev => prev === 'draw' ? null : 'draw');
+        break;
+      case 'Sticker':
+        Alert.alert('Stickers', 'Coming soon');
         break;
       default:
         break;

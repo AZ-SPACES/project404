@@ -300,35 +300,32 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleFeedbackSubmitted = (_rating: number) => {
-    openStoreReview();
+  // Gated review: collect in-app feedback first; route only happy (Good) users
+  // to the public store review so unhappy signal stays private + actionable.
+  const handleFeedbackSubmitted = (rating: number) => {
+    if (rating >= 5) openStoreReview();
   };
-
-  const ITUNES_ITEM_ID = '';
 
   const openStoreReview = async () => {
     try {
       const isAvailable = await StoreReview.isAvailableAsync();
       if (isAvailable) {
         await StoreReview.requestReview();
-        return;
-      }
-
-      const androidPackageName = 'com.semekor.k.aza';
-      if (Platform.OS === 'ios') {
-        if (!ITUNES_ITEM_ID) {
-          // No App Store ID yet — don't open a broken link.
-          return;
-        }
-        await Linking.openURL(`https://apps.apple.com/app/apple-store/id${ITUNES_ITEM_ID}?mt=8`);
-        return;
-      }
-
-      const marketUrl = `market://details?id=${androidPackageName}`;
-      if (await Linking.canOpenURL(marketUrl)) {
-        await Linking.openURL(marketUrl);
       } else {
-        await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackageName}`);
+        const androidPackageName = 'com.semekor.k.aza';
+        const itunesItemId = 'YOUR_APP_ID'; // Replace with actual App Store ID when known
+        const storeUrl = Platform.OS === 'ios'
+          ? `https://apps.apple.com/app/apple-store/id${itunesItemId}?mt=8`
+          : `market://details?id=${androidPackageName}`;
+
+        const canOpen = await Linking.canOpenURL(storeUrl);
+        if (canOpen) {
+          await Linking.openURL(storeUrl);
+        } else if (Platform.OS === 'android') {
+          await Linking.openURL(`https://play.google.com/store/apps/details?id=${androidPackageName}`);
+        } else {
+          showToast('Store could not be opened.', 'error');
+        }
       }
     } catch {
       showToast('Could not open store. Please try again later.', 'error');
@@ -500,15 +497,16 @@ export default function ProfileScreen() {
           <View style={styles.bottomSheetDivider} />
 
           <Button
-            title="Agent account"
+            title="Personal account"
             onPress={() => {
               setBottomSheetVisible(false);
-              navigation.navigate('MiniApp', { appId: 'aza_agent' });
             }}
             backgroundColor="#1E5128"
-            textColor="#ffffffff"
+            textColor="#B7ED7E"
             borderRadius={24}
+            disabled
           />
+          <Text style={styles.activeAccountMessage}>You already have a personal account</Text>
           
           <View style={{ height: 16 }} />
           
@@ -522,6 +520,9 @@ export default function ProfileScreen() {
             textColor={hasBusinessAccount ? "#B7ED7E" : "#1E5128"}
             borderRadius={24}
           />
+          {hasBusinessAccount && (
+            <Text style={styles.activeAccountMessage}>You already have a business account</Text>
+          )}
         </Animated.View>
       </View>
 
@@ -824,7 +825,11 @@ function createStyles(Colors: ThemeColors) {
     height: 1,
     backgroundColor: Colors.border,
     marginBottom: 24 },
-
+  activeAccountMessage: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8 },
   profileImageContainer: {
     position: "relative",
     marginBottom: Spacing.md },

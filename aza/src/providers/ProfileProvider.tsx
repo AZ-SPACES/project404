@@ -45,7 +45,6 @@ type ProfileData = {
   silentHoursStart: string | null;
   silentHoursEnd: string | null;
   silentHoursPaymentThreshold: number | null;
-  aiDisabled: boolean;
 };
 
 const INITIAL_PROFILE: ProfileData = {
@@ -85,7 +84,6 @@ const INITIAL_PROFILE: ProfileData = {
   silentHoursStart: null,
   silentHoursEnd: null,
   silentHoursPaymentThreshold: null,
-  aiDisabled: false,
 };
 
 type ProfileContextType = ProfileData & {
@@ -147,7 +145,6 @@ type UserApiResponse = {
   silentHoursStart?: string | null;
   silentHoursEnd?: string | null;
   silentHoursPaymentThreshold?: number | null;
-  aiDisabled?: boolean | null;
 };
 
 function mapUserData(userData: UserApiResponse): ProfileData {
@@ -192,7 +189,6 @@ function mapUserData(userData: UserApiResponse): ProfileData {
     silentHoursStart: userData.silentHoursStart ?? null,
     silentHoursEnd: userData.silentHoursEnd ?? null,
     silentHoursPaymentThreshold: userData.silentHoursPaymentThreshold ?? null,
-    aiDisabled: userData.aiDisabled ?? false,
   };
 }
 

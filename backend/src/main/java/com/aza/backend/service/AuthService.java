@@ -63,7 +63,6 @@ public class AuthService {
     private final ReferralService referralService;
     private final StaffRoleService staffRoleService;
     private final com.aza.backend.repository.MerchantRepository merchantRepository;
-    private final com.aza.backend.repository.AgentRepository agentRepository;
 
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
@@ -139,10 +138,7 @@ public class AuthService {
     public Object preLogin(LoginRequest request, String ipAddress, boolean merchantPortal) {
         rateLimitService.enforceRateLimit("login:" + ipAddress, 50, Duration.ofMinutes(15));
 
-        String identifier = request.getIdentifier().trim();
-        if (identifier.contains("@")) {
-            identifier = identifier.toLowerCase();
-        }
+        String identifier = normalizeIdentifier(request.getIdentifier());
 
         User user = userRepository
                 .findByEmailOrPhoneNumber(identifier, identifier)
@@ -160,16 +156,14 @@ public class AuthService {
         }
         // PENDING_DELETION users can log in to cancel their deletion request
 
-        // Web-portal password login: genuine, non-staff merchants AND agents (incl. superagents)
-        // sign in with just email/phone + password. 2FA is reserved for the QR (AZA App) sign-in,
-        // so the second factor is skipped here. Scoped to real merchant/agent accounts that are not
-        // staff/admin, so mobile logins (no header) and admin/staff logins keep full 2FA/OTP
-        // enforcement, and a plain user sending the header gains nothing. Agent tier (SUPER) is not
-        // checked here — that is enforced at the superagent distribution endpoints.
+        // Merchant-portal password login: genuine, non-staff merchants sign in with just
+        // email/phone + password. 2FA is reserved for the QR (AZA App) sign-in, so the second
+        // factor is skipped here. Scoped to real merchant accounts that are not staff/admin, so
+        // mobile logins (no header) and admin/staff logins keep full 2FA/OTP enforcement, and a
+        // non-merchant sending the header gains nothing.
         if (merchantPortal
-                && staffRoleService.getActiveRoles(user).isEmpty()
-                && (merchantRepository.findByUserId(user.getId()).isPresent()
-                        || agentRepository.findByUserId(user.getId()).isPresent())) {
+                && merchantRepository.findByUserId(user.getId()).isPresent()
+                && staffRoleService.getActiveRoles(user).isEmpty()) {
             return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(),
                     request.getDeviceId(), ipAddress, false, request.getGpsLocation());
         }
@@ -221,10 +215,15 @@ public class AuthService {
     @Transactional
     public Object loginWithOtp(OtpVerifyRequest request, String ipAddress) {
         rateLimitService.enforceRateLimit("otp_verify:" + ipAddress, 100, Duration.ofMinutes(15));
-        otpService.verifyOtp(request.getIdentifier(), request.getCode(), "login");
+
+        // Must match the exact normalization preLogin used when the code was sent — otherwise the
+        // Redis OTP key (and the user lookup) won't line up for a mixed-case or padded email, and a
+        // code that was genuinely delivered fails to verify as "OTP expired or not found".
+        String identifier = normalizeIdentifier(request.getIdentifier());
+        otpService.verifyOtp(identifier, request.getCode(), "login");
 
         User user = userRepository
-                .findByEmailOrPhoneNumber(request.getIdentifier(), request.getIdentifier())
+                .findByEmailOrPhoneNumber(identifier, identifier)
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("USER_NOT_FOUND", "User not found", org.springframework.http.HttpStatus.NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
@@ -1077,6 +1076,17 @@ public class AuthService {
 
     private String sanitize(String value) {
         return value != null ? value.replace("|", "") : "";
+    }
+
+    /**
+     * Canonicalizes a login identifier so the send and verify halves of the OTP flow agree on the
+     * Redis key. Emails are lowercased (they are stored lowercased at signup); phone numbers are
+     * left untouched. Both {@code preLogin} (send) and {@code loginWithOtp} (verify) must use this.
+     */
+    private String normalizeIdentifier(String raw) {
+        if (raw == null) return "";
+        String id = raw.trim();
+        return id.contains("@") ? id.toLowerCase() : id;
     }
 
     private record PreAuthSession(User user, String[] parts) {}
