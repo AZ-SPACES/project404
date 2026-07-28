@@ -276,6 +276,43 @@ export async function adminLoginTotp(preAuthToken: string, code: string): Promis
   return body.data as LoginResult;
 }
 
+// ── Forgot / reset password ──────────────────────────────────────────────────
+// Named request/confirm rather than forgot/reset because `resetPassword` is already taken by the
+// CS tool that force-resets *another* user's password.
+
+/**
+ * Sends a password-reset code to the account's email/phone. The backend answers 200 even when no
+ * account matches — do not surface a different message per outcome, that leaks which identifiers
+ * are registered. Throws only on rate limiting (3 per 10 min) or transport errors.
+ */
+export async function requestPasswordReset(identifier: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Could not send reset code");
+}
+
+/**
+ * Completes the reset with the emailed/SMS code. All existing sessions are revoked server-side;
+ * the next sign-in still goes through the portal's normal 2FA/step-up flow.
+ */
+export async function confirmPasswordReset(
+  identifier: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier, code, newPassword }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.error?.message ?? "Password reset failed");
+}
+
 // ── QR Login ─────────────────────────────────────────────────────────────────
 
 export interface QrLoginSession {

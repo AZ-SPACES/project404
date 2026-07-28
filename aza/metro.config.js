@@ -2,28 +2,41 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-const miniappsRoot = path.resolve(projectRoot, '../miniapps');
+const workspaceRoot = path.resolve(projectRoot, '..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the standalone miniapps directory so Metro hot-reloads changes there.
-config.watchFolders = [miniappsRoot];
+// The mini apps live outside this app, in project404/miniapps, and are consumed as @miniapps/*
+// npm workspace packages (symlinked into the workspace node_modules by the root install).
+//
+// Three things must line up for that to bundle, and all three are load-bearing — dropping any one
+// produces a differently-confusing failure:
+//   1. watchFolders     — so Metro indexes files outside aza/.
+//   2. nodeModulesPaths — so the @miniapps/* symlinks resolve from the workspace root.
+//   3. serverRoot       — raised to the workspace root by EXPO_USE_METRO_WORKSPACE_ROOT=1, set in
+//                         eas.json and required for local `expo export` too. Without it Metro
+//                         resolves the files and then dies on "Failed to get the SHA-1", because
+//                         serverRoot defaults to aza/ and refuses to read above itself.
+config.watchFolders = [
+  path.join(workspaceRoot, 'miniapps'),
+  path.join(workspaceRoot, 'node_modules'),
+];
 
-// Files outside the project root don't inherit aza's node_modules search path.
-// This tells Metro to look here for react, react-native, react-native-webview, etc.
-config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules')];
+config.resolver.nodeModulesPaths = [
+  path.join(projectRoot, 'node_modules'),
+  path.join(workspaceRoot, 'node_modules'),
+];
 
-// Map each @miniapps/* import to its directory. Metro finds index.tsx inside.
-config.resolver.extraNodeModules = {
-  '@miniapps/play-2048':         path.join(miniappsRoot, 'play-2048'),
-  '@miniapps/snake':             path.join(miniappsRoot, 'snake'),
-  '@miniapps/connect4':          path.join(miniappsRoot, 'connect4'),
-  '@miniapps/radio':             path.join(miniappsRoot, 'radio'),
-  '@miniapps/notepad':           path.join(miniappsRoot, 'notepad'),
-  '@miniapps/cedirates':         path.join(miniappsRoot, 'cedirates'),
-  '@miniapps/salifu-and-master': path.join(miniappsRoot, 'salifu-and-master'),
-  // SDK package — maps @aza/miniapp-sdk to the source entry point
-  '@aza/miniapp-sdk':            path.join(miniappsRoot, 'aza-sdk', 'src', 'index.ts'),
+// The SDK is published to npm rather than being a workspace member, so it has no node_modules
+// entry here. Nothing in the app imports it today; this keeps the source path working if it does.
+const externalModules = {
+  '@aza/miniapp-sdk': path.join(workspaceRoot, 'miniapps', 'aza-sdk', 'src', 'index.ts'),
+};
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const filePath = externalModules[moduleName];
+  if (filePath) return { type: 'sourceFile', filePath };
+  return context.resolveRequest(context, moduleName, platform);
 };
 
 module.exports = config;

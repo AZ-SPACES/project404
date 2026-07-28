@@ -419,7 +419,15 @@ export default function DevLoginPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="li-pw" className={labelCls}>Password</label>
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="li-pw" className={labelCls}>Password</label>
+                      <Link
+                        href="/developers/forgot-password"
+                        className="text-xs font-semibold text-[#174717] hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
                     <div className="relative">
                       <input
                         id="li-pw"
