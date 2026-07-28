@@ -1,0 +1,29 @@
+# EAS uploads from the workspace root now that project404 is an npm workspace, so without this
+# file the archive would carry the backend and every web app. Note that when .easignore exists EAS
+# uses it INSTEAD of .gitignore, so the ordinary exclusions have to be restated here.
+
+node_modules/
+**/node_modules/
+.git/
+.idea/
+.vscode/
+
+# Other apps in the monorepo — none of them are needed to build the mobile app.
+backend/
+aza-web/
+aza-admin/
+aza-merchants/
+aza-pay/
+aza-superagents/
+nginx/
+logos/
+docs/
+scripts/
+
+# Build output and local artifacts.
+aza/dist/
+aza/coverage/
+aza/.expo/
+aza/android/
+aza/ios/
+miniapps/aza-sdk/dist/
