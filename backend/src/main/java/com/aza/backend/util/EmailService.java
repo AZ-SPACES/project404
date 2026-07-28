@@ -58,10 +58,13 @@ public class EmailService {
     }
 
     public boolean sendOtp(String email, String otp) {
+        log.info("Sending OTP email to {}", email);
         Context ctx = new Context();
         ctx.setVariable("otp", otp);
         String html = inlineImages(templateEngine.process("email/otp-template", ctx));
-        return sendViaBrevo("AZA", senderEmail, email, "AZA - Your Verification Code", html, null, null);
+        boolean result = sendViaBrevo("AZA Security", senderEmail, email, "AZA - Your Verification Code", html, null, null);
+        log.info("OTP email to {} result: {}", email, result);
+        return result;
     }
 
     public void sendSignupNotification(String email, String name) {
