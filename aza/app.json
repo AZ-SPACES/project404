@@ -90,7 +90,9 @@
       "@react-native-vector-icons/material-icons",
       "@react-native-vector-icons/material-design-icons",
       "./plugins/withSwiftUICoreFix.js",
-      "./plugins/withUserScriptSandboxDisabled.js"
+      "./plugins/withUserScriptSandboxDisabled.js",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {
