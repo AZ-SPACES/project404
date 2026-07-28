@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import { api } from '../services/api';
 import { extractErrorMessage } from '../utils/errorUtils';
+import { composeE164 } from '../utils/validation';
 
 export type PronounOption = 'he/his' | 'she/her' | 'they/them' | 'custom' | null;
 export type EmploymentOption =
@@ -108,7 +109,7 @@ export const useSignupStore = create<SignupState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       const payload = {
-        phone: data.countryCode + data.phoneNumber.replace(/\D/g, ''),
+        phone: composeE164(data.countryCode, data.phoneNumber),
         email: data.email,
         password: data.password,
         firstName: data.firstName,

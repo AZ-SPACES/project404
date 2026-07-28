@@ -22,7 +22,7 @@ import {  useAppTheme, ThemeColors, Typography, Spacing, Radius  } from "../../.
 import Button from "../../../components/ui/Button";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../navigation/types";
-import { isValidPhone } from "../../../utils/validation";
+import { isValidPhone, composeE164, isCompleteLocalNumber } from "../../../utils/validation";
 import { useSignUp } from "../../../providers/SignUpProvider";
 import { checkPhoneAvailability } from "../../../services/api";
 import { BackButton } from '../../../components/ui/BackButton';
@@ -43,6 +43,12 @@ const COUNTRY_CODES: CountryCode[] = [
   { code: '+1',   flag: '🇨🇦', name: 'Canada' },
 ];
 
+/** "45s" / "3m" — human-readable Retry-After for rate-limit messages. */
+function formatWait(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
+  return `${Math.ceil(seconds / 60)}m`;
+}
+
 export default function SignUpNumberScreen() {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.isDark;
@@ -59,9 +65,10 @@ export default function SignUpNumberScreen() {
   );
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-  // The stored phone number is the local digits only; full number = code + localNumber.
+  // The stored phone number is the local digits only. composeE164 strips the
+  // trunk zero, so "0241234567" under +233 becomes +233241234567 (not +23302…).
   const localNumber = data.phoneNumber;
-  const fullNumber = selectedCountry.code + localNumber.replace(/\D/g, '');
+  const fullNumber = composeE164(selectedCountry.code, localNumber);
 
   const phoneError = (touched && localNumber.length > 0 && !isValidPhone(fullNumber))
     ? "Enter a valid phone number"
@@ -88,6 +95,10 @@ export default function SignUpNumberScreen() {
         if (getErrorStatus(err) === 409) {
           setIsAvailable(false);
           setError("This phone number is already linked to an account.");
+        } else if (getErrorStatus(err) === 429) {
+          // Rate limited — retrying immediately only digs the hole deeper.
+          const wait = (err as { retryAfterSeconds?: number }).retryAfterSeconds ?? 60;
+          setError(`Too many attempts. Please wait ${formatWait(wait)} and try again.`);
         } else {
           console.error("Availability check failed", err);
         }
@@ -125,9 +136,12 @@ export default function SignUpNumberScreen() {
       if (getErrorStatus(err) === 409) {
         setIsAvailable(false);
         setError("This phone number is already linked to an account.");
+      } else if (getErrorStatus(err) === 429) {
+        const wait = (err as { retryAfterSeconds?: number }).retryAfterSeconds ?? 60;
+        setError(`Too many attempts. Please wait ${formatWait(wait)} and try again.`);
       } else {
         console.error("Availability check failed", err);
-        setError("Unable to verify phone number. Please try again.");
+        setError("We couldn't reach our servers. Check your connection and try again.");
       }
     } finally {
       setLoading(false);
@@ -141,8 +155,10 @@ export default function SignUpNumberScreen() {
     setError(null);
     setIsAvailable(null);
 
-    const full = selectedCountry.code + digits;
-    if (isValidPhone(full)) {
+    // Only hit the availability endpoint once the number is plausibly complete —
+    // checking 7–8 digit prefixes wastes the server's per-number budget.
+    const full = composeE164(selectedCountry.code, digits);
+    if (isCompleteLocalNumber(digits) && isValidPhone(full)) {
       setIsValidating(true);
       validatePhone(full);
     } else {
@@ -156,8 +172,8 @@ export default function SignUpNumberScreen() {
     setIsAvailable(null);
     setError(null);
     update({ countryCode: country.code });
-    const full = country.code + localNumber.replace(/\D/g, '');
-    if (isValidPhone(full)) {
+    const full = composeE164(country.code, localNumber);
+    if (isCompleteLocalNumber(localNumber) && isValidPhone(full)) {
       setIsValidating(true);
       validatePhone(full);
     }

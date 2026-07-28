@@ -275,13 +275,21 @@ public class UserController {
 
     @GetMapping("/check-email")
     public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam String email) {
-        rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase(), 5, Duration.ofMinutes(10));
+        // 15/10min: enough for signup typo-and-retry loops, still blocks bulk
+        // enumeration of a single address (IP/fingerprint limits cap volume).
+        rateLimitService.enforceRateLimit("check:email:" + email.toLowerCase().trim(), 15, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isEmailAvailable(email)));
     }
 
     @GetMapping("/check-phone")
     public ResponseEntity<ApiResponse<Boolean>> checkPhone(@RequestParam String phone) {
-        rateLimitService.enforceRateLimit("check:phone:" + phone, 5, Duration.ofMinutes(10));
+        // Key on the canonical E.164 form so "024…" and "+23324…" share one budget.
+        // 15/10min: the signup screen fires a check per typing pause, so 5 locked
+        // legitimate users out mid-signup; enumeration is still bounded by the
+        // per-IP and per-device-fingerprint limits.
+        rateLimitService.enforceRateLimit(
+                "check:phone:" + com.aza.backend.util.PhoneNumberUtil.normalize(phone),
+                15, Duration.ofMinutes(10));
         return ResponseEntity.ok(ApiResponse.success(userService.isPhoneAvailable(phone)));
     }
 

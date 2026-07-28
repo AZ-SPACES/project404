@@ -17,6 +17,28 @@ export function isValidPhone(value: string): boolean {
   return digits.length >= 7 && digits.length <= 15 && PHONE_RE.test(value.trim());
 }
 
+/**
+ * Compose a full E.164 number from a country code and a locally-typed number.
+ * Strips the trunk zero ("024 123 4567" with +233 → "+233241234567") — without
+ * this, concatenation produces "+2330241234567", which the backend stores
+ * verbatim and SMS providers reject.
+ */
+export function composeE164(countryCode: string, localNumber: string): string {
+  const digits = localNumber.replace(/\D/g, '').replace(/^0+/, '');
+  return countryCode + digits;
+}
+
+/**
+ * True once a local number is plausibly complete (≥9 significant digits — the
+ * Ghana national length; other supported countries are 9–10). Used to gate
+ * availability checks so we don't burn per-number rate-limit budget on
+ * 7–8 digit prefixes while the user is still typing.
+ */
+export function isCompleteLocalNumber(localNumber: string): boolean {
+  const digits = localNumber.replace(/\D/g, '').replace(/^0+/, '');
+  return digits.length >= 9 && digits.length <= 11;
+}
+
 // ─── Password ─────────────────────────────────────────────────────────────────
 
 export type PasswordRule = {

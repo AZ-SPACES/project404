@@ -68,7 +68,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${app.ratelimit.ip.window-seconds:60}")
     private int ipWindowSeconds;
 
-    @Value("${app.ratelimit.ip.auth-limit:15}")
+    @Value("${app.ratelimit.ip.auth-limit:200}")
     private int authIpLimit;
     @Value("${app.ratelimit.ip.auth-window-seconds:900}")
     private int authIpWindowSeconds;

@@ -396,14 +396,9 @@ public class UserService {
     }
 
     private String normalizePhone(String phone) {
-        if (phone == null) return null;
-        String p = phone.replaceAll("[\\s\\-()]", "");
-        if (p.startsWith("0") && p.length() == 10) {
-            return "+233" + p.substring(1);
-        } else if (!p.startsWith("+")) {
-            return "+" + p;
-        }
-        return p;
+        // Delegates to the shared util so search, availability checks, signup and
+        // SMS sending all agree on one canonical E.164 form.
+        return com.aza.backend.util.PhoneNumberUtil.normalize(phone);
     }
 
     // ==================== PRIVACY ====================

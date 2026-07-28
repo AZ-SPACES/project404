@@ -149,21 +149,12 @@ public class SmsService {
 
     private String formatPhoneNumber(String phoneNumber) {
         if (phoneNumber == null) return "";
-        // Remove all non-digits
-        String digits = phoneNumber.replaceAll("\\D", "");
-        
-        // If it starts with 0, replace with 233
-        if (digits.startsWith("0") && digits.length() == 10) {
-            return "233" + digits.substring(1);
-        }
-        
-        // If it starts with +, it was handled by \\D (removed)
-        // If it already starts with 233 and is 12 digits, return as is
-        if (digits.startsWith("233") && digits.length() == 12) {
-            return digits;
-        }
-
-        return digits;
+        // Normalize to canonical E.164 first — this also repairs legacy rows stored
+        // as "+2330XXXXXXXXX" (country code + redundant trunk zero), which Arkesel
+        // silently rejects. Arkesel expects the number without the leading "+".
+        String normalized = PhoneNumberUtil.normalize(phoneNumber);
+        if (normalized == null) return "";
+        return normalized.startsWith("+") ? normalized.substring(1) : normalized.replaceAll("\\D", "");
     }
 
     // ── GDPR Account Deletion ──────────────────────────────────────────────────

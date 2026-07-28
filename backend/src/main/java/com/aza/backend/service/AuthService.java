@@ -74,18 +74,25 @@ public class AuthService {
 
     @Transactional
     public AuthResponse signup(SignupRequest request, String ipAddress) {
-        rateLimitService.enforceRateLimit("signup:" + ipAddress, 3, Duration.ofHours(1));
+        // Per-IP, not per-user: Ghanaian carriers use CGNAT, so one public IP can
+        // front hundreds of legitimate devices. 25/h absorbs a launch burst behind
+        // a shared NAT while still capping scripted mass-registration from one IP;
+        // per-device fingerprint limits and behavioral blocking cover the rest.
+        rateLimitService.enforceRateLimit("signup:" + ipAddress, 25, Duration.ofHours(1));
 
         String email = request.getEmail().toLowerCase().trim();
+        // Canonicalize before ANY lookup or persistence so "+233024…", "024…" and
+        // "+23324…" all resolve to the same stored account.
+        String phone = com.aza.backend.util.PhoneNumberUtil.normalize(request.getPhone());
         if (userRepository.existsByEmail(email)) {
             throw new com.aza.backend.exception.AppException("EMAIL_ALREADY_EXISTS", "This email address is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
-        if (userRepository.existsByPhoneNumber(request.getPhone())) {
+        if (userRepository.existsByPhoneNumber(phone)) {
             throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
 
         User user = User.builder()
-                .phoneNumber(request.getPhone())
+                .phoneNumber(phone)
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .passcodeHash(request.getPasscode() != null && !request.getPasscode().isEmpty() 
@@ -136,12 +143,17 @@ public class AuthService {
     }
 
     public Object preLogin(LoginRequest request, String ipAddress, boolean merchantPortal) {
-        rateLimitService.enforceRateLimit("login:" + ipAddress, 50, Duration.ofMinutes(15));
+        // Two independent brute-force gates:
+        //  - per-IP: sized for carrier CGNAT where one IP fronts many real users.
+        //  - per-identifier: the actual credential-stuffing defence — no single
+        //    account can be attacked more than 10 times per window regardless of
+        //    how many source IPs the attacker rotates through.
+        rateLimitService.enforceRateLimit("login:" + ipAddress, 150, Duration.ofMinutes(15));
 
         String identifier = normalizeIdentifier(request.getIdentifier());
+        rateLimitService.enforceRateLimit("login:id:" + identifier, 10, Duration.ofMinutes(15));
 
-        User user = userRepository
-                .findByEmailOrPhoneNumber(identifier, identifier)
+        User user = findUserByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("INVALID_CREDENTIALS", "Invalid credentials", org.springframework.http.HttpStatus.UNAUTHORIZED));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -222,8 +234,7 @@ public class AuthService {
         String identifier = normalizeIdentifier(request.getIdentifier());
         otpService.verifyOtp(identifier, request.getCode(), "login");
 
-        User user = userRepository
-                .findByEmailOrPhoneNumber(identifier, identifier)
+        User user = findUserByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new com.aza.backend.exception.AppException("USER_NOT_FOUND", "User not found", org.springframework.http.HttpStatus.NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
@@ -424,20 +435,22 @@ public class AuthService {
     // ==================== FORGOT / RESET PASSWORD ====================
 
     public void forgotPassword(ForgotPasswordRequest request) {
+        // Key on the normalized identifier so "024…" and "+23324…" share one budget,
+        // and so the OTP Redis key written here matches the one resetPassword reads.
+        String identifier = normalizeIdentifier(request.getIdentifier());
         rateLimitService.enforceRateLimit(
-                "forgot_pwd:" + request.getIdentifier(), 3, Duration.ofMinutes(10));
+                "forgot_pwd:" + identifier, 3, Duration.ofMinutes(10));
 
-        userRepository.findByEmailOrPhoneNumber(
-                        request.getIdentifier(), request.getIdentifier())
-                .ifPresent(user -> otpService.sendOtp(request.getIdentifier(), "password_reset"));
+        findUserByIdentifier(request.getIdentifier())
+                .ifPresent(user -> otpService.sendOtp(identifier, "password_reset"));
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request, String ipAddress) {
-        otpService.verifyOtp(request.getIdentifier(), request.getCode(), "password_reset");
+        String identifier = normalizeIdentifier(request.getIdentifier());
+        otpService.verifyOtp(identifier, request.getCode(), "password_reset");
 
-        User user = userRepository
-                .findByEmailOrPhoneNumber(request.getIdentifier(), request.getIdentifier())
+        User user = findUserByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new AppException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -1086,7 +1099,24 @@ public class AuthService {
     private String normalizeIdentifier(String raw) {
         if (raw == null) return "";
         String id = raw.trim();
-        return id.contains("@") ? id.toLowerCase() : id;
+        if (id.contains("@")) return id.toLowerCase();
+        return com.aza.backend.util.PhoneNumberUtil.normalize(id);
+    }
+
+    /**
+     * Looks a user up by email or phone. Tries the canonical (normalized) form
+     * first; falls back to the raw input so accounts created before phone
+     * normalization existed (e.g. stored as "+2330…") can still authenticate.
+     */
+    private java.util.Optional<User> findUserByIdentifier(String raw) {
+        String normalized = normalizeIdentifier(raw);
+        java.util.Optional<User> user =
+                userRepository.findByEmailOrPhoneNumber(normalized, normalized);
+        if (user.isEmpty() && raw != null && !normalized.equals(raw.trim())) {
+            String trimmed = raw.trim();
+            user = userRepository.findByEmailOrPhoneNumber(trimmed, trimmed);
+        }
+        return user;
     }
 
     private record PreAuthSession(User user, String[] parts) {}

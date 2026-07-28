@@ -5,20 +5,36 @@
  * iOS NSPinnedDomains) so ALL HTTP traffic — Axios, fetch, WebSocket — is
  * covered without any JavaScript changes.
  *
- * ── Updating after a Let's Encrypt renewal (every ~90 days) ─────────────────
- * 1. Run the helper script:  node scripts/check-pins.js
- *    (or manually)
- *    echo | openssl s_client -servername api.aza.systems -connect api.aza.systems:443 2>/dev/null \
- *      | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER \
- *      | openssl dgst -sha256 -binary | base64
- * 2. Replace LEAF_PIN below with the new hash.
- * 3. Update the same hash in:
- *      android/app/src/main/res/xml/network_security_config.xml  (leaf <pin>)
- *      ios/aza/Info.plist  (NSPinnedLeafIdentities SPKI-SHA256-BASE64)
- * 4. Commit and release before the old cert expires.
+ * ── Pinning strategy (changed 2026-07: root-CA pins, not leaf pins) ─────────
  *
- * The INTERMEDIATE_PIN (Let's Encrypt E8) is stable across renewals and only
- * needs updating if Let's Encrypt rotates that intermediate CA.
+ * The previous version pinned the origin's Let's Encrypt LEAF key plus one
+ * intermediate. That broke every shipped build twice over: Let's Encrypt
+ * renews the leaf (new key) every ~90 days, and the domain is now proxied
+ * through Cloudflare, which serves its own edge certificate and freely
+ * rotates both the certificate and the issuing CA. A native pin cannot be
+ * fixed by an OTA update, so a mismatch bricks the app until users install
+ * a new binary.
+ *
+ * We now pin the ROOT CAs of the two authorities Cloudflare issues from for
+ * this zone (Let's Encrypt / ISRG and Google Trust Services). Root keys are
+ * stable for a decade or more, and validation still fails for any certificate
+ * that does not chain to one of these specific roots — a mis-issued cert from
+ * any other public CA (the usual MITM path) is rejected.
+ *
+ * SECURITY NOTE — keep these two ops controls in place:
+ *   1. In Cloudflare, restrict Universal SSL to CAs covered here (Let's
+ *      Encrypt or Google), so an SSL.com-issued edge cert never appears:
+ *      PATCH /zones/{zone}/ssl/universal/settings {"certificate_authority":"lets_encrypt"}
+ *   2. The Android <pin-set> has an expiration date. After that date pinning
+ *      degrades to standard CA validation instead of hard-failing — a safety
+ *      valve so a forgotten update can never brick payments again. Ship an
+ *      updated build well before it lapses.
+ *
+ * Verify the live chain against these pins any time with:
+ *   node scripts/check-pins.js
+ *
+ * Pin provenance (SPKI SHA-256, base64) — computed 2026-07-28 from the
+ * CA-published root certificates (letsencrypt.org/certs, i.pki.goog).
  */
 
 const { withAndroidManifest, withInfoPlist } = require('@expo/config-plugins');
@@ -27,19 +43,26 @@ const fs = require('fs');
 
 const DOMAIN = 'api.aza.systems';
 
-// Leaf cert public key SPKI SHA256 (base64). Expires 2026-08-16.
-const LEAF_PIN = 'SwYDgPAIwIJcoIbzr4oG1I54WGJosyj81ErQfBBbMQo=';
+// Root CA public keys the API's certificate chain must terminate in.
+const ROOT_PINS = [
+  { name: "ISRG Root X1 (Let's Encrypt, RSA)",   pin: 'C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=' },
+  { name: "ISRG Root X2 (Let's Encrypt, ECDSA)", pin: 'diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=' },
+  { name: 'GTS Root R1 (Google, RSA)',           pin: 'hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc=' },
+  { name: 'GTS Root R2 (Google, RSA)',           pin: 'Vfd95BwDeSQo+NUYxVEEIlvkOlWY2SalKK1lPhzOx78=' },
+  { name: 'GTS Root R3 (Google, ECDSA)',         pin: 'QXnt2YHvdHR3tJYmQIr0Paosp6t/nggsEGD4QJZ3Q0g=' },
+  { name: 'GTS Root R4 (Google, ECDSA)',         pin: 'mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=' },
+];
 
-// Let's Encrypt E8 intermediate CA SPKI SHA256. Stable across leaf renewals.
-const INTERMEDIATE_PIN = 'iFvwVyJSxnQdyaUvUERIf+8qk7gRze3612JMwoO3zdU=';
+// After this date Android falls back to standard CA validation instead of
+// hard-failing on a pin mismatch. Ship an updated build well before then.
+const PIN_SET_EXPIRATION = '2027-08-01';
 
 const NETWORK_SECURITY_XML = `<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
   <domain-config cleartextTrafficPermitted="false">
     <domain includeSubdomains="true">${DOMAIN}</domain>
-    <pin-set>
-      <pin digest="SHA-256">${LEAF_PIN}</pin>
-      <pin digest="SHA-256">${INTERMEDIATE_PIN}</pin>
+    <pin-set expiration="${PIN_SET_EXPIRATION}">
+${ROOT_PINS.map(({ name, pin }) => `      <!-- ${name} -->\n      <pin digest="SHA-256">${pin}</pin>`).join('\n')}
     </pin-set>
   </domain-config>
 </network-security-config>
@@ -69,8 +92,9 @@ function withIosSslPinning(config) {
     ats.NSPinnedDomains = {
       [DOMAIN]: {
         NSIncludesSubdomains: false,
-        NSPinnedLeafIdentities: [{ 'SPKI-SHA256-BASE64': LEAF_PIN }],
-        NSPinnedCAIdentities: [{ 'SPKI-SHA256-BASE64': INTERMEDIATE_PIN }],
+        // CA-level pinning only — the chain must terminate in one of these
+        // roots. No leaf pins: leaves rotate with every renewal.
+        NSPinnedCAIdentities: ROOT_PINS.map(({ pin }) => ({ 'SPKI-SHA256-BASE64': pin })),
       },
     };
     modConfig.modResults.NSAppTransportSecurity = ats;

@@ -1,40 +1,77 @@
 package com.aza.backend.security.fingerprint;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.Arrays;
+import java.util.List;
 
 @Service
+@Slf4j
 public class RequestFingerprintService {
 
     @Value("${app.trusted-proxy-ips:}")
     private String trustedProxyIps;
 
+    /** Parsed at startup: each entry may be a single IP or a CIDR range. */
+    private final List<IpAddressMatcher> trustedProxyMatchers = new ArrayList<>();
+
+    @PostConstruct
+    void parseTrustedProxies() {
+        if (trustedProxyIps == null || trustedProxyIps.isBlank()) {
+            log.warn("app.trusted-proxy-ips is empty — X-Real-IP/X-Forwarded-For will never be "
+                    + "trusted, so every request behind a reverse proxy resolves to the proxy's "
+                    + "IP and shares one rate-limit bucket. Set it in production.");
+            return;
+        }
+        for (String entry : trustedProxyIps.split(",")) {
+            String candidate = entry.trim();
+            if (candidate.isEmpty()) continue;
+            try {
+                // IpAddressMatcher accepts both single addresses and CIDR ranges (v4 + v6).
+                trustedProxyMatchers.add(new IpAddressMatcher(candidate));
+            } catch (IllegalArgumentException e) {
+                log.error("Ignoring malformed trusted-proxy entry '{}': {}", candidate, e.getMessage());
+            }
+        }
+    }
+
     /**
-     * Extracts the real client IP. Trusts X-Forwarded-For only when the request
-     * arrives from a known trusted proxy (load balancer, Cloudflare, etc.).
+     * Extracts the real client IP. Forwarding headers are trusted only when the
+     * request arrives from a known trusted proxy (nginx, load balancer), matched
+     * by exact IP or CIDR range.
+     *
+     * Header precedence is chosen to resist spoofing:
+     *   1. X-Real-IP — nginx overwrites this with its own view of the peer
+     *      ($remote_addr, or the Cloudflare-restored client IP when the real_ip
+     *      module is configured), so a client can never inject it.
+     *   2. CF-Connecting-IP — set by Cloudflare when the zone is proxied.
+     *   3. X-Forwarded-For rightmost entry — the only element appended by our own
+     *      proxy. The leftmost entries are client-supplied and trivially forged,
+     *      so they must never be used for rate limiting or audit.
      */
     public String getClientIp(HttpServletRequest request) {
         String remoteAddr = request.getRemoteAddr();
         if (isTrustedProxy(remoteAddr)) {
-            String cfIp = request.getHeader("CF-Connecting-IP"); // Cloudflare
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) return realIp.trim();
+
+            String cfIp = request.getHeader("CF-Connecting-IP");
             if (cfIp != null && !cfIp.isBlank()) return cfIp.trim();
 
             String forwarded = request.getHeader("X-Forwarded-For");
             if (forwarded != null && !forwarded.isBlank()) {
-                // Leftmost entry is the original client
-                return forwarded.split(",")[0].trim();
+                String[] hops = forwarded.split(",");
+                return hops[hops.length - 1].trim();
             }
-            String realIp = request.getHeader("X-Real-IP");
-            if (realIp != null && !realIp.isBlank()) return realIp.trim();
         }
         return remoteAddr;
     }
@@ -65,11 +102,15 @@ public class RequestFingerprintService {
     }
 
     private boolean isTrustedProxy(String remoteAddr) {
-        if (trustedProxyIps == null || trustedProxyIps.isBlank()) return false;
-        Set<String> trusted = Arrays.stream(trustedProxyIps.split(","))
-                .map(String::trim)
-                .collect(Collectors.toSet());
-        return trusted.contains(remoteAddr);
+        if (remoteAddr == null || trustedProxyMatchers.isEmpty()) return false;
+        for (IpAddressMatcher matcher : trustedProxyMatchers) {
+            try {
+                if (matcher.matches(remoteAddr)) return true;
+            } catch (IllegalArgumentException ignored) {
+                // remoteAddr not parseable against this matcher's family — try the next
+            }
+        }
+        return false;
     }
 
     private static String nvl(String s) {
