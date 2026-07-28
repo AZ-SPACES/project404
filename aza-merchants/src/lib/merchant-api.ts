@@ -426,6 +426,32 @@ export async function verifyTwoFactorOtp(
   return body.data;
 }
 
+// ─── Forgot / reset password ─────────────────────────────────────────────────
+
+/**
+ * Sends a password-reset code to the account's email/phone. The backend answers 200 even when
+ * no account matches — never surface a different message per outcome, that leaks which
+ * identifiers are registered. Throws only on rate limiting (3 per 10 min) or transport errors.
+ */
+export async function forgotPassword(identifier: string): Promise<void> {
+  await request("/api/v1/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+/** Completes the reset with the emailed/SMS code. All existing sessions are revoked server-side. */
+export async function resetPassword(
+  identifier: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  await request("/api/v1/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ identifier, code, newPassword }),
+  });
+}
+
 // ─── QR Login ────────────────────────────────────────────────────────────────
 
 export interface QrLoginSession {

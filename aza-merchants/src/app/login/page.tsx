@@ -358,7 +358,15 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Password</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <InputGroup>
                   <InputGroupAddon align="inline-start">
                     <Lock size={14} />
