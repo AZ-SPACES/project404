@@ -165,6 +165,40 @@ class AuthServiceTest {
     }
 
     @Test
+    void preLogin_developerPortal_regularUser_sendsLoginOtpInsteadOfFinalizing() {
+        // Without the developer-portal flag a regular user (no staff role, no 2FA) is logged in
+        // directly, but the developer portal UI always advances to an OTP step — so the backend
+        // must actually send the code rather than silently finalizing the session.
+        User user = activeUser();
+        when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+
+        Object result = authService.preLogin(loginRequest("alice@example.com", "pass"), "1.2.3.4", false, true);
+
+        assertNull(result);
+        verify(otpService).sendOtp("alice@example.com", "login");
+        verify(jwtUtil, never()).generateAccessToken(any(), anyString());
+        verify(emailService, never()).sendLoginNotification(anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void preLogin_developerPortal_twoFactorUser_stillGetsOtpFirst() {
+        // The portal walks Credentials → OTP → 2FA; the preAuthToken handoff happens in
+        // loginWithOtp after the OTP is verified, not at the credentials step.
+        User user = activeUser();
+        user.setTwoFactorEnabled(true);
+        user.setTwoFactorSecret("encrypted-secret");
+        when(userRepository.findByEmailOrPhoneNumber(anyString(), anyString())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+
+        Object result = authService.preLogin(loginRequest("alice@example.com", "pass"), "1.2.3.4", false, true);
+
+        assertNull(result);
+        verify(otpService).sendOtp("alice@example.com", "login");
+        verify(valueOps, never()).set(startsWith("totp:preauth:"), anyString(), any(Duration.class));
+    }
+
+    @Test
     void loginWithOtp_mixedCaseEmail_normalizedBeforeVerifyAndLookup() {
         // preLogin lowercases the email before sending the code, so the stored OTP key and the
         // user row (emails are persisted lowercased) are keyed on the lowercased address. Verify

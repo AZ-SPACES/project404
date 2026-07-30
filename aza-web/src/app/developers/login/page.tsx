@@ -62,7 +62,9 @@ export default function DevLoginPage() {
   async function post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     const res = await fetch(`${API}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // X-Aza-Client tells the backend this is the developer portal, which always
+      // requires the email/phone OTP verification step after credentials.
+      headers: { 'Content-Type': 'application/json', 'X-Aza-Client': 'developer-portal' },
       body: JSON.stringify(body),
     });
     return res.json();

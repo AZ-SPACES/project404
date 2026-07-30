@@ -143,6 +143,10 @@ public class AuthService {
     }
 
     public Object preLogin(LoginRequest request, String ipAddress, boolean merchantPortal) {
+        return preLogin(request, ipAddress, merchantPortal, false);
+    }
+
+    public Object preLogin(LoginRequest request, String ipAddress, boolean merchantPortal, boolean developerPortal) {
         // Two independent brute-force gates:
         //  - per-IP: sized for carrier CGNAT where one IP fronts many real users.
         //  - per-identifier: the actual credential-stuffing defence — no single
@@ -178,6 +182,15 @@ public class AuthService {
                 && staffRoleService.getActiveRoles(user).isEmpty()) {
             return finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(),
                     request.getDeviceId(), ipAddress, false, request.getGpsLocation());
+        }
+
+        // Developer-portal password login: the portal always walks Credentials → Verification →
+        // 2FA, so every account type gets a login OTP here regardless of staff role. If the
+        // account has 2FA enabled, loginWithOtp returns the preAuthToken after the OTP is
+        // verified, which is when the portal shows its 2FA step.
+        if (developerPortal) {
+            otpService.sendOtp(identifier, "login");
+            return null;
         }
 
         if (Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
