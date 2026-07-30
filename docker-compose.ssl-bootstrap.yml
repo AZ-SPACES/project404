@@ -1,0 +1,15 @@
+# Temporary nginx config for issuing the FIRST Let's Encrypt certificate on a machine
+# that has none yet. Layered on last, it swaps nginx onto an HTTP-only config that can
+# answer the ACME HTTP-01 challenge — the real config's `listen 443` block references
+# cert files that do not exist yet, so nginx would fail to start without this.
+#
+# Used only by scripts/init-api-ssl.sh. Never part of a normal deploy.
+# Command: docker compose -f docker-compose.yml -f docker-compose.backend.yml \
+#                         -f docker-compose.ssl-bootstrap.yml up -d nginx
+
+services:
+  nginx:
+    volumes:
+      - ./nginx/bootstrap/conf.d:/etc/nginx/conf.d:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro

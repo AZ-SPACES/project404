@@ -32,10 +32,10 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            # The droplet serves api.aza.systems only — every frontend is on Vercel. The
-            # backend override is what points nginx at nginx/backend-only/conf.d, the only
-            # tree with a `listen 443` block for the API. Deploying without it leaves nginx
-            # on the HTTP-only bootstrap config and the API unreachable (Cloudflare 521).
+            # The droplet serves api.aza.systems only — every frontend is on Vercel, so the
+            # overlay disables the four Next.js services. nginx/conf.d is the API config in
+            # its final state, HTTPS included, so a plain `docker compose up` is still
+            # correct here; the overlay only trims what gets built.
             COMPOSE="docker compose -f docker-compose.yml -f docker-compose.backend.yml"
 
             echo "→ Pulling latest code..."
