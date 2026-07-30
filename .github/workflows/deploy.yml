@@ -32,18 +32,28 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
+            # The droplet serves api.aza.systems only — every frontend is on Vercel. The
+            # backend override is what points nginx at nginx/backend-only/conf.d, the only
+            # tree with a `listen 443` block for the API. Deploying without it leaves nginx
+            # on the HTTP-only bootstrap config and the API unreachable (Cloudflare 521).
+            COMPOSE="docker compose -f docker-compose.yml -f docker-compose.backend.yml"
+
             echo "→ Pulling latest code..."
             git pull origin main
 
             echo "→ Rebuilding and restarting services..."
             SENTRY_RELEASE=$(git rev-parse --short HEAD) \
-            docker compose up --build -d --remove-orphans
+            $COMPOSE up --build -d --remove-orphans
 
             echo "→ Waiting for services to become healthy..."
             sleep 15
 
             echo "→ Checking running containers..."
-            docker compose ps
+            $COMPOSE ps
+
+            echo "→ Verifying nginx is serving HTTPS..."
+            $COMPOSE exec -T nginx nginx -t
+            $COMPOSE exec -T nginx grep -q "listen 443" /etc/nginx/conf.d/default.conf
 
             echo "→ Pruning unused images..."
             docker image prune -f
