@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getRateLimits,
@@ -8,7 +8,10 @@ import {
   updateRateLimit,
   deleteRateLimit,
   toggleRateLimit,
+  getRateLimitSwitch,
+  setRateLimitSwitch,
   type RateLimitConfig,
+  type RateLimitGlobalSwitch,
 } from "@/lib/admin-api";
 import {
   Gauge,
@@ -18,6 +21,8 @@ import {
   Loader2,
   AlertCircle,
   Check,
+  ShieldOff,
+  ShieldCheck,
 } from "lucide-react";
 
 const SCOPE_OPTIONS: RateLimitConfig["scope"][] = ["USER", "IP", "GLOBAL"];
@@ -50,6 +55,180 @@ function fmtWindow(sec: number): string {
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) return `${sec / 60}m`;
   return `${sec / 3600}h`;
+}
+
+// Options for how long the kill switch stays off. `null` = until an admin turns it back on.
+const DISABLE_DURATIONS: { label: string; minutes: number | null }[] = [
+  { label: "30 minutes", minutes: 30 },
+  { label: "2 hours", minutes: 120 },
+  { label: "8 hours", minutes: 480 },
+  { label: "24 hours", minutes: 1440 },
+  { label: "Until I turn it back on", minutes: null },
+];
+
+function fmtCountdown(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec % 60}s`;
+  return `${sec}s`;
+}
+
+/**
+ * Break-glass switch that suspends every per-IP/user/fingerprint limit and behavioural block
+ * across all backend instances. IP-reputation blocks and geo-restrictions are unaffected.
+ */
+function GlobalKillSwitch({ onDone }: { onDone: (msg: string) => void }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const [minutes, setMinutes] = useState<number | null>(120);
+  const [now, setNow] = useState(() => Date.now());
+
+  const { data: state, isLoading, dataUpdatedAt } = useQuery<RateLimitGlobalSwitch>({
+    queryKey: ["rateLimitSwitch"],
+    queryFn: getRateLimitSwitch,
+    refetchInterval: 30_000,
+  });
+
+  // The switch is off with an auto-re-enable time — count the TTL down locally between the
+  // 30s refetches instead of showing a number that only moves twice a minute.
+  const counting = state?.disabled === true && state.expiresInSeconds > 0;
+
+  useEffect(() => {
+    if (!counting) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [counting]);
+
+  const remaining =
+    counting && state
+      ? Math.min(
+          state.expiresInSeconds,
+          Math.max(0, Math.round(state.expiresInSeconds - (now - dataUpdatedAt) / 1000))
+        )
+      : null;
+
+  const mutation = useMutation({
+    mutationFn: ({ disabled, mins }: { disabled: boolean; mins: number | null }) =>
+      setRateLimitSwitch(disabled, mins ?? undefined),
+    onSuccess: (next) => {
+      queryClient.setQueryData(["rateLimitSwitch"], next);
+      setConfirming(false);
+      onDone(next.disabled ? "Rate limiting is OFF platform-wide" : "Rate limiting re-enabled");
+    },
+  });
+
+  const disabled = state?.disabled ?? false;
+
+  return (
+    <div
+      className={`rounded-2xl border p-5 transition-colors ${
+        disabled ? "border-red-500/30 bg-red-500/[0.07]" : "border-border bg-card"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3">
+          {disabled ? (
+            <ShieldOff size={20} className="text-red-400 mt-0.5 shrink-0" />
+          ) : (
+            <ShieldCheck size={20} className="text-foreground/40 mt-0.5 shrink-0" />
+          )}
+          <div>
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              Global rate limiting
+              {isLoading ? (
+                <Loader2 size={12} className="animate-spin text-foreground/30" />
+              ) : (
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold uppercase tracking-wider ${
+                    disabled
+                      ? "bg-red-500/15 text-red-400 border-red-500/25"
+                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  }`}
+                >
+                  {disabled ? "Off" : "Enforcing"}
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-foreground/40 mt-1 max-w-xl">
+              {disabled
+                ? "Every request throttle and behavioural block is suspended across the server. IP blocks and geo-restrictions still apply."
+                : "Suspends every request throttle and behavioural block across the server. Use for incidents and load testing only."}
+            </p>
+            {disabled && remaining !== null && (
+              <p className="text-xs text-red-400/80 mt-1.5">
+                Re-arms automatically in {fmtCountdown(remaining)}
+              </p>
+            )}
+            {disabled && remaining === null && (
+              <p className="text-xs text-red-400/80 mt-1.5">
+                Stays off until switched back on — don&apos;t leave it here.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          {disabled ? (
+            <button
+              onClick={() => mutation.mutate({ disabled: false, mins: null })}
+              disabled={mutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 disabled:opacity-40 transition-all"
+            >
+              {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+              Turn back on
+            </button>
+          ) : confirming ? (
+            <>
+              <select
+                value={minutes === null ? "never" : String(minutes)}
+                onChange={(e) =>
+                  setMinutes(e.target.value === "never" ? null : Number(e.target.value))
+                }
+                className="bg-muted/30 border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-foreground/20"
+              >
+                {DISABLE_DURATIONS.map((d) => (
+                  <option key={d.label} value={d.minutes === null ? "never" : d.minutes}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => mutation.mutate({ disabled: true, mins: minutes })}
+                disabled={mutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/25 text-red-400 text-sm font-semibold hover:bg-red-500/25 disabled:opacity-40 transition-all"
+              >
+                {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <ShieldOff size={13} />}
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="px-3 py-2 rounded-xl bg-muted/30 text-foreground/50 text-sm hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20 disabled:opacity-40 transition-all"
+            >
+              <ShieldOff size={13} />
+              Turn off rate limiting
+            </button>
+          )}
+        </div>
+      </div>
+
+      {mutation.error && (
+        <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5 text-red-400 text-sm flex items-center gap-2">
+          <AlertCircle size={14} />
+          {(mutation.error as Error).message}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function RateLimitsPage() {
@@ -295,6 +474,9 @@ export default function RateLimitsPage() {
           </button>
         )}
       </div>
+
+      {/* Platform-wide kill switch */}
+      <GlobalKillSwitch onDone={showToast} />
 
       {/* Create form (above table) */}
       {formMode === "create" && RuleForm}

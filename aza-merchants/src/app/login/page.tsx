@@ -9,6 +9,7 @@ import {
   pickOtpTwoFactorMethod,
   requestTwoFactorOtp,
   verifyTwoFactorOtp,
+  verifyTotpLogin,
   type OtpTwoFactorMethod,
   getMe,
   initiateQrLogin,
@@ -16,7 +17,7 @@ import {
   completeQrLogin,
   type QrLoginSession,
 } from "@/lib/merchant-api";
-import { Loader2, Eye, EyeOff, ArrowLeft, AtSign, Phone, Lock, QrCode, RefreshCw } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, AtSign, Phone, Lock, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AuthSlideshow } from "@/components/auth-slideshow";
 
-type Step = "credentials" | "otp";
+type Step = "credentials" | "otp" | "totp";
 type LoginMode = "password" | "qr";
 
 export default function LoginPage() {
@@ -38,6 +39,7 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [totp, setTotp] = useState("");
   // 2FA-enabled accounts: the login call returns a preAuthToken and the code is sent/verified via
   // the dedicated 2FA endpoints. Null method means the legacy staff OTP path (already-sent code).
   const [preAuthToken, setPreAuthToken] = useState<string | null>(null);
@@ -161,16 +163,21 @@ export default function LoginPage() {
         await redirectAfterQrLogin();
       } else if (result.status === "two_factor_required") {
         // 2FA-enabled account (staff/admin). The login call does NOT send a code — pick an
-        // emailed/SMS method and dispatch it, then collect the code on the OTP step.
+        // emailed/SMS method and dispatch it, then collect the code on the OTP step. Accounts
+        // whose only code factor is an authenticator app go to the TOTP step instead; APP/PASSKEY
+        // -only accounts have no code to type and must use the AZA App (QR) tab.
         const method = pickOtpTwoFactorMethod(result.methods, result.defaultMethod);
-        if (!method) {
-          setError("This account uses app-based verification. Use the AZA App tab to sign in.");
-          return;
-        }
-        await requestTwoFactorOtp(result.preAuthToken, method);
         setPreAuthToken(result.preAuthToken);
-        setTwoFaMethod(method);
-        setStep("otp");
+        if (method) {
+          await requestTwoFactorOtp(result.preAuthToken, method);
+          setTwoFaMethod(method);
+          setStep("otp");
+        } else if (result.methods.includes("TOTP")) {
+          setTwoFaMethod(null);
+          setStep("totp");
+        } else {
+          setError("This account uses app-based verification. Use the AZA App tab to sign in.");
+        }
       } else {
         // Legacy staff OTP path: the backend already sent the code during login.
         setPreAuthToken(null);
@@ -192,7 +199,23 @@ export default function LoginPage() {
       if (preAuthToken && twoFaMethod) {
         await verifyTwoFactorOtp(preAuthToken, otp.trim(), twoFaMethod);
       } else {
-        await verifyLoginOtp(identifier.trim(), otp.trim());
+        const result = await verifyLoginOtp(identifier.trim(), otp.trim());
+        // The account also has 2FA enabled: the login OTP was only the first factor.
+        if (result.status === "two_factor_required") {
+          setPreAuthToken(result.preAuthToken);
+          const method = pickOtpTwoFactorMethod(result.methods, result.defaultMethod);
+          if (method) {
+            await requestTwoFactorOtp(result.preAuthToken, method);
+            setTwoFaMethod(method);
+            setOtp("");
+          } else if (result.methods.includes("TOTP")) {
+            setTwoFaMethod(null);
+            setStep("totp");
+          } else {
+            setError("This account uses app-based verification. Use the AZA App tab to sign in.");
+          }
+          return;
+        }
       }
       await redirectAfterQrLogin();
     } catch (err: unknown) {
@@ -200,6 +223,30 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleTotp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!preAuthToken) return;
+    setError(null);
+    setLoading(true);
+    try {
+      await verifyTotpLogin(preAuthToken, totp.trim());
+      await redirectAfterQrLogin();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid authenticator code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function backToCredentials() {
+    setStep("credentials");
+    setOtp("");
+    setTotp("");
+    setError(null);
+    setPreAuthToken(null);
+    setTwoFaMethod(null);
   }
 
   return (
@@ -460,7 +507,66 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => { setStep("credentials"); setOtp(""); setError(null); setPreAuthToken(null); setTwoFaMethod(null); }}
+                  onClick={backToCredentials}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                >
+                  <ArrowLeft size={12} /> Back
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* Authenticator (TOTP) step */}
+          {step === "totp" && (
+            <>
+              <div className="flex flex-col space-y-1">
+                <h1 className="font-bold text-2xl tracking-wide">Authenticator code</h1>
+                <p className="text-base text-muted-foreground">
+                  Open your authenticator app and enter the current 6-digit code
+                </p>
+              </div>
+
+              <form onSubmit={handleTotp} className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Verification code</label>
+                  <InputGroup>
+                    <InputGroupAddon align="inline-start">
+                      <ShieldCheck size={14} />
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d{6}"
+                      maxLength={6}
+                      required
+                      autoFocus
+                      autoComplete="one-time-code"
+                      value={totp}
+                      onChange={(e) => setTotp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="000000"
+                      className="text-center tracking-[0.4em] text-lg font-mono"
+                    />
+                  </InputGroup>
+                </div>
+
+                {error && (
+                  <div className="px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading || totp.length !== 6}
+                  className="w-full h-9 bg-[#174717] hover:bg-[#1e5e1e] text-white border-0"
+                >
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {loading ? "Verifying…" : "Sign in"}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={backToCredentials}
                   className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                 >
                   <ArrowLeft size={12} /> Back

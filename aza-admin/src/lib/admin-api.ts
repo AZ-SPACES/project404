@@ -3161,6 +3161,29 @@ export function toggleRateLimit(id: string): Promise<RateLimitConfig> {
   return request(`/api/v1/admin/rate-limits/${id}/toggle`, { method: "POST" });
 }
 
+/** State of the platform-wide rate-limiting kill switch. */
+export interface RateLimitGlobalSwitch {
+  /** true = rate limiting is currently OFF for the whole server. */
+  disabled: boolean;
+  /** Seconds until limiting re-arms itself; -1 when it stays off until switched back on. */
+  expiresInSeconds: number;
+}
+
+export function getRateLimitSwitch(): Promise<RateLimitGlobalSwitch> {
+  return request("/api/v1/admin/rate-limits/global");
+}
+
+/**
+ * Turns rate limiting off (or back on) across every backend instance.
+ * @param minutes optional auto-re-enable window (1–1440); omit to stay off until switched back on.
+ */
+export function setRateLimitSwitch(disabled: boolean, minutes?: number): Promise<RateLimitGlobalSwitch> {
+  return request("/api/v1/admin/rate-limits/global", {
+    method: "POST",
+    body: JSON.stringify({ disabled, minutes: minutes ?? null }),
+  });
+}
+
 // ── Live Transaction Monitor ──────────────────────────────────────────────────
 
 export function getLiveTransactions(page = 0, size = 30): Promise<Page<AdminTransaction>> {

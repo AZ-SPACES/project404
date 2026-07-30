@@ -69,6 +69,7 @@ public class AuditLog {
     public static final String ACCOUNT_SUSPENDED        = "ACCOUNT_SUSPENDED";
     public static final String ACCOUNT_REACTIVATED      = "ACCOUNT_REACTIVATED";
     public static final String PASSCODE_VERIFY_FAILURE  = "PASSCODE_VERIFY_FAILURE";
+    public static final String RATE_LIMIT_SWITCH_CHANGED = "RATE_LIMIT_SWITCH_CHANGED";
 
     public static final String SUCCESS = "SUCCESS";
     public static final String FAILURE = "FAILURE";

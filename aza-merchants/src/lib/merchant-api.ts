@@ -375,13 +375,31 @@ export async function preLogin(identifier: string, password: string): Promise<Pr
   return { status: "otp_required" };
 }
 
-export async function verifyLoginOtp(identifier: string, code: string): Promise<{ accessToken: string; refreshToken: string }> {
-  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+export type LoginOtpResult =
+  | { status: "authenticated" }
+  | { status: "two_factor_required"; preAuthToken: string; methods: string[]; defaultMethod: string | null };
+
+/**
+ * Verifies the login OTP the backend sent during /auth/login. An account that ALSO has 2FA
+ * enabled gets a preAuthToken here instead of tokens — the second factor still has to be
+ * cleared — so this returns a discriminated result rather than assuming tokens came back.
+ */
+export async function verifyLoginOtp(identifier: string, code: string): Promise<LoginOtpResult> {
+  const body = await request<{ success: boolean; data: unknown }>(
     "/api/v1/auth/verify-otp",
     { method: "POST", body: JSON.stringify({ identifier, code, purpose: "login" }) }
   );
-  await saveTokens(body.data.accessToken, body.data.refreshToken);
-  return body.data;
+  const obj = (body.data ?? {}) as Record<string, unknown>;
+  if (typeof obj.preAuthToken === "string") {
+    return {
+      status: "two_factor_required",
+      preAuthToken: obj.preAuthToken,
+      methods: Array.isArray(obj.methods) ? (obj.methods as string[]) : [],
+      defaultMethod: typeof obj.defaultMethod === "string" ? obj.defaultMethod : null,
+    };
+  }
+  await saveTokens(obj.accessToken as string, obj.refreshToken as string);
+  return { status: "authenticated" };
 }
 
 export type OtpTwoFactorMethod = "EMAIL" | "SMS";
@@ -389,8 +407,8 @@ export type OtpTwoFactorMethod = "EMAIL" | "SMS";
 /**
  * Picks an emailed/SMS 2FA method from the account's available methods. The login step does
  * NOT send a code for 2FA-enabled accounts — the caller must dispatch one for EMAIL/SMS. Returns
- * null when the account only supports non-code methods (APP/TOTP/PASSKEY), which this portal
- * handles via the AZA App (QR) tab instead.
+ * null when the account only supports non-code methods (APP/TOTP/PASSKEY): TOTP has its own
+ * authenticator step, and APP/PASSKEY are handled via the AZA App (QR) tab.
  */
 export function pickOtpTwoFactorMethod(
   methods: string[],
@@ -421,6 +439,22 @@ export async function verifyTwoFactorOtp(
   const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
     `/api/v1/auth/2fa/otp/verify?${qs}`,
     { method: "POST" }
+  );
+  await saveTokens(body.data.accessToken, body.data.refreshToken);
+  return body.data;
+}
+
+/**
+ * Completes a 2FA login with a 6-digit authenticator (TOTP) code and stores the returned tokens.
+ * Used when the account's only code-based factor is an authenticator app.
+ */
+export async function verifyTotpLogin(
+  preAuthToken: string,
+  code: string
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const body = await request<{ success: boolean; data: { accessToken: string; refreshToken: string } }>(
+    "/api/v1/auth/2fa/login",
+    { method: "POST", body: JSON.stringify({ preAuthToken, code }) }
   );
   await saveTokens(body.data.accessToken, body.data.refreshToken);
   return body.data;

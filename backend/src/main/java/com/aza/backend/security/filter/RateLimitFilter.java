@@ -38,6 +38,7 @@ import java.time.Duration;
  * Check order (cheapest → most expensive):
  *   1. IP reputation (persistent block set by admin)         → 403
  *   2. Geo-block via CF-IPCountry header                     → 403
+ *   -- global kill switch (admin) short-circuits 3–11 --
  *   3. User behavioral block (authenticated only)            → 429  [before bypass]
  *   4. IP behavioral block (unauthenticated only)            → 429
  *   5. Fingerprint behavioral block                          → 429
@@ -136,6 +137,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String country = fingerprinter.getCountryCode(request);
         if (country != null && ipReputation.isCountryBlocked(country)) {
             rejectGeoBlock(response);
+            return;
+        }
+
+        // ── Global kill switch (admin break-glass) ────────────────────────────
+        // Skips every throttle and behavioural block below — including blocks that were already
+        // handed out — so flipping the switch actually unblocks whoever is stuck. Deliberately
+        // placed AFTER the IP-reputation and geo checks: those are access-control decisions, not
+        // rate limiting, and must survive the switch.
+        if (rateLimitService.isGloballyDisabled()) {
+            response.setHeader("X-RateLimit-Bypass", "global-switch");
+            chain.doFilter(request, response);
             return;
         }
 
