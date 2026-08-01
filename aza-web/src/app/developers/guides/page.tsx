@@ -379,6 +379,15 @@ const docMap: Record<string, DocArticle> = {
         <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>aza_test_...</code>) behave identically to live keys but do not move real money.</p>
 
         <Note>
+          <strong>Two exceptions.</strong> API-key management (<code>/api/v1/merchant/api-keys</code>) is
+          dashboard-only by design — a key can never mint or revoke another key. And payout
+          <em>writes</em> (<code>POST /payouts</code>, <code>PUT /auto-payout</code>) reject secret keys:
+          moving money out to a bank requires a <strong>restricted</strong> key that explicitly carries
+          the <code>payouts:write</code> scope, so a leaked secret key cannot drain your balance.
+          Reading payouts works with any key.
+        </Note>
+
+        <Note>
           <strong>Currency:</strong> The default currency is <strong>GHS (Ghana Cedi)</strong>. All amounts in request and response bodies are in GHS unless noted.
         </Note>
 
@@ -1992,25 +2001,55 @@ public static boolean verifySignature(
         <Table
           headers={['error field', 'Description']}
           rows={[
-            ['INVALID_API_KEY',        'The X-Api-Key header is missing or malformed'],
-            ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended'],
-            ['INSUFFICIENT_BALANCE',   'Requested payout exceeds available balance'],
-            ['SESSION_ALREADY_PAID',   'Attempting to refund a non-completed session'],
-            ['DUPLICATE_CODE',         'Discount code with this value already exists'],
-            ['INVOICE_NOT_DRAFT',      'Trying to send an invoice not in DRAFT status'],
-            ['WEBHOOK_URL_UNREACHABLE','URL failed connectivity check during registration'],
+            ['INVALID_API_KEY',        'The X-Api-Key header is missing, malformed, or revoked (401)'],
+            ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended (403)'],
+            ['MISSING_SCOPE',          'Restricted key lacks the scope this endpoint requires (403)'],
+            ['PAYOUTS_REQUIRE_RESTRICTED_KEY', 'Payout writes need a restricted key carrying payouts:write (403)'],
+            ['UNAUTHORIZED_IP',        'Request came from an IP outside the key’s allowlist (403)'],
+            ['NOT_FOUND',              'The session, invoice, or resource does not exist on your account (404)'],
+            ['NOT_ACTIVE',             'Your merchant account cannot accept payments right now (403)'],
+            ['SESSION_EXPIRED',        'The checkout session passed its 30-minute expiry (400)'],
+            ['SESSION_NOT_PENDING',    'Session is already paid, cancelled, or expired (400)'],
+            ['INVALID_STATUS',         'Only COMPLETED sessions can be refunded (400)'],
+            ['INVALID_METADATA',       'metadata was not valid JSON (400)'],
+            ['INVALID_SPLIT',          'A split amount was missing or not greater than zero (400)'],
+            ['SPLITS_EXCEED_NET',      'Splits total more than the amount left after the Aza fee (400)'],
+            ['SPLIT_RECIPIENT_NOT_FOUND', 'No Aza account matches a split recipient (400)'],
+            ['INSUFFICIENT_FUNDS',     'Balance cannot cover this refund or payout (400)'],
+            ['VALIDATION_ERROR',       'A request field failed validation — see error.field (400)'],
           ]}
         />
+
+        <Note>
+          <strong>Codes are stable; messages are not.</strong> Branch on <code>error.code</code>,
+          never on <code>error.message</code> — message wording changes without notice.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Rate limits</h3>
+        <Table
+          headers={['Endpoint', 'Limit']}
+          rows={[
+            ['POST /api/v1/merchant/sessions', '200 per hour, per merchant'],
+          ]}
+        />
+        <p className="text-sm">
+          Exceeding a limit returns <code>429</code>. The window is a rolling hour and the budget is
+          shared across every key on your account, live and test. If you are aggregating many tenants
+          through one merchant account and expect to exceed this, contact <strong>support@aza.systems</strong> —
+          the cap is configurable per merchant.
+        </p>
       </div>
     ),
     codeSnippets: {
-      curl: `# A 401 response (invalid key)
+      curl: `# A 401 response (invalid key). Every error — including auth failures from
+# the API-key layer — uses this one envelope. Read error.code, not error.message.
 # HTTP/1.1 401 Unauthorized
 # {
 #   "success": false,
-#   "error": "INVALID_API_KEY",
-#   "message": "The provided API key is invalid or has been revoked.",
-#   "statusCode": 401
+#   "error": {
+#     "code": "INVALID_API_KEY",
+#     "message": "Invalid API key"
+#   }
 # }
 
 # Test your key
@@ -2027,8 +2066,11 @@ curl -X GET ${BASE}/api/v1/merchant/me \\
   });
   const body = await res.json();
   if (!body.success) {
-    const err = new Error(body.message);
-    err.code = body.error;
+    // error is an object: { code, message, field? } — on every failure, including
+    // 401/403 from the API-key layer.
+    const err = new Error(body.error?.message ?? 'Request failed');
+    err.code = body.error?.code;
+    err.field = body.error?.field;
     err.status = res.status;
     throw err;
   }
@@ -2062,7 +2104,10 @@ def aza_request(method, path, **kwargs):
     )
     body = resp.json()
     if not body.get('success'):
-        raise AzaError(body['error'], body['message'], resp.status_code)
+        # error is an object: {code, message, field?} — on every failure,
+        # including 401/403 from the API-key layer.
+        err = body.get('error') or {}
+        raise AzaError(err.get('code'), err.get('message', 'Request failed'), resp.status_code)
     return body['data']
 
 try:

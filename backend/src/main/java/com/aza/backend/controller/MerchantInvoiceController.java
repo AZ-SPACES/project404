@@ -6,7 +6,6 @@ import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.merchant.CreateInvoiceRequest;
 import com.aza.backend.dto.merchant.InvoiceResponse;
 import com.aza.backend.dto.merchant.UpdateInvoiceRequest;
-import com.aza.backend.entity.User;
 import com.aza.backend.service.MerchantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,42 +25,49 @@ public class MerchantInvoiceController {
 
     private final MerchantService merchantService;
 
+    // All handlers accept both principal types: User (dashboard JWT) and Merchant
+    // (MerchantApiKeyFilter) — this path is on the filter's activated list.
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<InvoiceResponse>>> list(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.listInvoices(user.getId(), page, size)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listInvoices(PrincipalResolver.ownerUserId(principal), page, size)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<InvoiceResponse>> create(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @Valid @RequestBody CreateInvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(merchantService.createInvoice(user.getId(), request)));
+                .body(ApiResponse.success(
+                        merchantService.createInvoice(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<InvoiceResponse>> update(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID id,
             @RequestBody UpdateInvoiceRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.updateInvoice(user.getId(), id, request)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.updateInvoice(PrincipalResolver.ownerUserId(principal), id, request)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> cancel(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID id) {
-        merchantService.cancelInvoice(user.getId(), id);
+        merchantService.cancelInvoice(PrincipalResolver.ownerUserId(principal), id);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @PostMapping("/{id}/send")
     public ResponseEntity<ApiResponse<InvoiceResponse>> send(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.sendInvoice(user.getId(), id)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.sendInvoice(PrincipalResolver.ownerUserId(principal), id)));
     }
 }

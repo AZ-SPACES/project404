@@ -1,9 +1,11 @@
 package com.aza.backend.security.filter;
 
+import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantApiKey;
 import com.aza.backend.security.fingerprint.RequestFingerprintService;
 import com.aza.backend.service.MerchantService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,18 +28,39 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
     /** Request attribute carrying the authenticating key's environment ("LIVE" | "TEST"). */
     public static final String API_KEY_ENVIRONMENT_ATTR = "aza.apiKeyEnvironment";
 
+    /**
+     * Path prefixes where API-key authentication is accepted — the documented integrator
+     * surface. Handlers on every listed prefix accept both principal types (see
+     * {@code resolveMerchantId}/{@code PrincipalResolver}); add a prefix ONLY after
+     * converting its handlers, or API-key calls will reach {@code @AuthenticationPrincipal
+     * User} handlers as null and 500.
+     *
+     * {@code /merchant/api-keys} is deliberately absent: managing keys with a key would
+     * let a stolen key mint its own replacements. Key management stays dashboard-only.
+     */
+    private static final String[] ACTIVATED_PREFIXES = {
+            "/api/v1/merchant/sessions",
+            "/api/v1/merchant/connect",
+            "/api/v1/merchant/transactions",
+            "/api/v1/merchant/webhooks",
+            "/api/v1/merchant/payouts",
+            "/api/v1/merchant/auto-payout",
+            "/api/v1/merchant/customers",
+            "/api/v1/merchant/disputes",
+            "/api/v1/merchant/settlements",
+            "/api/v1/merchant/invoices",
+            "/api/v1/merchant/discount-codes",
+    };
+
     private final MerchantService merchantService;
     private final RequestFingerprintService fingerprintService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Activate for the API-key surface: checkout sessions, the Connect (marketplace) API,
-        // and transaction verification (e.g. verifying a Mini App SDK payment server-side).
-        if (!path.startsWith("/api/v1/merchant/sessions")
-                && !path.startsWith("/api/v1/merchant/connect")
-                && !path.startsWith("/api/v1/merchant/transactions")) {
+        if (!isActivatedPath(path)) {
             chain.doFilter(request, response);
             return;
         }
@@ -73,44 +96,40 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
                 merchant = merchantService.getMerchantForApiKey(apiKeyEntity);
             }
 
-            if (apiKeyEntity == null || merchant == null || merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+            if (apiKeyEntity == null || merchant == null) {
                 statusCode = HttpServletResponse.SC_UNAUTHORIZED;
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"status\":\"error\",\"error\":{\"message\":\"Unauthorized: Invalid API key\"}}");
+                writeError(response, statusCode, "INVALID_API_KEY", "Invalid API key");
+                return;
+            }
+            if (merchant.getStatus() != Merchant.MerchantStatus.ACTIVE) {
+                statusCode = HttpServletResponse.SC_FORBIDDEN;
+                writeError(response, statusCode, "MERCHANT_NOT_ACTIVE",
+                        "Merchant account is not active");
                 return;
             }
 
-            // Verify Restricted scopes
+            boolean isWrite = !request.getMethod().equalsIgnoreCase("GET");
+
+            // Payout writes are the drain-to-bank capability and are NEVER implicit:
+            // a secret key cannot move money out of Aza, and a restricted key must
+            // explicitly carry payouts:write. Everything else follows the usual rule —
+            // secret keys have full access, restricted keys are scope-gated.
+            boolean isPayoutWrite = isWrite
+                    && (path.startsWith("/api/v1/merchant/payouts")
+                        || path.startsWith("/api/v1/merchant/auto-payout"));
+            if (isPayoutWrite && apiKeyEntity.getKeyType() == MerchantApiKey.KeyType.SECRET) {
+                statusCode = HttpServletResponse.SC_FORBIDDEN;
+                writeError(response, statusCode, "PAYOUTS_REQUIRE_RESTRICTED_KEY",
+                        "Payout operations require a restricted API key with the payouts:write scope");
+                return;
+            }
+
             if (apiKeyEntity.getKeyType() == MerchantApiKey.KeyType.RESTRICTED) {
-                // Connect (payout) calls need transfers:* scopes; session calls need sessions:*;
-                // transaction verification is read-only and needs transactions:read.
-                boolean isConnect = path.startsWith("/api/v1/merchant/connect");
-                boolean isTransactions = path.startsWith("/api/v1/merchant/transactions");
-                boolean isWrite = !request.getMethod().equalsIgnoreCase("GET");
-                String requiredScope;
-                if (isConnect) {
-                    requiredScope = isWrite ? "transfers:write" : "transfers:read";
-                } else if (isTransactions) {
-                    requiredScope = "transactions:read";
-                } else {
-                    requiredScope = isWrite ? "sessions:write" : "sessions:read";
-                }
-                String scopes = apiKeyEntity.getScopes();
-                boolean hasScope = false;
-                if (scopes != null) {
-                    for (String s : scopes.split(",")) {
-                        if (s.trim().equalsIgnoreCase(requiredScope)) {
-                            hasScope = true;
-                            break;
-                        }
-                    }
-                }
-                if (!hasScope) {
+                String requiredScope = requiredScope(path, isWrite);
+                if (!hasScope(apiKeyEntity.getScopes(), requiredScope)) {
                     statusCode = HttpServletResponse.SC_FORBIDDEN;
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"status\":\"error\",\"error\":{\"message\":\"Forbidden: API key is missing required scope '" + requiredScope + "'\"}}");
+                    writeError(response, statusCode, "MISSING_SCOPE",
+                            "API key is missing required scope '" + requiredScope + "'");
                     return;
                 }
             }
@@ -132,9 +151,7 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
         } catch (com.aza.backend.exception.AppException ex) {
             statusCode = ex.getStatus().value();
             errorMessage = ex.getMessage();
-            response.setStatus(statusCode);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"status\":\"error\",\"error\":{\"message\":\"" + errorMessage + "\"}}");
+            writeError(response, statusCode, ex.getCode(), errorMessage);
         } catch (Exception ex) {
             statusCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
             errorMessage = ex.getMessage();
@@ -154,5 +171,49 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
                 );
             }
         }
+    }
+
+    static boolean isActivatedPath(String path) {
+        for (String prefix : ACTIVATED_PREFIXES) {
+            if (path.startsWith(prefix)) return true;
+        }
+        return false;
+    }
+
+    /** Scope a RESTRICTED key must carry for {@code path}. Package-private for tests. */
+    static String requiredScope(String path, boolean isWrite) {
+        if (path.startsWith("/api/v1/merchant/connect"))        return isWrite ? "transfers:write" : "transfers:read";
+        if (path.startsWith("/api/v1/merchant/transactions"))   return "transactions:read";
+        if (path.startsWith("/api/v1/merchant/webhooks"))       return isWrite ? "webhooks:write" : "webhooks:read";
+        if (path.startsWith("/api/v1/merchant/payouts")
+                || path.startsWith("/api/v1/merchant/auto-payout")) return isWrite ? "payouts:write" : "payouts:read";
+        if (path.startsWith("/api/v1/merchant/customers"))      return "customers:read";
+        if (path.startsWith("/api/v1/merchant/disputes"))       return "disputes:read";
+        if (path.startsWith("/api/v1/merchant/settlements"))    return "settlements:read";
+        if (path.startsWith("/api/v1/merchant/invoices"))       return isWrite ? "invoices:write" : "invoices:read";
+        if (path.startsWith("/api/v1/merchant/discount-codes")) return isWrite ? "discounts:write" : "discounts:read";
+        // Checkout sessions and everything nested under them (refund, expire, simulate).
+        return isWrite ? "sessions:write" : "sessions:read";
+    }
+
+    private static boolean hasScope(String scopes, String requiredScope) {
+        if (scopes == null) return false;
+        for (String s : scopes.split(",")) {
+            if (s.trim().equalsIgnoreCase(requiredScope)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Error bodies use the same {@link ApiResponse} envelope as every controller, so an
+     * integrator's response parser sees one shape everywhere. (Previously the filter
+     * hand-built a {@code {"status":"error"}} JSON string — a different envelope, and an
+     * injection hazard since exception messages were concatenated unescaped.)
+     */
+    private void writeError(HttpServletResponse response, int status, String code, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.error(code, message)));
     }
 }
