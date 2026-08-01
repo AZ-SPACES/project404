@@ -37,6 +37,13 @@ public class RecurringTransferService {
             java.util.Optional<RecurringTransfer> existing =
                     recurringTransferRepository.findByIdempotencyKey(req.getIdempotencyKey());
             if (existing.isPresent()) {
+                // Ownership guard: keys are globally unique across all users, so a replayed
+                // key must belong to the caller or it would leak another user's schedule
+                // (recipient, amount, cadence).
+                if (!existing.get().getUserId().equals(userId)) {
+                    throw new AppException("INVALID_IDEMPOTENCY_KEY", "Invalid idempotency key",
+                            HttpStatus.CONFLICT);
+                }
                 return toResponse(existing.get());
             }
         }

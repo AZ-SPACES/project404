@@ -202,4 +202,65 @@ class AgentCashServiceTest {
                 () -> service.cashOut(agentUser(), "ABCDEFGHJK", null));
         assertTrue(ex.getMessage().toLowerCase().contains("too low"));
     }
+
+    // ── Idempotency ownership guards ──────────────────────────────────────────
+    // Keys are globally unique across the transactions table, so a replayed key that
+    // belongs to ANOTHER agent's transaction must throw, never return that record.
+
+    @Test
+    void cashIn_replayOfForeignKey_throwsInsteadOfLeaking() {
+        Transaction foreign = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderId(UUID.randomUUID())   // some other agent
+                .recipientId(UUID.randomUUID())
+                .amount(new BigDecimal("75.00"))
+                .type(Transaction.TransactionType.CASH_IN)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("agent-key-1")
+                .build();
+        when(transactionRepository.findByIdempotencyKey("agent-key-1")).thenReturn(Optional.of(foreign));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.cashIn(agentUser(), "bob@example.com", new BigDecimal("75.00"), "agent-key-1"));
+        assertEquals("INVALID_IDEMPOTENCY_KEY", ex.getCode());
+    }
+
+    @Test
+    void cashIn_replayOfOwnKey_returnsExisting() {
+        Agent agent = activeAgent();
+        Transaction own = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderId(agentUserId)
+                .recipientId(customerId)
+                .amount(new BigDecimal("75.00"))
+                .type(Transaction.TransactionType.CASH_IN)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("agent-key-2")
+                .build();
+        when(transactionRepository.findByIdempotencyKey("agent-key-2")).thenReturn(Optional.of(own));
+        when(agentRepository.findByUserId(agentUserId)).thenReturn(Optional.of(agent));
+
+        AgentCashResponse res = service.cashIn(agentUser(), "bob@example.com", new BigDecimal("75.00"), "agent-key-2");
+
+        assertEquals(own.getId().toString(), String.valueOf(res.getTransactionId()));
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void cashOut_replayOfForeignKey_throwsInsteadOfLeaking() {
+        Transaction foreign = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderId(UUID.randomUUID())
+                .recipientId(UUID.randomUUID())   // some other agent
+                .amount(new BigDecimal("40.00"))
+                .type(Transaction.TransactionType.CASH_OUT)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("agent-key-3")
+                .build();
+        when(transactionRepository.findByIdempotencyKey("agent-key-3")).thenReturn(Optional.of(foreign));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.cashOut(agentUser(), "ABCDEFGHJK", "agent-key-3"));
+        assertEquals("INVALID_IDEMPOTENCY_KEY", ex.getCode());
+    }
 }

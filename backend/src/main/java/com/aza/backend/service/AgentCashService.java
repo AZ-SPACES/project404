@@ -56,6 +56,12 @@ public class AgentCashService {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
+                // Ownership guard: keys are globally unique across the transactions table,
+                // so a replayed key must belong to THIS agent's cash-in (agent is sender)
+                // or it would leak another user's transaction details.
+                if (!existing.get().getSenderId().equals(agentUser.getId())) {
+                    throw new AppException("INVALID_IDEMPOTENCY_KEY", "Invalid idempotency key", HttpStatus.CONFLICT);
+                }
                 return toResponse(existing.get(), agentForUser(agentUser));
             }
         }
@@ -130,6 +136,11 @@ public class AgentCashService {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
+                // Ownership guard: a replayed key must belong to THIS agent's cash-out
+                // (agent is recipient) — see the matching check in cashIn.
+                if (!existing.get().getRecipientId().equals(agentUser.getId())) {
+                    throw new AppException("INVALID_IDEMPOTENCY_KEY", "Invalid idempotency key", HttpStatus.CONFLICT);
+                }
                 return toResponse(existing.get(), agentForUser(agentUser));
             }
         }
