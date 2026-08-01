@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "checkout_sessions")
+@Table(name = "checkout_sessions", uniqueConstraints =
+        @UniqueConstraint(name = "checkout_sessions_merchant_idem", columnNames = {"merchant_id", "idempotency_key"}))
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -48,7 +49,9 @@ public class CheckoutSession {
 
     private UUID customerId;
 
-    @Column(unique = true)
+    // Unique per (merchant_id, idempotency_key) — see the @Table constraint. Global uniqueness
+    // was a cross-tenant hazard: one merchant's key could collide with (and via the old unscoped
+    // lookup, expose) another merchant's session.
     private String idempotencyKey;
 
     private UUID transactionId; // underlying wallet-to-wallet transaction (null for test-mode sessions)

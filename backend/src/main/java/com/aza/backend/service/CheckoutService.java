@@ -87,9 +87,12 @@ public class CheckoutService {
             }
         }
 
-        // Idempotency check
+        // Idempotency check — scoped to the calling merchant. An unscoped lookup would
+        // return another merchant's session (id, amount, checkout URL) whenever two
+        // merchants happened to use the same key.
         if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
-            CheckoutSession existing = sessionRepository.findByIdempotencyKey(request.getIdempotencyKey()).orElse(null);
+            CheckoutSession existing = sessionRepository
+                    .findByMerchantIdAndIdempotencyKey(merchantId, request.getIdempotencyKey()).orElse(null);
             if (existing != null) {
                 return toResponse(existing, merchant);
             }

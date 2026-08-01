@@ -20,7 +20,9 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     Page<CheckoutSession> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId, Pageable pageable);
 
-    Optional<CheckoutSession> findByIdempotencyKey(String idempotencyKey);
+    // Idempotency is scoped per merchant: an unscoped lookup would let one merchant
+    // retrieve another's session by guessing/reusing a key (cross-tenant disclosure).
+    Optional<CheckoutSession> findByMerchantIdAndIdempotencyKey(UUID merchantId, String idempotencyKey);
 
     @Query("SELECT s FROM CheckoutSession s WHERE s.status = 'PENDING' AND s.expiresAt < :now")
     List<CheckoutSession> findExpiredSessions(@Param("now") LocalDateTime now);
