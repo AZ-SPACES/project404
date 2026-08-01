@@ -85,7 +85,7 @@ class MerchantApiKeyFilterTest {
                 "/api/v1/merchant/payouts", "/api/v1/merchant/auto-payout",
                 "/api/v1/merchant/customers", "/api/v1/merchant/disputes",
                 "/api/v1/merchant/settlements", "/api/v1/merchant/invoices",
-                "/api/v1/merchant/discount-codes"}) {
+                "/api/v1/merchant/discount-codes", "/api/v1/merchant/me"}) {
             assertTrue(MerchantApiKeyFilter.isActivatedPath(p), p);
         }
     }
@@ -119,6 +119,9 @@ class MerchantApiKeyFilterTest {
         assertEquals("payouts:read", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/payouts", false));
         assertEquals("customers:read", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/customers", false));
         assertEquals("disputes:read", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/disputes", false));
+        assertEquals("disputes:write", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/disputes/x/respond", true));
+        assertEquals("profile:read", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/me", false));
+        assertEquals("profile:write", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/me", true));
         assertEquals("settlements:read", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/settlements", false));
         assertEquals("invoices:write", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/invoices", true));
         assertEquals("discounts:write", MerchantApiKeyFilter.requiredScope("/api/v1/merchant/discount-codes", true));

@@ -50,6 +50,8 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
             "/api/v1/merchant/settlements",
             "/api/v1/merchant/invoices",
             "/api/v1/merchant/discount-codes",
+            // "Test your key" endpoint in the developer guides + profile read/update.
+            "/api/v1/merchant/me",
     };
 
     private final MerchantService merchantService;
@@ -188,10 +190,11 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/v1/merchant/payouts")
                 || path.startsWith("/api/v1/merchant/auto-payout")) return isWrite ? "payouts:write" : "payouts:read";
         if (path.startsWith("/api/v1/merchant/customers"))      return "customers:read";
-        if (path.startsWith("/api/v1/merchant/disputes"))       return "disputes:read";
+        if (path.startsWith("/api/v1/merchant/disputes"))       return isWrite ? "disputes:write" : "disputes:read";
         if (path.startsWith("/api/v1/merchant/settlements"))    return "settlements:read";
         if (path.startsWith("/api/v1/merchant/invoices"))       return isWrite ? "invoices:write" : "invoices:read";
         if (path.startsWith("/api/v1/merchant/discount-codes")) return isWrite ? "discounts:write" : "discounts:read";
+        if (path.startsWith("/api/v1/merchant/me"))             return isWrite ? "profile:write" : "profile:read";
         // Checkout sessions and everything nested under them (refund, expire, simulate).
         return isWrite ? "sessions:write" : "sessions:read";
     }

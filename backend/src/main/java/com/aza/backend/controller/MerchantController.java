@@ -55,9 +55,12 @@ public class MerchantController {
 
     // ==================== PROFILE ====================
 
+    // /me is on the API-key surface — it is the "test your key" endpoint in the
+    // developer guides, so it must work with X-Api-Key as well as a dashboard JWT.
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<MerchantResponse>> getMe(@AuthenticationPrincipal User user) {
-        MerchantResponse merchant = merchantService.getMyMerchant(user.getId());
+    public ResponseEntity<ApiResponse<MerchantResponse>> getMe(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal) {
+        MerchantResponse merchant = merchantService.getMyMerchant(PrincipalResolver.ownerUserId(principal));
         return ResponseEntity.ok(ApiResponse.success(merchant));
     }
 
@@ -71,9 +74,10 @@ public class MerchantController {
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<MerchantResponse>> updateMe(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @Valid @RequestBody UpdateMerchantRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.updateMerchant(user.getId(), request)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.updateMerchant(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     @PostMapping("/logo")
@@ -528,20 +532,20 @@ public class MerchantController {
 
     @GetMapping("/customers/{customerId}/sessions")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<CheckoutSessionResponse>>> getCustomerSessions(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Merchant merchant = requireMerchant(user.getId());
+        UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(
-                checkoutService.listCustomerSessions(merchant.getId(), customerId, page, size)));
+                checkoutService.listCustomerSessions(merchantId, customerId, page, size)));
     }
 
     // ==================== DISPUTE RESPONSE ====================
 
     @PostMapping("/disputes/{disputeId}/respond")
     public ResponseEntity<ApiResponse<com.aza.backend.dto.merchant.MerchantDisputeResponse>> respondToDispute(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID disputeId,
             @RequestBody java.util.Map<String, String> body) {
         String response = body.get("response");
@@ -549,7 +553,7 @@ public class MerchantController {
             throw new com.aza.backend.exception.AppException("VALIDATION", "Response text is required", HttpStatus.BAD_REQUEST);
         }
         return ResponseEntity.ok(ApiResponse.success(
-                merchantService.respondToDispute(user.getId(), disputeId, response.trim())));
+                merchantService.respondToDispute(PrincipalResolver.ownerUserId(principal), disputeId, response.trim())));
     }
 
     // ==================== HELPERS ====================
