@@ -27,6 +27,12 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
     private static final String API_KEY_HEADER = "X-Api-Key";
     /** Request attribute carrying the authenticating key's environment ("LIVE" | "TEST"). */
     public static final String API_KEY_ENVIRONMENT_ATTR = "aza.apiKeyEnvironment";
+    /**
+     * Request attribute carrying the authenticating key's id, so money-moving handlers can
+     * record which key authorized the action ("which of your keys released this" is a
+     * question integrators ask, and hold_events answers it).
+     */
+    public static final String API_KEY_ID_ATTR = "aza.apiKeyId";
 
     /**
      * Path prefixes where API-key authentication is accepted — the documented integrator
@@ -146,6 +152,7 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
             // Expose the key's environment so the controller can route to the sandbox.
             // aza_test_ keys → test-mode checkout sessions (no real funds move).
             request.setAttribute(API_KEY_ENVIRONMENT_ATTR, apiKeyEntity.getEnvironment().name());
+            request.setAttribute(API_KEY_ID_ATTR, apiKeyEntity.getId());
 
             chain.doFilter(request, response);
             statusCode = response.getStatus();

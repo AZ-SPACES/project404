@@ -47,6 +47,20 @@ public class CheckoutSession {
     @Builder.Default
     private SessionStatus status = SessionStatus.PENDING;
 
+    /**
+     * AUTOMATIC (default) settles to the merchant at confirmation — today's behaviour.
+     * MANUAL debits the payer into a {@link PaymentHold} instead, settled later when the
+     * integrator calls release or refund. Column is {@code release_mode}; the API field
+     * is {@code release}, which is a reserved word in enough SQL dialects to avoid.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "release_mode", nullable = false, length = 16)
+    @Builder.Default
+    private ReleaseMode releaseMode = ReleaseMode.AUTOMATIC;
+
+    /** MANUAL sessions only: ceiling on how long Aza holds the money before it returns to the payer. */
+    private Integer maxHoldDays;
+
     private UUID customerId;
 
     // Unique per (merchant_id, idempotency_key) — see the @Table constraint. Global uniqueness
@@ -84,4 +98,6 @@ public class CheckoutSession {
     public enum SessionStatus {
         PENDING, COMPLETED, EXPIRED, CANCELLED, REFUNDED
     }
+
+    public enum ReleaseMode { AUTOMATIC, MANUAL }
 }

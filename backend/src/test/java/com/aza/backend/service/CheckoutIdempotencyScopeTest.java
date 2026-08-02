@@ -41,11 +41,14 @@ class CheckoutIdempotencyScopeTest {
     private final MerchantNotificationPreferenceRepository notificationPrefRepository =
             mock(MerchantNotificationPreferenceRepository.class);
     private final NotificationService notificationService = mock(NotificationService.class);
+    private final RecipientResolver recipientResolver = mock(RecipientResolver.class);
+    private final HoldService holdService = mock(HoldService.class);
 
     private final CheckoutService service = new CheckoutService(
             sessionRepository, splitRepository, merchantRepository, walletRepository, userRepository,
             transactionRepository, webhookEndpointRepository, webhookDeliveryRepository, userService,
-            rateLimitService, objectMapper, emailService, notificationPrefRepository, notificationService);
+            rateLimitService, objectMapper, emailService, notificationPrefRepository, notificationService,
+            recipientResolver, holdService);
 
     private final UUID merchantAId = UUID.randomUUID();
     private final UUID merchantBId = UUID.randomUUID();

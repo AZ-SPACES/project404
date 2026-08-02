@@ -2001,6 +2001,11 @@ public static boolean verifySignature(
         <Table
           headers={['error field', 'Description']}
           rows={[
+            ['IDEMPOTENCY_KEY_REQUIRED', 'Release and refund require an Idempotency-Key header (400)'],
+            ['HOLD_ALREADY_SETTLED',   'This hold was already released or refunded (409)'],
+            ['HOLD_FROZEN',            'Held pending an Aza compliance review; cannot be settled (409)'],
+            ['RELEASE_EXCEEDS_HELD',   'Release or refund is larger than the amount still held (400)'],
+            ['RECIPIENT_NOT_FOUND',    'No Aza account matches that phone, email, or username (400)'],
             ['INVALID_API_KEY',        'The X-Api-Key header is missing, malformed, or revoked (401)'],
             ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended (403)'],
             ['MISSING_SCOPE',          'Restricted key lacks the scope this endpoint requires (403)'],
@@ -2024,6 +2029,34 @@ public static boolean verifySignature(
           <strong>Codes are stable; messages are not.</strong> Branch on <code>error.code</code>,
           never on <code>error.message</code> — message wording changes without notice.
         </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Holding money until you release it</h3>
+        <p className="text-sm">
+          A payment settles to you immediately by default. Add <code>release: &quot;MANUAL&quot;</code> and
+          Aza holds the money instead, until you call <code>POST /sessions/{'{id}'}/release</code>.
+          Use it when money should reach someone only <em>after</em> something happens — a job
+          finished, goods delivered, a rental returned. Aza never learns what that something is;
+          your <code>reference</code> and <code>metadata</code> are stored and echoed back untouched.
+        </p>
+        <Table
+          headers={['Field', 'Meaning']}
+          rows={[
+            ['release', '"AUTOMATIC" (default) or "MANUAL"'],
+            ['recipients', 'Who gets paid on release — phone, email, or username. Must already have an Aza account.'],
+            ['maxHoldDays', 'How long Aza holds before returning the money to the payer. Default 30, max 90.'],
+          ]}
+        />
+        <Note>
+          <strong>Release and refund require an <code>Idempotency-Key</code> header.</strong> These
+          calls move money and integrators retry on timeout; a replayed key returns the original
+          result without paying twice. A refund cannot fail while the money is held — nobody has
+          been credited yet.
+        </Note>
+        <Warn>
+          If nobody calls release within <code>maxHoldDays</code>, Aza returns the money to the
+          payer. Absence of a release call is not evidence that anything was earned, and Aza cannot
+          judge whether it was — you hold that decision, and the evidence for it.
+        </Warn>
 
         <h3 className="text-base font-bold text-gray-900">Rate limits</h3>
         <Table

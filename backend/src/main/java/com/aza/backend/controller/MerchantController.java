@@ -381,6 +381,56 @@ public class MerchantController {
         return ResponseEntity.ok(ApiResponse.success(checkoutService.refundSession(merchantId, sessionId)));
     }
 
+    // ==================== HOLDS (manual release) ====================
+
+    @Operation(summary = "Release a held payment",
+            description = "Settles a session created with release=MANUAL: recipients are paid and "
+                    + "you keep the remainder net of the Aza fee. Omit `recipients` to release "
+                    + "everything still held, or supply them to release part of it. Requires an "
+                    + "Idempotency-Key header — this call moves money and integrators retry.")
+    @PostMapping("/sessions/{sessionId}/release")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> releaseHold(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ID_ATTR, required = false) UUID apiKeyId,
+            @Valid @RequestBody(required = false) ReleaseHoldRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        requireIdempotencyKey(idempotencyKey);
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.releaseHold(merchantId, sessionId, request, idempotencyKey, apiKeyId)));
+    }
+
+    @Operation(summary = "Refund a held payment",
+            description = "Returns held money to the payer, in full or in part. Cannot fail while "
+                    + "the money is held — nobody has been credited yet. The Aza fee is returned "
+                    + "in full on a full refund.")
+    @PostMapping("/sessions/{sessionId}/hold/refund")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> refundHold(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ID_ATTR, required = false) UUID apiKeyId,
+            @Valid @RequestBody(required = false) RefundHoldRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        requireIdempotencyKey(idempotencyKey);
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.refundHold(merchantId, sessionId, request, idempotencyKey, apiKeyId)));
+    }
+
+    /**
+     * Money-moving hold endpoints require an explicit key rather than defaulting to
+     * "no idempotency" — a dropped response on release must be safely retryable.
+     */
+    private void requireIdempotencyKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new AppException("IDEMPOTENCY_KEY_REQUIRED",
+                    "An Idempotency-Key header is required on this endpoint", HttpStatus.BAD_REQUEST);
+        }
+    }
+
     // ==================== DISPUTES (merchant view) ====================
 
     @GetMapping("/disputes")

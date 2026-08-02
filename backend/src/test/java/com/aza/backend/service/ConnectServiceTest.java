@@ -34,9 +34,14 @@ class ConnectServiceTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final RateLimitService rateLimitService = mock(RateLimitService.class);
 
+    // Real resolver over the mocked repositories: recipient lookup still flows through the
+    // same userRepository stubs these tests already set up, now via the shared resolver.
+    private final RecipientResolver recipientResolver =
+            new RecipientResolver(userRepository, walletRepository);
+
     private final ConnectService service = new ConnectService(
             merchantRepository, userRepository, walletRepository, transactionRepository,
-            connectTransferRepository, notificationService, rateLimitService);
+            connectTransferRepository, notificationService, rateLimitService, recipientResolver);
 
     private final UUID merchantId = UUID.randomUUID();
     private final UUID ownerUserId = UUID.randomUUID();

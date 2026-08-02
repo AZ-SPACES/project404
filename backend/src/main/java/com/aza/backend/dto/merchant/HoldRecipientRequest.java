@@ -9,19 +9,18 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * One seller's fixed share of a checkout payment. When the buyer pays, {@code amount}
- * is credited straight to the seller's Aza wallet; the platform keeps whatever is left
- * after the Aza fee and all splits.
+ * One person to pay when the hold is released. Aza never learns what the money is
+ * for — that lives in the session's {@code reference} and {@code metadata}.
  */
 @Data
-public class CheckoutSplitRequest {
+public class HoldRecipientRequest {
 
-    /** Seller's Aza phone number, email, or username. */
+    /** Recipient's Aza phone number, email, or username. Must already have an account. */
     @NotBlank
     @Size(max = 255)
     private String recipient;
 
-    /** Fixed amount (GHS) to route to this seller. */
+    /** Fixed amount (GHS) this recipient receives on release. */
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal amount;

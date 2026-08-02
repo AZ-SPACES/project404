@@ -36,6 +36,10 @@ public class CheckoutSessionResponse {
     // Marketplace splits (Aza Connect). Merchant-facing only — never exposed on the
     // public checkout page, so buyers can't see who the sellers are.
     private List<CheckoutSplitInfo> splits;
+    /** "AUTOMATIC" or "MANUAL". */
+    private String release;
+    /** Present only on manual-release sessions once the payer has paid. */
+    private HoldInfo hold;
     private BigDecimal taxAmount;
     private String taxLabel;
     private String checkoutUrl;

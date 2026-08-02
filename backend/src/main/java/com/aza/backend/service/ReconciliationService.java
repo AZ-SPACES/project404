@@ -41,6 +41,7 @@ public class ReconciliationService {
     private final TransactionRepository transactionRepository;
     private final AdminAuditService auditService;
     private final StaffAlertService staffAlertService;
+    private final com.aza.backend.repository.PaymentHoldRepository paymentHoldRepository;
 
     // ── Safeguarding ──────────────────────────────────────────────────────────
 
@@ -85,7 +86,8 @@ public class ReconciliationService {
         staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.FINANCE,
                 "SAFEGUARDING BREACH",
                 "Platform float (customer " + snapshot.getCustomerFloat() + " + merchant "
-                        + snapshot.getMerchantFloat() + " GHS) exceeds the safeguarded balance of "
+                        + snapshot.getMerchantFloat() + " + held " + snapshot.getHeldFloat()
+                        + " GHS) exceeds the safeguarded balance of "
                         + snapshot.getSafeguardingBalance() + " GHS by "
                         + snapshot.getVariance().negate() + " GHS. Top up the safeguarding account immediately.");
     }
@@ -97,11 +99,20 @@ public class ReconciliationService {
         // reported separately for visibility and not subtracted again from variance.
         BigDecimal agentFloat = orZero(walletRepository.sumFloatForAgentStatus(
                 com.aza.backend.entity.Agent.Status.ACTIVE));
-        BigDecimal variance = safeguardingBalance.subtract(customerFloat).subtract(merchantFloat);
+        // Held money has left the payer's wallet but reached no wallet and no merchant
+        // balance, so it appears in neither sum above. Omitting it would make every open
+        // hold look like a safeguarding surplus and hide a real breach of exactly that
+        // size — it is still customer money Aza is obliged to safeguard.
+        BigDecimal heldFloat = orZero(paymentHoldRepository.sumActiveHeldFloat());
+        BigDecimal variance = safeguardingBalance
+                .subtract(customerFloat)
+                .subtract(merchantFloat)
+                .subtract(heldFloat);
         return SafeguardingSnapshot.builder()
                 .customerFloat(customerFloat)
                 .merchantFloat(merchantFloat)
                 .agentFloat(agentFloat)
+                .heldFloat(heldFloat)
                 .safeguardingBalance(safeguardingBalance)
                 .variance(variance)
                 .breach(variance.signum() < 0)
