@@ -285,6 +285,53 @@ class HoldServiceTest {
     }
 
     @Test
+    void fee_isBookedOnlyWhenTheHoldActuallySettles() {
+        // The fee dashboard sums Transaction.feeAmount. Capture must book nothing —
+        // a refunded hold returns the fee in full, so booking it early reports revenue
+        // Aza may never keep.
+        PaymentHold hold = heldHold("250.00", "3.75");
+        HoldRecipient worker = recipient("200.00");
+        Merchant m = merchant("0.00");
+        UUID captureTxId = UUID.randomUUID();
+        Transaction captureTx = Transaction.builder()
+                .id(captureTxId).senderId(payerId).recipientId(ownerUserId)
+                .amount(new BigDecimal("250.00")).feeAmount(BigDecimal.ZERO)
+                .status(Transaction.TransactionStatus.COMPLETED).build();
+
+        when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(hold));
+        when(recipientRepository.findAllByHoldId(hold.getId())).thenReturn(List.of(worker));
+        when(merchantRepository.findByIdForUpdate(merchantId)).thenReturn(Optional.of(m));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(
+                CheckoutSession.builder().id(sessionId).transactionId(captureTxId).build()));
+        when(transactionRepository.findById(captureTxId)).thenReturn(Optional.of(captureTx));
+        stubPayableWorker();
+
+        service.release(sessionId, merchantId, null, "rel-fee", null);
+
+        assertEquals(new BigDecimal("3.75"), captureTx.getFeeAmount(),
+                "the fee becomes revenue at release, not at capture");
+    }
+
+    @Test
+    void refundedHold_neverBooksTheFee() {
+        PaymentHold hold = heldHold("250.00", "3.75");
+        Wallet payerWallet = Wallet.builder().userId(payerId).balance(BigDecimal.ZERO)
+                .currency("GHS").frozen(false).build();
+
+        when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(hold));
+        when(walletRepository.findByUserIdForUpdate(payerId)).thenReturn(Optional.of(payerWallet));
+        when(userRepository.findById(payerId)).thenReturn(Optional.of(User.builder().id(payerId).build()));
+        when(recipientRepository.findAllByHoldId(hold.getId())).thenReturn(List.of());
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        service.refund(sessionId, merchantId, null, "ref-fee", null, HoldEvent.ActorType.PLATFORM);
+
+        // Payer got the whole 250 back, fee included; nothing was booked as revenue.
+        assertEquals(new BigDecimal("250.00"), payerWallet.getBalance());
+        verify(transactionRepository, never()).findById(any(UUID.class));
+    }
+
+    @Test
     void testModeHold_settlesStateButMovesNoMoney() {
         PaymentHold hold = heldHold("250.00", "3.75");
         hold.setTestMode(true);

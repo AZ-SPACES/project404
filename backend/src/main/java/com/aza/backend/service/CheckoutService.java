@@ -515,7 +515,11 @@ public class CheckoutService {
                 .senderId(customer.getId())
                 .recipientId(merchant.getUserId())
                 .amount(session.getAmount())
-                .feeAmount(platformFee)
+                // No fee booked at capture. The fee is only earned when the hold is
+                // released, and it is returned in full if the hold is refunded — booking
+                // it here would report revenue on money Aza may never keep
+                // (TransactionRepository.sumFeeBetween drives the fee dashboard).
+                .feeAmount(BigDecimal.ZERO)
                 .note(session.getDescription() != null && !session.getDescription().isBlank()
                         ? session.getDescription()
                         : "Held payment to @" + merchant.getBusinessHandle())
@@ -873,9 +877,24 @@ public class CheckoutService {
         session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
         session.setCustomerId(customerId);
         session.setPlatformFee(platformFee);
-        session.setNetAmount(netAmount.subtract(splitTotal));
         session.setCompletedAt(LocalDateTime.now());
         // transactionId intentionally left null — no real money moved.
+
+        // Sandbox parity for manual release: a test session must produce a real hold, or
+        // an integrator cannot exercise release/refund before going live — which is the
+        // whole point of the sandbox. HoldService already moves state without money when
+        // the hold is test-mode.
+        if (session.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL) {
+            session.setNetAmount(BigDecimal.ZERO);
+            sessionRepository.save(session);
+            holdService.capture(session, merchant, customerId, platformFee, splits);
+            log.info("TEST checkout captured into hold (no funds moved): sessionId={}, merchant={}, amount={}",
+                    session.getId(), merchant.getId(), session.getAmount());
+            scheduleWebhookDelivery(session, merchant, "hold.created");
+            return toResponse(session, merchant, toSplitInfos(splits));
+        }
+
+        session.setNetAmount(netAmount.subtract(splitTotal));
         sessionRepository.save(session);
 
         log.info("TEST checkout completed (no funds moved): sessionId={}, merchant={}, amount={}, splits={}",
@@ -942,6 +961,12 @@ public class CheckoutService {
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
+                // The payer is handing money to Aza's brand and will hold Aza responsible
+                // when a job goes wrong — so the checkout page must be able to tell them,
+                // before they confirm, that this payment is held and who decides its
+                // release. Aza cannot adjudicate that decision (see HELD_SETTLEMENT_PLAN §5),
+                // which is exactly why it has to be disclosed up front.
+                .release(s.getReleaseMode().name())
                 .build();
     }
 

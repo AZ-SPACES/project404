@@ -215,10 +215,26 @@ public class HoldService {
             if (platformShare.signum() < 0) platformShare = BigDecimal.ZERO;
             settledNow = remaining;   // fee leaves circulation with the rest of the hold
 
-            if (platformShare.signum() > 0 && !Boolean.TRUE.equals(hold.getTestMode())) {
-                merchant.setBalance(merchant.getBalance().add(platformShare));
-                merchant.setTotalVolume(merchant.getTotalVolume().add(hold.getAmount()));
-                merchantRepository.save(merchant);
+            if (!Boolean.TRUE.equals(hold.getTestMode())) {
+                if (platformShare.signum() > 0) {
+                    merchant.setBalance(merchant.getBalance().add(platformShare));
+                    merchant.setTotalVolume(merchant.getTotalVolume().add(hold.getAmount()));
+                    merchantRepository.save(merchant);
+                }
+                // The Aza fee is earned here, not at capture — a refunded hold returns it
+                // in full. Booking it on the capture transaction now (rather than writing a
+                // second payment row) keeps one transaction per payment; the fee dashboard
+                // reads feeAmount, so revenue appears only once a hold actually settles.
+                BigDecimal feeEarned = feeFor(hold, remaining);
+                if (feeEarned.signum() > 0) {
+                    sessionRepository.findById(hold.getSessionId())
+                            .map(CheckoutSession::getTransactionId)
+                            .flatMap(transactionRepository::findById)
+                            .ifPresent(captureTx -> {
+                                captureTx.setFeeAmount(feeEarned);
+                                transactionRepository.save(captureTx);
+                            });
+                }
             }
         }
 
