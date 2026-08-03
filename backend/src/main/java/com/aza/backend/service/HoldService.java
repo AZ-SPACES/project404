@@ -243,9 +243,12 @@ public class HoldService {
         if (!hold.isActive()) hold.setResolvedAt(LocalDateTime.now());
         holdRepository.save(hold);
 
+        // The event records what left the hold (settledNow), not just what reached
+        // recipients — the ledger invariant sums these against releasedAmount, so the two
+        // must be the same quantity.
         recordEvent(hold,
                 failures.isEmpty() ? HoldEvent.EventType.RELEASED : HoldEvent.EventType.RELEASE_FAILED,
-                releasedNow, HoldEvent.ActorType.PLATFORM, apiKeyId,
+                settledNow, HoldEvent.ActorType.PLATFORM, apiKeyId,
                 request != null ? request.getReason() : null, idempotencyKey, null);
 
         if (!failures.isEmpty()) {
@@ -266,7 +269,10 @@ public class HoldService {
     @Transactional
     public PaymentHold refund(UUID sessionId, UUID merchantId, RefundHoldRequest request,
                               String idempotencyKey, UUID apiKeyId, HoldEvent.ActorType actor) {
-        PaymentHold hold = lockHoldForSettlement(sessionId, merchantId);
+        // ADMIN is compliance resolving a hold it froze — the one actor allowed through a
+        // freeze, because otherwise a frozen hold has no terminal state at all.
+        PaymentHold hold = lockHoldForSettlement(sessionId, merchantId,
+                actor == HoldEvent.ActorType.ADMIN);
 
         HoldEvent replay = findReplay(hold, idempotencyKey);
         if (replay != null) return hold;
@@ -315,7 +321,13 @@ public class HoldService {
 
         hold.setRefundedAmount(hold.getRefundedAmount().add(refundAmount));
         hold.setStatus(statusAfterSettlement(hold));
-        if (!hold.isActive()) hold.setResolvedAt(LocalDateTime.now());
+        if (!hold.isActive()) {
+            hold.setResolvedAt(LocalDateTime.now());
+            // A compliance refund resolves the freeze along with the hold; leaving the
+            // freeze fields set would show a settled hold as still under review.
+            hold.setFrozenReason(null);
+            hold.setFrozenAt(null);
+        }
         holdRepository.save(hold);
 
         // Recipients who will now never be paid from this hold.
@@ -334,12 +346,138 @@ public class HoldService {
             });
         }
 
-        recordEvent(hold, HoldEvent.EventType.REFUNDED, refundAmount, actor, apiKeyId,
+        // SYSTEM is only ever the expiry sweep, so it books a distinct event type — an
+        // auto-refund because nobody released is a different fact from an integrator
+        // deciding to refund, and support will be asked to tell them apart.
+        HoldEvent.EventType eventType = actor == HoldEvent.ActorType.SYSTEM
+                ? HoldEvent.EventType.EXPIRED_REFUNDED
+                : HoldEvent.EventType.REFUNDED;
+        recordEvent(hold, eventType, refundAmount, actor, apiKeyId,
                 request != null ? request.getReason() : null, idempotencyKey, null);
 
         log.info("Hold refunded: holdId={}, amount={}, actor={}, status={}",
                 hold.getId(), refundAmount, actor, hold.getStatus());
         return hold;
+    }
+
+    // ==================== COMPLIANCE FREEZE ====================
+
+    /**
+     * Suspend a hold for an Aza compliance reason — fraud, sanctions, a frozen account, a
+     * legal order. This is the ONLY circumstance in which Aza acts on a hold of its own
+     * initiative outside expiry, and it is deliberately not a dispute mechanism: Aza has no
+     * view into whether work was done and does not rule on it (HELD_SETTLEMENT_PLAN §5).
+     *
+     * A freeze blocks release and refund alike, and stops the expiry clock.
+     */
+    @Transactional
+    public PaymentHold freeze(UUID holdId, String reason, UUID adminId) {
+        PaymentHold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
+
+        if (hold.getStatus() == PaymentHold.HoldStatus.FROZEN) {
+            throw new AppException("HOLD_FROZEN", "This hold is already frozen", HttpStatus.CONFLICT);
+        }
+        if (!hold.isActive()) {
+            throw new AppException("HOLD_ALREADY_SETTLED",
+                    "This hold is already " + hold.getStatus().name().toLowerCase(), HttpStatus.CONFLICT);
+        }
+
+        hold.setStatus(PaymentHold.HoldStatus.FROZEN);
+        hold.setFrozenReason(reason);
+        hold.setFrozenAt(LocalDateTime.now());
+        holdRepository.save(hold);
+
+        recordEvent(hold, HoldEvent.EventType.FROZEN, null, HoldEvent.ActorType.ADMIN,
+                null, reason, null, null);
+
+        log.warn("Hold frozen by compliance: holdId={}, adminId={}, reason={}", holdId, adminId, reason);
+        return hold;
+    }
+
+    /**
+     * Lift a compliance freeze. The hold returns to HELD with its window extended by however
+     * long it was frozen — an Aza review is Aza's delay, and letting it eat the payer's hold
+     * period could auto-refund a payer mid-investigation or leave a recipient no time to be paid.
+     */
+    @Transactional
+    public PaymentHold unfreeze(UUID holdId, UUID adminId) {
+        PaymentHold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
+
+        if (hold.getStatus() != PaymentHold.HoldStatus.FROZEN) {
+            throw new AppException("HOLD_NOT_FROZEN", "This hold is not frozen", HttpStatus.CONFLICT);
+        }
+
+        if (hold.getFrozenAt() != null) {
+            long frozenSeconds = java.time.Duration.between(hold.getFrozenAt(), LocalDateTime.now()).getSeconds();
+            if (frozenSeconds > 0) hold.setExpiresAt(hold.getExpiresAt().plusSeconds(frozenSeconds));
+        }
+        hold.setStatus(PaymentHold.HoldStatus.HELD);
+        hold.setFrozenReason(null);
+        hold.setFrozenAt(null);
+        holdRepository.save(hold);
+
+        recordEvent(hold, HoldEvent.EventType.UNFROZEN, null, HoldEvent.ActorType.ADMIN,
+                null, null, null, null);
+
+        log.info("Hold unfrozen: holdId={}, adminId={}, newExpiresAt={}", holdId, adminId, hold.getExpiresAt());
+        return hold;
+    }
+
+    // ==================== EXPIRY ====================
+
+    /**
+     * Return an expired hold's remaining money to the payer.
+     *
+     * Absence of a release call is absence of evidence that anything was earned, and Aza
+     * cannot judge whether it was — so the status quo ante is the only outcome it can
+     * defend. Idempotent per hold: the key means a repeated sweep cannot refund twice.
+     */
+    @Transactional
+    public PaymentHold expire(UUID holdId) {
+        PaymentHold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
+        return refund(hold.getSessionId(), hold.getMerchantId(), null,
+                "expiry:" + hold.getId(), null, HoldEvent.ActorType.SYSTEM);
+    }
+
+    /**
+     * Compliance returns a frozen hold's money to the payer, resolving it terminally.
+     *
+     * This is the exit from a freeze. Aza is still not ruling on whether work was done — it
+     * is unwinding a payment it should not be holding (fraud, sanctions, a legal order), and
+     * the status quo ante is the only outcome it can defend without an opinion it is not
+     * entitled to. Releasing to a recipient under those circumstances is never Aza's call.
+     */
+    @Transactional
+    public PaymentHold adminRefund(UUID holdId, String reason, UUID adminId) {
+        PaymentHold hold = holdRepository.findById(holdId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
+
+        RefundHoldRequest request = new RefundHoldRequest();
+        request.setReason(reason);
+        PaymentHold refunded = refund(hold.getSessionId(), null, request,
+                "admin-refund:" + holdId, null, HoldEvent.ActorType.ADMIN);
+
+        log.warn("Hold refunded by compliance: holdId={}, adminId={}, reason={}", holdId, adminId, reason);
+        return refunded;
+    }
+
+    /**
+     * Record that an expiry warning went out, returning false if it already had. The
+     * {@code (hold_id, idempotency_key)} constraint is what makes an hourly sweep safe to
+     * re-run without spamming an integrator every hour for a week.
+     */
+    @Transactional
+    public boolean markWarned(PaymentHold hold, int daysOut) {
+        String key = "expiry-warn-" + daysOut + ":" + hold.getId();
+        if (eventRepository.findByHoldIdAndIdempotencyKey(hold.getId(), key).isPresent()) {
+            return false;
+        }
+        recordEvent(hold, HoldEvent.EventType.EXPIRING, remainingOf(hold),
+                HoldEvent.ActorType.SYSTEM, null, daysOut + " day(s) until expiry", key, null);
+        return true;
     }
 
     // ==================== READ ====================
@@ -379,16 +517,27 @@ public class HoldService {
 
     /** Locks the hold row first, then validates it is this merchant's and still settleable. */
     private PaymentHold lockHoldForSettlement(UUID sessionId, UUID merchantId) {
+        return lockHoldForSettlement(sessionId, merchantId, false);
+    }
+
+    /**
+     * @param allowFrozen compliance resolving a frozen hold. A freeze blocks the integrator
+     *                    and the expiry sweep alike, so without this there is no way out of
+     *                    a freeze except lifting it — which hands control back to the very
+     *                    integrator the freeze may exist because of, and leaves safeguarded
+     *                    customer money parked with no defined exit.
+     */
+    private PaymentHold lockHoldForSettlement(UUID sessionId, UUID merchantId, boolean allowFrozen) {
         PaymentHold hold = holdRepository.findBySessionIdForUpdate(sessionId)
                 .orElseThrow(() -> new AppException("NOT_FOUND",
                         "This session has no hold — it settled automatically", HttpStatus.NOT_FOUND));
 
-        if (!hold.getMerchantId().equals(merchantId)) {
+        if (merchantId != null && !hold.getMerchantId().equals(merchantId)) {
             // Same response as a missing hold: never confirm another merchant's session exists.
             throw new AppException("NOT_FOUND",
                     "This session has no hold — it settled automatically", HttpStatus.NOT_FOUND);
         }
-        if (hold.getStatus() == PaymentHold.HoldStatus.FROZEN) {
+        if (hold.getStatus() == PaymentHold.HoldStatus.FROZEN && !allowFrozen) {
             throw new AppException("HOLD_FROZEN",
                     "This hold is frozen pending an Aza compliance review and cannot be settled",
                     HttpStatus.CONFLICT);

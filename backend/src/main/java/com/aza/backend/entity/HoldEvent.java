@@ -56,7 +56,9 @@ public class HoldEvent {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    public enum EventType { HELD, RELEASED, REFUNDED, RELEASE_FAILED, FROZEN, UNFROZEN, EXPIRED_REFUNDED }
+    public enum EventType {
+        HELD, RELEASED, REFUNDED, RELEASE_FAILED, FROZEN, UNFROZEN, EXPIRING, EXPIRED_REFUNDED
+    }
 
     public enum ActorType { PLATFORM, ADMIN, SYSTEM }
 }

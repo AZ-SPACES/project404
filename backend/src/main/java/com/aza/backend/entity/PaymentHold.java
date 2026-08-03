@@ -57,9 +57,15 @@ public class PaymentHold {
     @Builder.Default
     private HoldStatus status = HoldStatus.HELD;
 
-    /** Set only by Aza compliance (Phase 2). While present, both release and refund are blocked. */
+    /** Set only by Aza compliance. While present, both release and refund are blocked. */
     @Column(length = 500)
     private String frozenReason;
+
+    /**
+     * When compliance froze this hold. Unfreezing extends {@link #expiresAt} by the frozen
+     * duration: a review is Aza's delay, not the payer's, and must not consume their window.
+     */
+    private LocalDateTime frozenAt;
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;

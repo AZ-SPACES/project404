@@ -67,8 +67,9 @@ public class ReconBreak {
     public enum Direction { CREDIT, DEBIT }
 
     public enum BreakReason {
-        NO_MATCH,        // statement line has no matching internal transaction
-        AMOUNT_MISMATCH  // reference matched but amounts differ
+        NO_MATCH,          // statement line has no matching internal transaction
+        AMOUNT_MISMATCH,   // reference matched but amounts differ
+        HOLD_LEDGER_DRIFT  // a hold's settled totals disagree with its append-only event log
     }
 
     public enum Status { OPEN, RESOLVED }

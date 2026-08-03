@@ -16,6 +16,8 @@ public class BackOfficeScheduler {
 
     private final ApprovalService approvalService;
     private final ReconciliationService reconciliationService;
+    private final com.aza.backend.service.HoldLedgerAuditService holdLedgerAuditService;
+    private final com.aza.backend.repository.PaymentHoldRepository paymentHoldRepository;
     private final ScreeningService screeningService;
     private final com.aza.backend.service.AuditAnchorService auditAnchorService;
     private final com.aza.backend.service.StaffAlertService staffAlertService;
@@ -34,6 +36,33 @@ public class BackOfficeScheduler {
     @Scheduled(cron = "0 10 2 * * *")
     public void safeguardingCheck() {
         reconciliationService.takeScheduledSnapshot();
+    }
+
+    /**
+     * 02:15 — assert every settled hold's totals still agree with its append-only event
+     * log. Runs just before the safeguarding snapshot reads held float, so a drifted
+     * ledger is flagged in the same night's numbers rather than the next one's.
+     */
+    @Scheduled(cron = "0 15 2 * * *")
+    public void holdLedgerAudit() {
+        holdLedgerAuditService.verifyLedger();
+    }
+
+    /**
+     * 02:25 — surface holds that have sat under compliance freeze for over a week.
+     * Freezing stops the expiry clock, so a forgotten freeze parks a payer's money
+     * indefinitely with nothing to bring it back. This is the only thing that notices.
+     */
+    @Scheduled(cron = "0 25 2 * * *")
+    public void staleFrozenHolds() {
+        var stale = paymentHoldRepository.findLongFrozen(java.time.LocalDateTime.now().minusDays(7));
+        if (!stale.isEmpty()) {
+            staffAlertService.alertRole(com.aza.backend.entity.StaffRole.Role.COMPLIANCE,
+                    "Holds frozen over 7 days",
+                    stale.size() + " payment hold(s) have been frozen for more than a week. "
+                            + "A freeze stops the expiry clock, so these will not resolve on their own — "
+                            + "lift the freeze or refund the payer.");
+        }
     }
 
     /** Mondays 02:50 — flag verified users whose periodic KYC review is overdue. */

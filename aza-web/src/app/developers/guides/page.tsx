@@ -2057,6 +2057,31 @@ public static boolean verifySignature(
           payer. Absence of a release call is not evidence that anything was earned, and Aza cannot
           judge whether it was — you hold that decision, and the evidence for it.
         </Warn>
+        <p className="text-sm">
+          You get <code>hold.expiring</code> seven days and one day before that happens, then
+          <code>hold.expired_refunded</code> if it does. Subscribe to at least one of them: it is
+          the only warning before a payment you were holding is reversed.
+        </p>
+        <Table
+          headers={['Webhook event', 'When']}
+          rows={[
+            ['hold.created',          'Payer paid; the money is now held'],
+            ['hold.released',         'You released it; recipients and your balance are settled'],
+            ['hold.partially_settled','You released part of it; the rest stays held'],
+            ['hold.release_failed',   'A recipient could not be paid — their share stays held, not yours'],
+            ['hold.refunded',         'You returned it to the payer'],
+            ['hold.expiring',         'T-7 and T-1 before the hold expires'],
+            ['hold.expired_refunded', 'Nobody released in time; the payer has been refunded'],
+            ['hold.frozen',           'Aza froze the hold for compliance; release and refund now fail'],
+            ['hold.unfrozen',         'The freeze was lifted; your hold window was extended to match'],
+          ]}
+        />
+        <Note>
+          Aza may freeze a hold for fraud, sanctions, a frozen account, or a legal order. While
+          frozen, release and refund both return <code>HOLD_FROZEN</code> and the expiry clock
+          stops — a review will not eat the hold window. Aza does not freeze holds to take a side
+          in a disagreement about whether work was done; it has no way to know.
+        </Note>
 
         <h3 className="text-base font-bold text-gray-900">Rate limits</h3>
         <Table
