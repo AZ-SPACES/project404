@@ -891,7 +891,7 @@ export default function CheckoutPage() {
                     ) : (
                       <div className="flex flex-col items-center gap-3 py-1">
                         <div className="bg-white p-3 rounded-2xl">
-                          <QRCodeSVG value={`aza://pay/${sessionId}`} size={160} level="M" />
+                          <QRCodeSVG value={`https://pay.aza.systems/c/${sessionId}`} size={160} level="M" />
                         </div>
                         <p className="text-xs text-white/35 text-center leading-relaxed">
                           Open the AZA app and scan this code to pay
