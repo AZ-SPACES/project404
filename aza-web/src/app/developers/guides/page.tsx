@@ -379,6 +379,27 @@ const docMap: Record<string, DocArticle> = {
         <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>aza_test_...</code>) behave identically to live keys but do not move real money.</p>
 
         <Note>
+          <strong>Getting your recipients onto Aza.</strong> Every mode except paying your own
+          balance needs the recipient to already have an account. Call{' '}
+          <code>POST /api/v1/merchant/connect/recipients/invite</code> with their phone number and
+          Aza texts them a signup link; you get a <code>recipient.registered</code> webhook once
+          they join. Gate your own onboarding on{' '}
+          <code>GET /connect/recipients/resolve</code> so you never create a hold for someone who
+          cannot be paid. If the invite comes back <code>PENDING</code> with an{' '}
+          <code>unpayableReason</code>, that person already has an Aza account which cannot
+          receive money — no webhook will follow, so act on the reason instead of waiting.
+        </Note>
+
+        <Note>
+          <strong>Two exceptions.</strong> API-key management (<code>/api/v1/merchant/api-keys</code>) is
+          dashboard-only by design — a key can never mint or revoke another key. And payout
+          <em>writes</em> (<code>POST /payouts</code>, <code>PUT /auto-payout</code>) reject secret keys:
+          moving money out to a bank requires a <strong>restricted</strong> key that explicitly carries
+          the <code>payouts:write</code> scope, so a leaked secret key cannot drain your balance.
+          Reading payouts works with any key.
+        </Note>
+
+        <Note>
           <strong>Currency:</strong> The default currency is <strong>GHS (Ghana Cedi)</strong>. All amounts in request and response bodies are in GHS unless noted.
         </Note>
 
@@ -564,6 +585,31 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
     description: 'A checkout session represents a single payment request. When created, the customer opens the session URL in the Aza app and approves the payment with their PIN. You receive a webhook when it completes.',
     content: (
       <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Which mode do you need?</h3>
+        <p className="text-sm">
+          Decide this before you write any code — it is the only structural choice in Aza
+          payments, and picking the wrong one is the most common reason integrations get stuck.
+        </p>
+        <Table
+          headers={['If money should…', 'Use', 'Recipient needs an Aza account?']}
+          rows={[
+            ['Land in your own account', 'The default — send nothing extra', 'No'],
+            ['Reach named sellers at the moment of payment', 'splits', 'Yes'],
+            ['Reach someone only after something happens', 'release: "MANUAL"', 'Yes'],
+          ]}
+        />
+        <Note>
+          <strong>Reach for manual release only if you can name the moment the money should
+          move.</strong> A job marked complete, goods confirmed delivered, a rental returned. If
+          you cannot name it, you want the default: money that lands in your account is money you
+          can pay out on your own terms, with no expiry clock and no release call to remember.
+        </Note>
+        <Warn>
+          Manual release is a commitment, not a safety net. An unreleased hold reverses to the
+          payer at <code>maxHoldDays</code>, and Aza will not adjudicate whether it should have —
+          it cannot see what the payment was for.
+        </Warn>
+
         <h3 className="text-base font-bold text-gray-900">Create a session</h3>
         <Endpoint method="POST" path="/api/v1/merchant/sessions" />
         <Table
@@ -574,6 +620,9 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
             ['reference',      'string',  'No',  'Your own reference (e.g. order or tenant/seller id). Echoed on the session and in webhooks, and filterable via ?reference='],
             ['metadata',       'string',  'No',  'Arbitrary JSON string, returned unchanged on the session and in webhooks'],
             ['idempotencyKey', 'string',  'No',  'Unique key to safely retry creation without duplicating a session'],
+            ['release',        'string',  'No',  '"AUTOMATIC" (default) or "MANUAL" — see above'],
+            ['recipients',     'array',   'No',  'MANUAL only: who gets paid on release. Each must already have an Aza account'],
+            ['maxHoldDays',    'integer', 'No',  'MANUAL only: 1–90, default 30. After this the payer is refunded'],
           ]}
         />
 
@@ -1992,25 +2041,114 @@ public static boolean verifySignature(
         <Table
           headers={['error field', 'Description']}
           rows={[
-            ['INVALID_API_KEY',        'The X-Api-Key header is missing or malformed'],
-            ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended'],
-            ['INSUFFICIENT_BALANCE',   'Requested payout exceeds available balance'],
-            ['SESSION_ALREADY_PAID',   'Attempting to refund a non-completed session'],
-            ['DUPLICATE_CODE',         'Discount code with this value already exists'],
-            ['INVOICE_NOT_DRAFT',      'Trying to send an invoice not in DRAFT status'],
-            ['WEBHOOK_URL_UNREACHABLE','URL failed connectivity check during registration'],
+            ['IDEMPOTENCY_KEY_REQUIRED', 'Release and refund require an Idempotency-Key header (400)'],
+            ['HOLD_ALREADY_SETTLED',   'This hold was already released or refunded (409)'],
+            ['HOLD_FROZEN',            'Held pending an Aza compliance review; cannot be settled (409)'],
+            ['RELEASE_EXCEEDS_HELD',   'Release or refund is larger than the amount still held (400)'],
+            ['RECIPIENT_NOT_FOUND',    'No Aza account matches that phone, email, or username (400)'],
+            ['INVALID_API_KEY',        'The X-Api-Key header is missing, malformed, or revoked (401)'],
+            ['MERCHANT_NOT_ACTIVE',    'Merchant account is pending KYB or suspended (403)'],
+            ['MISSING_SCOPE',          'Restricted key lacks the scope this endpoint requires (403)'],
+            ['PAYOUTS_REQUIRE_RESTRICTED_KEY', 'Payout writes need a restricted key carrying payouts:write (403)'],
+            ['UNAUTHORIZED_IP',        'Request came from an IP outside the key’s allowlist (403)'],
+            ['NOT_FOUND',              'The session, invoice, or resource does not exist on your account (404)'],
+            ['NOT_ACTIVE',             'Your merchant account cannot accept payments right now (403)'],
+            ['SESSION_EXPIRED',        'The checkout session passed its 30-minute expiry (400)'],
+            ['SESSION_NOT_PENDING',    'Session is already paid, cancelled, or expired (400)'],
+            ['INVALID_STATUS',         'Only COMPLETED sessions can be refunded (400)'],
+            ['INVALID_METADATA',       'metadata was not valid JSON (400)'],
+            ['INVALID_SPLIT',          'A split amount was missing or not greater than zero (400)'],
+            ['SPLITS_EXCEED_NET',      'Splits total more than the amount left after the Aza fee (400)'],
+            ['SPLIT_RECIPIENT_NOT_FOUND', 'No Aza account matches a split recipient (400)'],
+            ['INSUFFICIENT_FUNDS',     'Balance cannot cover this refund or payout (400)'],
+            ['VALIDATION_ERROR',       'A request field failed validation — see error.field (400)'],
           ]}
         />
+
+        <Note>
+          <strong>Codes are stable; messages are not.</strong> Branch on <code>error.code</code>,
+          never on <code>error.message</code> — message wording changes without notice.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Holding money until you release it</h3>
+        <p className="text-sm">
+          A payment settles to you immediately by default. Add <code>release: &quot;MANUAL&quot;</code> and
+          Aza holds the money instead, until you call <code>POST /sessions/{'{id}'}/release</code>.
+          Use it when money should reach someone only <em>after</em> something happens — a job
+          finished, goods delivered, a rental returned. Aza never learns what that something is;
+          your <code>reference</code> and <code>metadata</code> are stored and echoed back untouched.
+        </p>
+        <Table
+          headers={['Field', 'Meaning']}
+          rows={[
+            ['release', '"AUTOMATIC" (default) or "MANUAL"'],
+            ['recipients', 'Who gets paid on release — phone, email, or username. Must already have an Aza account.'],
+            ['maxHoldDays', 'How long Aza holds before returning the money to the payer. Default 30, max 90.'],
+          ]}
+        />
+        <Note>
+          <strong>Release and refund require an <code>Idempotency-Key</code> header.</strong> These
+          calls move money and integrators retry on timeout; a replayed key returns the original
+          result without paying twice. A refund cannot fail while the money is held — nobody has
+          been credited yet.
+        </Note>
+        <Warn>
+          If nobody calls release within <code>maxHoldDays</code>, Aza returns the money to the
+          payer. Absence of a release call is not evidence that anything was earned, and Aza cannot
+          judge whether it was — you hold that decision, and the evidence for it.
+        </Warn>
+        <p className="text-sm">
+          You get <code>hold.expiring</code> seven days and one day before that happens, then
+          <code>hold.expired_refunded</code> if it does. Subscribe to at least one of them: it is
+          the only warning before a payment you were holding is reversed.
+        </p>
+        <Table
+          headers={['Webhook event', 'When']}
+          rows={[
+            ['hold.created',          'Payer paid; the money is now held'],
+            ['hold.released',         'You released it; recipients and your balance are settled'],
+            ['hold.partially_settled','You released part of it; the rest stays held'],
+            ['hold.release_failed',   'A recipient could not be paid — their share stays held, not yours'],
+            ['hold.refunded',         'You returned it to the payer'],
+            ['hold.expiring',         'T-7 and T-1 before the hold expires'],
+            ['hold.expired_refunded', 'Nobody released in time; the payer has been refunded'],
+            ['hold.frozen',           'Aza froze the hold for compliance; release and refund now fail'],
+            ['hold.unfrozen',         'The freeze was lifted; your hold window was extended to match'],
+            ['recipient.registered',  'Someone you invited now has an Aza account and can be paid'],
+          ]}
+        />
+        <Note>
+          Aza may freeze a hold for fraud, sanctions, a frozen account, or a legal order. While
+          frozen, release and refund both return <code>HOLD_FROZEN</code> and the expiry clock
+          stops — a review will not eat the hold window. Aza does not freeze holds to take a side
+          in a disagreement about whether work was done; it has no way to know.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Rate limits</h3>
+        <Table
+          headers={['Endpoint', 'Limit']}
+          rows={[
+            ['POST /api/v1/merchant/sessions', '200 per hour, per merchant'],
+          ]}
+        />
+        <p className="text-sm">
+          Exceeding a limit returns <code>429</code>. The window is a rolling hour and the budget is
+          shared across every key on your account, live and test. If you are aggregating many tenants
+          through one merchant account and expect to exceed this, contact <strong>support@aza.systems</strong> —
+          the cap is configurable per merchant.
+        </p>
       </div>
     ),
     codeSnippets: {
-      curl: `# A 401 response (invalid key)
+      curl: `# A 401 response (invalid key). Every error — including auth failures from
+# the API-key layer — uses this one envelope. Read error.code, not error.message.
 # HTTP/1.1 401 Unauthorized
 # {
 #   "success": false,
-#   "error": "INVALID_API_KEY",
-#   "message": "The provided API key is invalid or has been revoked.",
-#   "statusCode": 401
+#   "error": {
+#     "code": "INVALID_API_KEY",
+#     "message": "Invalid API key"
+#   }
 # }
 
 # Test your key
@@ -2027,8 +2165,11 @@ curl -X GET ${BASE}/api/v1/merchant/me \\
   });
   const body = await res.json();
   if (!body.success) {
-    const err = new Error(body.message);
-    err.code = body.error;
+    // error is an object: { code, message, field? } — on every failure, including
+    // 401/403 from the API-key layer.
+    const err = new Error(body.error?.message ?? 'Request failed');
+    err.code = body.error?.code;
+    err.field = body.error?.field;
     err.status = res.status;
     throw err;
   }
@@ -2062,7 +2203,10 @@ def aza_request(method, path, **kwargs):
     )
     body = resp.json()
     if not body.get('success'):
-        raise AzaError(body['error'], body['message'], resp.status_code)
+        # error is an object: {code, message, field?} — on every failure,
+        # including 401/403 from the API-key layer.
+        err = body.get('error') or {}
+        raise AzaError(err.get('code'), err.get('message', 'Request failed'), resp.status_code)
     return body['data']
 
 try:

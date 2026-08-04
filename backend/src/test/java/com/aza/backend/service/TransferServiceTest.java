@@ -440,4 +440,69 @@ class TransferServiceTest {
         req.setIdempotencyKey("idem-key");
         return req;
     }
+
+    // ── requestMoney idempotency ownership guard ──────────────────────────────
+    // Idempotency keys are globally unique across the transactions table, so replaying
+    // a key belonging to someone else's request must throw rather than hand back that
+    // transaction's amount, note, status and counterparty.
+
+    @Test
+    void requestMoney_replayOfForeignKey_throwsInsteadOfLeaking() {
+        User requester = verifiedActiveUser();
+        User fromUser = User.builder().id(recipientId).status(User.AccountStatus.ACTIVE).build();
+
+        Transaction foreign = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderId(UUID.randomUUID())      // unrelated parties
+                .recipientId(UUID.randomUUID())
+                .amount(new BigDecimal("500.00"))
+                .note("someone else's private note")
+                .type(Transaction.TransactionType.REQUEST)
+                .status(Transaction.TransactionStatus.PENDING)
+                .idempotencyKey("req-key-1")
+                .build();
+
+        when(userRepository.findByEmailOrPhoneNumber("bob@example.com", "bob@example.com"))
+                .thenReturn(Optional.of(fromUser));
+        when(transactionRepository.findByIdempotencyKey("req-key-1")).thenReturn(Optional.of(foreign));
+
+        AppException ex = assertThrows(AppException.class,
+                () -> transferService.requestMoney(requester, moneyRequest("50.00", "req-key-1")));
+        assertTrue(ex.getMessage().toLowerCase().contains("idempotency"));
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void requestMoney_replayOfOwnKey_returnsExisting() {
+        User requester = verifiedActiveUser();
+        User fromUser = User.builder().id(recipientId).firstName("Bob")
+                .status(User.AccountStatus.ACTIVE).build();
+
+        Transaction own = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderId(recipientId)            // money requested FROM bob
+                .recipientId(senderId)            // TO the requester
+                .amount(new BigDecimal("50.00"))
+                .type(Transaction.TransactionType.REQUEST)
+                .status(Transaction.TransactionStatus.PENDING)
+                .idempotencyKey("req-key-2")
+                .build();
+
+        when(userRepository.findByEmailOrPhoneNumber("bob@example.com", "bob@example.com"))
+                .thenReturn(Optional.of(fromUser));
+        when(transactionRepository.findByIdempotencyKey("req-key-2")).thenReturn(Optional.of(own));
+
+        TransferResponse res = transferService.requestMoney(requester, moneyRequest("50.00", "req-key-2"));
+
+        assertEquals(own.getId().toString(), res.getId());
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    private com.aza.backend.dto.transfer.MoneyRequestDto moneyRequest(String amount, String key) {
+        com.aza.backend.dto.transfer.MoneyRequestDto req = new com.aza.backend.dto.transfer.MoneyRequestDto();
+        req.setFromIdentifier("bob@example.com");
+        req.setAmount(new BigDecimal(amount));
+        req.setIdempotencyKey(key);
+        return req;
+    }
 }

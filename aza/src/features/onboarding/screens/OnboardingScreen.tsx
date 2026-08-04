@@ -27,13 +27,13 @@ const slides = [
   {
     title: "INSTANT, SAFE &\nPROTECTED",
     description:
-      "Transfers complete in seconds with escrow protection. Your money is safe until the recipient accepts.",
+      "Transfers complete in seconds. Your balance is safeguarded in regulated bank accounts, kept separate from Aza's own funds.",
     isLight: false,
   },
   {
-    title: "100% FEE-FREE\nTRANSFERS",
+    title: "FEE-FREE\nEVERYDAY TRANSFERS",
     description:
-      "Transfers complete in seconds with escrow protection. Your money is safe until the recipient accepts.",
+      "Small transfers are always free, and larger ones stay free within your monthly allowance.",
     isLight: false,
   },
   {

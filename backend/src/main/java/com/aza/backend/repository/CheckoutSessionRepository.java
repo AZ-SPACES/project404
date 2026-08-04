@@ -20,7 +20,9 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
 
     Page<CheckoutSession> findAllByMerchantIdOrderByCreatedAtDesc(UUID merchantId, Pageable pageable);
 
-    Optional<CheckoutSession> findByIdempotencyKey(String idempotencyKey);
+    // Idempotency is scoped per merchant: an unscoped lookup would let one merchant
+    // retrieve another's session by guessing/reusing a key (cross-tenant disclosure).
+    Optional<CheckoutSession> findByMerchantIdAndIdempotencyKey(UUID merchantId, String idempotencyKey);
 
     @Query("SELECT s FROM CheckoutSession s WHERE s.status = 'PENDING' AND s.expiresAt < :now")
     List<CheckoutSession> findExpiredSessions(@Param("now") LocalDateTime now);
@@ -110,6 +112,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND (CAST(:to AS timestamp) IS NULL OR s.createdAt <= :to) " +
            "AND (CAST(:testMode AS boolean) IS NULL OR s.testMode = :testMode) " +
            "AND (CAST(:reference AS string) IS NULL OR s.reference = :reference) " +
+           "AND (:releaseMode IS NULL OR s.releaseMode = :releaseMode) " +
            "AND (CAST(:q AS string) IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
@@ -119,6 +122,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
             @Param("to") LocalDateTime to,
             @Param("testMode") Boolean testMode,
             @Param("reference") String reference,
+            @Param("releaseMode") CheckoutSession.ReleaseMode releaseMode,
             @Param("q") String q,
             Pageable pageable);
 

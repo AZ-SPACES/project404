@@ -37,6 +37,15 @@ public class SafeguardingSnapshot {
     @Builder.Default
     private BigDecimal agentFloat = BigDecimal.ZERO;
 
+    /**
+     * Customer money sitting in open payment holds. In no wallet and no merchant balance,
+     * so it must be subtracted from the safeguarding variance explicitly or every hold
+     * reads as a surplus.
+     */
+    @Column(nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal heldFloat = BigDecimal.ZERO;
+
     /** Balance of the safeguarding bank account — entered by FINANCE until a bank API exists. */
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal safeguardingBalance;

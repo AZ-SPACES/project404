@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @Data
 public class CheckoutSplitRequest {
 
-    /** Seller's Aza email or username. */
+    /** Seller's Aza phone number, email, or username. */
     @NotBlank
     @Size(max = 255)
     private String recipient;

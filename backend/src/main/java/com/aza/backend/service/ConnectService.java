@@ -40,6 +40,8 @@ public class ConnectService {
     private final ConnectTransferRepository connectTransferRepository;
     private final NotificationService notificationService;
     private final RateLimitService rateLimitService;
+    private final RecipientResolver recipientResolver;
+    private final RecipientInviteService inviteService;
 
     // ==================== BALANCE ====================
 
@@ -68,11 +70,16 @@ public class ConnectService {
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
         String id = identifier.trim();
-        User user = userRepository.findByEmailIgnoreCaseOrUsername(id, id).orElse(null);
+        User user = recipientResolver.find(id).orElse(null);
         if (user == null) {
+            // Tell the integrator what to do about it rather than just that it failed —
+            // an unregistered recipient is the normal case when onboarding new workers,
+            // not an error state.
             return ConnectRecipientResponse.builder()
                     .found(false).canReceive(false)
-                    .reason("No Aza account matches that email or username")
+                    .reason("No Aza account matches that phone, email or username. "
+                            + "Invite them with POST /connect/recipients/invite, or send them "
+                            + "to " + inviteService.signupUrl() + " to create a free account.")
                     .build();
         }
 
@@ -137,7 +144,7 @@ public class ConnectService {
         }
 
         String identifier = request.getRecipient().trim();
-        User recipient = userRepository.findByEmailIgnoreCaseOrUsername(identifier, identifier).orElse(null);
+        User recipient = recipientResolver.find(identifier).orElse(null);
         if (recipient == null) {
             throw new AppException("RECIPIENT_NOT_FOUND",
                     "No Aza account matches '" + identifier + "'", HttpStatus.BAD_REQUEST);

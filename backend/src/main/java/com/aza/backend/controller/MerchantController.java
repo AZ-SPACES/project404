@@ -55,9 +55,12 @@ public class MerchantController {
 
     // ==================== PROFILE ====================
 
+    // /me is on the API-key surface — it is the "test your key" endpoint in the
+    // developer guides, so it must work with X-Api-Key as well as a dashboard JWT.
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<MerchantResponse>> getMe(@AuthenticationPrincipal User user) {
-        MerchantResponse merchant = merchantService.getMyMerchant(user.getId());
+    public ResponseEntity<ApiResponse<MerchantResponse>> getMe(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal) {
+        MerchantResponse merchant = merchantService.getMyMerchant(PrincipalResolver.ownerUserId(principal));
         return ResponseEntity.ok(ApiResponse.success(merchant));
     }
 
@@ -71,9 +74,10 @@ public class MerchantController {
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<MerchantResponse>> updateMe(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @Valid @RequestBody UpdateMerchantRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.updateMerchant(user.getId(), request)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.updateMerchant(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     @PostMapping("/logo")
@@ -160,14 +164,17 @@ public class MerchantController {
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String reference,
+            @RequestParam(required = false) String release,
             @RequestParam(required = false) String mode) {
         UUID merchantId = resolveMerchantId(principal);
         // mode: "test" → sandbox only, "live" → live only, anything else → both.
         Boolean testMode = "test".equalsIgnoreCase(mode) ? Boolean.TRUE
                 : "live".equalsIgnoreCase(mode) ? Boolean.FALSE : null;
-        if (status != null || from != null || to != null || q != null || reference != null || testMode != null) {
+        if (status != null || from != null || to != null || q != null || reference != null
+                || release != null || testMode != null) {
             return ResponseEntity.ok(ApiResponse.success(
-                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode, reference)));
+                    checkoutService.searchMerchantSessions(
+                            merchantId, page, size, status, from, to, q, testMode, reference, release)));
         }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));
@@ -210,9 +217,10 @@ public class MerchantController {
 
     @PostMapping("/sessions/{sessionId}/expire")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> expireSession(
-            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID sessionId) {
-        return ResponseEntity.ok(ApiResponse.success(checkoutService.expireSession(sessionId, user.getId())));
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.expireSession(sessionId, PrincipalResolver.ownerUserId(principal))));
     }
 
     // ==================== API KEYS ====================
@@ -267,113 +275,174 @@ public class MerchantController {
     // ==================== WEBHOOKS ====================
 
     @GetMapping("/webhooks")
-    public ResponseEntity<ApiResponse<List<WebhookEndpointResponse>>> listWebhooks(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.listWebhooks(user.getId())));
+    public ResponseEntity<ApiResponse<List<WebhookEndpointResponse>>> listWebhooks(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listWebhooks(PrincipalResolver.ownerUserId(principal))));
     }
 
     @PostMapping("/webhooks")
     public ResponseEntity<ApiResponse<WebhookEndpointResponse>> createWebhook(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @Valid @RequestBody WebhookEndpointRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(merchantService.createWebhook(user.getId(), request)));
+                .body(ApiResponse.success(
+                        merchantService.createWebhook(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     @PutMapping("/webhooks/{endpointId}")
     public ResponseEntity<ApiResponse<WebhookEndpointResponse>> updateWebhook(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID endpointId,
             @RequestBody WebhookEndpointRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                merchantService.updateWebhookEndpoint(user.getId(), endpointId, request)));
+                merchantService.updateWebhookEndpoint(PrincipalResolver.ownerUserId(principal), endpointId, request)));
     }
 
     @PostMapping("/webhooks/{endpointId}/regenerate-secret")
     public ResponseEntity<ApiResponse<WebhookEndpointResponse>> regenerateWebhookSecret(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID endpointId) {
         return ResponseEntity.ok(ApiResponse.success(
-                merchantService.regenerateWebhookSecret(user.getId(), endpointId)));
+                merchantService.regenerateWebhookSecret(PrincipalResolver.ownerUserId(principal), endpointId)));
     }
 
     @GetMapping("/webhooks/{endpointId}/deliveries")
     public ResponseEntity<ApiResponse<List<WebhookDeliveryResponse>>> listWebhookDeliveries(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID endpointId) {
         return ResponseEntity.ok(ApiResponse.success(
-                merchantService.listWebhookDeliveries(user.getId(), endpointId)));
+                merchantService.listWebhookDeliveries(PrincipalResolver.ownerUserId(principal), endpointId)));
     }
 
     @DeleteMapping("/webhooks/{endpointId}")
     public ResponseEntity<ApiResponse<Void>> deleteWebhook(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID endpointId) {
-        merchantService.deleteWebhook(user.getId(), endpointId);
+        merchantService.deleteWebhook(PrincipalResolver.ownerUserId(principal), endpointId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     // ==================== PAYOUTS ====================
 
+    // Payout WRITES are additionally gated in MerchantApiKeyFilter: secret keys are denied,
+    // and restricted keys must explicitly carry payouts:write (drain-to-bank capability).
+
     @GetMapping("/payouts")
     public ResponseEntity<ApiResponse<Page<PayoutResponse>>> listPayouts(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.listPayouts(user.getId(), page, size)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listPayouts(PrincipalResolver.ownerUserId(principal), page, size)));
     }
 
     @PostMapping("/payouts")
     public ResponseEntity<ApiResponse<PayoutResponse>> requestPayout(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @Valid @RequestBody PayoutRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(merchantService.requestPayout(user.getId(), request)));
+                .body(ApiResponse.success(
+                        merchantService.requestPayout(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     // ==================== AUTO-PAYOUT SETTINGS ====================
 
     @GetMapping("/auto-payout")
     public ResponseEntity<ApiResponse<AutoPayoutSettingsResponse>> getAutoPayoutSettings(
-            @AuthenticationPrincipal User user) {
-        Merchant merchant = requireMerchant(user.getId());
-        return ResponseEntity.ok(ApiResponse.success(merchantService.getAutoPayoutSettings(merchant.getId())));
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(merchantService.getAutoPayoutSettings(merchantId)));
     }
 
     @PutMapping("/auto-payout")
     public ResponseEntity<ApiResponse<AutoPayoutSettingsResponse>> updateAutoPayoutSettings(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestBody UpdateAutoPayoutSettingsRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.updateAutoPayoutSettings(user.getId(), request)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.updateAutoPayoutSettings(PrincipalResolver.ownerUserId(principal), request)));
     }
 
     // ==================== CUSTOMERS ====================
 
     @GetMapping("/customers")
     public ResponseEntity<ApiResponse<Page<CustomerResponse>>> listCustomers(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.listCustomers(user.getId(), page, size)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listCustomers(PrincipalResolver.ownerUserId(principal), page, size)));
     }
 
     // ==================== REFUND ====================
 
     @PostMapping("/sessions/{sessionId}/refund")
     public ResponseEntity<ApiResponse<CheckoutSessionResponse>> refundSession(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID sessionId) {
-        Merchant merchant = requireMerchant(user.getId());
-        return ResponseEntity.ok(ApiResponse.success(checkoutService.refundSession(merchant.getId(), sessionId)));
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.refundSession(merchantId, sessionId)));
+    }
+
+    // ==================== HOLDS (manual release) ====================
+
+    @Operation(summary = "Release a held payment",
+            description = "Settles a session created with release=MANUAL: recipients are paid and "
+                    + "you keep the remainder net of the Aza fee. Omit `recipients` to release "
+                    + "everything still held, or supply them to release part of it. Requires an "
+                    + "Idempotency-Key header — this call moves money and integrators retry.")
+    @PostMapping("/sessions/{sessionId}/release")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> releaseHold(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ID_ATTR, required = false) UUID apiKeyId,
+            @Valid @RequestBody(required = false) ReleaseHoldRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        requireIdempotencyKey(idempotencyKey);
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.releaseHold(merchantId, sessionId, request, idempotencyKey, apiKeyId)));
+    }
+
+    @Operation(summary = "Refund a held payment",
+            description = "Returns held money to the payer, in full or in part. Cannot fail while "
+                    + "the money is held — nobody has been credited yet. The Aza fee is returned "
+                    + "in full on a full refund.")
+    @PostMapping("/sessions/{sessionId}/hold/refund")
+    public ResponseEntity<ApiResponse<CheckoutSessionResponse>> refundHold(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID sessionId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @RequestAttribute(name = MerchantApiKeyFilter.API_KEY_ID_ATTR, required = false) UUID apiKeyId,
+            @Valid @RequestBody(required = false) RefundHoldRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        requireIdempotencyKey(idempotencyKey);
+        return ResponseEntity.ok(ApiResponse.success(
+                checkoutService.refundHold(merchantId, sessionId, request, idempotencyKey, apiKeyId)));
+    }
+
+    /**
+     * Money-moving hold endpoints require an explicit key rather than defaulting to
+     * "no idempotency" — a dropped response on release must be safely retryable.
+     */
+    private void requireIdempotencyKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new AppException("IDEMPOTENCY_KEY_REQUIRED",
+                    "An Idempotency-Key header is required on this endpoint", HttpStatus.BAD_REQUEST);
+        }
     }
 
     // ==================== DISPUTES (merchant view) ====================
 
     @GetMapping("/disputes")
     public ResponseEntity<ApiResponse<Page<MerchantDisputeResponse>>> listDisputes(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.listMerchantDisputes(user.getId(), page, size)));
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.listMerchantDisputes(PrincipalResolver.ownerUserId(principal), page, size)));
     }
 
     // ==================== AUDIT LOGS ====================
@@ -516,20 +585,20 @@ public class MerchantController {
 
     @GetMapping("/customers/{customerId}/sessions")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<CheckoutSessionResponse>>> getCustomerSessions(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID customerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Merchant merchant = requireMerchant(user.getId());
+        UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(
-                checkoutService.listCustomerSessions(merchant.getId(), customerId, page, size)));
+                checkoutService.listCustomerSessions(merchantId, customerId, page, size)));
     }
 
     // ==================== DISPUTE RESPONSE ====================
 
     @PostMapping("/disputes/{disputeId}/respond")
     public ResponseEntity<ApiResponse<com.aza.backend.dto.merchant.MerchantDisputeResponse>> respondToDispute(
-            @AuthenticationPrincipal User user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
             @PathVariable UUID disputeId,
             @RequestBody java.util.Map<String, String> body) {
         String response = body.get("response");
@@ -537,7 +606,7 @@ public class MerchantController {
             throw new com.aza.backend.exception.AppException("VALIDATION", "Response text is required", HttpStatus.BAD_REQUEST);
         }
         return ResponseEntity.ok(ApiResponse.success(
-                merchantService.respondToDispute(user.getId(), disputeId, response.trim())));
+                merchantService.respondToDispute(PrincipalResolver.ownerUserId(principal), disputeId, response.trim())));
     }
 
     // ==================== HELPERS ====================

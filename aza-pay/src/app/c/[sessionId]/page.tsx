@@ -15,8 +15,10 @@ import {
   request2faEmail,
   verify2faOtp,
   sendEmailReceipt,
+  pick2faMode,
   CheckoutSession,
   PromoInfo,
+  TwoFaMode,
 } from "@/lib/pay-api";
 import {
   Loader2,
@@ -35,12 +37,12 @@ import {
   Printer,
   Mail,
   Send,
+  Lock,
 } from "lucide-react";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
 type Step = "review" | "login" | "otp" | "2fa" | "passcode" | "success";
-type TwoFaMode = "totp" | "sms" | "email";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -145,6 +147,20 @@ function AmountBlock({ session, accent }: { session: CheckoutSession; accent: st
         <div className="flex items-center gap-1.5 pt-1.5">
           <Clock size={11} className="text-white/25" />
           <span className="text-[11px] text-white/30">{expiry}</span>
+        </div>
+      )}
+      {session.release === "MANUAL" && (
+        // The payer is handing money to AZA's brand, so they must know before approving
+        // that it is held and who decides its release. AZA cannot see what the payment is
+        // for and will not rule on whether a release was deserved — saying so here is what
+        // makes that honest rather than a surprise after the fact.
+        <div className="flex items-start gap-2 mt-3 rounded-xl bg-amber-400/5 border border-amber-400/15 px-3 py-2.5">
+          <Lock size={12} className="text-amber-400/80 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-white/45">
+            <span className="text-white/70 font-medium">This payment is held.</span>{" "}
+            {session.merchantName ?? "The business"} decides when it is released, and can refund
+            you instead. If nobody releases it in time, it comes back to you automatically.
+          </p>
         </div>
       )}
     </div>
@@ -461,6 +477,7 @@ export default function CheckoutPage() {
   // 2FA
   const [preAuthToken, setPreAuthToken] = useState<string | null>(null);
   const [twoFaMode, setTwoFaMode] = useState<TwoFaMode>("totp");
+  const [twoFaMethods, setTwoFaMethods] = useState<string[]>([]);
   const [twoFaCode, setTwoFaCode] = useState("");
 
   // review extras
@@ -506,12 +523,73 @@ export default function CheckoutPage() {
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
+  /**
+   * Opens the 2FA step for an account that returned a preAuthToken. Neither /auth/login nor
+   * /auth/verify-otp dispatches a code for these accounts, so an SMS/email factor has to be
+   * requested here — otherwise the payer waits on a code that was never sent.
+   */
+  const startTwoFactor = async (
+    token: string,
+    methods: string[],
+    defaultMethod: string | null
+  ) => {
+    const mode = pick2faMode(methods, defaultMethod);
+    if (!mode) {
+      // APP/passkey-only account: there is nothing this page can collect. Send them to the QR
+      // tab, where approving in the AZA app completes the very same checkout session.
+      setStep("review");
+      setQrView(true);
+      setError("Your account approves sign-ins from the AZA app. Scan the code below to pay.");
+      return;
+    }
+
+    if (mode !== "totp") {
+      try {
+        if (mode === "sms") await request2faSms(token);
+        else await request2faEmail(token);
+      } catch (e: any) {
+        // Couldn't dispatch the code. Fall back to the authenticator when the account has one
+        // rather than parking the payer on a step they have no way to complete.
+        if (!methods.includes("TOTP")) {
+          // Nothing left to offer. Send them back to credentials: when this runs after a login
+          // OTP, that code has already been consumed, so the OTP step is a dead end now.
+          setStep("login");
+          setOtp("");
+          throw e;
+        }
+        setPreAuthToken(token);
+        setTwoFaMethods(methods);
+        setTwoFaMode("totp");
+        setTwoFaCode("");
+        setStep("2fa");
+        setError("We couldn't send your code. Use your authenticator app instead.");
+        return;
+      }
+    }
+
+    setPreAuthToken(token);
+    setTwoFaMethods(methods);
+    setTwoFaMode(mode);
+    setTwoFaCode("");
+    setStep("2fa");
+  };
+
   const handleLogin = async () => {
     setBusy(true);
     setError(null);
     try {
-      await loginStep1(identifier, password);
-      setStep("otp");
+      // A login OTP is only sent to staff/admin accounts. An ordinary payer is signed in on the
+      // spot and a 2FA payer gets a preAuthToken, so the next step depends on which came back.
+      const result = await loginStep1(identifier, password);
+      if (result.status === "otp_required") {
+        setOtp("");
+        setStep("otp");
+      } else if (result.status === "authenticated") {
+        setToken(result.accessToken);
+        setStep("passcode");
+      } else {
+        await startTwoFactor(result.preAuthToken, result.methods, result.defaultMethod);
+      }
     } catch (e: any) {
       setError(e.message ?? "Login failed");
     } finally {
@@ -524,14 +602,13 @@ export default function CheckoutPage() {
     setError(null);
     try {
       const result = await loginStep2(identifier, otp);
-      if (result.preAuthToken) {
-        setPreAuthToken(result.preAuthToken);
-        setTwoFaMode("totp");
-        setTwoFaCode("");
-        setStep("2fa");
-      } else {
+      if (result.status === "two_factor_required") {
+        await startTwoFactor(result.preAuthToken, result.methods, result.defaultMethod);
+      } else if (result.status === "authenticated") {
         setToken(result.accessToken);
         setStep("passcode");
+      } else {
+        setError("OTP verification failed");
       }
     } catch (e: any) {
       setError(e.message ?? "OTP verification failed");
@@ -945,10 +1022,13 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2 -mt-1 mb-1">
                       <button
                         onClick={() => {
-                          setStep("otp");
+                          // Back to credentials, not the OTP step — most payers never saw one.
+                          setStep("login");
                           setError(null);
                           setTwoFaCode("");
                           setTwoFaMode("totp");
+                          setTwoFaMethods([]);
+                          setPreAuthToken(null);
                         }}
                         className="text-white/30 hover:text-white/60 transition-colors"
                       >
@@ -990,7 +1070,9 @@ export default function CheckoutPage() {
                       Verify <ArrowRight size={15} />
                     </PrimaryBtn>
                     <div className="flex items-center justify-center gap-3 pt-1 border-t border-white/5 flex-wrap">
-                      {twoFaMode !== "totp" && (
+                      {/* Only offer factors the account actually has, or the payer lands on
+                          another step they can't complete. */}
+                      {twoFaMode !== "totp" && twoFaMethods.includes("TOTP") && (
                         <button
                           onClick={() => { setTwoFaMode("totp"); setTwoFaCode(""); setError(null); }}
                           className="text-[11px] text-white/30 hover:text-white/50 transition-colors"
@@ -998,7 +1080,7 @@ export default function CheckoutPage() {
                           Use authenticator app
                         </button>
                       )}
-                      {twoFaMode !== "sms" && (
+                      {twoFaMode !== "sms" && twoFaMethods.includes("SMS") && (
                         <button
                           onClick={() => requestAlt2fa("sms")}
                           disabled={busy}
@@ -1007,7 +1089,7 @@ export default function CheckoutPage() {
                           Send SMS code
                         </button>
                       )}
-                      {twoFaMode !== "email" && (
+                      {twoFaMode !== "email" && twoFaMethods.includes("EMAIL") && (
                         <button
                           onClick={() => requestAlt2fa("email")}
                           disabled={busy}

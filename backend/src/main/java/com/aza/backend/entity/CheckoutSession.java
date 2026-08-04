@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "checkout_sessions")
+@Table(name = "checkout_sessions", uniqueConstraints =
+        @UniqueConstraint(name = "checkout_sessions_merchant_idem", columnNames = {"merchant_id", "idempotency_key"}))
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -46,9 +47,25 @@ public class CheckoutSession {
     @Builder.Default
     private SessionStatus status = SessionStatus.PENDING;
 
+    /**
+     * AUTOMATIC (default) settles to the merchant at confirmation — today's behaviour.
+     * MANUAL debits the payer into a {@link PaymentHold} instead, settled later when the
+     * integrator calls release or refund. Column is {@code release_mode}; the API field
+     * is {@code release}, which is a reserved word in enough SQL dialects to avoid.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "release_mode", nullable = false, length = 16)
+    @Builder.Default
+    private ReleaseMode releaseMode = ReleaseMode.AUTOMATIC;
+
+    /** MANUAL sessions only: ceiling on how long Aza holds the money before it returns to the payer. */
+    private Integer maxHoldDays;
+
     private UUID customerId;
 
-    @Column(unique = true)
+    // Unique per (merchant_id, idempotency_key) — see the @Table constraint. Global uniqueness
+    // was a cross-tenant hazard: one merchant's key could collide with (and via the old unscoped
+    // lookup, expose) another merchant's session.
     private String idempotencyKey;
 
     private UUID transactionId; // underlying wallet-to-wallet transaction (null for test-mode sessions)
@@ -81,4 +98,6 @@ public class CheckoutSession {
     public enum SessionStatus {
         PENDING, COMPLETED, EXPIRED, CANCELLED, REFUNDED
     }
+
+    public enum ReleaseMode { AUTOMATIC, MANUAL }
 }

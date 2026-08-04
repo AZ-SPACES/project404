@@ -5,6 +5,10 @@ import com.aza.backend.dto.merchant.CheckoutSplitInfo;
 import com.aza.backend.dto.merchant.CheckoutSplitRequest;
 import com.aza.backend.dto.merchant.ConfirmCheckoutRequest;
 import com.aza.backend.dto.merchant.CreateCheckoutSessionRequest;
+import com.aza.backend.dto.merchant.HoldInfo;
+import com.aza.backend.dto.merchant.HoldRecipientRequest;
+import com.aza.backend.dto.merchant.RefundHoldRequest;
+import com.aza.backend.dto.merchant.ReleaseHoldRequest;
 import com.aza.backend.entity.*;
 import com.aza.backend.exception.AppException;
 import com.aza.backend.entity.Transaction;
@@ -53,6 +57,8 @@ public class CheckoutService {
     private final EmailService emailService;
     private final MerchantNotificationPreferenceRepository notificationPrefRepository;
     private final NotificationService notificationService;
+    private final RecipientResolver recipientResolver;
+    private final HoldService holdService;
 
     @Value("${aza.pay.base-url:https://pay.aza.systems}")
     private String payBaseUrl;
@@ -87,9 +93,12 @@ public class CheckoutService {
             }
         }
 
-        // Idempotency check
+        // Idempotency check — scoped to the calling merchant. An unscoped lookup would
+        // return another merchant's session (id, amount, checkout URL) whenever two
+        // merchants happened to use the same key.
         if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
-            CheckoutSession existing = sessionRepository.findByIdempotencyKey(request.getIdempotencyKey()).orElse(null);
+            CheckoutSession existing = sessionRepository
+                    .findByMerchantIdAndIdempotencyKey(merchantId, request.getIdempotencyKey()).orElse(null);
             if (existing != null) {
                 return toResponse(existing, merchant);
             }
@@ -103,6 +112,20 @@ public class CheckoutService {
                     .multiply(merchant.getTaxRate())
                     .divide(java.math.BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
             taxLabel = merchant.getTaxLabel();
+        }
+
+        boolean manualRelease = "MANUAL".equalsIgnoreCase(request.getRelease());
+        if (!manualRelease && request.getRecipients() != null && !request.getRecipients().isEmpty()) {
+            throw new AppException("RECIPIENTS_REQUIRE_MANUAL_RELEASE",
+                    "recipients are only settled by a release call — set release to MANUAL, "
+                            + "or use splits to pay them at once",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (manualRelease && request.getSplits() != null && !request.getSplits().isEmpty()) {
+            throw new AppException("SPLITS_REQUIRE_AUTOMATIC_RELEASE",
+                    "splits settle at payment and cannot be combined with release=MANUAL — "
+                            + "use recipients instead",
+                    HttpStatus.BAD_REQUEST);
         }
 
         CheckoutSession session = CheckoutSession.builder()
@@ -119,11 +142,21 @@ public class CheckoutService {
                 .taxAmount(taxAmount)
                 .taxLabel(taxLabel)
                 .testMode(testMode)
+                .releaseMode(manualRelease
+                        ? CheckoutSession.ReleaseMode.MANUAL
+                        : CheckoutSession.ReleaseMode.AUTOMATIC)
+                .maxHoldDays(manualRelease
+                        ? (request.getMaxHoldDays() != null
+                            ? request.getMaxHoldDays() : HoldService.DEFAULT_MAX_HOLD_DAYS)
+                        : null)
                 .build();
 
-        // Validate & resolve marketplace splits (Aza Connect) before persisting anything,
-        // so an invalid seller fails session creation rather than a buyer's payment.
-        List<CheckoutSessionSplit> splits = resolveSplits(merchant, request.getAmount(), request.getSplits());
+        // Validate & resolve recipients before persisting anything, so an unpayable
+        // recipient fails session creation rather than a buyer's payment. Manual-release
+        // recipients reuse the split shape: same validation, deferred settlement.
+        List<CheckoutSessionSplit> splits = manualRelease
+                ? resolveSplits(merchant, request.getAmount(), toSplitRequests(request.getRecipients()))
+                : resolveSplits(merchant, request.getAmount(), request.getSplits());
 
         sessionRepository.save(session);
 
@@ -135,6 +168,24 @@ public class CheckoutService {
         log.info("Checkout session created: id={}, merchantId={}, amount={}, testMode={}, splits={}",
                 session.getId(), merchantId, request.getAmount(), testMode, splits.size());
         return toResponse(session, merchant, toSplitInfos(splits));
+    }
+
+    /**
+     * Manual-release recipients validate exactly like splits — same account checks, same
+     * "must fit inside the amount net of the Aza fee" rule — so they reuse that path
+     * rather than duplicating it. The difference is when they are paid, not who they are.
+     */
+    private List<CheckoutSplitRequest> toSplitRequests(List<HoldRecipientRequest> recipients) {
+        if (recipients == null) return null;
+        List<CheckoutSplitRequest> converted = new java.util.ArrayList<>();
+        for (HoldRecipientRequest r : recipients) {
+            CheckoutSplitRequest s = new CheckoutSplitRequest();
+            s.setRecipient(r.getRecipient());
+            s.setAmount(r.getAmount());
+            s.setNote(r.getNote());
+            converted.add(s);
+        }
+        return converted;
     }
 
     /**
@@ -158,7 +209,7 @@ public class CheckoutService {
             total = total.add(splitAmount);
 
             String identifier = req.getRecipient() == null ? "" : req.getRecipient().trim();
-            User seller = userRepository.findByEmailIgnoreCaseOrUsername(identifier, identifier).orElse(null);
+            User seller = recipientResolver.find(identifier).orElse(null);
             if (seller == null) {
                 throw new AppException("SPLIT_RECIPIENT_NOT_FOUND",
                         "No Aza account matches split recipient '" + identifier + "'", HttpStatus.BAD_REQUEST);
@@ -372,6 +423,13 @@ public class CheckoutService {
         customer.setBalance(customerWallet.getBalance());
         userRepository.save(customer);
 
+        // Manual release: the money stops here. It has left the payer but reaches nobody
+        // until the integrator calls release — so no wallet and no merchant balance is
+        // credited, and the hold row is what the safeguarding snapshot counts.
+        if (session.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL) {
+            return captureIntoHold(session, merchant, customer, platformFee);
+        }
+
         // Route marketplace splits straight to the sellers' wallets; the platform keeps
         // whatever is left of netAmount. Splits that can't be paid fall back to the platform
         // so the buyer's payment is never blocked by an unpayable seller.
@@ -443,6 +501,99 @@ public class CheckoutService {
         return toResponse(session, merchant, toSplitInfos(splits));
     }
 
+    /**
+     * Finish a manual-release confirmation: the payer is already debited, so record the
+     * hold, mark the session COMPLETED (the payment did complete — settlement is what is
+     * outstanding) and notify the merchant that money is waiting on their release call.
+     */
+    private CheckoutSessionResponse captureIntoHold(CheckoutSession session, Merchant merchant,
+                                                    User customer, BigDecimal platformFee) {
+        List<CheckoutSessionSplit> recipients = splitRepository.findAllBySessionId(session.getId());
+        PaymentHold hold = holdService.capture(session, merchant, customer.getId(), platformFee, recipients);
+
+        Transaction tx = transactionRepository.save(Transaction.builder()
+                .senderId(customer.getId())
+                .recipientId(merchant.getUserId())
+                .amount(session.getAmount())
+                // No fee booked at capture. The fee is only earned when the hold is
+                // released, and it is returned in full if the hold is refunded — booking
+                // it here would report revenue on money Aza may never keep
+                // (TransactionRepository.sumFeeBetween drives the fee dashboard).
+                .feeAmount(BigDecimal.ZERO)
+                .note(session.getDescription() != null && !session.getDescription().isBlank()
+                        ? session.getDescription()
+                        : "Held payment to @" + merchant.getBusinessHandle())
+                .type(Transaction.TransactionType.TRANSFER)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("checkout:" + session.getId())
+                .completedAt(LocalDateTime.now())
+                .build());
+
+        session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
+        session.setCustomerId(customer.getId());
+        session.setPlatformFee(platformFee);
+        session.setNetAmount(BigDecimal.ZERO);  // nothing settled to the merchant yet
+        session.setCompletedAt(LocalDateTime.now());
+        session.setTransactionId(tx.getId());
+        sessionRepository.save(session);
+
+        scheduleWebhookDelivery(session, merchant, "hold.created");
+
+        notificationService.sendNotification(
+                merchant.getUserId(),
+                Notification.NotificationType.MONEY_RECEIVED,
+                "Payment Held",
+                customer.getFirstName() + " " + customer.getLastName() + " paid "
+                        + merchant.getCurrency() + " " + session.getAmount()
+                        + " — release it when you're ready",
+                null);
+
+        log.info("Checkout captured into hold: sessionId={}, holdId={}, merchantId={}, amount={}",
+                session.getId(), hold.getId(), merchant.getId(), session.getAmount());
+
+        return toResponse(session, merchant, toSplitInfos(recipients));
+    }
+
+    /**
+     * Release a held payment. The hold row is the source of truth; this wraps it so the
+     * webhook and the session response stay consistent with an instant settlement.
+     */
+    @Transactional
+    public CheckoutSessionResponse releaseHold(UUID merchantId, UUID sessionId,
+                                               ReleaseHoldRequest request, String idempotencyKey,
+                                               UUID apiKeyId) {
+        PaymentHold hold = holdService.release(sessionId, merchantId, request, idempotencyKey, apiKeyId);
+
+        CheckoutSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Session not found", HttpStatus.NOT_FOUND));
+        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+
+        boolean anyFailed = holdService.toInfo(hold).getRecipients().stream()
+                .anyMatch(r -> "RELEASE_FAILED".equals(r.getStatus()));
+        String event = anyFailed ? "hold.release_failed"
+                : hold.getStatus() == PaymentHold.HoldStatus.RELEASED ? "hold.released"
+                : "hold.partially_settled";
+        scheduleWebhookDelivery(session, merchant, event);
+
+        return toResponse(session, merchant);
+    }
+
+    /** Refund a held payment, in full or in part. */
+    @Transactional
+    public CheckoutSessionResponse refundHold(UUID merchantId, UUID sessionId,
+                                              RefundHoldRequest request, String idempotencyKey,
+                                              UUID apiKeyId) {
+        holdService.refund(sessionId, merchantId, request, idempotencyKey, apiKeyId,
+                HoldEvent.ActorType.PLATFORM);
+
+        CheckoutSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Session not found", HttpStatus.NOT_FOUND));
+        Merchant merchant = merchantRepository.findById(merchantId).orElse(null);
+        scheduleWebhookDelivery(session, merchant, "hold.refunded");
+
+        return toResponse(session, merchant);
+    }
+
     // ==================== CANCEL SESSION ====================
 
     @Transactional
@@ -495,7 +646,8 @@ public class CheckoutService {
 
     public Page<CheckoutSessionResponse> searchMerchantSessions(
             UUID merchantId, int page, int size,
-            String status, String from, String to, String q, Boolean testMode, String reference) {
+            String status, String from, String to, String q, Boolean testMode, String reference,
+            String release) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -514,8 +666,20 @@ public class CheckoutService {
         String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
         String referenceParam = (reference != null && !reference.isBlank()) ? reference.trim() : null;
 
+        // Filtering held sessions has to happen in the query. Filtering a page client-side
+        // after the database has already paginated yields pages that look empty while more
+        // results exist, and a page count that counts the wrong rows.
+        CheckoutSession.ReleaseMode releaseMode = null;
+        if (release != null && !release.isBlank()) {
+            try { releaseMode = CheckoutSession.ReleaseMode.valueOf(release.toUpperCase()); }
+            catch (IllegalArgumentException e) {
+                throw new AppException("VALIDATION", "release must be AUTOMATIC or MANUAL",
+                        HttpStatus.BAD_REQUEST);
+            }
+        }
+
         return sessionRepository.searchSessions(
-                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, qParam,
+                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, releaseMode, qParam,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(s -> toResponse(s, merchant));
     }
@@ -640,6 +804,35 @@ public class CheckoutService {
                 }
                 payload.put("splits", splitList);
             }
+            // Hold state, so a platform can reconcile a manual-release settlement from the
+            // webhook alone — including which recipients failed and why.
+            if (session.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL) {
+                payload.put("release", "MANUAL");
+                holdService.findBySession(session.getId()).ifPresent(h -> {
+                    HoldInfo info = holdService.toInfo(h);
+                    Map<String, Object> hold = new LinkedHashMap<>();
+                    hold.put("id", info.getId());
+                    hold.put("status", info.getStatus());
+                    hold.put("amount", info.getAmount());
+                    hold.put("releasedAmount", info.getReleasedAmount());
+                    hold.put("refundedAmount", info.getRefundedAmount());
+                    hold.put("remainingAmount", info.getRemainingAmount());
+                    hold.put("expiresAt", info.getExpiresAt() != null ? info.getExpiresAt().toString() : null);
+                    List<Map<String, Object>> recips = new java.util.ArrayList<>();
+                    for (HoldInfo.HoldRecipientInfo r : info.getRecipients()) {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("recipient", r.getRecipient());
+                        m.put("amount", r.getAmount());
+                        m.put("releasedAmount", r.getReleasedAmount());
+                        m.put("status", r.getStatus());
+                        if (r.getFailureReason() != null) m.put("failureReason", r.getFailureReason());
+                        recips.add(m);
+                    }
+                    hold.put("recipients", recips);
+                    payload.put("hold", hold);
+                });
+            }
+
             // Timestamps: occurredAt is always present; the lifecycle-specific timestamps are
             // included only when set, so this payload is safe for every event type (a freshly
             // expired session has no completedAt).
@@ -697,9 +890,24 @@ public class CheckoutService {
         session.setStatus(CheckoutSession.SessionStatus.COMPLETED);
         session.setCustomerId(customerId);
         session.setPlatformFee(platformFee);
-        session.setNetAmount(netAmount.subtract(splitTotal));
         session.setCompletedAt(LocalDateTime.now());
         // transactionId intentionally left null — no real money moved.
+
+        // Sandbox parity for manual release: a test session must produce a real hold, or
+        // an integrator cannot exercise release/refund before going live — which is the
+        // whole point of the sandbox. HoldService already moves state without money when
+        // the hold is test-mode.
+        if (session.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL) {
+            session.setNetAmount(BigDecimal.ZERO);
+            sessionRepository.save(session);
+            holdService.capture(session, merchant, customerId, platformFee, splits);
+            log.info("TEST checkout captured into hold (no funds moved): sessionId={}, merchant={}, amount={}",
+                    session.getId(), merchant.getId(), session.getAmount());
+            scheduleWebhookDelivery(session, merchant, "hold.created");
+            return toResponse(session, merchant, toSplitInfos(splits));
+        }
+
+        session.setNetAmount(netAmount.subtract(splitTotal));
         sessionRepository.save(session);
 
         log.info("TEST checkout completed (no funds moved): sessionId={}, merchant={}, amount={}, splits={}",
@@ -766,6 +974,12 @@ public class CheckoutService {
                 .checkoutUrl(payBaseUrl + "/c/" + s.getId())
                 .createdAt(s.getCreatedAt())
                 .expiresAt(s.getExpiresAt())
+                // The payer is handing money to Aza's brand and will hold Aza responsible
+                // when a job goes wrong — so the checkout page must be able to tell them,
+                // before they confirm, that this payment is held and who decides its
+                // release. Aza cannot adjudicate that decision (see HELD_SETTLEMENT_PLAN §5),
+                // which is exactly why it has to be disclosed up front.
+                .release(s.getReleaseMode().name())
                 .build();
     }
 
@@ -804,6 +1018,10 @@ public class CheckoutService {
                 .completedAt(s.getCompletedAt())
                 .cancelledAt(s.getCancelledAt())
                 .refundedAt(s.getRefundedAt())
+                .release(s.getReleaseMode().name())
+                .hold(s.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL
+                        ? holdService.findBySession(s.getId()).map(holdService::toInfo).orElse(null)
+                        : null)
                 .build();
     }
 
@@ -816,6 +1034,16 @@ public class CheckoutService {
 
         if (session.getStatus() != CheckoutSession.SessionStatus.COMPLETED) {
             throw new AppException("INVALID_STATUS", "Only completed sessions can be refunded", HttpStatus.BAD_REQUEST);
+        }
+
+        // Held money is refunded from the hold, not clawed back from wallets — nobody has
+        // been credited yet, which is why this path cannot fail the way the instant one can.
+        if (session.getReleaseMode() == CheckoutSession.ReleaseMode.MANUAL) {
+            holdService.refund(sessionId, merchantId, null, null, null, HoldEvent.ActorType.PLATFORM);
+            CheckoutSession refunded = sessionRepository.findById(sessionId).orElse(session);
+            Merchant m = merchantRepository.findById(merchantId).orElse(null);
+            scheduleWebhookDelivery(refunded, m, "hold.refunded");
+            return toResponse(refunded, m);
         }
 
         User customer = userRepository.findById(session.getCustomerId())

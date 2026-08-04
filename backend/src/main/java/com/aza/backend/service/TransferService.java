@@ -700,6 +700,13 @@ public class TransferService {
             Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(request.getIdempotencyKey());
             if (existing.isPresent()) {
                 Transaction t = existing.get();
+                // Ownership guard (same as initiateTransfer): keys are globally unique across
+                // all users, so without this check a caller replaying someone else's key would
+                // be handed that transaction's amount, note, and status.
+                if (!t.getRecipientId().equals(requester.getId())
+                        || !t.getSenderId().equals(fromUser.getId())) {
+                    throw new AppException("Invalid idempotency key");
+                }
                 if (t.getStatus() == Transaction.TransactionStatus.PENDING
                         || t.getStatus() == Transaction.TransactionStatus.COMPLETED) {
                     return buildTransferResponse(t, fromUser, requester, requester.getId());

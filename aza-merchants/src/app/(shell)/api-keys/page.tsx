@@ -189,7 +189,24 @@ function CreateKeyModal({
 }) {
   const [label, setLabel] = useState("");
   const [keyType, setKeyType] = useState<"SECRET" | "RESTRICTED">("SECRET");
-  const [scopes, setScopes] = useState<Record<string, boolean>>({ "sessions:read": false, "sessions:write": false });
+  // Mirrors MerchantApiKeyFilter.requiredScope() in the backend — every scope the
+  // filter can demand must be grantable here, or the error message telling an
+  // integrator to use that scope points at a key they cannot create.
+  // payouts:write is the drain-to-bank scope: it is ONLY available on restricted
+  // keys (secret keys are rejected on payout writes by the backend).
+  const [scopes, setScopes] = useState<Record<string, boolean>>({
+    "sessions:read": false, "sessions:write": false,
+    "transfers:read": false, "transfers:write": false,
+    "transactions:read": false,
+    "webhooks:read": false, "webhooks:write": false,
+    "payouts:read": false, "payouts:write": false,
+    "customers:read": false,
+    "disputes:read": false, "disputes:write": false,
+    "settlements:read": false,
+    "invoices:read": false, "invoices:write": false,
+    "discounts:read": false, "discounts:write": false,
+    "profile:read": false, "profile:write": false,
+  });
   const [ipWhitelist, setIpWhitelist] = useState("");
   const [expirationDays, setExpirationDays] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
@@ -264,7 +281,7 @@ function CreateKeyModal({
           {keyType === "RESTRICTED" && (
             <div>
               <label className="block text-xs font-medium text-foreground/50 mb-2">Permissions</label>
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                 {Object.keys(scopes).map((scope) => (
                   <label key={scope} className="flex items-center gap-2.5 cursor-pointer">
                     <input

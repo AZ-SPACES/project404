@@ -422,7 +422,72 @@ class AuthServiceTest {
                 () -> authService.setDefaultTwoFactorMethod(activeUser(), "TOTP"));
     }
 
+    // ── Code-based 2FA may not be used unless the account enabled it ───────────
+
+    @Test
+    void requestSms2fa_smsFactorNotEnabled_throwsAndSendsNothing() {
+        User user = activeUser();
+        user.setTwoFactorSecret("encrypted-secret");   // authenticator only
+        user.setPhoneNumber("+233200000001");
+        givenPreAuthSession("pre-auth-token", user);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> authService.requestSms2fa("pre-auth-token"));
+
+        assertEquals("TWO_FACTOR_METHOD_NOT_ENABLED", ex.getCode());
+        verify(otpService, never()).sendOtp(anyString(), anyString());
+    }
+
+    @Test
+    void requestEmail2fa_emailFactorNotEnabled_throwsAndSendsNothing() {
+        User user = activeUser();
+        user.setTwoFactorSecret("encrypted-secret");
+        givenPreAuthSession("pre-auth-token", user);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> authService.requestEmail2fa("pre-auth-token"));
+
+        assertEquals("TWO_FACTOR_METHOD_NOT_ENABLED", ex.getCode());
+        verify(otpService, never()).sendOtp(anyString(), anyString());
+    }
+
+    @Test
+    void requestSms2fa_smsFactorEnabled_sendsCodeToPhone() {
+        User user = activeUser();
+        user.setSmsTwoFactorEnabled(true);
+        user.setPhoneNumber("+233200000001");
+        givenPreAuthSession("pre-auth-token", user);
+
+        authService.requestSms2fa("pre-auth-token");
+
+        verify(otpService).sendOtp("+233200000001", "2fa");
+    }
+
+    @Test
+    void verify2faOtp_smsFactorNotEnabled_throwsWithoutCheckingCode() {
+        User user = activeUser();
+        user.setTwoFactorSecret("encrypted-secret");
+        user.setPhoneNumber("+233200000001");
+        givenPreAuthSession("pre-auth-token", user);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> authService.verify2faOtp("pre-auth-token", "123456", "SMS", "1.2.3.4"));
+
+        assertEquals("TWO_FACTOR_METHOD_NOT_ENABLED", ex.getCode());
+        verify(otpService, never()).verifyOtp(anyString(), anyString(), anyString());
+        // The pre-auth session must survive a rejected attempt, or the payer would have to
+        // re-enter their password to try the factor they actually have.
+        verify(redisTemplate, never()).delete(startsWith("totp:preauth:"));
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Puts a user behind a preAuthToken the way preLogin does: "userId|device|os|deviceId|ip". */
+    private void givenPreAuthSession(String preAuthToken, User user) {
+        when(valueOps.get("totp:preauth:" + preAuthToken))
+                .thenReturn(user.getId() + "|iPhone|iOS 17|device-abc|1.2.3.4");
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+    }
 
     private User activeUser() {
         return User.builder()
