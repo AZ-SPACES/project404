@@ -35,7 +35,7 @@ import { useTransferStore } from "../../../store/transferStore";
 import { formatCurrency } from "../../../utils/transactionUtils";
 import { BackButton } from '../../../components/ui/BackButton';
 import { extractErrorMessage } from '../../../utils/errorUtils';
-import { getWithdrawals } from "../../../services/api";
+import { getWithdrawals, getPayouts } from "../../../services/api";
 import { useQuery } from "@tanstack/react-query";
 
 export type Transaction = {
@@ -249,6 +249,79 @@ function WithdrawalSection({ Colors, styles }: { Colors: ThemeColors; styles: Re
               </View>
               <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.textPrimary, fontVariant: ["tabular-nums"] }}>
                 −{formatCurrency(w.amount)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const P_STATUS: Record<string, { label: string; color: string }> = {
+  PENDING:   { label: "Pending",   color: "#D97706" },
+  COMPLETED: { label: "Completed", color: "#4ADE80" },
+  FAILED:    { label: "Failed",    color: "#EF4444" },
+};
+
+/**
+ * Merchant payouts (business balance -> bank/mobile money) are recorded as MerchantPayout rows,
+ * not Transaction rows, so they never appear in the main list below — same reason
+ * WithdrawalSection exists for personal-wallet UserWithdrawal records. Silently renders nothing
+ * for non-merchant accounts (getPayouts 403s, data stays undefined) rather than gating on an
+ * explicit "is this a merchant" check, mirroring WithdrawalSection's own approach.
+ */
+function PayoutSection({ Colors, styles }: { Colors: ThemeColors; styles: ReturnType<typeof createStyles> }) {
+  const { data } = useQuery({
+    queryKey: ["myPayouts"],
+    queryFn: async () => {
+      const r = await getPayouts(0, 5);
+      const d = (r as any)?.data?.data;
+      return (d?.content ?? []) as Array<{
+        id: string; amount: number; currency: string; status: string;
+        note: string | null; requestedAt: string; completedAt: string | null;
+      }>;
+    },
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  if (!data || data.length === 0) return null;
+
+  return (
+    <View style={{ marginHorizontal: Spacing.lg, marginBottom: Spacing.lg }}>
+      <Text style={[styles.sectionHeader, { marginBottom: Spacing.sm, paddingHorizontal: 0 }]}>
+        Business Payouts
+      </Text>
+      <View style={[styles.detailCard, { marginBottom: 0 }]}>
+        {data.map((p, i) => {
+          const meta = P_STATUS[p.status] ?? { label: p.status, color: Colors.textSecondary };
+          return (
+            <View
+              key={p.id}
+              style={[
+                { flexDirection: "row", alignItems: "center", paddingVertical: 11 },
+                i < data.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border },
+              ]}
+            >
+              <View style={{
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: Colors.background,
+                alignItems: "center", justifyContent: "center", marginRight: 12,
+              }}>
+                <Feather name="briefcase" size={15} color={Colors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.textPrimary }}>
+                  {p.note || "Payout"}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: meta.color }} />
+                  <Text style={{ fontSize: 11, color: meta.color, fontWeight: "600" }}>{meta.label}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.textPrimary, fontVariant: ["tabular-nums"] }}>
+                −{formatCurrency(p.amount)}
               </Text>
             </View>
           );
@@ -701,6 +774,9 @@ export function TransactionsScreen() {
 
             {/* Withdrawal requests */}
             <WithdrawalSection Colors={Colors} styles={styles} />
+
+            {/* Business payouts (merchant accounts only) */}
+            <PayoutSection Colors={Colors} styles={styles} />
           </>
         }
       />

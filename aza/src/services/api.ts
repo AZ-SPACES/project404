@@ -803,6 +803,11 @@ export const requestWithdrawal = (data: {
 export const getWithdrawals = (page = 0, size = 20) =>
   api.get(`/api/v1/withdrawals?page=${page}&size=${size}`);
 
+// Merchant payouts (business balance -> bank/mobile money) — a separate record from personal
+// wallet withdrawals above. Only resolves for accounts with a merchant profile.
+export const getPayouts = (page = 0, size = 20) =>
+  api.get(`/api/v1/merchant/payouts?page=${page}&size=${size}`);
+
 export const getMerchantAuditLogs = (page = 0, size = 30) =>
   api.get(`/api/v1/merchant/audit-logs?page=${page}&size=${size}`);
 
