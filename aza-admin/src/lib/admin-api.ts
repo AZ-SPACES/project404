@@ -540,6 +540,23 @@ export function getCommissionSettlements(page = 0, size = 20): Promise<Page<Comm
   return request(`/api/v1/admin/commission/settlements?${params}`);
 }
 
+// ── Admin fund transfers ─────────────────────────────────────────────────────
+
+/**
+ * Moves funds out of your own AZA wallet to another user. Always maker-checker: returns a
+ * pending Approval that a different FINANCE/ADMIN staff member must approve before anything moves.
+ */
+export function submitFundTransfer(
+  recipientIdentifier: string,
+  amount: number,
+  reference: string
+): Promise<Approval> {
+  return request("/api/v1/admin/fund-transfers", {
+    method: "POST",
+    body: JSON.stringify({ recipientIdentifier, amount, reference }),
+  });
+}
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
@@ -2138,7 +2155,8 @@ export interface Approval {
     | "UPDATE_AGENT_TERMS"
     | "MINT_FLOAT"
     | "BURN_FLOAT"
-    | "SETTLE_COMMISSION";
+    | "SETTLE_COMMISSION"
+    | "ADMIN_FUND_TRANSFER";
   targetId: string;
   summary: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";

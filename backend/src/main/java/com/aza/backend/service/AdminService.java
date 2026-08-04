@@ -47,6 +47,7 @@ public class AdminService {
     private final MerchantRepository merchantRepository;
     private final PresenceService presenceService;
     private final AdminAuditService auditService;
+    private final NotificationService notificationService;
 
     public Page<AdminUserResponse> getUsers(String query, String status, String kycStatus,
                                             boolean onlineOnly, int page, int size) {
@@ -390,6 +391,77 @@ public class AdminService {
                 .cancelledAt(tx.getCancelledAt())
                 .initiationLocation(tx.getInitiationLocation())
                 .build();
+    }
+
+    /**
+     * Moves funds out of the requesting admin's own wallet into a recipient's, on approval.
+     * Runs as the maker-checker's execution step (ApprovalService.ADMIN_FUND_TRANSFER) — the
+     * requester (not the approver) is the sender, since the approver is only authorizing someone
+     * else's already-submitted request. The idempotency key ties the resulting transaction to the
+     * approval row: transactions.idempotency_key is globally unique, so a concurrent double-approval
+     * would fail the second insert and roll back rather than moving the money twice.
+     */
+    @Transactional
+    public void transferFunds(UUID approvalId, UUID requesterId, UUID recipientId,
+                               BigDecimal amount, String reference, User approver) {
+        if (requesterId.equals(recipientId)) {
+            throw new AppException("SELF_TRANSFER", "Cannot transfer to yourself", HttpStatus.BAD_REQUEST);
+        }
+
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Requesting admin not found", HttpStatus.NOT_FOUND));
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Recipient not found", HttpStatus.NOT_FOUND));
+        if (recipient.getStatus() != User.AccountStatus.ACTIVE) {
+            throw new AppException("RECIPIENT_INACTIVE", "Recipient account is not active", HttpStatus.BAD_REQUEST);
+        }
+
+        // Lock both wallets in a fixed order (by user id) regardless of sender/recipient role,
+        // so two concurrent admin transfers between the same pair of accounts can never deadlock.
+        UUID first = requesterId.compareTo(recipientId) <= 0 ? requesterId : recipientId;
+        UUID second = requesterId.compareTo(recipientId) <= 0 ? recipientId : requesterId;
+        Wallet firstWallet = walletRepository.findByUserIdForUpdate(first)
+                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND));
+        Wallet secondWallet = walletRepository.findByUserIdForUpdate(second)
+                .orElseThrow(() -> new AppException("WALLET_NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND));
+        Wallet requesterWallet = first.equals(requesterId) ? firstWallet : secondWallet;
+        Wallet recipientWallet = first.equals(requesterId) ? secondWallet : firstWallet;
+
+        if (Boolean.TRUE.equals(requesterWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN", "The requesting admin's wallet is frozen", HttpStatus.FORBIDDEN);
+        }
+        if (requesterWallet.getBalance().compareTo(amount) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS", "Requesting admin has insufficient balance", HttpStatus.BAD_REQUEST);
+        }
+
+        requesterWallet.setBalance(requesterWallet.getBalance().subtract(amount));
+        recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
+        walletRepository.save(requesterWallet);
+        walletRepository.save(recipientWallet);
+        requester.setBalance(requesterWallet.getBalance());
+        recipient.setBalance(recipientWallet.getBalance());
+        userRepository.save(requester);
+        userRepository.save(recipient);
+
+        Transaction tx = Transaction.builder()
+                .senderId(requesterId)
+                .recipientId(recipientId)
+                .amount(amount)
+                .note(reference != null && !reference.isBlank() ? reference : "Admin fund transfer")
+                .type(Transaction.TransactionType.DISBURSEMENT)
+                .status(Transaction.TransactionStatus.COMPLETED)
+                .idempotencyKey("admin_fund_transfer:" + approvalId)
+                .completedAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(tx);
+
+        auditService.log(approver, "ADMIN_FUND_TRANSFER", requester,
+                "approvalId=" + approvalId + " recipientId=" + recipientId + " amount=" + amount
+                        + " requestedBy=" + requester.getEmail());
+
+        notificationService.sendMoneyReceivedNotification(
+                recipientId, requester.getFirstName() + " " + requester.getLastName(),
+                amount.toPlainString(), tx.getId().toString(), recipientWallet.getBalance());
     }
 
     private AdminUserResponse toAdminUserResponse(User user) {

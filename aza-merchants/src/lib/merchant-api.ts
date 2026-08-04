@@ -885,6 +885,62 @@ export async function requestPayout(data: {
   return body.data;
 }
 
+// ─── Send Money (personal wallet P2P transfer) ──────────────────────────────
+// Moves funds out of your own AZA wallet (the account you're logged in as), not the
+// business balance — that's what /merchant/payouts and Connect transfers are for.
+
+export interface PersonalWallet {
+  balance: number;
+  currency: string;
+  lastUpdatedAt: string | null;
+}
+
+export function getPersonalWallet(): Promise<PersonalWallet> {
+  return request<{ success: boolean; data: PersonalWallet }>("/api/v1/wallet/balance").then((b) => b.data);
+}
+
+export interface TransferResult {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  amount: number;
+  currency: string;
+  note: string | null;
+  type: string;
+  status: string;
+  direction: "INCOMING" | "OUTGOING";
+  initiatedAt: string;
+  completedAt: string | null;
+}
+
+/** Creates a PENDING transfer and resolves the recipient's name — no funds move yet. */
+export function initiateTransfer(data: {
+  recipientIdentifier: string;
+  amount: number;
+  note?: string;
+  idempotencyKey: string;
+}): Promise<TransferResult> {
+  return request<{ success: boolean; data: TransferResult }>("/api/v1/transfers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }).then((b) => b.data);
+}
+
+/** Debits your wallet and credits the recipient. Fails if the passcode is wrong or the transfer expired (10 min). */
+export function confirmTransfer(id: string, passcode: string): Promise<TransferResult> {
+  return request<{ success: boolean; data: TransferResult }>(`/api/v1/transfers/${id}/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ passcode }),
+  }).then((b) => b.data);
+}
+
+export function getSentTransfers(page = 0, size = 10): Promise<Page<TransferResult>> {
+  const params = new URLSearchParams({ direction: "OUTGOING", status: "COMPLETED", page: String(page), size: String(size) });
+  return request<{ success: boolean; data: Page<TransferResult> }>(`/api/v1/transfers?${params}`).then((b) => b.data);
+}
+
 // ─── KYB ─────────────────────────────────────────────────────────────────────
 
 export async function getKyb(): Promise<KybStatus> {

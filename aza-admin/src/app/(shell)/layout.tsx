@@ -53,6 +53,7 @@ import {
   Tag,
   Gauge,
   Headphones,
+  Send,
 } from "lucide-react";
 
 interface NavItem {
@@ -101,6 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/payouts", label: "Payouts", icon: Coins, roles: ["FINANCE"] },
       { href: "/withdrawals", label: "User Withdrawals", icon: Wallet, roles: ["FINANCE"] },
       { href: "/float", label: "Agent Float", icon: Coins, roles: ["FINANCE"] },
+      { href: "/fund-transfers", label: "Fund Transfers", icon: Send, roles: ["FINANCE"] },
       { href: "/merchants", label: "Merchants", icon: Store, roles: ["FINANCE", "COMPLIANCE"] },
       { href: "/merchants/health", label: "Merchant Health", icon: HeartPulse, roles: ["FINANCE", "ADMIN"] },
       { href: "/kyb-review", label: "KYB Review", icon: ShieldCheck, roles: ["FINANCE", "COMPLIANCE"] },

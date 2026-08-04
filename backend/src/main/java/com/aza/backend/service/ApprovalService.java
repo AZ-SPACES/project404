@@ -188,13 +188,19 @@ public class ApprovalService {
                             approval.getPayload() != null
                                     ? fromJson(approval.getPayload(), ReasonPayload.class).getReason()
                                     : null);
+            case ADMIN_FUND_TRANSFER -> {
+                FundTransferPayload p = fromJson(approval.getPayload(), FundTransferPayload.class);
+                adminService.transferFunds(approval.getId(), approval.getRequestedBy(),
+                        approval.getTargetId(), p.getAmount(), p.getReference(), approver);
+            }
         }
     }
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
             case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
-                 MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION -> StaffRole.Role.FINANCE;
+                 MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION,
+                 ADMIN_FUND_TRANSFER -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT,
                  UPDATE_AGENT_TERMS -> StaffRole.Role.COMPLIANCE;
             case GRANT_STAFF_ROLE, CHANGE_STAFF_ROLE, UPDATE_SYSTEM_SETTINGS,
@@ -243,6 +249,14 @@ public class ApprovalService {
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class CommissionSettlementPayload {
+        private BigDecimal amount;
+        private String reference;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class FundTransferPayload {
         private BigDecimal amount;
         private String reference;
     }

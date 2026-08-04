@@ -79,7 +79,8 @@ public class PendingApproval {
         MINT_FLOAT,             // approver needs FINANCE (creates e-money against a bank deposit)
         BURN_FLOAT,             // approver needs FINANCE (destroys e-money as bank money is wired out)
         APPROVE_WITHDRAWAL,     // approver needs FINANCE (rejection/refund stays immediate)
-        SETTLE_COMMISSION       // approver needs FINANCE (pays an agent's accrued commission out of band)
+        SETTLE_COMMISSION,      // approver needs FINANCE (pays an agent's accrued commission out of band)
+        ADMIN_FUND_TRANSFER     // approver needs FINANCE (moves funds out of the requesting admin's own wallet)
     }
 
     public enum Status {

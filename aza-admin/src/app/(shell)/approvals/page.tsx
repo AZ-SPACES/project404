@@ -38,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
   MINT_FLOAT: "Float Mint",
   BURN_FLOAT: "Float Burn",
   SETTLE_COMMISSION: "Commission Settlement",
+  ADMIN_FUND_TRANSFER: "Admin Fund Transfer",
 };
 
 function fmt(iso: string | null) {
