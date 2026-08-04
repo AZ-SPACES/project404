@@ -178,6 +178,8 @@ export interface CheckoutSession {
   currency: string;
   description: string | null;
   metadata: string | null;
+  /** Your own reference, echoed back unchanged. */
+  reference: string | null;
   successUrl: string | null;
   cancelUrl: string | null;
   status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
@@ -191,6 +193,71 @@ export interface CheckoutSession {
   completedAt: string | null;
   cancelledAt: string | null;
   refundedAt: string | null;
+  /** "AUTOMATIC" (settles at payment) or "MANUAL" (held until you release it). */
+  release?: "AUTOMATIC" | "MANUAL";
+  /** Present on manual-release sessions once the payer has paid. */
+  hold?: Hold | null;
+}
+
+export interface HoldRecipient {
+  recipient: string;
+  amount: number;
+  releasedAmount: number;
+  status: "PENDING" | "RELEASED" | "RELEASE_FAILED" | "REFUNDED";
+  failureReason: string | null;
+}
+
+export interface Hold {
+  id: string;
+  status: "HELD" | "RELEASED" | "REFUNDED" | "PARTIALLY_SETTLED" | "FROZEN";
+  amount: number;
+  releasedAmount: number;
+  refundedAmount: number;
+  remainingAmount: number;
+  azaFee: number;
+  heldAt: string;
+  /** After this the payer is automatically refunded. */
+  expiresAt: string;
+  resolvedAt: string | null;
+  recipients: HoldRecipient[];
+}
+
+/** Release a held payment. Requires an idempotency key — this moves money. */
+export async function releaseHold(sessionId: string, idempotencyKey: string, reason?: string): Promise<CheckoutSession> {
+  const body = await request<{ success: boolean; data: CheckoutSession }>(
+    `/api/v1/merchant/sessions/${sessionId}/release`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ reason: reason || undefined }),
+    }
+  );
+  return body.data;
+}
+
+/** Return a held payment to the payer. Cannot fail while the money is held. */
+export async function refundHold(sessionId: string, idempotencyKey: string, reason?: string): Promise<CheckoutSession> {
+  const body = await request<{ success: boolean; data: CheckoutSession }>(
+    `/api/v1/merchant/sessions/${sessionId}/hold/refund`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ reason: reason || undefined }),
+    }
+  );
+  return body.data;
+}
+
+/**
+ * Held payments only. The release filter is applied server-side: filtering a page after the
+ * database has paginated it produces empty-looking pages while more holds exist, and a page
+ * count for the wrong rows.
+ */
+export async function getHeldSessions(page = 0, size = 20): Promise<Page<CheckoutSession>> {
+  const body = await request<{ success: boolean; data: Page<CheckoutSession> }>(
+    `/api/v1/merchant/sessions?status=COMPLETED&release=MANUAL&page=${page}&size=${size}`
+  );
+  return body.data;
 }
 
 export interface ApiKey {

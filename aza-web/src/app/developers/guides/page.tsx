@@ -379,6 +379,18 @@ const docMap: Record<string, DocArticle> = {
         <p className="text-sm">All endpoints are under <code>/api/v1/merchant/</code> and require your API key. There is a single production environment — test keys (<code>aza_test_...</code>) behave identically to live keys but do not move real money.</p>
 
         <Note>
+          <strong>Getting your recipients onto Aza.</strong> Every mode except paying your own
+          balance needs the recipient to already have an account. Call{' '}
+          <code>POST /api/v1/merchant/connect/recipients/invite</code> with their phone number and
+          Aza texts them a signup link; you get a <code>recipient.registered</code> webhook once
+          they join. Gate your own onboarding on{' '}
+          <code>GET /connect/recipients/resolve</code> so you never create a hold for someone who
+          cannot be paid. If the invite comes back <code>PENDING</code> with an{' '}
+          <code>unpayableReason</code>, that person already has an Aza account which cannot
+          receive money — no webhook will follow, so act on the reason instead of waiting.
+        </Note>
+
+        <Note>
           <strong>Two exceptions.</strong> API-key management (<code>/api/v1/merchant/api-keys</code>) is
           dashboard-only by design — a key can never mint or revoke another key. And payout
           <em>writes</em> (<code>POST /payouts</code>, <code>PUT /auto-payout</code>) reject secret keys:
@@ -573,6 +585,31 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
     description: 'A checkout session represents a single payment request. When created, the customer opens the session URL in the Aza app and approves the payment with their PIN. You receive a webhook when it completes.',
     content: (
       <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Which mode do you need?</h3>
+        <p className="text-sm">
+          Decide this before you write any code — it is the only structural choice in Aza
+          payments, and picking the wrong one is the most common reason integrations get stuck.
+        </p>
+        <Table
+          headers={['If money should…', 'Use', 'Recipient needs an Aza account?']}
+          rows={[
+            ['Land in your own account', 'The default — send nothing extra', 'No'],
+            ['Reach named sellers at the moment of payment', 'splits', 'Yes'],
+            ['Reach someone only after something happens', 'release: "MANUAL"', 'Yes'],
+          ]}
+        />
+        <Note>
+          <strong>Reach for manual release only if you can name the moment the money should
+          move.</strong> A job marked complete, goods confirmed delivered, a rental returned. If
+          you cannot name it, you want the default: money that lands in your account is money you
+          can pay out on your own terms, with no expiry clock and no release call to remember.
+        </Note>
+        <Warn>
+          Manual release is a commitment, not a safety net. An unreleased hold reverses to the
+          payer at <code>maxHoldDays</code>, and Aza will not adjudicate whether it should have —
+          it cannot see what the payment was for.
+        </Warn>
+
         <h3 className="text-base font-bold text-gray-900">Create a session</h3>
         <Endpoint method="POST" path="/api/v1/merchant/sessions" />
         <Table
@@ -583,6 +620,9 @@ System.out.println(createRes.body()); // contains secret — store immediately`,
             ['reference',      'string',  'No',  'Your own reference (e.g. order or tenant/seller id). Echoed on the session and in webhooks, and filterable via ?reference='],
             ['metadata',       'string',  'No',  'Arbitrary JSON string, returned unchanged on the session and in webhooks'],
             ['idempotencyKey', 'string',  'No',  'Unique key to safely retry creation without duplicating a session'],
+            ['release',        'string',  'No',  '"AUTOMATIC" (default) or "MANUAL" — see above'],
+            ['recipients',     'array',   'No',  'MANUAL only: who gets paid on release. Each must already have an Aza account'],
+            ['maxHoldDays',    'integer', 'No',  'MANUAL only: 1–90, default 30. After this the payer is refunded'],
           ]}
         />
 
@@ -2074,6 +2114,7 @@ public static boolean verifySignature(
             ['hold.expired_refunded', 'Nobody released in time; the payer has been refunded'],
             ['hold.frozen',           'Aza froze the hold for compliance; release and refund now fail'],
             ['hold.unfrozen',         'The freeze was lifted; your hold window was extended to match'],
+            ['recipient.registered',  'Someone you invited now has an Aza account and can be paid'],
           ]}
         />
         <Note>

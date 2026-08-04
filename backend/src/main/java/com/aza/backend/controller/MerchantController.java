@@ -164,14 +164,17 @@ public class MerchantController {
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String reference,
+            @RequestParam(required = false) String release,
             @RequestParam(required = false) String mode) {
         UUID merchantId = resolveMerchantId(principal);
         // mode: "test" → sandbox only, "live" → live only, anything else → both.
         Boolean testMode = "test".equalsIgnoreCase(mode) ? Boolean.TRUE
                 : "live".equalsIgnoreCase(mode) ? Boolean.FALSE : null;
-        if (status != null || from != null || to != null || q != null || reference != null || testMode != null) {
+        if (status != null || from != null || to != null || q != null || reference != null
+                || release != null || testMode != null) {
             return ResponseEntity.ok(ApiResponse.success(
-                    checkoutService.searchMerchantSessions(merchantId, page, size, status, from, to, q, testMode, reference)));
+                    checkoutService.searchMerchantSessions(
+                            merchantId, page, size, status, from, to, q, testMode, reference, release)));
         }
         return ResponseEntity.ok(ApiResponse.success(
                 checkoutService.listMerchantSessions(merchantId, page, size)));

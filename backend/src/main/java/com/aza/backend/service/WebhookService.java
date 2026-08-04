@@ -38,6 +38,38 @@ public class WebhookService {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    /**
+     * Queue an event that is not about a checkout session — recipient lifecycle, account
+     * state, anything whose subject is the merchant rather than a payment. Same opt-in rule
+     * as session events: an endpoint receives it only if its events list names it or is "*".
+     *
+     * @return how many endpoints it was queued for
+     */
+    public int dispatch(java.util.UUID merchantId, String eventType, String payload) {
+        int queued = 0;
+        for (WebhookEndpoint endpoint : endpointRepository.findAllByMerchantIdAndIsActiveTrue(merchantId)) {
+            if (!isSubscribed(endpoint, eventType)) continue;
+            deliveryRepository.save(WebhookDelivery.builder()
+                    .endpointId(endpoint.getId())
+                    .eventType(eventType)
+                    .payload(payload)
+                    .status(WebhookDelivery.DeliveryStatus.PENDING)
+                    .nextRetryAt(LocalDateTime.now())
+                    .build());
+            queued++;
+        }
+        return queued;
+    }
+
+    private boolean isSubscribed(WebhookEndpoint endpoint, String eventType) {
+        if (endpoint.getEvents() == null) return false;
+        for (String e : endpoint.getEvents().split(",")) {
+            String trimmed = e.trim();
+            if (trimmed.equals("*") || trimmed.equalsIgnoreCase(eventType)) return true;
+        }
+        return false;
+    }
+
     @Scheduled(fixedDelay = 10_000) // every 10 seconds
     public void processQueue() {
         List<WebhookDelivery> pending = deliveryRepository.findAllByStatusAndNextRetryAtBefore(

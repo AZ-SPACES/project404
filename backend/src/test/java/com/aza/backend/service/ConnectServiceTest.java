@@ -39,9 +39,12 @@ class ConnectServiceTest {
     private final RecipientResolver recipientResolver =
             new RecipientResolver(userRepository, walletRepository);
 
+    private final RecipientInviteService inviteService = mock(RecipientInviteService.class);
+
     private final ConnectService service = new ConnectService(
             merchantRepository, userRepository, walletRepository, transactionRepository,
-            connectTransferRepository, notificationService, rateLimitService, recipientResolver);
+            connectTransferRepository, notificationService, rateLimitService, recipientResolver,
+            inviteService);
 
     private final UUID merchantId = UUID.randomUUID();
     private final UUID ownerUserId = UUID.randomUUID();

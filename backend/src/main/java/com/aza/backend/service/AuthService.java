@@ -61,6 +61,7 @@ public class AuthService {
     private final GeoLocationService geoLocationService;
     private final ScreeningService screeningService;
     private final ReferralService referralService;
+    private final RecipientInviteService recipientInviteService;
     private final StaffRoleService staffRoleService;
     private final com.aza.backend.repository.MerchantRepository merchantRepository;
 
@@ -129,6 +130,11 @@ public class AuthService {
                 .currency("GHS")
                 .build();
         walletRepository.save(wallet);
+
+        // Any merchant that invited this person can now pay them — tell them, rather than
+        // leaving them to poll. Never throws into signup: a webhook problem must not stop
+        // someone creating an account.
+        recipientInviteService.fulfilFor(user);
 
         AuthResponse response = finalizeLogin(user, request.getDeviceName(), request.getDeviceOs(), request.getDeviceId(), ipAddress, true);
         auditService.log(AuditLog.AUTH_SIGNUP, AuditLog.SUCCESS,
@@ -911,16 +917,40 @@ public class AuthService {
         return finalizeLogin(user, parts.length > 1 ? parts[1] : null, parts.length > 2 ? parts[2] : null, parts.length > 3 ? parts[3] : null, storedIp, false);
     }
 
+    /**
+     * Guards the code-based second factors. A preAuthToken only proves the password was correct,
+     * so without this check any 2FA account could be completed with an SMS or email code — quietly
+     * downgrading a user who deliberately chose an authenticator to a weaker factor they never
+     * enabled. Mirrors the SMS/EMAIL entries preLogin advertises in {@code methods}, so the list
+     * the clients render and the factors the server accepts cannot drift apart.
+     *
+     * @return the phone number or email the code is sent to and verified against
+     */
+    private String requireOtpTwoFactorEnabled(User user, String method) {
+        if ("SMS".equals(method)) {
+            if (!Boolean.TRUE.equals(user.getSmsTwoFactorEnabled())) {
+                throw new AppException("TWO_FACTOR_METHOD_NOT_ENABLED",
+                        "SMS 2FA is not enabled.", org.springframework.http.HttpStatus.BAD_REQUEST);
+            }
+            if (user.getPhoneNumber() == null) throw new AppException("No phone number registered");
+            return user.getPhoneNumber();
+        }
+        if (!Boolean.TRUE.equals(user.getEmailTwoFactorEnabled())) {
+            throw new AppException("TWO_FACTOR_METHOD_NOT_ENABLED",
+                    "Email 2FA is not enabled.", org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
+        if (user.getEmail() == null) throw new AppException("No email registered");
+        return user.getEmail();
+    }
+
     public void requestSms2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
-        if (user.getPhoneNumber() == null) throw new AppException("No phone number registered");
-        otpService.sendOtp(user.getPhoneNumber(), "2fa");
+        otpService.sendOtp(requireOtpTwoFactorEnabled(user, "SMS"), "2fa");
     }
 
     public void requestEmail2fa(String preAuthToken) {
         User user = getPreAuthSession(preAuthToken).user();
-        if (user.getEmail() == null) throw new AppException("No email registered");
-        otpService.sendOtp(user.getEmail(), "2fa");
+        otpService.sendOtp(requireOtpTwoFactorEnabled(user, "EMAIL"), "2fa");
     }
 
     public AuthResponse verify2faOtp(String preAuthToken, String code, String method, String ipAddress) {
@@ -934,7 +964,9 @@ public class AuthService {
         User user = session.user();
         String[] parts = session.parts();
 
-        String identifier = "SMS".equals(method) ? user.getPhoneNumber() : user.getEmail();
+        // Re-checked here, not only where the code is dispatched: /2fa/otp/verify is reachable on
+        // its own, and a code minted while the factor was still on must not outlive it being off.
+        String identifier = requireOtpTwoFactorEnabled(user, method);
         otpService.verifyOtp(identifier, code, "2fa");
         
         String storedIp = parts.length > 4 ? parts[4] : null;

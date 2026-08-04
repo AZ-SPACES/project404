@@ -10,6 +10,8 @@ import com.aza.backend.dto.connect.ConnectTransferRequest;
 import com.aza.backend.dto.connect.ConnectTransferResponse;
 import com.aza.backend.dto.merchant.BulkTransferResponse;
 import com.aza.backend.dto.merchant.CreateBulkTransferRequest;
+import com.aza.backend.dto.merchant.InviteRecipientRequest;
+import com.aza.backend.dto.merchant.RecipientInviteResponse;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.User;
 import com.aza.backend.exception.AppException;
@@ -41,6 +43,7 @@ public class ConnectController {
 
     private final ConnectService connectService;
     private final BulkTransferService bulkTransferService;
+    private final com.aza.backend.service.RecipientInviteService inviteService;
     private final MerchantRepository merchantRepository;
 
     @Operation(summary = "Platform balance", description = "Funds available to pay out to sellers.")
@@ -59,6 +62,31 @@ public class ConnectController {
             @RequestParam String identifier) {
         return ResponseEntity.ok(ApiResponse.success(
                 connectService.resolveRecipient(resolveMerchantId(principal), identifier)));
+    }
+
+    @Operation(summary = "Invite someone to join Aza so you can pay them",
+            description = "Every settlement mode except paying your own balance needs the "
+                    + "recipient to already have an Aza account. Invite them and you get a "
+                    + "recipient.registered webhook once they do — instead of discovering they "
+                    + "are unreachable when you try to create a hold. Idempotent per person: "
+                    + "re-inviting returns the existing invite rather than texting them again.")
+    @PostMapping("/recipients/invite")
+    public ResponseEntity<ApiResponse<RecipientInviteResponse>> inviteRecipient(
+            @Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @Valid @RequestBody InviteRecipientRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                inviteService.invite(merchantId, request.getRecipient(),
+                        request.getDisplayName(), request.getReference())));
+    }
+
+    @GetMapping("/recipients/invites")
+    public ResponseEntity<ApiResponse<Page<RecipientInviteResponse>>> listInvites(
+            @Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(inviteService.list(merchantId, page, size)));
     }
 
     @Operation(summary = "Pay a seller",

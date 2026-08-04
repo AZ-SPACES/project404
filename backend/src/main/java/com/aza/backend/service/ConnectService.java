@@ -41,6 +41,7 @@ public class ConnectService {
     private final NotificationService notificationService;
     private final RateLimitService rateLimitService;
     private final RecipientResolver recipientResolver;
+    private final RecipientInviteService inviteService;
 
     // ==================== BALANCE ====================
 
@@ -71,9 +72,14 @@ public class ConnectService {
         String id = identifier.trim();
         User user = recipientResolver.find(id).orElse(null);
         if (user == null) {
+            // Tell the integrator what to do about it rather than just that it failed —
+            // an unregistered recipient is the normal case when onboarding new workers,
+            // not an error state.
             return ConnectRecipientResponse.builder()
                     .found(false).canReceive(false)
-                    .reason("No Aza account matches that phone, email or username")
+                    .reason("No Aza account matches that phone, email or username. "
+                            + "Invite them with POST /connect/recipients/invite, or send them "
+                            + "to " + inviteService.signupUrl() + " to create a free account.")
                     .build();
         }
 

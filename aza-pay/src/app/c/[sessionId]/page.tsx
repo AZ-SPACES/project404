@@ -37,6 +37,7 @@ import {
   Printer,
   Mail,
   Send,
+  Lock,
 } from "lucide-react";
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -146,6 +147,20 @@ function AmountBlock({ session, accent }: { session: CheckoutSession; accent: st
         <div className="flex items-center gap-1.5 pt-1.5">
           <Clock size={11} className="text-white/25" />
           <span className="text-[11px] text-white/30">{expiry}</span>
+        </div>
+      )}
+      {session.release === "MANUAL" && (
+        // The payer is handing money to AZA's brand, so they must know before approving
+        // that it is held and who decides its release. AZA cannot see what the payment is
+        // for and will not rule on whether a release was deserved — saying so here is what
+        // makes that honest rather than a surprise after the fact.
+        <div className="flex items-start gap-2 mt-3 rounded-xl bg-amber-400/5 border border-amber-400/15 px-3 py-2.5">
+          <Lock size={12} className="text-amber-400/80 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-white/45">
+            <span className="text-white/70 font-medium">This payment is held.</span>{" "}
+            {session.merchantName ?? "The business"} decides when it is released, and can refund
+            you instead. If nobody releases it in time, it comes back to you automatically.
+          </p>
         </div>
       )}
     </div>
@@ -535,7 +550,13 @@ export default function CheckoutPage() {
       } catch (e: any) {
         // Couldn't dispatch the code. Fall back to the authenticator when the account has one
         // rather than parking the payer on a step they have no way to complete.
-        if (!methods.includes("TOTP")) throw e;
+        if (!methods.includes("TOTP")) {
+          // Nothing left to offer. Send them back to credentials: when this runs after a login
+          // OTP, that code has already been consumed, so the OTP step is a dead end now.
+          setStep("login");
+          setOtp("");
+          throw e;
+        }
         setPreAuthToken(token);
         setTwoFaMethods(methods);
         setTwoFaMode("totp");

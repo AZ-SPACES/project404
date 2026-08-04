@@ -112,6 +112,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND (CAST(:to AS timestamp) IS NULL OR s.createdAt <= :to) " +
            "AND (CAST(:testMode AS boolean) IS NULL OR s.testMode = :testMode) " +
            "AND (CAST(:reference AS string) IS NULL OR s.reference = :reference) " +
+           "AND (:releaseMode IS NULL OR s.releaseMode = :releaseMode) " +
            "AND (CAST(:q AS string) IS NULL OR LOWER(s.description) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))) " +
            "ORDER BY s.createdAt DESC")
     Page<CheckoutSession> searchSessions(
@@ -121,6 +122,7 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
             @Param("to") LocalDateTime to,
             @Param("testMode") Boolean testMode,
             @Param("reference") String reference,
+            @Param("releaseMode") CheckoutSession.ReleaseMode releaseMode,
             @Param("q") String q,
             Pageable pageable);
 

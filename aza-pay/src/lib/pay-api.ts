@@ -15,6 +15,13 @@ export interface CheckoutSession {
   taxAmount: number | null;
   taxLabel: string | null;
   status: "PENDING" | "COMPLETED" | "CANCELLED" | "EXPIRED" | "REFUNDED";
+  /**
+   * "MANUAL" means this payment is held rather than paid out immediately, and the business
+   * decides when it is released. The payer has to be told that before they approve — AZA
+   * cannot later rule on whether a release was deserved, because it cannot see what the
+   * payment was for.
+   */
+  release?: "AUTOMATIC" | "MANUAL";
   checkoutUrl: string;
   createdAt: string;
   expiresAt: string | null;
@@ -154,8 +161,9 @@ export async function loginStep2(identifier: string, code: string): Promise<PreL
 }
 
 /**
- * Picks the 2FA method to show first. TOTP wins when available because it needs no dispatch;
- * an SMS/email code has to be requested before the payer can enter anything. Returns null for
+ * Picks the 2FA method to show first. The account's own default wins, so a payer who chose SMS
+ * gets SMS even though TOTP would save a round-trip; only when the default is unusable do we
+ * fall through to TOTP (needs no dispatch) and then the code-based factors. Returns null for
  * accounts offering only APP/PASSKEY, which this page can't drive — those payers approve from
  * the AZA app via the QR tab instead.
  */

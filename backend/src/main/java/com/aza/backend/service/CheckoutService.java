@@ -646,7 +646,8 @@ public class CheckoutService {
 
     public Page<CheckoutSessionResponse> searchMerchantSessions(
             UUID merchantId, int page, int size,
-            String status, String from, String to, String q, Boolean testMode, String reference) {
+            String status, String from, String to, String q, Boolean testMode, String reference,
+            String release) {
         Merchant merchant = merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
 
@@ -665,8 +666,20 @@ public class CheckoutService {
         String qParam = (q != null && !q.isBlank()) ? q.trim() : null;
         String referenceParam = (reference != null && !reference.isBlank()) ? reference.trim() : null;
 
+        // Filtering held sessions has to happen in the query. Filtering a page client-side
+        // after the database has already paginated yields pages that look empty while more
+        // results exist, and a page count that counts the wrong rows.
+        CheckoutSession.ReleaseMode releaseMode = null;
+        if (release != null && !release.isBlank()) {
+            try { releaseMode = CheckoutSession.ReleaseMode.valueOf(release.toUpperCase()); }
+            catch (IllegalArgumentException e) {
+                throw new AppException("VALIDATION", "release must be AUTOMATIC or MANUAL",
+                        HttpStatus.BAD_REQUEST);
+            }
+        }
+
         return sessionRepository.searchSessions(
-                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, qParam,
+                        merchantId, statusEnum, fromDt, toDt, testMode, referenceParam, releaseMode, qParam,
                         PageRequest.of(page, Math.min(size, 50)))
                 .map(s -> toResponse(s, merchant));
     }
