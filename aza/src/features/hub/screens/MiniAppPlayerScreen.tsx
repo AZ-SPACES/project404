@@ -28,7 +28,7 @@ import { useCommunityMiniApps } from '../../../hooks/useCommunityMiniApps';
 import { useMiniAppConsent } from '../../../hooks/useMiniAppConsent';
 import ConsentSheet from '../../../components/miniapp/ConsentSheet';
 import { AZA_SDK_JS } from '../sdk/azaSDK';
-import { getSdkUser, getSdkBalance, sdkPayment, reportMiniApp } from '../../../services/api';
+import { getSdkUser, getSdkBalance, sdkPayment, sdkRequestMandate, reportMiniApp } from '../../../services/api';
 import { useDisabledMiniApps } from '../../../hooks/useDisabledMiniApps';
 import { useToast } from '../../../providers/ToastProvider';
 import { CloseButton } from '../../../components/ui/CloseButton';
@@ -378,6 +378,7 @@ function CommunityWebApp({ app, onClose, Colors, styles }: CommunityWebAppProps)
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const webViewRef = useRef<WebView>(null);
+  const navigation = useNavigation<PlayerNavProp>();
 
   React.useEffect(() => {
     if (consentStatus === 'needs_consent') setShowConsent(true);
@@ -440,6 +441,40 @@ function CommunityWebApp({ app, onClose, Colors, styles }: CommunityWebAppProps)
           });
           break;
         }
+        case 'requestMandate': {
+          if (!params.recipientIdentifier || !params.perChargeLimit) {
+            replyErrorToWebView(id, 'Missing required mandate fields');
+            return;
+          }
+          try {
+            // Created PENDING_APPROVAL server-side first — the merchant name it resolves to
+            // (or a "no such merchant" error) is what the approval screen shows the user, not
+            // whatever the mini-app claims.
+            const res = await sdkRequestMandate(app.id, {
+              recipientIdentifier: params.recipientIdentifier,
+              perChargeLimit: params.perChargeLimit,
+              periodLimit: params.periodLimit,
+              periodType: params.periodType,
+              expiresAt: params.expiresAt,
+              reference: params.reference,
+            });
+            const mandate = res.data?.data;
+            navigation.navigate('MandateApproval', {
+              mandateId: mandate.id,
+              merchantName: mandate.merchantName,
+              appName: app.name,
+              perChargeLimit: mandate.perChargeLimit,
+              periodLimit: mandate.periodLimit,
+              periodType: mandate.periodType,
+              reference: mandate.reference,
+              onApproved: (result) => replyToWebView(id, result),
+              onDeclined: () => replyErrorToWebView(id, 'User declined the mandate'),
+            });
+          } catch (err: any) {
+            replyErrorToWebView(id, err?.message ?? 'Could not create mandate');
+          }
+          break;
+        }
         case 'close':
           onClose();
           replyToWebView(id, null);
@@ -454,7 +489,7 @@ function CommunityWebApp({ app, onClose, Colors, styles }: CommunityWebAppProps)
     } catch (err: any) {
       replyErrorToWebView(id, err?.message ?? 'SDK error');
     }
-  }, [app.id, onClose, replyToWebView, replyErrorToWebView]);
+  }, [app.id, app.name, navigation, onClose, replyToWebView, replyErrorToWebView]);
 
   const confirmPayment = async () => {
     if (!pendingPayment) return;

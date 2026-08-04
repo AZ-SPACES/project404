@@ -56,6 +56,7 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
             "/api/v1/merchant/settlements",
             "/api/v1/merchant/invoices",
             "/api/v1/merchant/discount-codes",
+            "/api/v1/merchant/mandates",
             // "Test your key" endpoint in the developer guides + profile read/update.
             "/api/v1/merchant/me",
     };
@@ -118,10 +119,13 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
 
             boolean isWrite = !request.getMethod().equalsIgnoreCase("GET");
 
-            // Payout writes are the drain-to-bank capability and are NEVER implicit:
-            // a secret key cannot move money out of Aza, and a restricted key must
-            // explicitly carry payouts:write. Everything else follows the usual rule —
-            // secret keys have full access, restricted keys are scope-gated.
+            // Payout writes and mandate charges both move money out without any further
+            // confirmation from the payer, so neither is ever implicit: a secret key cannot
+            // do either, and a restricted key must explicitly carry the write scope. Charging
+            // a mandate is the direct-debit equivalent of a payout — the payer already
+            // authorized it once at mandate approval, so the API key is the only gate left.
+            // Everything else follows the usual rule — secret keys have full access,
+            // restricted keys are scope-gated.
             boolean isPayoutWrite = isWrite
                     && (path.startsWith("/api/v1/merchant/payouts")
                         || path.startsWith("/api/v1/merchant/auto-payout"));
@@ -129,6 +133,13 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
                 statusCode = HttpServletResponse.SC_FORBIDDEN;
                 writeError(response, statusCode, "PAYOUTS_REQUIRE_RESTRICTED_KEY",
                         "Payout operations require a restricted API key with the payouts:write scope");
+                return;
+            }
+            boolean isMandateCharge = isWrite && path.matches("^/api/v1/merchant/mandates/[^/]+/charge$");
+            if (isMandateCharge && apiKeyEntity.getKeyType() == MerchantApiKey.KeyType.SECRET) {
+                statusCode = HttpServletResponse.SC_FORBIDDEN;
+                writeError(response, statusCode, "MANDATES_REQUIRE_RESTRICTED_KEY",
+                        "Charging a mandate requires a restricted API key with the mandates:write scope");
                 return;
             }
 
@@ -201,6 +212,7 @@ public class MerchantApiKeyFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/v1/merchant/settlements"))    return "settlements:read";
         if (path.startsWith("/api/v1/merchant/invoices"))       return isWrite ? "invoices:write" : "invoices:read";
         if (path.startsWith("/api/v1/merchant/discount-codes")) return isWrite ? "discounts:write" : "discounts:read";
+        if (path.startsWith("/api/v1/merchant/mandates"))       return isWrite ? "mandates:write" : "mandates:read";
         if (path.startsWith("/api/v1/merchant/me"))             return isWrite ? "profile:write" : "profile:read";
         // Checkout sessions and everything nested under them (refund, expire, simulate).
         return isWrite ? "sessions:write" : "sessions:read";

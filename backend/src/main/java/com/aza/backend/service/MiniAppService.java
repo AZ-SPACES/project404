@@ -1,5 +1,7 @@
 package com.aza.backend.service;
 
+import com.aza.backend.dto.mandate.CreateMandateRequest;
+import com.aza.backend.dto.mandate.MandateResponse;
 import com.aza.backend.dto.miniapp.*;
 import com.aza.backend.dto.transfer.TransferRequest;
 import com.aza.backend.dto.transfer.TransferResponse;
@@ -7,6 +9,7 @@ import com.aza.backend.entity.MiniApp;
 import com.aza.backend.entity.MiniApp.Permission;
 import com.aza.backend.entity.MiniAppConsent;
 import com.aza.backend.entity.Notification;
+import com.aza.backend.entity.PaymentMandate;
 import com.aza.backend.entity.User;
 import com.aza.backend.repository.MiniAppConsentRepository;
 import com.aza.backend.repository.MiniAppRepository;
@@ -33,6 +36,7 @@ public class MiniAppService {
     private final MiniAppConsentRepository consentRepository;
     private final TransferService transferService;
     private final NotificationService notificationService;
+    private final PaymentMandateService paymentMandateService;
 
     // ── Public registry ────────────────────────────────────────────────────
 
@@ -288,6 +292,21 @@ public class MiniAppService {
                 .recipientUsername(req.getRecipientIdentifier())
                 .note(req.getNote())
                 .build();
+    }
+
+    /**
+     * Creates a PENDING_APPROVAL mandate the mini-app has asked this user to authorize. Consent
+     * to request one at all is gated the same way MAKE_PAYMENTS gates one-off payments; the user
+     * still has to actively approve the specific mandate (ceilings, cadence) with their passcode
+     * via MandateController — granting DIRECT_DEBIT permission does not itself authorize a charge.
+     */
+    public MandateResponse requestMandate(String appId, CreateMandateRequest request, User user) {
+        requirePermission(appId, user, Permission.DIRECT_DEBIT);
+        PaymentMandate mandate = paymentMandateService.create(
+                user.getId(), request.getRecipientIdentifier(), request.getPerChargeLimit(),
+                request.getPeriodLimit(), request.getPeriodType(), request.getExpiresAt(),
+                request.getReference(), PaymentMandate.SourceType.MINI_APP, appId);
+        return paymentMandateService.toResponse(mandate);
     }
 
     private MiniAppConsent requireConsent(String appId, User user) {

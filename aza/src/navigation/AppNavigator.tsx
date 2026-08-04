@@ -7,7 +7,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { TalkToUsScreen, EmailUsScreen, ChatWithUsScreen, ChatbotScreen, HelpAndSupportScreen, HelpTopicScreen,} from '../features/customercare';
 import { ChatScreen, CameraScreen, MediaPreviewScreen, ChatInfoScreen, AudioCallScreen, VideoCallScreen, IncomingCallScreen, StarredMessagesScreen, SharedMediaScreen, ManageStorageScreen, MessageInfoScreen, ChatThemeScreen, BroadcastScreen, SavedMessagesScreen, ChatBackupScreen,} from '../features/chat';
 import { ContactsProfileScreen, AddFriendsScreen, RequestPendingScreen } from '../features/contacts';
-import { MiniAppPlayerScreen } from '../features/hub';
+import { MiniAppPlayerScreen, MandateApprovalScreen } from '../features/hub';
 import { SendContactScreen, SendAmountScreen, SendConfirmScreen, SendPinScreen, SendSuccessScreen, RequestContactScreen, RequestAmountScreen, DetailsScreen, SpendingScreen, FinancialDashboardScreen, BudgetManagementScreen, AiAssistantScreen,} from '../features/transfer';
 import { WithdrawScreen, StatementDownloadScreen, TransactionsScreen, ReversalRequestScreen,} from '../features/home';
 
@@ -22,6 +22,7 @@ function RequestContactWithBoundary(props: React.ComponentProps<typeof RequestCo
 function RequestAmountWithBoundary(props: React.ComponentProps<typeof RequestAmountScreen>) { return <ErrorBoundary><RequestAmountScreen {...props} /></ErrorBoundary>; }
 import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen, AppSecurityScreen, SecureAccountScreen, LogoutEverywhereScreen, DevicesScreen, TwoStepVerificationScreen, TotpSetupScreen, DisableTotpScreen, RecoveryCodesScreen, ManageRecoveryCodesScreen, AccountRecoveryContactsScreen, SmsSetupScreen, DisableSmsScreen, PasskeySetupScreen, DisablePasskeyScreen, AzaAppSetupScreen, ChangePasswordScreen, FindMeByScreen, BillForwardingIntroScreen, BillForwardingDetailsScreen, PersonalDetailsScreen, PersonalInformationScreen, ChangeEmailScreen, ChangePhoneScreen, DeleteAccountScreen} from '../features/profile';
 import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
+import { PaymentMandatesScreen } from '../features/profile/securityandprivacy/PaymentMandatesScreen';
 import LimitsAndUsageScreen from '../features/profile/screens/LimitsAndUsageScreen';
 import LimitIncreaseRequestScreen from '../features/profile/screens/LimitIncreaseRequestScreen';
 import WalletFreezeScreen from '../features/profile/screens/WalletFreezeScreen';
@@ -124,6 +125,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChangePhone" component={ChangePhoneScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="ConnectedApps" component={ConnectedAppsScreen} />
+      <Stack.Screen name="PaymentMandates" component={PaymentMandatesScreen} />
       <Stack.Screen name="AppLoginApproval" component={AppLoginApprovalScreen} />
       <Stack.Screen name="QrLoginApproval" component={QrLoginApprovalScreen} />
       <Stack.Screen name="MerchantCheckout" component={MerchantCheckoutScreen} />
@@ -156,6 +158,7 @@ export default function AppNavigator() {
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="MiniApp" component={MiniAppPlayerScreen} options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}/>
+      <Stack.Screen name="MandateApproval" component={MandateApprovalScreen} options={{ presentation: 'modal', animation: 'slide_from_bottom' }}/>
       <Stack.Screen name="MerchantBusinessName" component={MerchantBusinessNameScreen} />
       <Stack.Screen name="MerchantBusinessCategory" component={MerchantBusinessCategoryScreen} />
       <Stack.Screen name="MerchantBusinessContact" component={MerchantBusinessContactScreen} />

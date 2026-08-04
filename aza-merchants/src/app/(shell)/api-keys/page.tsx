@@ -192,14 +192,16 @@ function CreateKeyModal({
   // Mirrors MerchantApiKeyFilter.requiredScope() in the backend — every scope the
   // filter can demand must be grantable here, or the error message telling an
   // integrator to use that scope points at a key they cannot create.
-  // payouts:write is the drain-to-bank scope: it is ONLY available on restricted
-  // keys (secret keys are rejected on payout writes by the backend).
+  // payouts:write and mandates:write are the money-out-without-a-passcode scopes: both are
+  // ONLY available on restricted keys (secret keys are rejected on payout writes and mandate
+  // charges by the backend).
   const [scopes, setScopes] = useState<Record<string, boolean>>({
     "sessions:read": false, "sessions:write": false,
     "transfers:read": false, "transfers:write": false,
     "transactions:read": false,
     "webhooks:read": false, "webhooks:write": false,
     "payouts:read": false, "payouts:write": false,
+    "mandates:read": false, "mandates:write": false,
     "customers:read": false,
     "disputes:read": false, "disputes:write": false,
     "settlements:read": false,

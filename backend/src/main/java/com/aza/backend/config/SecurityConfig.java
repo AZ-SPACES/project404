@@ -108,10 +108,14 @@ public class SecurityConfig {
                             "/oauth/qr/status/*",
                             "/oauth/qr/complete",
                             "/oauth/clients/*",
-                            "/oauth/payments/**"
+                            "/oauth/payments/**",
+                            "/oauth/mandates/**"
                     ).permitAll();
                     // Checkout GET is public; confirm and cancel require authenticated JWT
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/checkout/*").permitAll();
+                    // Mandate terms are public (merchant name/ceilings/cadence) for the aza-pay
+                    // hosted approval page before the payer logs in; approving requires JWT.
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/mandates/*/public").permitAll();
                     // Discount validation is public — no auth needed
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/checkout/discount/validate").permitAll();
                     // Promo code validation is public — redeem requires auth (handled by catch-all)

@@ -17,6 +17,8 @@ const SCOPE_LABELS: Record<string, string> = {
   email:         'Email',
   phone:         'Phone',
   'wallet:read': 'Wallet balance',
+  payment:       'Payments',
+  direct_debit:  'Standing charges',
 };
 
 interface ConnectedApp {

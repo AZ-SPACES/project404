@@ -14,6 +14,7 @@ const SCOPE_LABELS: Record<string, { label: string; short: string }> = {
   phone:         { label: 'Phone number',   short: 'PHONE'   },
   'wallet:read': { label: 'Wallet balance', short: 'WALLET'  },
   payment:       { label: 'Make payments',  short: 'PAYMENTS'},
+  direct_debit:  { label: 'Request standing charges', short: 'DIRECT DEBIT' },
 };
 
 interface ClientInfo {
@@ -111,6 +112,7 @@ function ConsentContent() {
   if (!client)   return <LoadingScreen />;
 
   const canPay = client.scopes.includes('payment');
+  const canRequestMandate = client.scopes.includes('direct_debit');
   const disabled = submitting || !identifier.trim() || !password;
   const passNo = passNumber(state);
 
@@ -185,6 +187,13 @@ function ConsentContent() {
               <p className="pass-note">
                 <Lock size={12} strokeWidth={2.4} />
                 Every payment is still confirmed by you inside Aza.
+              </p>
+            )}
+            {canRequestMandate && (
+              <p className="pass-note">
+                <Lock size={12} strokeWidth={2.4} />
+                This only lets {client.appName} ask you to approve a standing charge — you&apos;ll
+                review the exact amount and limits separately before anything is authorized.
               </p>
             )}
           </div>

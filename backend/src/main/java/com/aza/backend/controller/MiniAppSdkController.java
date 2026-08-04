@@ -1,9 +1,12 @@
 package com.aza.backend.controller;
 
 import com.aza.backend.dto.ApiResponse;
+import com.aza.backend.dto.mandate.CreateMandateRequest;
+import com.aza.backend.dto.mandate.MandateResponse;
 import com.aza.backend.dto.miniapp.*;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.MiniAppService;
+import jakarta.validation.Valid;
 import jakarta.validation.Valid;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +80,17 @@ public class MiniAppSdkController {
             @Valid @RequestBody SdkPaymentRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 miniAppService.requestSdkPayment(appId, request, user)));
+    }
+
+    // ── Payment mandates (direct debit) ────────────────────────────────────
+
+    @PostMapping("/mandates")
+    public ResponseEntity<ApiResponse<MandateResponse>> requestMandate(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody CreateMandateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                miniAppService.requestMandate(appId, request, user)));
     }
 
     @Data

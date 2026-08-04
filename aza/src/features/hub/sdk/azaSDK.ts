@@ -73,6 +73,21 @@ export const AZA_SDK_JS = `
     },
 
     /**
+     * Request a standing payment mandate (direct debit): once the user approves it, this app's
+     * merchant backend can charge it on demand, server-to-server, with no further prompt to the
+     * user per charge. Requires DIRECT_DEBIT permission. The returned mandate is PENDING_APPROVAL
+     * until the user finishes approving it with their passcode on the native screen this opens.
+     * @param {{ recipientIdentifier: string, perChargeLimit: number, periodLimit?: number, periodType?: 'DAILY'|'WEEKLY'|'MONTHLY', expiresAt?: string, reference?: string }} params
+     * @returns {Promise<{ id, status, perChargeLimit, periodLimit, periodType, merchantName }>}
+     */
+    requestMandate: function (params) {
+      if (!params || !params.recipientIdentifier || !params.perChargeLimit) {
+        return Promise.reject(new Error('recipientIdentifier and perChargeLimit are required'));
+      }
+      return call('requestMandate', params);
+    },
+
+    /**
      * Close this mini app.
      */
     close: function () { return call('close'); },

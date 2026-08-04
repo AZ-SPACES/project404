@@ -15,6 +15,7 @@ const PERMISSION_META: Record<string, { icon: string; label: string; description
   MAKE_PAYMENTS:{ icon: 'credit-card', label: 'Make payments', description: 'Initiate payments from your Aza wallet' },
   READ_BALANCE: { icon: 'bar-chart-2', label: 'View balance', description: 'See your current wallet balance' },
   READ_TRANSACTIONS: { icon: 'list', label: 'Transaction history', description: 'Read your past transactions' },
+  DIRECT_DEBIT: { icon: 'repeat', label: 'Request direct debit', description: 'Ask you to approve standing charges — each one still needs your separate approval' },
 };
 
 interface ConsentSheetProps {

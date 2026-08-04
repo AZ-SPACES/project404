@@ -27,6 +27,8 @@ const SCOPE_LABELS: Record<string, { label: string; description: string; icon: s
   email:        { label: 'Email address',    description: 'Your registered email',              icon: 'mail-outline' },
   phone:        { label: 'Phone number',     description: 'Your registered phone number',       icon: 'call-outline' },
   'wallet:read':{ label: 'Wallet balance',   description: 'Read-only balance and currency',     icon: 'wallet-outline' },
+  payment:      { label: 'Make payments',    description: 'Create payments for you to confirm — every one still needs your approval', icon: 'card-outline' },
+  direct_debit: { label: 'Request standing charges', description: 'Ask you to approve a mandate to charge your wallet later — you approve the specific terms separately, and can cancel anytime', icon: 'repeat-outline' },
 };
 
 type OAuthClientInfo = {

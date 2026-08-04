@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OAuthService {
 
-    private static final Set<String> VALID_SCOPES = Set.of("identity", "email", "phone", "wallet:read", "payment");
+    private static final Set<String> VALID_SCOPES = Set.of("identity", "email", "phone", "wallet:read", "payment", "direct_debit");
     private static final long ACCESS_TOKEN_TTL_SECONDS  = 3600;       // 1 hour
     private static final long REFRESH_TOKEN_TTL_SECONDS = 30L * 24 * 3600; // 30 days
     private static final long AUTH_CODE_TTL_SECONDS     = 60;

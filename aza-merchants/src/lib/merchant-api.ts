@@ -374,6 +374,62 @@ export interface Page<T> {
   size: number;
 }
 
+// ─── Payment mandates (direct debit) ────────────────────────────────────────
+
+export interface Mandate {
+  id: string;
+  merchantId: string;
+  perChargeLimit: number;
+  periodLimit: number | null;
+  periodType: "DAILY" | "WEEKLY" | "MONTHLY" | null;
+  periodSpent: number;
+  periodResetAt: string | null;
+  expiresAt: string | null;
+  reference: string;
+  status: "PENDING_APPROVAL" | "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED";
+  sourceType: "MINI_APP" | "OAUTH";
+  sourceId: string;
+  lastChargedAt: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export interface MandateChargeRecord {
+  id: string;
+  mandateId: string;
+  amount: number;
+  status: "COMPLETED" | "FAILED";
+  transactionId: string | null;
+  failureReason: string | null;
+  createdAt: string;
+}
+
+export function getMandates(page = 0, size = 20): Promise<Page<Mandate>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request<{ success: boolean; data: Page<Mandate> }>(`/api/v1/merchant/mandates?${params}`).then((b) => b.data);
+}
+
+export function getMandateCharges(mandateId: string, page = 0, size = 20): Promise<Page<MandateChargeRecord>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return request<{ success: boolean; data: Page<MandateChargeRecord> }>(
+    `/api/v1/merchant/mandates/${mandateId}/charges?${params}`
+  ).then((b) => b.data);
+}
+
+/** Debits the mandate's payer on demand — no passcode prompt, they already approved this mandate. */
+export function chargeMandate(
+  mandateId: string,
+  amount: number,
+  reference: string,
+  idempotencyKey: string
+): Promise<MandateChargeRecord> {
+  return request<{ success: boolean; data: MandateChargeRecord }>(`/api/v1/merchant/mandates/${mandateId}/charge`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ amount, reference }),
+  }).then((b) => b.data);
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export async function signup(data: {

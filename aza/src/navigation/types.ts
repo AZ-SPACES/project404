@@ -103,6 +103,23 @@ export type RootStackParamList = {
   ChatScreen: { id: string; name: string; avatar: string; online: boolean; payIdentifier?: string; sentMedia?: Array<{ uri: string; type: 'image' | 'video' }> | undefined; forwardedMessage?: ChatMessage; quickReply?: string };
   Hub: undefined;
   MiniApp: { appId: string };
+  /**
+   * Approve or decline a standing payment mandate (direct debit). onApproved/onDeclined are
+   * plain in-memory callbacks, not persisted navigation state — safe because this screen only
+   * ever has one initiator (the mini-app WebView bridge waiting on a single SDK promise), unlike
+   * SendPin's store-based pattern which supports being entered from several different flows.
+   */
+  MandateApproval: {
+    mandateId: string;
+    merchantName: string;
+    appName: string;
+    perChargeLimit: number;
+    periodLimit?: number;
+    periodType?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+    reference: string;
+    onApproved: (result: { id: string; status: string }) => void;
+    onDeclined: () => void;
+  };
   ContactsProfile: { id?: string; name: string; username: string; avatar: string; phone?: string; status?: string; accountProvider?: string };
   ChatCamera: { recipientName: string; chatId: string };
   MediaPreview: {
@@ -149,6 +166,7 @@ export type RootStackParamList = {
   QrLoginApproval: { challengeToken: string; siteType: string; siteName: string; oauthClientId?: string; oauthScopes?: string };
   GeoBlocked: undefined;
   ConnectedApps: undefined;
+  PaymentMandates: undefined;
   MerchantCheckout: { sessionId: string };
   StatementVerifyResult: { code: string };
   MerchantVerifyResult: { handle: string; amount?: number; note?: string };

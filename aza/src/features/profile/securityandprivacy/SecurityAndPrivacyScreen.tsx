@@ -347,6 +347,14 @@ export function SecurityAndPrivacyScreen() {
 
           <SettingRow
             iconType="Feather"
+            iconName="repeat"
+            title="Payment mandates"
+            subtitle="Manage standing charges you've approved for merchants and apps"
+            onPress={() => navigation.navigate("PaymentMandates")}
+          />
+
+          <SettingRow
+            iconType="Feather"
             iconName="info"
             title="Privacy policy"
             subtitle="Learn how we protect and use your personal information"

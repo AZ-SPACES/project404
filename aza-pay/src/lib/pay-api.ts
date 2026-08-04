@@ -220,3 +220,29 @@ export function redeemPromoCode(code: string, token: string): Promise<{ credited
 export function sendEmailReceipt(sessionId: string, email: string): Promise<void> {
   return post(`/api/v1/checkout/${sessionId}/receipt/email`, { email });
 }
+
+// ── Payment mandates (direct debit) ─────────────────────────────────────────
+// Hosted approval for a mandate an OAuth ("Sign in with AZA") app requested via
+// POST /oauth/mandates — this page is the approvalUrl that response points to.
+
+export interface MandateInfo {
+  id: string;
+  merchantId: string;
+  merchantName: string | null;
+  merchantLogoUrl: string | null;
+  perChargeLimit: number;
+  periodLimit: number | null;
+  periodType: "DAILY" | "WEEKLY" | "MONTHLY" | null;
+  reference: string | null;
+  status: "PENDING_APPROVAL" | "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED";
+  sourceType: "MINI_APP" | "OAUTH";
+  sourceId: string;
+}
+
+export function getMandate(mandateId: string): Promise<MandateInfo> {
+  return get(`/api/v1/mandates/${mandateId}/public`);
+}
+
+export function confirmMandate(mandateId: string, passcode: string, token: string): Promise<MandateInfo> {
+  return post(`/api/v1/mandates/${mandateId}/confirm`, { passcode }, token);
+}

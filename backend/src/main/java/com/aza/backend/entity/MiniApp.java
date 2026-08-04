@@ -31,7 +31,8 @@ public class MiniApp {
         USER_EMAIL,         // email address
         MAKE_PAYMENTS,      // initiate Aza payments from user wallet
         READ_BALANCE,       // view wallet balance
-        READ_TRANSACTIONS   // view recent transaction history
+        READ_TRANSACTIONS,  // view recent transaction history
+        DIRECT_DEBIT        // charge a standing mandate on the user's wallet with no per-charge passcode
     }
 
     @Id

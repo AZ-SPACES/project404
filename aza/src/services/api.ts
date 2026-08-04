@@ -994,6 +994,30 @@ export const sdkPayment = (appId: string, payload: {
   idempotencyKey: string;
 }) => api.post(`/api/v1/sdk/miniapps/${appId}/payment`, payload);
 
+// --- Payment mandates (direct debit) ---
+
+export const sdkRequestMandate = (appId: string, payload: {
+  recipientIdentifier: string;
+  perChargeLimit: number;
+  periodLimit?: number;
+  periodType?: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  expiresAt?: string;
+  reference?: string;
+}) => api.post(`/api/v1/sdk/miniapps/${appId}/mandates`, payload);
+
+export const getMandates = () => api.get('/api/v1/mandates');
+
+export const getMandate = (id: string) => api.get(`/api/v1/mandates/${id}`);
+
+export const confirmMandate = (id: string, passcode: string) =>
+  api.post(`/api/v1/mandates/${id}/confirm`, { passcode });
+
+export const pauseMandate = (id: string) => api.post(`/api/v1/mandates/${id}/pause`);
+
+export const resumeMandate = (id: string) => api.post(`/api/v1/mandates/${id}/resume`);
+
+export const cancelMandate = (id: string) => api.post(`/api/v1/mandates/${id}/cancel`);
+
 // --- Dispute / Reversal Endpoints ---
 
 export const createDispute = (payload: { transactionId: string; category: string; description: string }) =>

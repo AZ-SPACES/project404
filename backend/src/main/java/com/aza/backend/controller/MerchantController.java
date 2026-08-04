@@ -5,6 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.security.filter.MerchantApiKeyFilter;
+import com.aza.backend.dto.mandate.ChargeMandateRequest;
+import com.aza.backend.dto.mandate.MandateChargeResponse;
+import com.aza.backend.dto.mandate.MandateResponse;
 import com.aza.backend.dto.merchant.*;
 import com.aza.backend.entity.Merchant;
 import com.aza.backend.entity.MerchantApiLog;
@@ -16,6 +19,7 @@ import com.aza.backend.repository.MerchantRepository;
 import com.aza.backend.repository.UserRepository;
 import com.aza.backend.service.CheckoutService;
 import com.aza.backend.service.MerchantService;
+import com.aza.backend.service.PaymentMandateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,6 +49,7 @@ public class MerchantController {
     private final MerchantRepository merchantRepository;
     private final CheckoutSessionRepository checkoutSessionRepository;
     private final UserRepository userRepository;
+    private final PaymentMandateService mandateService;
 
     // ==================== HANDLE CHECK ====================
 
@@ -432,6 +437,52 @@ public class MerchantController {
             throw new AppException("IDEMPOTENCY_KEY_REQUIRED",
                     "An Idempotency-Key header is required on this endpoint", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    // ==================== DIRECT DEBIT (payment mandates) ====================
+
+    @Operation(summary = "List mandates paying this merchant")
+    @GetMapping("/mandates")
+    public ResponseEntity<ApiResponse<Page<MandateResponse>>> listMandates(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+                mandateService.listForMerchant(merchantId, PageRequest.of(page, Math.min(size, 100)))
+                        .map(mandateService::toResponse)));
+    }
+
+    @Operation(summary = "Charge history for a mandate")
+    @GetMapping("/mandates/{mandateId}/charges")
+    public ResponseEntity<ApiResponse<Page<MandateChargeResponse>>> listMandateCharges(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID mandateId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+                mandateService.listCharges(merchantId, mandateId, PageRequest.of(page, Math.min(size, 100)))
+                        .map(mandateService::toChargeResponse)));
+    }
+
+    @Operation(summary = "Charge a mandate",
+            description = "Debits the mandate's payer on demand, server-to-server, with no passcode "
+                    + "prompt — the payer already authorized this when they approved the mandate. "
+                    + "Rejected if the amount exceeds the mandate's per-charge or period ceiling, the "
+                    + "mandate isn't ACTIVE, or the payer's wallet can't cover it. An Idempotency-Key "
+                    + "is required: replaying the same key returns the original result instead of "
+                    + "charging twice.")
+    @PostMapping("/mandates/{mandateId}/charge")
+    public ResponseEntity<ApiResponse<MandateChargeResponse>> chargeMandate(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @PathVariable UUID mandateId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody ChargeMandateRequest request) {
+        UUID merchantId = resolveMerchantId(principal);
+        requireIdempotencyKey(idempotencyKey);
+        return ResponseEntity.ok(ApiResponse.success(mandateService.toChargeResponse(
+                mandateService.charge(merchantId, mandateId, request.getAmount(), request.getReference(), idempotencyKey))));
     }
 
     // ==================== DISPUTES (merchant view) ====================

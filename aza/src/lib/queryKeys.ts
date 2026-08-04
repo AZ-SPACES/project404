@@ -48,4 +48,5 @@ export const queryKeys = {
   developerClients:    () => ['developer', 'clients'] as const,
   connectedApps:       () => ['connected-apps'] as const,
   disabledMiniApps:    () => ['disabled-mini-apps'] as const,
+  mandates:            () => ['mandates'] as const,
 } as const;

@@ -41,6 +41,7 @@ import {
   Search,
   LogIn,
   Send,
+  Repeat2,
 } from "lucide-react";
 
 interface NavItem {
@@ -76,6 +77,7 @@ const NAV: NavSection[] = [
       { href: "/payouts", label: "Payouts", icon: ArrowDownToLine },
       { href: "/settlements", label: "Settlements", icon: Landmark },
       { href: "/send", label: "Send Money", icon: Send },
+      { href: "/mandates", label: "Payment Mandates", icon: Repeat2 },
     ],
   },
   {
