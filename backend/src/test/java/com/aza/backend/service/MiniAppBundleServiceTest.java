@@ -37,7 +37,8 @@ class MiniAppBundleServiceTest {
     void setUp() {
         service = new MiniAppBundleService(
                 bundleRoot.toString(),
-                "miniapps.aza.systems",
+                "aza.systems",
+                "mini",
                 1_048_576,   // 1 MB uncompressed cap, small enough to trip in a test
                 50,          // 50 entries
                 120,         // compression ratio
@@ -233,15 +234,39 @@ class MiniAppBundleServiceTest {
     @DisplayName("maps underscores to hyphens so ids remain valid hostnames")
     void derivesDnsSafeSubdomain() {
         assertEquals("bolt-ghana", service.deriveSubdomain("bolt_ghana"));
-        assertEquals("https://bolt-ghana.miniapps.aza.systems/", service.publicUrl("bolt-ghana"));
-        assertEquals("https://bolt-ghana-preview.miniapps.aza.systems/", service.previewUrl("bolt-ghana"));
+        assertEquals("https://bolt-ghana-mini.aza.systems/", service.publicUrl("bolt-ghana"));
+        assertEquals("https://bolt-ghana-mini-preview.aza.systems/", service.previewUrl("bolt-ghana"));
     }
 
     @Test
-    @DisplayName("refuses ids that would collide with the preview host")
-    void rejectsReservedPreviewSuffix() {
-        AppException e = assertThrows(AppException.class, () -> service.deriveSubdomain("my_app_preview"));
-        assertEquals("RESERVED_APP_ID", e.getCode());
+    @DisplayName("hosted apps stay one label deep so Cloudflare's Universal SSL covers them")
+    void keepsHostnamesOneLabelDeep() {
+        // A two-level host (<app>.miniapps.aza.systems) is not covered by Universal SSL and
+        // would force a paid certificate tier or a directly-exposed origin. Guard the shape.
+        String host = service.publicUrl("bolt-ghana").replace("https://", "").replace("/", "");
+        assertEquals(3, host.split("\\.").length, "hosted mini apps must be <label>.aza.systems");
+        assertTrue(host.endsWith("-mini.aza.systems"));
+    }
+
+    @Test
+    @DisplayName("a mini app cannot claim a platform hostname")
+    void cannotCollideWithPlatformSubdomains() {
+        // Every hosted app carries the -mini affix, and nothing in the zone ends in "-mini",
+        // so even an app id of "api" resolves somewhere harmless.
+        assertEquals("https://api-mini.aza.systems/", service.publicUrl(service.deriveSubdomain("api")));
+        assertEquals("https://admin-mini.aza.systems/", service.publicUrl(service.deriveSubdomain("admin")));
+    }
+
+    @Test
+    @DisplayName("rejects an app id too long to fit the preview hostname in 63 characters")
+    void rejectsOverlongAppId() {
+        // Ids may be up to 100 chars, but "-mini-preview" has to fit inside one DNS label.
+        AppException e = assertThrows(AppException.class,
+                () -> service.deriveSubdomain("a".repeat(51)));
+        assertEquals("APP_ID_TOO_LONG", e.getCode());
+
+        assertEquals("a".repeat(50), service.deriveSubdomain("a".repeat(50)));
+        assertTrue(service.previewUrl("a".repeat(50)).replace("https://", "").split("\\.")[0].length() <= 63);
     }
 
     @Test

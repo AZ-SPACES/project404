@@ -77,7 +77,8 @@ services:
       ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
       FIREBASE_CREDENTIALS_PATH: /etc/aza/firebase-service-account.json
       MINIAPP_BUNDLE_ROOT: /srv/miniapps
-      MINIAPP_HOST_SUFFIX: ${MINIAPP_HOST_SUFFIX:-miniapps.aza.systems}
+      MINIAPP_HOST_SUFFIX: ${MINIAPP_HOST_SUFFIX:-aza.systems}
+      MINIAPP_LABEL_SUFFIX: ${MINIAPP_LABEL_SUFFIX:-mini}
     volumes:
       - ./backend/src/main/resources/firebase-service-account.json:/etc/aza/firebase-service-account.json:ro
       # Extracted mini app bundles. The backend writes here on upload and approval; nginx

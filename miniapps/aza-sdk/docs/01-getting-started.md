@@ -77,7 +77,7 @@ cd dist && zip -r ../bundle.zip .    # zip the CONTENTS, not the folder
 Upload `bundle.zip` in the developer portal. Your app is served at its own origin:
 
 ```
-https://<your-app-id>.miniapps.aza.systems/
+https://<your-app-id>-mini.aza.systems/
 ```
 
 Each app gets a separate subdomain rather than a path on a shared host, so no other mini app
@@ -115,7 +115,7 @@ Submit for review. The Aza team reviews within 2–5 business days.
 ### Shipping updates to a live app
 
 Uploading a new bundle never disturbs the running version. The upload is staged at
-`https://<your-app-id>-preview.miniapps.aza.systems/` for review while your users stay on the
+`https://<your-app-id>-mini-preview.aza.systems/` for review while your users stay on the
 approved build, and only goes live once a reviewer approves it. Publishing and rolling back
 are both instant — Aza keeps your recent versions on disk.
 

@@ -68,8 +68,12 @@ public class MiniAppBundleService {
             ".php", ".php3", ".php4", ".php5", ".phtml", ".jsp", ".jspx", ".asp", ".aspx",
             ".cgi", ".pl", ".py", ".rb", ".sh", ".exe", ".so", ".dll");
 
+    /** Appended to the preview label; the longest affix a base label has to leave room for. */
+    private static final String PREVIEW_MARKER = "-preview";
+
     private final Path bundleRoot;
     private final String hostSuffix;
+    private final String labelSuffix;
     private final long maxUncompressedBytes;
     private final int maxEntries;
     private final int maxCompressionRatio;
@@ -77,13 +81,15 @@ public class MiniAppBundleService {
 
     public MiniAppBundleService(
             @Value("${aza.miniapps.bundle-root:/srv/miniapps}") String bundleRoot,
-            @Value("${aza.miniapps.host-suffix:miniapps.aza.systems}") String hostSuffix,
+            @Value("${aza.miniapps.host-suffix:aza.systems}") String hostSuffix,
+            @Value("${aza.miniapps.label-suffix:mini}") String labelSuffix,
             @Value("${aza.miniapps.max-uncompressed-bytes:52428800}") long maxUncompressedBytes,
             @Value("${aza.miniapps.max-entries:2000}") int maxEntries,
             @Value("${aza.miniapps.max-compression-ratio:120}") int maxCompressionRatio,
             @Value("${aza.miniapps.versions-to-keep:5}") int versionsToKeep) {
         this.bundleRoot = Paths.get(bundleRoot).toAbsolutePath().normalize();
         this.hostSuffix = hostSuffix;
+        this.labelSuffix = labelSuffix;
         this.maxUncompressedBytes = maxUncompressedBytes;
         this.maxEntries = maxEntries;
         this.maxCompressionRatio = maxCompressionRatio;
@@ -112,26 +118,40 @@ public class MiniAppBundleService {
         String label = appId.toLowerCase(Locale.ROOT).replace('_', '-');
         if (!DNS_LABEL.matcher(label).matches()) {
             throw new AppException("INVALID_APP_ID",
-                    "App id \"" + appId + "\" cannot be used as a hostname. Use 1–63 characters: "
-                            + "letters, digits, underscore or hyphen, starting and ending with a letter or digit.",
+                    "App id \"" + appId + "\" cannot be used as a hostname. Use letters, digits, "
+                            + "underscore or hyphen, starting and ending with a letter or digit.",
                     HttpStatus.BAD_REQUEST);
         }
-        // "-preview" is how reviewers reach an unapproved bundle, so an app may not claim it.
-        if (label.endsWith("-preview")) {
-            throw new AppException("RESERVED_APP_ID",
-                    "App ids ending in \"-preview\" are reserved.", HttpStatus.BAD_REQUEST);
+        // The base label is not the hostname — "-mini" and "-mini-preview" are appended, and the
+        // combined result still has to fit in a 63-character DNS label. App ids are allowed up to
+        // 100 characters, so this cap is reachable with an ordinary id and must be enforced here
+        // rather than left to produce an invalid hostname later.
+        int maxBase = 63 - (labelSuffix.length() + 1 + PREVIEW_MARKER.length());
+        if (label.length() > maxBase) {
+            throw new AppException("APP_ID_TOO_LONG",
+                    "App id is too long for a hosted app. Use at most " + maxBase
+                            + " characters when Aza hosts your bundle.",
+                    HttpStatus.BAD_REQUEST);
         }
         return label;
     }
 
-    /** Live URL for a hosted app. Trailing slash matters: bundles are served from the root. */
+    /**
+     * Live URL for a hosted app. Trailing slash matters: bundles are served from the root.
+     *
+     * <p>The "-mini" affix keeps every mini app one label deep under the apex — a two-level
+     * host like {@code <app>.miniapps.aza.systems} is not covered by Cloudflare's Universal
+     * SSL, which would force either a paid certificate tier or exposing the origin directly.
+     * It also guarantees a mini app can never claim a platform hostname: no existing
+     * subdomain ends in "-mini".
+     */
     public String publicUrl(String subdomain) {
-        return "https://" + subdomain + "." + hostSuffix + "/";
+        return "https://" + subdomain + "-" + labelSuffix + "." + hostSuffix + "/";
     }
 
     /** Where a reviewer sees an uploaded-but-unapproved bundle. */
     public String previewUrl(String subdomain) {
-        return "https://" + subdomain + "-preview." + hostSuffix + "/";
+        return "https://" + subdomain + "-" + labelSuffix + PREVIEW_MARKER + "." + hostSuffix + "/";
     }
 
     /**

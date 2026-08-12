@@ -262,11 +262,15 @@ function AppEditor({ token, app, existingIds, onClose, onSaved }: {
 
   // The id becomes a DNS label when Aza hosts the app, so it is fixed at creation:
   // changing it later would move the origin and orphan everything in the old one's storage.
+  // 50 rather than 100 when Aza hosts: the id becomes a DNS label with "-mini-preview"
+  // appended, and the whole thing has to fit in 63 characters.
   const idError = isNew && id !== '' && !/^[a-z0-9_]{3,100}$/.test(id)
     ? 'Use 3–100 characters: lowercase letters, digits and underscores.'
-    : isNew && existingIds.includes(id)
-      ? 'You already have an app with this id.'
-      : null;
+    : isNew && hosting === 'AZA_HOSTED' && id.length > 50
+      ? 'Use at most 50 characters when Aza hosts your app — the id becomes part of your hostname.'
+      : isNew && existingIds.includes(id)
+        ? 'You already have an app with this id.'
+        : null;
 
   async function save(submitForReview: boolean) {
     setError(null);
@@ -344,7 +348,7 @@ function AppEditor({ token, app, existingIds, onClose, onSaved }: {
           {idError && <p className="mt-1.5 text-[0.8rem] text-[#c62828]">{idError}</p>}
           {isNew && id && !idError && hosting === 'AZA_HOSTED' && (
             <p className="mt-1.5 font-mono text-[0.75rem] text-[#6b7280]">
-              https://{id.replace(/_/g, '-')}.miniapps.aza.systems
+              https://{id.replace(/_/g, '-')}-mini.aza.systems
             </p>
           )}
         </Field>

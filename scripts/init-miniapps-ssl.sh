@@ -11,27 +11,37 @@
 #
 # Why a wildcard at all
 # ---------------------
-# Every mini app gets its own origin (<app>.miniapps.aza.systems) so that one third-party
-# app cannot read another's localStorage, cookies or service workers. Apps are approved
+# Every mini app gets its own origin (<app>-mini.aza.systems) so that one third-party app
+# cannot read another's localStorage, cookies or service workers. Apps are approved
 # continuously, so a per-app certificate would put a Let's Encrypt round trip in the middle
 # of every approval — and hit issuance rate limits. One wildcard covers all of them.
 #
+# Why *.aza.systems and not *.miniapps.aza.systems
+# ------------------------------------------------
+# Mini apps sit ONE label deep so that Cloudflare's Universal SSL (which covers a single
+# level of subdomain) can serve them proxied. A two-level host would have forced either
+# Advanced Certificate Manager or a grey-clouded record pointing at the origin — and this
+# droplet's firewall admits Cloudflare IP ranges only, so direct traffic never arrives.
+# Traffic therefore reaches nginx already proxied, and this certificate secures the
+# Cloudflare→origin leg (SSL mode Full / Full strict).
+#
 # Prerequisites
 # -------------
-#  1. DNS pointing the zone at this server:
-#         *.miniapps.aza.systems   A   <droplet ip>
-#     If the record is Cloudflare-proxied, set it to "DNS only" — the orange cloud
-#     terminates TLS itself and this origin certificate then goes unused.
+#  1. The existing proxied wildcard record already covers this — no new DNS needed:
+#         *.aza.systems   A   <droplet ip>   (Proxied)
 #  2. A Cloudflare API token with Zone:DNS:Edit on aza.systems, in backend/.env as
 #         CLOUDFLARE_DNS_API_TOKEN=...
 #     Scope it to that one zone: it can rewrite DNS for the whole domain.
+#
+# DNS-01 is still required: Let's Encrypt does not issue wildcards over HTTP-01, and the
+# TXT record it validates is unaffected by proxy status.
 #
 # Safe to re-run: certbot leaves a valid, not-yet-due certificate untouched.
 
 set -euo pipefail
 
 EMAIL="caleb.dussey04@gmail.com"
-DOMAIN="miniapps.aza.systems"
+DOMAIN="aza.systems"
 COMPOSE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$COMPOSE_DIR/backend/.env"
 SECRETS_DIR="$COMPOSE_DIR/secrets"
@@ -83,8 +93,8 @@ $COMPOSE exec nginx nginx -s reload
 
 echo
 echo "Done."
-echo "  Live mini apps:    https://<app>.$DOMAIN/"
-echo "  Staged for review: https://<app>-preview.$DOMAIN/"
+echo "  Live mini apps:    https://<app>-mini.$DOMAIN/"
+echo "  Staged for review: https://<app>-mini-preview.$DOMAIN/"
 echo
 echo "Renewal is automatic: the certbot service runs on the certbot/dns-cloudflare image and"
 echo "replays the DNS-01 method recorded for this certificate, reading the same credentials"

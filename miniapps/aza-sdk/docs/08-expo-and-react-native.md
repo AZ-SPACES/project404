@@ -128,7 +128,7 @@ Treat anything over **1 MB gzipped** as a problem to fix first. Bundles are also
 ## 6. Never assume a subpath
 
 react-native-web resolves assets from the site root. Aza serves every hosted mini app from the
-root of its own origin (`https://<app-id>.miniapps.aza.systems/`), so this works by default —
+root of its own origin (`https://<app-id>-mini.aza.systems/`), so this works by default —
 but if you host it yourself, do not deploy to a subdirectory or your fonts and images will 404
 inside the WebView.
 
