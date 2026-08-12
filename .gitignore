@@ -19,9 +19,16 @@ aza-web/.next
 *.tsbuildinfo
 .env
 
+# Cloudflare API token used for the *.miniapps.aza.systems DNS-01 wildcard renewal.
+secrets/cloudflare.ini
+
 .DS_Store
 turnserver.conf
 backend/docs
+# Bare pattern — matches any directory named "docs" at any depth, not just the root one.
 docs
+# ...but the mini app SDK's docs are product, not scratch: the published README links to
+# them and they ship inside the npm package, so they have to be versioned.
+!miniapps/aza-sdk/docs/
 .gitignore
 backend/.env.example

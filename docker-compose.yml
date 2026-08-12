@@ -76,8 +76,14 @@ services:
       PASSKIT_TEMPLATE_ID: ${PASSKIT_TEMPLATE_ID:-}
       ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
       FIREBASE_CREDENTIALS_PATH: /etc/aza/firebase-service-account.json
+      MINIAPP_BUNDLE_ROOT: /srv/miniapps
+      MINIAPP_HOST_SUFFIX: ${MINIAPP_HOST_SUFFIX:-aza.systems}
+      MINIAPP_LABEL_SUFFIX: ${MINIAPP_LABEL_SUFFIX:-mini}
     volumes:
       - ./backend/src/main/resources/firebase-service-account.json:/etc/aza/firebase-service-account.json:ro
+      # Extracted mini app bundles. The backend writes here on upload and approval; nginx
+      # mounts the same volume read-only to serve them.
+      - miniapp_bundles:/srv/miniapps
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,17 +151,27 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_webroot:/var/www/certbot:ro
       - certbot_certs:/etc/letsencrypt:ro
+      # Read-only: nginx serves mini app bundles but must never be able to modify them.
+      - miniapp_bundles:/srv/miniapps:ro
     depends_on:
       - backend
     networks:
       - aza-network
 
   certbot:
-    image: certbot/certbot
+    # dns-cloudflare rather than plain certbot: it is a superset (the webroot plugin used by
+    # api.aza.systems is still there) and adds the DNS-01 plugin that the wildcard cert for
+    # *.miniapps.aza.systems needs. `certbot renew` replays whichever method each certificate
+    # was issued with, so on the plain image the wildcard would silently fail to renew and
+    # every mini app would go dark ~90 days after launch.
+    image: certbot/dns-cloudflare
     container_name: aza-certbot
     volumes:
       - certbot_webroot:/var/www/certbot
       - certbot_certs:/etc/letsencrypt
+      # Must persist for renewal, not just issuance — DNS-01 re-authenticates every time.
+      # Created by scripts/init-miniapps-ssl.sh; gitignored because it holds a live token.
+      - ./secrets:/etc/aza-secrets:ro
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'"
     restart: unless-stopped
 
@@ -168,3 +184,4 @@ volumes:
   redis_data:
   certbot_webroot:
   certbot_certs:
+  miniapp_bundles:

@@ -17,4 +17,11 @@ public interface MiniAppRepository extends JpaRepository<MiniApp, String> {
     List<MiniApp> findAllBySubmittedBy(UUID userId);
 
     long countByStatus(MiniApp.Status status);
+
+    /**
+     * Live apps whose developer has uploaded a new bundle that has not been reviewed yet.
+     * These never enter PENDING_REVIEW — pulling a working app out of the hub to review its
+     * update would punish users for the developer shipping — so they need their own queue.
+     */
+    Page<MiniApp> findAllByStatusAndPendingBundleVersionIsNotNull(MiniApp.Status status, Pageable pageable);
 }

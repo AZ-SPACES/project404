@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "A history of changes to the Aza REST API — new endpoints, breaking changes, deprecations, and fixes.",
 };
 
-type ChangeType = "added" | "changed" | "deprecated" | "fixed" | "removed" | "security";
+type ChangeType = "added" | "changed" | "deprecated" | "fixed" | "removed" | "security" | "docs";
 
 interface Change {
   type: ChangeType;
@@ -22,6 +22,32 @@ interface Release {
 }
 
 const releases: Release[] = [
+  {
+    version: "v1.8.0",
+    date: "2026-08-12",
+    summary: "Aza-hosted mini apps — upload a static bundle instead of hosting it yourself. No domain, server, or app store developer account needed.",
+    changes: [
+      { type: "added",   text: "POST /v1/dev/miniapps/{appId}/bundle — upload a zipped static build (multipart field `file`). Aza extracts and serves it; no domain or server of your own required." },
+      { type: "added",   text: "PUT /v1/dev/miniapps now accepts `hostingMode`: AZA_HOSTED (upload a bundle, Aza assigns the URL) or EXTERNAL (the previous behaviour — you supply `url`). Defaults to EXTERNAL, so existing integrations are unaffected." },
+      { type: "added",   text: "Hosted apps are served from their own origin at https://<app-id>-mini.aza.systems/ — one origin per app, so no mini app can read another's localStorage, cookies or service workers." },
+      { type: "added",   text: "Mini app responses now include `hostingMode`, `bundleVersion`, `pendingBundleVersion`, `bundleSizeBytes`, `bundleUploadedAt` and `previewUrl`." },
+      { type: "added",   text: "GET /v1/admin/miniapps/bundle-updates and POST /v1/admin/miniapps/bundle-updates/{appId}/approve — review queue for new bundles uploaded against apps that are already live." },
+      { type: "changed", text: "`url` is no longer required on PUT /v1/dev/miniapps when `hostingMode` is AZA_HOSTED. It remains required — and HTTPS-only — for EXTERNAL apps." },
+      { type: "changed", text: "Uploading a bundle to a live app no longer interrupts it: the build is staged at https://<app-id>-mini-preview.aza.systems/ for review while users stay on the approved version, and publishing is instant once approved." },
+      { type: "changed", text: "Multipart upload limit raised from 8 MB to 25 MB to accommodate bundles. Uploaded archives are additionally capped at 50 MB uncompressed and 2000 files during extraction." },
+      { type: "security", text: "Bundle extraction rejects path traversal (zip slip), decompression bombs, entry floods and server-side script files, and suspending a hosted app now stops serving its bundle rather than only hiding it from the Hub." },
+    ],
+  },
+  {
+    version: "v1.7.1",
+    date: "2026-08-12",
+    summary: "Mini app guidance for React Native and Expo developers, and for teams that already ship a native mobile app.",
+    changes: [
+      { type: "docs", text: "New guide — Building with Expo / React Native: exporting an Expo app to web with `output: \"single\"`, reaching `window.aza` under react-native-web, the native modules that break on web, and the bundle-size budget to stay inside." },
+      { type: "docs", text: "New guide — Already Have a Mobile App?: choosing between rebuilding your core flow, exporting an existing Expo app, and deep-linking out, plus why there is no third-party native mini app tier." },
+      { type: "docs", text: "Clarified across the Mini Apps guides that no Apple or Google developer account is required to publish a mini app — mini apps are served in Aza's WebView and never go through either store." },
+    ],
+  },
   {
     version: "v1.7.0",
     date: "2026-07-01",
@@ -133,6 +159,7 @@ const typeConfig: Record<ChangeType, { label: string; bg: string; color: string;
   fixed:      { label: "Fixed",      bg: "#e7f6ec", color: "#1b7a3d", ring: "#c3e9d1" },
   removed:    { label: "Removed",    bg: "#fdeaea", color: "#c62828", ring: "#f6c9c9" },
   security:   { label: "Security",   bg: "#f5eafb", color: "#7b1fa2", ring: "#e5c9f2" },
+  docs:       { label: "Docs",       bg: "#f1f5f9", color: "#475569", ring: "#d5dee7" },
 };
 
 function ChangeTag({ type }: { type: ChangeType }) {
