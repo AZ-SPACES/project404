@@ -1801,3 +1801,145 @@ export async function uploadMobileKybDocument(token: string, file: File, docType
   const body = await res.json();
   return body.data;
 }
+
+// ─── Mini apps ───────────────────────────────────────────────────────────────
+//
+// These hit /api/v1/dev/miniapps, which authenticates a normal AZA user rather than a
+// merchant — and this portal already logs in through /api/v1/auth/login, so the access
+// token in memory is exactly what those endpoints expect. No separate developer account.
+
+export type MiniAppStatus = "DRAFT" | "PENDING_REVIEW" | "ACTIVE" | "REJECTED" | "SUSPENDED";
+export type MiniAppHosting = "AZA_HOSTED" | "EXTERNAL";
+
+export interface MiniApp {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  iconUrl?: string;
+  url?: string;
+  developerName?: string;
+  supportUrl?: string;
+  version?: string;
+  status: MiniAppStatus;
+  requestedPermissions?: string[];
+  rejectionReason?: string;
+  hostingMode?: MiniAppHosting;
+  bundleVersion?: string;
+  pendingBundleVersion?: string;
+  bundleSizeBytes?: number;
+  bundleUploadedAt?: string;
+  previewUrl?: string;
+  createdAt?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+}
+
+export interface SaveMiniAppInput {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  iconUrl?: string;
+  hostingMode: MiniAppHosting;
+  /** Required for EXTERNAL only — AZA_HOSTED apps get their URL assigned by the backend. */
+  url?: string;
+  developerName: string;
+  supportUrl?: string;
+  version?: string;
+  requestedPermissions: string[];
+  submitForReview: boolean;
+}
+
+export const MINI_APP_CATEGORIES = [
+  "Finance", "Bills & Utilities", "Entertainment", "Shopping",
+  "Transport", "Business", "Productivity", "Games",
+] as const;
+
+export const MINI_APP_PERMISSIONS: { id: string; label: string; help: string }[] = [
+  { id: "USER_PROFILE",      label: "Profile",             help: "First name, username and avatar" },
+  { id: "USER_PHONE",        label: "Phone number",        help: "Only if you need to contact the user" },
+  { id: "USER_EMAIL",        label: "Email address",       help: "Only if you need to contact the user" },
+  { id: "MAKE_PAYMENTS",     label: "Take payments",       help: "Charge the user with their confirmation" },
+  { id: "READ_BALANCE",      label: "Read wallet balance", help: "Show what the user can afford" },
+  { id: "READ_TRANSACTIONS", label: "Read transactions",   help: "Recent history — rarely approved" },
+  { id: "DIRECT_DEBIT",      label: "Standing mandate",    help: "Recurring charges the user pre-approves" },
+];
+
+/** Matches spring.servlet.multipart.max-file-size, so we fail before wasting the upload. */
+export const MINI_APP_MAX_BUNDLE_BYTES = 25 * 1024 * 1024;
+
+export async function getMyMiniApps(): Promise<MiniApp[]> {
+  const body = await request<{ data: MiniApp[] }>("/api/v1/dev/miniapps");
+  return body.data ?? [];
+}
+
+export async function saveMiniApp(input: SaveMiniAppInput): Promise<MiniApp> {
+  const body = await request<{ data: MiniApp }>("/api/v1/dev/miniapps", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return body.data;
+}
+
+export async function resubmitMiniApp(appId: string): Promise<MiniApp> {
+  const body = await request<{ data: MiniApp }>(`/api/v1/dev/miniapps/${appId}/resubmit`, {
+    method: "POST",
+  });
+  return body.data;
+}
+
+/**
+ * Uploads a zipped static build. Staged for review — it does not replace whatever is
+ * already live until a reviewer approves it, so this is safe to call against a live app.
+ *
+ * Uses XHR rather than the shared `request()` helper for two reasons: fetch still has no
+ * upload-progress event, and `request()` forces Content-Type: application/json, which would
+ * stop the browser generating the multipart boundary.
+ */
+export async function uploadMiniAppBundle(
+  appId: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<MiniApp> {
+  await ensureSession();
+
+  const send = (token: string | null) =>
+    new Promise<{ status: number; text: string }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append("file", file);
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+      xhr.addEventListener("load", () => resolve({ status: xhr.status, text: xhr.responseText }));
+      xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
+
+      xhr.open("POST", `${BASE_URL}/api/v1/dev/miniapps/${appId}/bundle`);
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      // Deliberately no Content-Type header — the browser has to set the multipart boundary.
+      xhr.send(form);
+    });
+
+  let res = await send(getToken());
+  // Mirror request()'s single retry: a bundle upload can outlive a ~15-minute access token.
+  if (res.status === 401 && (await refreshAccessToken())) {
+    res = await send(getToken());
+  }
+
+  let parsed: { success?: boolean; data?: MiniApp; message?: string; error?: { message?: string } } | null = null;
+  try { parsed = JSON.parse(res.text); } catch { /* nginx/proxy error page, not JSON */ }
+
+  if (res.status >= 200 && res.status < 300 && parsed?.data) return parsed.data;
+
+  throw new Error(
+    parsed?.error?.message
+    ?? parsed?.message
+    ?? (res.status === 413
+          ? "That bundle is too large for the server to accept."
+          : `Upload failed (${res.status})`),
+  );
+}

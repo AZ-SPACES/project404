@@ -16,6 +16,7 @@ import {
   ArrowLeftRight,
   Link2,
   Key,
+  Blocks,
   Webhook,
   ArrowDownToLine,
   Settings,
@@ -93,6 +94,7 @@ const NAV: NavSection[] = [
     label: "Developer",
     items: [
       { href: "/api-keys", label: "API Keys", icon: Key },
+      { href: "/mini-apps", label: "Mini Apps", icon: Blocks },
       { href: "/oauth-apps", label: "Sign in with AZA", icon: LogIn },
       { href: "/webhooks", label: "Webhooks", icon: Webhook },
       { href: "/embed", label: "Embed Widget", icon: Code2 },
