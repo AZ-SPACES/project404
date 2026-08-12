@@ -325,7 +325,9 @@ const navigationGroups = [
   {
     title: 'Mini Apps',
     items: [
-      { id: 'miniapps-intro',       label: 'What are Mini Apps?' },
+      { id: 'miniapps-intro',        label: 'What are Mini Apps?' },
+      { id: 'miniapps-existing-app', label: 'Already Have a Mobile App?' },
+      { id: 'miniapps-expo',         label: 'Building with Expo / RN' },
       { id: 'miniapps-sdk',         label: 'SDK Reference' },
       { id: 'miniapps-permissions', label: 'Permissions' },
       { id: 'miniapps-payments',    label: 'Payments' },
@@ -2875,6 +2877,285 @@ import java.net.URI;
 import java.net.http.*;
 
 // Verify a transactionId returned by aza.requestPayment()
+String txId = "9c8d7e6f-5a4b-4c3d-2e1f-0a9b8c7d6e5f";
+var client = HttpClient.newHttpClient();
+var res = client.send(
+    HttpRequest.newBuilder()
+        .uri(URI.create("https://api.aza.systems/api/v1/merchant/transactions/" + txId))
+        .header("X-Api-Key", "aza_live_YOUR_KEY")
+        .GET().build(),
+    HttpResponse.BodyHandlers.ofString());
+
+System.out.println(res.body());
+// {"status":"COMPLETED","amount":5.00,...}`,
+    },
+  },
+
+  'miniapps-existing-app': {
+    id: 'miniapps-existing-app',
+    category: 'Mini Apps',
+    title: 'Already Have a Mobile App?',
+    subtitle: 'Bringing an existing native app to the Aza Hub',
+    lastUpdated: 'August 2026',
+    description: 'If you already ship a React Native, Flutter or native mobile app, you do not port it to become a mini app. Pick the one flow your users need inside Aza and build that as a web app.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">You do not need an Apple or Google developer account</h3>
+        <p className="text-sm">Mini apps never go through the App Store or Play Store. They are web apps loaded in a WebView inside the Aza app, so the only developer account involved is Aza&apos;s own. There is nothing for you to register, pay for, or wait on.</p>
+
+        <h3 className="text-base font-bold text-gray-900">A mini app is not a port of your app</h3>
+        <p className="text-sm">This is the most common and most expensive misunderstanding. Your native app might have thirty screens; your mini app needs the two or three that make money — browse, pay, confirm. Mini apps are a deliberately reduced surface, the same way a mini program is on WeChat. Trying to reach feature parity is how teams lose a month.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Pick your path</h3>
+        <Table
+          headers={['Path', 'When it fits', 'Effort']}
+          rows={[
+            ['Rebuild the core flow as a web app', 'Your app already has a backend API. The mini app becomes a new thin client against it. Right answer for most teams.', 'Days'],
+            ['Export your Expo app to web', 'You are on Expo and avoided native-only modules. Try this first — it is nearly free when it works.', 'Hours to find out'],
+            ['Deep-link out to your native app', 'You genuinely need background location, BLE, or heavy offline. The mini app becomes a launcher card.', 'Hours'],
+          ]}
+        />
+
+        <Note>
+          If you are on Expo, spend one hour running <code>npx expo export --platform web</code> before you plan anything larger. See <strong>Building with Expo / RN</strong> for the full walkthrough and the list of things that break.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">Why there is no &ldquo;native mini app&rdquo; tier</h3>
+        <p className="text-sm">Aza ships a handful of first-party mini apps that are compiled into the Aza binary rather than loaded over the web. That path is not open to third-party developers, and it is a structural limit rather than a policy we expect to relax:</p>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm">
+          <li>Your crash would become an Aza crash, for every Aza user.</li>
+          <li>Your release would be gated on Aza&apos;s App Store review cycle, not yours.</li>
+          <li>Your native dependencies would change the permissions Aza declares.</li>
+          <li>Your code would ship under Aza&apos;s developer account, which is exactly the liability the WebView sandbox exists to contain.</li>
+        </ul>
+        <p className="text-sm">The WebView boundary is what lets us approve your app in days instead of tying it to our release train.</p>
+
+        <Warn>
+          Do not try to load a remote React Native bundle inside your mini app to recreate a native experience. Apple&apos;s guideline 4.7 permits mini apps inside a host app on the condition that they are HTML5 — a remote native bundle puts the entire Aza app&apos;s review at risk, and submissions doing this are rejected.
+        </Warn>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Nothing to install or register to become a mini app developer.
+# Your existing backend is reused as-is — the mini app is just
+# a new web client calling the same endpoints you already have.
+
+# Reuse your existing API from the mini app front-end:
+curl -X GET https://api.your-existing-app.com/v1/products \\
+  -H "Authorization: Bearer YOUR_TOKEN"`,
+      js: `// Typical shape when you already have a mobile app + backend.
+// The mini app is a thin web client over YOUR api, and uses
+// window.aza only for identity and payment.
+
+import { waitForAza } from '@az-spaces/aza-miniapp-sdk';
+
+const aza = await waitForAza();
+
+// 1. Identify the user via Aza — no signup screen, no password.
+const user = await aza.getUser();
+
+// 2. Talk to your own existing backend as you always have.
+const products = await fetch('https://api.your-existing-app.com/v1/products')
+  .then(r => r.json());
+
+// 3. Take the money through Aza.
+const result = await aza.requestPayment({
+  amount: products[0].price,
+  recipientIdentifier: 'your_aza_username',
+  note: products[0].name,
+  idempotencyKey: crypto.randomUUID(),
+});
+
+if (result.status === 'COMPLETED') {
+  // 4. Settle in your own system, keyed by the Aza transaction id.
+  await fetch('https://api.your-existing-app.com/v1/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      azaTransactionId: result.transactionId,
+      azaUsername: user.username,
+      productId: products[0].id,
+    }),
+  });
+}`,
+      python: `# Your existing backend keeps working unchanged. Add one endpoint
+# that accepts an Aza transaction id and verifies it before fulfilling.
+
+import requests
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.post('/v1/orders')
+def create_order():
+    body = request.get_json()
+    tx_id = body['azaTransactionId']
+
+    # Never trust the client's word that payment succeeded — verify.
+    resp = requests.get(
+        f'https://api.aza.systems/api/v1/merchant/transactions/{tx_id}',
+        headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
+    )
+    tx = resp.json()['data']
+
+    if tx['status'] != 'COMPLETED':
+        return jsonify({'error': 'payment not completed'}), 402
+
+    fulfill_order(body['productId'], tx['amount'])
+    return jsonify({'ok': True})`,
+      java: `// Same idea on an existing Spring backend: one new endpoint that
+// verifies the Aza transaction before fulfilling the order.
+
+@PostMapping("/v1/orders")
+public ResponseEntity<?> createOrder(@RequestBody OrderRequest body) {
+    var client = HttpClient.newHttpClient();
+    var res = client.send(
+        HttpRequest.newBuilder()
+            .uri(URI.create("https://api.aza.systems/api/v1/merchant/transactions/"
+                 + body.getAzaTransactionId()))
+            .header("X-Api-Key", "aza_live_YOUR_KEY")
+            .GET().build(),
+        HttpResponse.BodyHandlers.ofString());
+
+    // Verify server-side before granting anything of value.
+    if (!res.body().contains("\\"status\\":\\"COMPLETED\\"")) {
+        return ResponseEntity.status(402).body(Map.of("error", "payment not completed"));
+    }
+
+    orderService.fulfill(body.getProductId());
+    return ResponseEntity.ok(Map.of("ok", true));
+}`,
+    },
+  },
+
+  'miniapps-expo': {
+    id: 'miniapps-expo',
+    category: 'Mini Apps',
+    title: 'Building with Expo / React Native',
+    subtitle: 'Ship an Expo app as a mini app using web export',
+    lastUpdated: 'August 2026',
+    description: 'Mini apps run in a WebView, but you do not have to abandon React Native to build one. Expo exports to web via react-native-web, so you keep your components, your router and your workflow.',
+    content: (
+      <div className="space-y-6">
+        <h3 className="text-base font-bold text-gray-900">Configure web output</h3>
+        <p className="text-sm">In <code>app.json</code>, set Metro as the web bundler and <code>single</code> as the output mode:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700 overflow-x-auto">{`{
+  "expo": {
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}`}</pre>
+        <Table
+          headers={['Output mode', 'Result', 'Use for mini apps?']}
+          rows={[
+            ['single', 'One index.html, client-side routing, no server needed.', 'Yes — this is what you want'],
+            ['static', 'One HTML file per route, needs host-side route rewrites.', 'No — extra hosting complexity'],
+            ['server', 'Requires a Node server at runtime.', 'No — mini apps are static'],
+          ]}
+        />
+
+        <h3 className="text-base font-bold text-gray-900">Export and test</h3>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700 overflow-x-auto">{`npx expo export --platform web   # → ./dist
+npx serve dist                   # verify it runs as a plain static site`}</pre>
+        <p className="text-sm">If <code>npx serve dist</code> gives you a working app with no backend running, you have something a mini app host can serve. That is the whole bar.</p>
+
+        <h3 className="text-base font-bold text-gray-900">Reaching the Aza bridge</h3>
+        <p className="text-sm">Under react-native-web, <code>window</code> is the real DOM window, so the SDK works unchanged. Guard for platform so your native builds keep compiling:</p>
+        <pre className="p-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700 overflow-x-auto">{`import { Platform } from 'react-native';
+import { waitForAza, isInsideAza } from '@az-spaces/aza-miniapp-sdk';
+
+if (Platform.OS === 'web' && isInsideAza()) {
+  const aza = await waitForAza();
+  const user = await aza.getUser();
+}`}</pre>
+        <Note>
+          <code>window.aza</code> does not exist in Expo Go or in an iOS/Android simulator build — the bridge is injected only by the Aza WebView. Use the mock bridge from <strong>Local Development</strong> while you build.
+        </Note>
+
+        <h3 className="text-base font-bold text-gray-900">What breaks on web</h3>
+        <p className="text-sm">Native-only modules are absent or stubbed once you export to web. Most of what you would reach for is available through the Aza bridge instead:</p>
+        <Table
+          headers={['Native module', 'On web', 'Use instead']}
+          rows={[
+            ['expo-camera',           'Partial (getUserMedia)',  'Test carefully, or redesign the flow'],
+            ['expo-notifications',    'Not available',           'Aza handles user notification'],
+            ['expo-secure-store',     'Not available',           'Server-side state keyed by aza.getUser()'],
+            ['@react-navigation/native-stack', 'Not available',  'Switch to the JS stack or Expo Router'],
+            ['react-native-maps',     'Not available',           'A web map library, or drop the screen'],
+            ['Any unlisted RN package', 'Check for web support', 'Verify before you commit to it'],
+          ]}
+        />
+
+        <Warn>
+          A react-native-web bundle is heavy — commonly 500 KB to 1 MB gzipped, against roughly 150 KB for the same app in Vite plus React. On Ghanaian mobile data that is a real cost to your users and shows up directly in your launch-to-interactive time. Measure your <code>dist</code> output, and treat anything over 1 MB gzipped as a problem to fix before submitting.
+        </Warn>
+
+        <h3 className="text-base font-bold text-gray-900">Never assume a subpath</h3>
+        <p className="text-sm">react-native-web resolves assets from the site root. Serve your mini app from the root of its own origin, never from a subdirectory, or your fonts and images will 404 in the WebView.</p>
+
+        <Note>
+          Starting a brand-new mini app rather than adapting an existing Expo project? Prefer Vite plus React. It is a fraction of the bundle size and there is no react-native-web layer between you and the DOM. Expo web export is the right tool when you already have RN code worth keeping.
+        </Note>
+      </div>
+    ),
+    codeSnippets: {
+      curl: `# Build and check your bundle size before submitting.
+npx expo export --platform web
+
+# Total gzipped weight of the JS you are about to ship:
+find dist -name '*.js' -exec gzip -c {} \\; | wc -c | awk '{print $1/1024 " KB gzipped"}'
+
+# Aim well under 1024 KB. Anything above that needs work first.`,
+      js: `// app.json
+{
+  "expo": {
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}
+
+// App.tsx — one component that works in Expo Go AND as a mini app
+import { Platform, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { waitForAza, isInsideAza } from '@az-spaces/aza-miniapp-sdk';
+
+export default function App() {
+  const [name, setName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isInsideAza()) return;
+    waitForAza()
+      .then(aza => aza.getUser())
+      .then(user => setName(user.firstName));
+  }, []);
+
+  return (
+    <View>
+      <Text>{name ? \`Hello, \${name}!\` : 'Open this inside Aza'}</Text>
+    </View>
+  );
+}
+
+// Then:
+//   npx expo export --platform web
+//   npx serve dist        ← must work with no backend running`,
+      python: `# Expo web export is a front-end build step — there is no Python
+# involved. If your mini app has a backend, it verifies payments
+# exactly like any other Aza integration:
+
+import requests
+
+def verify_payment(tx_id: str) -> bool:
+    resp = requests.get(
+        f'https://api.aza.systems/api/v1/merchant/transactions/{tx_id}',
+        headers={'X-Api-Key': 'aza_live_YOUR_KEY'}
+    )
+    return resp.json()['data']['status'] == 'COMPLETED'`,
+      java: `// Expo web export is a front-end build step — no Java involved.
+// A Java backend verifies mini app payments the same as any other
+// Aza integration:
+
 String txId = "9c8d7e6f-5a4b-4c3d-2e1f-0a9b8c7d6e5f";
 var client = HttpClient.newHttpClient();
 var res = client.send(

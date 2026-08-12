@@ -8,6 +8,7 @@ import { Logo } from './Logo';
 const LINKS = [
   { href: '/developers/guides',       label: 'Guides'   },
   { href: '/developers/api-explorer', label: 'API Reference' },
+  { href: '/developers/apps',         label: 'Mini Apps' },
   { href: '/developers/changelog',    label: 'Changelog' },
   { href: '/developers/status',       label: 'Status'   },
 ];

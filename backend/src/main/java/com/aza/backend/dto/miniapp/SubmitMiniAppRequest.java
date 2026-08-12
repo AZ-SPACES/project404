@@ -30,9 +30,20 @@ public class SubmitMiniAppRequest {
     @Pattern(regexp = "^(https://.*)?$", message = "Icon URL must use HTTPS")
     private String iconUrl;
 
-    /** The URL the WebView will load. Must be HTTPS. */
-    @NotBlank
-    @Pattern(regexp = "^https://.*", message = "App URL must use HTTPS")
+    /**
+     * How this app is served. {@code EXTERNAL} (default) means the developer hosts the build
+     * and supplies {@link #url}; {@code AZA_HOSTED} means they upload a bundle instead and Aza
+     * assigns the URL.
+     */
+    @Pattern(regexp = "^(EXTERNAL|AZA_HOSTED)?$", message = "hostingMode must be EXTERNAL or AZA_HOSTED")
+    private String hostingMode;
+
+    /**
+     * The URL the WebView will load. Must be HTTPS. Required for {@code EXTERNAL} apps and
+     * ignored for {@code AZA_HOSTED} ones, where Aza derives it from the app id — validated in
+     * MiniAppService rather than here, since the requirement depends on hostingMode.
+     */
+    @Pattern(regexp = "^(https://.*)?$", message = "App URL must use HTTPS")
     private String url;
 
     @NotBlank

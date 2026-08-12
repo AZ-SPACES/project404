@@ -7,9 +7,11 @@ import com.aza.backend.entity.User;
 import com.aza.backend.service.MiniAppService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -54,5 +56,23 @@ public class DeveloperMiniAppController {
             @PathVariable String appId,
             @AuthenticationPrincipal User developer) {
         return ResponseEntity.ok(ApiResponse.success(miniAppService.resubmit(appId, developer)));
+    }
+
+    /**
+     * Upload a static bundle for Aza to host, for developers with no domain or server of their
+     * own. Send the zipped contents of a build output directory (Vite {@code dist/}, Expo
+     * {@code npx expo export --platform web}) as multipart field {@code file}.
+     *
+     * <p>The upload is staged, not published: it becomes reachable at the app's preview host
+     * for review, and only reaches users once an admin approves it. Uploading against a live
+     * app is therefore safe.
+     */
+    @PostMapping(value = "/{appId}/bundle", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<MiniAppDetailResponse>> uploadBundle(
+            @PathVariable String appId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal User developer) {
+        return ResponseEntity.ok(ApiResponse.success(
+                miniAppService.uploadBundle(appId, file, developer)));
     }
 }

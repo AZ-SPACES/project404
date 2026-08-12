@@ -141,6 +141,26 @@ public class AdminMiniAppController {
         return ResponseEntity.ok(ApiResponse.success(miniAppService.suspend(appId, request.getReason(), admin)));
     }
 
+    /**
+     * Bundle updates for apps that are already live. These are not in the submissions queue:
+     * the app stays ACTIVE on its previous bundle while the new one waits, so users are never
+     * cut off mid-review.
+     */
+    @GetMapping("/bundle-updates")
+    public ResponseEntity<ApiResponse<Page<MiniAppDetailResponse>>> getBundleUpdates(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.getPendingBundleUpdates(page, size)));
+    }
+
+    /** Publish a pending bundle to a live app. Review it at the app's preview URL first. */
+    @PostMapping("/bundle-updates/{appId}/approve")
+    public ResponseEntity<ApiResponse<MiniAppDetailResponse>> approveBundleUpdate(
+            @PathVariable String appId,
+            @AuthenticationPrincipal User admin) {
+        return ResponseEntity.ok(ApiResponse.success(miniAppService.approveBundleUpdate(appId, admin)));
+    }
+
     @Data
     static class RejectRequest {
         @NotBlank

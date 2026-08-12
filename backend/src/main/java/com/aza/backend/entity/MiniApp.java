@@ -25,6 +25,13 @@ public class MiniApp {
         SUSPENDED       // pulled by admin after going live
     }
 
+    public enum HostingMode {
+        /** Developer hosts the build themselves; {@code url} is whatever they submitted. */
+        EXTERNAL,
+        /** Developer uploaded a static bundle; Aza serves it from its own origin. */
+        AZA_HOSTED
+    }
+
     public enum Permission {
         USER_PROFILE,       // first name, username, avatar
         USER_PHONE,         // phone number
@@ -95,4 +102,32 @@ public class MiniApp {
 
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
+
+    // ── Hosting ────────────────────────────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hosting_mode", nullable = false, length = 20)
+    @Builder.Default
+    private HostingMode hostingMode = HostingMode.EXTERNAL;
+
+    /**
+     * DNS label this app is served from when {@link HostingMode#AZA_HOSTED}, e.g.
+     * {@code bolt-ghana} → {@code bolt-ghana.miniapps.aza.systems}. Derived from
+     * {@link #id} rather than reused directly, because ids permit underscores and
+     * hostnames do not. Null for EXTERNAL apps.
+     */
+    @Column(length = 63)
+    private String subdomain;
+
+    /** Bundle version currently symlinked to {@code current} and served to users. */
+    @Column(length = 40)
+    private String bundleVersion;
+
+    /** Uploaded, awaiting review. Promoted to {@link #bundleVersion} on approval. */
+    @Column(length = 40)
+    private String pendingBundleVersion;
+
+    private Long bundleSizeBytes;
+
+    private LocalDateTime bundleUploadedAt;
 }

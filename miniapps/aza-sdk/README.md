@@ -17,6 +17,8 @@ The Aza native app injects `window.aza` into your WebView automatically — you 
 | [Local Development](./docs/05-local-development.md) | Mock bridge, ngrok tunnel, hot reload |
 | [Submission Guide](./docs/06-submission-guide.md) | Review criteria, rejection reasons, update workflow |
 | [Security](./docs/07-security.md) | HTTPS, CSP, rate limits, what not to do |
+| [Building with Expo / RN](./docs/08-expo-and-react-native.md) | Ship an Expo app as a mini app via web export |
+| [Already have a mobile app?](./docs/09-existing-mobile-apps.md) | Bringing an existing native app to the Hub |
 | [Example: React + Vite](./docs/examples/react-vite.md) | Full working mini app with payments |
 | [Example: Vanilla JS](./docs/examples/vanilla-js.md) | No-framework single-file app |
 

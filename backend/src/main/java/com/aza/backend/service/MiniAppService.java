@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,6 +38,7 @@ public class MiniAppService {
     private final TransferService transferService;
     private final NotificationService notificationService;
     private final PaymentMandateService paymentMandateService;
+    private final MiniAppBundleService bundleService;
 
     // ── Public registry ────────────────────────────────────────────────────
 
@@ -71,10 +73,30 @@ public class MiniAppService {
         app.setDescription(req.getDescription());
         app.setCategory(req.getCategory());
         app.setIconUrl(req.getIconUrl());
-        app.setUrl(req.getUrl());
         app.setDeveloperName(req.getDeveloperName());
         app.setSupportUrl(req.getSupportUrl());
         app.setVersion(req.getVersion());
+
+        // Hosting mode decides where `url` comes from. An AZA_HOSTED app's URL is derived from
+        // its id and must never be developer-supplied, or a developer could point their catalogue
+        // entry at an origin they control while passing review as "hosted by Aza".
+        MiniApp.HostingMode mode = req.getHostingMode() == null || req.getHostingMode().isBlank()
+                ? MiniApp.HostingMode.EXTERNAL
+                : MiniApp.HostingMode.valueOf(req.getHostingMode());
+        app.setHostingMode(mode);
+
+        if (mode == MiniApp.HostingMode.AZA_HOSTED) {
+            String subdomain = bundleService.deriveSubdomain(app.getId());
+            app.setSubdomain(subdomain);
+            app.setUrl(bundleService.publicUrl(subdomain));
+        } else {
+            if (req.getUrl() == null || req.getUrl().isBlank()) {
+                throw new IllegalArgumentException(
+                        "A URL is required for developer-hosted apps. Upload a bundle instead to let Aza host it.");
+            }
+            app.setSubdomain(null);
+            app.setUrl(req.getUrl());
+        }
 
         Set<Permission> permissions = req.getRequestedPermissions() == null
                 ? Set.of()
@@ -118,6 +140,41 @@ public class MiniAppService {
         return toDetailResponse(miniAppRepository.save(app));
     }
 
+    /**
+     * Accepts a static bundle upload and stages it for review. The bundle is extracted and
+     * served at the app's preview host immediately, but users keep seeing whatever is already
+     * live until an admin approves it — so a developer can upload freely without risk to a
+     * running app.
+     */
+    @Transactional
+    public MiniAppDetailResponse uploadBundle(String appId, MultipartFile file, User developer) {
+        MiniApp app = findOwned(appId, developer);
+
+        if (app.getStatus() == MiniApp.Status.PENDING_REVIEW) {
+            throw new IllegalStateException(
+                    "This app is locked while under review. Wait for the outcome before uploading a new bundle.");
+        }
+        if (app.getStatus() == MiniApp.Status.SUSPENDED) {
+            throw new IllegalStateException(
+                    "This app is suspended. Contact support before uploading a new bundle.");
+        }
+
+        MiniAppBundleService.StoredBundle stored = bundleService.store(appId, file);
+
+        String subdomain = bundleService.deriveSubdomain(appId);
+        app.setHostingMode(MiniApp.HostingMode.AZA_HOSTED);
+        app.setSubdomain(subdomain);
+        app.setUrl(bundleService.publicUrl(subdomain));
+        app.setPendingBundleVersion(stored.getVersion());
+        app.setBundleSizeBytes(stored.getSizeBytes());
+        app.setBundleUploadedAt(LocalDateTime.now());
+
+        log.info("Developer {} uploaded bundle {} for mini app {} ({} bytes, {} files)",
+                developer.getId(), stored.getVersion(), appId, stored.getSizeBytes(), stored.getFileCount());
+
+        return toDetailResponse(miniAppRepository.save(app));
+    }
+
     private MiniApp findOwned(String appId, User developer) {
         MiniApp app = miniAppRepository.findById(appId)
                 .orElseThrow(() -> new IllegalArgumentException("App not found: " + appId));
@@ -143,6 +200,7 @@ public class MiniAppService {
         if (app.getStatus() != MiniApp.Status.PENDING_REVIEW) {
             throw new IllegalStateException("App is not pending review");
         }
+        promotePendingBundle(app);
         app.setStatus(MiniApp.Status.ACTIVE);
         app.setReviewedBy(admin.getId());
         app.setReviewedAt(LocalDateTime.now());
@@ -178,9 +236,74 @@ public class MiniAppService {
         app.setReviewedAt(LocalDateTime.now());
         app.setRejectionReason(reason);
         miniAppRepository.save(app);
+        // Removing it from the hub is not enough for a hosted app — anyone holding the URL could
+        // still open it directly. Stop serving the bundle too. The version stays on disk, so
+        // reinstating the app is a promote away.
+        if (app.getHostingMode() == MiniApp.HostingMode.AZA_HOSTED) {
+            bundleService.unpublish(appId);
+        }
         notifyDeveloper(app, false, "Your app has been suspended: " + reason);
         log.info("Admin {} suspended mini app {}", admin.getId(), appId);
         return toDetailResponse(app);
+    }
+
+    /** Live apps with an uploaded bundle waiting on review. */
+    public Page<MiniAppDetailResponse> getPendingBundleUpdates(int page, int size) {
+        return miniAppRepository.findAllByStatusAndPendingBundleVersionIsNotNull(
+                MiniApp.Status.ACTIVE,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "bundleUploadedAt")))
+                .map(this::toDetailResponse);
+    }
+
+    /**
+     * Ships a new bundle for an app that is already live, without touching its review status.
+     * Kept separate from {@link #approve} so that approving an update can never be confused
+     * with approving a first submission.
+     */
+    @Transactional
+    public MiniAppDetailResponse approveBundleUpdate(String appId, User admin) {
+        MiniApp app = miniAppRepository.findById(appId)
+                .orElseThrow(() -> new IllegalArgumentException("App not found: " + appId));
+        if (app.getStatus() != MiniApp.Status.ACTIVE) {
+            throw new IllegalStateException(
+                    "This app is not live — review it through the submissions queue instead.");
+        }
+        if (app.getPendingBundleVersion() == null) {
+            throw new IllegalStateException("No bundle update is pending for this app");
+        }
+        promotePendingBundle(app);
+        app.setReviewedBy(admin.getId());
+        app.setReviewedAt(LocalDateTime.now());
+        miniAppRepository.save(app);
+
+        notifyDeveloper(app, true, null);
+        log.info("Admin {} approved bundle update for mini app {}", admin.getId(), appId);
+        return toDetailResponse(app);
+    }
+
+    /**
+     * Swaps the served bundle to the pending version, if there is one.
+     *
+     * <p>The filesystem swap runs before the entity is saved deliberately. A failure to promote
+     * then rolls the whole transaction back, leaving the database agreeing with the disk. The
+     * reverse order could commit "this version is live" for a version that never got published.
+     * The remaining window — promote succeeds, commit fails — leaves the disk one version ahead
+     * and is corrected by re-approving, which is idempotent.
+     */
+    private void promotePendingBundle(MiniApp app) {
+        if (app.getHostingMode() != MiniApp.HostingMode.AZA_HOSTED) {
+            return;
+        }
+        if (app.getPendingBundleVersion() == null) {
+            if (app.getBundleVersion() == null) {
+                throw new IllegalStateException(
+                        "This app is set to Aza hosting but no bundle has been uploaded yet.");
+            }
+            return; // already live on its current bundle, nothing to swap
+        }
+        bundleService.promote(app.getId(), app.getPendingBundleVersion());
+        app.setBundleVersion(app.getPendingBundleVersion());
+        app.setPendingBundleVersion(null);
     }
 
     private void notifyDeveloper(MiniApp app, boolean approved, String reason) {
@@ -358,6 +481,14 @@ public class MiniAppService {
                 .submittedAt(app.getSubmittedAt())
                 .reviewedAt(app.getReviewedAt())
                 .rejectionReason(app.getRejectionReason())
+                .hostingMode(app.getHostingMode() != null ? app.getHostingMode().name() : null)
+                .bundleVersion(app.getBundleVersion())
+                .pendingBundleVersion(app.getPendingBundleVersion())
+                .bundleSizeBytes(app.getBundleSizeBytes())
+                .bundleUploadedAt(app.getBundleUploadedAt())
+                .previewUrl(app.getPendingBundleVersion() != null && app.getSubdomain() != null
+                        ? bundleService.previewUrl(app.getSubdomain())
+                        : null)
                 .build();
     }
 }
