@@ -77,19 +77,33 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                                Pageable pageable);
 
     /* Get total amount sent today for daily limit enforcement.
-     * Counts COMPLETED transfers and PENDING transfers that have not yet expired.
      *
-     * MERCHANT_PAYMENT is in the type list along with every other sender-side query
-     * below: these all mean "money that left this wallet", and paying a shop has
-     * always been part of that. Store payments only used to be typed TRANSFER, so
-     * matching on that alone would now let a day's shopping slip past the daily cap. */
+     * Two kinds of movement count, and they are dated differently.
+     *
+     * Transfers and store payments are counted from when they were started: COMPLETED,
+     * or PENDING and not yet expired, so money committed but not yet settled still holds
+     * against the cap. MERCHANT_PAYMENT is in that list along with every other
+     * sender-side query below — these all mean "money that left this wallet", and paying
+     * a shop has always been part of that. Store payments only used to be typed
+     * TRANSFER, so matching on that alone would let a day's shopping past the cap.
+     *
+     * An accepted money request is counted from when it was PAID, not when it was asked
+     * for. Leaving requests out entirely is how they used to escape the cap altogether —
+     * a payer could accept any number of them and the ceiling never engaged, which bill
+     * splitting made worse by minting a leg per person. Dating them by completedAt is
+     * what keeps that honest: a request asked on Monday and paid on Friday belongs to
+     * Friday's ceiling, because that is the day the money actually left.
+     *
+     * A request that is still PENDING is deliberately not counted. Being asked for money
+     * is not spending it, and a split can put thirty asks in front of someone at once. */
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.senderId = :userId " +
-            "AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') " +
-            "AND t.initiatedAt >= :startOfDay " +
-            "AND t.initiatedAt < :endOfDay " +
-            "AND (t.status = 'COMPLETED' OR " +
-            "     (t.status = 'PENDING' AND (t.expiresAt IS NULL OR t.expiresAt > :now)))")
+            "AND ((t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') " +
+            "      AND t.initiatedAt >= :startOfDay AND t.initiatedAt < :endOfDay " +
+            "      AND (t.status = 'COMPLETED' OR " +
+            "           (t.status = 'PENDING' AND (t.expiresAt IS NULL OR t.expiresAt > :now)))) " +
+            "  OR (t.type = 'REQUEST' AND t.status = 'COMPLETED' " +
+            "      AND t.completedAt >= :startOfDay AND t.completedAt < :endOfDay))")
     BigDecimal getTotalSentToday(@Param("userId") UUID userId,
                                  @Param("startOfDay") LocalDateTime startofDay,
                                  @Param("endOfDay") LocalDateTime endofDay,
