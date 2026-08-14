@@ -420,6 +420,14 @@ export const initiateTransfer = (payload: {
   idempotencyKey: string;
   category?: string;
   gpsLocation?: string;
+  /**
+   * 'MERCHANT' when the payer scanned a store code. The backend resolves handles by
+   * checking users before merchants, so saying so is what stops a business handle
+   * that also exists as a username from paying the person instead of the shop.
+   */
+  recipientType?: 'USER' | 'MERCHANT';
+  /** Till / branch the store code was printed for, so the shop can attribute the sale. */
+  terminalId?: string;
 }) => api.post("/api/v1/transfers", payload);
 
 export const confirmTransfer = (id: string, passcode: string) =>
@@ -719,7 +727,22 @@ export const createMerchantSession = (data: {
   metadata?: string;
   successUrl?: string;
   cancelUrl?: string;
+  /** Till / branch ringing up the sale, so a multi-counter shop can attribute it. */
+  terminalId?: string;
 }) => api.post('/api/v1/merchant/sessions', data);
+
+/** One session — polled at the till to tell when the customer has actually paid. */
+export const getMerchantSession = (sessionId: string) =>
+  api.get(`/api/v1/merchant/sessions/${sessionId}`);
+
+/**
+ * Today's takings in Ghana time: count, gross and net of live completed sales.
+ * Pass a till to scope it to one counter, or omit for the whole shop.
+ */
+export const getMerchantTakingsToday = (terminalId?: string) =>
+  api.get('/api/v1/merchant/sessions/today', {
+    params: terminalId ? { terminalId } : undefined,
+  });
 
 export const getMerchantApiKeys = () => api.get('/api/v1/merchant/api-keys');
 

@@ -22,8 +22,27 @@ public class Transaction {
     @Column(nullable = false)
     private UUID senderId;
 
+    /**
+     * Points at either a {@code users} row or a {@code merchants} row — read it with
+     * {@link #recipientType}, never by assuming. Merchant payments have always stored
+     * the merchant's id here; anything that joins this straight to users silently gets
+     * nothing back for them.
+     */
     @Column(nullable = false)
     private UUID recipientId;
+
+    /** Which table {@link #recipientId} points into. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    @Builder.Default
+    private RecipientType recipientType = RecipientType.USER;
+
+    /**
+     * Which till, branch, or cashier rang up a merchant sale, as carried on the store
+     * QR. Null for everything else, and free-form — merchants label their own tills.
+     */
+    @Column(length = 40)
+    private String terminalId;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
@@ -57,6 +76,9 @@ public class Transaction {
     private LocalDateTime requestedAt;
     private LocalDateTime acceptedAt;
     private LocalDateTime declinedAt;
+
+    /** What kind of account {@link #recipientId} names. */
+    public enum RecipientType { USER, MERCHANT }
 
     public enum TransactionType {
         TRANSFER, REQUEST,

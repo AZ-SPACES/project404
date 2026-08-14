@@ -52,6 +52,7 @@ public class UserService {
     private final SmsService smsService;
     private final PresenceService presenceService;
     private final StaffRoleService staffRoleService;
+    private final HandleRegistry handleRegistry;
 
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
@@ -145,7 +146,10 @@ public class UserService {
             if (!HANDLE_PATTERN.matcher(newHandle).matches()) {
                 throw new AppException("Handle must be 3-30 characters and contain only lowercase letters, numbers, and underscores");
             }
-            if (!newHandle.equals(user.getUsername()) && userRepository.existsByUsername(newHandle)) {
+            // Shared namespace with business handles — taking one that a shop already
+            // prints on its posters would make every scan of it pay this user instead.
+            if (!newHandle.equals(user.getUsername())
+                    && !handleRegistry.isAvailableToUser(newHandle, user.getId())) {
                 throw new AppException("Handle is already taken");
             }
             user.setUsername(newHandle);
@@ -678,7 +682,7 @@ public class UserService {
     }
 
     public boolean isUsernameAvailable(String username) {
-        return isFieldAvailable(username, HANDLE_PATTERN, userRepository::existsByUsername);
+        return isFieldAvailable(username, HANDLE_PATTERN, h -> !handleRegistry.isAvailable(h));
     }
 
     public boolean isEmailAvailable(String email) {
@@ -702,16 +706,16 @@ public class UserService {
         int suffix = 1;
         while (suggestions.size() < 3 && suffix < 1000) {
             String candidate = base + suffix;
-            if (candidate.length() >= 3 && !userRepository.existsByUsername(candidate)) {
+            if (candidate.length() >= 3 && handleRegistry.isAvailable(candidate)) {
                 suggestions.add(candidate);
             }
             suffix++;
         }
-        
+
         // Add some more variations if we need 3
         if (suggestions.size() < 3 && !firstName.isEmpty() && !lastName.isEmpty()) {
             String altBase = firstName.toLowerCase().replaceAll("[^a-z0-9]", "") + "_" + lastName.toLowerCase().replaceAll("[^a-z0-9]", "");
-            if (altBase.length() >= 3 && altBase.length() <= 30 && !userRepository.existsByUsername(altBase)) {
+            if (altBase.length() >= 3 && altBase.length() <= 30 && handleRegistry.isAvailable(altBase)) {
                 suggestions.add(altBase);
             }
         }

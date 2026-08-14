@@ -133,6 +133,20 @@ public interface CheckoutSessionRepository extends JpaRepository<CheckoutSession
            "AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED")
     List<Object[]> reconcileByReference(@Param("merchantId") UUID merchantId, @Param("reference") String reference);
 
+    // What a till has taken over a window — the number a trader cashes up against at
+    // close. Live sessions only; test-mode ones would inflate the count. A null
+    // terminalId means "the whole shop", so the parameter has to be optional.
+    @Query("SELECT COUNT(s), COALESCE(SUM(s.amount), 0), COALESCE(SUM(s.netAmount), 0) " +
+           "FROM CheckoutSession s WHERE s.merchantId = :merchantId " +
+           "AND s.status = com.aza.backend.entity.CheckoutSession.SessionStatus.COMPLETED " +
+           "AND s.testMode = false " +
+           "AND s.completedAt >= :from AND s.completedAt < :to " +
+           "AND (:terminalId IS NULL OR s.terminalId = :terminalId)")
+    List<Object[]> takingsBetween(@Param("merchantId") UUID merchantId,
+                                  @Param("from") java.time.LocalDateTime from,
+                                  @Param("to") java.time.LocalDateTime to,
+                                  @Param("terminalId") String terminalId);
+
     // ── Customer transaction history ──────────────────────────────────────────
 
     Page<CheckoutSession> findAllByMerchantIdAndCustomerIdOrderByCreatedAtDesc(

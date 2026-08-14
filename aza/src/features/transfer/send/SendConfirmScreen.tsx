@@ -27,7 +27,7 @@ import { extractErrorMessage } from '../../../utils/errorUtils';
 type SendConfirmScreenProps = NativeStackScreenProps<RootStackParamList, 'SendConfirm'>;
 
 export default function SendConfirmScreen({ navigation, route }: SendConfirmScreenProps) {
-  const { name, username, avatar, amount, note, identifier, category } = route.params;
+  const { name, username, avatar, amount, note, identifier, category, merchantVerified, terminalId } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const isDark = Colors.isDark;
@@ -59,7 +59,17 @@ export default function SendConfirmScreen({ navigation, route }: SendConfirmScre
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsLoading(true);
     try {
-      await initiateTransfer({ recipientIdentifier: identifier, amount, note: editedNote, ...(category ? { category } : {}) });
+      await initiateTransfer({
+        recipientIdentifier: identifier,
+        amount,
+        note: editedNote,
+        ...(category ? { category } : {}),
+        // Only a scanned store code sets merchantVerified, and it is the payer's
+        // explicit "this is a business" — without it the handle would be looked up
+        // against users first and could resolve to a person of the same name.
+        ...(merchantVerified ? { recipientType: 'MERCHANT' as const } : {}),
+        ...(terminalId ? { terminalId } : {}),
+      });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate('SendPin', { name, username, avatar, amount, note: editedNote, identifier, ...(category ? { category } : {}) });
     } catch (err: unknown) {

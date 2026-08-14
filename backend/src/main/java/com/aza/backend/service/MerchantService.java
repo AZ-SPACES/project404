@@ -61,6 +61,7 @@ public class MerchantService {
     private final MerchantInvoiceRepository invoiceRepository;
     private final CheckoutService checkoutService;
     private final MerchantSettlementService merchantSettlementService;
+    private final HandleRegistry handleRegistry;
 
     private static final Pattern HANDLE_PATTERN = Pattern.compile("^[a-z0-9_]{3,30}$");
     private static final long MAX_DOC_SIZE = 10 * 1024 * 1024;
@@ -72,8 +73,16 @@ public class MerchantService {
 
     // ==================== MERCHANT PROFILE ====================
 
-    public boolean isHandleAvailable(String handle) {
-        return !merchantRepository.existsByBusinessHandle(handle.toLowerCase());
+    /**
+     * Handles are one namespace shared with usernames — see {@link HandleRegistry}.
+     * {@code ownerUserId} is the caller, so a business may take its own owner's
+     * username but nobody else's.
+     */
+    public boolean isHandleAvailable(String handle, UUID ownerUserId) {
+        if (handle == null || !HANDLE_PATTERN.matcher(handle.toLowerCase().trim()).matches()) {
+            return false;
+        }
+        return handleRegistry.isAvailableToMerchant(handle, ownerUserId);
     }
 
     private static final int DIRECTORY_MAX = 60;
@@ -125,7 +134,9 @@ public class MerchantService {
                     "Handle must be 3–30 characters: lowercase letters, numbers, and underscores only",
                     HttpStatus.BAD_REQUEST);
         }
-        if (merchantRepository.existsByBusinessHandle(handle)) {
+        // Checked against usernames as well as other businesses: a handle that already
+        // belongs to a person would resolve to them, not to this shop, on every scan.
+        if (!handleRegistry.isAvailableToMerchant(handle, userId)) {
             throw new AppException("HANDLE_TAKEN", "This business handle is already taken", HttpStatus.CONFLICT);
         }
 

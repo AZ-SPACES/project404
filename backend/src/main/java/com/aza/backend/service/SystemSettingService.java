@@ -37,8 +37,12 @@ public class SystemSettingService {
             Map.entry("feature_biometric", "true"),
             Map.entry("feature_p2p", "true"),
             Map.entry("feature_notifications", "true"),
-            Map.entry("blocked_countries", "KP,CU,IR,SY,RU,BY,MM")
+            Map.entry("blocked_countries", "KP,CU,IR,SY,RU,BY,MM"),
+            Map.entry("merchant_pos_review_ceiling_ghs", "500.00")
     );
+
+    /** Fallback when {@code merchant_pos_review_ceiling_ghs} is missing or unparseable. */
+    private static final BigDecimal DEFAULT_POS_REVIEW_CEILING = new BigDecimal("500.00");
 
     private String get(String key) {
         return repo.findById(key)
@@ -52,6 +56,27 @@ public class SystemSettingService {
 
     private BigDecimal getDecimal(String key) {
         try { return new BigDecimal(get(key)); } catch (Exception e) { return BigDecimal.ZERO; }
+    }
+
+    /**
+     * The amount above which a HIGH-anomaly merchant payment is held for compliance
+     * review instead of taking the point-of-sale exemption.
+     *
+     * The exemption exists because a queue at a till cannot wait on a human reviewer,
+     * and that reasoning holds for the shop purchases it was written for — not for a
+     * flagged five-figure transfer, which would otherwise find the store QR the one
+     * rail out of Aza with no compliance stop on it. A bad value falls back to the
+     * documented default rather than to zero, so a fat-fingered setting cannot
+     * quietly freeze every till in the country.
+     */
+    public BigDecimal merchantPosReviewCeilingGhs() {
+        try {
+            BigDecimal configured = new BigDecimal(get("merchant_pos_review_ceiling_ghs"));
+            return configured.signum() > 0 ? configured : DEFAULT_POS_REVIEW_CEILING;
+        } catch (Exception e) {
+            log.warn("Unparseable merchant_pos_review_ceiling_ghs; using default {}", DEFAULT_POS_REVIEW_CEILING);
+            return DEFAULT_POS_REVIEW_CEILING;
+        }
     }
 
     private List<String> getList(String key) {

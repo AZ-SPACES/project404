@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMe, Merchant } from "@/lib/merchant-api";
 import { Loader2, Copy, Check, Code2, ExternalLink, Monitor } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 
 const PAY_BASE = "https://pay.aza.systems";
 const PAY_URL_BASE = "https://aza.systems/m";
@@ -57,6 +58,26 @@ export default function EmbedPage() {
   const [buttonColor, setButtonColor] = useState("#B7EE7A");
   const [buttonSize, setButtonSize] = useState<"sm" | "md" | "lg">("md");
 
+  // The snippet used to hotlink a third-party QR image service, which put every
+  // merchant's embedded code — and their customers' first impression of it — behind
+  // someone else's uptime. Drawing it to a canvas here lets the snippet carry the
+  // image inline instead, so what merchants paste onto their site depends on nothing.
+  const qrCanvasRef = useRef<HTMLDivElement>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  const readQrDataUrl = useCallback(() => {
+    const canvas = qrCanvasRef.current?.querySelector("canvas");
+    if (canvas) setQrDataUrl(canvas.toDataURL("image/png"));
+  }, []);
+
+  // Re-read after the canvas has repainted for the current link. Runs on every input
+  // the code depends on, so the snippet never carries a stale image.
+  useEffect(() => {
+    if (embedType !== "qr") return;
+    const id = requestAnimationFrame(readQrDataUrl);
+    return () => cancelAnimationFrame(id);
+  }, [embedType, merchant, amount, description, readQrDataUrl]);
+
   useEffect(() => {
     getMe()
       .then((me) => {
@@ -78,7 +99,6 @@ export default function EmbedPage() {
   if (!merchant) return null;
 
   const payUrl = buildPayUrl(merchant.businessHandle, amount, description);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payUrl)}`;
 
   const sizeCss = {
     sm: "padding: 8px 16px; font-size: 13px; border-radius: 8px;",
@@ -95,10 +115,12 @@ export default function EmbedPage() {
   ${buttonText}
 </a>`;
 
+  // The code travels inside the snippet as a data URI, so the merchant's page has no
+  // request to make and nothing to break when they paste this somewhere.
   const qrHtml = `<!-- Aza Pay QR Code for ${merchant.businessName} -->
 <div style="display:inline-flex;flex-direction:column;align-items:center;gap:8px;font-family:system-ui,sans-serif;">
   <img
-    src="${qrUrl}"
+    src="${qrDataUrl || "data:,"}"
     alt="Scan to pay ${merchant.businessName}"
     width="200"
     height="200"
@@ -289,7 +311,20 @@ export default function EmbedPage() {
               )}
               {embedType === "qr" && (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: "system-ui, sans-serif" }}>
-                  <img src={qrUrl} alt="QR code" width={160} height={160} style={{ borderRadius: 10, border: "1px solid #e5e7eb" }} />
+                  <div
+                    ref={qrCanvasRef}
+                    style={{ borderRadius: 10, border: "1px solid #e5e7eb", padding: 6, background: "#fff", lineHeight: 0 }}
+                  >
+                    <QRCodeCanvas
+                      value={payUrl}
+                      size={200}
+                      level="M"
+                      marginSize={0}
+                      bgColor="#ffffff"
+                      fgColor="#111111"
+                      style={{ width: 160, height: 160 }}
+                    />
+                  </div>
                   <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>Scan to pay {merchant.businessName}</p>
                 </div>
               )}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Share, Linking, Clipboard, Alert, Platform } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, ScrollView, Text, TouchableOpacity, ActivityIndicator, Modal, Share, Clipboard, Alert, Platform } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Typography, Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
@@ -12,6 +12,7 @@ import { queryClient } from '../../../../../lib/queryClient';
 import InternalHeader from '../components/InternalHeader';
 import Button from '../../../../../components/ui/Button';
 import StatusBadge from '../components/StatusBadge';
+import { sharePoster } from '../../../../../utils/sharePoster';
 
 export default function SessionsPage({ navigate, goBack, Colors, styles }: NavProps) {
   const { data: sessions = [], isLoading: loading } = useQuery({
@@ -24,6 +25,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
+  const posterRef = useRef<View>(null);
   const [refunding, setRefunding] = useState(false);
   const [expiring, setExpiring] = useState(false);
 
@@ -97,12 +99,12 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
     );
   };
 
+  // Shares a capture of the poster shown in the sheet rather than an image fetched
+  // from a third-party QR service, so it works without one and keeps the link here.
   const handlePrint = (session: any) => {
     const link = session.checkoutUrl || `https://pay.aza.systems/c/${session.id}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(link)}`;
-    Linking.openURL(qrImageUrl).catch(() => {
-      Alert.alert('Error', 'Unable to open printable QR code.');
-    });
+    const amountStr = session.amount ? `GH₵ ${Number(session.amount).toFixed(2)}` : '';
+    sharePoster(posterRef, `Pay ${session.merchantName || 'Merchant'} ${amountStr} on Aza Pay: ${link}`);
   };
 
   return (
@@ -228,7 +230,7 @@ export default function SessionsPage({ navigate, goBack, Colors, styles }: NavPr
                     </Text>
 
                     {/* QR Poster Card */}
-                    <View style={{
+                    <View ref={posterRef} collapsable={false} style={{
                       backgroundColor: '#FFFFFF',
                       borderWidth: 1,
                       borderColor: Colors.border,

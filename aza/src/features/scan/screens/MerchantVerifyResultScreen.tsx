@@ -33,7 +33,7 @@ function prettyCategory(c?: string) {
 }
 
 const MerchantVerifyResultScreen = ({ route, navigation }: Props) => {
-  const { handle, amount, note } = route.params;
+  const { handle, amount, note, terminalId } = route.params;
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
 
@@ -66,8 +66,12 @@ const MerchantVerifyResultScreen = ({ route, navigation }: Props) => {
       username: `@${handle}`,
       avatar: merchant?.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(merchant?.businessName ?? handle)}&background=random`,
       identifier: `@${handle}`,
+      // This screen is only reached from a scanned store code, so the payer is
+      // knowingly paying a business — say so rather than letting handle lookup guess.
+      merchantVerified: true,
       ...(amount !== undefined ? { amount } : {}),
       ...(note ? { note } : {}),
+      ...(terminalId ? { terminalId } : {}),
     });
   };
 

@@ -77,10 +77,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                                                Pageable pageable);
 
     /* Get total amount sent today for daily limit enforcement.
-     * Counts COMPLETED transfers and PENDING transfers that have not yet expired. */
+     * Counts COMPLETED transfers and PENDING transfers that have not yet expired.
+     *
+     * MERCHANT_PAYMENT is in the type list along with every other sender-side query
+     * below: these all mean "money that left this wallet", and paying a shop has
+     * always been part of that. Store payments only used to be typed TRANSFER, so
+     * matching on that alone would now let a day's shopping slip past the daily cap. */
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.senderId = :userId " +
-            "AND t.type = 'TRANSFER' " +
+            "AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') " +
             "AND t.initiatedAt >= :startOfDay " +
             "AND t.initiatedAt < :endOfDay " +
             "AND (t.status = 'COMPLETED' OR " +
@@ -97,7 +102,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
             "WHERE t.senderId = :userId " +
-            "AND t.type = 'TRANSFER' " +
+            "AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') " +
             "AND t.status = 'COMPLETED' " +
             "AND t.initiatedAt >= :start " +
             "AND t.initiatedAt < :end")
@@ -242,13 +247,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.recipientId = :recipientId AND t.status = 'COMPLETED'")
     long countCompletedDebitsByUserAndRecipient(@Param("userId") UUID userId, @Param("recipientId") UUID recipientId);
 
-    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') AND t.initiatedAt >= :since")
     long countCompletedDebitsByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
 
-    @Query("SELECT COALESCE(AVG(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    @Query("SELECT COALESCE(AVG(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') AND t.initiatedAt >= :since")
     BigDecimal getAverageAmountByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
 
-    @Query("SELECT COALESCE(MAX(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type = 'TRANSFER' AND t.initiatedAt >= :since")
+    @Query("SELECT COALESCE(MAX(t.amount), 0) FROM Transaction t WHERE t.senderId = :userId AND t.status = 'COMPLETED' AND t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') AND t.initiatedAt >= :since")
     BigDecimal getMaxAmountByUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
 
     // ── Category suggestion queries ───────────────────────────────────────────
@@ -297,7 +302,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     // ── Ledger check queries ──────────────────────────────────────────────────
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.type = 'TRANSFER' AND t.status = 'COMPLETED'")
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.type IN ('TRANSFER', 'MERCHANT_PAYMENT') AND t.status = 'COMPLETED'")
     BigDecimal sumCompletedTransfers();
 
     @Modifying

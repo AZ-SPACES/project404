@@ -54,8 +54,11 @@ public class MerchantController {
     // ==================== HANDLE CHECK ====================
 
     @GetMapping("/check-handle")
-    public ResponseEntity<ApiResponse<Boolean>> checkHandle(@RequestParam String handle) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.isHandleAvailable(handle)));
+    public ResponseEntity<ApiResponse<Boolean>> checkHandle(
+            @RequestParam String handle,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(
+                merchantService.isHandleAvailable(handle, user != null ? user.getId() : null)));
     }
 
     // ==================== PROFILE ====================
@@ -195,6 +198,18 @@ public class MerchantController {
             @RequestParam String reference) {
         UUID merchantId = resolveMerchantId(principal);
         return ResponseEntity.ok(ApiResponse.success(checkoutService.reconcileByReference(merchantId, reference)));
+    }
+
+    @Operation(summary = "Today's takings",
+            description = "Count, gross and net of live COMPLETED sessions for today in Ghana time. "
+                    + "Pass `terminalId` to scope to one till, or omit it for the whole shop. "
+                    + "This is the cash-up figure the in-app point of sale shows.")
+    @GetMapping("/sessions/today")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> takingsToday(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true) @AuthenticationPrincipal Object principal,
+            @RequestParam(required = false) String terminalId) {
+        UUID merchantId = resolveMerchantId(principal);
+        return ResponseEntity.ok(ApiResponse.success(checkoutService.takingsToday(merchantId, terminalId)));
     }
 
     @GetMapping("/sessions/{sessionId}")

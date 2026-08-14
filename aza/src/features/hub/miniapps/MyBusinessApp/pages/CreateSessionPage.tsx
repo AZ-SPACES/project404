@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, Alert, Clipboard, KeyboardAvoidingView, Platform, Modal, Image, Share, Linking, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, View, Text, TouchableOpacity, Alert, Clipboard, KeyboardAvoidingView, Platform, Modal, Share } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import { extractData, fmtAmount } from '../helpers';
-import { createMerchantSession } from '../../../../../services/api';
+import { createMerchantSession, getMerchantSession } from '../../../../../services/api';
 import InternalHeader from '../components/InternalHeader';
 import FieldInput from '../components/FieldInput';
 import PrimaryButton from '../components/PrimaryButton';
 import Button from '../../../../../components/ui/Button';
+import QrCode from '../../../../../components/ui/QrCode';
 import { extractErrorMessage } from '../../../../../utils/errorUtils';
+import { sharePoster } from '../../../../../utils/sharePoster';
+
+const TILL_MAX = 40;
+/** How often the till re-checks whether the customer has paid, while POS mode is open. */
+const POLL_MS = 3000;
 
 export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [terminalId, setTerminalId] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
   const [cancelUrl, setCancelUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,8 +28,32 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
 
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const posterRef = useRef<View>(null);
 
   const canSubmit = parseFloat(amount) > 0;
+
+  // A cashier holding the phone out to a customer needs to see the sale land — the
+  // scan happens on the customer's device, so nothing else here would ever say so.
+  // Only runs while POS mode is on screen, and stops as soon as the sale completes.
+  useEffect(() => {
+    if (!posMode || paid || !result?.id) return;
+    let cancelled = false;
+
+    const timer = setInterval(async () => {
+      try {
+        const session = extractData(await getMerchantSession(result.id));
+        if (!cancelled && session?.status === 'COMPLETED') {
+          setPaid(true);
+        }
+      } catch {
+        // Offline or a flaky connection at the till — keep polling rather than
+        // telling the merchant the sale failed when we simply cannot see it yet.
+      }
+    }, POLL_MS);
+
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [posMode, paid, result?.id]);
 
   const submit = async () => {
     setLoading(true);
@@ -30,11 +61,13 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
       const res = await createMerchantSession({
         amount: parseFloat(amount),
         ...(description.trim() && { description: description.trim() }),
+        ...(terminalId.trim() && { terminalId: terminalId.trim() }),
         ...(successUrl.trim() && { successUrl: successUrl.trim() }),
         ...(cancelUrl.trim() && { cancelUrl: cancelUrl.trim() }),
       });
       const session = extractData(res);
       if (session) {
+        setPaid(false);
         setResult(session);
       }
     } catch (e: unknown) {
@@ -66,17 +99,16 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
     }
   };
 
+  // Captures the poster rendered above instead of pulling artwork off a third-party
+  // image service, so this keeps working when that service does not.
   const handlePrint = () => {
     const link = result?.checkoutUrl || `https://pay.aza.systems/c/${result?.id}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(link)}`;
-    Linking.openURL(qrImageUrl).catch(() => {
-      Alert.alert('Error', 'Unable to open printable QR code.');
-    });
+    const amountStr = result?.amount ? `GH₵ ${Number(result.amount).toFixed(2)}` : '';
+    sharePoster(posterRef, `Pay ${result?.merchantName || 'Merchant'} ${amountStr} on Aza Pay: ${link}`);
   };
 
   if (result) {
     const checkoutUrl = result.checkoutUrl || `https://pay.aza.systems/c/${result.id}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(checkoutUrl)}`;
 
     return (
       <View style={{ flex: 1 }}>
@@ -93,7 +125,7 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
           </Text>
 
           {/* Printable Poster Card */}
-          <View style={{
+          <View ref={posterRef} collapsable={false} style={{
             backgroundColor: '#FFFFFF',
             borderWidth: 1,
             borderColor: Colors.border,
@@ -125,24 +157,12 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
               borderRadius: 8,
               marginBottom: 16
             }}>
-              <Image source={{ uri: qrUrl }} style={{ width: 180, height: 180 }} />
-              <View style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                marginTop: -18,
-                marginLeft: -15,
-                backgroundColor: '#FFFFFF',
-                padding: 4,
-                borderRadius: 6,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.1,
-                shadowRadius: 2,
-                elevation: 1
-              }}>
-                <Image source={require('../../../../../assets/aza-z.png')} style={{ width: 20, height: 26 }} />
-              </View>
+              <QrCode
+                value={checkoutUrl}
+                size={180}
+                logo={require('../../../../../assets/aza-z.png')}
+                logoSize={36}
+              />
             </View>
 
             <Text style={{ fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 4 }}>
@@ -226,13 +246,14 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
         <Modal visible={posMode} animationType="slide" onRequestClose={() => setPosMode(false)}>
           <View style={{ flex: 1, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center', padding: Spacing.xl }}>
             <Text style={{ fontSize: 13, color: '#9CA3AF', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-              POS Scanning Mode
+              {paid ? 'Payment Received' : 'POS Scanning Mode'}
             </Text>
             <Text style={{ fontSize: 20, color: '#FFFFFF', fontWeight: '800', marginBottom: 24, textAlign: 'center' }}>
               {result.merchantName || 'Aza Merchant'}
             </Text>
 
-            {/* Poster Card */}
+            {/* Poster Card — swaps to a confirmation the moment the sale lands, so the
+                cashier can hand over the goods without checking anywhere else. */}
             <View style={{
               backgroundColor: '#FFFFFF',
               padding: 24,
@@ -242,7 +263,30 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
               maxWidth: 320,
               marginBottom: Spacing.xl,
             }}>
-              <Image source={{ uri: qrUrl }} style={{ width: 220, height: 220 }} />
+              {paid ? (
+                <View style={{
+                  width: 220,
+                  height: 220,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <View style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    backgroundColor: '#DCFCE7',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Feather name="check" size={52} color="#16A34A" />
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#16A34A', marginTop: 16 }}>
+                    Paid in full
+                  </Text>
+                </View>
+              ) : (
+                <QrCode value={checkoutUrl} size={220} />
+              )}
               <Text style={{ fontSize: 26, fontWeight: '800', color: '#111827', marginTop: 16 }}>
                 {fmtAmount(result.amount, result.currency)}
               </Text>
@@ -251,11 +295,21 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
                   {result.description}
                 </Text>
               ) : null}
+              {!paid && (
+                <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>
+                  Waiting for the customer to scan…
+                </Text>
+              )}
             </View>
 
             <Button
-              title="Close POS"
-              onPress={() => setPosMode(false)}
+              title={paid ? 'Next customer' : 'Close POS'}
+              onPress={() => {
+                setPosMode(false);
+                // A completed sale cannot be paid again, so send the cashier back to
+                // a fresh amount rather than leaving a spent code on screen.
+                if (paid) { setResult(null); setPaid(false); setAmount(''); setDescription(''); }
+              }}
               backgroundColor="#FFFFFF"
               textColor="#000000"
               borderRadius={8}
@@ -277,6 +331,15 @@ export default function CreateSessionPage({ goBack, Colors, styles }: NavProps) 
 
         <FieldInput label="Amount (GHS) *" value={amount} onChangeText={setAmount} placeholder="0.00" keyboardType="decimal-pad" Colors={Colors} styles={styles} />
         <FieldInput label="Description" value={description} onChangeText={setDescription} placeholder="What is this payment for?" Colors={Colors} styles={styles} />
+        <FieldInput
+          label="Till / branch"
+          hint="Optional. Tags the sale so a shop with several counters can tell them apart."
+          value={terminalId}
+          onChangeText={(t: string) => setTerminalId(t.slice(0, TILL_MAX))}
+          placeholder="Counter 1"
+          Colors={Colors}
+          styles={styles}
+        />
         <FieldInput label="Success URL" value={successUrl} onChangeText={setSuccessUrl} placeholder="https://yoursite.com/thanks" keyboardType="url" Colors={Colors} styles={styles} />
         <FieldInput label="Cancel URL" value={cancelUrl} onChangeText={setCancelUrl} placeholder="https://yoursite.com/cancel" keyboardType="url" Colors={Colors} styles={styles} />
 

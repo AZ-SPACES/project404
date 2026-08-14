@@ -27,6 +27,14 @@ public class CreateCheckoutSessionRequest {
     @Size(max = 255)
     private String reference;
 
+    /**
+     * Till, branch, or cashier this sale belongs to. Free-form — merchants label their
+     * own tills — and reported back on the session so a shop with several points of
+     * sale can attribute takings to each.
+     */
+    @Size(max = 40)
+    private String terminalId;
+
     private String successUrl;
     private String cancelUrl;
     private String idempotencyKey;

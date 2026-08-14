@@ -61,6 +61,7 @@ public class AuthService {
     private final GeoLocationService geoLocationService;
     private final ScreeningService screeningService;
     private final ReferralService referralService;
+    private final HandleRegistry handleRegistry;
     private final RecipientInviteService recipientInviteService;
     private final StaffRoleService staffRoleService;
     private final com.aza.backend.repository.MerchantRepository merchantRepository;
@@ -90,6 +91,12 @@ public class AuthService {
         }
         if (userRepository.existsByPhoneNumber(phone)) {
             throw new com.aza.backend.exception.AppException("PHONE_ALREADY_EXISTS", "This phone number is already in use", org.springframework.http.HttpStatus.CONFLICT);
+        }
+        // The users table's unique index cannot see business handles, and the client's
+        // check-handle call is advisory — so claim the handle out of the shared
+        // namespace here, or a signup could take one a shop already has on its posters.
+        if (!handleRegistry.isAvailable(request.getHandle())) {
+            throw new com.aza.backend.exception.AppException("HANDLE_ALREADY_EXISTS", "This handle is already in use", org.springframework.http.HttpStatus.CONFLICT);
         }
 
         User user = User.builder()

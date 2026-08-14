@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Text, Alert, Clipboard, Modal, Image, Share, Linking } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ScrollView, View, Text, Clipboard, Modal, Image, Share } from 'react-native';
 import { Feather } from '@react-native-vector-icons/feather';
 import { Spacing } from '../../../../../theme';
 import { NavProps } from '../types';
 import InternalHeader from '../components/InternalHeader';
 import Button from '../../../../../components/ui/Button';
 import QrCode from '../../../../../components/ui/QrCode';
+import FieldInput from '../components/FieldInput';
+import { sharePoster } from '../../../../../utils/sharePoster';
+
+const TILL_MAX = 40;
 
 export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavProps) {
   const [copied, setCopied] = useState(false);
   const [posMode, setPosMode] = useState(false);
+  const [till, setTill] = useState('');
+  const posterRef = useRef<View>(null);
 
   if (!merchant) {
     return (
@@ -19,7 +25,13 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
     );
   }
 
-  const staticLink = `https://aza.systems/m/${merchant.businessHandle}`;
+  const trimmedTill = till.trim();
+
+  // `till` rides on the code so a shop running more than one counter can see which
+  // one each sale came from; the app reads it off the scan and tags the transaction.
+  const staticLink = trimmedTill
+    ? `https://aza.systems/m/${merchant.businessHandle}?till=${encodeURIComponent(trimmedTill)}`
+    : `https://aza.systems/m/${merchant.businessHandle}`;
 
   const handleCopy = () => {
     Clipboard.setString(staticLink);
@@ -38,11 +50,11 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
     }
   };
 
+  // Captures the poster drawn above rather than fetching artwork from an image
+  // service, so printing keeps working without a third party and the handle is
+  // never sent off-platform to be rendered.
   const handlePrint = () => {
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(staticLink)}`;
-    Linking.openURL(qrImageUrl).catch(() => {
-      Alert.alert('Error', 'Unable to open printable QR code.');
-    });
+    sharePoster(posterRef, `Pay ${merchant.businessName} on Aza Pay: ${staticLink}`);
   };
 
   return (
@@ -60,7 +72,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
         </Text>
 
         {/* Store Poster Card */}
-        <View style={{
+        <View ref={posterRef} collapsable={false} style={{
           backgroundColor: '#FFFFFF',
           borderWidth: 1,
           borderColor: Colors.border,
@@ -90,6 +102,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
               </Text>
               <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>
                 @{merchant.businessHandle}
+                {trimmedTill ? ` · Till ${trimmedTill}` : ''}
               </Text>
             </View>
           </View>
@@ -122,6 +135,19 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
               Powered by Aza Systems
             </Text>
           </View>
+        </View>
+
+        {/* Till / branch */}
+        <View style={{ width: '100%', marginBottom: Spacing.sm }}>
+          <FieldInput
+            label="Till / branch (optional)"
+            hint="Print a separate code per counter and every sale is tagged with the one it came from."
+            value={till}
+            onChangeText={(t: string) => setTill(t.slice(0, TILL_MAX))}
+            placeholder="Counter 1"
+            Colors={Colors}
+            styles={styles}
+          />
         </View>
 
         {/* Action Buttons */}
@@ -203,6 +229,7 @@ export default function StoreQrPage({ goBack, Colors, styles, merchant }: NavPro
             </Text>
             <Text style={{ fontSize: 12, color: '#4B5563', marginTop: 4, textAlign: 'center' }}>
               @{merchant.businessHandle}
+              {trimmedTill ? ` · Till ${trimmedTill}` : ''}
             </Text>
           </View>
 

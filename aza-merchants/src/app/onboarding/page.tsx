@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 import {
   getMe,
   checkHandle,
@@ -589,7 +590,6 @@ export default function OnboardingPage() {
       {/* ── Mobile handoff modal ── */}
       {mobileModalOpen && mobileToken && (() => {
         const mobileUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${mobileToken}`;
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=ffffff&bgcolor=0f0f0f&data=${encodeURIComponent(mobileUrl)}`;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
             <div className="bg-[#181818] border border-white/10 rounded-2xl p-6 w-full max-w-sm">
@@ -608,9 +608,18 @@ export default function OnboardingPage() {
 
               {/* QR Code */}
               <div className="flex justify-center mb-5">
+                {/* Drawn here rather than fetched from an image service: this code
+                    carries a short-lived onboarding token, and it should not be handed
+                    to a third party to render. */}
                 <div className="p-3 rounded-xl bg-[#0f0f0f] border border-white/8">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qrUrl} alt="QR code" width={220} height={220} className="rounded-lg" />
+                  <QRCodeSVG
+                    value={mobileUrl}
+                    size={220}
+                    level="M"
+                    marginSize={0}
+                    bgColor="#0f0f0f"
+                    fgColor="#ffffff"
+                  />
                 </div>
               </div>
 

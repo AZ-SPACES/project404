@@ -62,8 +62,13 @@ public class TransferService {
     private final RiskEngineService riskEngineService;
     private final FeeCalculationService feeCalculationService;
     private final LimitGuard limitGuard;
+    private final SystemSettingService systemSettingService;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.trim();
+    }
 
     // ── Recipient resolution helpers (used by anomaly + category endpoints) ────
 
@@ -196,16 +201,27 @@ public class TransferService {
             throw new AppException("Transfer would exceed your daily limit. Remaining: GHS " + remaining);
         }
 
-        // 2. Find recipient — try email/phone first, then handle
+        // 2. Find recipient.
+        //
+        // A payer who scanned a store poster already knows they are paying a business,
+        // and says so via recipientType=MERCHANT. That matters because handle lookup
+        // tries users before merchants: without the explicit intent, a business handle
+        // that also exists as a username would silently pay the person. HandleRegistry
+        // now stops new collisions being created, but the scanned rail must not depend
+        // on that for handles registered before it existed.
         String rawIdentifier = request.getRecipientIdentifier();
         String usernameCandidate = rawIdentifier.startsWith("@")
                 ? rawIdentifier.substring(1) : rawIdentifier;
-        User recipient = userRepository
+        boolean merchantIntent = Transaction.RecipientType.MERCHANT.name()
+                .equalsIgnoreCase(request.getRecipientType());
+
+        User recipient = merchantIntent ? null : userRepository
                 .findByEmailOrPhoneNumber(rawIdentifier, rawIdentifier)
                 .or(() -> userRepository.findByUsername(usernameCandidate))
                 .orElse(null);
 
         UUID recipientId;
+        Transaction.RecipientType recipientType;
         if (recipient != null) {
             if (recipient.getId().equals(sender.getId())) {
                 throw new AppException("Cannot transfer to yourself");
@@ -214,6 +230,7 @@ public class TransferService {
                 throw new AppException("Recipient account is not available");
             }
             recipientId = recipient.getId();
+            recipientType = Transaction.RecipientType.USER;
         } else {
             // Try to find a merchant with this handle
             Merchant merchant = merchantRepository.findByBusinessHandle(usernameCandidate)
@@ -225,6 +242,7 @@ public class TransferService {
                 throw new AppException("Cannot transfer to yourself");
             }
             recipientId = merchant.getId();
+            recipientType = Transaction.RecipientType.MERCHANT;
         }
 
         // 3. Check sender balance
@@ -251,16 +269,25 @@ public class TransferService {
             anomaly = new AnomalyDetectionService.Result(0.0, "LOW", null);
         }
 
+        boolean toMerchant = recipientType == Transaction.RecipientType.MERCHANT;
+
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipientId)
+                .recipientType(recipientType)
                 .amount(request.getAmount())
                 .note(request.getNote())
-                .type(Transaction.TransactionType.TRANSFER)
+                // A purchase and a transfer to a friend are different things in a
+                // statement, in spending analytics, and in the P2P-vs-merchant split
+                // that regulatory reporting turns on — so type them differently.
+                .type(toMerchant
+                        ? Transaction.TransactionType.MERCHANT_PAYMENT
+                        : Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.PENDING)
                 .idempotencyKey(request.getIdempotencyKey())
                 .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .category(txCategory)
+                .terminalId(toMerchant ? blankToNull(request.getTerminalId()) : null)
                 .anomalyScore(anomaly.score())
                 .anomalyRiskLevel(anomaly.riskLevel())
                 .initiationLocation(request.getGpsLocation() != null && !request.getGpsLocation().isBlank()
@@ -332,13 +359,24 @@ public class TransferService {
             throw new AppException("Daily transfer limit exceeded. Please try again tomorrow.");
         }
 
-        Merchant merchant = merchantRepository.findByIdForUpdate(transaction.getRecipientId()).orElse(null);
+        // Read the recipient's kind off the transaction rather than probing both tables
+        // for the id — that probe was the same ambiguity that let handles misroute.
+        Merchant merchant = transaction.getRecipientType() == Transaction.RecipientType.MERCHANT
+                ? merchantRepository.findByIdForUpdate(transaction.getRecipientId())
+                        .orElseThrow(() -> new AppException("Recipient not found"))
+                : null;
 
-        // HIGH-anomaly P2P transfers stop here: no money moves until COMPLIANCE
-        // releases or rejects the hold. Merchant payments complete (point-of-sale
-        // UX can't wait on review) but still raise an alert via the risk engine.
-        if (merchant == null && "HIGH".equals(transaction.getAnomalyRiskLevel())) {
-            return holdForReview(transaction, sender);
+        // HIGH-anomaly transfers stop here: no money moves until COMPLIANCE releases
+        // or rejects the hold. Merchant payments are exempt up to the point-of-sale
+        // ceiling, because a queue at a till cannot wait on a human reviewer — above
+        // it the compliance stop wins, so the store rail is not a way around review.
+        // Either way the risk engine still raises its alert.
+        if ("HIGH".equals(transaction.getAnomalyRiskLevel())) {
+            boolean withinPosExemption = merchant != null
+                    && transaction.getAmount().compareTo(systemSettingService.merchantPosReviewCeilingGhs()) <= 0;
+            if (!withinPosExemption) {
+                return holdForReview(transaction, sender);
+            }
         }
 
         if (merchant != null) {
@@ -366,6 +404,7 @@ public class TransferService {
                     .platformFee(platformFee)
                     .netAmount(netAmount)
                     .customerId(sender.getId())
+                    .terminalId(transaction.getTerminalId())
                     .completedAt(LocalDateTime.now())
                     .transactionId(transaction.getId())
                     .build();
@@ -1254,9 +1293,16 @@ public class TransferService {
         Transaction transaction = Transaction.builder()
                 .senderId(sender.getId())
                 .recipientId(recipientId)
+                // recipient == null means the identifier resolved to a business, so this
+                // id points into merchants — same discriminator as a single store payment.
+                .recipientType(recipient != null
+                        ? Transaction.RecipientType.USER
+                        : Transaction.RecipientType.MERCHANT)
                 .amount(amount)
                 .note(note)
-                .type(Transaction.TransactionType.TRANSFER)
+                .type(recipient != null
+                        ? Transaction.TransactionType.TRANSFER
+                        : Transaction.TransactionType.MERCHANT_PAYMENT)
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .completedAt(LocalDateTime.now())
                 .feeAmount(fee)

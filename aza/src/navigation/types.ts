@@ -68,8 +68,8 @@ export type RootStackParamList = {
   HelpTopic: { topicId: string; title: string };
   Inbox: undefined;
   NotificationSettings: undefined;
-  SendAmount: { id?: string; name?: string; username?: string; avatar?: string; identifier: string; amount?: number; note?: string; merchantVerified?: boolean };
-  SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string; category?: string };
+  SendAmount: { id?: string; name?: string; username?: string; avatar?: string; identifier: string; amount?: number; note?: string; merchantVerified?: boolean; terminalId?: string };
+  SendConfirm: { name: string; username: string; avatar: string; amount: number; note: string; identifier: string; category?: string; merchantVerified?: boolean; terminalId?: string };
   SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; id?: string; category?: string };
   SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; category?: string; transactionId?: string };
   RequestAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
@@ -169,7 +169,7 @@ export type RootStackParamList = {
   PaymentMandates: undefined;
   MerchantCheckout: { sessionId: string };
   StatementVerifyResult: { code: string };
-  MerchantVerifyResult: { handle: string; amount?: number; note?: string };
+  MerchantVerifyResult: { handle: string; amount?: number; note?: string; terminalId?: string };
   PaymentVerifyResult: { ref: string; sig: string };
   PaymentProof: { transactionId: string };
   OAuthPaymentApproval: { sessionId: string };

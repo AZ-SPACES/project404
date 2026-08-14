@@ -213,7 +213,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   // Resolve a handle as a merchant and go straight to paying them. A verified/active
   // business opens the Send flow with the "Verified business" badge; otherwise the
   // verification screen warns the user instead of silently paying an unknown handle.
-  const goToMerchant = async (handle: string, amount?: number, note?: string) => {
+  const goToMerchant = async (handle: string, amount?: number, note?: string, till?: string) => {
     try {
       const res = await getPublicMerchant(handle);
       const m = res?.data?.data ?? {};
@@ -231,9 +231,13 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           username: `@${handle}`,
           avatar,
           identifier: `@${handle}`,
+          // Carried to the transfer call as recipientType=MERCHANT: this code came
+          // off a store poster, so the handle must resolve to the business even if a
+          // person happens to hold the same one.
           merchantVerified: true,
           ...(amount !== undefined ? { amount } : {}),
           ...(note ? { note } : {}),
+          ...(till ? { terminalId: till } : {}),
         },
       });
     } catch {
@@ -241,6 +245,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         handle,
         ...(amount !== undefined ? { amount } : {}),
         ...(note ? { note } : {}),
+        ...(till ? { terminalId: till } : {}),
       });
     }
   };
@@ -342,6 +347,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       //   https://aza.systems/<handle>, https://aza.me/<handle>, @<handle>, or bare <handle>
       let amount: number | undefined;
       let note: string | undefined;
+      let till: string | undefined;
       const qIndex = raw.indexOf('?');
       if (qIndex >= 0) {
         try {
@@ -350,6 +356,10 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
           if (!isNaN(amt) && amt > 0) amount = amt;
           const n = params.get('note') ?? params.get('description');
           if (n) note = n;
+          // Which till printed this code, so a shop with several counters can see
+          // where each sale came from. Length-capped to match the column.
+          const t = params.get('till');
+          if (t) till = t.slice(0, 40);
         } catch {
           // Malformed query — fall back to opening the profile.
         }
@@ -359,7 +369,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
       // (unambiguous, no user lookup). goToMerchant shows the verified badge or warns.
       const merchantMatch = raw.match(/aza\.systems\/m\/([A-Za-z0-9_.-]+)/i);
       if (merchantMatch?.[1]) {
-        await goToMerchant(merchantMatch[1], amount, note);
+        await goToMerchant(merchantMatch[1], amount, note, till);
         return;
       }
 
@@ -439,6 +449,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
               merchantVerified: true,
               ...(amount !== undefined ? { amount } : {}),
               ...(note ? { note } : {}),
+              ...(till ? { terminalId: till } : {}),
             },
           });
           return;

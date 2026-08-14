@@ -134,6 +134,7 @@ public class CheckoutService {
                 .description(request.getDescription())
                 .metadata(request.getMetadata())
                 .reference(request.getReference())
+                .terminalId(request.getTerminalId())
                 .successUrl(request.getSuccessUrl())
                 .cancelUrl(request.getCancelUrl())
                 .idempotencyKey(request.getIdempotencyKey())
@@ -703,6 +704,29 @@ public class CheckoutService {
         return result;
     }
 
+    /**
+     * What the shop has taken so far today, in Ghana time — the figure a trader cashes
+     * up against at close. Pass {@code terminalId} to scope it to one till; pass null
+     * for the whole shop.
+     */
+    public Map<String, Object> takingsToday(UUID merchantId, String terminalId) {
+        java.time.ZoneId ghana = java.time.ZoneId.of("Africa/Accra");
+        java.time.LocalDateTime from = java.time.LocalDate.now(ghana).atStartOfDay();
+        java.time.LocalDateTime to = from.plusDays(1);
+        String till = terminalId != null && !terminalId.isBlank() ? terminalId.trim() : null;
+
+        List<Object[]> rows = sessionRepository.takingsBetween(merchantId, from, to, till);
+        Object[] row = rows.isEmpty() ? new Object[]{0L, BigDecimal.ZERO, BigDecimal.ZERO} : rows.get(0);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("date", from.toLocalDate().toString());
+        result.put("terminalId", till);
+        result.put("completedCount", row[0] != null ? ((Number) row[0]).longValue() : 0L);
+        result.put("totalAmount", row[1] != null ? row[1] : BigDecimal.ZERO);
+        result.put("totalNetAmount", row[2] != null ? row[2] : BigDecimal.ZERO);
+        return result;
+    }
+
     public Page<CheckoutSessionResponse> listCustomerSessions(
             UUID merchantId, UUID customerId, int page, int size) {
         Merchant merchant = merchantRepository.findById(merchantId)
@@ -1006,6 +1030,7 @@ public class CheckoutService {
                 .cancelUrl(s.getCancelUrl())
                 .status(s.getStatus().name())
                 .customerId(s.getCustomerId() != null ? s.getCustomerId().toString() : null)
+                .terminalId(s.getTerminalId())
                 .platformFee(s.getPlatformFee())
                 .netAmount(s.getNetAmount())
                 .splits(splits)

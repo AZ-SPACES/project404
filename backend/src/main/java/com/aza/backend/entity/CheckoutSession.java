@@ -63,6 +63,10 @@ public class CheckoutSession {
 
     private UUID customerId;
 
+    /** Till / branch / cashier that rang up the sale, when the payer scanned a store QR. */
+    @Column(length = 40)
+    private String terminalId;
+
     // Unique per (merchant_id, idempotency_key) — see the @Table constraint. Global uniqueness
     // was a cross-tenant hazard: one merchant's key could collide with (and via the old unscoped
     // lookup, expose) another merchant's session.

@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { QRCodeSVG } from "qrcode.react";
 
 function fmtGHS(n: number) {
   return `GH₵ ${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -120,6 +121,17 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               <CheckCircle2 size={16} className="text-[#B7EE7A] flex-shrink-0" />
               <p className="text-sm text-[#B7EE7A] font-medium">Link created · expires in 30 min</p>
             </div>
+            {/* The app scans checkout URLs directly, so showing the code turns this
+                into a counter flow: hold the screen out, the customer pays the exact
+                amount. Without it the link could only be sent, never presented. */}
+            <div className="flex justify-center">
+              <div className="bg-white rounded-xl p-3">
+                <QRCodeSVG value={result.checkoutUrl} size={168} level="M" marginSize={0} />
+              </div>
+            </div>
+            <p className="text-[11px] text-foreground/30 text-center -mt-1">
+              Show this to the customer, or send the link below.
+            </p>
             <div className="bg-black/30 border border-border rounded-xl p-3 break-all">
               <p className="text-[10px] text-foreground/30 mb-1.5 uppercase tracking-wider font-medium">URL</p>
               <p className="text-xs text-foreground/70 font-mono">{result.checkoutUrl}</p>

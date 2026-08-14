@@ -35,7 +35,7 @@ import { CATEGORIES, CategoryKey } from '../../../utils/categories';
 type SendAmountScreenProps = NativeStackScreenProps<RootStackParamList, 'SendAmount'>;
 
 export default function SendAmountScreen({ navigation, route }: SendAmountScreenProps) {
-    const { name, username, avatar, identifier, amount: initialAmount, note: initialNote, merchantVerified } = route.params;
+    const { name, username, avatar, identifier, amount: initialAmount, note: initialNote, merchantVerified, terminalId } = route.params;
     const { colors: Colors } = useAppTheme();
     const styles = React.useMemo(() => createStyles(Colors), [Colors]);
     const isDark = Colors.isDark;
@@ -154,6 +154,10 @@ export default function SendAmountScreen({ navigation, route }: SendAmountScreen
             note,
             identifier,
             ...(effectiveCategory ? { category: effectiveCategory } : {}),
+            // Carried from the scanned store code so the confirm step can tell the
+            // backend it is paying a business, and which till rang it up.
+            ...(merchantVerified ? { merchantVerified } : {}),
+            ...(terminalId ? { terminalId } : {}),
         });
     };
 

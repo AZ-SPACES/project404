@@ -214,7 +214,9 @@ function PinPad({
   accent: string;
 }) {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
-  const maxLen = 6;
+  // Aza passcodes are 4 digits (see CreatePasscodeScreen in the app) — showing six
+  // dots made the pad look unfinished at the point the payment was already valid.
+  const maxLen = 4;
 
   return (
     <div className="space-y-4">

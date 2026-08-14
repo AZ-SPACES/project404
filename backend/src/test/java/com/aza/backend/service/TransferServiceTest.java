@@ -49,6 +49,7 @@ class TransferServiceTest {
     @MockitoBean AuditService auditService;
     @MockitoBean RiskEngineService riskEngineService;
     @MockitoBean FeeCalculationService feeCalculationService;
+    @MockitoBean SystemSettingService systemSettingService;
     @MockitoBean StringRedisTemplate stringRedisTemplate;
     @MockitoBean RedisMessageListenerContainer redisMessageListenerContainer;
 
@@ -65,6 +66,10 @@ class TransferServiceTest {
         // behaviour is covered explicitly in confirmTransfer_chargesP2pFee_*.
         when(feeCalculationService.quote(any(), any(), any()))
                 .thenReturn(new FeeCalculationService.FeeQuote(BigDecimal.ZERO, null, true));
+        // The production default. Below it a HIGH-anomaly store payment still completes
+        // so the till keeps moving; above it the compliance hold applies as for P2P.
+        when(systemSettingService.merchantPosReviewCeilingGhs())
+                .thenReturn(new BigDecimal("500.00"));
     }
 
     // ── getBalance ────────────────────────────────────────────────────────────
@@ -416,7 +421,100 @@ class TransferServiceTest {
         assertEquals(new BigDecimal("1000.00"), merchant.getTotalVolume());
     }
 
+    // ── HIGH-anomaly merchant payments ────────────────────────────────────────
+    // A queue at a till cannot wait on a human reviewer, so small store payments keep
+    // completing even when the risk engine flags them. That exemption is capped: above
+    // the point-of-sale ceiling the compliance hold wins, or the store rail would be
+    // the one way out of Aza with no review on it.
+
+    @Test
+    void confirmTransfer_highAnomalyMerchantPayment_belowCeiling_completes() {
+        User sender = verifiedActiveUser();
+        Merchant merchant = posMerchant();
+        Transaction tx = highAnomalyMerchantTx(merchant.getId(), "200.00");
+        Wallet senderWallet = walletWithBalance("60000.00");
+
+        stubMerchantConfirm(tx, merchant, senderWallet);
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        assertEquals(Transaction.TransactionStatus.COMPLETED, tx.getStatus());
+        assertEquals(new BigDecimal("198.00"), merchant.getBalance()); // 200 - 1% MDR
+    }
+
+    @Test
+    void confirmTransfer_highAnomalyMerchantPayment_aboveCeiling_heldForReview() {
+        User sender = verifiedActiveUser();
+        Merchant merchant = posMerchant();
+        // Above the GHS 500 default ceiling — no longer a till purchase in any real sense.
+        Transaction tx = highAnomalyMerchantTx(merchant.getId(), "5000.00");
+        Wallet senderWallet = walletWithBalance("60000.00");
+
+        stubMerchantConfirm(tx, merchant, senderWallet);
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        assertEquals(Transaction.TransactionStatus.HELD_FOR_REVIEW, tx.getStatus());
+        assertEquals(new BigDecimal("0.00"), merchant.getBalance()); // nothing moved
+        assertEquals(new BigDecimal("60000.00"), senderWallet.getBalance());
+    }
+
+    @Test
+    void confirmTransfer_highAnomalyP2p_isStillHeldAtAnyAmount() {
+        User sender = verifiedActiveUser();
+        Transaction tx = Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(recipientId)
+                .amount(new BigDecimal("50.00"))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.TRANSFER)
+                .recipientType(Transaction.RecipientType.USER)
+                .anomalyRiskLevel("HIGH")
+                .build();
+        Wallet senderWallet = walletWithBalance("60000.00");
+
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(userRepository.findById(recipientId)).thenReturn(Optional.empty());
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        transferService.confirmTransfer(sender, tx.getId(), "1234");
+
+        assertEquals(Transaction.TransactionStatus.HELD_FOR_REVIEW, tx.getStatus());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private Merchant posMerchant() {
+        return Merchant.builder()
+                .id(UUID.randomUUID()).businessName("Store").businessHandle("store")
+                .status(Merchant.MerchantStatus.ACTIVE).userId(UUID.randomUUID())
+                .feeRateBps(100) // 1% MDR
+                .balance(new BigDecimal("0.00")).totalVolume(new BigDecimal("0.00"))
+                .build();
+    }
+
+    private Transaction highAnomalyMerchantTx(UUID merchantId, String amount) {
+        return Transaction.builder()
+                .id(UUID.randomUUID()).senderId(senderId).recipientId(merchantId)
+                .amount(new BigDecimal(amount))
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.MERCHANT_PAYMENT)
+                .recipientType(Transaction.RecipientType.MERCHANT)
+                .anomalyRiskLevel("HIGH")
+                .build();
+    }
+
+    private void stubMerchantConfirm(Transaction tx, Merchant merchant, Wallet senderWallet) {
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        when(merchantRepository.findByIdForUpdate(merchant.getId())).thenReturn(Optional.of(merchant));
+        when(merchantRepository.findById(merchant.getId())).thenReturn(Optional.of(merchant));
+        when(userRepository.findById(merchant.getId())).thenReturn(Optional.empty());
+        when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+    }
 
     private User verifiedActiveUser() {
         return User.builder()

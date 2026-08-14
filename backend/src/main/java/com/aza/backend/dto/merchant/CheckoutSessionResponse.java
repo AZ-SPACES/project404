@@ -31,6 +31,8 @@ public class CheckoutSessionResponse {
     private String status;
     private Boolean testMode; // true for sandbox sessions created with an aza_test_ key
     private String customerId;
+    /** Till / branch the sale was rung up on, when the payer scanned a store QR. */
+    private String terminalId;
     private BigDecimal platformFee;
     private BigDecimal netAmount;
     // Marketplace splits (Aza Connect). Merchant-facing only — never exposed on the

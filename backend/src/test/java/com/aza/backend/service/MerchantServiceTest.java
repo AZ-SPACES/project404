@@ -63,16 +63,46 @@ class MerchantServiceTest {
 
     @Test
     void isHandleAvailable_handleExists_returnsFalse() {
-        when(merchantRepository.existsByBusinessHandle("myshop")).thenReturn(true);
+        Merchant other = Merchant.builder().id(UUID.randomUUID()).userId(UUID.randomUUID()).build();
+        when(merchantRepository.findByBusinessHandle("myshop")).thenReturn(Optional.of(other));
 
-        assertFalse(merchantService.isHandleAvailable("myshop"));
+        assertFalse(merchantService.isHandleAvailable("myshop", userId));
     }
 
     @Test
     void isHandleAvailable_handleFree_returnsTrue() {
-        when(merchantRepository.existsByBusinessHandle("newshop")).thenReturn(false);
+        when(userRepository.existsByUsername("newshop")).thenReturn(false);
+        when(merchantRepository.findByBusinessHandle("newshop")).thenReturn(Optional.empty());
 
-        assertTrue(merchantService.isHandleAvailable("newshop"));
+        assertTrue(merchantService.isHandleAvailable("newshop", userId));
+    }
+
+    /**
+     * The collision that let a store poster pay the wrong party: handles used to be
+     * checked only against other merchants, so a business could claim one a person
+     * already had — and recipient lookup tries users first.
+     */
+    @Test
+    void isHandleAvailable_handleTakenByAUser_returnsFalse() {
+        when(userRepository.existsByUsername("kofi")).thenReturn(true);
+        when(merchantRepository.findByBusinessHandle("kofi")).thenReturn(Optional.empty());
+
+        assertFalse(merchantService.isHandleAvailable("kofi", userId));
+    }
+
+    /** A merchant keeps its own handle — re-checking it must not report a conflict. */
+    @Test
+    void isHandleAvailable_ownHandle_returnsTrue() {
+        Merchant mine = Merchant.builder().id(UUID.randomUUID()).userId(userId).build();
+        when(userRepository.existsByUsername("myshop")).thenReturn(false);
+        when(merchantRepository.findByBusinessHandle("myshop")).thenReturn(Optional.of(mine));
+
+        assertTrue(merchantService.isHandleAvailable("myshop", userId));
+    }
+
+    @Test
+    void isHandleAvailable_malformedHandle_returnsFalse() {
+        assertFalse(merchantService.isHandleAvailable("No Spaces!", userId));
     }
 
     // ── getMyMerchant ─────────────────────────────────────────────────────────
@@ -109,11 +139,29 @@ class MerchantServiceTest {
 
     @Test
     void register_handleAlreadyTaken_throwsConflict() {
+        Merchant other = Merchant.builder().id(UUID.randomUUID()).userId(UUID.randomUUID()).build();
         when(merchantRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(merchantRepository.existsByBusinessHandle("taken_shop")).thenReturn(true);
+        when(merchantRepository.findByBusinessHandle("taken_shop")).thenReturn(Optional.of(other));
 
         AppException ex = assertThrows(AppException.class,
                 () -> merchantService.register(userId, registerRequest("taken_shop", "My Shop")));
+
+        assertEquals("HANDLE_TAKEN", ex.getCode());
+    }
+
+    /**
+     * Registration is refused when a person already holds the handle, not just when
+     * another business does — the two used to be separate namespaces, and a business
+     * taking a username meant every scan of its poster paid that person instead.
+     */
+    @Test
+    void register_handleHeldByAUser_throwsConflict() {
+        when(merchantRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(userRepository.existsByUsername("kofi")).thenReturn(true);
+        when(merchantRepository.findByBusinessHandle("kofi")).thenReturn(Optional.empty());
+
+        AppException ex = assertThrows(AppException.class,
+                () -> merchantService.register(userId, registerRequest("kofi", "Kofi Store")));
 
         assertEquals("HANDLE_TAKEN", ex.getCode());
     }

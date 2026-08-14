@@ -24,6 +24,9 @@ interface TransferState {
     amount: number;
     note: string;
     category?: string;
+    /** 'MERCHANT' when the payer scanned a store code — see the API helper for why. */
+    recipientType?: 'USER' | 'MERCHANT';
+    terminalId?: string;
   }) => Promise<string>;
 
   confirmTransfer: (txId: string, passcode: string) => Promise<void>;
@@ -59,7 +62,7 @@ export const useTransferStore = create<TransferState>((set, get) => ({
   pendingTransactionId: null,
   error: null,
 
-  initiateTransfer: async ({ recipientIdentifier, amount, note, category }) => {
+  initiateTransfer: async ({ recipientIdentifier, amount, note, category, recipientType, terminalId }) => {
     set({ status: 'initiating', error: null });
     try {
       const [idempotencyKey, gpsLocation] = await Promise.all([
@@ -73,6 +76,8 @@ export const useTransferStore = create<TransferState>((set, get) => ({
         idempotencyKey,
         ...(category ? { category } : {}),
         ...(gpsLocation ? { gpsLocation } : {}),
+        ...(recipientType ? { recipientType } : {}),
+        ...(terminalId ? { terminalId } : {}),
       });
       const txId: string = res.data?.data?.id || res.data?.id;
       if (!txId) throw new Error('No transaction ID in response');
