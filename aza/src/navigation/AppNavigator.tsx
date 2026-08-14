@@ -20,6 +20,12 @@ function SendPinWithBoundary(props: React.ComponentProps<typeof SendPinScreen>) 
 function SendSuccessWithBoundary(props: React.ComponentProps<typeof SendSuccessScreen>) { return <ErrorBoundary><SendSuccessScreen {...props} /></ErrorBoundary>; }
 function RequestContactWithBoundary(props: React.ComponentProps<typeof RequestContactScreen>) { return <ErrorBoundary><RequestContactScreen {...props} /></ErrorBoundary>; }
 function RequestAmountWithBoundary(props: React.ComponentProps<typeof RequestAmountScreen>) { return <ErrorBoundary><RequestAmountScreen {...props} /></ErrorBoundary>; }
+import CreateAkyedeScreen from '../features/akyede/screens/CreateAkyedeScreen';
+import AkyedeOpenScreen from '../features/akyede/screens/AkyedeOpenScreen';
+import MyAkyedeScreen from '../features/akyede/screens/MyAkyedeScreen';
+import SplitsScreen from '../features/splits/screens/SplitsScreen';
+import CreateSplitScreen from '../features/splits/screens/CreateSplitScreen';
+import SplitDetailScreen from '../features/splits/screens/SplitDetailScreen';
 import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen, AppSecurityScreen, SecureAccountScreen, LogoutEverywhereScreen, DevicesScreen, TwoStepVerificationScreen, TotpSetupScreen, DisableTotpScreen, RecoveryCodesScreen, ManageRecoveryCodesScreen, AccountRecoveryContactsScreen, SmsSetupScreen, DisableSmsScreen, PasskeySetupScreen, DisablePasskeyScreen, AzaAppSetupScreen, ChangePasswordScreen, FindMeByScreen, BillForwardingIntroScreen, BillForwardingDetailsScreen, PersonalDetailsScreen, PersonalInformationScreen, ChangeEmailScreen, ChangePhoneScreen, DeleteAccountScreen} from '../features/profile';
 import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
 import { PaymentMandatesScreen } from '../features/profile/securityandprivacy/PaymentMandatesScreen';
@@ -84,6 +90,12 @@ export default function AppNavigator() {
       <Stack.Screen name="SendPin" component={SendPinWithBoundary} />
       <Stack.Screen name="SendSuccess" component={SendSuccessWithBoundary} />
       <Stack.Screen name="RequestAmount" component={RequestAmountWithBoundary} />
+      <Stack.Screen name="CreateAkyede" component={CreateAkyedeScreen} />
+      <Stack.Screen name="AkyedeOpen" component={AkyedeOpenScreen} />
+      <Stack.Screen name="MyAkyede" component={MyAkyedeScreen} />
+      <Stack.Screen name="Splits" component={SplitsScreen} />
+      <Stack.Screen name="CreateSplit" component={CreateSplitScreen} />
+      <Stack.Screen name="SplitDetail" component={SplitDetailScreen} />
       <Stack.Screen name="Details" component={DetailsScreen} options={{ presentation: 'modal' }}/>
       <Stack.Screen name="Spending" component={SpendingScreen} />
       <Stack.Screen name="Withdraw" component={WithdrawScreen} options={{ presentation: 'modal' }}/>

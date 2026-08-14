@@ -73,6 +73,18 @@ export type RootStackParamList = {
   SendPin: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; id?: string; category?: string };
   SendSuccess: { name: string; username?: string; avatar?: string; amount: number; note: string; identifier: string; category?: string; transactionId?: string };
   RequestAmount: { id?: string; name: string; username: string; avatar: string; identifier: string };
+
+  // Akyede — money given to one person as a gift. `chatId` drops the gift card straight
+  // into a thread; without one it simply waits in the recipient's Akyede list.
+  CreateAkyede: { chatId?: string };
+  AkyedeOpen: { claimCode: string };
+  MyAkyede: undefined;
+
+  // Bill splitting — a bill one person paid, and who owes them a share. Shares are
+  // paid through the ordinary money-request flow, so there is no payment screen here.
+  Splits: undefined;
+  CreateSplit: undefined;
+  SplitDetail: { id: string };
   SecurityAndPrivacy: undefined;
   ChangePassword: undefined;
   SecureAccount: undefined;

@@ -1343,6 +1343,7 @@ function previewForSpecialText(text: string): string | null {
     return '💰 Payment';
   }
   if (text.startsWith('{"__payment_decline":')) return 'Payment request declined';
+  if (text.startsWith('{"__akyede":')) return '🎁 Akyede';
   if (text.startsWith('{"__gif":')) return 'GIF';
   if (text.startsWith('{"__location":')) return '📍 Location';
   if (text.startsWith('{"__sticker":')) return 'Sticker';

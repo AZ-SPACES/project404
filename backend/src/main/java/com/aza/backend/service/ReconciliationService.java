@@ -42,6 +42,7 @@ public class ReconciliationService {
     private final AdminAuditService auditService;
     private final StaffAlertService staffAlertService;
     private final com.aza.backend.repository.PaymentHoldRepository paymentHoldRepository;
+    private final com.aza.backend.repository.RedEnvelopeRepository redEnvelopeRepository;
 
     // ── Safeguarding ──────────────────────────────────────────────────────────
 
@@ -103,7 +104,11 @@ public class ReconciliationService {
         // balance, so it appears in neither sum above. Omitting it would make every open
         // hold look like a safeguarding surplus and hide a real breach of exactly that
         // size — it is still customer money Aza is obliged to safeguard.
-        BigDecimal heldFloat = orZero(paymentHoldRepository.sumActiveHeldFloat());
+        // Money in open Akyede envelopes is held on exactly the same terms — debited
+        // from the sender, credited to nobody until claimed or refunded — so it belongs
+        // in the same line rather than being quietly absent from the obligation.
+        BigDecimal heldFloat = orZero(paymentHoldRepository.sumActiveHeldFloat())
+                .add(orZero(redEnvelopeRepository.sumOpenEnvelopeFloat()));
         BigDecimal variance = safeguardingBalance
                 .subtract(customerFloat)
                 .subtract(merchantFloat)

@@ -77,6 +77,15 @@ public class Transaction {
     private LocalDateTime acceptedAt;
     private LocalDateTime declinedAt;
 
+    /**
+     * Set when this request is one person's share of a split bill.
+     *
+     * A share is an ordinary money request — accepted, declined, and limit-checked
+     * through exactly the same path — so splitting a bill never becomes a second way to
+     * move money. This only tells the split which of its legs just settled.
+     */
+    private UUID splitId;
+
     /** What kind of account {@link #recipientId} names. */
     public enum RecipientType { USER, MERCHANT }
 

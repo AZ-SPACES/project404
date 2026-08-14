@@ -62,6 +62,13 @@ public class TransferService {
     private final RiskEngineService riskEngineService;
     private final FeeCalculationService feeCalculationService;
     private final LimitGuard limitGuard;
+    /**
+     * A money request may be one person's share of a split bill. When it is accepted or
+     * declined the split needs to know, because its status is nothing but a rollup of
+     * its legs. The dependency runs one way only — a split creates its request rows
+     * through the repository, never through this service.
+     */
+    private final ExpenseSplitService expenseSplitService;
     private final SystemSettingService systemSettingService;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
@@ -868,6 +875,8 @@ public class TransferService {
         transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
+        expenseSplitService.onLegSettled(transaction);
+
         feeCalculationService.recordMonthlyUsage("P2P", transaction.getAmount(), payer.getId());
 
         riskEngineService.evaluateTransfer(transaction, payer);
@@ -898,6 +907,8 @@ public class TransferService {
         transaction.setStatus(Transaction.TransactionStatus.DECLINED);
         transaction.setDeclinedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
+
+        expenseSplitService.onLegSettled(transaction);
 
         User requester = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new AppException("User not found"));

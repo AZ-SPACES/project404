@@ -67,6 +67,10 @@ const linking = {
         screens: {
           SendAmount: { path: "pay/:identifier", alias: ["m/:identifier"] },
           OAuthPaymentApproval: "checkout/:sessionId",
+          // Akyede links get shared into WhatsApp groups, so opening one has to land
+          // straight on the envelope rather than the app's home screen.
+          AkyedeOpen: "akyede/:claimCode",
+          MyAkyede: "akyede",
           Transactions: "transactions",
           SecurityAndPrivacy: "settings/security",
           ManageRecoveryCodes: "settings/security/recovery-codes",

@@ -10,6 +10,9 @@ import { useReactionStore, EmojiReaction } from '../../store/reactionStore';
 import { extractFirstUrl, fetchLinkPreview, LinkPreview } from '../../utils/linkPreview';
 import { usePollStore } from '../../store/pollStore';
 import Button from '../ui/Button';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -603,6 +606,26 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
     return null;
   }, [message.type, message.uri, message.text]);
 
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  // Detect Akyede cards. Like every other money card in a thread these ride inside
+  // the encrypted message text — the server holds no key, so it cannot put one here.
+  const akyedeData = useMemo(() => {
+    if (typeof message.text === 'string' && message.text.startsWith('{"__akyede":')) {
+      try {
+        const p = JSON.parse(message.text);
+        if (p.__akyede === true && typeof p.claimCode === 'string') {
+          return {
+            claimCode: p.claimCode as string,
+            occasion: typeof p.occasion === 'string' ? p.occasion : null,
+            note: typeof p.note === 'string' ? p.note : null,
+          };
+        }
+      } catch {}
+    }
+    return null;
+  }, [message.text]);
+
   // Detect location messages sent as E2EE JSON text
   const incomingLocationData = useMemo(() => {
     if (message.type === 'location') return null; // already a resolved local message
@@ -949,6 +972,44 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             Colors={Colors}
             receivedBubbleBg={receivedBubbleBg}
           />
+        ) : akyedeData ? (
+          <>
+            {!isMe && (
+              <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
+            )}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onLongPress={handleLongPress}
+              delayLongPress={250}
+              onPress={() => navigation.navigate('AkyedeOpen', { claimCode: akyedeData.claimCode })}
+              style={[
+                styles.bubble,
+                styles.docBubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther,
+                isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                !isMe && { backgroundColor: receivedBubbleBg },
+                groupedBubbleStyle,
+                { paddingHorizontal: 12, paddingVertical: 10 },
+              ]}
+            >
+              {forwardedBadge}
+              {replyPreview}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.docIconBox, { backgroundColor: '#B7EE7A20' }]}>
+                  <Feather name="gift" size={20} color="#8CC63F" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.docName, isMe ? styles.textMe : styles.textOther]} numberOfLines={2}>
+                    {akyedeData.note || 'Akyede'}
+                  </Text>
+                  <Text style={[styles.docSize, isMe ? styles.timeTextMe : styles.timeTextOther]}>
+                    {isMe ? 'Gift sent · tap to see' : 'A gift for you · tap to open'}
+                  </Text>
+                </View>
+              </View>
+              {metaRow}
+            </TouchableOpacity>
+          </>
         ) : (message.type === 'location' || incomingLocationData) ? (
           (() => {
             const lat = incomingLocationData?.lat ?? message.latitude;

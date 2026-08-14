@@ -76,6 +76,9 @@ public class ChatMessage {
     /** Set for PAYMENT_REQUEST messages — links to the PaymentRequest record. */
     private UUID paymentRequestId;
 
+    /** Set for RED_ENVELOPE messages — links to the RedEnvelope record. */
+    private UUID redEnvelopeId;
+
     /** If true, mediaKey is wiped after the recipient views it once. */
     @Builder.Default
     private Boolean viewOnce = false;
@@ -98,7 +101,7 @@ public class ChatMessage {
     private Boolean isAdminReply = false;
 
     public enum MessageType {
-        TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE, PAYMENT_REQUEST
+        TEXT, IMAGE, VIDEO, DOCUMENT, VOICE_NOTE, PAYMENT_REQUEST, RED_ENVELOPE
     }
 
     public enum MessageStatus {

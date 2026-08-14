@@ -28,15 +28,18 @@ class SafeguardingHeldFloatTest {
     private final AdminAuditService auditService = mock(AdminAuditService.class);
     private final StaffAlertService staffAlertService = mock(StaffAlertService.class);
     private final PaymentHoldRepository paymentHoldRepository = mock(PaymentHoldRepository.class);
+    private final RedEnvelopeRepository redEnvelopeRepository = mock(RedEnvelopeRepository.class);
 
     private final ReconciliationService service = new ReconciliationService(
             snapshotRepository, breakRepository, walletRepository, merchantRepository,
-            transactionRepository, auditService, staffAlertService, paymentHoldRepository);
+            transactionRepository, auditService, staffAlertService, paymentHoldRepository,
+            redEnvelopeRepository);
 
     @BeforeEach
     void stubs() {
         when(snapshotRepository.save(any(SafeguardingSnapshot.class))).thenAnswer(i -> i.getArgument(0));
         when(walletRepository.sumFloatForAgentStatus(any())).thenReturn(BigDecimal.ZERO);
+        when(redEnvelopeRepository.sumOpenEnvelopeFloat()).thenReturn(BigDecimal.ZERO);
     }
 
     private User admin() {
@@ -82,5 +85,36 @@ class SafeguardingHeldFloatTest {
 
         assertEquals(new BigDecimal("300.00"), snapshot.getVariance());
         assertEquals(BigDecimal.ZERO, snapshot.getHeldFloat());
+    }
+
+    /**
+     * Money in open Akyede envelopes is held on the same terms as a payment hold —
+     * debited from the sender, credited to nobody — so it has to land in the same line.
+     */
+    @Test
+    void openRedEnvelopesCountAsHeldFloatToo() {
+        when(walletRepository.sumTotalBalance()).thenReturn(new BigDecimal("600.00"));
+        when(merchantRepository.sumTotalMerchantBalance()).thenReturn(new BigDecimal("100.00"));
+        when(paymentHoldRepository.sumActiveHeldFloat()).thenReturn(new BigDecimal("150.00"));
+        when(redEnvelopeRepository.sumOpenEnvelopeFloat()).thenReturn(new BigDecimal("100.00"));
+
+        SafeguardingSnapshot snapshot = service.takeSnapshot(admin(), new BigDecimal("1000.00"));
+
+        assertEquals(new BigDecimal("250.00"), snapshot.getHeldFloat());
+        assertEquals(new BigDecimal("50.00"), snapshot.getVariance());
+        assertFalse(snapshot.isBreach());
+    }
+
+    @Test
+    void aBreachHiddenOnlyByOpenEnvelopesIsDetected() {
+        when(walletRepository.sumTotalBalance()).thenReturn(new BigDecimal("800.00"));
+        when(merchantRepository.sumTotalMerchantBalance()).thenReturn(new BigDecimal("100.00"));
+        when(paymentHoldRepository.sumActiveHeldFloat()).thenReturn(BigDecimal.ZERO);
+        when(redEnvelopeRepository.sumOpenEnvelopeFloat()).thenReturn(new BigDecimal("250.00"));
+
+        SafeguardingSnapshot snapshot = service.takeSnapshot(admin(), new BigDecimal("1000.00"));
+
+        assertEquals(new BigDecimal("-150.00"), snapshot.getVariance());
+        assertTrue(snapshot.isBreach(), "unclaimed envelope money is still an obligation");
     }
 }

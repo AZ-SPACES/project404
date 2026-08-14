@@ -234,6 +234,7 @@ export default function HomeScreen() {
     withdraw:  { icon: 'log-out',     label: 'Withdraw',  onPress: () => navigation.navigate('Withdraw') },
     topup:     { icon: 'plus-circle', label: 'Top Up',    onPress: () => navigation.navigate('Receive') },
     statement: { icon: 'file-text',   label: 'Statement', onPress: () => navigation.navigate('StatementDownload') },
+    akyede:    { icon: 'gift',        label: 'Akyede',    onPress: () => navigation.navigate('MyAkyede') },
   }), [navigation]);
 
   // Shared header row used by both layouts

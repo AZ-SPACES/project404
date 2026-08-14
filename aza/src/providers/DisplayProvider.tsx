@@ -18,7 +18,7 @@ export type CornerRadiusScale = 'sharp' | 'rounded' | 'pill';
 export type TabIconStyle = 'outline' | 'filled';
 export type MainTabNav = 'custom' | 'default' | 'native';
 export type TransactionGrouping = 'date' | 'flat';
-export type QuickActionId = 'send' | 'request' | 'details' | 'withdraw' | 'topup' | 'statement';
+export type QuickActionId = 'send' | 'request' | 'details' | 'withdraw' | 'topup' | 'statement' | 'akyede';
 
 export const QUICK_ACTIONS_REGISTRY: { id: QuickActionId; icon: string; label: string }[] = [
   { id: 'send',      icon: 'arrow-up',    label: 'Send'      },
@@ -27,6 +27,7 @@ export const QUICK_ACTIONS_REGISTRY: { id: QuickActionId; icon: string; label: s
   { id: 'withdraw',  icon: 'log-out',     label: 'Withdraw'  },
   { id: 'topup',     icon: 'plus-circle', label: 'Top Up'    },
   { id: 'statement', icon: 'file-text',   label: 'Statement' },
+  { id: 'akyede',    icon: 'gift',        label: 'Akyede'    },
 ];
 
 export type TabId = 'home' | 'contacts' | 'chat' | 'hub';

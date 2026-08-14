@@ -295,6 +295,15 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
         return;
       }
 
+      // Akyede claim code: aza.systems/akyede/{code} — open the envelope and let them
+      // take a share. Matched before the handle fallthrough, which would otherwise
+      // read "akyede" as a username.
+      const akyedeMatch = raw.match(/aza\.systems\/akyede\/([A-Za-z0-9]{6,22})/i);
+      if (akyedeMatch?.[1]) {
+        navigation.navigate('AkyedeOpen', { claimCode: akyedeMatch[1].toUpperCase() });
+        return;
+      }
+
       // Statement verification QR: aza.systems/verify?code={code} (also www.)
       const statementMatch = raw.match(/aza\.systems\/verify\?code=([A-Za-z0-9-]+)/i);
       if (statementMatch) {

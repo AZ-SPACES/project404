@@ -430,6 +430,137 @@ export const initiateTransfer = (payload: {
   terminalId?: string;
 }) => api.post("/api/v1/transfers", payload);
 
+// ── Akyede (gifting money) ───────────────────────────────────────────────────
+
+export const AKYEDE_OCCASIONS = [
+  'BIRTHDAY',
+  'WEDDING',
+  'OUTDOORING',
+  'GRADUATION',
+  'CONGRATULATIONS',
+  'THANK_YOU',
+  'CHRISTMAS',
+  'EID',
+  'EASTER',
+  'JUST_BECAUSE',
+] as const;
+
+export type AkyedeOccasion = (typeof AKYEDE_OCCASIONS)[number];
+
+export type Akyede = {
+  id: string;
+  claimCode: string;
+  claimUrl: string;
+  senderName: string;
+  senderHandle?: string | null;
+  senderAvatarUrl?: string | null;
+  recipientName?: string | null;
+  recipientHandle?: string | null;
+  recipientAvatarUrl?: string | null;
+  message?: string | null;
+  occasion?: AkyedeOccasion | null;
+  currency: string;
+  status: 'UNOPENED' | 'OPENED' | 'EXPIRED_REFUNDED';
+  expiresAt: string;
+  createdAt: string;
+  openedAt?: string | null;
+  /**
+   * What the gift holds. Null for the recipient until they open it — the surprise is
+   * the whole point — and null for anyone else always.
+   */
+  amount?: number | null;
+  openable: boolean;
+  blockedReason?: 'NOT_YOURS' | 'ALREADY_OPENED' | 'EXPIRED' | 'OWN_GIFT' | null;
+  sentByMe: boolean;
+};
+
+export const createAkyede = (payload: {
+  /** Handle, phone, or email — resolved the same way a transfer resolves a payee. */
+  recipient: string;
+  amount: number;
+  occasion?: AkyedeOccasion;
+  message?: string;
+  chatId?: string;
+  expiresInHours?: number;
+  /** Sending a gift is a debit, so it is authorised like any other. */
+  passcode: string;
+  idempotencyKey: string;
+}) => api.post('/api/v1/akyede', payload);
+
+export const previewAkyede = (claimCode: string) =>
+  api.get(`/api/v1/akyede/${claimCode}`);
+
+export const openAkyede = (claimCode: string) =>
+  api.post(`/api/v1/akyede/${claimCode}/open`);
+
+export const getSentAkyede = (page = 0, size = 20) =>
+  api.get(`/api/v1/akyede?page=${page}&size=${size}`);
+
+export const getReceivedAkyede = (page = 0, size = 20) =>
+  api.get(`/api/v1/akyede/received?page=${page}&size=${size}`);
+
+// ── Bill splitting ───────────────────────────────────────────────────────────
+
+export type SplitParticipant = {
+  userId: string;
+  name: string;
+  handle?: string | null;
+  avatarUrl?: string | null;
+  amountOwed: number;
+  status: 'PENDING' | 'PAID' | 'DECLINED' | 'WAIVED' | 'CANCELLED';
+  organiser: boolean;
+  /**
+   * The money request this person pays their share through — the same request the
+   * home screen and chat payment sheet already accept.
+   */
+  requestId?: string | null;
+  settledAt?: string | null;
+};
+
+export type Split = {
+  id: string;
+  description: string;
+  totalAmount: number;
+  currency: string;
+  splitMode: 'EQUAL' | 'EXACT';
+  status: 'OPEN' | 'SETTLED' | 'CANCELLED';
+  creatorId: string;
+  creatorName: string;
+  creatorHandle?: string | null;
+  creatorAvatarUrl?: string | null;
+  createdAt: string;
+  settledAt?: string | null;
+  organisedByMe: boolean;
+  /** What you still owe, or null when you owe nothing. */
+  myShare?: number | null;
+  myStatus?: SplitParticipant['status'] | null;
+  myRequestId?: string | null;
+  outstandingAmount: number;
+  paidCount: number;
+  participantCount: number;
+  participants: SplitParticipant[];
+};
+
+export const createSplit = (payload: {
+  totalAmount: number;
+  description: string;
+  splitMode?: 'EQUAL' | 'EXACT';
+  participants: { identifier: string; amount?: number }[];
+  idempotencyKey: string;
+}) => api.post('/api/v1/splits', payload);
+
+export const getSplits = (page = 0, size = 20) =>
+  api.get(`/api/v1/splits?page=${page}&size=${size}`);
+
+export const getSplit = (id: string) => api.get(`/api/v1/splits/${id}`);
+
+export const waiveSplitShare = (id: string, userId: string) =>
+  api.post(`/api/v1/splits/${id}/participants/${userId}/waive`);
+
+export const remindSplit = (id: string) => api.post(`/api/v1/splits/${id}/remind`);
+
+export const cancelSplit = (id: string) => api.post(`/api/v1/splits/${id}/cancel`);
+
 export const confirmTransfer = (id: string, passcode: string) =>
   api.post(`/api/v1/transfers/${id}/confirm`, { passcode });
 
