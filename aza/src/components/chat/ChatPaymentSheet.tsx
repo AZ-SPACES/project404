@@ -9,6 +9,7 @@ import { useAppTheme, Spacing, Radius, Typography } from '../../theme';
 import { useTransferStore } from '../../store/transferStore';
 import { useSettledRequestsStore } from '../../store/settledRequestsStore';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { sendChatPaymentRequest, ChatPaymentRequest } from '../../services/api';
 import Button from '../ui/Button';
 
 // ----------------------------------------------------------------------------
@@ -29,9 +30,23 @@ type ChatPaymentSheetProps = {
   payRequestId?: string | undefined;
   /** Pre-filled amount; fixed in 'pay' mode, starting value otherwise. */
   prefillAmount?: number | undefined;
+  /**
+   * The thread this is happening in. When present, a request is created server-side and
+   * carries its own status, so both sides read the same answer instead of inferring it
+   * from receipt messages.
+   */
+  chatId?: string | null;
   onClose: () => void;
-  /** requestId is the money-request id: the new request for 'request', the settled one for 'pay'. */
-  onSuccess?: (amount: number, mode: ChatPaymentMode, requestId?: string) => void;
+  /**
+   * `requestId` is the new request for 'request', the settled one for 'pay'.
+   * `requestKind` says which system holds it, so the caller seals the right card.
+   */
+  onSuccess?: (
+    amount: number,
+    mode: ChatPaymentMode,
+    requestId?: string,
+    requestKind?: 'chat-request' | 'money-request',
+  ) => void;
 };
 
 const PIN_LENGTH = 4;
@@ -48,6 +63,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   recipientIdentifier,
   payRequestId,
   prefillAmount,
+  chatId,
   onClose,
   onSuccess,
 }: ChatPaymentSheetProps) {
@@ -74,6 +90,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   const finalAmountRef = useRef(0);
   // Money-request id to report back via onSuccess (new request, or the one being paid)
   const requestIdRef = useRef<string | undefined>(undefined);
+  const requestKindRef = useRef<'chat-request' | 'money-request' | undefined>(undefined);
 
   const { initiateTransfer, confirmTransfer, cancelPendingTransfer, requestMoney, acceptMoneyRequest, pendingTransactionId } =
     useTransferStore();
@@ -150,7 +167,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
   useEffect(() => {
     if (step !== 'success') return;
     const t = setTimeout(() => {
-      onSuccess?.(finalAmountRef.current, mode, requestIdRef.current);
+      onSuccess?.(finalAmountRef.current, mode, requestIdRef.current, requestKindRef.current);
       onClose();
     }, 2000);
     return () => clearTimeout(t);
@@ -165,7 +182,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
 
   const handleAmountConfirm = useCallback(async () => {
     if (!canConfirm || isLoading) return;
-    if (isUUID) {
+    if (isUUID && !(mode === 'request' && chatId)) {
       setErrorMsg("Recipient identifier unavailable. Please try again later.");
       return;
     }
@@ -175,7 +192,18 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
     setIsLoading(true);
     try {
       if (mode === 'request') {
-        requestIdRef.current = await requestMoney({ fromIdentifier: recipientIdentifier, amount: displayAmount, note: '' });
+        if (chatId) {
+          // In a thread the payer is whoever else is in it, so the request needs no
+          // recipient identifier at all — which is also why this path works when the
+          // identifier is an unusable raw UUID.
+          const res = await sendChatPaymentRequest({ chatId, amount: displayAmount });
+          const created: ChatPaymentRequest = res.data?.data ?? res.data;
+          requestIdRef.current = created.id;
+          requestKindRef.current = 'chat-request';
+        } else {
+          requestIdRef.current = await requestMoney({ fromIdentifier: recipientIdentifier, amount: displayAmount, note: '' });
+          requestKindRef.current = 'money-request';
+        }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setStep('success');
       } else {
@@ -188,7 +216,7 @@ export const ChatPaymentSheet = memo(function ChatPaymentSheet({
     } finally {
       setIsLoading(false);
     }
-  }, [canConfirm, isLoading, displayAmount, mode, recipientIdentifier, requestMoney, initiateTransfer]);
+  }, [canConfirm, isLoading, displayAmount, mode, recipientIdentifier, chatId, requestMoney, initiateTransfer]);
 
   const handlePinChange = useCallback((text: string) => {
     if (isLoading) return;

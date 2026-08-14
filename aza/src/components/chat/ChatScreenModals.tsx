@@ -241,8 +241,9 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
         recipientIdentifier={payIdentifier ?? id}
         payRequestId={paymentSheet.requestId}
         prefillAmount={paymentSheet.prefillAmount}
+        chatId={chatId}
         onClose={() => setPaymentSheet(s => ({ ...s, visible: false }))}
-        onSuccess={(amount, paidMode, requestId) => {
+        onSuccess={(amount, paidMode, requestId, requestKind) => {
           const settleMsgId = paymentSheet.settleMsgId;
           setPaymentSheet(s => ({ ...s, visible: false }));
           // Requests carry their money-request id so the payer's card can settle
@@ -250,7 +251,12 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
           // for legacy cards keyed by the request message's id) so both sides'
           // request cards flip to Paid (messages are E2EE and can't be edited).
           const payload =
-            paidMode === 'request'
+            // A server-backed request seals only a pointer: its amount and status are
+            // read from the server, so neither side has to infer paid state from a
+            // receipt message that may never arrive.
+            paidMode === 'request' && requestKind === 'chat-request'
+              ? { __paymentRequest: true, id: requestId, amount }
+              : paidMode === 'request'
               ? { __payment: true, amount, mode: 'request', status: 'pending', requestId }
               : paidMode === 'pay' || settleMsgId
                 ? {

@@ -13,6 +13,7 @@ import Button from '../ui/Button';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
+import { ChatPaymentRequestCard } from './ChatPaymentRequestCard';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -548,6 +549,25 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
   const showResend = isMe && isMediaMsg && message.status === 'failed' && !!onResend;
   const docIcon = getDocIcon(message.mimeType);
   const replyInfo = message.replyToMessage;
+
+  // Detect server-backed payment requests. Unlike the older payment cards, only a
+  // pointer is sealed into the thread — the amount and status are read from the server,
+  // so both sides agree without inferring paid state from receipt messages.
+  const paymentRequestData = useMemo(() => {
+    if (typeof message.text === 'string' && message.text.startsWith('{"__paymentRequest":')) {
+      try {
+        const p = JSON.parse(message.text);
+        if (p.__paymentRequest === true && typeof p.id === 'string') {
+          return {
+            id: p.id as string,
+            amount: typeof p.amount === 'number' ? p.amount : undefined,
+            note: typeof p.note === 'string' ? p.note : null,
+          };
+        }
+      } catch {}
+    }
+    return null;
+  }, [message.text]);
 
   // Detect payment messages sent as E2EE JSON text (persisted via sendText)
   const paymentData = useMemo(() => {
@@ -1211,6 +1231,34 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               {message.time}
             </Text>
           </View>
+        ) : paymentRequestData ? (
+          <>
+            {!isMe && (
+              <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
+            )}
+            <TouchableOpacity
+              activeOpacity={1}
+              onLongPress={handleLongPress}
+              delayLongPress={250}
+              style={[
+                styles.bubble,
+                isMe ? styles.bubbleMe : styles.bubbleOther,
+                isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
+                !isMe && { backgroundColor: receivedBubbleBg },
+                groupedBubbleStyle,
+                { paddingHorizontal: 12, paddingVertical: 10 },
+              ]}
+            >
+              {forwardedBadge}
+              {replyPreview}
+              <ChatPaymentRequestCard
+                requestId={paymentRequestData.id}
+                isRequester={isMe}
+                fallbackAmount={paymentRequestData.amount}
+                fallbackNote={paymentRequestData.note}
+              />
+            </TouchableOpacity>
+          </>
         ) : paymentData ? (
           <View style={styles.paymentCard}>
             <View style={styles.paymentBrand}>

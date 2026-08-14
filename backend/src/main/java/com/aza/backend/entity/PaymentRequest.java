@@ -32,8 +32,14 @@ public class PaymentRequest {
     @Column(name = "chat_id", nullable = false)
     private UUID chatId;
 
-    /** The ChatMessage that represents this request in the thread. */
-    @Column(name = "message_id", nullable = false)
+    /**
+     * The client's sealed card for this request, when it has sent one.
+     *
+     * Nullable, and never written by the server: threads are end-to-end encrypted, so
+     * only the client can put a readable card in one. The server records the request;
+     * the client seals a message pointing at it.
+     */
+    @Column(name = "message_id")
     private UUID messageId;
 
     @Column(name = "requester_id", nullable = false)

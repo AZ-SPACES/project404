@@ -1342,6 +1342,14 @@ function previewForSpecialText(text: string): string | null {
     } catch {}
     return '💰 Payment';
   }
+  if (text.startsWith('{"__paymentRequest":')) {
+    try {
+      const p = JSON.parse(text);
+      const amount = typeof p.amount === 'number' ? ` GH¢${p.amount.toFixed(2)}` : '';
+      return `💰 Payment request${amount}`;
+    } catch {}
+    return '💰 Payment request';
+  }
   if (text.startsWith('{"__payment_decline":')) return 'Payment request declined';
   if (text.startsWith('{"__akyede":')) return '🎁 Akyede';
   if (text.startsWith('{"__gif":')) return 'GIF';

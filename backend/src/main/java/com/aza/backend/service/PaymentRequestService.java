@@ -5,13 +5,11 @@ import com.aza.backend.dto.chat.PaymentRequestMessageRequest;
 import com.aza.backend.dto.chat.PaymentRequestResponse;
 import com.aza.backend.dto.websocket.WebSocketEventType;
 import com.aza.backend.entity.Chat;
-import com.aza.backend.entity.ChatMessage;
 import com.aza.backend.entity.PaymentRequest;
 import com.aza.backend.entity.Transaction;
 import com.aza.backend.entity.User;
 import com.aza.backend.entity.Wallet;
 import com.aza.backend.repository.BlockedUserRepository;
-import com.aza.backend.repository.ChatMessageRepository;
 import com.aza.backend.repository.ChatRepository;
 import com.aza.backend.repository.PaymentRequestRepository;
 import com.aza.backend.repository.TransactionRepository;
@@ -39,7 +37,6 @@ import com.aza.backend.exception.AppException;
 public class PaymentRequestService {
 
     private final PaymentRequestRepository paymentRequestRepository;
-    private final ChatMessageRepository chatMessageRepository;
     private final ChatRepository chatRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
@@ -90,10 +87,8 @@ public class PaymentRequestService {
                 ? LocalDateTime.now().plusHours(req.getExpiresInHours())
                 : null;
 
-        // Create PaymentRequest first (messageId will be linked below)
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .chatId(req.getChatId())
-                .messageId(UUID.randomUUID()) // placeholder — updated after a message is saved
                 .requesterId(requester.getId())
                 .payerId(payerId)
                 .amount(req.getAmount())
@@ -104,24 +99,10 @@ public class PaymentRequestService {
 
         paymentRequest = paymentRequestRepository.save(paymentRequest);
 
-        // Create the chat message that represents this request in the thread
-        ChatMessage message = ChatMessage.builder()
-                .chatId(req.getChatId())
-                .senderId(requester.getId())
-                .ciphertext("[payment-request:" + paymentRequest.getId() + "]")
-                .type(ChatMessage.MessageType.PAYMENT_REQUEST)
-                .status(ChatMessage.MessageStatus.SENT)
-                .paymentRequestId(paymentRequest.getId())
-                .build();
-
-        message = chatMessageRepository.save(message);
-
-        // Link the message back to the payment request
-        paymentRequest.setMessageId(message.getId());
-        paymentRequest = paymentRequestRepository.save(paymentRequest);
-
-        chat.setLastMessageAt(LocalDateTime.now());
-        chatRepository.save(chat);
+        // No chat message is written here. Threads are end-to-end encrypted and the
+        // server has no key, so a card it wrote would reach the reader as a failed
+        // decryption rather than a request. The client seals its own card pointing at
+        // this id — the same split Akyede uses.
 
         PaymentRequestResponse response = toResponse(paymentRequest);
 
@@ -137,6 +118,20 @@ public class PaymentRequestService {
         log.info("Payment request {} sent in chat {} by {} to {}",
                 paymentRequest.getId(), req.getChatId(), requester.getId(), payerId);
         return response;
+    }
+
+    /**
+     * Read one request. Only the two people it is between may see it — the card in the
+     * thread is theirs, and a request id is not a licence for anyone else to read it.
+     */
+    @Transactional(readOnly = true)
+    public PaymentRequestResponse getPaymentRequest(User viewer, UUID id) {
+        PaymentRequest pr = paymentRequestRepository.findById(id)
+                .orElseThrow(() -> new AppException("Payment request not found"));
+        if (!pr.getRequesterId().equals(viewer.getId()) && !pr.getPayerId().equals(viewer.getId())) {
+            throw new AppException("Not authorized — this request is not yours");
+        }
+        return toResponse(pr);
     }
 
     // ==================== APPROVE ====================

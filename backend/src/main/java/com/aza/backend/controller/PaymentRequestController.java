@@ -35,7 +35,19 @@ public class PaymentRequestController {
                 .body(ApiResponse.success(paymentRequestService.sendPaymentRequest(user, request)));
     }
 
-    /**
+/**
+     * GET /api/v1/payment-requests/{id}
+     * Status for the card in the thread. Visible only to the two people it is between.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<PaymentRequestResponse>> get(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentRequestService.getPaymentRequest(user, id)));
+    }
+
+        /**
      * POST /api/v1/payment-requests/{id}/approve
      * Payer approves a pending payment request — requires 4-digit passcode.
      */

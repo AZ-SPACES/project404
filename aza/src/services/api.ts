@@ -499,6 +499,52 @@ export const getSentAkyede = (page = 0, size = 20) =>
 export const getReceivedAkyede = (page = 0, size = 20) =>
   api.get(`/api/v1/akyede/received?page=${page}&size=${size}`);
 
+// ── In-chat payment requests ─────────────────────────────────────────────────
+
+/**
+ * A request for money inside a thread.
+ *
+ * The server holds the request and its status; it never writes the card into the
+ * conversation, because threads are end-to-end encrypted and it has no key. The client
+ * creates the request, then seals a card pointing at `id` as an ordinary message — the
+ * same split Akyede uses.
+ */
+export type ChatPaymentRequest = {
+  id: string;
+  chatId: string;
+  requesterId: string;
+  payerId: string;
+  amount: number;
+  currency: string;
+  note?: string | null;
+  status: 'PENDING' | 'PAID' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
+  transactionId?: string | null;
+  expiresAt?: string | null;
+  paidAt?: string | null;
+  declinedAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+};
+
+export const sendChatPaymentRequest = (payload: {
+  chatId: string;
+  amount: number;
+  note?: string;
+  expiresInHours?: number;
+}) => api.post('/api/v1/payment-requests', payload);
+
+export const getChatPaymentRequest = (id: string) =>
+  api.get(`/api/v1/payment-requests/${id}`);
+
+export const approveChatPaymentRequest = (id: string, passcode: string) =>
+  api.post(`/api/v1/payment-requests/${id}/approve`, { passcode });
+
+export const declineChatPaymentRequest = (id: string) =>
+  api.post(`/api/v1/payment-requests/${id}/decline`);
+
+export const cancelChatPaymentRequest = (id: string) =>
+  api.delete(`/api/v1/payment-requests/${id}`);
+
 // ── Bill splitting ───────────────────────────────────────────────────────────
 
 export type SplitParticipant = {
