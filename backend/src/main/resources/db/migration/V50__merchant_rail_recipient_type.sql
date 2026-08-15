@@ -27,6 +27,18 @@ ALTER TABLE transactions
     ALTER COLUMN recipient_type SET DEFAULT 'USER',
     ALTER COLUMN recipient_type SET NOT NULL;
 
+-- Widen the type check before retyping anything through it.
+--
+-- transactions.type carries a CHECK listing the values that existed when the column was
+-- created. MERCHANT_PAYMENT came later, so the retype below fails against it on any
+-- database holding real store sales — and passes on an empty one, which is how this got
+-- as far as it did. Recreated from the current TransactionType enum, which also admits
+-- BILL_PAY and the disbursement types that had the same latent problem waiting.
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;
+ALTER TABLE transactions ADD CONSTRAINT transactions_type_check
+    CHECK (type IN ('TRANSFER', 'REQUEST', 'CASH_IN', 'CASH_OUT',
+                    'MERCHANT_PAYMENT', 'BILL_PAY', 'PAYOUT', 'DISBURSEMENT'));
+
 -- Retype completed store sales that were written as plain TRANSFERs, so statements
 -- and the P2P-vs-merchant volume split stop counting purchases as transfers.
 UPDATE transactions
