@@ -26,6 +26,9 @@ import MyAkyedeScreen from '../features/akyede/screens/MyAkyedeScreen';
 import SplitsScreen from '../features/splits/screens/SplitsScreen';
 import CreateSplitScreen from '../features/splits/screens/CreateSplitScreen';
 import SplitDetailScreen from '../features/splits/screens/SplitDetailScreen';
+import BillsScreen from '../features/bills/screens/BillsScreen';
+import PayBillScreen from '../features/bills/screens/PayBillScreen';
+import BillReceiptScreen from '../features/bills/screens/BillReceiptScreen';
 import { ProfileScreen, AppearanceScreen, NotificationSettingsScreen, SecurityAndPrivacyScreen, AppSecurityScreen, SecureAccountScreen, LogoutEverywhereScreen, DevicesScreen, TwoStepVerificationScreen, TotpSetupScreen, DisableTotpScreen, RecoveryCodesScreen, ManageRecoveryCodesScreen, AccountRecoveryContactsScreen, SmsSetupScreen, DisableSmsScreen, PasskeySetupScreen, DisablePasskeyScreen, AzaAppSetupScreen, ChangePasswordScreen, FindMeByScreen, BillForwardingIntroScreen, BillForwardingDetailsScreen, PersonalDetailsScreen, PersonalInformationScreen, ChangeEmailScreen, ChangePhoneScreen, DeleteAccountScreen} from '../features/profile';
 import { ConnectedAppsScreen } from '../features/profile/securityandprivacy/ConnectedAppsScreen';
 import { PaymentMandatesScreen } from '../features/profile/securityandprivacy/PaymentMandatesScreen';
@@ -96,6 +99,9 @@ export default function AppNavigator() {
       <Stack.Screen name="Splits" component={SplitsScreen} />
       <Stack.Screen name="CreateSplit" component={CreateSplitScreen} />
       <Stack.Screen name="SplitDetail" component={SplitDetailScreen} />
+      <Stack.Screen name="Bills" component={BillsScreen} />
+      <Stack.Screen name="PayBill" component={PayBillScreen} />
+      <Stack.Screen name="BillReceipt" component={BillReceiptScreen} />
       <Stack.Screen name="Details" component={DetailsScreen} options={{ presentation: 'modal' }}/>
       <Stack.Screen name="Spending" component={SpendingScreen} />
       <Stack.Screen name="Withdraw" component={WithdrawScreen} options={{ presentation: 'modal' }}/>

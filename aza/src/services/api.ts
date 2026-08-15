@@ -499,6 +499,65 @@ export const getSentAkyede = (page = 0, size = 20) =>
 export const getReceivedAkyede = (page = 0, size = 20) =>
   api.get(`/api/v1/akyede/received?page=${page}&size=${size}`);
 
+// ── Bill payments ────────────────────────────────────────────────────────────
+
+export type BillerCategory =
+  | 'ELECTRICITY' | 'WATER' | 'AIRTIME' | 'DATA'
+  | 'TV' | 'INTERNET' | 'GOVERNMENT' | 'INSURANCE' | 'EDUCATION';
+
+export type Biller = {
+  slug: string;
+  name: string;
+  category: BillerCategory;
+  logoUrl?: string | null;
+  /** What to call the field the payer types into — "Meter number", "Phone number". */
+  accountLabel: string;
+  minAmount: number;
+  maxAmount?: number | null;
+  /** True when the biller can confirm who an account belongs to before paying. */
+  supportsNameLookup: boolean;
+};
+
+export type BillPayment = {
+  id: string;
+  billerSlug?: string | null;
+  billerName: string;
+  billerLogoUrl?: string | null;
+  accountNumber: string;
+  accountName?: string | null;
+  amount: number;
+  currency: string;
+  /** PENDING means debited but the biller hasn't confirmed yet — not a failure. */
+  status: 'PENDING' | 'COMPLETED' | 'REFUNDED' | 'FAILED';
+  /** What the biller handed back — a prepaid meter token, a receipt number. */
+  token?: string | null;
+  providerReference?: string | null;
+  failureReason?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+};
+
+export const getBillers = (category?: BillerCategory) =>
+  api.get(`/api/v1/bills/billers${category ? `?category=${category}` : ''}`);
+
+/** Resolve the account holder's name before any money moves. */
+export const lookupBillAccount = (slug: string, account: string) =>
+  api.get(`/api/v1/bills/billers/${slug}/lookup?account=${encodeURIComponent(account)}`);
+
+export const payBill = (payload: {
+  billerSlug: string;
+  accountNumber: string;
+  accountName?: string;
+  amount: number;
+  passcode: string;
+  idempotencyKey: string;
+}) => api.post('/api/v1/bills/pay', payload);
+
+export const getBillPayments = (page = 0, size = 20) =>
+  api.get(`/api/v1/bills?page=${page}&size=${size}`);
+
+export const getBillPayment = (id: string) => api.get(`/api/v1/bills/${id}`);
+
 // ── In-chat payment requests ─────────────────────────────────────────────────
 
 /**
