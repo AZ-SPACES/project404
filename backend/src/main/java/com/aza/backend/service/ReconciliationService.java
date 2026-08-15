@@ -43,6 +43,7 @@ public class ReconciliationService {
     private final StaffAlertService staffAlertService;
     private final com.aza.backend.repository.PaymentHoldRepository paymentHoldRepository;
     private final com.aza.backend.repository.RedEnvelopeRepository redEnvelopeRepository;
+    private final com.aza.backend.repository.BillPaymentRepository billPaymentRepository;
 
     // ── Safeguarding ──────────────────────────────────────────────────────────
 
@@ -107,8 +108,12 @@ public class ReconciliationService {
         // Money in open Akyede envelopes is held on exactly the same terms — debited
         // from the sender, credited to nobody until claimed or refunded — so it belongs
         // in the same line rather than being quietly absent from the obligation.
+        // A bill payment whose provider has not answered is held on the same terms: the
+        // wallet is already debited and the money has reached nobody Aza can name, so
+        // leaving it out would show a surplus exactly the size of the limbo.
         BigDecimal heldFloat = orZero(paymentHoldRepository.sumActiveHeldFloat())
-                .add(orZero(redEnvelopeRepository.sumOpenEnvelopeFloat()));
+                .add(orZero(redEnvelopeRepository.sumOpenEnvelopeFloat()))
+                .add(orZero(billPaymentRepository.sumPendingBillFloat()));
         BigDecimal variance = safeguardingBalance
                 .subtract(customerFloat)
                 .subtract(merchantFloat)

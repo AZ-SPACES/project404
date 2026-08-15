@@ -29,17 +29,19 @@ class SafeguardingHeldFloatTest {
     private final StaffAlertService staffAlertService = mock(StaffAlertService.class);
     private final PaymentHoldRepository paymentHoldRepository = mock(PaymentHoldRepository.class);
     private final RedEnvelopeRepository redEnvelopeRepository = mock(RedEnvelopeRepository.class);
+    private final BillPaymentRepository billPaymentRepository = mock(BillPaymentRepository.class);
 
     private final ReconciliationService service = new ReconciliationService(
             snapshotRepository, breakRepository, walletRepository, merchantRepository,
             transactionRepository, auditService, staffAlertService, paymentHoldRepository,
-            redEnvelopeRepository);
+            redEnvelopeRepository, billPaymentRepository);
 
     @BeforeEach
     void stubs() {
         when(snapshotRepository.save(any(SafeguardingSnapshot.class))).thenAnswer(i -> i.getArgument(0));
         when(walletRepository.sumFloatForAgentStatus(any())).thenReturn(BigDecimal.ZERO);
         when(redEnvelopeRepository.sumOpenEnvelopeFloat()).thenReturn(BigDecimal.ZERO);
+        when(billPaymentRepository.sumPendingBillFloat()).thenReturn(BigDecimal.ZERO);
     }
 
     private User admin() {
