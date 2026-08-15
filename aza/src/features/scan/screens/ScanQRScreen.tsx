@@ -17,6 +17,7 @@ import { useContactStore } from '../../../store/contactStore';
 import { getPublicMerchant, reportHandle } from '../../../services/api';
 import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
+import { useDisplayContext } from '../../../providers/DisplayProvider';
 
 const { width } = Dimensions.get('window');
 const FRAME_SIZE = width * 0.7;
@@ -34,7 +35,8 @@ type PendingPayee = {
 
 const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { mainTabNav } = useDisplayContext();
+  const styles = React.useMemo(() => createStyles(Colors, mainTabNav), [Colors, mainTabNav]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -775,7 +777,7 @@ const ScanQRScreen = ({ onToggle }: { onToggle: () => void }) => {
   );
 };
 
-function createStyles(Colors: ThemeColors) {
+function createStyles(Colors: ThemeColors, mainTabNav: string) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
   container: { 
@@ -893,7 +895,7 @@ function createStyles(Colors: ThemeColors) {
   },
   bottomNav: {
     position: 'absolute',
-    bottom: 100,
+    bottom: mainTabNav === 'native' ? 130 : 100,
     width: '100%',
     alignItems: 'center'
   },

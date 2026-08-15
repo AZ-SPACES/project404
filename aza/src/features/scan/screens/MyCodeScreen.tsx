@@ -16,12 +16,14 @@ import { useProfile } from '../../../providers/ProfileProvider';
 import { useToast } from '../../../providers/ToastProvider';
 import { api } from '../../../services/api';
 import { BackButton } from '../../../components/ui/BackButton';
+import { useDisplayContext } from '../../../providers/DisplayProvider';
 
 const { width } = Dimensions.get('window');
 
 const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   const { colors: Colors } = useAppTheme();
-  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { mainTabNav } = useDisplayContext();
+  const styles = React.useMemo(() => createStyles(Colors, mainTabNav), [Colors, mainTabNav]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { displayName, profileImageUri, handle } = useProfile();
   const { showToast } = useToast();
@@ -239,7 +241,7 @@ const MyCodeScreen = ({ onToggle }: { onToggle: () => void }) => {
   );
 };
 
-function createStyles(Colors: ThemeColors) {
+function createStyles(Colors: ThemeColors, mainTabNav: string) {
   const isDark = Colors.isDark;
   return StyleSheet.create({
   container: {
@@ -397,7 +399,7 @@ function createStyles(Colors: ThemeColors) {
   },
   bottomNav: {
     position: 'absolute',
-    bottom: Spacing.xl,
+    bottom: mainTabNav === 'native' ? 130 : Spacing.xl,
     left: 0,
     right: 0,
     alignItems: 'center' 
