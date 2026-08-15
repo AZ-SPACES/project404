@@ -20,8 +20,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_staff_roles_user_role_active ON staff_roles
 -- after this; authorization reads staff_roles.
 -- Guarded so re-running (baseline replay on an existing DB) cannot duplicate an
 -- active ADMIN grant, which would violate uq_staff_roles_user_role_active.
-INSERT INTO staff_roles (user_id, role)
-SELECT id, 'ADMIN' FROM users u
+--
+-- id and granted_at are supplied rather than left to the column defaults above. On a
+-- database that adopted its schema from ddl-auto, staff_roles already exists and was
+-- built by Hibernate — which generates ids and timestamps in Java and so declares both
+-- columns NOT NULL with no default at all. The CREATE TABLE above is then skipped as
+-- "already exists", and an insert that relies on those defaults fails on a null id.
+INSERT INTO staff_roles (id, user_id, role, granted_at)
+SELECT gen_random_uuid(), u.id, 'ADMIN', now() FROM users u
 WHERE u.role = 'ADMIN'
   AND NOT EXISTS (
       SELECT 1 FROM staff_roles sr
