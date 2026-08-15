@@ -26,6 +26,7 @@ import MyAkyedeScreen from '../features/akyede/screens/MyAkyedeScreen';
 import SplitsScreen from '../features/splits/screens/SplitsScreen';
 import CreateSplitScreen from '../features/splits/screens/CreateSplitScreen';
 import SplitDetailScreen from '../features/splits/screens/SplitDetailScreen';
+import RecurringSplitsScreen from '../features/splits/screens/RecurringSplitsScreen';
 import BillsScreen from '../features/bills/screens/BillsScreen';
 import PayBillScreen from '../features/bills/screens/PayBillScreen';
 import BillReceiptScreen from '../features/bills/screens/BillReceiptScreen';
@@ -99,6 +100,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Splits" component={SplitsScreen} />
       <Stack.Screen name="CreateSplit" component={CreateSplitScreen} />
       <Stack.Screen name="SplitDetail" component={SplitDetailScreen} />
+      <Stack.Screen name="RecurringSplits" component={RecurringSplitsScreen} />
       <Stack.Screen name="Bills" component={BillsScreen} />
       <Stack.Screen name="PayBill" component={PayBillScreen} />
       <Stack.Screen name="BillReceipt" component={BillReceiptScreen} />

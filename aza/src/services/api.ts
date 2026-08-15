@@ -612,7 +612,7 @@ export type SplitParticipant = {
   handle?: string | null;
   avatarUrl?: string | null;
   amountOwed: number;
-  status: 'PENDING' | 'PAID' | 'DECLINED' | 'WAIVED' | 'CANCELLED';
+  status: 'PENDING' | 'PAID' | 'DECLINED' | 'WAIVED' | 'CANCELLED' | 'NETTED';
   organiser: boolean;
   /**
    * The money request this person pays their share through — the same request the
@@ -627,7 +627,7 @@ export type Split = {
   description: string;
   totalAmount: number;
   currency: string;
-  splitMode: 'EQUAL' | 'EXACT';
+  splitMode: 'EQUAL' | 'EXACT' | 'SHARES' | 'PERCENTAGE';
   status: 'OPEN' | 'SETTLED' | 'CANCELLED';
   creatorId: string;
   creatorName: string;
@@ -646,11 +646,76 @@ export type Split = {
   participants: SplitParticipant[];
 };
 
+export type SplitBalance = {
+  userId: string;
+  name: string;
+  handle?: string | null;
+  avatarUrl?: string | null;
+  theyOweYou: number;
+  youOweThem: number;
+  /** Positive means they owe you; negative means you owe them. */
+  net: number;
+  shareCount: number;
+  /** A settlement already waiting between the two of you, if there is one. */
+  openSettlementId?: string | null;
+};
+
+export type RecurringSplit = {
+  id: string;
+  description: string;
+  totalAmount: number;
+  currency: string;
+  splitMode: 'EQUAL' | 'EXACT' | 'SHARES' | 'PERCENTAGE';
+  frequency: 'WEEKLY' | 'MONTHLY';
+  dayOfPeriod: number;
+  nextRunOn: string;
+  lastRunOn?: string | null;
+  active: boolean;
+  participants: {
+    userId: string;
+    name: string;
+    handle?: string | null;
+    avatarUrl?: string | null;
+    amount?: number | null;
+    shares?: number | null;
+    percentage?: number | null;
+  }[];
+};
+
+/** Where you stand with everyone, netted both ways. */
+export const getSplitBalances = () => api.get('/api/v1/splits/balances');
+
+/** Collapse every outstanding share with one person into a single request. */
+export const settleUpWith = (userId: string) =>
+  api.post(`/api/v1/splits/balances/${userId}/settle`);
+
+export const getRecurringSplits = () => api.get('/api/v1/splits/recurring');
+
+export const createRecurringSplit = (
+  payload: {
+    totalAmount: number;
+    description: string;
+    splitMode?: 'EQUAL' | 'EXACT' | 'SHARES' | 'PERCENTAGE';
+    participants: { identifier: string; amount?: number; shares?: number; percentage?: number }[];
+    idempotencyKey: string;
+  },
+  frequency: 'WEEKLY' | 'MONTHLY',
+  dayOfPeriod: number,
+) => api.post(`/api/v1/splits/recurring?frequency=${frequency}&dayOfPeriod=${dayOfPeriod}`, payload);
+
+export const setRecurringSplitActive = (id: string, active: boolean) =>
+  api.post(`/api/v1/splits/recurring/${id}/active?active=${active}`);
+
+export const deleteRecurringSplit = (id: string) =>
+  api.delete(`/api/v1/splits/recurring/${id}`);
+
 export const createSplit = (payload: {
   totalAmount: number;
   description: string;
-  splitMode?: 'EQUAL' | 'EXACT';
-  participants: { identifier: string; amount?: number }[];
+  splitMode?: 'EQUAL' | 'EXACT' | 'SHARES' | 'PERCENTAGE';
+  participants: { identifier: string; amount?: number; shares?: number; percentage?: number }[];
+  /** Parts the organiser carries in a SHARES split. */
+  organiserShares?: number;
   idempotencyKey: string;
 }) => api.post('/api/v1/splits', payload);
 

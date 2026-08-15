@@ -690,6 +690,13 @@ public class ExpenseSplitService {
         if (participant.getStatus() == ExpenseSplitParticipant.Status.PAID) {
             throw new AppException("ALREADY_PAID", "They already paid their share.", HttpStatus.CONFLICT);
         }
+        if (participant.getStatus() == ExpenseSplitParticipant.Status.NETTED) {
+            // The settlement is already asking for this money as part of a larger sum.
+            // Forgiving it here would leave that settlement collecting for a share
+            // nobody owes any more.
+            throw new AppException("SHARE_NETTED",
+                    "That share is in a settle-up. Cancel the settle-up first.", HttpStatus.CONFLICT);
+        }
 
         withdrawLeg(participant);
         participant.setStatus(ExpenseSplitParticipant.Status.WAIVED);

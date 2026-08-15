@@ -85,6 +85,7 @@ export type RootStackParamList = {
   Splits: undefined;
   CreateSplit: undefined;
   SplitDetail: { id: string };
+  RecurringSplits: undefined;
 
   // Bill payments — utilities, airtime, TV, government fees.
   Bills: undefined;

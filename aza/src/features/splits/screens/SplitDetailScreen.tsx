@@ -29,6 +29,8 @@ const STATUS_COPY: Record<SplitParticipant['status'], string> = {
   DECLINED: 'Declined',
   WAIVED: 'Forgiven',
   CANCELLED: 'Withdrawn',
+  // Rolled into a settle-up with the organiser: still owed, just consolidated.
+  NETTED: 'In a settle-up',
 };
 
 export default function SplitDetailScreen({ navigation, route }: Props) {
@@ -161,7 +163,10 @@ export default function SplitDetailScreen({ navigation, route }: Props) {
               </Text>
             </View>
             <Text style={styles.amount}>GH₵ {Number(p.amountOwed).toFixed(2)}</Text>
-            {split.organisedByMe && open && !p.organiser && p.status !== 'PAID' && p.status !== 'WAIVED' && (
+            {/* A netted share is being collected by a settle-up; forgiving it here would
+                leave that settlement asking for money nobody owes. */}
+            {split.organisedByMe && open && !p.organiser
+              && p.status !== 'PAID' && p.status !== 'WAIVED' && p.status !== 'NETTED' && (
               <TouchableOpacity
                 onPress={() => act(() => waiveSplitShare(split.id, p.userId), 'Could not forgive that share.')}
                 accessibilityLabel={`Forgive ${p.name}'s share`}

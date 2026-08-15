@@ -620,6 +620,18 @@ class ExpenseSplitServiceTest {
     }
 
     @Test
+    void forgivingANettedShare_isRejected() {
+        SplitResponse response = service.create(creator(), exact("100.00", kofiId, "50.00"));
+        ExpenseSplit split = splitOf(UUID.fromString(response.getId()));
+        service.settleUp(creator(), kofiId);
+
+        AppException e = assertThrows(AppException.class,
+                () -> service.waive(creator(), split.getId(), kofiId));
+        // The settle-up is already collecting this money as part of a larger sum.
+        assertEquals("SHARE_NETTED", e.getCode());
+    }
+
+    @Test
     void settleUp_withNothingOutstanding_isRejected() {
         AppException e = assertThrows(AppException.class, () -> service.settleUp(creator(), kofiId));
         assertEquals("NOTHING_TO_SETTLE", e.getCode());
