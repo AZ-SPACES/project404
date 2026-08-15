@@ -40,7 +40,6 @@ CREATE INDEX IF NOT EXISTS idx_red_envelopes_sender ON red_envelopes (sender_id)
 CREATE INDEX IF NOT EXISTS idx_red_envelopes_recipient ON red_envelopes (recipient_id);
 CREATE INDEX IF NOT EXISTS idx_red_envelopes_status_expires ON red_envelopes (status, expires_at);
 
--- No chat_messages column is added here. A gift card in a thread is E2EE JSON the client
--- seals and sends as an ordinary message — the server never links a message to a gift, so
--- a column for it would only ever be null. It also happens that no migration creates
--- chat_messages at all, so altering it here would fail outright on a fresh database.
+-- No message column is added here. A gift card in a thread is E2EE JSON the client seals
+-- and sends as an ordinary message — the server never links a message to a gift, so a
+-- column for it would only ever be null.
