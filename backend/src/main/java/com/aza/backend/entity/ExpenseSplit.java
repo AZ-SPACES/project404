@@ -78,8 +78,17 @@ public class ExpenseSplit {
     private LocalDateTime cancelledAt;
 
     public enum SplitMode {
+        /** The bill divided evenly. The organiser absorbs the rounding. */
         EQUAL,
-        EXACT
+        /** The organiser set each person's amount by hand. */
+        EXACT,
+        /**
+         * Weighted by shares — one part for the person who had a starter, three for the
+         * person who drank all evening. The organiser holds parts too.
+         */
+        SHARES,
+        /** Weighted by percentage. The organiser keeps whatever is left over. */
+        PERCENTAGE
     }
 
     public enum Status {

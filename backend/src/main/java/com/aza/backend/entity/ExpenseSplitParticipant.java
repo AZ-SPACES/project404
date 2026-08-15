@@ -56,6 +56,9 @@ public class ExpenseSplitParticipant {
     /** The money request this person pays their share through. Null for the organiser. */
     private UUID requestTransactionId;
 
+    /** Set when this share was rolled into a settlement with the organiser. */
+    private UUID settlementId;
+
     private LocalDateTime settledAt;
 
     @CreationTimestamp
@@ -71,11 +74,19 @@ public class ExpenseSplitParticipant {
         /** The organiser forgave this share. It counts as settled. */
         WAIVED,
         /** The split was cancelled before this share was paid. */
-        CANCELLED
+        CANCELLED,
+        /**
+         * Consolidated into a settlement with the organiser — not forgiven, not paid.
+         * It becomes {@link #PAID} when that settlement is.
+         */
+        NETTED
     }
 
     /** True when this share no longer needs chasing. */
     public boolean isClosed() {
+        // NETTED is deliberately absent. A share rolled into a settlement is consolidated,
+        // not settled — the money has not moved yet — so its split stays open until the
+        // settlement is paid and the share becomes PAID with it.
         return status == Status.PAID || status == Status.WAIVED || status == Status.CANCELLED;
     }
 }

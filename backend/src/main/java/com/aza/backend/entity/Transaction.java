@@ -86,6 +86,12 @@ public class Transaction {
      */
     private UUID splitId;
 
+    /**
+     * Set when this request is several debts between two people netted into one.
+     * Settling it settles every share it covers.
+     */
+    private UUID settlementId;
+
     /** What kind of account {@link #recipientId} names. */
     public enum RecipientType { USER, MERCHANT }
 

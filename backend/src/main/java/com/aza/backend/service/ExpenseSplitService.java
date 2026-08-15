@@ -1,5 +1,6 @@
 package com.aza.backend.service;
 
+import com.aza.backend.dto.split.BalanceResponse;
 import com.aza.backend.dto.split.CreateSplitRequest;
 import com.aza.backend.dto.split.SplitResponse;
 import com.aza.backend.entity.*;
@@ -40,6 +41,7 @@ public class ExpenseSplitService {
 
     private final ExpenseSplitRepository splitRepository;
     private final ExpenseSplitParticipantRepository participantRepository;
+    private final SplitSettlementRepository settlementRepository;
     private final TransactionRepository transactionRepository;
     private final BlockedUserRepository blockedUserRepository;
     private final UserRepository userRepository;
@@ -77,9 +79,12 @@ public class ExpenseSplitService {
         // so the arithmetic adds up, and never asked for, because they already paid.
         int shareCount = others.size() + 1;
 
-        List<BigDecimal> shares = mode == ExpenseSplit.SplitMode.EQUAL
-                ? equalShares(total, shareCount)
-                : exactShares(total, req.getParticipants(), others.size());
+        List<BigDecimal> shares = switch (mode) {
+            case EQUAL -> equalShares(total, shareCount);
+            case EXACT -> exactShares(total, req.getParticipants(), others.size());
+            case SHARES -> weightedShares(total, req, others.size());
+            case PERCENTAGE -> percentageShares(total, req, others.size());
+        };
 
         ExpenseSplit split = splitRepository.save(ExpenseSplit.builder()
                 .creatorId(creator.getId())
@@ -217,6 +222,91 @@ public class ExpenseSplitService {
         return shares;
     }
 
+    /**
+     * Divide by weight — one part for the person who had a starter, three for the person
+     * who drank all evening.
+     *
+     * Every part is worth the same, and the organiser holds parts too. The pesewas that
+     * will not divide go to them for the same reason they do in an even split: the person
+     * who paid the bill is the one person who cannot argue about it.
+     */
+    private List<BigDecimal> weightedShares(BigDecimal total, CreateSplitRequest req, int count) {
+        int organiserShares = req.getOrganiserShares() != null ? req.getOrganiserShares() : 1;
+        long totalShares = organiserShares;
+
+        int[] weights = new int[count];
+        for (int i = 0; i < count; i++) {
+            Integer shares = req.getParticipants().get(i).getShares();
+            if (shares == null || shares < 1) {
+                throw new AppException("SHARES_REQUIRED",
+                        "A weighted split needs a share count for everyone.", HttpStatus.BAD_REQUEST);
+            }
+            weights[i] = shares;
+            totalShares += shares;
+        }
+        if (totalShares <= 0) {
+            throw new AppException("SHARES_REQUIRED",
+                    "Somebody has to carry a share of it.", HttpStatus.BAD_REQUEST);
+        }
+
+        BigDecimal perShare = total.divide(BigDecimal.valueOf(totalShares), 2, RoundingMode.DOWN);
+        List<BigDecimal> shares = new ArrayList<>(count + 1);
+        shares.add(BigDecimal.ZERO); // organiser's slot
+
+        BigDecimal handedOut = BigDecimal.ZERO;
+        for (int i = 0; i < count; i++) {
+            BigDecimal owed = perShare.multiply(BigDecimal.valueOf(weights[i]));
+            if (owed.compareTo(MIN_SHARE) < 0) {
+                throw new AppException("AMOUNT_TOO_SMALL",
+                        "GHS " + total.toPlainString() + " doesn\u2019t stretch across "
+                                + totalShares + " shares \u2014 everyone needs at least GHS 0.01.",
+                        HttpStatus.BAD_REQUEST);
+            }
+            handedOut = handedOut.add(owed);
+            shares.add(owed);
+        }
+        shares.set(0, total.subtract(handedOut));
+        return shares;
+    }
+
+    /**
+     * Divide by percentage. The organiser keeps whatever the named percentages leave, so
+     * the arithmetic cannot drift away from the bill even when the numbers are rounded.
+     */
+    private List<BigDecimal> percentageShares(BigDecimal total, CreateSplitRequest req, int count) {
+        List<BigDecimal> shares = new ArrayList<>(count + 1);
+        shares.add(BigDecimal.ZERO); // organiser's slot
+
+        BigDecimal namedPercent = BigDecimal.ZERO;
+        BigDecimal handedOut = BigDecimal.ZERO;
+
+        for (int i = 0; i < count; i++) {
+            BigDecimal percent = req.getParticipants().get(i).getPercentage();
+            if (percent == null) {
+                throw new AppException("PERCENTAGE_REQUIRED",
+                        "A percentage split needs a percentage for everyone.", HttpStatus.BAD_REQUEST);
+            }
+            namedPercent = namedPercent.add(percent);
+            BigDecimal owed = total.multiply(percent)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN);
+            if (owed.compareTo(MIN_SHARE) < 0) {
+                throw new AppException("AMOUNT_TOO_SMALL",
+                        percent.toPlainString() + "% of GHS " + total.toPlainString()
+                                + " rounds to nothing.", HttpStatus.BAD_REQUEST);
+            }
+            handedOut = handedOut.add(owed);
+            shares.add(owed);
+        }
+
+        if (namedPercent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new AppException("PERCENTAGES_EXCEED_TOTAL",
+                    "Those percentages add up to " + namedPercent.toPlainString()
+                            + "%, more than the whole bill.", HttpStatus.BAD_REQUEST);
+        }
+        shares.set(0, total.subtract(handedOut));
+        return shares;
+    }
+
     // ==================== PARTICIPANTS ====================
 
     private List<User> resolveParticipants(User creator, List<CreateSplitRequest.Participant> asked) {
@@ -248,6 +338,256 @@ public class ExpenseSplitService {
         return resolved;
     }
 
+    // ==================== NETTING ====================
+
+    /**
+     * Where the user stands with everyone they still owe or are owed by.
+     *
+     * Debts between two people run in both directions more often than not — you paid for
+     * dinner, they paid for the taxi — and a list of individual shares hides that. This
+     * shows the difference, which is the only number either of them actually has to act on.
+     */
+    @Transactional(readOnly = true)
+    public List<BalanceResponse> balances(User viewer) {
+        Map<UUID, BigDecimal> owedToViewer = new HashMap<>();
+        Map<UUID, BigDecimal> owedByViewer = new HashMap<>();
+        Map<UUID, Integer> shareCounts = new HashMap<>();
+
+        for (Object[] row : participantRepository.findAllOwedToUser(viewer.getId())) {
+            UUID other = (UUID) row[0];
+            ExpenseSplitParticipant p = (ExpenseSplitParticipant) row[1];
+            owedToViewer.merge(other, p.getAmountOwed(), BigDecimal::add);
+            shareCounts.merge(other, 1, Integer::sum);
+        }
+        for (Object[] row : participantRepository.findAllOwedByUser(viewer.getId())) {
+            UUID other = (UUID) row[0];
+            ExpenseSplitParticipant p = (ExpenseSplitParticipant) row[1];
+            owedByViewer.merge(other, p.getAmountOwed(), BigDecimal::add);
+            shareCounts.merge(other, 1, Integer::sum);
+        }
+
+        Set<UUID> counterparties = new HashSet<>();
+        counterparties.addAll(owedToViewer.keySet());
+        counterparties.addAll(owedByViewer.keySet());
+
+        List<BalanceResponse> balances = new ArrayList<>();
+        for (UUID other : counterparties) {
+            BigDecimal theyOwe = owedToViewer.getOrDefault(other, BigDecimal.ZERO);
+            BigDecimal youOwe = owedByViewer.getOrDefault(other, BigDecimal.ZERO);
+            User u = userRepository.findById(other).orElse(null);
+            String openSettlement = settlementRepository.findOpenBetween(viewer.getId(), other)
+                    .stream().findFirst().map(st -> st.getId().toString()).orElse(null);
+
+            balances.add(BalanceResponse.builder()
+                    .userId(other.toString())
+                    .name(u != null ? displayName(u) : "Someone")
+                    .handle(u != null ? u.getUsername() : null)
+                    .avatarUrl(u != null ? u.getProfileImageUrl() : null)
+                    .theyOweYou(theyOwe)
+                    .youOweThem(youOwe)
+                    .net(theyOwe.subtract(youOwe))
+                    .shareCount(shareCounts.getOrDefault(other, 0))
+                    .openSettlementId(openSettlement)
+                    .build());
+        }
+        balances.sort((a, b) -> b.getNet().abs().compareTo(a.getNet().abs()));
+        return balances;
+    }
+
+    /**
+     * Collapse everything outstanding between two people into a single request.
+     *
+     * Either of them may do this; who ends up owing falls out of the arithmetic rather
+     * than out of who pressed the button. The shares it covers are marked NETTED — still
+     * outstanding, just consolidated — so nothing is quietly forgiven, and they become
+     * paid only when the settlement does.
+     */
+    @Transactional
+    public BalanceResponse settleUp(User viewer, UUID counterpartyId) {
+        if (viewer.getId().equals(counterpartyId)) {
+            throw new AppException("SELF_SETTLEMENT",
+                    "You can\u2019t settle up with yourself.", HttpStatus.BAD_REQUEST);
+        }
+        if (!settlementRepository.findOpenBetween(viewer.getId(), counterpartyId).isEmpty()) {
+            throw new AppException("SETTLEMENT_OPEN",
+                    "There\u2019s already a settlement waiting between you two.", HttpStatus.CONFLICT);
+        }
+
+        User other = userRepository.findById(counterpartyId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "No such person.", HttpStatus.NOT_FOUND));
+
+        List<ExpenseSplitParticipant> viewerOwes =
+                participantRepository.findOutstanding(counterpartyId, viewer.getId());
+        List<ExpenseSplitParticipant> otherOwes =
+                participantRepository.findOutstanding(viewer.getId(), counterpartyId);
+
+        if (viewerOwes.isEmpty() && otherOwes.isEmpty()) {
+            throw new AppException("NOTHING_TO_SETTLE",
+                    "Nothing outstanding between you two.", HttpStatus.BAD_REQUEST);
+        }
+
+        BigDecimal viewerTotal = sum(viewerOwes);
+        BigDecimal otherTotal = sum(otherOwes);
+        BigDecimal net = viewerTotal.subtract(otherTotal);
+
+        UUID creditorId = net.signum() > 0 ? counterpartyId : viewer.getId();
+        UUID debtorId = net.signum() > 0 ? viewer.getId() : counterpartyId;
+        BigDecimal amount = net.abs();
+
+        SplitSettlement settlement = settlementRepository.save(SplitSettlement.builder()
+                .creditorId(creditorId)
+                .debtorId(debtorId)
+                .amount(amount)
+                .status(amount.signum() == 0 ? SplitSettlement.Status.PAID : SplitSettlement.Status.PENDING)
+                .settledAt(amount.signum() == 0 ? LocalDateTime.now() : null)
+                .build());
+
+        List<ExpenseSplitParticipant> covered = new ArrayList<>();
+        covered.addAll(viewerOwes);
+        covered.addAll(otherOwes);
+
+        for (ExpenseSplitParticipant p : covered) {
+            withdrawLeg(p);
+            p.setSettlementId(settlement.getId());
+            // When the debts cancel exactly, nobody owes anything and they are simply done.
+            p.setStatus(amount.signum() == 0
+                    ? ExpenseSplitParticipant.Status.PAID
+                    : ExpenseSplitParticipant.Status.NETTED);
+            if (amount.signum() == 0) p.setSettledAt(LocalDateTime.now());
+            participantRepository.save(p);
+        }
+
+        if (amount.signum() == 0) {
+            // Everything offset. No request needed, and every split it touched can close.
+            rollUpSplitsOf(covered);
+            log.info("Settlement between {} and {} cancelled out exactly", viewer.getId(), counterpartyId);
+        } else {
+            User creditor = creditorId.equals(viewer.getId()) ? viewer : other;
+            User debtor = debtorId.equals(viewer.getId()) ? viewer : other;
+            Transaction leg = transactionRepository.save(Transaction.builder()
+                    .senderId(debtorId)
+                    .recipientId(creditorId)
+                    .recipientType(Transaction.RecipientType.USER)
+                    .amount(amount)
+                    .note("Settling up with " + displayName(creditor))
+                    .type(Transaction.TransactionType.REQUEST)
+                    .status(Transaction.TransactionStatus.PENDING)
+                    .isRequest(true)
+                    .requestedAt(LocalDateTime.now())
+                    .settlementId(settlement.getId())
+                    .idempotencyKey("settlement:" + settlement.getId())
+                    .build());
+
+            settlement.setRequestTransactionId(leg.getId());
+            settlementRepository.save(settlement);
+
+            notificationService.sendNotification(
+                    debtorId,
+                    Notification.NotificationType.MONEY_REQUESTED,
+                    "Settle up with " + displayName(creditor),
+                    covered.size() + " shares came to GHS " + amount.toPlainString() + " owed.",
+                    Map.of("settlementId", settlement.getId().toString(),
+                            "requestId", leg.getId().toString()),
+                    amount);
+
+            log.info("Settlement {}: {} owes {} GHS {} across {} shares",
+                    settlement.getId(), debtorId, creditorId, amount, covered.size());
+        }
+
+        return balances(viewer).stream()
+                .filter(b -> b.getUserId().equals(counterpartyId.toString()))
+                .findFirst()
+                .orElse(BalanceResponse.builder()
+                        .userId(counterpartyId.toString())
+                        .name(displayName(other))
+                        .theyOweYou(BigDecimal.ZERO)
+                        .youOweThem(BigDecimal.ZERO)
+                        .net(BigDecimal.ZERO)
+                        .shareCount(0)
+                        .build());
+    }
+
+    /** What happened to a netted settlement, once its single request is answered. */
+    private void onSettlementSettled(Transaction leg) {
+        SplitSettlement settlement = settlementRepository.findByIdForUpdate(leg.getSettlementId()).orElse(null);
+        if (settlement == null || settlement.getStatus() != SplitSettlement.Status.PENDING) return;
+
+        List<ExpenseSplitParticipant> covered =
+                participantRepository.findAllBySettlementId(settlement.getId());
+
+        switch (leg.getStatus()) {
+            case COMPLETED -> {
+                settlement.setStatus(SplitSettlement.Status.PAID);
+                settlement.setSettledAt(LocalDateTime.now());
+                for (ExpenseSplitParticipant p : covered) {
+                    p.setStatus(ExpenseSplitParticipant.Status.PAID);
+                    p.setSettledAt(LocalDateTime.now());
+                    participantRepository.save(p);
+                }
+                rollUpSplitsOf(covered);
+                log.info("Settlement {} paid, closing {} shares", settlement.getId(), covered.size());
+            }
+            case DECLINED, CANCELLED, FAILED, REVERSED -> {
+                // Refusing to settle up is not refusing the debts. Each share goes back to
+                // being asked for on its own rather than quietly disappearing.
+                settlement.setStatus(SplitSettlement.Status.CANCELLED);
+                settlement.setSettledAt(LocalDateTime.now());
+                for (ExpenseSplitParticipant p : covered) {
+                    reissue(p);
+                }
+                log.info("Settlement {} refused, {} shares asked for individually",
+                        settlement.getId(), covered.size());
+            }
+            default -> {
+                return;
+            }
+        }
+        settlementRepository.save(settlement);
+    }
+
+    /** Put a share back the way it was before it was netted. */
+    private void reissue(ExpenseSplitParticipant participant) {
+        ExpenseSplit split = splitRepository.findById(participant.getSplitId()).orElse(null);
+        User creator = split == null ? null : userRepository.findById(split.getCreatorId()).orElse(null);
+        User debtor = userRepository.findById(participant.getUserId()).orElse(null);
+
+        participant.setSettlementId(null);
+        participant.setStatus(ExpenseSplitParticipant.Status.PENDING);
+
+        if (split != null && creator != null && debtor != null) {
+            // A fresh key, because the original leg was cancelled and its own is taken.
+            Transaction leg = transactionRepository.save(Transaction.builder()
+                    .senderId(debtor.getId())
+                    .recipientId(creator.getId())
+                    .recipientType(Transaction.RecipientType.USER)
+                    .amount(participant.getAmountOwed())
+                    .note(split.getDescription())
+                    .type(Transaction.TransactionType.REQUEST)
+                    .status(Transaction.TransactionStatus.PENDING)
+                    .isRequest(true)
+                    .requestedAt(LocalDateTime.now())
+                    .splitId(split.getId())
+                    .idempotencyKey("split:" + split.getId() + ":" + debtor.getId()
+                            + ":" + UUID.randomUUID())
+                    .build());
+            participant.setRequestTransactionId(leg.getId());
+        }
+        participantRepository.save(participant);
+    }
+
+    private void rollUpSplitsOf(List<ExpenseSplitParticipant> participants) {
+        participants.stream()
+                .map(ExpenseSplitParticipant::getSplitId)
+                .distinct()
+                .forEach(splitId -> splitRepository.findByIdForUpdate(splitId).ifPresent(this::rollUp));
+    }
+
+    private static BigDecimal sum(List<ExpenseSplitParticipant> participants) {
+        return participants.stream()
+                .map(ExpenseSplitParticipant::getAmountOwed)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     // ==================== SETTLEMENT ====================
 
     /**
@@ -260,6 +600,10 @@ public class ExpenseSplitService {
      */
     @Transactional
     public void onLegSettled(Transaction leg) {
+        if (leg.getSettlementId() != null) {
+            onSettlementSettled(leg);
+            return;
+        }
         if (leg.getSplitId() == null) return;
 
         ExpenseSplit split = splitRepository.findByIdForUpdate(leg.getSplitId()).orElse(null);
@@ -516,7 +860,7 @@ public class ExpenseSplitService {
             return ExpenseSplit.SplitMode.valueOf(raw.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new AppException("INVALID_SPLIT_MODE",
-                    "Split mode must be EQUAL or EXACT", HttpStatus.BAD_REQUEST);
+                    "Split mode must be EQUAL, EXACT, SHARES, or PERCENTAGE", HttpStatus.BAD_REQUEST);
         }
     }
 

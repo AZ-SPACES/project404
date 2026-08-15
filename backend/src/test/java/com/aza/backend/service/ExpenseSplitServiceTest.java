@@ -1,5 +1,6 @@
 package com.aza.backend.service;
 
+import com.aza.backend.dto.split.BalanceResponse;
 import com.aza.backend.dto.split.CreateSplitRequest;
 import com.aza.backend.dto.split.SplitResponse;
 import com.aza.backend.entity.*;
@@ -34,6 +35,7 @@ class ExpenseSplitServiceTest {
 
     @MockitoBean ExpenseSplitRepository splitRepository;
     @MockitoBean ExpenseSplitParticipantRepository participantRepository;
+    @MockitoBean SplitSettlementRepository settlementRepository;
     @MockitoBean TransactionRepository transactionRepository;
     @MockitoBean BlockedUserRepository blockedUserRepository;
     @MockitoBean UserRepository userRepository;
@@ -51,12 +53,14 @@ class ExpenseSplitServiceTest {
     private final List<ExpenseSplitParticipant> saved = new ArrayList<>();
     private final Map<UUID, Transaction> legs = new HashMap<>();
     private final Map<UUID, ExpenseSplit> splits = new HashMap<>();
+    private final Map<UUID, SplitSettlement> settlements = new HashMap<>();
 
     @BeforeEach
     void setUp() {
         saved.clear();
         legs.clear();
         splits.clear();
+        settlements.clear();
 
         when(splitRepository.save(any(ExpenseSplit.class))).thenAnswer(inv -> {
             ExpenseSplit s = inv.getArgument(0);
@@ -92,6 +96,61 @@ class ExpenseSplitServiceTest {
                 .thenAnswer(inv -> Optional.ofNullable(legs.get(inv.getArgument(0))));
 
         when(splitRepository.findByCreatorIdAndIdempotencyKey(any(), anyString())).thenReturn(Optional.empty());
+        when(splitRepository.findById(any()))
+                .thenAnswer(inv -> Optional.ofNullable(splits.get(inv.getArgument(0))));
+        when(splitRepository.findByIdForUpdate(any()))
+                .thenAnswer(inv -> Optional.ofNullable(splits.get(inv.getArgument(0))));
+
+        when(settlementRepository.save(any(SplitSettlement.class))).thenAnswer(inv -> {
+            SplitSettlement st = inv.getArgument(0);
+            if (st.getId() == null) st.setId(UUID.randomUUID());
+            settlements.put(st.getId(), st);
+            return st;
+        });
+        when(settlementRepository.findByIdForUpdate(any()))
+                .thenAnswer(inv -> Optional.ofNullable(settlements.get(inv.getArgument(0))));
+        when(settlementRepository.findOpenBetween(any(), any())).thenReturn(List.of());
+        when(participantRepository.findAllBySettlementId(any())).thenAnswer(inv -> {
+            UUID id = inv.getArgument(0);
+            return saved.stream().filter(p -> id.equals(p.getSettlementId())).toList();
+        });
+        when(participantRepository.findOutstanding(any(), any())).thenAnswer(inv -> {
+            UUID creditor = inv.getArgument(0);
+            UUID debtor = inv.getArgument(1);
+            return saved.stream()
+                    .filter(p -> !p.isOrganiser())
+                    .filter(p -> p.getStatus() == ExpenseSplitParticipant.Status.PENDING)
+                    .filter(p -> p.getUserId().equals(debtor))
+                    .filter(p -> {
+                        ExpenseSplit sp = splits.get(p.getSplitId());
+                        return sp != null && sp.getCreatorId().equals(creditor);
+                    })
+                    .toList();
+        });
+        when(participantRepository.findAllOwedByUser(any())).thenAnswer(inv -> {
+            UUID uid = inv.getArgument(0);
+            List<Object[]> rows = new ArrayList<>();
+            for (ExpenseSplitParticipant p : saved) {
+                ExpenseSplit sp = splits.get(p.getSplitId());
+                if (sp != null && !p.isOrganiser() && p.getUserId().equals(uid)
+                        && p.getStatus() == ExpenseSplitParticipant.Status.PENDING) {
+                    rows.add(new Object[]{sp.getCreatorId(), p});
+                }
+            }
+            return rows;
+        });
+        when(participantRepository.findAllOwedToUser(any())).thenAnswer(inv -> {
+            UUID uid = inv.getArgument(0);
+            List<Object[]> rows = new ArrayList<>();
+            for (ExpenseSplitParticipant p : saved) {
+                ExpenseSplit sp = splits.get(p.getSplitId());
+                if (sp != null && !p.isOrganiser() && sp.getCreatorId().equals(uid)
+                        && p.getStatus() == ExpenseSplitParticipant.Status.PENDING) {
+                    rows.add(new Object[]{p.getUserId(), p});
+                }
+            }
+            return rows;
+        });
         when(blockedUserRepository.existsBlockBetween(any(), any())).thenReturn(false);
 
         stubUser(creatorId, "Ama", "Mensah");
@@ -172,6 +231,85 @@ class ExpenseSplitServiceTest {
 
         AppException e = assertThrows(AppException.class, () -> service.create(creator(), req));
         assertEquals("SHARE_REQUIRED", e.getCode());
+    }
+
+    // ── Weighted shares ───────────────────────────────────────────────────────
+
+    @Test
+    void weightedSplit_dividesByParts_andCountsTheOrganisersOwn() {
+        CreateSplitRequest req = request("120.00", "SHARES", kofiId, amaId);
+        req.getParticipants().get(0).setShares(1);
+        req.getParticipants().get(1).setShares(3);
+        req.setOrganiserShares(2);
+
+        service.create(creator(), req);
+
+        // Six parts of GHS 20: organiser 2, Kofi 1, Abena 3.
+        assertEquals(new BigDecimal("40.00"), shareOf(creatorId));
+        assertEquals(new BigDecimal("20.00"), shareOf(kofiId));
+        assertEquals(new BigDecimal("60.00"), shareOf(amaId));
+        assertEquals(new BigDecimal("120.00"), totalOfShares());
+    }
+
+    @Test
+    void weightedSplit_givesTheRoundingToTheOrganiser() {
+        CreateSplitRequest req = request("100.00", "SHARES", kofiId, amaId);
+        req.getParticipants().get(0).setShares(1);
+        req.getParticipants().get(1).setShares(1);
+        req.setOrganiserShares(1);
+
+        service.create(creator(), req);
+
+        // 100 over three parts leaves a pesewa; the person who paid absorbs it.
+        assertEquals(new BigDecimal("33.33"), shareOf(kofiId));
+        assertEquals(new BigDecimal("33.33"), shareOf(amaId));
+        assertEquals(new BigDecimal("33.34"), shareOf(creatorId));
+        assertEquals(new BigDecimal("100.00"), totalOfShares());
+    }
+
+    @Test
+    void weightedSplit_missingAShareCount_isRejected() {
+        CreateSplitRequest req = request("120.00", "SHARES", kofiId, amaId);
+        req.getParticipants().get(0).setShares(2);
+
+        AppException e = assertThrows(AppException.class, () -> service.create(creator(), req));
+        assertEquals("SHARES_REQUIRED", e.getCode());
+    }
+
+    // ── Percentage ────────────────────────────────────────────────────────────
+
+    @Test
+    void percentageSplit_leavesTheRemainderToTheOrganiser() {
+        CreateSplitRequest req = request("200.00", "PERCENTAGE", kofiId, amaId);
+        req.getParticipants().get(0).setPercentage(new BigDecimal("25"));
+        req.getParticipants().get(1).setPercentage(new BigDecimal("50"));
+
+        service.create(creator(), req);
+
+        assertEquals(new BigDecimal("50.00"), shareOf(kofiId));
+        assertEquals(new BigDecimal("100.00"), shareOf(amaId));
+        // The organiser keeps the 25% nobody was asked for.
+        assertEquals(new BigDecimal("50.00"), shareOf(creatorId));
+        assertEquals(new BigDecimal("200.00"), totalOfShares());
+    }
+
+    @Test
+    void percentageSplit_overOneHundred_isRejected() {
+        CreateSplitRequest req = request("200.00", "PERCENTAGE", kofiId, amaId);
+        req.getParticipants().get(0).setPercentage(new BigDecimal("70"));
+        req.getParticipants().get(1).setPercentage(new BigDecimal("60"));
+
+        AppException e = assertThrows(AppException.class, () -> service.create(creator(), req));
+        assertEquals("PERCENTAGES_EXCEED_TOTAL", e.getCode());
+    }
+
+    @Test
+    void percentageSplit_missingAPercentage_isRejected() {
+        CreateSplitRequest req = request("200.00", "PERCENTAGE", kofiId, amaId);
+        req.getParticipants().get(0).setPercentage(new BigDecimal("25"));
+
+        AppException e = assertThrows(AppException.class, () -> service.create(creator(), req));
+        assertEquals("PERCENTAGE_REQUIRED", e.getCode());
     }
 
     // ── Who is asked ──────────────────────────────────────────────────────────
@@ -364,6 +502,139 @@ class ExpenseSplitServiceTest {
         assertEquals(Transaction.TransactionStatus.CANCELLED, legs.get(amaLeg).getStatus());
     }
 
+    // ── Netting ───────────────────────────────────────────────────────────────
+
+    @Test
+    void balances_nettsBothDirectionsIntoOneNumber() {
+        // Ama organises a GHS 100 bill: Kofi owes her 50.
+        service.create(creator(), exact("100.00", kofiId, "50.00"));
+        // Kofi organises a GHS 60 bill: Ama owes him 30.
+        service.create(user(kofiId, "Kofi", "Owusu"), exact("60.00", creatorId, "30.00"));
+
+        List<BalanceResponse> balances = service.balances(creator());
+
+        assertEquals(1, balances.size());
+        BalanceResponse b = balances.get(0);
+        assertEquals(new BigDecimal("50.00"), b.getTheyOweYou());
+        assertEquals(new BigDecimal("30.00"), b.getYouOweThem());
+        assertEquals(new BigDecimal("20.00"), b.getNet());
+    }
+
+    @Test
+    void settleUp_replacesEveryShareWithOneRequestForTheDifference() {
+        service.create(creator(), exact("100.00", kofiId, "50.00"));
+        service.create(user(kofiId, "Kofi", "Owusu"), exact("60.00", creatorId, "30.00"));
+        int legsBefore = legs.size();
+
+        service.settleUp(creator(), kofiId);
+
+        SplitSettlement settlement = settlements.values().iterator().next();
+        // Kofi owed 50, Ama owed 30 — Kofi pays the 20 difference.
+        assertEquals(creatorId, settlement.getCreditorId());
+        assertEquals(kofiId, settlement.getDebtorId());
+        assertEquals(new BigDecimal("20.00"), settlement.getAmount());
+
+        // Both original asks are off the table, replaced by exactly one.
+        assertEquals(legsBefore + 1, legs.size());
+        assertEquals(2, saved.stream()
+                .filter(p -> p.getStatus() == ExpenseSplitParticipant.Status.NETTED).count());
+    }
+
+    @Test
+    void settleUp_directionFollowsTheArithmetic_notWhoAsked() {
+        // Ama is the one who owes more, and Ama is the one pressing the button.
+        service.create(creator(), exact("100.00", kofiId, "20.00"));
+        service.create(user(kofiId, "Kofi", "Owusu"), exact("200.00", creatorId, "90.00"));
+
+        service.settleUp(creator(), kofiId);
+
+        SplitSettlement settlement = settlements.values().iterator().next();
+        assertEquals(kofiId, settlement.getCreditorId());
+        assertEquals(creatorId, settlement.getDebtorId());
+        assertEquals(new BigDecimal("70.00"), settlement.getAmount());
+    }
+
+    @Test
+    void settleUp_whenDebtsCancelExactly_nobodyPaysAnything() {
+        service.create(creator(), exact("100.00", kofiId, "40.00"));
+        service.create(user(kofiId, "Kofi", "Owusu"), exact("80.00", creatorId, "40.00"));
+        int legsBefore = legs.size();
+
+        service.settleUp(creator(), kofiId);
+
+        SplitSettlement settlement = settlements.values().iterator().next();
+        assertEquals(0, BigDecimal.ZERO.compareTo(settlement.getAmount()));
+        assertEquals(SplitSettlement.Status.PAID, settlement.getStatus());
+        // No new ask: there is nothing to ask for.
+        assertEquals(legsBefore, legs.size());
+        assertEquals(2, saved.stream()
+                .filter(p -> p.getStatus() == ExpenseSplitParticipant.Status.PAID && !p.isOrganiser()).count());
+    }
+
+    @Test
+    void nettedSharesAreNotSettled_soTheirSplitStaysOpen() {
+        SplitResponse response = service.create(creator(), exact("100.00", kofiId, "50.00"));
+        ExpenseSplit split = splitOf(UUID.fromString(response.getId()));
+
+        service.settleUp(creator(), kofiId);
+
+        // Consolidated is not paid. The money has not moved yet.
+        assertEquals(ExpenseSplit.Status.OPEN, split.getStatus());
+    }
+
+    @Test
+    void payingASettlement_closesEveryShareBehindIt() {
+        SplitResponse response = service.create(creator(), exact("100.00", kofiId, "50.00"));
+        ExpenseSplit split = splitOf(UUID.fromString(response.getId()));
+        service.settleUp(creator(), kofiId);
+
+        SplitSettlement settlement = settlements.values().iterator().next();
+        Transaction netLeg = legs.get(settlement.getRequestTransactionId());
+        netLeg.setStatus(Transaction.TransactionStatus.COMPLETED);
+
+        service.onLegSettled(netLeg);
+
+        assertEquals(SplitSettlement.Status.PAID, settlement.getStatus());
+        assertEquals(ExpenseSplitParticipant.Status.PAID, statusOf(kofiId));
+        assertEquals(ExpenseSplit.Status.SETTLED, split.getStatus());
+    }
+
+    @Test
+    void refusingToSettleUp_putsTheSharesBack_ratherThanErasingThem() {
+        service.create(creator(), exact("100.00", kofiId, "50.00"));
+        service.settleUp(creator(), kofiId);
+
+        SplitSettlement settlement = settlements.values().iterator().next();
+        Transaction netLeg = legs.get(settlement.getRequestTransactionId());
+        netLeg.setStatus(Transaction.TransactionStatus.DECLINED);
+
+        service.onLegSettled(netLeg);
+
+        assertEquals(SplitSettlement.Status.CANCELLED, settlement.getStatus());
+        // Refusing to settle up is not refusing the debt.
+        assertEquals(ExpenseSplitParticipant.Status.PENDING, statusOf(kofiId));
+        ExpenseSplitParticipant kofi = saved.stream()
+                .filter(p -> p.getUserId().equals(kofiId)).findFirst().orElseThrow();
+        assertNull(kofi.getSettlementId());
+        assertNotNull(kofi.getRequestTransactionId());
+    }
+
+    @Test
+    void settleUp_withNothingOutstanding_isRejected() {
+        AppException e = assertThrows(AppException.class, () -> service.settleUp(creator(), kofiId));
+        assertEquals("NOTHING_TO_SETTLE", e.getCode());
+    }
+
+    @Test
+    void settleUp_whileOneIsAlreadyWaiting_isRejected() {
+        service.create(creator(), exact("100.00", kofiId, "50.00"));
+        when(settlementRepository.findOpenBetween(any(), any()))
+                .thenReturn(List.of(SplitSettlement.builder().id(UUID.randomUUID()).build()));
+
+        AppException e = assertThrows(AppException.class, () -> service.settleUp(creator(), kofiId));
+        assertEquals("SETTLEMENT_OPEN", e.getCode());
+    }
+
     // ── Visibility ────────────────────────────────────────────────────────────
 
     @Test
@@ -406,6 +677,13 @@ class ExpenseSplitServiceTest {
     private BigDecimal totalOfShares() {
         return saved.stream().map(ExpenseSplitParticipant::getAmountOwed)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** An exact split where one named person owes a set amount. */
+    private CreateSplitRequest exact(String total, UUID other, String owed) {
+        CreateSplitRequest req = request(total, "EXACT", other);
+        req.getParticipants().get(0).setAmount(new BigDecimal(owed));
+        return req;
     }
 
     private CreateSplitRequest request(String total, String mode, UUID... people) {
