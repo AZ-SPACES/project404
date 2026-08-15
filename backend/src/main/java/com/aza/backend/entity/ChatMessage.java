@@ -76,8 +76,6 @@ public class ChatMessage {
     /** Set for PAYMENT_REQUEST messages — links to the PaymentRequest record. */
     private UUID paymentRequestId;
 
-    /** Set for RED_ENVELOPE messages — links to the RedEnvelope record. */
-    private UUID redEnvelopeId;
 
     /** If true, mediaKey is wiped after the recipient views it once. */
     @Builder.Default
