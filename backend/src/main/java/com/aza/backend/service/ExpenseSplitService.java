@@ -71,10 +71,21 @@ public class ExpenseSplitService {
         }
         rateLimitService.enforceRateLimit("split:create:" + creator.getId(), 20, Duration.ofHours(1));
 
+        List<User> others = resolveParticipants(creator, req.getParticipants());
+        return createFor(creator, req, others);
+    }
+
+    /**
+     * Everything about making a split except working out who the participants are.
+     *
+     * Split out so a recurring split can reuse it: those already know their people by id
+     * and have no handle or phone number to resolve, and resolving one every month would
+     * quietly break the day somebody changed their username.
+     */
+    SplitResponse createFor(User creator, CreateSplitRequest req, List<User> others) {
         ExpenseSplit.SplitMode mode = parseMode(req.getSplitMode());
         BigDecimal total = req.getTotalAmount().setScale(2, RoundingMode.HALF_UP);
 
-        List<User> others = resolveParticipants(creator, req.getParticipants());
         // The organiser is a participant too — they ate as well. Their share is recorded
         // so the arithmetic adds up, and never asked for, because they already paid.
         int shareCount = others.size() + 1;

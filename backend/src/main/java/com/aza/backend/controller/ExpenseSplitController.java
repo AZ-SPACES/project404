@@ -3,6 +3,7 @@ package com.aza.backend.controller;
 import com.aza.backend.dto.ApiResponse;
 import com.aza.backend.dto.split.BalanceResponse;
 import com.aza.backend.dto.split.CreateSplitRequest;
+import com.aza.backend.dto.split.RecurringSplitResponse;
 import com.aza.backend.dto.split.SplitResponse;
 import com.aza.backend.entity.User;
 import com.aza.backend.service.ExpenseSplitService;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class ExpenseSplitController {
 
     private final ExpenseSplitService expenseSplitService;
+    private final com.aza.backend.service.RecurringSplitService recurringSplitService;
 
     @Operation(summary = "Split a bill",
             description = "Works out who owes what and sends each person a payment request "
@@ -65,6 +67,46 @@ public class ExpenseSplitController {
             @AuthenticationPrincipal User user,
             @PathVariable UUID userId) {
         return ResponseEntity.ok(ApiResponse.success(expenseSplitService.settleUp(user, userId)));
+    }
+
+    @Operation(summary = "Split the same bill every month",
+            description = "Rent, the water, the wifi. Stored once and produces an ordinary "
+                    + "split on schedule, so netting and reminders work on it unchanged.")
+    @PostMapping("/recurring")
+    public ResponseEntity<ApiResponse<RecurringSplitResponse>> createRecurring(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody CreateSplitRequest request,
+            @RequestParam(defaultValue = "MONTHLY") String frequency,
+            @RequestParam(required = false) Integer dayOfPeriod) {
+        return ResponseEntity.ok(ApiResponse.success(
+                recurringSplitService.create(user, request, frequency, dayOfPeriod)));
+    }
+
+    @Operation(summary = "Your recurring splits")
+    @GetMapping("/recurring")
+    public ResponseEntity<ApiResponse<List<RecurringSplitResponse>>> listRecurring(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.success(recurringSplitService.listMine(user)));
+    }
+
+    @Operation(summary = "Pause or resume one",
+            description = "Paused keeps the people and amounts, so a quiet month costs nothing.")
+    @PostMapping("/recurring/{id}/active")
+    public ResponseEntity<ApiResponse<RecurringSplitResponse>> setRecurringActive(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @RequestParam boolean active) {
+        return ResponseEntity.ok(ApiResponse.success(
+                recurringSplitService.setActive(user, id, active)));
+    }
+
+    @Operation(summary = "Stop splitting this one for good")
+    @DeleteMapping("/recurring/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteRecurring(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id) {
+        recurringSplitService.delete(user, id);
+        return ResponseEntity.ok(ApiResponse.success("Deleted"));
     }
 
     @Operation(summary = "One split in full")
