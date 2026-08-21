@@ -38,6 +38,16 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<!-- Boot 4's dependency management no longer pins the Testcontainers modules,
+			     so the BOM is imported explicitly to keep junit-jupiter and postgresql on
+			     one version. -->
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>1.20.6</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
@@ -95,6 +105,27 @@
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Testcontainers — the integration suite runs the real Flyway chain against a
+		     real PostgreSQL 16. H2 cannot exercise SELECT ... FOR UPDATE row locking,
+		     CHECK constraints, or the migrations themselves, which is exactly the class
+		     of defect that produced the V50/V51/V57 fix commits. Tests annotated
+		     @Testcontainers(disabledWithoutDocker = true) skip cleanly where Docker is
+		     unavailable, so a laptop without a running daemon still gets a green build. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -220,6 +251,46 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- Coverage. `mvn test` writes target/site/jacoco/index.html.
+			     Read the money classes separately from the aggregate: with 100 services
+			     covering everything from birthday greetings to image search, an overall
+			     percentage says very little about the paths that move money. -->
+			<!-- Surefire's default includes are *Test / Test* / *Tests, which would skip
+			     the *IT classes entirely. They are run here rather than under Failsafe so
+			     that a single `mvn test` — the command CI already uses — runs unit and
+			     integration tests together. The IT classes are Docker-gated and skip
+			     cleanly where no daemon is running. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+						<include>**/*IT.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
