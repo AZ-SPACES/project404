@@ -26,7 +26,10 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Run unit tests
+      # Runners have a Docker daemon, so the Testcontainers *IT classes actually execute
+      # here — the full Flyway chain against a real PostgreSQL 16, plus the concurrent
+      # -transfer experiment. On a laptop without Docker they skip instead of failing.
+      - name: Run tests (unit + Testcontainers integration)
         run: |
           mvn test --no-transfer-progress \
             -Dsurefire.excludes="**/*ApplicationTests.java"
@@ -38,6 +41,14 @@ jobs:
         with:
           name: surefire-reports
           path: backend/target/surefire-reports/
+          retention-days: 7
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jacoco
+          path: backend/target/site/jacoco/
           retention-days: 7
 
   # ── Backend Docker build (compile + image validation) ─────────────────────
@@ -60,6 +71,50 @@ jobs:
           tags: aza-backend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ── Mobile app: typecheck + unit tests (incl. the E2EE crypto suite) ──────
+  # Added because nothing in CI previously ran the mobile app at all — which meant the
+  # cryptographic test suite (x3dh, e2ee, keystore, mediaCrypto, backupCrypto) that the
+  # platform's confidentiality claims rest on was never exercised by an automated gate.
+  mobile-test:
+    name: Mobile Tests (Expo / RN)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # Install from the workspace root: npm hoists @react-native/jest-preset there while
+      # react-native stays nested in aza/node_modules. Installing inside aza/ alone leaves
+      # the preset unresolvable and jest dies at config load.
+      - name: Install workspace dependencies
+        run: npm install
+
+      # tsconfig.ci.json is tsconfig.json with the @miniapps/* aliases pointed at a stub
+      # declaration. The mini apps are sibling workspaces with no node_modules of their
+      # own, so pulling their sources into this program yields two dozen spurious
+      # "Cannot find module 'react'" errors. See aza/types/miniapp-workspaces.d.ts.
+      - name: Typecheck
+        run: npx tsc -p tsconfig.ci.json --noEmit
+        working-directory: aza
+
+      - name: Unit tests with coverage
+        run: npm test -- --coverage --ci
+        working-directory: aza
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage
+          path: aza/coverage/
+          retention-days: 7
 
   # ── Frontend lint + build (all 4 Next.js apps in parallel) ───────────────
   frontend-ci:
