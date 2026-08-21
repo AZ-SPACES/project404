@@ -32,7 +32,8 @@ class AgentCashServiceTest {
     private final RiskEngineService riskEngineService = mock(RiskEngineService.class);
     private final AgentCashService service = new AgentCashService(
             agentRepository, walletRepository, userRepository, transactionRepository,
-            feeCalculationService, withdrawalCodeService, new LimitGuard(), riskEngineService);
+            feeCalculationService, withdrawalCodeService, new LimitGuard(), riskEngineService,
+            new WalletLocker(walletRepository));
 
     private final UUID agentUserId = UUID.randomUUID();
     private final UUID customerId = UUID.randomUUID();

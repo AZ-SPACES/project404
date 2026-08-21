@@ -70,6 +70,16 @@ public class TransferService {
      */
     private final ExpenseSplitService expenseSplitService;
     private final SystemSettingService systemSettingService;
+    /**
+     * Locks a pair of wallets in a canonical order so two transfers in opposite
+     * directions between the same people can never deadlock each other.
+     */
+    private final WalletLocker walletLocker;
+    /**
+     * Defers pushes, SMS, email and WebSocket events until the money has actually
+     * committed — never notify someone about a transfer that then rolls back.
+     */
+    private final AfterCommitExecutor afterCommit;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -336,9 +346,24 @@ public class TransferService {
             throw new AppException("Transaction has expired. Please initiate a new transfer.");
         }
 
-        //Lock sender wallet and execute transfer atomically
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
-                .orElseThrow(() -> new AppException("Sender wallet not found"));
+        // Lock every wallet this transfer touches, up front and in a canonical order.
+        // A user-to-user transfer locks both wallets together through WalletLocker: taking
+        // them in request order (sender first) is what lets A→B and B→A deadlock each
+        // other. A merchant payment credits a `merchants` row, not a second wallet, so
+        // there is no pair to order.
+        boolean toMerchant = transaction.getRecipientType() == Transaction.RecipientType.MERCHANT;
+        Wallet senderWallet;
+        Wallet recipientWallet = null;
+        if (toMerchant) {
+            senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
+                    .orElseThrow(() -> new AppException("Sender wallet not found"));
+        } else {
+            WalletLocker.Locked wallets = walletLocker.lock(
+                    WalletLocker.personal(sender.getId(), "Sender wallet not found"),
+                    WalletLocker.personal(transaction.getRecipientId(), "Recipient wallet not found"));
+            senderWallet = wallets.first();
+            recipientWallet = wallets.second();
+        }
 
         if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
             throw new AppException("WALLET_FROZEN", "Your wallet has been frozen. Please contact support.", HttpStatus.FORBIDDEN);
@@ -426,47 +451,60 @@ public class TransferService {
             transaction.setCompletedAt(completedAt);
             transactionRepository.save(transaction);
 
+            // Risk evaluation writes to our own tables, so it belongs inside the
+            // transaction alongside the ledger record.
             riskEngineService.evaluateTransfer(transaction, sender);
 
-            webSocketPublisher.publishNotification(merchant.getUserId(), WebSocketEventType.TRANSFER_UPDATE,
-                    Map.of(
-                            "transactionId", transaction.getId().toString(),
-                            "amount", transaction.getAmount().toString(),
-                            "from", sender.getFirstName() + " " + sender.getLastName(),
-                            "note", transaction.getNote() != null ? transaction.getNote() : ""
-                    ));
-
-            notificationService.sendMoneyReceivedNotification(
-                    merchant.getUserId(),
-                    sender.getFirstName() + " " + sender.getLastName(),
-                    transaction.getAmount().toString(),
-                    transaction.getId().toString());
-
+            // Everything below leaves the building — a push, an email, an SMS, a socket
+            // event. Fired inside the transaction, a later rollback would leave the
+            // merchant notified of a payment that never happened, and four provider calls
+            // would hold the wallet lock for their whole duration. Reads stay here; only
+            // the sends are deferred to after commit.
             String merchantTxnRef = transaction.getId().toString().substring(28).toUpperCase();
-            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
-                    merchant.getBusinessName(), transaction.getAmount(), merchantTxnRef);
-            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
-                smsService.sendTransferSentSms(sender.getPhoneNumber(), merchant.getBusinessName(),
-                        transaction.getAmount(), merchantTxnRef, senderWallet.getBalance(),
-                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
-            }
-
             boolean emailPaymentReceived = merchantNotificationPrefRepository
                     .findByMerchantId(merchant.getId())
                     .map(p -> p.isEmailPaymentReceived())
                     .orElse(true);
-            if (emailPaymentReceived) {
-                userRepository.findById(merchant.getUserId()).ifPresent(merchantOwner ->
+            User merchantOwner = emailPaymentReceived
+                    ? userRepository.findById(merchant.getUserId()).orElse(null)
+                    : null;
+            BigDecimal senderBalanceAfter = senderWallet.getBalance();
+            Merchant paidMerchant = merchant;
+
+            afterCommit.run(() -> {
+                webSocketPublisher.publishNotification(paidMerchant.getUserId(), WebSocketEventType.TRANSFER_UPDATE,
+                        Map.of(
+                                "transactionId", transaction.getId().toString(),
+                                "amount", transaction.getAmount().toString(),
+                                "from", sender.getFirstName() + " " + sender.getLastName(),
+                                "note", transaction.getNote() != null ? transaction.getNote() : ""
+                        ));
+
+                notificationService.sendMoneyReceivedNotification(
+                        paidMerchant.getUserId(),
+                        sender.getFirstName() + " " + sender.getLastName(),
+                        transaction.getAmount().toString(),
+                        transaction.getId().toString());
+
+                emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                        paidMerchant.getBusinessName(), transaction.getAmount(), merchantTxnRef);
+                if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                    smsService.sendTransferSentSms(sender.getPhoneNumber(), paidMerchant.getBusinessName(),
+                            transaction.getAmount(), merchantTxnRef, senderBalanceAfter,
+                            transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
+                }
+
+                if (merchantOwner != null) {
                     emailService.sendMerchantPaymentReceivedEmail(
                             merchantOwner.getEmail(), merchantOwner.getFirstName(),
-                            merchant.getBusinessName(), transaction.getAmount(),
-                            sender.getFirstName() + " " + sender.getLastName(), merchantTxnRef));
-            }
+                            paidMerchant.getBusinessName(), transaction.getAmount(),
+                            sender.getFirstName() + " " + sender.getLastName(), merchantTxnRef);
+                }
+            });
 
             return buildTransferResponse(transaction, sender, null, sender.getId());
         } else {
-            Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                    .orElseThrow(() -> new AppException("Recipient wallet not found"));
+            // recipientWallet was locked with senderWallet above, in canonical order.
 
             // Resolve the P2P fee from the fee engine: free for everyday transfers, 0.5%
             // above the free tier. The fee leaves circulation the same way the merchant
@@ -513,36 +551,43 @@ public class TransferService {
 
             riskEngineService.evaluateTransfer(transaction, sender);
 
-            webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
-                    Map.of(
-                            "transactionId", transaction.getId().toString(),
-                            "amount", transaction.getAmount().toString(),
-                            "from", sender.getFirstName() + " " + sender.getLastName(),
-                            "note", transaction.getNote() != null ? transaction.getNote() : ""
-                    ));
-
-            notificationService.sendMoneyReceivedNotification(
-                    transaction.getRecipientId(),
-                    sender.getFirstName() + " " + sender.getLastName(),
-                    transaction.getAmount().toString(),
-                    transaction.getId().toString());
-
+            // External effects are deferred past commit — see the merchant branch above
+            // for why. Balances are captured now, while the entities are still managed.
             String txnRef = transaction.getId().toString().substring(28).toUpperCase();
             String senderFullName = sender.getFirstName() + " " + sender.getLastName();
             String recipientFullName = recipient.getFirstName() + " " + recipient.getLastName();
+            BigDecimal senderBalanceAfter = senderWallet.getBalance();
+            BigDecimal recipientBalanceAfter = recipientWallet.getBalance();
+            User creditedRecipient = recipient;
 
-            emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
-                    recipientFullName, transaction.getAmount(), txnRef);
-            if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
-                smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
-                        transaction.getAmount(), txnRef, senderWallet.getBalance(),
-                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
-            }
-            if (recipient.getPhoneNumber() != null && !recipient.getPhoneNumber().isBlank()) {
-                smsService.sendTransferReceivedSms(recipient.getPhoneNumber(), senderFullName,
-                        transaction.getAmount(), txnRef, recipientWallet.getBalance(),
-                        transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO);
-            }
+            afterCommit.run(() -> {
+                webSocketPublisher.publishNotification(creditedRecipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                        Map.of(
+                                "transactionId", transaction.getId().toString(),
+                                "amount", transaction.getAmount().toString(),
+                                "from", senderFullName,
+                                "note", transaction.getNote() != null ? transaction.getNote() : ""
+                        ));
+
+                notificationService.sendMoneyReceivedNotification(
+                        transaction.getRecipientId(),
+                        senderFullName,
+                        transaction.getAmount().toString(),
+                        transaction.getId().toString());
+
+                emailService.sendTransferSentEmail(sender.getEmail(), sender.getFirstName(),
+                        recipientFullName, transaction.getAmount(), txnRef);
+                if (sender.getPhoneNumber() != null && !sender.getPhoneNumber().isBlank()) {
+                    smsService.sendTransferSentSms(sender.getPhoneNumber(), recipientFullName,
+                            transaction.getAmount(), txnRef, senderBalanceAfter,
+                            transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO, BigDecimal.ZERO);
+                }
+                if (creditedRecipient.getPhoneNumber() != null && !creditedRecipient.getPhoneNumber().isBlank()) {
+                    smsService.sendTransferReceivedSms(creditedRecipient.getPhoneNumber(), senderFullName,
+                            transaction.getAmount(), txnRef, recipientBalanceAfter,
+                            transaction.getNote(), transaction.getId().toString(), BigDecimal.ZERO);
+                }
+            });
 
             auditService.logWithResource(AuditLog.TRANSFER_COMPLETED, AuditLog.SUCCESS,
                     sender.getId(), sender.getEmail(), null,
@@ -578,11 +623,12 @@ public class TransferService {
         }
         User sender = userRepository.findById(transaction.getSenderId())
                 .orElseThrow(() -> new AppException("Sender not found"));
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
-                .orElseThrow(() -> new AppException("Sender wallet not found"));
+        WalletLocker.Locked wallets = walletLocker.lock(
+                WalletLocker.personal(sender.getId(), "Sender wallet not found"),
+                WalletLocker.personal(transaction.getRecipientId(), "Recipient wallet not found"));
+        Wallet senderWallet = wallets.first();
+        Wallet recipientWallet = wallets.second();
         validateBalance(senderWallet, transaction.getAmount());
-        Wallet recipientWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                .orElseThrow(() -> new AppException("Recipient wallet not found"));
         User recipient = userRepository.findById(transaction.getRecipientId())
                 .orElseThrow(() -> new AppException("Recipient not found"));
 
@@ -602,24 +648,29 @@ public class TransferService {
         riskEngineService.recordHeldOutcome(transaction.getId(),
                 com.aza.backend.entity.RiskDecisionLog.Outcome.RELEASED);
 
-        webSocketPublisher.publishNotification(recipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
-                Map.of(
-                        "transactionId", transaction.getId().toString(),
-                        "amount", transaction.getAmount().toString(),
-                        "from", sender.getFirstName() + " " + sender.getLastName(),
-                        "note", transaction.getNote() != null ? transaction.getNote() : ""
-                ));
-        notificationService.sendMoneyReceivedNotification(
-                recipient.getId(),
-                sender.getFirstName() + " " + sender.getLastName(),
-                transaction.getAmount().toString(),
-                transaction.getId().toString());
-        notificationService.sendNotification(sender.getId(),
-                com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
-                "Transfer cleared",
-                "Your transfer of GHS " + transaction.getAmount().toPlainString()
-                        + " has been reviewed and completed.",
-                null, null);
+        // Deferred past commit — a released hold is a real transfer, so the same rule
+        // applies: nobody hears about it until it has committed.
+        User creditedRecipient = recipient;
+        afterCommit.run(() -> {
+            webSocketPublisher.publishNotification(creditedRecipient.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                    Map.of(
+                            "transactionId", transaction.getId().toString(),
+                            "amount", transaction.getAmount().toString(),
+                            "from", sender.getFirstName() + " " + sender.getLastName(),
+                            "note", transaction.getNote() != null ? transaction.getNote() : ""
+                    ));
+            notificationService.sendMoneyReceivedNotification(
+                    creditedRecipient.getId(),
+                    sender.getFirstName() + " " + sender.getLastName(),
+                    transaction.getAmount().toString(),
+                    transaction.getId().toString());
+            notificationService.sendNotification(sender.getId(),
+                    com.aza.backend.entity.Notification.NotificationType.SECURITY_ALERT,
+                    "Transfer cleared",
+                    "Your transfer of GHS " + transaction.getAmount().toPlainString()
+                            + " has been reviewed and completed.",
+                    null, null);
+        });
 
         return buildTransferResponse(transaction, sender, recipient, sender.getId());
     }
@@ -843,11 +894,14 @@ public class TransferService {
             return holdForReview(transaction, payer);
         }
 
-        // Execute transfer
-        Wallet payerWallet = walletRepository.findByUserIdForUpdate(payer.getId())
-                .orElseThrow(() -> new AppException("Wallet not found"));
-        Wallet requesterWallet = walletRepository.findByUserIdForUpdate(transaction.getRecipientId())
-                .orElseThrow(() -> new AppException("Wallet not found"));
+        // Execute transfer. Both wallets are locked together in canonical order — an
+        // accepted request moves money exactly like a transfer, so it can deadlock
+        // against one going the other way unless the order is fixed.
+        WalletLocker.Locked wallets = walletLocker.lock(
+                WalletLocker.personal(payer.getId(), "Wallet not found"),
+                WalletLocker.personal(transaction.getRecipientId(), "Wallet not found"));
+        Wallet payerWallet = wallets.first();
+        Wallet requesterWallet = wallets.second();
 
         // Accepting a money request moves money like any P2P transfer — charge the same
         // fee so requests can't be used to route around the P2P fee.
@@ -881,13 +935,17 @@ public class TransferService {
 
         riskEngineService.evaluateTransfer(transaction, payer);
 
-        webSocketPublisher.publishNotification(requester.getId(), WebSocketEventType.TRANSFER_UPDATE,
-                Map.of(
-                        "transactionId", transaction.getId().toString(),
-                        "amount", transaction.getAmount().toString(),
-                        "from", payer.getFirstName() + " " + payer.getLastName(),
-                        "note", transaction.getNote() != null ? transaction.getNote() : ""
-                ));
+        // Deferred past commit: accepting a request moves money like any transfer, so
+        // the requester must not be told it landed until it actually has.
+        User paidRequester = requester;
+        afterCommit.run(() ->
+                webSocketPublisher.publishNotification(paidRequester.getId(), WebSocketEventType.TRANSFER_UPDATE,
+                        Map.of(
+                                "transactionId", transaction.getId().toString(),
+                                "amount", transaction.getAmount().toString(),
+                                "from", payer.getFirstName() + " " + payer.getLastName(),
+                                "note", transaction.getNote() != null ? transaction.getNote() : ""
+                        )));
 
         return buildTransferResponse(transaction, payer, requester, payer.getId());
     }
@@ -1262,9 +1320,21 @@ public class TransferService {
                 : BigDecimal.ZERO;
         BigDecimal totalDebit = amount.add(fee);
 
-        // Lock and debit sender
-        Wallet senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
-                .orElseThrow(() -> new AppException("Wallet not found"));
+        // Lock the wallets first, in canonical order — a bulk run and an ordinary transfer
+        // going the other way touch the same pair and would otherwise deadlock.
+        Wallet senderWallet;
+        Wallet recipientWallet = null;
+        if (recipient != null) {
+            WalletLocker.Locked wallets = walletLocker.lock(
+                    WalletLocker.personal(sender.getId(), "Wallet not found"),
+                    WalletLocker.personal(recipientId, "Recipient wallet not found"));
+            senderWallet = wallets.first();
+            recipientWallet = wallets.second();
+        } else {
+            senderWallet = walletRepository.findByUserIdForUpdate(sender.getId())
+                    .orElseThrow(() -> new AppException("Wallet not found"));
+        }
+
         if (Boolean.TRUE.equals(senderWallet.getFrozen()))
             throw new AppException("WALLET_FROZEN", "Your wallet has been frozen.", HttpStatus.FORBIDDEN);
         if (senderWallet.getBalance().compareTo(totalDebit) < 0)
@@ -1276,8 +1346,6 @@ public class TransferService {
         userRepository.save(sender);
 
         if (recipient != null) {
-            Wallet recipientWallet = walletRepository.findByUserIdForUpdate(recipientId)
-                    .orElseThrow(() -> new AppException("Recipient wallet not found"));
             recipientWallet.setBalance(recipientWallet.getBalance().add(amount));
             walletRepository.save(recipientWallet);
             recipient.setBalance(recipientWallet.getBalance());

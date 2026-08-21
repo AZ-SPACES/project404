@@ -279,6 +279,11 @@ class TransferServiceTest {
         Wallet senderWallet = walletWithBalance("60000.00"); // plenty of balance
         when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
         when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        // Both wallets are locked together before the limit re-check, so the recipient's
+        // wallet must resolve even though this transfer is about to be rejected.
+        when(walletRepository.findByUserIdForUpdate(recipientId))
+                .thenReturn(Optional.of(Wallet.builder().userId(recipientId)
+                        .balance(BigDecimal.ZERO).currency("GHS").frozen(false).build()));
         // Today's total already at 51000 (over the 50000 limit), including this tx
         when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
                 .thenReturn(new BigDecimal("51000.00"));
@@ -474,6 +479,11 @@ class TransferServiceTest {
 
         when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
         when(walletRepository.findByUserIdForUpdate(senderId)).thenReturn(Optional.of(senderWallet));
+        // Both wallets are now locked together, up front, in canonical order — so the
+        // recipient's wallet has to exist even on paths that never move money.
+        when(walletRepository.findByUserIdForUpdate(recipientId))
+                .thenReturn(Optional.of(Wallet.builder().userId(recipientId)
+                        .balance(BigDecimal.ZERO).currency("GHS").frozen(false).build()));
         when(userRepository.findById(recipientId)).thenReturn(Optional.empty());
         when(transactionRepository.getTotalSentToday(eq(senderId), any(), any(), any()))
                 .thenReturn(BigDecimal.ZERO);

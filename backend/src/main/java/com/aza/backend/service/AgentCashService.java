@@ -45,6 +45,7 @@ public class AgentCashService {
     private final WithdrawalCodeService withdrawalCodeService;
     private final LimitGuard limitGuard;
     private final RiskEngineService riskEngineService;
+    private final WalletLocker walletLocker;
 
     /**
      * Agent hands the customer's deposit into the app: {@code amount} moves from the
@@ -250,28 +251,17 @@ public class AgentCashService {
      * deterministic order (ascending owner id) so a concurrent cash-in and
      * cash-out over the same pair can never deadlock.
      */
+    /**
+     * Delegates to the shared {@link WalletLocker} so cash-in/cash-out orders its locks
+     * the same way every other money path does. The canonical ordering was implemented
+     * here first; keeping a private copy of it would let the two drift apart, which is
+     * precisely how a deadlock gets reintroduced.
+     */
     private WalletPair lockFloatAndCustomer(UUID agentUserId, UUID customerId) {
-        Wallet agentWallet;
-        Wallet customerWallet;
-        if (agentUserId.compareTo(customerId) < 0) {
-            agentWallet = lockFloat(agentUserId);
-            customerWallet = lockPersonal(customerId);
-        } else {
-            customerWallet = lockPersonal(customerId);
-            agentWallet = lockFloat(agentUserId);
-        }
-        return new WalletPair(agentWallet, customerWallet);
-    }
-
-    private Wallet lockFloat(UUID agentUserId) {
-        return walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT)
-                .orElseThrow(() -> new AppException("AGENT_FLOAT_MISSING",
-                        "Agent float wallet not found", HttpStatus.CONFLICT));
-    }
-
-    private Wallet lockPersonal(UUID userId) {
-        return walletRepository.findByUserIdForUpdate(userId)
-                .orElseThrow(() -> new AppException("Customer wallet not found"));
+        WalletLocker.Locked locked = walletLocker.lock(
+                WalletLocker.agentFloat(agentUserId, "Agent float wallet not found"),
+                WalletLocker.personal(customerId, "Customer wallet not found"));
+        return new WalletPair(locked.first(), locked.second());
     }
 
     private record WalletPair(Wallet agentWallet, Wallet customerWallet) {}
