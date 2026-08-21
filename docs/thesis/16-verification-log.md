@@ -667,7 +667,73 @@ marker.
 
 ---
 
-## 16.4 Re-running this log
+---
+
+## 16.4 Where the remediation landed
+
+All of it is committed on branch `Home`, in reviewable slices rather than one bulk
+commit. Cite these in the thesis when you describe a fix — a commit hash is stronger
+evidence than a description of one.
+
+| Commit | Subject | Covers |
+|---|---|---|
+| `d290807` | `chore: stop tracking aza/coverage, and version the thesis docs` | Build artefact untracked; scoped `.gitignore` negation so `docs/thesis/` is versioned |
+| `468662e` | `fix: order wallet locks canonically and defer notifications past commit` | **F1 + F2**, plus 12 new tests |
+| `664f65a` | `test: run the migration chain and a real concurrency experiment on Postgres` | `MigrationChainIT`, `ConcurrentTransferIT`, the `integration` profile |
+| `7580280` | `build: add JaCoCo and run *IT classes under surefire` | Coverage instrumentation; Testcontainers BOM |
+| `4da0656` | `fix: repair two shipping bugs the mobile typecheck was hiding` | **F4** — 893 → 0 errors, `absoluteFill`, `Clipboard.setStringAsync` |
+| `d93fbeb` | `ci: run the mobile app's typecheck and tests` | **F5** — the `mobile-test` job; JaCoCo + coverage artifacts |
+| `008055d` | `docs: add the thesis documentation set` | These seventeen files |
+
+Verified at `008055d`: backend **374 tests, 0 failures, 0 errors** (7 Docker-gated
+integration tests skip locally); mobile **254 tests, 0 failures**; mobile typecheck
+**0 errors**; working tree clean.
+
+### Two incidents during the commit, worth recording
+
+Neither changes any result, but both are the kind of thing a methods chapter should be
+honest about, and the second nearly destroyed a day's writing.
+
+**1. `docs/` was gitignored by a bare pattern.** The root `.gitignore` carries a bare
+`docs` entry, commented as deliberately matching any directory of that name at any
+depth — the repository's convention is that `docs/` means scratch. Nothing under
+`docs/` had ever been tracked, so the entire documentation set would have been silently
+skipped by `git add`. The repo already had the pattern for the exception
+(`!miniapps/aza-sdk/docs/`, justified in a comment as "product, not scratch"), so the
+same treatment was applied. Getting it right needs three lines in order, because Git
+will not descend into an excluded directory:
+
+```gitignore
+!/docs/          # re-include the root docs dir so Git descends into it
+/docs/*          # …but re-exclude everything directly inside
+!/docs/thesis/   # …then let just this back in
+```
+
+The leading slashes matter. A first attempt used bare `!docs/`, which un-ignored
+`backend/docs` and the whole of `docs/` as well — verified and corrected before
+committing. **Check what an ignore rule actually matches rather than what it looks like
+it matches**; `git check-ignore -v <path>` names the exact rule and line.
+
+**2. Seven chapter files were found merged on disk.** Between writing and staging,
+`01`–`03`, `04`–`06`, `07`–`09` and `11`–`12` had been concatenated into four files with
+comma-joined names (`01-introduction, background, methodology.md` and so on), and
+`.gitignore` had separately lost a leading `!` after being written correctly. Cause not
+established — no editor or hook in this repository does that, and it was not a Git
+operation.
+
+Recovery was clean because every chapter opens with a unique `# N. Title` heading, so the
+merged files split back at exact boundaries with no content loss: 3,978 lines before,
+3,978 after, all 17 files restored with their original line counts. The integrity check
+was the useful part — comparing per-file line counts against the pre-merge measurements,
+rather than assuming the split had worked.
+
+**The lesson for the thesis, and it is a real one:** structure that is machine-checkable
+is also machine-recoverable. Had the chapters not each begun with a distinct, parseable
+heading, the merge would have been unrecoverable without rewriting from memory. The same
+argument runs through Chapter 3 — an invariant you can check mechanically is worth more
+than one you merely hold in your head.
+
+## 16.5 Re-running this log
 
 ```bash
 cd /Users/caleb/Desktop/GitHub/az-spaces/project404

@@ -19,6 +19,30 @@ fix:  V12 insert relied on a default a ddl-auto table never has
 fix:  V50 retyped store sales through a CHECK that forbade the new type
 ```
 
+### Version control practice
+
+Worth a short subsection, because the commit history is itself evidence for §3.1's claim
+about invariant-driven review. The remediation described in `16-verification-log.md` was
+committed in **seven reviewable slices** rather than one bulk commit — one per concern,
+each with a message that states the failure scenario before the fix:
+
+```
+d290807  chore: stop tracking aza/coverage, and version the thesis docs
+468662e  fix: order wallet locks canonically and defer notifications past commit
+664f65a  test: run the migration chain and a real concurrency experiment on Postgres
+7580280  build: add JaCoCo and run *IT classes under surefire
+4da0656  fix: repair two shipping bugs the mobile typecheck was hiding
+d93fbeb  ci: run the mobile app's typecheck and tests
+008055d  docs: add the thesis documentation set
+```
+
+The convention is Conventional Commits (`feat`, `fix`, `test`, `build`, `ci`, `chore`,
+`docs`), applied to 308 of the repository's 694 commits. Where a commit fixes a defect,
+the message records **what would have gone wrong**, not just what changed — the
+lock-ordering commit describes the A→B / B→A deadlock cycle before describing
+`WalletLocker`. That is a small discipline with a large payoff for a thesis: the history
+becomes a citable record of reasoning rather than a list of edits.
+
 ### Measured development history
 
 | Metric | Value |

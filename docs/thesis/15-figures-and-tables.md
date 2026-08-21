@@ -113,7 +113,8 @@ verification page.
 | G | Test inventory and coverage reports | §11.2; generated JaCoCo / Jest reports |
 | H | Postman collections | `docs/AZA_Backend.postman_collection.json`, `docs/aza-connect.postman_collection.json` |
 | I | Deployment and operations runbook | `10-devops-and-deployment.md`, `backend/docs/SECRETS_ROTATION.md` |
-| **J** | **Verification log** — 14 mechanical checks with commands, results and three findings | `16-verification-log.md` |
+| **J** | **Verification log** — 18 mechanical checks with commands, results, five findings and the commit that closed each | `16-verification-log.md` |
+| **K** | Commit history for the remediation — seven slices, each stating the failure scenario | `git log --oneline d290807..008055d` |
 
 ## 15.5 Commands to regenerate the evidence
 

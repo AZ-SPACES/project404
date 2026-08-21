@@ -225,6 +225,8 @@ that the review method works.
 
 ### Closed
 
+All committed on branch `Home`; see §16.4 for the commit-to-fix mapping.
+
 | Gap | Closed by |
 |---|---|
 | No mobile CI job | `mobile-test` job — typecheck, 254 tests, coverage artifact |

@@ -38,6 +38,19 @@ more or less directly into a thesis. Each file maps to one or more thesis chapte
    *your* decision — performance figures, a usability study, the regulatory position,
    competitor verification. They are not gaps in the research; they are handoffs.
 4. Code references use `path:line` form so you can cite exact locations in an appendix.
+5. The remediation is committed in seven reviewable slices on branch `Home` — §16.4 maps
+   each fix to its commit. Cite a hash rather than a description when you write up a fix.
+
+## Working state at the last verification (`008055d`)
+
+| | |
+|---|---|
+| Backend | **374 tests, 0 failures** (40 classes; 7 Docker-gated integration tests skip locally) |
+| Mobile | **254 tests, 0 failures**; typecheck **0 errors** |
+| Coverage — money classes | **63.3%** lines |
+| Coverage — `src/crypto` | **87.8%** statements |
+| Money invariants holding unconditionally | **8 of 9** (the ninth is vacuous by design — §12.3b) |
+| Working tree | clean |
 
 ## One-paragraph description of the project (use this in your abstract)
 
