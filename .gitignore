@@ -30,5 +30,14 @@ docs
 # ...but the mini app SDK's docs are product, not scratch: the published README links to
 # them and they ship inside the npm package, so they have to be versioned.
 !miniapps/aza-sdk/docs/
+# ...and so is the thesis documentation set, for the same reason: it is written to be read
+# by someone other than the author.
+# Three lines, and the order matters. Git will not descend into an excluded directory, so
+# the root docs/ has to be re-included first; the leading slash keeps that from also
+# un-ignoring backend/docs and every other nested docs/. Everything directly inside is then
+# re-excluded, and only docs/thesis/ is let back in.
+!/docs/
+/docs/*
+!/docs/thesis/
 .gitignore
 backend/.env.example
