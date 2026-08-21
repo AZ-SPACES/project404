@@ -35,6 +35,14 @@ import {
   wipeIdentity,
 } from '../keystore';
 
+/**
+ * Byte arrays compare by identity, not value, so these tests render them as hex.
+ * Node's Buffer is not part of the React Native runtime and @types/node is not a
+ * dependency of this app — a three-line local helper is the honest way to do it.
+ */
+const hex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+
 const UID = 'user-keystore-test';
 const DID = 'device-test-001';
 const SPK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -61,8 +69,8 @@ describe('ensureSignedPreKey', () => {
   it('is idempotent: second call returns the same public key', async () => {
     const first  = await ensureSignedPreKey(UID, DID);
     const second = await ensureSignedPreKey(UID, DID);
-    expect(Buffer.from(first.publicKey).toString('hex')).toBe(
-      Buffer.from(second.publicKey).toString('hex'),
+    expect(hex(first.publicKey)).toBe(
+      hex(second.publicKey),
     );
   });
 
@@ -110,8 +118,8 @@ describe('rotateSignedPreKey', () => {
   it('generates a new key with a different public key than the old one', async () => {
     const { publicKey: oldPub } = await ensureSignedPreKey(UID, DID);
     const { publicKey: newPub } = await rotateSignedPreKey(UID, DID);
-    expect(Buffer.from(oldPub).toString('hex')).not.toBe(
-      Buffer.from(newPub).toString('hex'),
+    expect(hex(oldPub)).not.toBe(
+      hex(newPub),
     );
   });
 
@@ -148,8 +156,8 @@ describe('getPreviousSignedPreKeyPrivate', () => {
     const prevPriv = await getPreviousSignedPreKeyPrivate(UID, DID);
 
     expect(prevPriv).not.toBeNull();
-    expect(Buffer.from(prevPriv!).toString('hex')).toBe(
-      Buffer.from(oldPriv!).toString('hex'),
+    expect(hex(prevPriv!)).toBe(
+      hex(oldPriv!),
     );
   });
 

@@ -62,7 +62,7 @@ export default function AudioCallScreen() {
 
   // Duration timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setTimeout>;
     if (activeCall?.status === 'ACTIVE') {
       interval = setInterval(() => {
         if (activeCall.startedAt) {

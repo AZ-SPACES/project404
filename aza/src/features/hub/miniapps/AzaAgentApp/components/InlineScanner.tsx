@@ -78,9 +78,9 @@ export default function InlineScanner({
 }
 
 const styles = StyleSheet.create({
-  container: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', zIndex: 9999, elevation: 9999 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
-  frameWrap: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  container: { ...StyleSheet.absoluteFill, backgroundColor: '#000', zIndex: 9999, elevation: 9999 },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)' },
+  frameWrap: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
   frame: { width: FRAME, height: FRAME, borderWidth: 3, borderRadius: 20, backgroundColor: 'transparent' },
   promptPill: { marginTop: 28, backgroundColor: '#fff', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   promptText: { color: '#000', fontWeight: '700', fontSize: 13 },

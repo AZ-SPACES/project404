@@ -473,7 +473,7 @@ export function createStyles(Colors: ThemeColors) {
 
     // ─── Dashboard bottom sheet ────────────────────────────────────────────────
     modalOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.6)',
     },
     bottomSheet: {

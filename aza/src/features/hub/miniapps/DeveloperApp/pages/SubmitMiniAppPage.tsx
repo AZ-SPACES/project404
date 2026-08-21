@@ -9,10 +9,13 @@ import { saveMiniApp } from '../../../../../services/api';
 import { ThemeColors, Spacing, Radius, Typography } from '../../../../../theme';
 import { NavProps } from '../types';
 
+// `as const` makes this a non-empty tuple, so CATEGORIES[0] is a string rather than
+// `string | undefined` under noUncheckedIndexedAccess — which is what the default
+// category below needs.
 const CATEGORIES = [
   'Finance', 'Shopping', 'Transport', 'Food & Drink',
   'Entertainment', 'Productivity', 'Business', 'Games',
-];
+] as const;
 
 const ALL_PERMISSIONS = [
   { key: 'USER_PROFILE',       label: 'User Profile',        desc: 'Name and avatar' },
@@ -30,7 +33,7 @@ export default function SubmitMiniAppPage({ navigate, goBack, Colors }: NavProps
   const [id, setId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [iconUrl, setIconUrl] = useState('');
   const [url, setUrl] = useState('');
   const [developerName, setDeveloperName] = useState('');

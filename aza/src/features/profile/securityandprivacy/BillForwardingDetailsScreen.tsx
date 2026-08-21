@@ -45,7 +45,9 @@ export function BillForwardingDetailsScreen() {
   };
 
   const handleCopy = () => {
-    Clipboard.setString(emailAddress);
+    // setStringAsync, not setString — expo-clipboard has no synchronous setter, so the
+    // old call threw at runtime and the copy button did nothing.
+    void Clipboard.setStringAsync(emailAddress);
     setCopied(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => {

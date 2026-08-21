@@ -433,7 +433,7 @@ function createStyles(Colors: ThemeColors) {
         
     // Success bottom sheet
     modalBackdrop: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(0,0,0,0.6)',
     },
     modalSheet: {

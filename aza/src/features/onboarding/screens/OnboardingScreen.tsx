@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
   useFocusEffect(useCallback(() => { resetSignup(); }, [resetSignup]));
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideChangeTimeout = useRef<NodeJS.Timeout | null>(null);
+  const slideChangeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isBottomSheetVisible, setBottomSheetVisible] = useState(false);
   const bottomSheetAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;

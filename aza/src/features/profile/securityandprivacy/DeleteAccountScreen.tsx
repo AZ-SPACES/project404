@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   buttonTextContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   circleContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: Spacing.xl * 2 + 28, // Center over the button

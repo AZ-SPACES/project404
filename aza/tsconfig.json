@@ -2,11 +2,21 @@
   "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
+    // Without this the 17 Jest suites report ~830 "Cannot find name 'describe'" errors and
+    // drown out the real ones. @types/jest is already a devDependency.
+    "types": ["jest"],
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
     "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
     "jsx": "react-native",
+    // baseUrl is deprecated in TypeScript 6 and removed in 7, but it cannot simply be
+    // dropped here: the workspace mini apps reached through `paths` below live outside
+    // this directory, and their bare imports ("react", "react-native") only resolve
+    // because baseUrl points module resolution at aza/node_modules. Without it they fail
+    // with TS2307. Silence the deprecation for now; migrating means either hoisting the
+    // shared deps to the workspace root or giving the mini apps their own tsconfig.
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@miniapps/play-2048":         ["../miniapps/play-2048/index"],

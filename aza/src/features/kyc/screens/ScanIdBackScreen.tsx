@@ -99,8 +99,8 @@ export default function ScanIdBackScreen() {
 
   // Simulated Liveness and Edge Detection logic for Expo Go
   useEffect(() => {
-    let timeout1: NodeJS.Timeout;
-    let timeout2: NodeJS.Timeout;
+    let timeout1: ReturnType<typeof setTimeout>;
+    let timeout2: ReturnType<typeof setTimeout>;
 
     if (!capturedImage && permission?.granted) {
       // Mock progression of detecting an ID
@@ -443,7 +443,7 @@ function createStyles(Colors: ThemeColors) {
     borderRadius: 30,
     backgroundColor: "#fff" },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
     position: "absolute",

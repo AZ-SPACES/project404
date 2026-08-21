@@ -96,8 +96,8 @@ export default function ScanIdScreen() {
 
   // Simulated Liveness and Edge Detection logic for Expo Go
   useEffect(() => {
-    let timeout1: NodeJS.Timeout;
-    let timeout2: NodeJS.Timeout;
+    let timeout1: ReturnType<typeof setTimeout>;
+    let timeout2: ReturnType<typeof setTimeout>;
 
     if (!capturedImage && permission?.granted) {
       // Mock progression of detecting an ID

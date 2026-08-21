@@ -1,0 +1,16 @@
+{
+  // Typecheck configuration for CI. Identical to tsconfig.json except that the
+  // `@miniapps/*` aliases resolve to a stub declaration instead of the sibling workspace
+  // sources — see types/miniapp-workspaces.d.ts for why.
+  //
+  // Local development still uses tsconfig.json, so an editor continues to see the real
+  // mini-app types.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@miniapps/*": ["./types/miniapp-workspaces.d.ts"],
+      "@aza/miniapp-sdk": ["../miniapps/aza-sdk/src/index"]
+    }
+  },
+  "exclude": ["node_modules", "../miniapps"]
+}

@@ -131,7 +131,7 @@ export const DrawingCanvas = memo(DrawingCanvasInner);
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 15,
   },
   canvasArea: {

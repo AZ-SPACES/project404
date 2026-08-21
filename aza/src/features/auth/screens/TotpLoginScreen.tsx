@@ -673,7 +673,7 @@ function createStyles(Colors: ThemeColors) {
     
     // Selector
     selectorOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: 'flex-end',
       paddingBottom: 40,
     },

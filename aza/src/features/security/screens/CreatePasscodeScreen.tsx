@@ -54,7 +54,7 @@ export default function CreatePasscodeScreen() {
 
   // Automatic Navigation when 4 digits are entered
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (passcode.length === 4) {
       // Small delay for visual confirmation of the last digit
       timer = setTimeout(() => {

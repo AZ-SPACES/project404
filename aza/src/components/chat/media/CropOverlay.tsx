@@ -447,7 +447,7 @@ export const CropOverlay = memo(CropOverlayInner);
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.95)',
     zIndex: 50,
     justifyContent: 'center',

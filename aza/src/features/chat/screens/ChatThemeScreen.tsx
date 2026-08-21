@@ -777,7 +777,7 @@ function createStyles(Colors: ThemeColors, isDark: boolean) {
     resetBtnText: { ...Typography.body, fontWeight: '600' },
 
     // Color picker sheet
-    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+    backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.5)' },
     sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
     sheet: { backgroundColor: mainBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: 48 },
     sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginBottom: Spacing.lg },

@@ -22,7 +22,7 @@ interface ConsentSheetProps {
   visible: boolean;
   appName: string;
   appIcon: string | any;
-  developerName?: string;
+  developerName?: string | undefined;
   requestedPermissions: string[];
   onGrant: (permissions: string[]) => Promise<void>;
   onDeny: () => void;

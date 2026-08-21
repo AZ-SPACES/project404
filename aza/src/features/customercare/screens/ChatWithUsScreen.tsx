@@ -38,7 +38,7 @@ export default function ChatWithUsScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { messages, loading, sendMessage, sendAttachment, isOtherTyping, sendTypingStatus, loadHistory } = useSupportChat();
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialFocus = useRef(true);
 
   useFocusEffect(

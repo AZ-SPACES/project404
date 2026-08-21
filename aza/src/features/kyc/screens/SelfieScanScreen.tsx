@@ -420,7 +420,7 @@ function createStyles(Colors: ThemeColors) {
 
   // Bottom sheet
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.6)" },
   sheet: {
     position: "absolute",

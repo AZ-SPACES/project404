@@ -1294,7 +1294,9 @@ export const getMyMiniApps = () => api.get('/api/v1/dev/miniapps');
 
 export const saveMiniApp = (data: {
   id: string; name: string; description: string; category: string;
-  iconUrl?: string; url: string; developerName: string; supportUrl?: string;
+  // `| undefined` is explicit because tsconfig sets exactOptionalPropertyTypes: true —
+  // without it, a caller cannot pass `supportUrl: value || undefined` for "not supplied".
+  iconUrl?: string | undefined; url: string; developerName: string; supportUrl?: string | undefined;
   version: string; requestedPermissions: string[]; submitForReview: boolean;
 }) => api.put('/api/v1/dev/miniapps', data);
 
@@ -1319,7 +1321,9 @@ export const getSdkBalance = (appId: string) =>
 export const sdkPayment = (appId: string, payload: {
   amount: number;
   recipientIdentifier: string;
-  note?: string;
+  // Explicitly `| undefined`: a mini app may omit the note, and the caller forwards
+  // whatever the bridge gave it. See exactOptionalPropertyTypes in tsconfig.
+  note?: string | undefined;
   idempotencyKey: string;
 }) => api.post(`/api/v1/sdk/miniapps/${appId}/payment`, payload);
 

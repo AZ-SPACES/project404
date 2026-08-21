@@ -21,6 +21,12 @@ import {
 } from '../e2ee';
 import { bytesToBase64 } from '../codec';
 
+/** Byte arrays compare by identity, not value — render them as hex to compare contents.
+ *  Node's Buffer is not part of the React Native runtime, so this is done locally. */
+const hex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+
+
 function buildBundle(): {
   bundleForSender: RecipientBundle;
   privates: {
@@ -80,8 +86,8 @@ describe('X3DH session establishment', () => {
       senderId: 'alice',
       chatId: 'chat',
     });
-    expect(Buffer.from(senderResult.rootKey).toString('hex')).toBe(
-      Buffer.from(recipientRoot).toString('hex'),
+    expect(hex(senderResult.rootKey)).toBe(
+      hex(recipientRoot),
     );
   });
 
@@ -107,8 +113,8 @@ describe('X3DH session establishment', () => {
       senderId: 'alice',
       chatId: 'chat',
     });
-    expect(Buffer.from(senderResult.rootKey).toString('hex')).toBe(
-      Buffer.from(recipientRoot).toString('hex'),
+    expect(hex(senderResult.rootKey)).toBe(
+      hex(recipientRoot),
     );
   });
 
@@ -127,8 +133,8 @@ describe('X3DH session establishment', () => {
       senderId: 'alice',
       chatId: 'chatB',
     });
-    expect(Buffer.from(a.rootKey).toString('hex')).not.toBe(
-      Buffer.from(b.rootKey).toString('hex'),
+    expect(hex(a.rootKey)).not.toBe(
+      hex(b.rootKey),
     );
   });
 });
@@ -159,8 +165,8 @@ describe('v3 envelope round-trip', () => {
     });
     expect(result).not.toBeNull();
     expect(result!.plaintext).toBe('first hi 🌍');
-    expect(Buffer.from(result!.rootKey!).toString('hex')).toBe(
-      Buffer.from(rootKey).toString('hex'),
+    expect(hex(result!.rootKey!)).toBe(
+      hex(rootKey),
     );
   });
 
@@ -255,8 +261,8 @@ describe('v3 envelope round-trip', () => {
     expect(decoded).not.toBeNull();
     expect(decoded!.plaintext).toBe('second hi');
     // Both sides should derive the same ratcheted root key.
-    expect(Buffer.from(decoded!.rootKey!).toString('hex')).toBe(
-      Buffer.from(followup.newRootKey).toString('hex'),
+    expect(hex(decoded!.rootKey!)).toBe(
+      hex(followup.newRootKey),
     );
   });
 
@@ -327,8 +333,8 @@ describe('v3 envelope round-trip', () => {
     })!;
     expect(bobDecrypt1.plaintext).toBe('msg1');
     // Both sides derive the same ratcheted root
-    expect(Buffer.from(fu1.newRootKey).toString('hex')).toBe(
-      Buffer.from(bobDecrypt1.rootKey!).toString('hex'),
+    expect(hex(fu1.newRootKey)).toBe(
+      hex(bobDecrypt1.rootKey!),
     );
 
     // Advance both ratchets
@@ -351,8 +357,8 @@ describe('v3 envelope round-trip', () => {
       chatId: 'chat',
     })!;
     expect(bobDecrypt2.plaintext).toBe('msg2');
-    expect(Buffer.from(fu2.newRootKey).toString('hex')).toBe(
-      Buffer.from(bobDecrypt2.rootKey!).toString('hex'),
+    expect(hex(fu2.newRootKey)).toBe(
+      hex(bobDecrypt2.rootKey!),
     );
   });
 

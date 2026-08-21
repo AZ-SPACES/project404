@@ -55,7 +55,7 @@ export default function VideoCallScreen() {
 
   // Duration timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setTimeout>;
     if (activeCall?.status === 'ACTIVE') {
       interval = setInterval(() => {
         if (activeCall.startedAt) {

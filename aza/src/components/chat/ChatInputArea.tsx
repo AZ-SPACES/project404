@@ -52,7 +52,7 @@ export const ChatInputArea = memo(function ChatInputArea({
 
   // Animated waveform bars for recording preview (8 bars)
   const waveAnims = useRef(Array.from({ length: 8 }, () => new Animated.Value(0.3))).current;
-  const waveAnimRef = useRef<NodeJS.Timeout | null>(null);
+  const waveAnimRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isRecording) {
@@ -85,7 +85,7 @@ export const ChatInputArea = memo(function ChatInputArea({
 
   // Handle audio timer
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setTimeout>;
     if (isRecording) {
       interval = setInterval(() => {
         setRecordDuration(prev => prev + 1);
