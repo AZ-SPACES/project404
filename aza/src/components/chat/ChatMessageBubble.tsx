@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ChatPaymentRequestCard } from './ChatPaymentRequestCard';
+import { AkyedeGiftCard } from './AkyedeGiftCard';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -998,13 +999,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
               <View style={[styles.tailReceived, !isLastInGroup && styles.tailHidden, { borderTopColor: receivedBubbleBg }]} />
             )}
             <TouchableOpacity
-              activeOpacity={0.85}
+              activeOpacity={1}
               onLongPress={handleLongPress}
               delayLongPress={250}
               onPress={() => navigation.navigate('AkyedeOpen', { claimCode: akyedeData.claimCode })}
               style={[
                 styles.bubble,
-                styles.docBubble,
                 isMe ? styles.bubbleMe : styles.bubbleOther,
                 isMe && bubbleColor ? { backgroundColor: bubbleColor } : null,
                 !isMe && { backgroundColor: receivedBubbleBg },
@@ -1014,19 +1014,12 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
             >
               {forwardedBadge}
               {replyPreview}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={[styles.docIconBox, { backgroundColor: '#B7EE7A20' }]}>
-                  <Feather name="gift" size={20} color="#8CC63F" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.docName, isMe ? styles.textMe : styles.textOther]} numberOfLines={2}>
-                    {akyedeData.note || 'Akyede'}
-                  </Text>
-                  <Text style={[styles.docSize, isMe ? styles.timeTextMe : styles.timeTextOther]}>
-                    {isMe ? 'Gift sent · tap to see' : 'A gift for you · tap to open'}
-                  </Text>
-                </View>
-              </View>
+              <AkyedeGiftCard
+                claimCode={akyedeData.claimCode}
+                isMe={isMe}
+                fallbackOccasion={akyedeData.occasion}
+                fallbackNote={akyedeData.note}
+              />
               {metaRow}
             </TouchableOpacity>
           </>

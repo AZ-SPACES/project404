@@ -36,7 +36,7 @@ public class User {
 
     @Column(precision = 15, scale = 2)
     @Builder.Default
-    private java.math.BigDecimal balance = java.math.BigDecimal.ZERO;
+    private java.math.BigDecimal balancePROBE = java.math.BigDecimal.ZERO;
 
     @Column(name = "username", unique = true)
     private String username;

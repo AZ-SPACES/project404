@@ -18,7 +18,8 @@ import { useAppTheme, Typography, Spacing, ThemeColors } from '../../../theme';
 import type { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
-import { previewAkyede, openAkyede, Akyede, AkyedeOccasion } from '../../../services/api';
+import { previewAkyede, openAkyede, Akyede } from '../../../services/api';
+import { akyedeArt } from '../../../utils/akyedeOccasions';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { useDisplayContext } from '../../../providers/DisplayProvider';
 
@@ -29,19 +30,6 @@ const BLOCKED_COPY: Record<string, string> = {
   ALREADY_OPENED: 'You already opened this one.',
   NOT_YOURS: 'This gift was meant for someone else.',
   OWN_GIFT: 'You sent this one. It is waiting for them to open it.',
-};
-
-const OCCASION_ART: Record<AkyedeOccasion, { emoji: string; line: string }> = {
-  BIRTHDAY: { emoji: '🎂', line: 'for your birthday' },
-  WEDDING: { emoji: '💍', line: 'for your wedding' },
-  OUTDOORING: { emoji: '👶', line: 'for the outdooring' },
-  GRADUATION: { emoji: '🎓', line: 'for your graduation' },
-  CONGRATULATIONS: { emoji: '🎉', line: 'to say well done' },
-  THANK_YOU: { emoji: '🙏', line: 'to say thank you' },
-  CHRISTMAS: { emoji: '🎄', line: 'for Christmas' },
-  EID: { emoji: '🌙', line: 'for Eid' },
-  EASTER: { emoji: '🐣', line: 'for Easter' },
-  JUST_BECAUSE: { emoji: '💛', line: 'just because' },
 };
 
 export default function AkyedeOpenScreen({ navigation, route }: Props) {
@@ -136,7 +124,7 @@ export default function AkyedeOpenScreen({ navigation, route }: Props) {
 
   const blocked = !gift.openable ? gift.blockedReason ?? null : null;
   const showOpenButton = gift.openable && !revealed;
-  const art = OCCASION_ART[gift.occasion ?? 'JUST_BECAUSE'];
+  const art = akyedeArt(gift.occasion);
 
   return (
     <SafeAreaView style={styles.container}>

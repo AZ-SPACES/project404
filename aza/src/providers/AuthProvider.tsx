@@ -74,6 +74,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
 
+  // Ref tracks the latest state — including updates React has queued but not
+  // yet rendered — so async SecureStore writes always persist the most recent
+  // version. Every write goes through applyState so the two never diverge.
+  const stateRef = useRef(authState);
+
+  const applyState = useCallback((next: AuthState) => {
+    stateRef.current = next;
+    setAuthState(next);
+  }, []);
+
   useEffect(() => {
     const bootstrapAsync = async () => {
       let stateFromStorage: AuthState | null = null;
@@ -105,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         } catch (_) {}
       }
 
-      setAuthState({
+      applyState({
         userToken: stateFromStorage?.userToken || null,
         isKYCVerified: isKYCVerifiedResolved,
         hasPasscode: hasPasscodeResolved,
@@ -118,21 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     bootstrapAsync();
-  }, []);
-
-  // Ref tracks the latest state so async SecureStore writes always
-  // persist the most recent version, avoiding stale-closure overwrites.
-  const stateRef = useRef(authState);
-  stateRef.current = authState;
+  }, [applyState]);
 
   const saveState = useCallback(async (newState: Partial<AuthState>) => {
-    setAuthState(prev => {
-      const updated = { ...prev, ...newState };
-      stateRef.current = updated;
-      return updated;
-    });
-    // Persist using the merged values (ref is updated synchronously above)
-    const toPersist = { ...stateRef.current };
+    // Merge off the ref rather than React's `prev`. React only computes an
+    // updater eagerly for the first update in a queue, so reading the ref
+    // after a `setAuthState(fn)` could hand us pre-merge values and persist
+    // them — state that looked right in-session but was wrong on next launch.
+    // The ref is written synchronously here, so back-to-back calls compose.
+    const toPersist = { ...stateRef.current, ...newState };
+    applyState(toPersist);
     try {
       await SecureStore.setItemAsync(
         AUTH_STATE_KEY,
@@ -145,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         "We couldn't save your session. Please restart the app if issues persist.",
       );
     }
-  }, []);
+  }, [applyState]);
 
   const login = useCallback(({
     token,
@@ -169,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = useCallback(() => {
     // Reset in-memory state immediately so navigation reacts at once
-    setAuthState({
+    applyState({
       userToken: null,
       isKYCVerified: false,
       hasPasscode: false,
@@ -191,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       SecureStore.deleteItemAsync(AUTH_STATE_KEY),
       SecureStore.deleteItemAsync(PIN_ATTEMPTS_KEY),
     ]).catch((e) => console.error("Failed to clear SecureStore on logout", e));
-  }, []);
+  }, [applyState]);
 
   // Register logout with the API interceptor so that 403 responses
   // (token revoked / invalid) automatically clear the session.
