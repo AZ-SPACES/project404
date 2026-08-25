@@ -1,0 +1,64 @@
+# coturn configuration for WebRTC calls.
+#
+# Copy to turnserver.conf and fill in the two site-specific values below.
+# turnserver.conf itself is gitignored because static-auth-secret is a
+# credential; this template is the tracked reference for what belongs in it.
+#
+#   docker compose up -d coturn
+#
+# Firewall (ufw on the droplet) must allow:
+#   3478/udp  3478/tcp   STUN + TURN
+#   5349/tcp             TURNS, once a certificate exists for the realm
+#   49152:65535/udp      the relay range configured below
+
+# ── Site-specific ────────────────────────────────────────────────────────────
+# The droplet's public IPv4. coturn advertises this in relay candidates, so a
+# wrong value hands peers an unroutable address and every relayed call fails.
+external-ip=203.0.113.10
+
+# Must byte-for-byte equal TURN_SECRET in .env — the backend signs REST
+# credentials with it (CallService.getTurnCredentials) and coturn verifies the
+# HMAC with this copy. A mismatch shows up as 401s from the TURN server and
+# calls that connect only on the same network.
+static-auth-secret=replace-me-openssl-rand-hex-32
+
+# Must equal TURN_HOST in .env, and needs a DNS A record pointing here.
+realm=turn.example.com
+server-name=turn.example.com
+
+# ── Listeners ────────────────────────────────────────────────────────────────
+listening-port=3478
+tls-listening-port=5349
+use-auth-secret
+
+# Relay port range. Keep in sync with the firewall rule above.
+min-port=49152
+max-port=65535
+
+# ── TLS ──────────────────────────────────────────────────────────────────────
+# Paths inside the container: docker-compose mounts the certbot_certs volume at
+# /etc/letsencrypt. No certificate is issued for the TURN host by default —
+# init-api-ssl.sh covers api.aza.systems only — so until one exists coturn logs
+# the missing file and serves plain TURN on 3478. Comment both lines out to
+# silence that, at the cost of TURNS for clients on networks that only allow 443/TLS.
+cert=/etc/letsencrypt/live/turn.example.com/fullchain.pem
+pkey=/etc/letsencrypt/live/turn.example.com/privkey.pem
+
+# ── Hardening ────────────────────────────────────────────────────────────────
+# Refuse to relay to private ranges: without this the TURN server is an open
+# proxy into the internal Docker network and the droplet's own services.
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+
+no-tcp-relay
+no-multicast-peers
+fingerprint
+
+# Trim the attack surface and the log noise of legacy STUN behaviours.
+no-rfc5780
+no-stun-backward-compatibility
+response-origin-only-with-rfc5780
+
+log-file=/var/log/turnserver.log
