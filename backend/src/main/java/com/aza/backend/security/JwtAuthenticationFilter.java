@@ -100,6 +100,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .filter(a -> a.getStatus() == Agent.Status.ACTIVE)
                     .ifPresent(a -> authorities.add(new SimpleGrantedAuthority("ROLE_AGENT")));
         }
+        // Master-agent capability, on the same principle: an ACTIVE agent of tier SUPER.
+        // Scoped to the super-agent path so ordinary traffic skips the query.
+        if (request.getRequestURI().startsWith("/api/v1/superagent")) {
+            agentRepository.findByUserId(user.getId())
+                    .filter(a -> a.getStatus() == Agent.Status.ACTIVE)
+                    .filter(a -> a.getTier() == Agent.Tier.SUPER)
+                    .ifPresent(a -> authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_AGENT")));
+        }
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(user, null, authorities);
 

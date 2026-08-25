@@ -1,13 +1,13 @@
 # Production overlay for the DigitalOcean droplet, where every frontend is on Vercel and
-# the box serves api.aza.systems only. It disables the four Next.js services; nginx needs
+# the box serves api.aza.systems only. It disables the five Next.js services; nginx needs
 # no override, because nginx/conf.d is the API config (HTTP + HTTPS) in its final state.
 #
 # Command: docker compose -f docker-compose.yml -f docker-compose.backend.yml up -d
 # The deploy workflow always passes both files.
 
 services:
-  # Served by Vercel — see DNS for aza.systems, admin/merchants/pay.aza.systems. Nothing
-  # in nginx/conf.d routes to these, so running them on the droplet only burns build time.
+  # Served by Vercel — see DNS for aza.systems and admin/merchants/pay/superagents.aza.systems.
+  # Nothing in nginx/conf.d routes to these, so running them on the droplet only burns build time.
   aza-web:
     profiles: ["disabled"]
 
@@ -18,6 +18,9 @@ services:
     profiles: ["disabled"]
 
   aza-pay:
+    profiles: ["disabled"]
+
+  aza-superagents:
     profiles: ["disabled"]
 
   postgres:
