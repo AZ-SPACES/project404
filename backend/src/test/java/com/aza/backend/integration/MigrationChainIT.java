@@ -100,6 +100,12 @@ class MigrationChainIT extends PostgresIntegrationTest {
                   AND (column_name LIKE '%amount%'
                        OR column_name LIKE '%balance%'
                        OR column_name IN ('fee_amount', 'used_amount'))
+                  -- A boolean cannot hold a monetary value, so a name match on one is a
+                  -- false positive by construction, not a column to fix. The case that
+                  -- forced this: merchant_notification_preferences.email_low_balance is
+                  -- one of eight email_* notification toggles, and that table's actual
+                  -- money column, low_balance_threshold, is NUMERIC(15,2) and passes.
+                  AND data_type <> 'boolean'
                 """;
         List<String> offenders = new ArrayList<>();
         try (Connection c = dataSource.getConnection();
