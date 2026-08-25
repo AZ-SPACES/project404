@@ -7,6 +7,11 @@ require('./jest/moduleFallback');
 
 const expoPreset = require('jest-expo/jest-preset');
 
+// Resolve @babel/runtime rather than assuming where npm put it. Depending on how
+// the workspace tree resolves, it hoists to the monorepo root or stays nested in
+// aza/node_modules — and a hardcoded path silently fails every suite when that flips.
+const babelRuntimeDir = path.dirname(require.resolve('@babel/runtime/package.json'));
+
 // Files that live inside the ROOT-hoisted @react-native/jest-preset cannot
 // resolve their own runtime deps when jest workers load them. Swap each one
 // for a local wrapper that installs the fallback first, then delegates.
@@ -36,10 +41,9 @@ module.exports = {
   moduleNameMapper: {
     ...preset.moduleNameMapper,
     // Sandboxed code transformed by babel-jest references @babel/runtime
-    // helpers; map them to this workspace's copy so files loaded from the
+    // helpers; point them at the copy resolved above so files loaded from the
     // root-hoisted preset can find them too.
-    '^@babel/runtime/(.*)$':
-      path.join(__dirname, 'node_modules', '@babel', 'runtime') + '/$1',
+    '^@babel/runtime/(.*)$': path.join(babelRuntimeDir, '$1'),
   },
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|native-base|react-native-svg|@noble/.*)',
