@@ -92,7 +92,7 @@ services:
       # Single-instance deploy: skip the Redis hop for real-time delivery.
       # Set to "false" if you ever scale aza-backend beyond one instance.
       WEBSOCKET_LOCAL_DELIVERY: "true"
-      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems,https://pay.aza.systems
+      ALLOWED_ORIGINS: https://aza.systems,https://www.aza.systems,https://admin.aza.systems,https://merchants.aza.systems,https://pay.aza.systems,https://superagents.aza.systems
       TRUSTED_PROXY_IPS: 172.16.0.0/12,127.0.0.1,::1
       SWAGGER_ENABLED: true
       HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
@@ -164,6 +164,21 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+    networks:
+      - aza-network
+
+  aza-superagents:
+    build:
+      context: ./aza-superagents
+      args:
+        NEXT_PUBLIC_API_URL: https://api.aza.systems
+    container_name: aza-superagents
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-side only: the portal's proxy routes reach the API over the compose network,
+      # so no browser traffic depends on this and it never has to be a public hostname.
+      BACKEND_URL: http://aza-backend:8080
     networks:
       - aza-network
 

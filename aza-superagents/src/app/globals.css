@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * The super-agent console is dark-only and deliberately so. PRODUCT.md calls dark the brand's
+ * default voice, and this is an operator's tool — it gets stared at for long stretches, often
+ * in a back office, and a light mode would be a second palette to keep honest for no one's
+ * benefit. There is no theme toggle, so the tokens are declared once.
+ *
+ * Lime (#B7EE7A) is the only saturated colour in the system. Per the brand principles it is
+ * used surgically: the primary action, the active nav item, and the direction of a float
+ * movement. When everything is lime, nothing is.
+ */
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(0.145 0.006 145);
+  --foreground: oklch(0.965 0.005 130);
+
+  --surface: oklch(0.185 0.007 145);
+  --elevated: oklch(0.222 0.008 145);
+
+  --card: oklch(0.185 0.007 145);
+  --card-foreground: oklch(0.965 0.005 130);
+  --popover: oklch(0.222 0.008 145);
+  --popover-foreground: oklch(0.965 0.005 130);
+
+  /* #B7EE7A — the one expressive colour in the system. */
+  --primary: oklch(0.896 0.157 131);
+  --primary-foreground: oklch(0.205 0.045 140);
+
+  --secondary: oklch(0.262 0.009 145);
+  --secondary-foreground: oklch(0.965 0.005 130);
+
+  --muted: oklch(0.262 0.009 145);
+  --muted-foreground: oklch(0.685 0.012 145);
+
+  --accent: oklch(0.302 0.045 140);
+  --accent-foreground: oklch(0.896 0.157 131);
+
+  --destructive: oklch(0.665 0.192 25);
+  --destructive-foreground: oklch(0.985 0.005 130);
+  --success: oklch(0.896 0.157 131);
+  --warning: oklch(0.815 0.152 82);
+
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.896 0.157 131 / 55%);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  /* WCAG AA floor: every interactive element keeps a visible focus ring. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2;
+    outline-color: var(--primary);
+  }
+  /* Tabular figures everywhere money is shown — columns of cedis must line up. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+/*
+ * Motion. PRODUCT.md asks for speed to read as the product, and for every animation to have an
+ * instant-reveal fallback — so each of these is a short, single-property move, and the whole
+ * set is switched off under prefers-reduced-motion rather than merely shortened.
+ */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-rise {
+  animation: rise 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

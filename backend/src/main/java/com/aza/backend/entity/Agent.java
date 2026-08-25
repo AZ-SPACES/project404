@@ -47,6 +47,13 @@ public class Agent {
     @Column(length = 255)
     private String location;
 
+    /**
+     * The super agent this agent draws float from, or null for an agent that reports to
+     * nobody. Only a {@link Tier#SUPER} agent may appear here.
+     */
+    @Column(name = "parent_agent_id")
+    private UUID parentAgentId;
+
     /** Trading/business name the agent operates under. */
     @Column(length = 255)
     private String businessName;

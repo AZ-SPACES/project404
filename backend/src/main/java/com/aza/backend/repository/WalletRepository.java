@@ -46,6 +46,21 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
     @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w")
     java.math.BigDecimal sumAllBalancesIncludingFrozen();
 
+    /** Float held by the agents under one master, for the super-agent downline position. */
+    @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w " +
+            "WHERE w.type = com.aza.backend.entity.Wallet.WalletType.AGENT_FLOAT " +
+            "AND w.userId IN (SELECT a.userId FROM Agent a WHERE a.parentAgentId = :parentAgentId)")
+    java.math.BigDecimal sumFloatForDownline(@Param("parentAgentId") UUID parentAgentId);
+
+    /**
+     * Float wallets for a batch of agent users. The roster and reconciliation views read a
+     * whole downline at once, so they fetch in one query rather than one per agent.
+     */
+    @Query("SELECT w FROM Wallet w " +
+            "WHERE w.type = com.aza.backend.entity.Wallet.WalletType.AGENT_FLOAT " +
+            "AND w.userId IN :userIds")
+    java.util.List<Wallet> findAgentFloatWallets(@Param("userIds") java.util.Collection<UUID> userIds);
+
     /** Float held by agents in a given status — a breakdown of customer float for safeguarding reporting. */
     @Query("SELECT COALESCE(SUM(w.balance), 0) FROM Wallet w " +
             "WHERE w.type = com.aza.backend.entity.Wallet.WalletType.AGENT_FLOAT " +

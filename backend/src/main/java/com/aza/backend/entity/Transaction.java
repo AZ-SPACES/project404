@@ -100,7 +100,9 @@ public class Transaction {
         /** Agent cash network: physical cash exchanged for wallet balance. */
         CASH_IN, CASH_OUT,
         /** Reserved for the merchant/biller/disbursement flows built on the same ledger. */
-        MERCHANT_PAYMENT, BILL_PAY, PAYOUT, DISBURSEMENT
+        MERCHANT_PAYMENT, BILL_PAY, PAYOUT, DISBURSEMENT,
+        /** Super agent moving float to or from one of its sub-agents. No margin, no fee. */
+        FLOAT_DISTRIBUTION
     }
 
     public enum TransactionStatus {
