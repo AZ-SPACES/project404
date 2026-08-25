@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.semekor.k.aza",
+      "appleTeamId": "ZAP538ZDR4",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -98,7 +99,8 @@
       "./plugins/withUserScriptSandboxDisabled.js",
       "expo-sharing",
       "expo-status-bar",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "@bacons/apple-targets"
     ],
     "extra": {
       "eas": {
