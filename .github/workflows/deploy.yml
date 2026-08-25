@@ -55,11 +55,16 @@ jobs:
             # in a loop, so printing it asserted nothing: a service that died on a bad
             # config deployed "successfully" and went unnoticed until someone looked.
             #
-            # Only the services this box actually serves. The four Next.js apps are on
+            # Only the compose services this box actually serves. The Next.js apps are on
             # Vercel and disabled by the overlay, but `ps` still lists containers left
             # running from an older deploy — asserting on those would fail the deploy over
             # a service that is meant to be down.
-            REQUIRED="postgres redis backend nginx coturn"
+            #
+            # coturn is deliberately absent: TURN runs as a host service on the droplet,
+            # not under compose (see the disabled coturn service in docker-compose.yml).
+            # Docker cannot see it, so requiring it here would fail every deploy. It is
+            # reachable externally and worth checking that way if TURN monitoring is wanted.
+            REQUIRED="postgres redis backend nginx"
             FAILED=""
 
             restart_counts() {

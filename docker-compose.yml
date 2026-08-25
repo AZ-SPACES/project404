@@ -50,6 +50,20 @@ services:
   # must allow 3478/udp, 3478/tcp, 5349/tcp and 49152-65535/udp, and
   # `external-ip` in turnserver.conf must be the droplet's public address.
   coturn:
+    # DISABLED — the droplet already runs coturn as a host service, and this
+    # container cannot coexist with it. Both want :3478 with host networking, so
+    # the container lost the race and restarted 201 times before the deploy
+    # health check caught it ("bind: Address in use" in its logs).
+    #
+    # The host instance is verified working: it answers STUN, challenges with
+    # realm turn.aza.systems, and allocates relays against the same TURN_SECRET
+    # the backend signs with. Nothing is lost by leaving it in charge.
+    #
+    # This definition is kept, not deleted, because it is the migration target:
+    # to move TURN into compose, stop and disable the host service first
+    # (`systemctl disable --now coturn`), then drop this profile. Until then
+    # turnserver.conf.example documents what the host instance must contain.
+    profiles: ["disabled"]
     image: coturn/coturn:4.6-alpine
     container_name: aza-coturn
     restart: unless-stopped
