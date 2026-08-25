@@ -45,11 +45,78 @@ jobs:
             SENTRY_RELEASE=$(git rev-parse --short HEAD) \
             $COMPOSE up --build -d --remove-orphans
 
-            echo "→ Waiting for services to become healthy..."
-            sleep 15
+            echo "→ Waiting for services to settle..."
+            sleep 20
 
-            echo "→ Checking running containers..."
+            echo "→ Current containers:"
             $COMPOSE ps
+
+            # `docker compose ps` exits 0 whether a container is up, dead, or restarting
+            # in a loop, so printing it asserted nothing: a service that died on a bad
+            # config deployed "successfully" and went unnoticed until someone looked.
+            #
+            # Only the services this box actually serves. The four Next.js apps are on
+            # Vercel and disabled by the overlay, but `ps` still lists containers left
+            # running from an older deploy — asserting on those would fail the deploy over
+            # a service that is meant to be down.
+            REQUIRED="postgres redis backend nginx coturn"
+            FAILED=""
+
+            restart_counts() {
+              for svc in $REQUIRED; do
+                cid=$($COMPOSE ps -q "$svc" 2>/dev/null || true)
+                if [ -n "$cid" ]; then
+                  printf '%s=%s ' "$svc" "$(docker inspect -f '{{.RestartCount}}' "$cid" 2>/dev/null || echo ?)"
+                fi
+              done
+              return 0
+            }
+
+            report_states() {
+              for svc in $REQUIRED; do
+                cid=$($COMPOSE ps -q "$svc" 2>/dev/null || true)
+                if [ -z "$cid" ]; then
+                  echo "  ✗ $svc — no container"
+                  FAILED="$FAILED $svc"
+                  continue
+                fi
+                state=$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null || echo unknown)
+                health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' "$cid" 2>/dev/null || echo unknown)
+                if [ "$state" != "running" ] || [ "$health" = "unhealthy" ]; then
+                  echo "  ✗ $svc — state=$state health=$health"
+                  FAILED="$FAILED $svc"
+                else
+                  echo "  ✓ $svc — state=$state health=$health"
+                fi
+              done
+              return 0
+            }
+
+            echo "→ Verifying required services are running..."
+            BEFORE=$(restart_counts)
+            report_states
+
+            # A crash-looping container reads as "running" the instant after it restarts,
+            # so state alone cannot tell a healthy service from one dying every few
+            # seconds. Compare Docker's restart counters across a window instead.
+            sleep 15
+            AFTER=$(restart_counts)
+            if [ "$BEFORE" != "$AFTER" ]; then
+              echo "  ✗ a service restarted during the settle window — crash loop"
+              echo "      before: $BEFORE"
+              echo "      after:  $AFTER"
+              FAILED="$FAILED crash-loop"
+            fi
+            report_states
+
+            if [ -n "$FAILED" ]; then
+              # report_states runs twice, so a service down in both passes lists twice.
+              FAILED=$(echo "$FAILED" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ')
+              echo "✗ Deploy failed — not healthy: $FAILED"
+              $COMPOSE logs --tail=60 $REQUIRED 2>&1 || true
+              exit 1
+            fi
+            echo "  all required services running"
 
             echo "→ Verifying nginx is serving HTTPS..."
             $COMPOSE exec -T nginx nginx -t
