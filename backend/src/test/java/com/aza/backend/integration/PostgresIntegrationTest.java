@@ -5,15 +5,10 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Base class for tests that need a real PostgreSQL rather than H2.
- *
- * <p>The container is {@code static}, so one database is started for the whole suite and
- * shared by every subclass — starting a fresh PostgreSQL per test class would dominate
- * the runtime for no benefit.
  *
  * <p>{@code disabledWithoutDocker} is what keeps this honest on a developer laptop with
  * no daemon running: the suite skips rather than fails, so {@code mvn test} stays green
@@ -25,7 +20,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 public abstract class PostgresIntegrationTest {
 
-    @Container
+    /**
+     * Singleton containers: started once in the static initializer below and never
+     * stopped. Deliberately <em>not</em> annotated {@code @Container}.
+     *
+     * <p>{@code @Container} binds a container's lifecycle to the class declaring it.
+     * Because this field is inherited, that means every subclass stops and restarts it on
+     * a fresh random port — while Spring's test context is cached and shared across those
+     * same subclasses. The second class therefore inherited a datasource still pointing at
+     * the first class's dead container, and every one of its tests failed with connection
+     * refused. Starting the containers once and leaving them up is Testcontainers'
+     * documented singleton pattern; Ryuk removes them when the JVM exits.
+     */
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16").withReuse(true);
@@ -40,12 +46,15 @@ public abstract class PostgresIntegrationTest {
      * fails and every test in the class errors out before it runs.
      *
      * <p>A container rather than a mock: mocking a lifecycle bean would hide a genuine
-     * startup dependency, and this keeps the boot path honest about what the application
-     * actually requires. {@code @ServiceConnection} supplies the host and port, taking
-     * precedence over any {@code spring.data.redis.*} property.
+     * startup dependency, and booting the context is the strongest assertion
+     * {@link MigrationChainIT} makes.
      */
-    @Container
     @ServiceConnection(name = "redis")
     static final GenericContainer<?> REDIS =
             new GenericContainer<>("redis:7-alpine").withExposedPorts(6379).withReuse(true);
+
+    static {
+        POSTGRES.start();
+        REDIS.start();
+    }
 }
