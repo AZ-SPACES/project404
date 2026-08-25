@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.semekor.k.aza"
+      "bundleIdentifier": "com.semekor.k.aza",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "android": {
       "allowBackup": false,
@@ -92,7 +97,8 @@
       "./plugins/withSwiftUICoreFix.js",
       "./plugins/withUserScriptSandboxDisabled.js",
       "expo-sharing",
-      "expo-status-bar"
+      "expo-status-bar",
+      "@config-plugins/react-native-webrtc"
     ],
     "extra": {
       "eas": {

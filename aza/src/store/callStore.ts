@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import { webrtcService } from '../services/webrtcService';
+import type { MediaStream, MediaStreamTrack, RTCPeerConnection } from 'react-native-webrtc';
+import {
+  webrtcService,
+  type IceCandidateInit,
+  type IceServer,
+  type SessionDescriptionInit,
+  type WebRTCCallbacks,
+} from '../services/webrtcService';
 import { callAudioService } from '../services/callAudioService';
-
-type RTCPeerConnection = any;
-type MediaStream = any;
-type RTCIceCandidate = any;
-type RTCSessionDescription = any;
 import { ensureCallPermissions } from '../services/callPermissions';
 import { navigate } from '../navigation/navigationRef';
 import {
@@ -61,6 +63,76 @@ interface CallState {
   flipCamera: () => void;
 }
 
+/**
+ * ICE candidates routinely arrive before we can use them. Both sides await
+ * getTurnCredentials() before constructing the peer connection, and
+ * addIceCandidate() rejects until a remote description is set — a candidate
+ * landing in either window is lost. A dropped candidate is often the only
+ * route that would have worked, so this shows up as calls that ring, connect,
+ * then sit in silence. Buffer per call; flush once the connection can take them.
+ */
+const iceBuffer: { callId: string | null; candidates: IceCandidateInit[] } = {
+  callId: null,
+  candidates: [],
+};
+
+function resetIceBuffer(callId: string | null) {
+  iceBuffer.callId = callId;
+  iceBuffer.candidates = [];
+}
+
+async function flushIceBuffer(pc: RTCPeerConnection, callId: string) {
+  if (iceBuffer.callId !== callId) return;
+  const queued = iceBuffer.candidates;
+  iceBuffer.candidates = [];
+  for (const candidate of queued) {
+    try {
+      await webrtcService.addIceCandidate(pc, candidate);
+    } catch (e) {
+      console.warn('[call] discarding unusable buffered ICE candidate', e);
+    }
+  }
+}
+
+/**
+ * Peer-connection callbacks. Caller and callee need exactly the same wiring,
+ * so build it once. `callId` is captured rather than read from the store so a
+ * late event from a finished call can't mutate its successor.
+ */
+function makePeerCallbacks(callId: string): WebRTCCallbacks {
+  return {
+    onIceCandidate: (candidate) => {
+      relayIceCandidate(callId, JSON.stringify(candidate)).catch(() => {});
+    },
+
+    onTrack: (stream) => {
+      useCallStore.setState((state) => ({
+        activeCall: state.activeCall ? { ...state.activeCall, remoteStream: stream } : null,
+      }));
+    },
+
+    onConnectionStateChange: (connectionState) => {
+      const { activeCall } = useCallStore.getState();
+      if (!activeCall || activeCall.callId !== callId) return;
+
+      if (connectionState === 'connected') {
+        // Recovered from a transient drop.
+        if (activeCall.status === 'RECONNECTING') {
+          useCallStore.setState({ activeCall: { ...activeCall, status: 'ACTIVE' } });
+        }
+      } else if (connectionState === 'disconnected') {
+        // Not terminal — ICE often recovers on its own. Surface it, don't kill it.
+        if (activeCall.status === 'ACTIVE') {
+          useCallStore.setState({ activeCall: { ...activeCall, status: 'RECONNECTING' } });
+        }
+      } else if (connectionState === 'failed') {
+        // Terminal: ICE gave up. Tear down instead of showing a dead call.
+        void useCallStore.getState().endCurrentCall();
+      }
+    },
+  };
+}
+
 export const useCallStore = create<CallState>((set, get) => ({
   activeCall: null,
   isMuted: false,
@@ -71,6 +143,7 @@ export const useCallStore = create<CallState>((set, get) => ({
   setIncomingCall: (payload: any) => {
     // Payload from WS call.initiate event
     // { callId, callerId, callerName, callerAvatar, type, status, ... }
+    resetIceBuffer(payload.callId);
     set({
       activeCall: {
         callId: payload.callId,
@@ -124,6 +197,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       }
 
       // 2. Set state
+      resetIceBuffer(data.callId);
       set({
         activeCall: {
           callId: data.callId,
@@ -226,6 +300,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     callAudioService.stop();
     webrtcService.teardown(activeCall.peerConnection, activeCall.localStream);
     webrtcService.teardown(null, activeCall.remoteStream);
+    resetIceBuffer(null);
 
     set({ activeCall: null });
   },
@@ -261,25 +336,12 @@ export const useCallStore = create<CallState>((set, get) => ({
           try {
             // Get credentials
             const turnRes = await getTurnCredentials();
-            const iceServers = turnRes.data?.data?.iceServers || turnRes.data?.iceServers || [];
+            const iceServers: IceServer[] = turnRes.data?.data?.iceServers || turnRes.data?.iceServers || [];
             
-            const callbacks = {
-              onIceCandidate: (candidate: RTCIceCandidate) => {
-                relayIceCandidate(activeCall.callId, JSON.stringify(candidate)).catch(() => {});
-              },
-              onTrack: (stream: MediaStream) => {
-                set((state) => ({
-                  activeCall: state.activeCall ? { ...state.activeCall, remoteStream: stream } : null
-                }));
-              },
-              onConnectionStateChange: (state: string) => {
-                if (state === 'failed' || state === 'disconnected') {
-                  // handle reconnect logic later
-                }
-              }
-            };
-            
-            const pc = webrtcService.createPeerConnection(iceServers, callbacks);
+            const pc = webrtcService.createPeerConnection(
+              iceServers,
+              makePeerCallbacks(activeCall.callId),
+            );
             
             const state = get();
             if (state.activeCall?.localStream) {
@@ -306,6 +368,7 @@ export const useCallStore = create<CallState>((set, get) => ({
           callAudioService.stop();
           webrtcService.teardown(activeCall.peerConnection, activeCall.localStream);
           webrtcService.teardown(null, activeCall.remoteStream);
+          resetIceBuffer(null);
           set({ activeCall: null });
         }
         break;
@@ -314,25 +377,12 @@ export const useCallStore = create<CallState>((set, get) => ({
         if (activeCall && !activeCall.isCaller) {
           try {
             const turnRes = await getTurnCredentials();
-            const iceServers = turnRes.data?.data?.iceServers || turnRes.data?.iceServers || [];
+            const iceServers: IceServer[] = turnRes.data?.data?.iceServers || turnRes.data?.iceServers || [];
             
-            const callbacks = {
-              onIceCandidate: (candidate: RTCIceCandidate) => {
-                relayIceCandidate(activeCall.callId, JSON.stringify(candidate)).catch(() => {});
-              },
-              onTrack: (stream: MediaStream) => {
-                set((state) => ({
-                  activeCall: state.activeCall ? { ...state.activeCall, remoteStream: stream } : null
-                }));
-              },
-              onConnectionStateChange: (state: string) => {
-                if (state === 'failed' || state === 'disconnected') {
-                  // handle reconnect logic later
-                }
-              }
-            };
-            
-            const pc = webrtcService.createPeerConnection(iceServers, callbacks);
+            const pc = webrtcService.createPeerConnection(
+              iceServers,
+              makePeerCallbacks(activeCall.callId),
+            );
             
             if (activeCall.localStream) {
               activeCall.localStream.getTracks().forEach((track: any) => {
@@ -342,8 +392,11 @@ export const useCallStore = create<CallState>((set, get) => ({
             
             set((st) => ({ activeCall: st.activeCall ? { ...st.activeCall, peerConnection: pc } : null }));
             
-            const offerDesc = JSON.parse(payload.data);
+            const offerDesc: SessionDescriptionInit = JSON.parse(payload.data);
             const answer = await webrtcService.createAnswer(pc, offerDesc);
+            // createAnswer set the remote description, so candidates that
+            // arrived while we were fetching TURN credentials can go in now.
+            await flushIceBuffer(pc, activeCall.callId);
             await relaySdpAnswer(activeCall.callId, JSON.stringify(answer));
           } catch (e) {
             console.error("Error handling offer", e);
@@ -355,8 +408,9 @@ export const useCallStore = create<CallState>((set, get) => ({
       case 'sdp.answer':
         if (activeCall?.peerConnection) {
           try {
-            const answerDesc = JSON.parse(payload.data);
+            const answerDesc: SessionDescriptionInit = JSON.parse(payload.data);
             await webrtcService.setRemoteDescription(activeCall.peerConnection, answerDesc);
+            await flushIceBuffer(activeCall.peerConnection, activeCall.callId);
           } catch (e) {
             console.error("Error handling answer", e);
           }
@@ -364,10 +418,18 @@ export const useCallStore = create<CallState>((set, get) => ({
         break;
 
       case 'ice.candidate':
-        if (activeCall?.peerConnection && payload.data) {
+        if (activeCall && payload.data) {
           try {
-            const candidate = JSON.parse(payload.data);
-            await webrtcService.addIceCandidate(activeCall.peerConnection, candidate);
+            const candidate: IceCandidateInit = JSON.parse(payload.data);
+            const pc = activeCall.peerConnection;
+            // addIceCandidate rejects until the remote description is set, and
+            // the connection may not exist yet at all — buffer for the flush
+            // that follows setRemoteDescription rather than dropping.
+            if (pc && pc.remoteDescription) {
+              await webrtcService.addIceCandidate(pc, candidate);
+            } else {
+              iceBuffer.candidates.push(candidate);
+            }
           } catch (e) {
             console.error("Error adding ice candidate", e);
           }
