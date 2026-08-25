@@ -11,7 +11,7 @@
 import 'fast-text-encoding';
 import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { Client } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 
 import { BASE_URL, TOKEN_KEY } from '../services/api';
@@ -19,6 +19,7 @@ import { useAuth } from './AuthProvider';
 import { useE2EE } from './E2EEProvider';
 import { useChatStore } from '../store/chatStore';
 import { subscribeAuthEvents } from './authEvents';
+import { flushSessionRoots } from '../store/sessionRootCache';
 
 export function ChatSocketProvider({ children }: { children: React.ReactNode }) {
   const { userToken } = useAuth();
@@ -47,7 +48,14 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
     const client = new Client({
       brokerURL: wsUrl,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5_000,
+      // Every send while the socket is down falls back to REST, which is a
+      // fresh TLS handshake per message. A flat 5s retry meant a transient
+      // drop (tunnel, cell handover) put the whole conversation on the slow
+      // path for seconds; retry almost immediately instead, and back off
+      // exponentially so a genuinely down server isn't hammered.
+      reconnectDelay: 500,
+      reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+      maxReconnectDelay: 15_000,
       heartbeatIncoming: 10_000,
       heartbeatOutgoing: 10_000,
       forceBinaryWSFrames: true,
@@ -106,6 +114,9 @@ export function ChatSocketProvider({ children }: { children: React.ReactNode }) 
       if (state === 'active') {
         if (!client.active) client.activate();
       } else if (state === 'background') {
+        // Sends don't wait on the session-root write, so make sure the
+        // ratchet is durable before the OS is free to kill us.
+        flushSessionRoots().catch(() => {});
         client.deactivate().catch(() => {});
       }
     });

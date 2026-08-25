@@ -118,7 +118,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
   const markReadStore = useChatStore((s) => s.markRead);
   const setDisappearingTtlStore = useChatStore((s) => s.setDisappearingTtl);
   const deleteMessageStore = useChatStore((s) => s.deleteMessage);
-  const ensurePeerKeys = useChatStore((s) => s.ensurePeerKeys);
+  const prewarmSend = useChatStore((s) => s.prewarmSend);
   // Note: setSelfIdentity is invoked by E2EEProvider as part of bootstrap,
   // so the store already has the keypair before any screen mounts.
 
@@ -132,10 +132,13 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
         const summary = await openChatWithUser(otherUserId);
         if (cancelled) return;
         setChatId(summary.id);
+        // Warm the key bundles, own-device bundles and X3DH session root the
+        // encryptor needs, concurrently with the history load rather than
+        // after it — history is a full page fetch plus a decrypt loop, and
+        // making key warming wait behind it meant the first message of a
+        // conversation paid for those fetches on the send path instead.
+        prewarmSend(otherUserId);
         await loadHistory(summary.id);
-        // Pre-fetch peer key bundle so the first send is instant and
-        // verification UI works on first open.
-        await ensurePeerKeys(otherUserId);
       } catch (e: unknown) {
         if (!cancelled) setError(extractErrorMessage(e, 'Could not open chat'));
       }
@@ -143,7 +146,7 @@ export function useChat(otherUserId: string | undefined): UseChatResult {
     return () => {
       cancelled = true;
     };
-  }, [otherUserId, e2eeReady, openChatWithUser, loadHistory, ensurePeerKeys]);
+  }, [otherUserId, e2eeReady, openChatWithUser, loadHistory, prewarmSend]);
 
   // Pull store state for THIS chat only (selectors keep re-renders tight).
   const thread = useChatStore((s) => (chatId ? s.messagesByChat[chatId] : undefined));

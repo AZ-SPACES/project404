@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -325,10 +326,11 @@ public class ChatService {
     }
 
     public void sendTypingIndicator(User user, TypingRequest request) {
-        Chat chat = chatRepository.findById(request.getChatId())
-                .orElseThrow(() -> new AppException("Chat not found"));
+        UUID[] participants = participantsOf(request.getChatId());
 
-        assertParticipant(chat, user.getId());
+        if (!participants[0].equals(user.getId()) && !participants[1].equals(user.getId())) {
+            throw new AppException("Not authorized to access this chat");
+        }
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("chatId", request.getChatId().toString());
@@ -336,8 +338,35 @@ public class ChatService {
         payload.put("isTyping", request.isTyping());
 
         webSocketPublisher.publishToChatRoom(
-                chat.getParticipantOneId(), chat.getParticipantTwoId(),
+                participants[0], participants[1],
                 WebSocketEventType.CHAT_TYPING, payload);
+    }
+
+    /**
+     * The two participants of a chat, cached.
+     *
+     * A typing indicator fires several times per message a user types, and each
+     * one used to load the whole Chat row — a DB round trip competing with real
+     * sends for both a STOMP inbound thread and a connection from the pool, to
+     * re-read two ids that cannot change. Nothing in the codebase deletes or
+     * re-participates a chat, so the mapping is immutable once the row exists.
+     * Bounded so a long-lived instance with many chats can't grow it without
+     * limit; past the cap we simply stop caching rather than evict.
+     */
+    private static final int PARTICIPANT_CACHE_MAX = 10_000;
+    private final Map<UUID, UUID[]> participantCache = new ConcurrentHashMap<>();
+
+    private UUID[] participantsOf(UUID chatId) {
+        UUID[] cached = participantCache.get(chatId);
+        if (cached != null) return cached;
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new AppException("Chat not found"));
+        UUID[] participants = { chat.getParticipantOneId(), chat.getParticipantTwoId() };
+        if (participantCache.size() < PARTICIPANT_CACHE_MAX) {
+            participantCache.put(chatId, participants);
+        }
+        return participants;
     }
 
     // ==================== DELETE MESSAGE ====================
