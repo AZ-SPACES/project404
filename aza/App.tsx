@@ -39,6 +39,7 @@ import { PresenceProvider } from "./src/providers/PresenceProvider";
 import { E2EEProvider } from "./src/providers/E2EEProvider";
 import { ChatSocketProvider } from "./src/providers/ChatSocketProvider";
 import { CallSocketProvider } from "./src/providers/CallSocketProvider";
+import { useWatchSync } from "./src/hooks/useWatchSync";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import { UpdateBanner } from "./src/components/ui/UpdateBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
@@ -99,6 +100,10 @@ function AppContent() {
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [showBiometricsPrompt, setShowBiometricsPrompt] = useState(false);
   const [isGeoBlocked, setIsGeoBlocked] = useState(false);
+
+  // Mirrors the wallet to a paired Apple Watch. A no-op on Android, and on iOS
+  // until a watch is paired with the app installed, so it needs no guard here.
+  useWatchSync();
 
   useEffect(() => {
     return subscribeAuthEvents((e) => {
