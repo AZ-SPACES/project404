@@ -37,6 +37,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # TURN relay for WebRTC calls. Without it a call connects only when the two
+  # peers can reach each other directly, which fails behind the symmetric NAT
+  # most mobile carriers use: the call rings, reports itself connected, then
+  # sits silent. CallService hands clients turn:<TURN_HOST>:3478 (udp + tcp)
+  # and turns:<TURN_HOST>:5349, authenticated by an HMAC of TURN_SECRET, so
+  # static-auth-secret in turnserver.conf must equal TURN_SECRET exactly.
+  #
+  # host networking rather than bridge: coturn allocates relay ports across
+  # 49152-65535 and publishing ~16k ports through docker-proxy is impractical.
+  # The container binds the host's interfaces directly, so the droplet firewall
+  # must allow 3478/udp, 3478/tcp, 5349/tcp and 49152-65535/udp, and
+  # `external-ip` in turnserver.conf must be the droplet's public address.
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    container_name: aza-coturn
+    restart: unless-stopped
+    network_mode: host
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    volumes:
+      # Gitignored: it carries static-auth-secret. Copy turnserver.conf.example
+      # and fill it in — that file documents every value.
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      # TURNS on 5349 needs a certificate for TURN_HOST. No cert is issued for
+      # it yet (init-api-ssl.sh covers api.aza.systems only), so until one is,
+      # coturn logs the missing file and serves plain TURN on 3478.
+      - certbot_certs:/etc/letsencrypt:ro
+
   backend:
     build: ./backend
     container_name: aza-backend
