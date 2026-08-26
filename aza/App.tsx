@@ -40,6 +40,7 @@ import { E2EEProvider } from "./src/providers/E2EEProvider";
 import { ChatSocketProvider } from "./src/providers/ChatSocketProvider";
 import { CallSocketProvider } from "./src/providers/CallSocketProvider";
 import { useWatchSync } from "./src/hooks/useWatchSync";
+import { useWatchCommands } from "./src/hooks/useWatchCommands";
 import { OfflineBanner } from "./src/components/ui/OfflineBanner";
 import { UpdateBanner } from "./src/components/ui/UpdateBanner";
 import PrivacyOverlay from "./src/components/ui/PrivacyOverlay";
@@ -104,6 +105,7 @@ function AppContent() {
   // Mirrors the wallet to a paired Apple Watch. A no-op on Android, and on iOS
   // until a watch is paired with the app installed, so it needs no guard here.
   useWatchSync();
+  useWatchCommands();
 
   useEffect(() => {
     return subscribeAuthEvents((e) => {

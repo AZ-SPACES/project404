@@ -218,6 +218,10 @@ public class NotificationService {
         Map<String, Object> data = new HashMap<>();
         data.put("transactionId", transactionId);
         data.put("type", "MONEY_RECEIVED");
+        // The watch renders these directly rather than parsing the body sentence.
+        // Nothing new is disclosed: both already appear in the visible title.
+        data.put("amount", "GHS " + fmtAmt(amount));
+        data.put("counterparty", senderName);
 
         String body = "Credit: GHS " + fmtAmt(amount) + " from " + senderName + ".";
         if (newBalance != null)
@@ -231,12 +235,39 @@ public class NotificationService {
                 data);
     }
 
+    /**
+     * Someone has asked this user for money.
+     *
+     * Distinct from {@link #sendMoneyReceivedNotification} on purpose. Money
+     * requests previously reused that method, which told the *payer* "GHS 50
+     * received" and described being asked for money as a credit — the exact
+     * inverse of what happened. It also drove the wrong interface on a paired
+     * Apple Watch, which picks a notification scene by category.
+     */
+    public void sendMoneyRequestedNotification(UUID payerId, String requesterName,
+                                               String amount, String transactionId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("transactionId", transactionId);
+        data.put("type", "MONEY_REQUESTED");
+        data.put("amount", "GHS " + fmtAmt(amount));
+        data.put("counterparty", requesterName);
+
+        sendNotification(
+                payerId,
+                Notification.NotificationType.MONEY_REQUESTED,
+                "GHS " + fmtAmt(amount) + " requested",
+                requesterName + " asked you for GHS " + fmtAmt(amount) + ".",
+                data);
+    }
+
     public void sendMoneySentNotification(UUID senderId, String recipientName,
                                           String amount, String transactionId,
                                           java.math.BigDecimal newBalance) {
         Map<String, Object> data = new HashMap<>();
         data.put("transactionId", transactionId);
         data.put("type", "TRANSFER_COMPLETED");
+        data.put("amount", "GHS " + fmtAmt(amount));
+        data.put("counterparty", recipientName);
 
         String body = "Debit: GHS " + fmtAmt(amount) + " to " + recipientName + ".";
         if (newBalance != null)
@@ -503,11 +534,31 @@ public class NotificationService {
                                 .build();
 
                 boolean isCall = "INCOMING_CALL".equals(fcmData.get("type"));
+                String watchCategory = watchNotificationCategory(fcmData.get("type"));
 
                 Message.Builder builder = Message.builder()
                         .setToken(fcmToken.getToken())
                         .setNotification(fcmNotification)
                         .putAllData(fcmData);
+
+                // watchOS picks a custom notification interface by APNs category.
+                // The alert is restated explicitly because setting `aps` at all
+                // overrides what the top-level notification would have filled in
+                // — omitting it here would ship a silent push.
+                if (watchCategory != null) {
+                    builder.setApnsConfig(
+                            com.google.firebase.messaging.ApnsConfig.builder()
+                                    .putHeader("apns-push-type", "alert")
+                                    .setAps(com.google.firebase.messaging.Aps.builder()
+                                            .setCategory(watchCategory)
+                                            .setSound("default")
+                                            .setAlert(com.google.firebase.messaging.ApsAlert.builder()
+                                                    .setTitle(title)
+                                                    .setBody(body)
+                                                    .build())
+                                            .build())
+                                    .build());
+                }
 
                 // For call pushes we need to wake the JS layer immediately even
                 // when the app is in Doze / killed, so the client can show the
@@ -548,6 +599,25 @@ public class NotificationService {
         }
     }
 
+    /**
+     * APNs category, which drives two separate client behaviours.
+     *
+     * watchOS selects a `WKNotificationScene` by category alone — the two money
+     * events have custom wrist interfaces and fall back to a generic banner
+     * without this. `LOGIN_APPROVAL` has no custom scene; it carries a category
+     * so its registered Deny action is offered on the notification, including on
+     * a paired watch. Every other type deliberately keeps the plain default.
+     */
+    private static String watchNotificationCategory(Object type) {
+        if (type == null) return null;
+        String t = String.valueOf(type);
+        if ("MONEY_RECEIVED".equals(t)
+                || "TRANSFER_COMPLETED".equals(t)
+                || "MONEY_REQUESTED".equals(t)
+                || "LOGIN_APPROVAL".equals(t)) return t;
+        return null;
+    }
+
     private void sendExpoPush(FcmToken fcmToken, String title, String body, Map<String, Object> data) {
         try {
             Map<String, Object> payload = new HashMap<>();
@@ -566,6 +636,12 @@ public class NotificationService {
 
             if (data != null && "NEW_MESSAGE".equals(data.get("type"))) {
                 payload.put("categoryId", "CHAT_MESSAGE");
+            }
+
+            String watchCategory = data != null
+                    ? watchNotificationCategory(data.get("type")) : null;
+            if (watchCategory != null) {
+                payload.put("categoryId", watchCategory);
             }
 
             String jsonPayload = objectMapper.writeValueAsString(payload);

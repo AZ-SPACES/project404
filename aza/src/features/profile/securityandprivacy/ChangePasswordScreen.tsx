@@ -137,6 +137,22 @@ export function ChangePasswordScreen() {
             disabled={!isFormValid || isLoading}
             loading={isLoading}
           />
+          {/* When the reset is forced there is no back button, so signing out is
+              the only way off this screen for anyone who can't supply their
+              current password. Logging back in re-reads the flag from the
+              server, so a completed "Forgot password" run releases them. */}
+          {forcePasswordReset && (
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={logout}
+              disabled={isLoading}
+              accessibilityRole="button"
+            >
+              <Text style={[Typography.body, styles.signOutText]}>
+                Don&apos;t know your current password? Sign out and use &quot;Forgot password&quot;
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -247,6 +263,15 @@ function createStyles(Colors: ThemeColors) {
       borderTopWidth: 1,
       borderTopColor: Colors.border,
       backgroundColor: Colors.background
+    },
+    signOutButton: {
+      marginTop: Spacing.md,
+      alignItems: 'center'
+    },
+    signOutText: {
+      color: Colors.textSecondary,
+      textAlign: 'center',
+      textDecorationLine: 'underline'
     }
   });
 }

@@ -800,7 +800,7 @@ public class TransferService {
         transaction = transactionRepository.save(transaction);
 
         String requesterName = requester.getFirstName() + " " + requester.getLastName();
-        notificationService.sendMoneyReceivedNotification(
+        notificationService.sendMoneyRequestedNotification(
                 fromUser.getId(), requesterName,
                 request.getAmount().toString(), transaction.getId().toString());
         if (fromUser.getPhoneNumber() != null && !fromUser.getPhoneNumber().isBlank()) {

@@ -76,7 +76,16 @@ export type RootStackParamList = {
 
   // Akyede — money given to one person as a gift. `chatId` drops the gift card straight
   // into a thread; without one it simply waits in the recipient's Akyede list.
-  CreateAkyede: { chatId?: string };
+  CreateAkyede: {
+    chatId?: string;
+    /**
+     * Who the gift is for, when the sender started from a thread rather than the gift
+     * list. `identifier` is resolved the same way a transfer resolves a payee, so it is
+     * passed through untouched — the composer must not dress a phone number up as a
+     * @handle. Absent, the composer asks who it is for.
+     */
+    recipient?: { identifier: string; name: string; handle?: string; avatar?: string };
+  };
   AkyedeOpen: { claimCode: string };
   MyAkyede: undefined;
 

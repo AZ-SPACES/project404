@@ -114,6 +114,9 @@ export type ChatScreenModalsProps = {
   toastMessage: string | null;
 };
 
+/** The transfer API will not resolve a raw account id, and neither will a gift. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function ChatScreenModals(props: ChatScreenModalsProps) {
   const { colors: Colors } = useAppTheme();
   const isDark = Colors.background === '#121212';
@@ -139,6 +142,27 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
     toastMessage,
   } = props;
 
+  // The thread's peer, in the form the recipient resolver understands — a handle, a
+  // phone number, or an email. A raw account id is none of those, and a thread that
+  // carries no pay identifier at all hands over nobody; either way the gift composer
+  // falls back to asking who the gift is for.
+  const giftRecipient = React.useMemo(() => {
+    if (!payIdentifier || UUID_RE.test(payIdentifier)) return null;
+    // Only a handle is worth showing under the name; a phone number or an email would
+    // read as a handle it is not.
+    const handle = payIdentifier.startsWith('@')
+      ? payIdentifier.slice(1)
+      : /^[A-Za-z][A-Za-z0-9._-]*$/.test(payIdentifier)
+        ? payIdentifier
+        : undefined;
+    return {
+      identifier: payIdentifier,
+      name,
+      ...(handle ? { handle } : {}),
+      ...(avatar ? { avatar } : {}),
+    };
+  }, [payIdentifier, name, avatar]);
+
   return (
     <>
       <ChatAttachmentModal
@@ -151,6 +175,17 @@ export function ChatScreenModals(props: ChatScreenModalsProps) {
         onDocument={handlePickDocument}
         onSendMoney={() => { handleCloseAttachment(); setPaymentSheet({ visible: true, mode: 'send' }); }}
         onRequestMoney={() => { handleCloseAttachment(); setPaymentSheet({ visible: true, mode: 'request' }); }}
+        onGiftMoney={() => {
+          handleCloseAttachment();
+          navigation.navigate('CreateAkyede', {
+            // Only with a chat id does the gift card reach the thread; without one the
+            // gift still stands, it just waits in their Akyede list.
+            ...(chatId ? { chatId } : {}),
+            // A raw user id is not something the recipient resolver accepts, so in that
+            // case say nothing and let the composer ask who the gift is for.
+            ...(giftRecipient ? { recipient: giftRecipient } : {}),
+          });
+        }}
         onGif={() => { handleCloseAttachment(); setShowGifPicker(true); }}
         onLocation={() => { handleShareLocation(); }}
         onContact={() => { handleCloseAttachment(); setShowContactPicker(true); }}

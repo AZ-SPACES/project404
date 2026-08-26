@@ -19,6 +19,7 @@ type ChatAttachmentModalProps = {
   onDocument: () => void;
   onSendMoney?: () => void;
   onRequestMoney?: () => void;
+  onGiftMoney?: () => void;
   onGif?: () => void;
   onLocation?: () => void;
   onContact?: () => void;
@@ -50,6 +51,7 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
   onDocument,
   onSendMoney,
   onRequestMoney,
+  onGiftMoney,
   onGif,
   onLocation,
   onContact,
@@ -71,7 +73,7 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
     ? Math.max(Spacing.lg, Math.min(anchor.left, screenWidth - CARD_WIDTH - Spacing.lg))
     : Spacing.lg;
 
-  const showMoneySection = !!(onSendMoney || onRequestMoney);
+  const showMoneySection = !!(onSendMoney || onRequestMoney || onGiftMoney);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -91,13 +93,21 @@ export const ChatAttachmentModal = memo(function ChatAttachmentModal({
                   {onSendMoney && (
                     <TouchableOpacity style={styles.moneyBtn} onPress={onSendMoney} activeOpacity={0.85}>
                       <Feather name="arrow-up-right" size={16} color="#fff" />
-                      <Text style={styles.moneyBtnLabel}>Send</Text>
+                      <Text style={styles.moneyBtnLabel} numberOfLines={1}>Send</Text>
                     </TouchableOpacity>
                   )}
                   {onRequestMoney && (
                     <TouchableOpacity style={[styles.moneyBtn, styles.moneyBtnSecondary]} onPress={onRequestMoney} activeOpacity={0.85}>
                       <Feather name="arrow-down-left" size={16} color={Colors.primary} />
-                      <Text style={[styles.moneyBtnLabel, styles.moneyBtnLabelSecondary]}>Request</Text>
+                      <Text style={[styles.moneyBtnLabel, styles.moneyBtnLabelSecondary]} numberOfLines={1}>Request</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/* Akyede — money given rather than paid, so it sits with the other two
+                      but sends a wrapped card into the thread instead of a receipt. */}
+                  {onGiftMoney && (
+                    <TouchableOpacity style={[styles.moneyBtn, styles.moneyBtnSecondary]} onPress={onGiftMoney} activeOpacity={0.85}>
+                      <Feather name="gift" size={16} color={Colors.primary} />
+                      <Text style={[styles.moneyBtnLabel, styles.moneyBtnLabelSecondary]} numberOfLines={1}>Akyede</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -207,7 +217,7 @@ const createStyles = (Colors: ThemeColors, isDark: boolean) =>
       backgroundColor: Colors.primary,
       borderRadius: Radius.sm,
       paddingVertical: 8,
-      paddingHorizontal: Spacing.md,
+      paddingHorizontal: Spacing.sm,
     },
     moneyBtnSecondary: {
       backgroundColor: 'transparent',

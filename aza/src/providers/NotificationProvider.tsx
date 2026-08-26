@@ -4,7 +4,13 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from './AuthProvider';
-import { registerFcmToken, unregisterFcmToken, getDeviceId } from '../services/api';
+import {
+  registerFcmToken,
+  unregisterFcmToken,
+  getDeviceId,
+  respondToApp2faApproval,
+  declineMoneyRequest,
+} from '../services/api';
 import { navigate } from '../navigation/navigationRef';
 import { queryClient } from '../lib/queryClient';
 import { queryKeys } from '../lib/queryKeys';
@@ -73,6 +79,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         options: { opensAppToForeground: false },
       },
     ]).catch(() => {});
+
+    // Deny-only, deliberately. Denying a sign-in fails closed — the worst a
+    // stranger holding the unlocked device can do is lock the real user out of
+    // one attempt. Approving grants account access, so it stays behind the full
+    // approval screen. iOS forwards these actions to a paired Apple Watch, which
+    // is where a sign-in alert is most likely to be seen first.
+    // Decline only. `declineMoneyRequest` takes no passcode and fails closed;
+    // paying takes one, so it stays behind the app.
+    Notifications.setNotificationCategoryAsync('MONEY_REQUESTED', [
+      {
+        identifier: 'DECLINE_REQUEST',
+        buttonTitle: 'Decline',
+        options: { isDestructive: true, opensAppToForeground: false },
+      },
+    ]).catch(() => {});
+
+    Notifications.setNotificationCategoryAsync('LOGIN_APPROVAL', [
+      {
+        identifier: 'DENY_LOGIN',
+        buttonTitle: 'Deny',
+        options: { isDestructive: true, opensAppToForeground: false },
+      },
+    ]).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -124,7 +153,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           handleIncomingCallPush(data as CallPushData);
         }
 
-        if (type === 'MONEY_RECEIVED' || type === 'TRANSFER_COMPLETED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
+        if (type === 'MONEY_RECEIVED' || type === 'MONEY_REQUESTED' || type === 'TRANSFER_COMPLETED' || type === 'PAYMENT_REQUEST_RECEIVED' || type === 'PAYMENT_REQUEST_PAID') {
           queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
         }
@@ -141,6 +170,35 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as Record<string, unknown> | undefined;
         const type = data?.type as string | undefined;
+
+        if ((response as any).actionIdentifier === 'DECLINE_REQUEST') {
+          const transactionId = data?.transactionId as string | undefined;
+          if (transactionId) {
+            declineMoneyRequest(transactionId)
+              .then(() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.wallet() });
+                queryClient.invalidateQueries({ queryKey: ['transactions'] });
+              })
+              .catch(() => {
+                // Nothing useful to show from a background action handler; the
+                // request stays pending and the app can still decline it.
+              });
+          }
+          return;
+        }
+
+        // Deny a sign-in straight from the notification — including from a
+        // paired watch — without opening the app.
+        if ((response as any).actionIdentifier === 'DENY_LOGIN') {
+          const requestId = data?.requestId as string | undefined;
+          if (requestId) {
+            respondToApp2faApproval(requestId, false).catch(() => {
+              // Nothing useful to show from a background action handler. The
+              // request expires on its own, which is also a denial.
+            });
+          }
+          return;
+        }
 
         // Handle quick-reply action without opening the app
         if ((response as any).actionIdentifier === 'QUICK_REPLY') {

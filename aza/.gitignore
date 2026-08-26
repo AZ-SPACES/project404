@@ -43,3 +43,6 @@ yarn-error.*
 
 # test coverage
 coverage/
+
+# SwiftPM build output for the watch model tests (targets/Package.swift)
+targets/.build/

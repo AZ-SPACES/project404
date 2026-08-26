@@ -480,6 +480,11 @@ public class AuthService {
                 .orElseThrow(() -> new AppException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // Forgot-password is the flow we tell force-reset users to take (see
+        // adminForcePasswordReset), so it has to clear the flag exactly like
+        // changePassword does. Leaving it set traps the user on the forced
+        // change-password screen after their next login.
+        user.setForcePasswordReset(false);
         userRepository.save(user);
 
         refreshTokenRepository.deleteAllByUserId(user.getId());

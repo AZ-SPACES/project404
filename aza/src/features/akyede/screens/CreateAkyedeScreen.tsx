@@ -20,6 +20,7 @@ import type { RootStackParamList } from '../../../navigation/types';
 import { BackButton } from '../../../components/ui/BackButton';
 import Button from '../../../components/ui/Button';
 import { createAkyede, Akyede, AkyedeOccasion } from '../../../services/api';
+import { AKYEDE_OCCASION_ART as OCCASIONS, akyedeArt } from '../../../utils/akyedeOccasions';
 import { extractErrorMessage } from '../../../utils/errorUtils';
 import { useToast } from '../../../providers/ToastProvider';
 import { useChatStore } from '../../../store/chatStore';
@@ -27,20 +28,6 @@ import { useContactStore } from '../../../store/contactStore';
 import type { Contact } from '../../contacts/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAkyede'>;
-
-/** The occasions worth a shortcut. Presentation only — none of them moves money. */
-const OCCASIONS: { key: AkyedeOccasion; label: string; emoji: string; greeting: string }[] = [
-  { key: 'BIRTHDAY', label: 'Birthday', emoji: '🎂', greeting: 'Happy birthday!' },
-  { key: 'WEDDING', label: 'Wedding', emoji: '💍', greeting: 'Congratulations!' },
-  { key: 'OUTDOORING', label: 'Outdooring', emoji: '👶', greeting: 'Ayekoo!' },
-  { key: 'GRADUATION', label: 'Graduation', emoji: '🎓', greeting: 'Ayekoo!' },
-  { key: 'CONGRATULATIONS', label: 'Well done', emoji: '🎉', greeting: 'Congratulations!' },
-  { key: 'THANK_YOU', label: 'Thank you', emoji: '🙏', greeting: 'Medaase!' },
-  { key: 'CHRISTMAS', label: 'Christmas', emoji: '🎄', greeting: 'Afehyia pa!' },
-  { key: 'EID', label: 'Eid', emoji: '🌙', greeting: 'Eid Mubarak!' },
-  { key: 'EASTER', label: 'Easter', emoji: '🐣', greeting: 'Happy Easter!' },
-  { key: 'JUST_BECAUSE', label: 'Just because', emoji: '💛', greeting: 'For you.' },
-];
 
 const AMOUNT_PRESETS = [20, 50, 100, 200];
 
@@ -51,11 +38,31 @@ function newIdempotencyKey() {
 
 export default function CreateAkyedeScreen({ navigation, route }: Props) {
   const chatId = route.params?.chatId;
+  const prefill = route.params?.recipient;
   const { colors: Colors } = useAppTheme();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { showToast } = useToast();
 
-  const [recipient, setRecipient] = useState<Contact | null>(null);
+  const [recipient, setRecipient] = useState<Contact | null>(
+    prefill
+      ? {
+          id: prefill.identifier,
+          displayName: prefill.name,
+          isAzaUser: true,
+          isFavorite: false,
+          ...(prefill.handle ? { handle: prefill.handle } : {}),
+          ...(prefill.avatar ? { profileImageUrl: prefill.avatar } : {}),
+        }
+      : null,
+  );
+  // Set only for a recipient a thread handed over, whose identifier is already in the
+  // form the resolver wants. Cleared the moment the sender picks someone else, so the
+  // gift can never go to the thread's peer under another person's name.
+  const [identifierOverride, setIdentifierOverride] = useState<string | null>(
+    prefill?.identifier ?? null,
+  );
+
+  const pickAnother = () => { setRecipient(null); setIdentifierOverride(null); };
   const [amount, setAmount] = useState('');
   const [occasion, setOccasion] = useState<AkyedeOccasion>('JUST_BECAUSE');
   const [message, setMessage] = useState('');
@@ -84,9 +91,8 @@ export default function CreateAkyedeScreen({ navigation, route }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const identifier = recipient.handle
-        ? `@${recipient.handle}`
-        : recipient.phoneNumber ?? recipient.email ?? '';
+      const identifier = identifierOverride
+        ?? (recipient.handle ? `@${recipient.handle}` : recipient.phoneNumber ?? recipient.email ?? '');
 
       const res = await createAkyede({
         recipient: identifier,
@@ -138,20 +144,22 @@ export default function CreateAkyedeScreen({ navigation, route }: Props) {
     );
   }
 
-  const chosen = OCCASIONS.find((o) => o.key === occasion)!;
+  const chosen = akyedeArt(occasion);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={Colors.isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" />
       <View style={styles.header}>
-        <BackButton onPress={() => setRecipient(null)} />
+        {/* Straight back to the thread when it sent us here; otherwise back to the
+            question of who the gift is for. */}
+        <BackButton onPress={() => (prefill ? navigation.goBack() : pickAnother())} />
         <Text style={styles.headerTitle}>Send Akyede</Text>
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Who it is for */}
-          <TouchableOpacity style={styles.recipientCard} onPress={() => setRecipient(null)}>
+          <TouchableOpacity style={styles.recipientCard} onPress={pickAnother}>
             <Avatar contact={recipient} Colors={Colors} styles={styles} />
             <View style={styles.flex}>
               <Text style={styles.recipientName}>{recipient.displayName}</Text>
@@ -404,7 +412,7 @@ function SentView({
   Colors: ThemeColors;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const occasion = OCCASIONS.find((o) => o.key === gift.occasion);
+  const occasion = akyedeArt(gift.occasion);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -415,7 +423,7 @@ function SentView({
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.envelopeArt, { backgroundColor: Colors.success + '22' }]}>
-          <Text style={styles.sentEmoji}>{occasion?.emoji ?? '🎁'}</Text>
+          <Text style={styles.sentEmoji}>{occasion.emoji}</Text>
         </View>
 
         <Text style={styles.createdTitle}>
