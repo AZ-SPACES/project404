@@ -116,7 +116,7 @@ class UserWithdrawalServiceTest {
     void review_approve_doesNotTouchWallet() {
         UUID uid = UUID.randomUUID();
         UserWithdrawal wd = pending(uid, new BigDecimal("60"));
-        when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
+        when(withdrawalRepository.findByIdForUpdate(wd.getId())).thenReturn(Optional.of(wd));
         echoSavedWithdrawal();
 
         UserWithdrawal result = service.review(user(UUID.randomUUID()), wd.getId(), "APPROVE", "ok");
@@ -133,7 +133,7 @@ class UserWithdrawalServiceTest {
         UserWithdrawal wd = pending(uid, new BigDecimal("60"));
         User u = user(uid);
         Wallet w = wallet(uid, new BigDecimal("40"), false); // already debited at request time
-        when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
+        when(withdrawalRepository.findByIdForUpdate(wd.getId())).thenReturn(Optional.of(wd));
         when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
         when(userRepository.findById(uid)).thenReturn(Optional.of(u));
         echoSavedWithdrawal();
@@ -152,7 +152,7 @@ class UserWithdrawalServiceTest {
                 .amount(new BigDecimal("10"))
                 .status(UserWithdrawal.WithdrawalStatus.APPROVED)
                 .build();
-        when(withdrawalRepository.findById(wd.getId())).thenReturn(Optional.of(wd));
+        when(withdrawalRepository.findByIdForUpdate(wd.getId())).thenReturn(Optional.of(wd));
 
         AppException ex = assertThrows(AppException.class,
                 () -> service.review(user(UUID.randomUUID()), wd.getId(), "APPROVE", null));

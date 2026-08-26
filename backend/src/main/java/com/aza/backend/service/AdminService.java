@@ -96,15 +96,22 @@ public class AdminService {
 
     private AdminTransactionResponse toAdminTransactionResponse(Transaction tx) {
         User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        // A merchant recipient is a merchants row, not a users row; looking it up as
+        // a user is what made every store sale read as "Unknown" in the admin views.
+        boolean toMerchant = tx.getRecipientType() == Transaction.RecipientType.MERCHANT;
+        User recipient = toMerchant ? null : userRepository.findById(tx.getRecipientId()).orElse(null);
+        Merchant recipientMerchant = toMerchant
+                ? merchantRepository.findById(tx.getRecipientId()).orElse(null) : null;
         return AdminTransactionResponse.builder()
                 .id(tx.getId().toString())
                 .senderId(tx.getSenderId().toString())
                 .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
                 .senderHandle(sender != null ? sender.getUsername() : null)
                 .recipientId(tx.getRecipientId().toString())
-                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                .recipientName(recipientMerchant != null ? recipientMerchant.getBusinessName()
+                        : recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipientMerchant != null ? recipientMerchant.getBusinessHandle()
+                        : recipient != null ? recipient.getUsername() : null)
                 .amount(tx.getAmount())
                 .note(tx.getNote())
                 .type(tx.getType().name())
@@ -306,15 +313,22 @@ public class AdminService {
         Transaction tx = transactionRepository.findById(id)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
         User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        // A merchant recipient is a merchants row, not a users row; looking it up as
+        // a user is what made every store sale read as "Unknown" in the admin views.
+        boolean toMerchant = tx.getRecipientType() == Transaction.RecipientType.MERCHANT;
+        User recipient = toMerchant ? null : userRepository.findById(tx.getRecipientId()).orElse(null);
+        Merchant recipientMerchant = toMerchant
+                ? merchantRepository.findById(tx.getRecipientId()).orElse(null) : null;
         return AdminTransactionResponse.builder()
                 .id(tx.getId().toString())
                 .senderId(tx.getSenderId().toString())
                 .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
                 .senderHandle(sender != null ? sender.getUsername() : null)
                 .recipientId(tx.getRecipientId().toString())
-                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                .recipientName(recipientMerchant != null ? recipientMerchant.getBusinessName()
+                        : recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipientMerchant != null ? recipientMerchant.getBusinessHandle()
+                        : recipient != null ? recipient.getUsername() : null)
                 .amount(tx.getAmount())
                 .note(tx.getNote())
                 .type(tx.getType().name())
@@ -328,28 +342,25 @@ public class AdminService {
 
     @Transactional
     public AdminTransactionResponse reverseTransaction(UUID transactionId, User admin) {
-        Transaction tx = transactionRepository.findById(transactionId)
+        // Locked, not a plain read. The COMPLETED check below is a read-modify-write on
+        // this row: two approvals raised against the same transaction would otherwise
+        // both read COMPLETED and both refund it.
+        Transaction tx = transactionRepository.findByIdForUpdate(transactionId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND));
 
         if (tx.getStatus() != Transaction.TransactionStatus.COMPLETED) {
             throw new AppException("INVALID_STATE", "Only COMPLETED transactions can be reversed", HttpStatus.BAD_REQUEST);
         }
 
-        // A reversal is the original transfer run backwards: the recipient is debited and
-        // the sender made whole. Both wallets were previously read without a lock, so a
-        // reversal racing any other movement on either wallet could lose one of the two
-        // writes. Locking both in canonical order first also keeps the funds check under
-        // the lock rather than against a stale read.
-        WalletLocker.Locked reversal = walletLocker.lock(
-                WalletLocker.personal(tx.getRecipientId(), "Recipient wallet not found"),
-                WalletLocker.personal(tx.getSenderId(), "Sender wallet not found"));
-        Wallet recipientWallet = reversal.first();
-        Wallet senderWallet = reversal.second();
-
-        if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {
-            throw new AppException("INSUFFICIENT_FUNDS", "Recipient has insufficient funds for reversal", HttpStatus.BAD_REQUEST);
+        // recipientId points at either a users row or a merchants row -- read it with
+        // recipientType, never by assuming. Treating a merchant payment as a user
+        // transfer looks for a wallet under the merchant's id, finds none, and fails
+        // every attempt to reverse a store sale.
+        if (tx.getRecipientType() == Transaction.RecipientType.MERCHANT) {
+            reverseMerchantPayment(tx);
+        } else {
+            reverseUserTransfer(tx);
         }
-        walletLedger.transferLocked(recipientWallet, senderWallet, tx.getAmount(), BigDecimal.ZERO, null);
 
         tx.setStatus(Transaction.TransactionStatus.REVERSED);
         tx.setCancelledAt(LocalDateTime.now());
@@ -362,15 +373,22 @@ public class AdminService {
                 "transactionId=" + transactionId + " amount=" + tx.getAmount());
 
         User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-        User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+        // A merchant recipient is a merchants row, not a users row; looking it up as
+        // a user is what made every store sale read as "Unknown" in the admin views.
+        boolean toMerchant = tx.getRecipientType() == Transaction.RecipientType.MERCHANT;
+        User recipient = toMerchant ? null : userRepository.findById(tx.getRecipientId()).orElse(null);
+        Merchant recipientMerchant = toMerchant
+                ? merchantRepository.findById(tx.getRecipientId()).orElse(null) : null;
         return AdminTransactionResponse.builder()
                 .id(tx.getId().toString())
                 .senderId(tx.getSenderId().toString())
                 .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
                 .senderHandle(sender != null ? sender.getUsername() : null)
                 .recipientId(tx.getRecipientId().toString())
-                .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                .recipientName(recipientMerchant != null ? recipientMerchant.getBusinessName()
+                        : recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                .recipientHandle(recipientMerchant != null ? recipientMerchant.getBusinessHandle()
+                        : recipient != null ? recipient.getUsername() : null)
                 .amount(tx.getAmount())
                 .note(tx.getNote())
                 .type(tx.getType().name())
@@ -380,6 +398,65 @@ public class AdminService {
                 .cancelledAt(tx.getCancelledAt())
                 .initiationLocation(tx.getInitiationLocation())
                 .build();
+    }
+
+    /** Wallet-to-wallet reversal: debit the recipient, make the sender whole. */
+    private void reverseUserTransfer(Transaction tx) {
+        // Both wallets locked in canonical order, so the funds check happens under the
+        // lock rather than against a stale read.
+        WalletLocker.Locked reversal = walletLocker.lock(
+                WalletLocker.personal(tx.getRecipientId(), "Recipient wallet not found"),
+                WalletLocker.personal(tx.getSenderId(), "Sender wallet not found"));
+        Wallet recipientWallet = reversal.first();
+        Wallet senderWallet = reversal.second();
+
+        if (recipientWallet.getBalance().compareTo(tx.getAmount()) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS",
+                    "Recipient has insufficient funds for reversal", HttpStatus.BAD_REQUEST);
+        }
+        walletLedger.transferLocked(recipientWallet, senderWallet, tx.getAmount(), BigDecimal.ZERO, null);
+    }
+
+    /**
+     * Store-sale reversal: claw back what the merchant actually banked and refund the
+     * customer in full.
+     *
+     * <p>The two are not the same number. The merchant was credited the amount net of
+     * AZA's MDR, so that net is all there is to take back -- but the customer paid the
+     * gross, and a reversal that kept the fee would be AZA charging for a sale that no
+     * longer exists. The difference is AZA giving back its own fee, which is the same
+     * rule {@code CheckoutService} applies when it refunds a session.
+     *
+     * <p>The fee comes off the transaction row rather than being recomputed from the
+     * merchant's current rate, so a rate change between the sale and the reversal cannot
+     * shift the amount. Rows written before the fee was recorded fall back to zero, which
+     * claws back the gross -- the merchant keeps nothing they were not paid, and the
+     * customer is made whole either way.
+     */
+    private void reverseMerchantPayment(Transaction tx) {
+        // Merchant first, then wallet -- the same lock order as every other path that
+        // touches both (MerchantService.requestPayout, ConnectService, CheckoutService).
+        Merchant merchant = merchantRepository.findByIdForUpdate(tx.getRecipientId())
+                .orElseThrow(() -> new AppException("MERCHANT_NOT_FOUND",
+                        "Merchant not found for this payment", HttpStatus.NOT_FOUND));
+
+        BigDecimal fee = tx.getFeeAmount() != null ? tx.getFeeAmount() : BigDecimal.ZERO;
+        BigDecimal merchantReceived = tx.getAmount().subtract(fee);
+        if (merchantReceived.signum() < 0) merchantReceived = BigDecimal.ZERO;
+
+        if (merchant.getBalance().compareTo(merchantReceived) < 0) {
+            throw new AppException("INSUFFICIENT_FUNDS",
+                    "Merchant has already paid out this sale and cannot be auto-reversed ("
+                            + merchant.getCurrency() + " " + merchantReceived.toPlainString()
+                            + " needed). Reverse it manually.", HttpStatus.BAD_REQUEST);
+        }
+
+        merchant.setBalance(merchant.getBalance().subtract(merchantReceived));
+        merchantRepository.save(merchant);
+
+        walletLedger.credit(
+                WalletLocker.personal(tx.getSenderId(), "Sender wallet not found"),
+                tx.getAmount());
     }
 
     /**
@@ -499,15 +576,22 @@ public class AdminService {
 
         return txPage.map(tx -> {
             User sender = userRepository.findById(tx.getSenderId()).orElse(null);
-            User recipient = userRepository.findById(tx.getRecipientId()).orElse(null);
+            // A merchant recipient is a merchants row, not a users row; looking it up as
+        // a user is what made every store sale read as "Unknown" in the admin views.
+        boolean toMerchant = tx.getRecipientType() == Transaction.RecipientType.MERCHANT;
+        User recipient = toMerchant ? null : userRepository.findById(tx.getRecipientId()).orElse(null);
+        Merchant recipientMerchant = toMerchant
+                ? merchantRepository.findById(tx.getRecipientId()).orElse(null) : null;
             return AdminTransactionResponse.builder()
                     .id(tx.getId().toString())
                     .senderId(tx.getSenderId().toString())
                     .senderName(sender != null ? sender.getFirstName() + " " + sender.getLastName() : "Unknown")
                     .senderHandle(sender != null ? sender.getUsername() : null)
                     .recipientId(tx.getRecipientId().toString())
-                    .recipientName(recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
-                    .recipientHandle(recipient != null ? recipient.getUsername() : null)
+                    .recipientName(recipientMerchant != null ? recipientMerchant.getBusinessName()
+                            : recipient != null ? recipient.getFirstName() + " " + recipient.getLastName() : "Unknown")
+                    .recipientHandle(recipientMerchant != null ? recipientMerchant.getBusinessHandle()
+                            : recipient != null ? recipient.getUsername() : null)
                     .amount(tx.getAmount())
                     .note(tx.getNote())
                     .type(tx.getType().name())

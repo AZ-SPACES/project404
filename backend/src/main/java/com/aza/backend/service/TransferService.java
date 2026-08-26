@@ -421,6 +421,12 @@ public class TransferService {
             BigDecimal platformFee = transaction.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
             BigDecimal netAmount = transaction.getAmount().subtract(platformFee);
 
+            // Record the MDR on the transaction itself. It was previously only stored on
+            // the virtual checkout session, which left the transaction row claiming a
+            // zero fee -- so the revenue report under-counted every store sale, and a
+            // reversal had no way to tell what the merchant had actually banked.
+            transaction.setFeeAmount(platformFee);
+
             merchant.setBalance(merchant.getBalance().add(netAmount));
             merchant.setTotalVolume(merchant.getTotalVolume().add(transaction.getAmount()));
             merchantRepository.save(merchant);
@@ -800,7 +806,7 @@ public class TransferService {
         transaction = transactionRepository.save(transaction);
 
         String requesterName = requester.getFirstName() + " " + requester.getLastName();
-        notificationService.sendMoneyRequestedNotification(
+        notificationService.sendMoneyReceivedNotification(
                 fromUser.getId(), requesterName,
                 request.getAmount().toString(), transaction.getId().toString());
         if (fromUser.getPhoneNumber() != null && !fromUser.getPhoneNumber().isBlank()) {
@@ -1302,6 +1308,10 @@ public class TransferService {
 
         walletLedger.debitLocked(senderWallet, totalDebit);
 
+        // The fee actually charged: the P2P fee for a person, the merchant's MDR for a
+        // business. Recorded on the transaction below either way, so the row always says
+        // what was charged.
+        BigDecimal chargedFee = fee;
         if (recipient != null) {
             walletLedger.creditLocked(recipientWallet, amount);
         } else {
@@ -1314,6 +1324,7 @@ public class TransferService {
             merchant.setBalance(merchant.getBalance().add(amount.subtract(platformFee)));
             merchant.setTotalVolume(merchant.getTotalVolume().add(amount));
             merchantRepository.save(merchant);
+            chargedFee = platformFee;
         }
 
         AnomalyDetectionService.Result anomaly;
@@ -1338,7 +1349,7 @@ public class TransferService {
                         : Transaction.TransactionType.MERCHANT_PAYMENT)
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .completedAt(LocalDateTime.now())
-                .feeAmount(fee)
+                .feeAmount(chargedFee)
                 .anomalyScore(anomaly.score())
                 .anomalyRiskLevel(anomaly.riskLevel())
                 .build();

@@ -262,7 +262,11 @@ public class ApprovalService {
     }
 
     private PendingApproval getPending(UUID approvalId) {
-        PendingApproval approval = approvalRepository.findById(approvalId)
+        // Locked, not a plain read. Approving runs a money-moving action, and the
+        // PENDING check below is a read-modify-write on this row: without the lock two
+        // approvers clicking at the same moment both read PENDING and both execute --
+        // a double reversal, a double fund transfer, a double role grant.
+        PendingApproval approval = approvalRepository.findByIdForUpdate(approvalId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Approval not found", HttpStatus.NOT_FOUND));
         if (approval.getStatus() != PendingApproval.Status.PENDING) {
             throw new AppException("ALREADY_REVIEWED",

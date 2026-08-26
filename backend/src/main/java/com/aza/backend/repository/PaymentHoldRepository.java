@@ -30,6 +30,16 @@ public interface PaymentHoldRepository extends JpaRepository<PaymentHold, UUID> 
     Optional<PaymentHold> findBySessionIdForUpdate(@Param("sessionId") UUID sessionId);
 
     /**
+     * The same lock, reached by hold id rather than session id — for the mutations that
+     * start from a hold (freeze, unfreeze, expiry, admin refund). Row locks are re-entrant
+     * within a transaction, so a path that locks here and then calls into one that locks
+     * by session id takes the same row twice harmlessly.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT h FROM PaymentHold h WHERE h.id = :id")
+    Optional<PaymentHold> findByIdForUpdate(@Param("id") UUID id);
+
+    /**
      * Holds whose window has run out. FROZEN holds are excluded by the status predicate —
      * that is how a compliance review stops the expiry clock.
      */

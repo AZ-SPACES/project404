@@ -364,7 +364,11 @@ public class HoldService {
      */
     @Transactional
     public PaymentHold freeze(UUID holdId, String reason, UUID adminId) {
-        PaymentHold hold = holdRepository.findById(holdId)
+        // Locked, like every other hold mutation. A freeze exists to block release and
+        // refund, so it cannot be the one path that reads the row without the lock: an
+        // unlocked freeze can be stepped over by a release committing beside it, which is
+        // exactly the outcome a compliance freeze is there to prevent.
+        PaymentHold hold = holdRepository.findByIdForUpdate(holdId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
 
         if (hold.getStatus() == PaymentHold.HoldStatus.FROZEN) {
@@ -394,7 +398,9 @@ public class HoldService {
      */
     @Transactional
     public PaymentHold unfreeze(UUID holdId, UUID adminId) {
-        PaymentHold hold = holdRepository.findById(holdId)
+        // Locked: lifting a freeze races the refund that resolves it, and the FROZEN
+        // check below is a read-modify-write on this row.
+        PaymentHold hold = holdRepository.findByIdForUpdate(holdId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
 
         if (hold.getStatus() != PaymentHold.HoldStatus.FROZEN) {
@@ -428,7 +434,9 @@ public class HoldService {
      */
     @Transactional
     public PaymentHold expire(UUID holdId) {
-        PaymentHold hold = holdRepository.findById(holdId)
+        // Take the hold lock up front so the sweep serialises against a freeze or a
+        // release arriving at the same moment; refund() then re-takes the same row.
+        PaymentHold hold = holdRepository.findByIdForUpdate(holdId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
         return refund(hold.getSessionId(), hold.getMerchantId(), null,
                 "expiry:" + hold.getId(), null, HoldEvent.ActorType.SYSTEM);
@@ -444,7 +452,9 @@ public class HoldService {
      */
     @Transactional
     public PaymentHold adminRefund(UUID holdId, String reason, UUID adminId) {
-        PaymentHold hold = holdRepository.findById(holdId)
+        // Locked before refund() re-takes the same row, so an unfreeze cannot slip in
+        // between reading this hold and resolving it.
+        PaymentHold hold = holdRepository.findByIdForUpdate(holdId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Hold not found", HttpStatus.NOT_FOUND));
 
         RefundHoldRequest request = new RefundHoldRequest();

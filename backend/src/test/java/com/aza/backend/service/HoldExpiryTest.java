@@ -70,7 +70,7 @@ class HoldExpiryTest {
         Wallet payerWallet = Wallet.builder().userId(payerId).balance(BigDecimal.ZERO)
                 .currency("GHS").frozen(false).build();
 
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
         when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(h));
         when(walletRepository.findByUserIdForUpdate(payerId)).thenReturn(Optional.of(payerWallet));
         when(userRepository.findById(payerId)).thenReturn(Optional.of(User.builder().id(payerId).build()));
@@ -92,7 +92,7 @@ class HoldExpiryTest {
     @Test
     void expirySweepIsIdempotent_soARepeatedRunCannotRefundTwice() {
         PaymentHold h = hold(LocalDateTime.now().minusMinutes(1));
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
         when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(h));
         // The first sweep already recorded this hold's expiry event.
         when(eventRepository.findByHoldIdAndIdempotencyKey(h.getId(), "expiry:" + h.getId()))
@@ -126,7 +126,7 @@ class HoldExpiryTest {
     @Test
     void freezeBlocksSettlement_inBothDirections() {
         PaymentHold h = hold(LocalDateTime.now().plusDays(30));
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
         when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(h));
 
         service.freeze(h.getId(), "Sanctions screening match", UUID.randomUUID());
@@ -148,7 +148,7 @@ class HoldExpiryTest {
         h.setFrozenReason("Fraud review");
         h.setFrozenAt(LocalDateTime.now().minusDays(3));
 
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
 
         service.unfreeze(h.getId(), UUID.randomUUID());
 
@@ -168,7 +168,7 @@ class HoldExpiryTest {
     void cannotFreezeAnAlreadySettledHold() {
         PaymentHold h = hold(LocalDateTime.now().plusDays(10));
         h.setStatus(PaymentHold.HoldStatus.RELEASED);
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
 
         assertEquals("HOLD_ALREADY_SETTLED", assertThrows(AppException.class,
                 () -> service.freeze(h.getId(), "too late", UUID.randomUUID())).getCode());
@@ -186,7 +186,7 @@ class HoldExpiryTest {
         Wallet payerWallet = Wallet.builder().userId(payerId).balance(BigDecimal.ZERO)
                 .currency("GHS").frozen(false).build();
 
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
         when(holdRepository.findBySessionIdForUpdate(sessionId)).thenReturn(Optional.of(h));
         when(walletRepository.findByUserIdForUpdate(payerId)).thenReturn(Optional.of(payerWallet));
         when(userRepository.findById(payerId)).thenReturn(Optional.of(User.builder().id(payerId).build()));
@@ -220,7 +220,7 @@ class HoldExpiryTest {
     @Test
     void unfreezingAHoldThatIsNotFrozen_throws() {
         PaymentHold h = hold(LocalDateTime.now().plusDays(10));
-        when(holdRepository.findById(h.getId())).thenReturn(Optional.of(h));
+        when(holdRepository.findByIdForUpdate(h.getId())).thenReturn(Optional.of(h));
 
         assertEquals("HOLD_NOT_FROZEN", assertThrows(AppException.class,
                 () -> service.unfreeze(h.getId(), UUID.randomUUID())).getCode());
