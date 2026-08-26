@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,12 @@ public class ScreeningService {
     private final RiskAlertRepository riskAlertRepository;
     private final AdminAuditService auditService;
     private final StaffAlertService staffAlertService;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    /** Page size for the full-base screening run. Bounded so the batch cannot load the user table. */
+    private static final int SCREENING_PAGE_SIZE = 500;
 
     private static final int SCORE_THRESHOLD = 70;
 
@@ -232,15 +239,32 @@ public class ScreeningService {
 
     // ── Screening ─────────────────────────────────────────────────────────────
 
-    /** Screens every user against active entries. Returns the number of new matches raised. */
+    /**
+     * Screens every user against active entries. Returns the number of new matches raised.
+     *
+     * <p>Paged rather than {@code findAll()}. This is a batch over the entire user base, so
+     * materialising it as one list put the whole table in heap and grew with every signup —
+     * the daily sanctions run would be the first thing to fall over as the platform grew.
+     * The persistence context is cleared between pages for the same reason: without it,
+     * paging bounds the query but not the memory, because every entity read stays managed
+     * until the transaction ends.
+     */
     @Transactional
     public int screenAllUsers() {
         List<SanctionsListEntry> entries = listRepository.findByActiveTrue();
         if (entries.isEmpty()) return 0;
         int raised = 0;
-        for (User user : userRepository.findAll()) {
-            raised += screen(user, entries);
-        }
+        int pageNumber = 0;
+        Page<User> page;
+        do {
+            page = userRepository.findAll(PageRequest.of(pageNumber, SCREENING_PAGE_SIZE, Sort.by("id")));
+            for (User user : page.getContent()) {
+                raised += screen(user, entries);
+            }
+            entityManager.flush();
+            entityManager.clear();
+            pageNumber++;
+        } while (page.hasNext());
         if (raised > 0) {
             log.info("Screening raised {} new potential watchlist matches", raised);
             staffAlertService.alertRole(StaffRole.Role.COMPLIANCE, "Watchlist matches pending review",

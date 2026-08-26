@@ -23,6 +23,20 @@ public interface WebhookDeliveryRepository extends JpaRepository<WebhookDelivery
 
     long countByStatus(WebhookDelivery.DeliveryStatus status);
 
+    /**
+     * One row per (event type, status) with its count, for the delivery dashboard.
+     *
+     * <p>The dashboard used to load every delivery ever recorded and count them in Java.
+     * Deliveries are an append-only table that grows with traffic, so that was an
+     * out-of-memory failure waiting on volume. The database already knows how to count.
+     */
+    @Query("SELECT d.eventType, d.status, COUNT(d) FROM WebhookDelivery d GROUP BY d.eventType, d.status")
+    List<Object[]> countByEventTypeAndStatus();
+
+    /** Mean attempts across all deliveries, computed in the database. */
+    @Query("SELECT COALESCE(AVG(d.attemptCount), 0) FROM WebhookDelivery d")
+    Double averageAttemptCount();
+
     @Query("SELECT d.endpointId, COUNT(d) FROM WebhookDelivery d WHERE d.status IN ('FAILED','ABANDONED') AND d.endpointId IN :endpointIds GROUP BY d.endpointId")
     List<Object[]> countFailedByEndpointIds(@Param("endpointIds") List<UUID> endpointIds);
 }

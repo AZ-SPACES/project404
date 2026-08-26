@@ -41,25 +41,26 @@ public class AdminAnalyticsController {
     /** Webhook delivery analytics: success/failure rates by event type. */
     @GetMapping("/webhooks")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getWebhookAnalytics() {
-        List<WebhookDelivery> all = webhookDeliveryRepository.findAll();
+        // Counted in the database. This used to load every delivery ever recorded into
+        // heap and count them in Java; deliveries are append-only and grow with traffic,
+        // so that was an out-of-memory failure waiting on volume.
+        Map<String, Map<String, Long>> byEventType = new LinkedHashMap<>();
+        long total = 0, delivered = 0, failed = 0, pending = 0;
+        for (Object[] row : webhookDeliveryRepository.countByEventTypeAndStatus()) {
+            String eventType = (String) row[0];
+            WebhookDelivery.DeliveryStatus status = (WebhookDelivery.DeliveryStatus) row[1];
+            long count = ((Number) row[2]).longValue();
 
-        long total = all.size();
-        long delivered = all.stream()
-                .filter(d -> d.getStatus() == WebhookDelivery.DeliveryStatus.SUCCESS).count();
-        long failed = all.stream()
-                .filter(d -> d.getStatus() == WebhookDelivery.DeliveryStatus.FAILED).count();
-        long pending = all.stream()
-                .filter(d -> d.getStatus() == WebhookDelivery.DeliveryStatus.PENDING).count();
-
-        // Group by event type
-        Map<String, Map<String, Long>> byEventType = all.stream()
-                .collect(Collectors.groupingBy(
-                        WebhookDelivery::getEventType,
-                        Collectors.groupingBy(
-                                d -> d.getStatus().name(),
-                                Collectors.counting()
-                        )
-                ));
+            byEventType.computeIfAbsent(eventType, k -> new LinkedHashMap<>())
+                    .merge(status.name(), count, Long::sum);
+            total += count;
+            switch (status) {
+                case SUCCESS -> delivered += count;
+                case FAILED -> failed += count;
+                case PENDING -> pending += count;
+                default -> { }
+            }
+        }
 
         List<Map<String, Object>> eventStats = byEventType.entrySet().stream()
                 .map(e -> {
@@ -77,9 +78,8 @@ public class AdminAnalyticsController {
                 .sorted(Comparator.<Map<String, Object>, Long>comparing(m -> (Long) m.get("total")).reversed())
                 .collect(Collectors.toList());
 
-        // Average attempts
-        double avgAttempts = all.stream()
-                .mapToInt(WebhookDelivery::getAttemptCount).average().orElse(0);
+        Double avg = webhookDeliveryRepository.averageAttemptCount();
+        double avgAttempts = avg != null ? avg : 0;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", total);

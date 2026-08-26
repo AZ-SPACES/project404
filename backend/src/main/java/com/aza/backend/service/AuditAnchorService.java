@@ -95,10 +95,8 @@ public class AuditAnchorService {
     }
 
     private LocalDate earliestEntryDate(LocalDate fallback) {
-        return auditLogRepository.findAll().stream()
-                .map(e -> e.getTimestamp().toLocalDate())
-                .min(LocalDate::compareTo)
-                .orElse(fallback);
+        java.time.LocalDateTime earliest = auditLogRepository.earliestTimestamp();
+        return earliest != null ? earliest.toLocalDate() : fallback;
     }
 
     private static String hash(String prevHash, List<AdminAuditLog> entries) {
