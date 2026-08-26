@@ -117,6 +117,29 @@ public class AdminMerchantController {
                         + " to " + request.getFeeRateBps() + "bps")));
     }
 
+    /**
+     * Maker-checker: moves a merchant onto another pricing plan's schedule. Changes what
+     * every future sale costs them, so it needs the same second approver as setting a rate.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
+    @PatchMapping("/{merchantId}/pricing-plan")
+    public ResponseEntity<ApiResponse<ApprovalResponse>> setPricingPlan(
+            @PathVariable UUID merchantId,
+            @RequestBody PricingPlanRequest request,
+            @AuthenticationPrincipal User admin) {
+        Merchant merchant = merchantService.validatePricingPlanChange(merchantId, request.getPricingPlan());
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.UPDATE_MERCHANT_PRICING_PLAN, merchantId,
+                new ApprovalService.MerchantPricingPlanPayload(request.getPricingPlan()),
+                "Move " + merchant.getBusinessName() + " from plan " + merchant.getPricingPlan()
+                        + " to " + request.getPricingPlan().trim().toUpperCase())));
+    }
+
+    @lombok.Data
+    public static class PricingPlanRequest {
+        private String pricingPlan;
+    }
+
     @GetMapping("/{merchantId}/payouts")
     public ResponseEntity<ApiResponse<Page<PayoutResponse>>> getPayouts(
             @PathVariable UUID merchantId,

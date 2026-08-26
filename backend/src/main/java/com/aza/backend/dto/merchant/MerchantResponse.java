@@ -27,7 +27,11 @@ public class MerchantResponse {
     private BigDecimal balance;
     private String currency;
     private BigDecimal totalVolume;
+    /** The per-merchant override, or null when this merchant prices off their plan. */
     private Integer feeRateBps;
+
+    /** Which pricing plan's schedule prices this merchant when there is no override. */
+    private String pricingPlan;
     private LocalDateTime createdAt;
     private LocalDateTime activatedAt;
     private Integer activeApiKeyCount;

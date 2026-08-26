@@ -81,7 +81,8 @@ public class PendingApproval {
         APPROVE_WITHDRAWAL,     // approver needs FINANCE (rejection/refund stays immediate)
         SETTLE_COMMISSION,      // approver needs FINANCE (pays an agent's accrued commission out of band)
         ADMIN_FUND_TRANSFER,    // approver needs FINANCE (moves funds out of the requesting admin's own wallet)
-        UPDATE_MERCHANT_FEE_RATE // approver needs FINANCE (sets one merchant's MDR; 0% forgoes revenue, 100% takes the whole sale)
+        UPDATE_MERCHANT_FEE_RATE, // approver needs FINANCE (sets one merchant's MDR override)
+        UPDATE_MERCHANT_PRICING_PLAN // approver needs FINANCE (moves a merchant onto another plan's schedule)
     }
 
     public enum Status {

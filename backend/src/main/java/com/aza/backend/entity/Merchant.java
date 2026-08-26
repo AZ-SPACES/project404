@@ -57,8 +57,21 @@ public class Merchant {
     @Builder.Default
     private BigDecimal totalVolume = BigDecimal.ZERO;
 
+    /**
+     * A rate negotiated with this merchant alone, in basis points, or null to price off
+     * their {@link #pricingPlan}. Null is the normal case: an override exists only where
+     * someone deliberately put one there.
+     */
+    private Integer feeRateBps;
+
+    /**
+     * Which class of pricing this merchant sits in. Resolves to a versioned
+     * {@code MERCHANT_MDR} fee rule, so a plan can carry amount bands, caps and an
+     * effective window that a bare per-merchant integer never could.
+     */
+    @Column(nullable = false, length = 50)
     @Builder.Default
-    private Integer feeRateBps = 150; // 1.5%
+    private String pricingPlan = "STANDARD";
 
     // ==================== CHECKOUT BRANDING ====================
 

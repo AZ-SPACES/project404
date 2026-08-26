@@ -48,12 +48,24 @@ public class FeeCalculationService {
     public record FeeQuote(BigDecimal fee, UUID ruleId, boolean free) {}
 
     public FeeQuote quote(String transactionType, BigDecimal amount, UUID payerId) {
+        return quote(transactionType, amount, payerId, null);
+    }
+
+    /**
+     * As {@link #quote(String, BigDecimal, UUID)}, for a fee that depends on which pricing
+     * plan the payer sits in.
+     *
+     * <p>Consumer fees have no plan and pass null, which matches only plan-agnostic rules —
+     * so P2P and cash-out resolve exactly as they always did. Merchant MDR passes the
+     * merchant's plan, which is how one versioned rule can price a whole class of merchants.
+     */
+    public FeeQuote quote(String transactionType, BigDecimal amount, UUID payerId, String pricingPlan) {
         if (amount == null || amount.signum() <= 0) {
             return new FeeQuote(BigDecimal.ZERO, null, true);
         }
         LocalDateTime now = LocalDateTime.now(GHANA_TZ);
 
-        FeeRule rule = resolveRule(transactionType, amount, now);
+        FeeRule rule = resolveRule(transactionType, amount, now, pricingPlan);
         if (rule == null) {
             return new FeeQuote(BigDecimal.ZERO, null, true);
         }
@@ -105,12 +117,30 @@ public class FeeCalculationService {
     }
 
     private FeeRule resolveRule(String transactionType, BigDecimal amount, LocalDateTime now) {
+        return resolveRule(transactionType, amount, now, null);
+    }
+
+    private FeeRule resolveRule(String transactionType, BigDecimal amount, LocalDateTime now,
+                                String pricingPlan) {
         return feeRuleRepository.findByTransactionTypeAndActiveTrue(transactionType).stream()
                 .filter(r -> withinEffectiveWindow(r, now))
                 .filter(r -> withinTierBand(r, amount))
-                // Prefer the most specific (narrowest) tier band when several match.
-                .min(Comparator.comparing(FeeCalculationService::bandWidth))
+                .filter(r -> appliesToPlan(r, pricingPlan))
+                // A rule written for this plan beats a catch-all; among equals, the
+                // narrowest tier band wins, as before.
+                .min(Comparator.<FeeRule, Integer>comparing(r -> r.getPricingPlan() != null ? 0 : 1)
+                        .thenComparing(FeeCalculationService::bandWidth))
                 .orElse(null);
+    }
+
+    /**
+     * A rule is in scope when it names this plan, or names no plan at all. A rule written
+     * for a different plan is never a fallback — that would quietly price a merchant on
+     * somebody else's terms.
+     */
+    private static boolean appliesToPlan(FeeRule rule, String pricingPlan) {
+        if (rule.getPricingPlan() == null) return true;
+        return pricingPlan != null && rule.getPricingPlan().equalsIgnoreCase(pricingPlan);
     }
 
     private boolean isFree(FeeRule rule, BigDecimal amount, UUID payerId, LocalDateTime now) {

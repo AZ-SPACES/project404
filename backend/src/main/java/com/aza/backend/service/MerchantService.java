@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 public class MerchantService {
 
     private final MerchantRepository merchantRepository;
+    private final com.aza.backend.repository.FeeRuleRepository feeRuleRepository;
     private final KybRecordRepository kybRecordRepository;
     private final KybDocumentRepository kybDocumentRepository;
     private final MerchantApiKeyRepository apiKeyRepository;
@@ -1077,12 +1078,55 @@ public class MerchantService {
      * still there to fix it, rather than blowing up in the approver's face later.
      */
     public Merchant validateFeeRateChange(UUID merchantId, Integer feeRateBps) {
-        if (feeRateBps == null || feeRateBps < 0 || feeRateBps > 10000) {
+        // Null is meaningful here: it clears the override and puts the merchant back on
+        // their plan's schedule. Only a present-but-nonsense rate is rejected.
+        if (feeRateBps != null && (feeRateBps < 0 || feeRateBps > 10000)) {
             throw new AppException("INVALID_FEE_RATE",
                     "Fee rate must be between 0 and 10000 bps (0–100%)", HttpStatus.BAD_REQUEST);
         }
         return merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Checks a proposed plan move without applying it.
+     *
+     * <p>A plan with no active {@code MERCHANT_MDR} rule is refused rather than accepted.
+     * Accepting it would move the merchant onto a schedule that does not exist, and they
+     * would quietly fall through to the backstop rate — priced by an accident rather than
+     * by a decision. Configure the plan's rule first.
+     */
+    public Merchant validatePricingPlanChange(UUID merchantId, String pricingPlan) {
+        if (pricingPlan == null || pricingPlan.isBlank()) {
+            throw new AppException("INVALID_PRICING_PLAN", "A pricing plan is required", HttpStatus.BAD_REQUEST);
+        }
+        String plan = pricingPlan.trim().toUpperCase();
+        boolean planHasRule = feeRuleRepository
+                .findByTransactionTypeAndActiveTrue(MerchantFeeCalculator.MDR_TRANSACTION_TYPE).stream()
+                .anyMatch(r -> plan.equalsIgnoreCase(r.getPricingPlan()));
+        if (!planHasRule) {
+            throw new AppException("UNKNOWN_PRICING_PLAN",
+                    "No active MERCHANT_MDR rule exists for plan '" + plan
+                            + "'. Create the rule before moving merchants onto it.", HttpStatus.BAD_REQUEST);
+        }
+        return merchantRepository.findById(merchantId)
+                .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+    }
+
+    /** Moves a merchant onto another plan's schedule. Reached only through maker-checker. */
+    @Transactional
+    public MerchantResponse applyPricingPlan(com.aza.backend.entity.User approver, UUID merchantId, String pricingPlan) {
+        Merchant merchant = validatePricingPlanChange(merchantId, pricingPlan);
+        String previous = merchant.getPricingPlan();
+        String plan = pricingPlan.trim().toUpperCase();
+
+        merchant.setPricingPlan(plan);
+        merchantRepository.save(merchant);
+
+        logMerchantAction(merchantId, "PRICING_PLAN_UPDATED", resolveActorEmail(approver.getId()),
+                "from=" + previous + " to=" + plan);
+        log.info("Pricing plan updated for merchantId={}, from={}, to={}", merchantId, previous, plan);
+        return toResponse(merchant);
     }
 
     /**
@@ -1109,7 +1153,8 @@ public class MerchantService {
         // March" is a reconciliation and dispute question, and the merchant row only ever
         // holds today's answer.
         logMerchantAction(merchantId, "FEE_RATE_UPDATED", resolveActorEmail(approver.getId()),
-                "from=" + (previous != null ? previous + "bps" : "unset") + " to=" + feeRateBps + "bps");
+                "from=" + (previous != null ? previous + "bps" : "plan:" + merchant.getPricingPlan())
+                        + " to=" + (feeRateBps != null ? feeRateBps + "bps" : "plan:" + merchant.getPricingPlan()));
         log.info("Fee rate updated for merchantId={}, from={}, to={}", merchantId, previous, feeRateBps);
         return toResponse(merchant);
     }
@@ -1573,6 +1618,7 @@ public class MerchantService {
                 .currency(m.getCurrency())
                 .totalVolume(m.getTotalVolume())
                 .feeRateBps(m.getFeeRateBps())
+                .pricingPlan(m.getPricingPlan())
                 .createdAt(m.getCreatedAt())
                 .activatedAt(m.getActivatedAt())
                 .brandColor(m.getBrandColor())

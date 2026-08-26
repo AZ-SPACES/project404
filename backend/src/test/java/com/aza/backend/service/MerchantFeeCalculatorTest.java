@@ -1,12 +1,16 @@
 package com.aza.backend.service;
 
 import com.aza.backend.entity.Merchant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 /**
  * One formula, many rates.
@@ -19,15 +23,35 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class MerchantFeeCalculatorTest {
 
-    private final MerchantFeeCalculator calculator = new MerchantFeeCalculator();
+    private final FeeCalculationService feeCalculationService = mock(FeeCalculationService.class);
+    private final MerchantFeeCalculator calculator = new MerchantFeeCalculator(feeCalculationService);
 
+    /** No rule matches unless a test says one does — the backstop path. */
+    @BeforeEach
+    void noRuleByDefault() {
+        when(feeCalculationService.quote(any(), any(), any(), any()))
+                .thenReturn(new FeeCalculationService.FeeQuote(BigDecimal.ZERO, null, true));
+    }
+
+    /** A merchant priced by an explicit override. */
     private static Merchant merchantAt(Integer bps) {
+        return merchantOn("STANDARD", bps);
+    }
+
+    /** A merchant priced by their plan, with no override. */
+    private static Merchant merchantOn(String plan, Integer overrideBps) {
         return Merchant.builder()
                 .id(UUID.randomUUID()).userId(UUID.randomUUID())
                 .businessName("Test").currency("GHS")
                 .balance(BigDecimal.ZERO).totalVolume(BigDecimal.ZERO)
-                .feeRateBps(bps)
+                .pricingPlan(plan)
+                .feeRateBps(overrideBps)
                 .build();
+    }
+
+    private void planCharges(String plan, String fee) {
+        when(feeCalculationService.quote(eq(MerchantFeeCalculator.MDR_TRANSACTION_TYPE), any(), any(), eq(plan)))
+                .thenReturn(new FeeCalculationService.FeeQuote(new BigDecimal(fee), UUID.randomUUID(), false));
     }
 
     @Test
@@ -67,14 +91,52 @@ class MerchantFeeCalculatorTest {
         }
     }
 
+    // ==================== plan pricing ====================
+
     @Test
-    void aMerchantWithNoRateFallsBackInsteadOfThrowing() {
-        // The column was nullable with no database default, so a null could reach the money
-        // path and NPE on unboxing mid-payment. V62 closes that at the schema; this is the
-        // belt to its braces.
-        assertEquals(MerchantFeeCalculator.DEFAULT_FEE_RATE_BPS, calculator.rateBpsOf(merchantAt(null)));
+    void withNoOverrideTheMerchantIsPricedByTheirPlan() {
+        planCharges("ENTERPRISE", "8.00");
+        assertEquals(0, new BigDecimal("8.00")
+                .compareTo(calculator.feeOn(merchantOn("ENTERPRISE", null), new BigDecimal("1000.00"))));
+    }
+
+    @Test
+    void twoPlansPriceTheSameSaleDifferently() {
+        planCharges("STANDARD", "15.00");
+        planCharges("ENTERPRISE", "8.00");
+        BigDecimal sale = new BigDecimal("1000.00");
+
+        assertEquals(0, new BigDecimal("15.00").compareTo(calculator.feeOn(merchantOn("STANDARD", null), sale)));
+        assertEquals(0, new BigDecimal("8.00").compareTo(calculator.feeOn(merchantOn("ENTERPRISE", null), sale)));
+    }
+
+    @Test
+    void anOverrideOutranksThePlan() {
+        // The whole point of an override: this merchant negotiated terms, and the plan's
+        // schedule must not quietly reprice them.
+        planCharges("STANDARD", "15.00");
+        assertEquals(0, new BigDecimal("5.00")
+                .compareTo(calculator.feeOn(merchantOn("STANDARD", 50), new BigDecimal("1000.00"))));
+        verify(feeCalculationService, never()).quote(any(), any(), any(), any());
+    }
+
+    @Test
+    void aPlanWithNoRuleFallsBackToTheStandardRateRatherThanFree() {
+        // Nothing is stubbed for this plan, so the engine reports no matching rule. The sale
+        // must not become free: an unconfigured plan is a gap, not a giveaway.
         assertEquals(0, new BigDecimal("15.00")
-                .compareTo(calculator.feeOn(merchantAt(null), new BigDecimal("1000.00"))));
+                .compareTo(calculator.feeOn(merchantOn("UNCONFIGURED", null), new BigDecimal("1000.00"))));
+    }
+
+    @Test
+    void merchantPricingNeverSpendsAPerPayerFreeAllowance() {
+        // Passing a payer id here would let one plan's free tier be consumed by whichever
+        // customer happened to buy first, which is not what a merchant rate means.
+        planCharges("STANDARD", "15.00");
+        calculator.feeOn(merchantOn("STANDARD", null), new BigDecimal("1000.00"));
+
+        verify(feeCalculationService).quote(
+                eq(MerchantFeeCalculator.MDR_TRANSACTION_TYPE), any(), eq(null), eq("STANDARD"));
     }
 
     @Test

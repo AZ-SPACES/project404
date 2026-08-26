@@ -140,6 +140,10 @@ public class ApprovalService {
                 var p = fromJson(approval.getPayload(), MerchantFeeRatePayload.class);
                 merchantService.applyFeeRate(approver, approval.getTargetId(), p.feeRateBps());
             }
+            case UPDATE_MERCHANT_PRICING_PLAN -> {
+                var p = fromJson(approval.getPayload(), MerchantPricingPlanPayload.class);
+                merchantService.applyPricingPlan(approver, approval.getTargetId(), p.pricingPlan());
+            }
             case UPDATE_FEE_RULE ->
                     feeService.updateRule(approval.getTargetId(),
                             fromJson(approval.getPayload(), FeeService.FeeRuleUpdateRequest.class));
@@ -203,7 +207,8 @@ public class ApprovalService {
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
-            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UPDATE_MERCHANT_FEE_RATE, UNFREEZE_WALLET,
+            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UPDATE_MERCHANT_FEE_RATE,
+                 UPDATE_MERCHANT_PRICING_PLAN, UNFREEZE_WALLET,
                  MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION,
                  ADMIN_FUND_TRANSFER -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT,
@@ -268,6 +273,9 @@ public class ApprovalService {
 
     /** Payload for {@link PendingApproval.ActionType#UPDATE_MERCHANT_FEE_RATE}. */
     public record MerchantFeeRatePayload(Integer feeRateBps) {}
+
+    /** Payload for {@link PendingApproval.ActionType#UPDATE_MERCHANT_PRICING_PLAN}. */
+    public record MerchantPricingPlanPayload(String pricingPlan) {}
 
     private PendingApproval getPending(UUID approvalId) {
         // Locked, not a plain read. Approving runs a money-moving action, and the

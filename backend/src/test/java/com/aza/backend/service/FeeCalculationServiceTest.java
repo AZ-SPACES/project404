@@ -114,4 +114,98 @@ class FeeCalculationServiceTest {
         assertEquals(new BigDecimal("15.00"),
                 service.quote("CASH_OUT", new BigDecimal("5000"), payer).fee()); // 50 -> cap 15
     }
+
+    // ==================== merchant pricing plans ====================
+    //
+    // The engine resolved on transaction type alone, which has no room for *who* is being
+    // charged. A plan is that dimension: one versioned MERCHANT_MDR rule prices a whole
+    // class of merchants, and merchants on different plans price differently.
+
+    private FeeRule mdr(String plan, String percent) {
+        return FeeRule.builder()
+                .id(UUID.randomUUID())
+                .transactionType("MERCHANT_MDR")
+                .pricingPlan(plan)
+                .feeType(FeeRule.FeeType.PERCENTAGE)
+                .amount(new BigDecimal(percent))
+                .active(true)
+                .build();
+    }
+
+    @Test
+    void twoPlansPriceTheSameSaleDifferently() {
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr("STANDARD", "1.5"), mdr("ENTERPRISE", "0.8")));
+        BigDecimal sale = new BigDecimal("1000.00");
+
+        assertEquals(0, new BigDecimal("15.00")
+                .compareTo(service.quote("MERCHANT_MDR", sale, null, "STANDARD").fee()));
+        assertEquals(0, new BigDecimal("8.00")
+                .compareTo(service.quote("MERCHANT_MDR", sale, null, "ENTERPRISE").fee()));
+    }
+
+    @Test
+    void aRuleForThisPlanBeatsTheCatchAll() {
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr(null, "1.5"), mdr("ENTERPRISE", "0.8")));
+
+        assertEquals(0, new BigDecimal("8.00")
+                .compareTo(service.quote("MERCHANT_MDR", new BigDecimal("1000.00"), null, "ENTERPRISE").fee()));
+    }
+
+    @Test
+    void aPlanWithNoRuleOfItsOwnFallsToTheCatchAll() {
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr(null, "1.5"), mdr("ENTERPRISE", "0.8")));
+
+        assertEquals(0, new BigDecimal("15.00")
+                .compareTo(service.quote("MERCHANT_MDR", new BigDecimal("1000.00"), null, "CHARITY").fee()));
+    }
+
+    @Test
+    void anotherPlansRuleIsNeverUsedAsAFallback() {
+        // Pricing a merchant on somebody else's negotiated terms would be worse than
+        // having no rule at all, so a non-matching plan rule must not apply.
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr("ENTERPRISE", "0.8")));
+
+        var quote = service.quote("MERCHANT_MDR", new BigDecimal("1000.00"), null, "STANDARD");
+
+        assertNull(quote.ruleId(), "no rule should have matched");
+        assertEquals(0, BigDecimal.ZERO.compareTo(quote.fee()));
+    }
+
+    @Test
+    void planMatchingIsCaseInsensitive() {
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr("ENTERPRISE", "0.8")));
+
+        assertEquals(0, new BigDecimal("8.00")
+                .compareTo(service.quote("MERCHANT_MDR", new BigDecimal("1000.00"), null, "enterprise").fee()));
+    }
+
+    @Test
+    void consumerFeesAreUnaffected_aPlanlessQuoteMatchesOnlyPlanlessRules() {
+        // P2P and cash-out pass no plan and must resolve exactly as they always did.
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(mdr(null, "1.5"), mdr("ENTERPRISE", "0.8")));
+
+        assertEquals(0, new BigDecimal("15.00")
+                .compareTo(service.quote("MERCHANT_MDR", new BigDecimal("1000.00"), null).fee()));
+    }
+
+    @Test
+    void aPlanRuleStillHonoursItsCapsAndBands() {
+        FeeRule capped = mdr("STANDARD", "1.5");
+        capped.setMaxFee(new BigDecimal("20"));
+        capped.setTierMinAmount(new BigDecimal("100"));
+        when(feeRuleRepository.findByTransactionTypeAndActiveTrue("MERCHANT_MDR"))
+                .thenReturn(List.of(capped));
+
+        // Above the band, and above the cap: clamped to 20 rather than 150.
+        assertEquals(0, new BigDecimal("20.00")
+                .compareTo(service.quote("MERCHANT_MDR", new BigDecimal("10000.00"), null, "STANDARD").fee()));
+        // Below the band entirely: no rule matches.
+        assertNull(service.quote("MERCHANT_MDR", new BigDecimal("50.00"), null, "STANDARD").ruleId());
+    }
 }

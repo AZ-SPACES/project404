@@ -28,6 +28,16 @@ public class FeeRule {
     @Column(nullable = false, length = 50)
     private String transactionType;
 
+    /**
+     * Which merchant pricing plan this rule prices, or null to apply to any plan.
+     *
+     * <p>The engine used to resolve on {@code transactionType} alone, which left no room
+     * for who is being charged. A plan-specific rule outranks a plan-agnostic one, so a
+     * catch-all can back-stop plans that have no rule of their own.
+     */
+    @Column(length = 50)
+    private String pricingPlan;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FeeType feeType;
