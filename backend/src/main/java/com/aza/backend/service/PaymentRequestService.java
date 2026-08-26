@@ -49,6 +49,8 @@ public class PaymentRequestService {
     private final SmsService smsService;
     private final AnomalyDetectionService anomalyDetectionService;
     private final RiskEngineService riskEngineService;
+    private final LimitGuard limitGuard;
+    private final FeeCalculationService feeCalculationService;
 
     private static final ZoneId GHANA_TZ = ZoneId.of("Africa/Accra");
 
@@ -139,7 +141,10 @@ public class PaymentRequestService {
 
     @Transactional
     public PaymentRequestResponse approvePaymentRequest(User payer, UUID id, String passcode) {
-        PaymentRequest pr = paymentRequestRepository.findById(id)
+        // Locked, not a plain read. Approving settles the request and moves money, and the
+        // PENDING check below is a read-modify-write on this row: a double-tapped approve
+        // would otherwise pass it twice and pay the requester twice.
+        PaymentRequest pr = paymentRequestRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException("Payment request not found"));
 
         if (!pr.getPayerId().equals(payer.getId())) {
@@ -183,12 +188,25 @@ public class PaymentRequestService {
             throw new AppException("Your wallet has been frozen. Please contact support.");
         }
 
-        if (payerWallet.getBalance().compareTo(pr.getAmount()) < 0) {
-            throw new AppException("Insufficient balance");
+        // The payer's KYC tier cap. The flat daily cap above is a separate, global limit;
+        // without this, settling a chat request was a way around the per-transaction cap
+        // that every other transfer path applies.
+        limitGuard.enforceSingle(payer, pr.getAmount());
+
+        // The same P2P fee an ordinary transfer of this amount would pay. Settling a
+        // request moves money exactly like a transfer, so charging nothing here made a
+        // chat request a free route around P2P pricing -- the very thing the equivalent
+        // path in TransferService charges the fee to prevent.
+        BigDecimal fee = feeCalculationService.quote("P2P", pr.getAmount(), payer.getId()).fee();
+
+        if (payerWallet.getBalance().compareTo(pr.getAmount().add(fee)) < 0) {
+            throw new AppException("Insufficient balance to cover the amount plus the GHS "
+                    + fee.toPlainString() + " fee");
         }
 
         // Both wallets are already locked in canonical order above.
-        walletLedger.transferLocked(payerWallet, requesterWallet, pr.getAmount(), BigDecimal.ZERO, null);
+        walletLedger.transferLocked(payerWallet, requesterWallet, pr.getAmount(), fee, null);
+        feeCalculationService.recordMonthlyUsage("P2P", pr.getAmount(), payer.getId());
 
         // Scored for the fraud queues; chat payment requests complete inline (the
         // PAID status/chat flow can't park mid-payment) so HIGH alerts rather than holds.
@@ -203,6 +221,7 @@ public class PaymentRequestService {
                 .senderId(payer.getId())
                 .recipientId(pr.getRequesterId())
                 .amount(pr.getAmount())
+                .feeAmount(fee)
                 .note(pr.getNote())
                 .type(Transaction.TransactionType.TRANSFER)
                 .status(Transaction.TransactionStatus.COMPLETED)

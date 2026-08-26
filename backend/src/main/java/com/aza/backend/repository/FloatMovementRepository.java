@@ -12,4 +12,11 @@ import java.util.UUID;
 public interface FloatMovementRepository extends JpaRepository<FloatMovement, UUID> {
     Page<FloatMovement> findAllByOrderByCreatedAtDesc(Pageable pageable);
     Page<FloatMovement> findByAgentIdOrderByCreatedAtDesc(UUID agentId, Pageable pageable);
+
+    /**
+     * Has this bank transaction already been minted or burned? Backed by the partial
+     * unique index in V60 — this check gives the operator a readable error, and the index
+     * is what actually holds when two approvals commit at the same instant.
+     */
+    boolean existsByTypeAndBankReference(FloatMovement.Type type, String bankReference);
 }

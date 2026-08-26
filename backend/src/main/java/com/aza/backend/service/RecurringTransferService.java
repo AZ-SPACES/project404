@@ -30,6 +30,8 @@ public class RecurringTransferService {
     private final TransactionRepository transactionRepository;
     private final AnomalyDetectionService anomalyDetectionService;
     private final RiskEngineService riskEngineService;
+    private final LimitGuard limitGuard;
+    private final FeeCalculationService feeCalculationService;
 
     @Transactional
     public RecurringTransferResponse create(UUID userId, CreateRecurringTransferRequest req) {
@@ -156,14 +158,40 @@ public class RecurringTransferService {
             throw new RuntimeException("Recipient not found or inactive");
         }
 
+        User sender = userRepository.findById(rt.getUserId())
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+        // A standing order is a transfer the payer set up earlier, not a transfer that
+        // escapes the rules that apply to every other one. Before this, it skipped all
+        // three: it drained a frozen wallet, ignored the payer's KYC tier cap, and moved
+        // money for free while every other P2P path charged for it.
+
+        // 1. A frozen wallet pays nobody. Checked before the lock so a frozen payer costs
+        //    nothing to reject; the ledger takes the lock for the move itself.
+        Wallet senderWallet = walletRepository.findByUserId(rt.getUserId())
+                .orElseThrow(() -> new RuntimeException("Sender wallet not found"));
+        if (Boolean.TRUE.equals(senderWallet.getFrozen())) {
+            throw new AppException("WALLET_FROZEN",
+                    "Your wallet is frozen, so this standing order did not run", HttpStatus.FORBIDDEN);
+        }
+
+        // 2. The payer's tier cap applies to money leaving on a schedule too.
+        limitGuard.enforceSingle(sender, rt.getAmount());
+
+        // 3. The same P2P fee as an equivalent manual transfer, so a standing order is not
+        //    a free route around it.
+        BigDecimal fee = feeCalculationService.quote("P2P", rt.getAmount(), rt.getUserId()).fee();
+
         // Locks both wallets in canonical order and applies the move. The recipient's
         // wallet was previously read without a lock, so a standing order landing at the
         // same moment as any other credit could overwrite it. The insufficient-funds
-        // check now happens under the lock, inside the ledger.
+        // check now happens under the lock, inside the ledger, against amount + fee.
         walletLedger.transfer(
                 WalletLocker.personal(rt.getUserId(), "Sender wallet not found"),
                 WalletLocker.personal(recipient.getId(), "Recipient wallet not found"),
-                rt.getAmount(), BigDecimal.ZERO, null);
+                rt.getAmount(), fee, null);
+
+        feeCalculationService.recordMonthlyUsage("P2P", rt.getAmount(), rt.getUserId());
 
         String note = rt.getNote() != null && !rt.getNote().isBlank()
                 ? rt.getNote()
@@ -185,12 +213,12 @@ public class RecurringTransferService {
                 .status(Transaction.TransactionStatus.COMPLETED)
                 .idempotencyKey("recurring:" + rt.getId() + ":" + rt.getTotalRuns())
                 .completedAt(LocalDateTime.now())
+                .feeAmount(fee)
                 .anomalyScore(anomaly.score())
                 .anomalyRiskLevel(anomaly.riskLevel())
                 .build();
         transactionRepository.save(tx);
-        userRepository.findById(rt.getUserId()).ifPresent(sender ->
-                riskEngineService.evaluateTransfer(tx, sender));
+        riskEngineService.evaluateTransfer(tx, sender);
 
         rt.setTotalRuns(rt.getTotalRuns() + 1);
         rt.setSuccessfulRuns(rt.getSuccessfulRuns() + 1);

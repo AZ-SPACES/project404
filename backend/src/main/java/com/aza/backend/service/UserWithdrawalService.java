@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -42,6 +43,23 @@ public class UserWithdrawalService {
     @Transactional
     public UserWithdrawal request(User user, BigDecimal amount, String provider,
                                   String destination, String bankName, String passcode) {
+        return request(user, amount, provider, destination, bankName, passcode, null);
+    }
+
+    @Transactional
+    public UserWithdrawal request(User user, BigDecimal amount, String provider,
+                                  String destination, String bankName, String passcode,
+                                  String idempotencyKey) {
+        // Replay check first: a retried request must return the original reservation, not
+        // make a second one. Requesting a withdrawal debits the wallet, so a double submit
+        // used to reserve the money twice and leave two PENDING rows.
+        String key = idempotencyKey != null && !idempotencyKey.isBlank() ? idempotencyKey.trim() : null;
+        if (key != null) {
+            Optional<UserWithdrawal> replay =
+                    withdrawalRepository.findByUserIdAndIdempotencyKey(user.getId(), key);
+            if (replay.isPresent()) return replay.get();
+        }
+
         // Verify passcode before taking any lock (avoids holding the row lock over the Redis round-trip).
         userService.verifyPasscode(user, passcode);
 
@@ -67,6 +85,7 @@ public class UserWithdrawalService {
                 .destination(destination)
                 .bankName(bankName)
                 .status(UserWithdrawal.WithdrawalStatus.PENDING)
+                .idempotencyKey(key)
                 .build());
 
         log.info("Withdrawal requested and funds reserved: userId={}, amount={}", user.getId(), amount);
@@ -75,7 +94,10 @@ public class UserWithdrawalService {
 
     @Transactional
     public UserWithdrawal review(User admin, UUID id, String action, String note) {
-        UserWithdrawal withdrawal = withdrawalRepository.findById(id)
+        // Locked, not a plain read. Rejecting refunds the reserved funds, and the PENDING
+        // check below is a read-modify-write on this row: two admins rejecting at the same
+        // moment would otherwise both pass it and refund the same reservation twice.
+        UserWithdrawal withdrawal = withdrawalRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Withdrawal not found", HttpStatus.NOT_FOUND));
 
         if (withdrawal.getStatus() != UserWithdrawal.WithdrawalStatus.PENDING) {

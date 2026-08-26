@@ -94,4 +94,78 @@ class FloatServiceTest {
                 () -> service.burn(admin, agentId, new BigDecimal("200.00"), "BANK-REF-4"));
         assertTrue(ex.getMessage().toLowerCase().contains("too low"));
     }
+
+    // ==================== one bank transaction, one movement ====================
+    //
+    // Mint is the only place e-money is created, so a deposit minted twice puts issued
+    // e-money above the safeguarded balance. Maker-checker cannot catch it: two approvals
+    // raised for one deposit are two legitimate approvals.
+
+    @Test
+    void mint_refusesABankReferenceAlreadyMinted() {
+        when(floatMovementRepository.existsByTypeAndBankReference(FloatMovement.Type.MINT, "BANK-REF-DUP"))
+                .thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.mint(admin, agentId, new BigDecimal("500.00"), "BANK-REF-DUP"));
+
+        assertEquals("BANK_REFERENCE_ALREADY_USED", ex.getCode());
+        verify(floatMovementRepository, never()).save(any());
+        verify(walletRepository, never()).save(any(Wallet.class));
+    }
+
+    @Test
+    void burn_refusesABankReferenceAlreadyBurned() {
+        when(floatMovementRepository.existsByTypeAndBankReference(FloatMovement.Type.BURN, "BANK-REF-DUP"))
+                .thenReturn(true);
+
+        AppException ex = assertThrows(AppException.class,
+                () -> service.burn(admin, agentId, new BigDecimal("200.00"), "BANK-REF-DUP"));
+
+        assertEquals("BANK_REFERENCE_ALREADY_USED", ex.getCode());
+        verify(walletRepository, never()).save(any(Wallet.class));
+    }
+
+    @Test
+    void mintAndBurnMayShareAReference_aReturnedDepositIsOneBankTransactionBothWays() {
+        // Only (type, reference) is unique, so a deposit that is later returned can cite
+        // the same bank transaction for its burn.
+        Wallet wallet = wallet("100.00");
+        when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(null)));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT))
+                .thenReturn(Optional.of(wallet));
+        when(floatMovementRepository.existsByTypeAndBankReference(FloatMovement.Type.MINT, "BANK-REF-5"))
+                .thenReturn(true);
+        when(floatMovementRepository.existsByTypeAndBankReference(FloatMovement.Type.BURN, "BANK-REF-5"))
+                .thenReturn(false);
+        echoMovement();
+
+        FloatMovement m = service.burn(admin, agentId, new BigDecimal("50.00"), "BANK-REF-5");
+
+        assertEquals(FloatMovement.Type.BURN, m.getType());
+        assertEquals(new BigDecimal("50.00"), wallet.getBalance());
+    }
+
+    @Test
+    void mint_requiresABankReference() {
+        for (String missing : new String[]{null, "", "   "}) {
+            AppException ex = assertThrows(AppException.class,
+                    () -> service.mint(admin, agentId, new BigDecimal("500.00"), missing));
+            assertEquals("BANK_REFERENCE_REQUIRED", ex.getCode());
+        }
+        verify(floatMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void referenceIsTrimmedSoPaddingCannotSlipADuplicatePast() {
+        Wallet wallet = wallet("100.00");
+        when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent(null)));
+        when(walletRepository.findByUserIdAndTypeForUpdate(agentUserId, Wallet.WalletType.AGENT_FLOAT))
+                .thenReturn(Optional.of(wallet));
+        echoMovement();
+
+        service.mint(admin, agentId, new BigDecimal("10.00"), "  BANK-REF-6  ");
+
+        verify(floatMovementRepository).existsByTypeAndBankReference(FloatMovement.Type.MINT, "BANK-REF-6");
+    }
 }

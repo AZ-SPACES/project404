@@ -44,6 +44,13 @@ public class UserWithdrawal {
     @Column(columnDefinition = "TEXT")
     private String adminNote;
 
+    /**
+     * Replay key for the request, unique per user (see V61). Null for rows created before
+     * the key existed, and for clients that do not send one.
+     */
+    @Column(length = 255)
+    private String idempotencyKey;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

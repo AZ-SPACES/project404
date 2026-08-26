@@ -59,6 +59,7 @@ public class BillPaymentService {
     private final BillerRepository billerRepository;
     private final WalletRepository walletRepository;
     private final WalletLedger walletLedger;
+    private final AfterCommitExecutor afterCommit;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
@@ -218,13 +219,18 @@ public class BillPaymentService {
                 payment.setToken(result.token());
                 payment.setCompletedAt(LocalDateTime.now());
                 completeLedger(payment, Transaction.TransactionStatus.COMPLETED);
-                notificationService.sendNotification(
-                        payment.getUserId(),
+                // Deferred past commit: a "bill paid" push that outlives a rollback tells
+                // the customer their money moved when it did not.
+                String paidBody = billerName(payment) + " paid — GHS " + payment.getAmount().toPlainString()
+                        + (result.token() != null ? ". Token: " + result.token() : ".");
+                UUID paidUserId = payment.getUserId();
+                BigDecimal paidAmount = payment.getAmount();
+                afterCommit.run(() -> notificationService.sendNotification(
+                        paidUserId,
                         Notification.NotificationType.TRANSFER_COMPLETED,
                         "Bill paid",
-                        billerName(payment) + " paid — GHS " + payment.getAmount().toPlainString()
-                                + (result.token() != null ? ". Token: " + result.token() : "."),
-                        null, payment.getAmount());
+                        paidBody,
+                        null, paidAmount));
                 log.info("Bill paid: payment={}, ref={}", payment.getId(), result.providerReference());
             }
             case REJECTED -> {
@@ -262,13 +268,17 @@ public class BillPaymentService {
         payment.setRefundedAt(LocalDateTime.now());
         completeLedger(payment, Transaction.TransactionStatus.CANCELLED);
 
-        notificationService.sendNotification(
-                payment.getUserId(),
+        // Deferred past commit, for the same reason as the success path above.
+        String refundBody = billerName(payment) + " couldn't be paid, so GHS "
+                + payment.getAmount().toPlainString() + " is back in your wallet.";
+        UUID refundUserId = payment.getUserId();
+        BigDecimal refundAmount = payment.getAmount();
+        afterCommit.run(() -> notificationService.sendNotification(
+                refundUserId,
                 Notification.NotificationType.MONEY_RECEIVED,
                 "Bill payment refunded",
-                billerName(payment) + " couldn't be paid, so GHS "
-                        + payment.getAmount().toPlainString() + " is back in your wallet.",
-                null, payment.getAmount());
+                refundBody,
+                null, refundAmount));
 
         log.info("Bill payment refunded: payment={}, reason={}", payment.getId(), reason);
     }

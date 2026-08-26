@@ -43,7 +43,8 @@ class ConnectServiceTest {
 
     private final ConnectService service = new ConnectService(
             merchantRepository, userRepository, walletRepository,
-            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository), transactionRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository),
+            new AfterCommitExecutor(), transactionRepository,
             connectTransferRepository, notificationService, rateLimitService, recipientResolver,
             inviteService);
 

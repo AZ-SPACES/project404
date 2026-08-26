@@ -36,6 +36,7 @@ public class FloatService {
     @Transactional
     public FloatMovement mint(User admin, UUID agentId, BigDecimal amount, String bankReference) {
         validateAmount(amount);
+        requireUnusedBankReference(FloatMovement.Type.MINT, bankReference);
         Agent agent = requireAgent(agentId);
         if (agent.getStatus() != Agent.Status.ACTIVE) {
             throw new AppException("AGENT_NOT_ACTIVE", "Float can only be minted to an active agent", HttpStatus.CONFLICT);
@@ -55,6 +56,7 @@ public class FloatService {
     @Transactional
     public FloatMovement burn(User admin, UUID agentId, BigDecimal amount, String bankReference) {
         validateAmount(amount);
+        requireUnusedBankReference(FloatMovement.Type.BURN, bankReference);
         Agent agent = requireAgent(agentId);
         Wallet wallet = lockWallet(agent);
 
@@ -76,9 +78,32 @@ public class FloatService {
                 .agentId(agent.getId())
                 .type(type)
                 .amount(amount)
-                .bankReference(bankReference)
+                .bankReference(bankReference != null ? bankReference.trim() : null)
                 .performedBy(admin != null ? admin.getId() : null)
                 .build());
+    }
+
+    /**
+     * The bank transaction is the idempotency key for e-money issuance.
+     *
+     * <p>Mint is the only place e-money is created, so a deposit that is minted twice puts
+     * issued e-money above the safeguarded balance. Maker-checker does not catch it: two
+     * approvals raised for the same deposit are two legitimate approvals. The reference is
+     * therefore mandatory and single-use, enforced here for a readable error and by the
+     * partial unique index in V60 for the case where two approvals commit at once.
+     */
+    private void requireUnusedBankReference(FloatMovement.Type type, String bankReference) {
+        if (bankReference == null || bankReference.isBlank()) {
+            throw new AppException("BANK_REFERENCE_REQUIRED",
+                    "A bank reference is required: e-money is only created or destroyed against a "
+                            + "real bank transaction", HttpStatus.BAD_REQUEST);
+        }
+        if (floatMovementRepository.existsByTypeAndBankReference(type, bankReference.trim())) {
+            throw new AppException("BANK_REFERENCE_ALREADY_USED",
+                    "That bank reference has already been " + (type == FloatMovement.Type.MINT ? "minted" : "burned")
+                            + ". Issuing against it again would put e-money above the safeguarded balance.",
+                    HttpStatus.CONFLICT);
+        }
     }
 
     private Agent requireAgent(UUID agentId) {

@@ -53,6 +53,7 @@ public class RedEnvelopeService {
     private final BlockedUserRepository blockedUserRepository;
     private final NotificationService notificationService;
     private final WebSocketPublisher webSocketPublisher;
+    private final AfterCommitExecutor afterCommit;
     private final RateLimitService rateLimitService;
     private final RecipientResolver recipientResolver;
     private final UserService userService;
@@ -299,24 +300,29 @@ public class RedEnvelopeService {
         gift.setSettledAt(LocalDateTime.now());
         envelopeRepository.save(gift);
 
-        notificationService.sendNotification(
-                gift.getSenderId(),
-                Notification.NotificationType.MONEY_RECEIVED,
-                "Akyede opened",
-                displayName(recipient) + " opened your GHS " + amount.toPlainString() + " Akyede.",
-                null, amount);
-
         log.info("Akyede opened: id={}, recipient={}, amount={}", gift.getId(), recipient.getId(), amount);
 
         EnvelopeResponse response = toResponse(gift, recipient.getId());
-        if (gift.getChatId() != null) {
-            Chat chat = chatRepository.findById(gift.getChatId()).orElse(null);
+        Chat chat = gift.getChatId() != null ? chatRepository.findById(gift.getChatId()).orElse(null) : null;
+
+        // Deferred past commit. A push saying the gift was opened has already left by the
+        // time a rollback undoes the credit, which would tell the sender their money moved
+        // when it did not. Read the chat above, while the entities are still managed.
+        UUID senderId = gift.getSenderId();
+        String openerName = displayName(recipient);
+        afterCommit.run(() -> {
+            notificationService.sendNotification(
+                    senderId,
+                    Notification.NotificationType.MONEY_RECEIVED,
+                    "Akyede opened",
+                    openerName + " opened your GHS " + amount.toPlainString() + " Akyede.",
+                    null, amount);
             if (chat != null) {
                 webSocketPublisher.publishToChatRoom(
                         chat.getParticipantOneId(), chat.getParticipantTwoId(),
                         WebSocketEventType.TRANSFER_UPDATE, response);
             }
-        }
+        });
         return response;
     }
 

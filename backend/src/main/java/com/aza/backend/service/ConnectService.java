@@ -37,6 +37,7 @@ public class ConnectService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final WalletLedger walletLedger;
+    private final AfterCommitExecutor afterCommit;
     private final TransactionRepository transactionRepository;
     private final ConnectTransferRepository connectTransferRepository;
     private final NotificationService notificationService;
@@ -229,12 +230,16 @@ public class ConnectService {
         transfer.setTransactionId(tx.getId());
         connectTransferRepository.save(transfer);
 
-        notificationService.sendNotification(
-                recipient.getId(),
+        // Deferred past commit: a "money received" push that outlives a rollback tells the
+        // seller they were paid when they were not.
+        UUID paidRecipientId = recipient.getId();
+        String payoutBody = merchant.getBusinessName() + " sent you " + merchant.getCurrency() + " " + amount;
+        afterCommit.run(() -> notificationService.sendNotification(
+                paidRecipientId,
                 Notification.NotificationType.MONEY_RECEIVED,
                 "Money Received",
-                merchant.getBusinessName() + " sent you " + merchant.getCurrency() + " " + amount,
-                null);
+                payoutBody,
+                null));
 
         log.info("Connect transfer completed: id={}, merchantId={}, recipient={}, amount={}",
                 transfer.getId(), merchantId, recipient.getId(), amount);

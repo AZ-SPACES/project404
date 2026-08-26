@@ -73,6 +73,60 @@ class UserWithdrawalServiceTest {
         verify(userService).verifyPasscode(u, "1234");
     }
 
+    // ── request: idempotency ──────────────────────────────────────────────────
+    //
+    // Requesting a withdrawal reserves the funds, so a retry without a key used to
+    // reserve them twice and leave two PENDING rows.
+
+    @Test
+    void request_replayReturnsTheOriginalAndDoesNotDebitAgain() {
+        UUID uid = UUID.randomUUID();
+        User u = user(uid);
+        Wallet w = wallet(uid, new BigDecimal("100"), false);
+        UserWithdrawal original = UserWithdrawal.builder()
+                .id(UUID.randomUUID()).userId(uid).amount(new BigDecimal("60"))
+                .status(UserWithdrawal.WithdrawalStatus.PENDING).idempotencyKey("retry-1").build();
+        when(withdrawalRepository.findByUserIdAndIdempotencyKey(uid, "retry-1"))
+                .thenReturn(Optional.of(original));
+
+        UserWithdrawal result = service.request(u, new BigDecimal("60"), "MTN", "024", null, "1234", "retry-1");
+
+        assertEquals(original.getId(), result.getId(), "the original reservation comes back");
+        assertEquals(0, new BigDecimal("100").compareTo(w.getBalance()), "wallet not debited a second time");
+        verify(walletRepository, never()).save(any(Wallet.class));
+        verify(userService, never()).verifyPasscode(any(), any());
+    }
+
+    @Test
+    void request_storesTheKeySoTheNextRetryFindsIt() {
+        UUID uid = UUID.randomUUID();
+        User u = user(uid);
+        Wallet w = wallet(uid, new BigDecimal("100"), false);
+        when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
+        when(withdrawalRepository.findByUserIdAndIdempotencyKey(uid, "retry-2")).thenReturn(Optional.empty());
+        echoSavedWithdrawal();
+
+        UserWithdrawal result = service.request(u, new BigDecimal("60"), "MTN", "024", null, "1234", "  retry-2  ");
+
+        assertEquals("retry-2", result.getIdempotencyKey(), "stored trimmed, so padding cannot dodge the replay check");
+        assertEquals(0, new BigDecimal("40").compareTo(w.getBalance()));
+    }
+
+    @Test
+    void request_withoutAKeyStillWorks_soExistingClientsAreNotBroken() {
+        UUID uid = UUID.randomUUID();
+        User u = user(uid);
+        Wallet w = wallet(uid, new BigDecimal("100"), false);
+        when(walletRepository.findByUserIdForUpdate(uid)).thenReturn(Optional.of(w));
+        echoSavedWithdrawal();
+
+        UserWithdrawal result = service.request(u, new BigDecimal("60"), "MTN", "024", null, "1234", null);
+
+        assertNull(result.getIdempotencyKey());
+        assertEquals(0, new BigDecimal("40").compareTo(w.getBalance()));
+        verify(withdrawalRepository, never()).findByUserIdAndIdempotencyKey(any(), any());
+    }
+
     @Test
     void request_insufficientBalance_throwsAndDoesNotDebit() {
         UUID uid = UUID.randomUUID();

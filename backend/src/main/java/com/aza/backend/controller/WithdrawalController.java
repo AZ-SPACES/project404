@@ -35,9 +35,13 @@ public class WithdrawalController {
     @PostMapping
     public ResponseEntity<ApiResponse<WithdrawalResponse>> requestWithdrawal(
             @AuthenticationPrincipal User user,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody WithdrawalRequest req) {
+        // Optional so existing clients keep working, but the app should send one: this
+        // call reserves the funds, so a retry without a key reserves them twice.
         var withdrawal = withdrawalService.request(
-                user, req.amount(), req.provider(), req.destination(), req.bankName(), req.passcode());
+                user, req.amount(), req.provider(), req.destination(), req.bankName(), req.passcode(),
+                idempotencyKey);
         return ResponseEntity.ok(ApiResponse.success(WithdrawalResponse.from(withdrawal)));
     }
 
