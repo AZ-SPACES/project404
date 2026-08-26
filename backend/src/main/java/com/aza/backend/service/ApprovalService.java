@@ -37,6 +37,7 @@ public class ApprovalService {
     private final AdminAuditService auditService;
     private final AdminService adminService;
     private final FeeService feeService;
+    private final MerchantService merchantService;
     private final UserLimitsService userLimitsService;
     private final SystemSettingService settingService;
     private final KycService kycService;
@@ -135,6 +136,10 @@ public class ApprovalService {
         switch (approval.getActionType()) {
             case REVERSE_TRANSACTION ->
                     adminService.reverseTransaction(approval.getTargetId(), approver);
+            case UPDATE_MERCHANT_FEE_RATE -> {
+                var p = fromJson(approval.getPayload(), MerchantFeeRatePayload.class);
+                merchantService.applyFeeRate(approver, approval.getTargetId(), p.feeRateBps());
+            }
             case UPDATE_FEE_RULE ->
                     feeService.updateRule(approval.getTargetId(),
                             fromJson(approval.getPayload(), FeeService.FeeRuleUpdateRequest.class));
@@ -198,7 +203,7 @@ public class ApprovalService {
 
     private StaffRole.Role requiredRole(PendingApproval.ActionType actionType) {
         return switch (actionType) {
-            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UNFREEZE_WALLET,
+            case REVERSE_TRANSACTION, UPDATE_FEE_RULE, UPDATE_MERCHANT_FEE_RATE, UNFREEZE_WALLET,
                  MINT_FLOAT, BURN_FLOAT, APPROVE_WITHDRAWAL, SETTLE_COMMISSION,
                  ADMIN_FUND_TRANSFER -> StaffRole.Role.FINANCE;
             case UPDATE_USER_LIMITS, REACTIVATE_USER, APPROVE_KYC, APPROVE_AGENT,
@@ -260,6 +265,9 @@ public class ApprovalService {
         private BigDecimal amount;
         private String reference;
     }
+
+    /** Payload for {@link PendingApproval.ActionType#UPDATE_MERCHANT_FEE_RATE}. */
+    public record MerchantFeeRatePayload(Integer feeRateBps) {}
 
     private PendingApproval getPending(UUID approvalId) {
         // Locked, not a plain read. Approving runs a money-moving action, and the

@@ -46,6 +46,7 @@ class ApprovalLockingTest {
 
     private final ApprovalService service = new ApprovalService(
             approvalRepository, staffRoleService, auditService, adminService, feeService,
+            mock(MerchantService.class),
             userLimitsService, settingService, kycService, miniAppReportService,
             broadcastNotificationService, staffAlertService, agentService, floatService,
             agentCommissionService, userWithdrawalService, new ObjectMapper());

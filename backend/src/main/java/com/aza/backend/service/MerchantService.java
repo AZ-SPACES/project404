@@ -1070,15 +1070,47 @@ public class MerchantService {
     }
 
     @Transactional
-    public MerchantResponse adminSetFeeRate(UUID merchantId, int feeRateBps) {
-        if (feeRateBps < 0 || feeRateBps > 10000) {
-            throw new AppException("INVALID_FEE_RATE", "Fee rate must be between 0 and 10000 bps (0–100%)", HttpStatus.BAD_REQUEST);
+    /**
+     * Validates a proposed rate without applying it, for the maker-checker submission step.
+     *
+     * <p>Checking at submission means a nonsense rate is rejected while the requester is
+     * still there to fix it, rather than blowing up in the approver's face later.
+     */
+    public Merchant validateFeeRateChange(UUID merchantId, Integer feeRateBps) {
+        if (feeRateBps == null || feeRateBps < 0 || feeRateBps > 10000) {
+            throw new AppException("INVALID_FEE_RATE",
+                    "Fee rate must be between 0 and 10000 bps (0–100%)", HttpStatus.BAD_REQUEST);
         }
-        Merchant merchant = merchantRepository.findById(merchantId)
+        return merchantRepository.findById(merchantId)
                 .orElseThrow(() -> new AppException("NOT_FOUND", "Merchant not found", HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Sets one merchant's MDR. Reached only through the maker-checker approval, never
+     * straight from a controller.
+     *
+     * <p>Rates are per-merchant and expected to differ — a negotiated enterprise rate and a
+     * standard rate are both legitimate. What this guards is who may change one: the rate
+     * decides AZA's cut of every future sale, so 0% quietly forgoes revenue indefinitely
+     * and 10000 bps takes a merchant's entire sale. Consumer fee rules already required a
+     * second approver ({@code UPDATE_FEE_RULE}); merchant rates did not, which meant any
+     * single ADMIN, FINANCE or COMPLIANCE user could reprice a merchant on their own with
+     * nothing but a log line behind them.
+     */
+    @Transactional
+    public MerchantResponse applyFeeRate(com.aza.backend.entity.User approver, UUID merchantId, Integer feeRateBps) {
+        Merchant merchant = validateFeeRateChange(merchantId, feeRateBps);
+        Integer previous = merchant.getFeeRateBps();
+
         merchant.setFeeRateBps(feeRateBps);
         merchantRepository.save(merchant);
-        log.info("Fee rate updated for merchantId={}, feeRateBps={}", merchantId, feeRateBps);
+
+        // The old rate is recorded alongside the new one: "what was this merchant on in
+        // March" is a reconciliation and dispute question, and the merchant row only ever
+        // holds today's answer.
+        logMerchantAction(merchantId, "FEE_RATE_UPDATED", resolveActorEmail(approver.getId()),
+                "from=" + (previous != null ? previous + "bps" : "unset") + " to=" + feeRateBps + "bps");
+        log.info("Fee rate updated for merchantId={}, from={}, to={}", merchantId, previous, feeRateBps);
         return toResponse(merchant);
     }
 

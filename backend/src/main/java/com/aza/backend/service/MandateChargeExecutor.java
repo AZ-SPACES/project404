@@ -29,6 +29,7 @@ class MandateChargeExecutor {
     private final MerchantRepository merchantRepository;
     private final WalletRepository walletRepository;
     private final WalletLedger walletLedger;
+    private final MerchantFeeCalculator merchantFeeCalculator;
     private final TransactionRepository transactionRepository;
 
     @Transactional
@@ -86,9 +87,7 @@ class MandateChargeExecutor {
 
         // Same fee math as CheckoutService.confirmPayment's automatic-release path — a mandate
         // charge is a merchant payment that happens to skip the hosted checkout page.
-        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps())
-                .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-        BigDecimal platformFee = amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = merchantFeeCalculator.feeOn(merchant, amount);
         BigDecimal netAmount = amount.subtract(platformFee);
 
         walletLedger.debitLocked(payerWallet, amount);

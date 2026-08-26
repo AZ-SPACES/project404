@@ -19,6 +19,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.aza.backend.entity.Merchant;
+import com.aza.backend.entity.PendingApproval;
+import com.aza.backend.entity.User;
+import com.aza.backend.dto.admin.ApprovalResponse;
+import com.aza.backend.service.ApprovalService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +40,7 @@ import java.util.stream.Collectors;
 public class AdminMerchantController {
 
     private final MerchantService merchantService;
+    private final ApprovalService approvalService;
     private final CheckoutService checkoutService;
     private final MerchantPayoutRepository payoutRepository;
     private final WebhookEndpointRepository webhookEndpointRepository;
@@ -88,11 +95,26 @@ public class AdminMerchantController {
         return ResponseEntity.ok(ApiResponse.success(merchantService.adminSetStatus(merchantId, request.getStatus())));
     }
 
+    /**
+     * Maker-checker: a merchant's rate decides AZA's cut of every future sale, so a second
+     * FINANCE/ADMIN must approve it — the same bar consumer fee rules already sat behind.
+     * Rates stay per-merchant; this governs who may change one, not what it may be.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN','FINANCE')")
     @PatchMapping("/{merchantId}/fee-rate")
-    public ResponseEntity<ApiResponse<MerchantResponse>> setFeeRate(
+    public ResponseEntity<ApiResponse<ApprovalResponse>> setFeeRate(
             @PathVariable UUID merchantId,
-            @RequestBody FeeRateRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(merchantService.adminSetFeeRate(merchantId, request.getFeeRateBps())));
+            @RequestBody FeeRateRequest request,
+            @AuthenticationPrincipal User admin) {
+        // Validated now so a bad rate is rejected while the requester is still here.
+        Merchant merchant = merchantService.validateFeeRateChange(merchantId, request.getFeeRateBps());
+        Integer previous = merchant.getFeeRateBps();
+        return ResponseEntity.ok(ApiResponse.success(approvalService.submit(
+                admin, PendingApproval.ActionType.UPDATE_MERCHANT_FEE_RATE, merchantId,
+                new ApprovalService.MerchantFeeRatePayload(request.getFeeRateBps()),
+                "Set " + merchant.getBusinessName() + " fee rate from "
+                        + (previous != null ? previous + "bps" : "unset")
+                        + " to " + request.getFeeRateBps() + "bps")));
     }
 
     @GetMapping("/{merchantId}/payouts")

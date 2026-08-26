@@ -48,6 +48,7 @@ public class CheckoutService {
     private final MerchantRepository merchantRepository;
     private final WalletRepository walletRepository;
     private final WalletLedger walletLedger;
+    private final MerchantFeeCalculator merchantFeeCalculator;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final WebhookEndpointRepository webhookEndpointRepository;
@@ -314,9 +315,7 @@ public class CheckoutService {
     }
 
     private BigDecimal computeAzaFee(Merchant merchant, BigDecimal amount) {
-        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps())
-                .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-        return amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        return merchantFeeCalculator.feeOn(merchant, amount);
     }
 
     private List<CheckoutSplitInfo> toSplitInfos(List<CheckoutSessionSplit> splits) {
@@ -414,8 +413,7 @@ public class CheckoutService {
         }
 
         // Calculate fee
-        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-        BigDecimal platformFee = session.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = computeAzaFee(merchant, session.getAmount());
         BigDecimal netAmount = session.getAmount().subtract(platformFee);
 
         // Debit customer
@@ -898,8 +896,7 @@ public class CheckoutService {
      * no effect on balances/volume/settlement. {@code customerId} may be null.
      */
     private CheckoutSessionResponse completeTestSession(CheckoutSession session, Merchant merchant, UUID customerId) {
-        BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-        BigDecimal platformFee = session.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = computeAzaFee(merchant, session.getAmount());
         BigDecimal netAmount = session.getAmount().subtract(platformFee);
 
         // Preview splits without moving money: netAmount shows what the platform would keep.

@@ -47,7 +47,7 @@ class CheckoutHoldSandboxTest {
 
     private final CheckoutService service = new CheckoutService(
             sessionRepository, splitRepository, merchantRepository, walletRepository,
-            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository), userRepository,
+            new WalletLedger(walletRepository, new WalletLocker(walletRepository), transactionRepository), new MerchantFeeCalculator(), userRepository,
             transactionRepository, webhookEndpointRepository, webhookDeliveryRepository, userService,
             rateLimitService, objectMapper, emailService, notificationPrefRepository, notificationService,
             recipientResolver, holdService);

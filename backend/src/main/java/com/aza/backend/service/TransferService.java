@@ -76,6 +76,7 @@ public class TransferService {
      */
     private final WalletLocker walletLocker;
     private final WalletLedger walletLedger;
+    private final MerchantFeeCalculator merchantFeeCalculator;
     /**
      * Defers pushes, SMS, email and WebSocket events until the money has actually
      * committed — never notify someone about a transfer that then rolls back.
@@ -417,8 +418,7 @@ public class TransferService {
             walletLedger.debitLocked(senderWallet, transaction.getAmount());
 
             // Credit merchant
-            BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps()).divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-            BigDecimal platformFee = transaction.getAmount().multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal platformFee = merchantFeeCalculator.feeOn(merchant, transaction.getAmount());
             BigDecimal netAmount = transaction.getAmount().subtract(platformFee);
 
             // Record the MDR on the transaction itself. It was previously only stored on
@@ -1318,9 +1318,7 @@ public class TransferService {
             // Apply the merchant's MDR, exactly like a single store payment, so bulk
             // payments to a merchant are charged consistently (the fee leaves circulation).
             Merchant merchant = merchantRepository.findByIdForUpdate(recipientId).orElseThrow();
-            BigDecimal feeRate = BigDecimal.valueOf(merchant.getFeeRateBps())
-                    .divide(BigDecimal.valueOf(10_000), 6, RoundingMode.HALF_UP);
-            BigDecimal platformFee = amount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal platformFee = merchantFeeCalculator.feeOn(merchant, amount);
             merchant.setBalance(merchant.getBalance().add(amount.subtract(platformFee)));
             merchant.setTotalVolume(merchant.getTotalVolume().add(amount));
             merchantRepository.save(merchant);
